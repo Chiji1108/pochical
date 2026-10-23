@@ -28,6 +28,9 @@ struct AppleSignInButton: View {
   @State private var nonce = SignInNonce()
   @State private var busy = false
   @State private var failed = false
+  /// The account is suspended by Pochical's people: said as such, as
+  /// trying again would not help.
+  @State private var suspended = false
   /// The choice of which side to keep, when the Apple account is in use.
   @State private var choosing: Choice?
 
@@ -59,6 +62,11 @@ struct AppleSignInButton: View {
     }
     .alert("ログインできませんでした。時間をおいてもう一度お試しください。", isPresented: $failed) {
       Button("OK", role: .cancel) {}
+    }
+    .alert("このアカウントは利用を停止されています", isPresented: $suspended) {
+      Button("OK", role: .cancel) {}
+    } message: {
+      Text("このAppleアカウントではログインできません。")
     }
     .alert(
       "どちらのデータを使いますか？",
@@ -118,10 +126,13 @@ struct AppleSignInButton: View {
   /// nothing goes without asking, the device's first, as a new phone's
   /// first sign-in does; else the person chooses, seeing what each holds.
   private func chooseSide(idToken: String, nonce: String, email: String?) async {
-    guard let held = try? await groupCalls.peekAccount(appleIDToken: idToken, nonce: nonce),
-      let here = try? await database.read({ try Holdings.onDevice(in: $0) })
-    else {
-      failed = true
+    let held: Holdings
+    let here: Holdings
+    do {
+      held = try await groupCalls.peekAccount(appleIDToken: idToken, nonce: nonce)
+      here = try await database.read { try Holdings.onDevice(in: $0) }
+    } catch {
+      failedOrSuspended(error)
       return
     }
     let choice = Choice(idToken: idToken, nonce: nonce, email: email, account: held, device: here)
@@ -143,7 +154,7 @@ struct AppleSignInButton: View {
     do {
       try await session.useAccount(appleIDToken: choice.idToken, nonce: choice.nonce)
     } catch {
-      failed = true
+      failedOrSuspended(error)
       return
     }
     await keep(email: choice.email, .switched)
@@ -157,10 +168,20 @@ struct AppleSignInButton: View {
     do {
       try await groupCalls.takeAccount(appleIDToken: choice.idToken, nonce: choice.nonce)
     } catch {
-      failed = true
+      failedOrSuspended(error)
       return
     }
     await keep(email: choice.email, .linked)
+  }
+
+  /// A step that failed, said as the account being suspended when it is,
+  /// else as a failure to try again.
+  private func failedOrSuspended(_ error: any Error) {
+    if error is AccountSuspended {
+      suspended = true
+    } else {
+      failed = true
+    }
   }
 
   /// What one side holds, in a few words.

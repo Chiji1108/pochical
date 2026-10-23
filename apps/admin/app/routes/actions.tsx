@@ -24,12 +24,16 @@ const ACTION_NAMES: Record<string, string> = {
   cleanBucket: "棚卸しの削除",
   report: "通報の対応",
   reset: "全消去",
+  suspend: "ユーザーの停止",
+  unsuspend: "停止の解除",
 };
 
 // The page of whom or what each action was done to.
 const PAGE_OF: Record<string, (target: string) => string> = {
   answer: (userId) => `/support/${userId}`,
   report: () => "/reports",
+  suspend: (userId) => `/users/${userId}`,
+  unsuspend: (userId) => `/users/${userId}`,
 };
 
 /** Whom an action was done to, to their page where there is one. */

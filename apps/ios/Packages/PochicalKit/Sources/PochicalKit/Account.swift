@@ -321,6 +321,11 @@ struct Account: AccountServer {
   private func signedIn(by request: URLRequest) async throws -> StoredSession {
     let (body, response) = try await send(request)
     let status = (response as? HTTPURLResponse)?.statusCode
+    if status == 403,
+      (try? JSONDecoder().decode(RefusedBody.self, from: body))?.code == suspendedCode
+    {
+      throw AccountSuspended()
+    }
     guard status == 200,
       let token = (response as? HTTPURLResponse)?.value(forHTTPHeaderField: "set-auth-token"),
       !token.isEmpty,
@@ -329,6 +334,14 @@ struct Account: AccountServer {
       throw SignInError(status: status)
     }
     return StoredSession(token: token, userID: user.id)
+  }
+
+  /// better-auth's code for a suspended user's sign-in (the server's
+  /// `USER_SUSPENDED`).
+  private let suspendedCode = "USER_SUSPENDED"
+
+  private struct RefusedBody: Decodable {
+    let code: String
   }
 
   private struct SignedInBody: Decodable {
@@ -355,4 +368,11 @@ private let uncached = URLSession(configuration: uncachedConfiguration)
 /// HTTP status, as 429 when too many sign-ins came from one address.
 public struct SignInError: Error {
   public let status: Int?
+}
+
+/// The account is suspended by Pochical's people (spec/admin.md, ユーザー):
+/// signing in to it, or switching to it, is refused, which the app says as
+/// such rather than as a failure to try again.
+public struct AccountSuspended: Error, Equatable {
+  public init() {}
 }

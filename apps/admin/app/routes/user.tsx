@@ -1,15 +1,20 @@
 import { css } from "@pochical/styled-system/css";
 import { env } from "cloudflare:workers";
-import { data, Link } from "react-router";
+import { data, Form, Link, redirect, useNavigation } from "react-router";
 
 import { ReportTable } from "../report-table";
 import { SignIns } from "../sign-ins";
+import { staffOf } from "../staff";
 import {
+  actions,
+  actionsStyle,
+  alert,
   badge,
   button,
   card,
   code,
   Crumbs,
+  dialog,
   Empty,
   numeric,
   page,
@@ -34,31 +39,117 @@ export const loader = async ({ params }: Route.LoaderArgs) => {
   return user;
 };
 
+// The user suspended, or let back (spec/admin.md, ユーザー), by whoever
+// Access let in; then the page again (Post/Redirect/Get).
+export const action = async ({ params, request, url }: Route.ActionArgs) => {
+  const form = await request.formData();
+  const on = form.get("suspend") === "on";
+  const done = await env.SERVER.suspend(
+    params.userId,
+    on,
+    staffOf(request)
+  ).catch(() => false);
+  if (!done) {
+    return data({ error: "変えられませんでした。" }, { status: 502 });
+  }
+  return redirect(url.pathname);
+};
+
 const section = css({ display: "flex", flexDirection: "column", gap: "3" });
 
-export default function User({ loaderData: user }: Route.ComponentProps) {
+export default function User({
+  actionData,
+  loaderData: user,
+}: Route.ComponentProps) {
+  const busy = useNavigation().state !== "idle";
+  const suspended = user.suspendedAtMs !== null;
   return (
     <main className={page}>
       <PageHeader
         actions={
-          user.supportChat === null ? null : (
-            <Link
-              className={button({ variant: "outline" })}
-              to={`/support/${user.userId}`}
-            >
-              サポートのチャット
-              {user.unanswered > 0 && (
-                <span className={badge({ tone: "danger" })}>
-                  {`未返信 ${user.unanswered}`}
-                </span>
-              )}
-            </Link>
-          )
+          <div className={actions}>
+            {user.supportChat === null ? null : (
+              <Link
+                className={button({ variant: "outline" })}
+                to={`/support/${user.userId}`}
+              >
+                サポートのチャット
+                {user.unanswered > 0 && (
+                  <span className={badge({ tone: "danger" })}>
+                    {`未返信 ${user.unanswered}`}
+                  </span>
+                )}
+              </Link>
+            )}
+            {suspended ? (
+              <Form method="post">
+                <input name="suspend" type="hidden" value="off" />
+                <button
+                  className={button({ variant: "outline" })}
+                  disabled={busy}
+                  type="submit"
+                >
+                  停止を解除
+                </button>
+              </Form>
+            ) : (
+              <button
+                className={button({ variant: "danger" })}
+                command="show-modal"
+                commandfor="suspend"
+                disabled={busy}
+                type="button"
+              >
+                停止する
+              </button>
+            )}
+          </div>
         }
         crumbs={<Crumbs trail={[{ label: "ユーザー", to: "/users" }]} />}
         description={<span className={code}>{user.userId}</span>}
-        title={user.name === "" ? "名前なし" : user.name}
+        title={
+          <span
+            className={css({ alignItems: "center", display: "flex", gap: "2" })}
+          >
+            {user.name === "" ? "名前なし" : user.name}
+            {suspended && user.suspendedAtMs !== null && (
+              <span className={badge({ tone: "danger" })}>
+                {`${when(user.suspendedAtMs)} から停止中`}
+              </span>
+            )}
+          </span>
+        }
       />
+      {actionData?.error === undefined ? null : (
+        <p className={alert} role="alert">
+          {actionData.error}
+        </p>
+      )}
+      {/* Closed again once the suspension has loaded the page anew. */}
+      <dialog className={dialog} id="suspend" key={String(suspended)}>
+        <h2 className={sectionTitle}>このユーザーを停止しますか？</h2>
+        <p className={css({ color: "text.secondary" })}>
+          すべての端末でログアウトされ、Apple
+          でもう一度ログインしようとしても断られます。グループやデータは消えず、停止を解除すれば元どおり使えます。匿名のユーザーは、アプリを入れ直すと別の新しいユーザーとして使えてしまいます。
+        </p>
+        <Form
+          className={css(actionsStyle, { justifyContent: "flex-end" })}
+          method="post"
+        >
+          <input name="suspend" type="hidden" value="on" />
+          <button
+            className={button({ variant: "outline" })}
+            command="close"
+            commandfor="suspend"
+            type="button"
+          >
+            キャンセル
+          </button>
+          <button className={button({ variant: "danger" })} type="submit">
+            停止する
+          </button>
+        </Form>
+      </dialog>
       <div className={stats}>
         <Stat
           detail={<SignIns anonymous={user.anonymous} signIns={user.signIns} />}

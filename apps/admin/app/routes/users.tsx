@@ -108,10 +108,23 @@ export default function Users({
                     </Link>
                   </td>
                   <td>
-                    <SignIns
-                      anonymous={user.anonymous}
-                      signIns={user.signIns}
-                    />
+                    <span
+                      className={css({
+                        display: "inline-flex",
+                        flexWrap: "wrap",
+                        gap: "1",
+                      })}
+                    >
+                      <SignIns
+                        anonymous={user.anonymous}
+                        signIns={user.signIns}
+                      />
+                      {user.suspendedAtMs !== null && (
+                        <span className={badge({ tone: "danger" })}>
+                          停止中
+                        </span>
+                      )}
+                    </span>
                   </td>
                   <td>
                     {user.unanswered > 0 && (

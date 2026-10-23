@@ -9,7 +9,7 @@ import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { eraseUser } from "./account-deletion";
-import { account } from "./db/auth-schema";
+import { account, user } from "./db/auth-schema";
 import { getAuth } from "./session";
 
 const APPLE = "apple";
@@ -47,6 +47,22 @@ const userWith = async (
 };
 
 /**
+ * Refuses a suspended account (PERMISSION_DENIED), which the apps say as
+ * such: switching to it would sign in as it, and keeping the device's
+ * data would delete it and take its Apple account elsewhere, out of the
+ * suspension (spec/admin.md, ユーザー).
+ */
+const refuseSuspended = async (env: Env, userId: string): Promise<void> => {
+  const [row] = await drizzle(env.DB)
+    .select({ suspendedAt: user.suspendedAt })
+    .from(user)
+    .where(eq(user.id, userId));
+  if (row?.suspendedAt !== null && row?.suspendedAt !== undefined) {
+    throw new ConnectError("This account is suspended", Code.PermissionDenied);
+  }
+};
+
+/**
  * What the account an ID token is of holds, when it is another user's
  * than `callerId`: for the person to choose which side to keep.
  */
@@ -60,6 +76,7 @@ export const peekAccount = async (
   if (other === undefined || other === callerId) {
     throw new ConnectError("No other user holds it", Code.NotFound);
   }
+  await refuseSuspended(env, other);
   return await env.USERS.getByName(other).holdings();
 };
 
@@ -80,6 +97,7 @@ export const takeAccount = async (
     return;
   }
   if (other !== undefined) {
+    await refuseSuspended(env, other);
     await eraseUser(env, other);
   }
   const auth = await getAuth().$context;
