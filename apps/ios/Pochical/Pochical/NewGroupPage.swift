@@ -39,7 +39,7 @@ struct NewGroupPage: View {
           LimitedTextField(placeholder: "例：家族", text: $name, limit: TextLimits.groupName)
         }
         PageLink {
-          GroupMarkPage(name: name, mark: mark) { pickedMark = $0 }
+          GroupMarkPage(name: name, mark: $pickedMark[or: mark])
         } label: {
           LabeledContent("アイコン") {
             GroupMarkBadge(mark: mark)
@@ -130,4 +130,14 @@ struct NewGroupPage: View {
 
 private func trimmed(_ text: String) -> String {
   text.trimmingCharacters(in: .whitespacesAndNewlines)
+}
+
+extension Optional where Wrapped: Hashable {
+  /// The value, else `fallback`; set, the value. A binding through it is
+  /// still one to the optional's place, which keeps a page pushed with it
+  /// drawing what it picks (PageLink).
+  fileprivate subscript(or fallback: Wrapped) -> Wrapped {
+    get { self ?? fallback }
+    set { self = newValue }
+  }
 }

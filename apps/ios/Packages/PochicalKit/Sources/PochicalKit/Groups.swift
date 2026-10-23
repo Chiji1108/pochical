@@ -29,10 +29,6 @@ public struct GroupRow: Hashable, Sendable, Identifiable {
   }
 }
 
-/// A group's mark (/design's GroupMark; proto GroupMark): one emoji, one of
-/// the mark icons, letters, the last two in one of the mark palette's
-/// colors, or a photo. Every member sees it as it is, whatever their style
-/// for shifts.
 /// A group the person asks to make: its name, its mark and their name in
 /// it, under one request id the server makes it once for, so a retry after
 /// a lost answer gives back the same group (spec/sync-protocol.md, Groups).
@@ -56,6 +52,10 @@ public struct NewGroupRequest: Hashable, Sendable {
   }
 }
 
+/// A group's mark (/design's GroupMark; proto GroupMark): one emoji, one of
+/// the mark icons, letters, the last two in one of the mark palette's
+/// colors, or a photo. Every member sees it as it is, whatever their style
+/// for shifts.
 public struct GroupMarkValue: Hashable, Sendable {
   public var emoji = ""
   public var icon = ""
