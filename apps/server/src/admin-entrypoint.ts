@@ -518,20 +518,17 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
     if (known === undefined) {
       return false;
     }
-    const { groups } = await this.env.USERS.getByName(userId).adminView();
-    const inIt = groups.some(
-      (group) => group.groupId === groupId && group.leftAtMs === null
-    );
-    if (!inIt) {
+    if (!(await this.env.USERS.getByName(userId).isMember(groupId))) {
       return false;
     }
-    const taken =
-      await this.env.GROUPS.getByName(groupId).removeByPochical(userId);
+    const group = this.env.GROUPS.getByName(groupId);
+    const taken = await group.removeByPochical(userId);
     if (taken) {
+      const named = await group.getProfile();
       await noteDone(this.env, {
         action: "removeFromGroup",
         by,
-        detail: groups.find((group) => group.groupId === groupId)?.name ?? "",
+        detail: named?.name ?? "",
         target: userId,
       });
     }

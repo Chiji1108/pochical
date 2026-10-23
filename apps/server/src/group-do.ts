@@ -226,11 +226,11 @@ type MemberLog = {
 /** One Durable Object per group, named by the group's id. */
 type RefusedSendInit = MessageInitShape<typeof RefusedSendSchema>;
 
+/** Who took a member out: themselves, another member, or Pochical. */
+type Leaving = { self: true } | { member: string } | { pochical: true };
+
 /** The group's line saying how a member came to leave it. */
-const noticeOf = (
-  userId: string,
-  by: { self: true } | { member: string } | { pochical: true }
-): Notice => {
+const noticeOf = (userId: string, by: Leaving): Notice => {
   if ("member" in by) {
     return { kind: "removed", subjectId: userId };
   }
@@ -478,11 +478,7 @@ export class GroupDO extends DurableObject<Env> {
     return taken;
   }
 
-  /** Who took a member out: themselves, another member, or Pochical. */
-  private takeOut(
-    userId: string,
-    by: { self: true } | { member: string } | { pochical: true }
-  ): boolean {
+  private takeOut(userId: string, by: Leaving): boolean {
     const left = this.ctx.storage.transactionSync(() => {
       const known = this.db.select().from(members).where(inGroup(userId)).get();
       if (known === undefined) {

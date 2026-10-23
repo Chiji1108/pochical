@@ -146,6 +146,11 @@ describe("a group's notices", () => {
         seq: 2n,
       },
     ]);
+    // Their own DO lists them out of it once the call has answered.
+    const page = await admin.user(guestId);
+    expect(
+      page?.groups.map((listed) => listed.leftAtMs !== null)
+    ).toStrictEqual([true]);
     // Out of it now, they are not taken out again, nor noted twice.
     await expect(
       admin.removeFromGroup(guestId, groupId, "staff@pochical.app")
@@ -156,7 +161,7 @@ describe("a group's notices", () => {
         (action) =>
           action.action === "removeFromGroup" && action.target === guestId
       )
-    ).toHaveLength(1);
+    ).toMatchObject([{ detail: "いとこ会" }]);
   });
 
   it("takes no one out of a group they are not in, nor for no account", async () => {
