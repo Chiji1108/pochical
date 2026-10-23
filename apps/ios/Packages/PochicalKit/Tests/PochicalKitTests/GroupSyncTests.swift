@@ -166,8 +166,8 @@ private func change(_ cursor: UInt64, _ fill: (inout Pochical_V1_Change) -> Void
     #expect(try Profile.markLookToSend(in: db) == nil)
     var look = Look()
     look.style = .badge
-    let json = String(decoding: try JSONEncoder().encode(look), as: UTF8.self)
-    try PreferenceRow.insert { PreferenceRow(key: "look", value: json) }.execute(db)
+    let value = try look.message.serializedData()
+    try PreferenceRow.insert { PreferenceRow(key: "look", value: value) }.execute(db)
     #expect(try Profile.markLookToSend(in: db) == MarkLook(style: .badge, fill: true))
     // Once the account says so, nothing more.
     var profile = Pochical_V1_Profile()

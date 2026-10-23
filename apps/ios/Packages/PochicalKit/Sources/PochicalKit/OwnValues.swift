@@ -181,8 +181,8 @@ public enum OwnValues {
           .execute(db)
       }
     case .preference(let value):
-      if value.hasValue {
-        let row = PreferenceRow(key: value.key, value: value.value)
+      if value.hasMessage {
+        let row = PreferenceRow(key: value.key, value: value.message)
         try PreferenceRow.upsert { row }.execute(db)
       } else {
         try PreferenceRow.find(value.key).delete().execute(db)
@@ -241,7 +241,7 @@ extension Pochical_V1_Change {
     case .coworkerOrder:
       change.coworkerOrder = Pochical_V1_CoworkerOrder()
     case .preference(var value):
-      value.clearValue()
+      value.clearMessage()
       change.preference = value
     case .memberDay, .memberPattern, .memberRepeatOrders, .membership, .unreadCount, .block, .chatMute, .chatNotifications, .profile,
       .groupProfile,

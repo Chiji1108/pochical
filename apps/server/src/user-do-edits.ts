@@ -398,12 +398,12 @@ export const applyPreference = (
     return undefined;
   }
   // One too long keeps what was there, as a name that does not fit.
-  const fits = edit.value === undefined || fitsPreference(edit.value);
+  const fits = edit.message === undefined || fitsPreference(edit.message);
   const row: PreferenceRow = {
     ...clockColumns(writtenClock(clock, fits)),
     cursor: nextCursor(),
     key: edit.key,
-    value: fits ? (edit.value ?? null) : (stored?.value ?? null),
+    value: fits ? (edit.message ?? null) : (stored?.value ?? null),
   };
   db.insert(preferences)
     .values(row)

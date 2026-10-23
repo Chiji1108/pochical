@@ -192,7 +192,7 @@ export const preferenceChange = (row: PreferenceRow): Change =>
       value: create(PreferenceValueSchema, {
         hlc: hlcOf(row),
         key: row.key,
-        value: row.value ?? undefined,
+        message: row.value ?? undefined,
       }),
     },
   });

@@ -39,7 +39,7 @@ interface Values {
   /** The person's coworkers in their order; one the order does not name yet comes after, by name. */
   @Query("SELECT coworkers.* $COWORKERS_IN_ORDER") fun coworkers(): Flow<List<CoworkerRow>>
 
-  /** The preferences the account holds, each its JSON by key. */
+  /** The preferences the account holds, each its message's bytes by key. */
   @Query("SELECT * FROM preferences") fun preferences(): Flow<List<PreferenceRow>>
 
   /** The user's groups in the order they joined them. */
