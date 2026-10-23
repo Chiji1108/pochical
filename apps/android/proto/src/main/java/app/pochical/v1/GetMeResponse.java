@@ -102,6 +102,69 @@ public  final class GetMeResponse extends
     anonymous_ = false;
   }
 
+  public static final int PROVIDER_FIELD_NUMBER = 3;
+  private int provider_;
+  /**
+   * <pre>
+   * The provider the user is linked to; unspecified while anonymous.
+   * </pre>
+   *
+   * <code>.pochical.v1.SignInProvider provider = 3 [json_name = "provider"];</code>
+   * @return The enum numeric value on the wire for provider.
+   */
+  @java.lang.Override
+  public int getProviderValue() {
+    return provider_;
+  }
+  /**
+   * <pre>
+   * The provider the user is linked to; unspecified while anonymous.
+   * </pre>
+   *
+   * <code>.pochical.v1.SignInProvider provider = 3 [json_name = "provider"];</code>
+   * @return The provider.
+   */
+  @java.lang.Override
+  public app.pochical.v1.SignInProvider getProvider() {
+    app.pochical.v1.SignInProvider result = app.pochical.v1.SignInProvider.forNumber(provider_);
+    return result == null ? app.pochical.v1.SignInProvider.UNRECOGNIZED : result;
+  }
+  /**
+   * <pre>
+   * The provider the user is linked to; unspecified while anonymous.
+   * </pre>
+   *
+   * <code>.pochical.v1.SignInProvider provider = 3 [json_name = "provider"];</code>
+   * @param value The enum numeric value on the wire for provider to set.
+   */
+  private void setProviderValue(int value) {
+      provider_ = value;
+  }
+  /**
+   * <pre>
+   * The provider the user is linked to; unspecified while anonymous.
+   * </pre>
+   *
+   * <code>.pochical.v1.SignInProvider provider = 3 [json_name = "provider"];</code>
+   * @param value The provider to set.
+   * @throws IllegalArgumentException if UNRECOGNIZED is provided.
+   */
+  private void setProvider(app.pochical.v1.SignInProvider value) {
+    provider_ = value.getNumber();
+
+  }
+  /**
+   * <pre>
+   * The provider the user is linked to; unspecified while anonymous.
+   * </pre>
+   *
+   * <code>.pochical.v1.SignInProvider provider = 3 [json_name = "provider"];</code>
+   */
+  private void clearProvider() {
+
+    provider_ = 0;
+  }
+
   public static app.pochical.v1.GetMeResponse parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -288,6 +351,73 @@ public  final class GetMeResponse extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The provider the user is linked to; unspecified while anonymous.
+     * </pre>
+     *
+     * <code>.pochical.v1.SignInProvider provider = 3 [json_name = "provider"];</code>
+     * @return The enum numeric value on the wire for provider.
+     */
+    @java.lang.Override
+    public int getProviderValue() {
+      return instance.getProviderValue();
+    }
+    /**
+     * <pre>
+     * The provider the user is linked to; unspecified while anonymous.
+     * </pre>
+     *
+     * <code>.pochical.v1.SignInProvider provider = 3 [json_name = "provider"];</code>
+     * @param value The provider to set.
+     * @throws IllegalArgumentException if UNRECOGNIZED is provided.
+     * @return This builder for chaining.
+     */
+    public Builder setProviderValue(int value) {
+      copyOnWrite();
+      instance.setProviderValue(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The provider the user is linked to; unspecified while anonymous.
+     * </pre>
+     *
+     * <code>.pochical.v1.SignInProvider provider = 3 [json_name = "provider"];</code>
+     * @return The provider.
+     */
+    @java.lang.Override
+    public app.pochical.v1.SignInProvider getProvider() {
+      return instance.getProvider();
+    }
+    /**
+     * <pre>
+     * The provider the user is linked to; unspecified while anonymous.
+     * </pre>
+     *
+     * <code>.pochical.v1.SignInProvider provider = 3 [json_name = "provider"];</code>
+     * @param value The enum numeric value on the wire for provider to set.
+     * @return This builder for chaining.
+     */
+    public Builder setProvider(app.pochical.v1.SignInProvider value) {
+      copyOnWrite();
+      instance.setProvider(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The provider the user is linked to; unspecified while anonymous.
+     * </pre>
+     *
+     * <code>.pochical.v1.SignInProvider provider = 3 [json_name = "provider"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearProvider() {
+      copyOnWrite();
+      instance.clearProvider();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.GetMeResponse)
   }
   @java.lang.Override
@@ -306,10 +436,11 @@ public  final class GetMeResponse extends
           java.lang.Object[] objects = new java.lang.Object[] {
             "userId_",
             "anonymous_",
+            "provider_",
           };
           java.lang.String info =
-              "\u0000\u0002\u0000\u0000\u0001\u0002\u0002\u0000\u0000\u0000\u0001\u0208\u0002\u0007" +
-              "";
+              "\u0000\u0003\u0000\u0000\u0001\u0003\u0003\u0000\u0000\u0000\u0001\u0208\u0002\u0007" +
+              "\u0003\f";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

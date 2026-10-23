@@ -15,101 +15,53 @@ public  final class TakeAccountRequest extends
     // @@protoc_insertion_point(message_implements:pochical.v1.TakeAccountRequest)
     TakeAccountRequestOrBuilder {
   private TakeAccountRequest() {
-    appleIdToken_ = "";
-    nonce_ = "";
   }
-  public static final int APPLE_ID_TOKEN_FIELD_NUMBER = 1;
-  private java.lang.String appleIdToken_;
+  private int bitField0_;
+  public static final int ACCOUNT_FIELD_NUMBER = 3;
+  private app.pochical.v1.ProviderToken account_;
   /**
-   * <code>string apple_id_token = 1 [json_name = "appleIdToken"];</code>
-   * @return The appleIdToken.
+   * <code>.pochical.v1.ProviderToken account = 3 [json_name = "account"];</code>
    */
   @java.lang.Override
-  public java.lang.String getAppleIdToken() {
-    return appleIdToken_;
+  public boolean hasAccount() {
+    return ((bitField0_ & 0x00000001) != 0);
   }
   /**
-   * <code>string apple_id_token = 1 [json_name = "appleIdToken"];</code>
-   * @return The bytes for appleIdToken.
+   * <code>.pochical.v1.ProviderToken account = 3 [json_name = "account"];</code>
    */
   @java.lang.Override
-  public com.google.protobuf.ByteString
-      getAppleIdTokenBytes() {
-    return com.google.protobuf.ByteString.copyFromUtf8(appleIdToken_);
+  public app.pochical.v1.ProviderToken getAccount() {
+    return account_ == null ? app.pochical.v1.ProviderToken.getDefaultInstance() : account_;
   }
   /**
-   * <code>string apple_id_token = 1 [json_name = "appleIdToken"];</code>
-   * @param value The appleIdToken to set.
+   * <code>.pochical.v1.ProviderToken account = 3 [json_name = "account"];</code>
    */
-  private void setAppleIdToken(
-      java.lang.String value) {
+  private void setAccount(app.pochical.v1.ProviderToken value) {
     java.util.Objects.requireNonNull(value);
-
-    appleIdToken_ = value;
+    account_ = value;
+    bitField0_ |= 0x00000001;
   }
   /**
-   * <code>string apple_id_token = 1 [json_name = "appleIdToken"];</code>
+   * <code>.pochical.v1.ProviderToken account = 3 [json_name = "account"];</code>
    */
-  private void clearAppleIdToken() {
-
-    appleIdToken_ = getDefaultInstance().getAppleIdToken();
-  }
-  /**
-   * <code>string apple_id_token = 1 [json_name = "appleIdToken"];</code>
-   * @param value The bytes for appleIdToken to set.
-   */
-  private void setAppleIdTokenBytes(
-      com.google.protobuf.ByteString value) {
-    checkByteStringIsUtf8(value);
-    appleIdToken_ = value.toStringUtf8();
-
-  }
-
-  public static final int NONCE_FIELD_NUMBER = 2;
-  private java.lang.String nonce_;
-  /**
-   * <code>string nonce = 2 [json_name = "nonce"];</code>
-   * @return The nonce.
-   */
-  @java.lang.Override
-  public java.lang.String getNonce() {
-    return nonce_;
-  }
-  /**
-   * <code>string nonce = 2 [json_name = "nonce"];</code>
-   * @return The bytes for nonce.
-   */
-  @java.lang.Override
-  public com.google.protobuf.ByteString
-      getNonceBytes() {
-    return com.google.protobuf.ByteString.copyFromUtf8(nonce_);
-  }
-  /**
-   * <code>string nonce = 2 [json_name = "nonce"];</code>
-   * @param value The nonce to set.
-   */
-  private void setNonce(
-      java.lang.String value) {
+  @java.lang.SuppressWarnings("ReferenceEquality")
+  private void mergeAccount(app.pochical.v1.ProviderToken value) {
     java.util.Objects.requireNonNull(value);
-
-    nonce_ = value;
+    if (account_ != null &&
+        account_ != app.pochical.v1.ProviderToken.getDefaultInstance()) {
+      account_ =
+        app.pochical.v1.ProviderToken.newBuilder(account_).mergeFrom(value).buildPartial();
+    } else {
+      account_ = value;
+    }
+    bitField0_ |= 0x00000001;
   }
   /**
-   * <code>string nonce = 2 [json_name = "nonce"];</code>
+   * <code>.pochical.v1.ProviderToken account = 3 [json_name = "account"];</code>
    */
-  private void clearNonce() {
-
-    nonce_ = getDefaultInstance().getNonce();
-  }
-  /**
-   * <code>string nonce = 2 [json_name = "nonce"];</code>
-   * @param value The bytes for nonce to set.
-   */
-  private void setNonceBytes(
-      com.google.protobuf.ByteString value) {
-    checkByteStringIsUtf8(value);
-    nonce_ = value.toStringUtf8();
-
+  private void clearAccount() {
+    account_ = null;
+    bitField0_ = (bitField0_ & ~0x00000001);
   }
 
   public static app.pochical.v1.TakeAccountRequest parseFrom(
@@ -210,100 +162,49 @@ public  final class TakeAccountRequest extends
 
 
     /**
-     * <code>string apple_id_token = 1 [json_name = "appleIdToken"];</code>
-     * @return The appleIdToken.
+     * <code>.pochical.v1.ProviderToken account = 3 [json_name = "account"];</code>
      */
     @java.lang.Override
-    public java.lang.String getAppleIdToken() {
-      return instance.getAppleIdToken();
+    public boolean hasAccount() {
+      return instance.hasAccount();
     }
     /**
-     * <code>string apple_id_token = 1 [json_name = "appleIdToken"];</code>
-     * @return The bytes for appleIdToken.
+     * <code>.pochical.v1.ProviderToken account = 3 [json_name = "account"];</code>
      */
     @java.lang.Override
-    public com.google.protobuf.ByteString
-        getAppleIdTokenBytes() {
-      return instance.getAppleIdTokenBytes();
+    public app.pochical.v1.ProviderToken getAccount() {
+      return instance.getAccount();
     }
     /**
-     * <code>string apple_id_token = 1 [json_name = "appleIdToken"];</code>
-     * @param value The appleIdToken to set.
-     * @return This builder for chaining.
+     * <code>.pochical.v1.ProviderToken account = 3 [json_name = "account"];</code>
      */
-    public Builder setAppleIdToken(
-        java.lang.String value) {
+    public Builder setAccount(app.pochical.v1.ProviderToken value) {
       copyOnWrite();
-      instance.setAppleIdToken(value);
+      instance.setAccount(value);
+      return this;
+      }
+    /**
+     * <code>.pochical.v1.ProviderToken account = 3 [json_name = "account"];</code>
+     */
+    public Builder setAccount(
+        app.pochical.v1.ProviderToken.Builder builderForValue) {
+      copyOnWrite();
+      instance.setAccount(builderForValue.build());
       return this;
     }
     /**
-     * <code>string apple_id_token = 1 [json_name = "appleIdToken"];</code>
-     * @return This builder for chaining.
+     * <code>.pochical.v1.ProviderToken account = 3 [json_name = "account"];</code>
      */
-    public Builder clearAppleIdToken() {
+    public Builder mergeAccount(app.pochical.v1.ProviderToken value) {
       copyOnWrite();
-      instance.clearAppleIdToken();
+      instance.mergeAccount(value);
       return this;
     }
     /**
-     * <code>string apple_id_token = 1 [json_name = "appleIdToken"];</code>
-     * @param value The bytes for appleIdToken to set.
-     * @return This builder for chaining.
+     * <code>.pochical.v1.ProviderToken account = 3 [json_name = "account"];</code>
      */
-    public Builder setAppleIdTokenBytes(
-        com.google.protobuf.ByteString value) {
-      copyOnWrite();
-      instance.setAppleIdTokenBytes(value);
-      return this;
-    }
-
-    /**
-     * <code>string nonce = 2 [json_name = "nonce"];</code>
-     * @return The nonce.
-     */
-    @java.lang.Override
-    public java.lang.String getNonce() {
-      return instance.getNonce();
-    }
-    /**
-     * <code>string nonce = 2 [json_name = "nonce"];</code>
-     * @return The bytes for nonce.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getNonceBytes() {
-      return instance.getNonceBytes();
-    }
-    /**
-     * <code>string nonce = 2 [json_name = "nonce"];</code>
-     * @param value The nonce to set.
-     * @return This builder for chaining.
-     */
-    public Builder setNonce(
-        java.lang.String value) {
-      copyOnWrite();
-      instance.setNonce(value);
-      return this;
-    }
-    /**
-     * <code>string nonce = 2 [json_name = "nonce"];</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearNonce() {
-      copyOnWrite();
-      instance.clearNonce();
-      return this;
-    }
-    /**
-     * <code>string nonce = 2 [json_name = "nonce"];</code>
-     * @param value The bytes for nonce to set.
-     * @return This builder for chaining.
-     */
-    public Builder setNonceBytes(
-        com.google.protobuf.ByteString value) {
-      copyOnWrite();
-      instance.setNonceBytes(value);
+    public Builder clearAccount() {  copyOnWrite();
+      instance.clearAccount();
       return this;
     }
 
@@ -323,12 +224,11 @@ public  final class TakeAccountRequest extends
       }
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
-            "appleIdToken_",
-            "nonce_",
+            "bitField0_",
+            "account_",
           };
           java.lang.String info =
-              "\u0000\u0002\u0000\u0000\u0001\u0002\u0002\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
-              "";
+              "\u0000\u0001\u0000\u0001\u0003\u0003\u0001\u0000\u0000\u0000\u0003\u1009\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

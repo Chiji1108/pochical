@@ -7,7 +7,7 @@ import SwiftUI
 /// syncs, and nothing on the device is cleared but by the person:
 /// もう一度つなぐ tries the session again, and はじめから使う, asked first,
 /// erases what the device holds and starts as a new install does, where
-/// signing in with Apple again brings back an account's data.
+/// signing in with Apple or Google again brings back an account's data.
 struct SessionEndedScreen: View {
   @Environment(\.themeColors) private var colors
   let tryAgain: () -> Void
@@ -47,7 +47,7 @@ struct SessionEndedScreen: View {
       Button("キャンセル", role: .cancel) {}
       Button("データを消してはじめる", role: .destructive, action: startAfresh)
     } message: {
-      Text("この端末のデータが消えます。アカウントが残っていれば、Apple でもう一度ログインすると同じデータを使えます。")
+      Text("この端末のデータが消えます。アカウントが残っていれば、Apple または Google でもう一度ログインすると同じデータを使えます。")
     }
   }
 }

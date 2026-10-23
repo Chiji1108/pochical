@@ -70,6 +70,38 @@ public object GetMeResponseKt {
     public fun clearAnonymous() {
       _builder.clearAnonymous()
     }
+
+    /**
+     * ```
+     * The provider the user is linked to; unspecified while anonymous.
+     * ```
+     *
+     * `.pochical.v1.SignInProvider provider = 3 [json_name = "provider"];`
+     */
+    public var provider: app.pochical.v1.SignInProvider
+      @kotlin.jvm.JvmName("getProvider")
+        get() = _builder.provider
+      @kotlin.jvm.JvmName("setProvider")
+        set(value) {
+        _builder.provider = value
+      }
+    public var providerValue: kotlin.Int
+      @kotlin.jvm.JvmName("getProviderValue")
+        get() = _builder.providerValue
+      @kotlin.jvm.JvmName("setProviderValue")
+        set(value) {
+        _builder.providerValue = value
+      }
+    /**
+     * ```
+     * The provider the user is linked to; unspecified while anonymous.
+     * ```
+     *
+     * `.pochical.v1.SignInProvider provider = 3 [json_name = "provider"];`
+     */
+    public fun clearProvider() {
+      _builder.clearProvider()
+    }
   }
 }
 public inline fun app.pochical.v1.GetMeResponse.copy(block: `app.pochical.v1`.GetMeResponseKt.Dsl.() -> kotlin.Unit): app.pochical.v1.GetMeResponse =

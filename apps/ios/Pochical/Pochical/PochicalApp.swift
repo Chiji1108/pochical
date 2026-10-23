@@ -1,3 +1,4 @@
+import GoogleSignIn
 import PochicalDesign
 import PochicalKit
 import SQLiteData
@@ -49,6 +50,9 @@ struct PochicalApp: App {
             settings: settings, groupCalls: groupCalls, session: session, openPlace: openPlace))
         // The person's preferences, kept with the account from launch.
         .task { settings.sync(with: database) }
+        // Google Sign-In's answer, should it come back by the app's URL
+        // scheme (its reversed iOS client id) rather than to its web session.
+        .onOpenURL { _ = GIDSignIn.sharedInstance.handle($0) }
         // Someone else from now, or signed in at last: the widgets show
         // them, and the push token goes under their session.
         .onChange(of: session.userID) {

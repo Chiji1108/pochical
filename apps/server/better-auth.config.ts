@@ -7,5 +7,6 @@ import { createAuth } from "./src/auth";
 export const auth = createAuth({} as D1Database, {
   appleAppId: "app.pochical",
   baseURL: "https://api.pochical.app",
+  googleClientIds: [],
   secret: "cli-only",
 });

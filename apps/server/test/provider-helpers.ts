@@ -1,10 +1,11 @@
-import { exports } from "cloudflare:workers";
+import { env, exports } from "cloudflare:workers";
 import { vi } from "vitest";
 
 import { ORIGIN } from "./helpers";
 
-// Sign in with Apple, as Apple's keys would sign its ID tokens: a test key
-// stands in for Apple's, served where better-auth asks for them.
+// Signing in with Apple or Google, as each provider's keys would sign its
+// ID tokens: a test key stands in for both, served where better-auth asks
+// for them.
 const generated = await crypto.subtle.generateKey(
   {
     hash: "SHA-256",
@@ -23,13 +24,45 @@ const exported = await crypto.subtle.exportKey("jwk", pair.publicKey);
 if (exported instanceof ArrayBuffer) {
   throw new TypeError("A JWK was asked for");
 }
-const appleKey = {
+const testKey = {
   alg: "RS256",
   e: exported.e,
   kid: "test-kid",
   kty: "RSA",
   n: exported.n,
 };
+
+/** Where each provider serves its keys. */
+const KEYS = new Set([
+  "https://appleid.apple.com/auth/keys",
+  "https://www.googleapis.com/oauth2/v3/certs",
+]);
+
+export type Provider = "apple" | "google";
+
+/** As UserService's ProviderToken names each. */
+const PROTO_PROVIDER = {
+  apple: "SIGN_IN_PROVIDER_APPLE",
+  google: "SIGN_IN_PROVIDER_GOOGLE",
+} as const;
+
+/** What each provider's ID token says beyond the person and the nonce. */
+const claimsOf = (provider: Provider, sub: string) =>
+  provider === "apple"
+    ? {
+        aud: "app.pochical",
+        email: `${sub}@privaterelay.appleid.com`,
+        email_verified: "true",
+        iss: "https://appleid.apple.com",
+      }
+    : {
+        // As the apps ask: for the Web client, by the iOS client.
+        aud: env.GOOGLE_CLIENT_IDS[0],
+        azp: env.GOOGLE_CLIENT_IDS[1],
+        email: `${sub}@gmail.com`,
+        email_verified: true,
+        iss: "https://accounts.google.com",
+      };
 
 const base64url = (bytes: Uint8Array): string =>
   btoa(String.fromCodePoint(...bytes))
@@ -40,21 +73,19 @@ const base64url = (bytes: Uint8Array): string =>
 const part = (value: unknown): string =>
   base64url(new TextEncoder().encode(JSON.stringify(value)));
 
-/** An ID token as Apple gives the app, for `sub`, with `more` claims. */
+/** An ID token as the provider gives the app, for `sub`, with `more` claims. */
 export const idToken = async (
+  provider: Provider,
   sub: string,
   nonce: string,
   more: Record<string, unknown> = {}
 ): Promise<string> => {
   const now = Math.floor(Date.now() / 1000);
-  const head = part({ alg: "RS256", kid: appleKey.kid });
+  const head = part({ alg: "RS256", kid: testKey.kid });
   const body = part({
-    aud: "app.pochical",
-    email: `${sub}@privaterelay.appleid.com`,
-    email_verified: "true",
+    ...claimsOf(provider, sub),
     exp: now + 600,
     iat: now,
-    iss: "https://appleid.apple.com",
     nonce,
     sub,
     ...more,
@@ -67,35 +98,47 @@ export const idToken = async (
   return `${head}.${body}.${base64url(new Uint8Array(signature))}`;
 };
 
+/** UserService's ProviderToken for `sub`, as the apps send it. */
+export const accountToken = async (
+  provider: Provider,
+  sub: string,
+  nonce: string
+) => ({
+  idToken: await idToken(provider, sub, nonce),
+  nonce,
+  provider: PROTO_PROVIDER[provider],
+});
+
 /**
- * Apple's keys, from the test key; what `more` answers, as Apple's other
- * calls; everything else as it is.
+ * The providers' keys, from the test key; what `more` answers, as Apple's
+ * other calls; everything else as it is.
  */
-export const appleKeys = (
+export const providerKeys = (
   more: (request: Request) => Response | undefined = () => undefined
 ) => {
   const through = globalThis.fetch;
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
     const request = new Request(input, init);
-    if (request.url === "https://appleid.apple.com/auth/keys") {
-      return Response.json({ keys: [appleKey] });
+    if (KEYS.has(request.url)) {
+      return Response.json({ keys: [testKey] });
     }
     return more(request) ?? (await through(request));
   });
 };
 
-/** Links Apple's account to the session's user; the status. */
+/** Links the provider's account to the session's user; the status. */
 export const link = async (
   token: string,
-  appleToken: string,
+  provider: Provider,
+  providerToken: string,
   nonce: string
 ) => {
   const response = await exports.default.fetch(
     `${ORIGIN}/api/auth/link-social`,
     {
       body: JSON.stringify({
-        idToken: { nonce, token: appleToken },
-        provider: "apple",
+        idToken: { nonce, token: providerToken },
+        provider,
       }),
       headers: {
         Authorization: `Bearer ${token}`,

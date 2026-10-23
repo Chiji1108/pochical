@@ -1,6 +1,8 @@
 // Signing in with Apple or Google, so the same data follows a new phone or
 // a second device. The prototype only pretends: nothing leaves the page.
 
+import { sizes } from "@pochical/design/metrics";
+import { googleButton } from "@pochical/design/sign-in";
 import { css, cva } from "@pochical/styled-system/css";
 
 export type AccountProvider = "apple" | "google";
@@ -83,7 +85,7 @@ const providerButton = {
       fontWeight: 600,
       gap: "12px",
       justifyContent: "center",
-      minHeight: "50px",
+      minHeight: `${sizes.signIn}px`,
       textStyle: "callout",
       width: "100%",
     },
@@ -95,9 +97,9 @@ const providerButton = {
           color: "light-dark(#ffffff, #000000)",
         },
         google: {
-          bg: "light-dark(#ffffff, #131314)",
-          border: "1px solid light-dark(#747775, #8e918f)",
-          color: "light-dark(#1f1f1f, #e3e3e3)",
+          bg: `light-dark(${googleButton.light.fill}, ${googleButton.dark.fill})`,
+          border: `1px solid light-dark(${googleButton.light.stroke}, ${googleButton.dark.stroke})`,
+          color: `light-dark(${googleButton.light.text}, ${googleButton.dark.text})`,
         },
       },
     },

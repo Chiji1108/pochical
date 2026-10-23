@@ -49,9 +49,7 @@ enum NotKeptAlert {
 
   static func show() {
     guard !shown, waiting == nil else { return }
-    let scene = UIApplication.shared.connectedScenes.lazy
-      .compactMap { $0 as? UIWindowScene }.first { $0.activationState == .foregroundActive }
-    guard var top = scene?.keyWindow?.rootViewController else {
+    guard let top = UIApplication.shared.topViewController else {
       waiting = NotificationCenter.default.addObserver(
         forName: UIScene.didActivateNotification, object: nil, queue: .main
       ) { _ in
@@ -63,7 +61,6 @@ enum NotKeptAlert {
       }
       return
     }
-    while let presented = top.presentedViewController { top = presented }
     if let moving = top.transitionCoordinator ?? top.navigationControllers.lazy
       .compactMap(\.transitionCoordinator).first
     {

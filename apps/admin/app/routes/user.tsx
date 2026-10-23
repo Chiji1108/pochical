@@ -140,7 +140,7 @@ export default function User({
       <dialog className={dialog} id="suspend" key={String(suspended)}>
         <h2 className={sectionTitle}>このユーザーを停止しますか？</h2>
         <p className={css({ color: "text.secondary" })}>
-          すべての端末でログアウトされ、Apple
+          すべての端末でログアウトされ、Apple や Google
           でもう一度ログインしようとしても断られます。グループやデータは消えず、停止を解除すれば元どおり使えます。匿名のユーザーは、アプリを入れ直すと別の新しいユーザーとして使えてしまいます。
         </p>
         <Form

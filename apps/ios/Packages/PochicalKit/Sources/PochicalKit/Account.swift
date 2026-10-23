@@ -160,12 +160,12 @@ struct SessionKeychain: Sendable {
 /// What AccountSession asks the server, each on the session it names.
 protocol AccountServer: Sendable {
   func signInAnonymously() async throws -> StoredSession
-  func signInApple(idToken: String, nonce: String, on token: String) async throws
-    -> StoredSession
+  func signIn(with account: ProviderToken, on token: String) async throws -> StoredSession
   func signOut(_ token: String) async throws
-  func linkApple(idToken: String, nonce: String, on token: String) async throws -> LinkResult
-  /// Whose the session is, and whether they are still anonymous.
-  func me(_ token: String) async throws -> (userID: String, anonymous: Bool)
+  func link(_ account: ProviderToken, on token: String) async throws -> LinkResult
+  /// Whose the session is, and the provider they are linked to, nil while
+  /// still anonymous.
+  func me(_ token: String) async throws -> (userID: String, linked: LinkedAccount.Provider?)
   func deleteAccount(_ token: String, appleAuthorizationCode: String) async throws(DeletionFailure)
 }
 
@@ -239,15 +239,12 @@ struct Account: AccountServer {
     return try await signedIn(by: request)
   }
 
-  /// Signs in to the user the Apple account is linked to, with its ID token
-  /// (better-auth's `/api/auth/sign-in/social`), on the session `token`.
-  func signInApple(idToken: String, nonce: String, on token: String) async throws
-    -> StoredSession
-  {
+  /// Signs in to the user the provider's account is linked to, with its ID
+  /// token (better-auth's `/api/auth/sign-in/social`), on the session
+  /// `token`.
+  func signIn(with account: ProviderToken, on token: String) async throws -> StoredSession {
     var request = authRequest("api/auth/sign-in/social", token: token)
-    request.httpBody = try JSONSerialization.data(withJSONObject: [
-      "idToken": ["nonce": nonce, "token": idToken], "provider": "apple",
-    ])
+    request.httpBody = try account.socialBody()
     return try await signedIn(by: request)
   }
 
@@ -262,14 +259,12 @@ struct Account: AccountServer {
     }
   }
 
-  /// Links Sign in with Apple's account to the user of the session
-  /// `token`, with its ID token and the nonce it was asked with
-  /// (better-auth's `/api/auth/link-social`).
-  func linkApple(idToken: String, nonce: String, on token: String) async throws -> LinkResult {
+  /// Links the provider's account to the user of the session `token`, with
+  /// its ID token and the nonce it was asked with (better-auth's
+  /// `/api/auth/link-social`).
+  func link(_ account: ProviderToken, on token: String) async throws -> LinkResult {
     var request = authRequest("api/auth/link-social", token: token)
-    request.httpBody = try JSONSerialization.data(withJSONObject: [
-      "idToken": ["nonce": nonce, "token": idToken], "provider": "apple",
-    ])
+    request.httpBody = try account.socialBody()
     let (_, response) = try await send(request)
     switch (response as? HTTPURLResponse)?.statusCode {
     case 200: return .linked
@@ -278,15 +273,16 @@ struct Account: AccountServer {
     }
   }
 
-  func me(_ token: String) async throws -> (userID: String, anonymous: Bool) {
+  func me(_ token: String) async throws -> (userID: String, linked: LinkedAccount.Provider?) {
     let me = try await users.getMe(request: Pochical_V1_GetMeRequest(), headers: bearer(token))
       .result.get()
-    return (me.userID, me.anonymous)
+    return (me.userID, LinkedAccount.Provider(me.provider))
   }
 
   /// Deletes the user of the session `token` and everything of theirs
   /// (spec/sync-protocol.md, Deleting an account), with Sign in with
-  /// Apple's fresh authorization code when the user is linked to Apple.
+  /// Apple's fresh authorization code when the user is linked to Apple,
+  /// empty otherwise.
   func deleteAccount(_ token: String, appleAuthorizationCode: String) async throws(DeletionFailure)
   {
     var request = Pochical_V1_DeleteAccountRequest()
