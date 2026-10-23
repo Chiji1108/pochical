@@ -54,9 +54,9 @@ message WeekPreference {
 
 // "period": シフトの期間, what each page of the calendar holds.
 message PeriodPreference {
-  // The day of the month each page starts on: 1 for the month itself, else
-  // 2 to 28.
-  int32 start = 1;
+  // The day of the month a period starting mid-month starts on, 2 to 28;
+  // 0, its zero, for the month itself (1日〜末日).
+  int32 start_day = 1;
 }
 
 // "heading": the calendar's month heading.

@@ -20,45 +20,45 @@ public  final class PeriodPreference extends
     PeriodPreferenceOrBuilder {
   private PeriodPreference() {
   }
-  public static final int START_FIELD_NUMBER = 1;
-  private int start_;
+  public static final int START_DAY_FIELD_NUMBER = 1;
+  private int startDay_;
   /**
    * <pre>
-   * The day of the month each page starts on: 1 for the month itself, else
-   * 2 to 28.
+   * The day of the month a period starting mid-month starts on, 2 to 28;
+   * 0, its zero, for the month itself (1日〜末日).
    * </pre>
    *
-   * <code>int32 start = 1 [json_name = "start"];</code>
-   * @return The start.
+   * <code>int32 start_day = 1 [json_name = "startDay"];</code>
+   * @return The startDay.
    */
   @java.lang.Override
-  public int getStart() {
-    return start_;
+  public int getStartDay() {
+    return startDay_;
   }
   /**
    * <pre>
-   * The day of the month each page starts on: 1 for the month itself, else
-   * 2 to 28.
+   * The day of the month a period starting mid-month starts on, 2 to 28;
+   * 0, its zero, for the month itself (1日〜末日).
    * </pre>
    *
-   * <code>int32 start = 1 [json_name = "start"];</code>
-   * @param value The start to set.
+   * <code>int32 start_day = 1 [json_name = "startDay"];</code>
+   * @param value The startDay to set.
    */
-  private void setStart(int value) {
+  private void setStartDay(int value) {
     
-    start_ = value;
+    startDay_ = value;
   }
   /**
    * <pre>
-   * The day of the month each page starts on: 1 for the month itself, else
-   * 2 to 28.
+   * The day of the month a period starting mid-month starts on, 2 to 28;
+   * 0, its zero, for the month itself (1日〜末日).
    * </pre>
    *
-   * <code>int32 start = 1 [json_name = "start"];</code>
+   * <code>int32 start_day = 1 [json_name = "startDay"];</code>
    */
-  private void clearStart() {
+  private void clearStartDay() {
 
-    start_ = 0;
+    startDay_ = 0;
   }
 
   public static app.pochical.v1.PeriodPreference parseFrom(
@@ -164,44 +164,44 @@ public  final class PeriodPreference extends
 
     /**
      * <pre>
-     * The day of the month each page starts on: 1 for the month itself, else
-     * 2 to 28.
+     * The day of the month a period starting mid-month starts on, 2 to 28;
+     * 0, its zero, for the month itself (1日〜末日).
      * </pre>
      *
-     * <code>int32 start = 1 [json_name = "start"];</code>
-     * @return The start.
+     * <code>int32 start_day = 1 [json_name = "startDay"];</code>
+     * @return The startDay.
      */
     @java.lang.Override
-    public int getStart() {
-      return instance.getStart();
+    public int getStartDay() {
+      return instance.getStartDay();
     }
     /**
      * <pre>
-     * The day of the month each page starts on: 1 for the month itself, else
-     * 2 to 28.
+     * The day of the month a period starting mid-month starts on, 2 to 28;
+     * 0, its zero, for the month itself (1日〜末日).
      * </pre>
      *
-     * <code>int32 start = 1 [json_name = "start"];</code>
-     * @param value The start to set.
+     * <code>int32 start_day = 1 [json_name = "startDay"];</code>
+     * @param value The startDay to set.
      * @return This builder for chaining.
      */
-    public Builder setStart(int value) {
+    public Builder setStartDay(int value) {
       copyOnWrite();
-      instance.setStart(value);
+      instance.setStartDay(value);
       return this;
     }
     /**
      * <pre>
-     * The day of the month each page starts on: 1 for the month itself, else
-     * 2 to 28.
+     * The day of the month a period starting mid-month starts on, 2 to 28;
+     * 0, its zero, for the month itself (1日〜末日).
      * </pre>
      *
-     * <code>int32 start = 1 [json_name = "start"];</code>
+     * <code>int32 start_day = 1 [json_name = "startDay"];</code>
      * @return This builder for chaining.
      */
-    public Builder clearStart() {
+    public Builder clearStartDay() {
       copyOnWrite();
-      instance.clearStart();
+      instance.clearStartDay();
       return this;
     }
 
@@ -221,7 +221,7 @@ public  final class PeriodPreference extends
       }
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
-            "start_",
+            "startDay_",
           };
           java.lang.String info =
               "\u0000\u0001\u0000\u0000\u0001\u0001\u0001\u0000\u0000\u0000\u0001\u0004";

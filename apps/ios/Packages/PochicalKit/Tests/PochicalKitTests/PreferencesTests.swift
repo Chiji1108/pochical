@@ -51,6 +51,23 @@ import Testing
   #expect(try await database.read { try OutboxEdit.fetchCount($0) } == 0)
 }
 
+@Test func aPreferenceAllAtItsZeroIsKeptAsNoBytes() async throws {
+  // 月と曜日 back in 日本語 with no sky: every field at its zero, which
+  // encodes to no bytes, still a value kept rather than none.
+  let database = try appDatabase()
+  try await database.write { db in
+    var value = Pochical_V1_PreferenceValue()
+    value.key = "heading"
+    value.message = try Pochical_V1_HeadingPreference().serializedData()
+    var change = Pochical_V1_Change()
+    change.cursor = 1
+    change.preference = value
+    try OwnValues.take(change, in: db)
+  }
+  let kept = try await database.read { try PreferenceRow.find("heading").fetchOne($0) }
+  #expect(kept?.value == Data())
+}
+
 @Test func anUnreadablePreferenceLeavesTheDevicesOwn() throws {
   var device = DeviceSettings()
   device.week.start = 1

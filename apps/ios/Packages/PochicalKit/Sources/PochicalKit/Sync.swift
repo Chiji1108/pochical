@@ -12,8 +12,9 @@ public enum Sync {
   /// A device moves its cursors past Changes it cannot read, so after the
   /// update it takes everything again (`takeAllAgainIfOlder`). 3: a
   /// chat line's content as one kind (`ChatLine.content`). 4: the notice
-  /// of a member Pochical's people took out (`REMOVED_BY_POCHICAL`). 5: a
-  /// preference's value as its key's message (`PreferenceValue.value`).
+  /// of a member Pochical's people took out (`REMOVED_BY_POCHICAL`). 5 and
+  /// 6: a preference's value as its key's message, 5 recorded before it
+  /// moved to its own field (`PreferenceValue.message`), never shipped.
   /// `mise run sync:check` fails when `Change`'s messages in proto/ change
   /// while this stays, and its `--write` records each raise in
   /// `sync-wire.json`.

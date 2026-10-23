@@ -76,7 +76,7 @@ extension DeviceSettings {
       (settings, theme: Pochical_V1_ThemePreference) in settings.themeID = theme.id
     },
     PreferencePart("look", \.look.message) { $0.look = try Look($1) },
-    PreferencePart("week", \.week.message) { $0.week = Week($1) },
+    PreferencePart("week", \.week.message) { $0.week = try Week($1) },
     PreferencePart("heading", \.heading.message) { $0.heading = Heading($1) },
     PreferencePart("picture", \.picture.options.message) { $0.picture.options = try MarkOptions($1) },
     PreferencePart("calendarAdd", \.calendarAdd.message) { $0.calendarAdd = CalendarAdd($1) },
@@ -153,8 +153,14 @@ extension Look {
   }
 }
 
+/// A week said to start on a day there is none of.
+struct WeekStartOutOfRange: Error {
+  let start: Int32
+}
+
 extension DeviceSettings.Week {
-  init(_ message: Pochical_V1_WeekPreference) {
+  init(_ message: Pochical_V1_WeekPreference) throws {
+    guard (0...6).contains(message.start) else { throw WeekStartOutOfRange(start: message.start) }
     self.init()
     start = Int(message.start)
     sunday = message.sunday

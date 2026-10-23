@@ -136,9 +136,9 @@ public nonisolated struct Pochical_V1_PeriodPreference: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  /// The day of the month each page starts on: 1 for the month itself, else
-  /// 2 to 28.
-  public var start: Int32 = 0
+  /// The day of the month a period starting mid-month starts on, 2 to 28;
+  /// 0, its zero, for the month itself (1日〜末日).
+  public var startDay: Int32 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -377,7 +377,7 @@ nonisolated extension Pochical_V1_WeekPreference: SwiftProtobuf.Message, SwiftPr
 
 nonisolated extension Pochical_V1_PeriodPreference: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PeriodPreference"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}start\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}start_day\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -385,21 +385,21 @@ nonisolated extension Pochical_V1_PeriodPreference: SwiftProtobuf.Message, Swift
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularInt32Field(value: &self.start) }()
+      case 1: try { try decoder.decodeSingularInt32Field(value: &self.startDay) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if self.start != 0 {
-      try visitor.visitSingularInt32Field(value: self.start, fieldNumber: 1)
+    if self.startDay != 0 {
+      try visitor.visitSingularInt32Field(value: self.startDay, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pochical_V1_PeriodPreference, rhs: Pochical_V1_PeriodPreference) -> Bool {
-    if lhs.start != rhs.start {return false}
+    if lhs.startDay != rhs.startDay {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -12,12 +12,12 @@ public interface PeriodPreferenceOrBuilder extends
 
   /**
    * <pre>
-   * The day of the month each page starts on: 1 for the month itself, else
-   * 2 to 28.
+   * The day of the month a period starting mid-month starts on, 2 to 28;
+   * 0, its zero, for the month itself (1日〜末日).
    * </pre>
    *
-   * <code>int32 start = 1 [json_name = "start"];</code>
-   * @return The start.
+   * <code>int32 start_day = 1 [json_name = "startDay"];</code>
+   * @return The startDay.
    */
-  int getStart();
+  int getStartDay();
 }

@@ -35,29 +35,29 @@ public object PeriodPreferenceKt {
 
     /**
      * ```
-     * The day of the month each page starts on: 1 for the month itself, else
-     * 2 to 28.
+     * The day of the month a period starting mid-month starts on, 2 to 28;
+     * 0, its zero, for the month itself (1日〜末日).
      * ```
      *
-     * `int32 start = 1 [json_name = "start"];`
+     * `int32 start_day = 1 [json_name = "startDay"];`
      */
-    public var start: kotlin.Int
-      @kotlin.jvm.JvmName("getStart")
-        get() = _builder.start
-      @kotlin.jvm.JvmName("setStart")
+    public var startDay: kotlin.Int
+      @kotlin.jvm.JvmName("getStartDay")
+        get() = _builder.startDay
+      @kotlin.jvm.JvmName("setStartDay")
         set(value) {
-        _builder.start = value
+        _builder.startDay = value
       }
     /**
      * ```
-     * The day of the month each page starts on: 1 for the month itself, else
-     * 2 to 28.
+     * The day of the month a period starting mid-month starts on, 2 to 28;
+     * 0, its zero, for the month itself (1日〜末日).
      * ```
      *
-     * `int32 start = 1 [json_name = "start"];`
+     * `int32 start_day = 1 [json_name = "startDay"];`
      */
-    public fun clearStart() {
-      _builder.clearStart()
+    public fun clearStartDay() {
+      _builder.clearStartDay()
     }
   }
 }
