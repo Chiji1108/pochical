@@ -87,7 +87,7 @@ class SyncAccount(
 
   init {
     scope.launch { for (command in commands) handle(command) }
-    network?.watch(lost = { commands.trySend(Command.NetworkLost) }, back = { commands.trySend(Command.NetworkBack) })
+    network?.watch(lost = { commands.trySend(Command.NetworkLost) }, changed = { commands.trySend(Command.NetworkChanged) })
   }
 
   /** The app came to the foreground: signs in if it is not, and opens the sockets. */
@@ -190,7 +190,7 @@ class SyncAccount(
         mutableState.value = AccountState.SessionEnded
       }
       Command.NetworkLost -> current?.clients()?.forEach { it.networkLost() }
-      Command.NetworkBack -> current?.clients()?.forEach { it.networkBack() }
+      Command.NetworkChanged -> current?.clients()?.forEach { it.networkChanged() }
     }
   }
 
@@ -270,7 +270,7 @@ class SyncAccount(
 
     data object NetworkLost : Command
 
-    data object NetworkBack : Command
+    data object NetworkChanged : Command
   }
 
   private companion object {
