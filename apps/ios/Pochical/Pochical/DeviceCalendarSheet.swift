@@ -455,9 +455,9 @@ struct DeviceCalendarSheet: View {
     }
     do {
       try calendars.add(events, of: page, by: meID, to: calendarID)
-      let name = calendars.calendar(calendarID)?.title ?? ""
+      let calendarName = calendars.calendar(calendarID)?.title ?? ""
       withAnimation {
-        done = ("保存しました", "「\(name)」に\(name)の予定を\(events.count)件追加しました。")
+        done = ("保存しました", "「\(calendarName)」に\(name)の予定を\(events.count)件追加しました。")
       }
     } catch {
       ReviewPrompt.troubled = true

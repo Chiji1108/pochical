@@ -620,9 +620,12 @@ export function formatPeriodStart(start: number) {
   return start === 1 ? "1日〜末日" : `${start}日〜翌月${start - 1}日`;
 }
 
-// The days a period may start on: the month's 1st, else 2 to 28, so
-// every month has the day.
-export const periodStarts = Array.from({ length: 28 }, (_, index) => index + 1);
+// The days a period may start on: the month's 1st, else 2 to
+// dayRules.periodLastStart, so every month has the day.
+export const periodStarts = Array.from(
+  { length: dayRules.periodLastStart },
+  (_, index) => index + 1
+);
 
 // 11/1, where room is short.
 export function formatSlash(date: Date) {

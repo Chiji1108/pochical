@@ -586,7 +586,7 @@ const PATTERNS_PAGE_DOC =
 const shared: [string, string, Values][] = [
   [
     "Days",
-    "What a day's values mean (design/src/days.ts): noShift is a day cleared on purpose, unlike no pattern, which follows the repeating order.",
+    "What a day's values mean (design/src/days.ts): noShift is a day cleared on purpose, unlike no pattern, which follows the repeating order; periodLastStart and periodFirstPick bound シフトの期間.",
     dayRules,
   ],
   ["Invite", "What an invitation code is made of.", inviteRules],

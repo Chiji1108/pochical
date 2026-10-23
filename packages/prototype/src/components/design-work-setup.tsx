@@ -1,3 +1,4 @@
+import { dayRules } from "@pochical/design/days";
 import { rosterTemplates, rotationTemplates } from "@pochical/design/patterns";
 import type { JobTemplate } from "@pochical/design/patterns";
 import { css, cva, cx } from "@pochical/styled-system/css";
@@ -683,7 +684,7 @@ function PeriodDayStep({
   onBack: () => void;
   onFinish: (periodStart: number) => void;
 }) {
-  const [start, setStart] = useState(15);
+  const [start, setStart] = useState<number>(dayRules.periodFirstPick);
   return (
     <>
       <StepHeader

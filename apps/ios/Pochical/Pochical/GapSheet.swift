@@ -11,6 +11,9 @@ struct GapSheet: View {
   @Environment(\.dismiss) private var dismiss
   @Environment(Settings.self) private var settings
   let days: [Day]
+  /// The page's first day: a month's 1st after it, of a シフトの期間, is
+  /// dated 11/1(日), as on the page.
+  let pageFirst: Day
   /// The patterns that count as off; with more than one, chips pick
   /// which fills the days, the first to begin with.
   let offPatterns: [Pattern]
@@ -28,10 +31,11 @@ struct GapSheet: View {
   @State private var blank = false
 
   init(
-    days: [Day], offPatterns: [Pattern], picked: Binding<PatternID?>, openedLook: MarkOptions,
-    onFill: @escaping (Pattern) -> Bool
+    days: [Day], pageFirst: Day, offPatterns: [Pattern], picked: Binding<PatternID?>,
+    openedLook: MarkOptions, onFill: @escaping (Pattern) -> Bool
   ) {
     self.days = days
+    self.pageFirst = pageFirst
     _picked = picked
     self.offPatterns = offPatterns
     self.onFill = onFill
@@ -51,9 +55,7 @@ struct GapSheet: View {
           // The days, as /design's tags: words to read, not to press.
           WrappingRow(spacing: 8) {
             ForEach(days, id: \.self) { day in
-              // A month's 1st past the first month's days, of a シフトの
-              // 期間, is dated 11/1(日), as on the page.
-              let turns = day.day == 1 && day.month != days.first?.month
+              let turns = day.day == 1 && day != pageFirst
               Text(turns ? "\(day.slashText)(\(day.weekdayName))" : day.dayWeekdayText)
                 .font(.footnote)
                 .foregroundStyle(colors.textSecondary)

@@ -87,7 +87,7 @@ enum PeriodQuestion {
   static let dayTitle = "何日から始まりますか？"
   static let dayDescription = "シフト表の最初の日を選んでください。"
   /// The day picked to begin with.
-  static let firstPick = 15
+  static let firstPick = Days.periodFirstPick
 }
 
 /// The day a period starting mid-month starts on, 2 to 28, with the

@@ -27,6 +27,8 @@ struct CalendarScreen: View {
   /// The day ポチポチ入力 enters next, while entering.
   @State private var entering: Day?
   @State private var gaps: [Day] = []
+  /// The first day of the page the gaps are on.
+  @State private var gapsPageFirst = Day.today
   /// The pattern picked in the gap sheet to fill them with.
   @State private var gapFill: PatternID?
   /// What a tap on a day does, for every day of the pages.
@@ -207,9 +209,14 @@ struct CalendarScreen: View {
         entering = firstBlankDay(in: page, days: pageDays(page, currentCalendar))
       }
     }
-    // A シフトの期間 changed in 設定 turns to the page holding today.
+    // A シフトの期間 changed, here or on another device, turns to the page
+    // holding today, and entering goes on from that page's first blank day.
     .onChange(of: period) {
       shownMonth = nil
+      if entering != nil {
+        let page = period.page(thisMonth)
+        entering = firstBlankDay(in: page, days: pageDays(page, currentCalendar))
+      }
     }
     // A widget's day: its month, the day open in its week; from a day
     // already open, as 今週 goes to today's.
@@ -289,7 +296,7 @@ struct CalendarScreen: View {
       let page = period.page(month)
       let days = pageDays(page, calendar)
       MonthBreakdownSheet(
-        month: month, period: period.byPeriod ? page : nil,
+        page: page, byPeriod: period.byPeriod,
         counts: calendar.patterns.map { pattern in
           (pattern, days.values.count { $0.shift == pattern.id })
         },
@@ -297,8 +304,7 @@ struct CalendarScreen: View {
     }
     .sheet(item: $picturing, id: \.self) { month in
       MonthPicturePage(
-        month: month, period: period.byPeriod ? period.page(month) : nil,
-        calendar: currentCalendar)
+        page: period.page(month), byPeriod: period.byPeriod, calendar: currentCalendar)
     }
     .sheet(item: $addingToCalendar, id: \.self) { month in
       DeviceCalendarSheet(
@@ -593,6 +599,7 @@ struct CalendarScreen: View {
       return
     }
     let page = Period(holding: day, start: period.start)
+    gapsPageFirst = page.first
     gaps = gapDays(in: page, days: pageDays(page, calendar))
   }
 
@@ -602,7 +609,7 @@ struct CalendarScreen: View {
     let offPatterns = calendar.patterns.inUse.filter(\.countsAsOff)
     guard !offPatterns.isEmpty, !gaps.isEmpty else { return nil }
     return GapSheet(
-      days: gaps, offPatterns: offPatterns, picked: $gapFill,
+      days: gaps, pageFirst: gapsPageFirst, offPatterns: offPatterns, picked: $gapFill,
       openedLook: settings.device.look.options
     ) { off in
       keep { db, now in try OwnValues.fill(gaps, with: off.id, now: now, in: db) }

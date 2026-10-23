@@ -169,8 +169,8 @@ struct Onboarding: View {
     }
   }
 
-  /// The patterns chosen: a roster's work, or a weekly order, end the
-  /// questions; others go on to their order's first day.
+  /// The patterns chosen: a weekly order ends the questions, an order
+  /// goes on to its first day, and a roster's work to its period.
   private func choose(_ template: JobTemplate, patterns: [PatternID]) {
     if let sequence = template.sequence, template.weekly {
       // A week starts on Sunday: its order lines up with the weekdays.
@@ -183,17 +183,21 @@ struct Onboarding: View {
     }
   }
 
-  /// A roster's work begins, its pages the period its shifts come for.
+  /// A roster's work begins, its pages the period its shifts come for,
+  /// once the patterns are kept, as 新しい仕事にする sets it.
   private func start(roster patterns: [PatternID], period: ShiftPeriod) {
-    settings.device.period = period
-    begin(patterns, sequence: [], anchor: .today, write: write)
+    if begin(patterns, sequence: [], anchor: .today, write: write) {
+      settings.device.period = period
+    }
   }
 }
 
-/// The patterns chosen become the person's, and the order repeats.
+/// The patterns chosen become the person's, and the order repeats; true
+/// once kept.
+@discardableResult
 @MainActor private func begin(
   _ patternIDs: [PatternID], sequence: [PatternID], anchor: Day, write: WriteAction
-) {
+) -> Bool {
   let incoming = readyPatterns(patternIDs)
   let now = Int64(Date.now.timeIntervalSince1970 * 1000)
   let kept = write {
@@ -201,8 +205,9 @@ struct Onboarding: View {
       with: incoming, sequence: sequence, anchor: anchor, today: .today,
       holidayCountry: HolidayCountry.current, now: now, in: $0)
   }
-  guard kept else { return }
+  guard kept else { return false }
   ReminderOffer.setUpOrder(sequence)
+  return true
 }
 
 // MARK: Steps

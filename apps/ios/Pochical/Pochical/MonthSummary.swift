@@ -98,9 +98,9 @@ struct MonthBreakdownSheet: View {
   @Environment(\.english) private var english
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
-  let month: Day
-  /// A シフトの期間's page, its 期間の内訳.
-  var period: Period?
+  /// The page's days, a month's or a シフトの期間's, its 期間の内訳.
+  let page: Period
+  let byPeriod: Bool
   /// Each pattern in the person's order, with its days in the month.
   let counts: [(pattern: Pattern, days: Int)]
   let unfilled: Int
@@ -127,15 +127,14 @@ struct MonthBreakdownSheet: View {
           }
         } footer: {
           Text(
-            period.map { "この期間は全\($0.days.count)日" }
-              ?? "この月は全\(month.daysOfMonth.count)日")
+            "\(byPeriod ? "この期間" : "この月")は全\(page.days.count)日")
             .frame(maxWidth: .infinity)
         }
         .settingsRows()
       }
       .settingsList()
-      .navigationTitle(period == nil ? "今月の内訳" : "期間の内訳")
-      .navigationSubtitle(period?.yearText ?? month.monthWithYear(english: english))
+      .navigationTitle(byPeriod ? "期間の内訳" : "今月の内訳")
+      .navigationSubtitle(byPeriod ? page.yearText : page.month.monthWithYear(english: english))
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {

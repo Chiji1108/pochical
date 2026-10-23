@@ -1,3 +1,5 @@
+import PochicalDesign
+
 /// A page of the calendar's days (spec/calendar.md, The shift period): a
 /// month, or with a シフトの期間 the period starting on `start` (2 to 28) in
 /// a month and running to the day before it a month on. A page is named by
@@ -53,7 +55,7 @@ public struct Period: Hashable, Sendable {
 /// month each page starts on, 1 for the month itself, else 2 to 28, so
 /// every month has the day.
 public struct ShiftPeriod: Codable, Equatable, Sendable {
-  public static let starts = Array(1...28)
+  public static let starts = Array(1...Days.periodLastStart)
 
   public var start = 1
 

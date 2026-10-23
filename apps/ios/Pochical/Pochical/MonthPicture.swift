@@ -12,10 +12,10 @@ struct MonthPicturePage: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.colorScheme) private var colorScheme
   @Environment(\.dismiss) private var dismiss
-  let month: Day
-  /// A シフトの期間's page, which the picture holds rather than the month
-  /// (spec/calendar.md, The shift period).
-  var period: Period?
+  /// The page's days, a month's or a シフトの期間's, the period named by
+  /// its days (spec/calendar.md, The shift period).
+  let page: Period
+  let byPeriod: Bool
   let calendar: OwnCalendar
   @State private var notice: String?
   /// Saves and copies done, each felt as it is (spec/haptics.md).
@@ -135,7 +135,7 @@ struct MonthPicturePage: View {
 
   /// The month, or the period, as its picture is shared and read.
   private var name: String {
-    period?.fullText ?? month.yearMonthText
+    byPeriod ? page.fullText : page.month.yearMonthText
   }
 
   /// 共有 and 保存 under the page.
@@ -183,7 +183,7 @@ struct MonthPicturePage: View {
     var look = settings.device.look
     look.options = settings.device.picture.options
     return MonthPicture(
-      page: period ?? Period(of: month, start: 1), byPeriod: period != nil, calendar: calendar,
+      page: page, byPeriod: byPeriod, calendar: calendar,
       week: settings.device.week)
       .environment(\.themeColors, settings.device.theme.colors(scheme))
       .environment(\.colorScheme, scheme)

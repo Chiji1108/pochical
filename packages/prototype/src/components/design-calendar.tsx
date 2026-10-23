@@ -1,7 +1,7 @@
 import { css, cva } from "@pochical/styled-system/css";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { motion, useMotionValue } from "motion/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   addDays,
@@ -18,6 +18,7 @@ import {
   isSameMonth,
   monthAfter,
   nextDayOf,
+  pageMonthOf,
   selectedAfter,
   withNote,
   withShiftEntered,
@@ -143,6 +144,18 @@ export function DesignCalendar({
   const page = pages.periodOf(month);
   const dates = pages.datesOf(month);
   const pageDays = daysOfPeriod(page);
+  // A シフトの期間 changed, or loaded with the saved settings, turns to the
+  // page holding today, as the apps open on it.
+  useEffect(
+    () =>
+      useSettings.subscribe((state, previous) => {
+        const start = state.device.periodStart;
+        if (start !== previous.device.periodStart) {
+          setMonth(pageMonthOf(designToday, start));
+        }
+      }),
+    [setMonth]
+  );
   const daysOffIn = (days: Date[]) =>
     days.filter((date) => {
       const shift = schedule[dateKey(date)]?.shift;
@@ -586,6 +599,7 @@ export function DesignCalendar({
             label: pattern.name,
           }))}
         days={gapDays}
+        pageFirst={page.first}
         onFill={fillGaps}
         onPick={setGapFill}
         onBlankOff={(key) => {

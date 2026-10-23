@@ -292,8 +292,9 @@ struct JobChangePage: View {
     withAnimation { steps.append(step) }
   }
 
-  /// The patterns chosen: a roster's work, or a weekly order, end the
-  /// questions; others go on to building their order or its first day.
+  /// The patterns chosen: a weekly order ends the questions, an order goes
+  /// on to building it or its first day, and a roster's work to its
+  /// period.
   private func choose(_ template: JobTemplate, patterns: [PatternID]) {
     if let order = template.sequence, template.weekly {
       // A week starts on Sunday: its order lines up with the weekdays.

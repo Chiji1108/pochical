@@ -31,6 +31,9 @@ const gap = {
 export type GapSheetProps = {
   // The blank days to fill.
   days: Date[];
+  // The page's first day: a month's 1st after it, of a シフトの期間, is
+  // dated 11/1(日), as on the page.
+  pageFirst?: Date;
   // The person's patterns that count as a day off, in their order; it is
   // asked only with one.
   choices: OffChoice[];
@@ -88,6 +91,7 @@ export function GapSheetPreview(props: GapSheetProps) {
 
 function GapSheetBody({
   days,
+  pageFirst,
   choices,
   onFill,
   onBlankOff,
@@ -106,9 +110,9 @@ function GapSheetBody({
           <ChipGroup as="ul" className={spaced}>
             {days.map((day) => (
               <Tag as="li" key={dateKey(day)}>
-                {/* A month's 1st past the first month's days, of a シフトの
-                    期間, is dated 11/1(日), as on the page. */}
-                {day.getDate() === 1 && day.getMonth() !== days[0]?.getMonth()
+                {day.getDate() === 1 &&
+                pageFirst !== undefined &&
+                dateKey(day) !== dateKey(pageFirst)
                   ? formatSlash(day)
                   : `${day.getDate()}日`}
                 ({weekdayNames[day.getDay()]})
