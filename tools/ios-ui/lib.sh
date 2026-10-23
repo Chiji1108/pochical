@@ -9,10 +9,13 @@
 # `derived` (the derived data) and `server_log` (where the server writes).
 
 export POCHICAL_DEV_SERVER=${POCHICAL_DEV_SERVER:-http://localhost:8787}
+[[ $POCHICAL_DEV_SERVER =~ ^http://localhost:([0-9]+)$ ]] ||
+  { echo "POCHICAL_DEV_SERVER is not http://localhost:<port>: $POCHICAL_DEV_SERVER" >&2; exit 1; }
+port=${BASH_REMATCH[1]}
 server=""
 
 start_server() {
-  (cd "$root" && exec mise run server -- --port "${POCHICAL_DEV_SERVER##*:}" >>"$server_log" 2>&1) &
+  (cd "$root" && exec mise run server -- --port "$port" >>"$server_log" 2>&1) &
   server=$!
   until curl -s -o /dev/null "$POCHICAL_DEV_SERVER"; do
     kill -0 "$server" 2>/dev/null || { echo "the server did not start: $server_log" >&2; exit 1; }

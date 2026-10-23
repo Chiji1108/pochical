@@ -58,9 +58,12 @@ description = "Fail if the Changes the iOS app reads changed without raising Syn
 run = ["bun test tools/sync-schema", "bun tools/sync-schema/check.ts"]
 
 [tasks.server]
-description = "Run the Workers dev server, on :8787 or the port given: [--port <port>]"
-usage = 'flag "--port <port>" default="8787"'
-run = "bun run --cwd apps/server dev --port {{usage.port}} --var BETTER_AUTH_URL:http://localhost:{{usage.port}}"
+description = "Run the Workers dev server: [--port <port>, 8787 by default] [more wrangler dev flags]"
+usage = '''
+flag "--port <port>" default="8787"
+arg "[wrangler]..." help="passed on to wrangler dev" var=#true
+'''
+run = 'bun run --cwd apps/server dev --port {{usage.port}} --var BETTER_AUTH_URL:http://localhost:{{usage.port}} {{usage.wrangler | join(sep=" ")}}'
 
 [tasks.admin]
 description = "Run the admin site's dev server, beside mise run server"

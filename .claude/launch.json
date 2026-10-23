@@ -26,7 +26,7 @@
     {
       "name": "server",
       "runtimeExecutable": "sh",
-      "runtimeArgs": ["-c", "exec mise run server -- --port 8787"],
+      "runtimeArgs": ["-c", "exec mise run server"],
       "port": 8787
     },
     {
