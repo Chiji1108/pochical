@@ -1719,7 +1719,8 @@ const REPORT_AROUND = 3;
  * line with the few around it, as JSON, each with its writer's name, its
  * words with mentions as names, and the reported one marked; or a
  * member's name. Null when the reporter cannot read the line or reports
- * themselves.
+ * themselves, and for a line with nothing of anyone's in it: one taken
+ * back, as every line of a deleted account is, or the app's notice.
  */
 export const reportContext = (
   db: DrizzleSqliteDODatabase,
@@ -1741,6 +1742,8 @@ export const reportContext = (
   const line = lineAt(db, target.threadId, BigInt(target.seq));
   if (
     line === undefined ||
+    line.content.kind === "unsent" ||
+    line.content.kind === "notice" ||
     !mayRead(target.threadId, reporterId) ||
     line.authorId === reporterId ||
     line.hiddenFrom === reporterId

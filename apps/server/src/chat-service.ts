@@ -2,6 +2,7 @@ import { create } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
 import type { ConnectRouter } from "@connectrpc/connect";
 import { env, waitUntil } from "cloudflare:workers";
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { reports } from "./db/schema";
@@ -15,7 +16,7 @@ import { linkPreview, mayFetch } from "./link-preview";
 import { isMemberOf } from "./membership";
 import { overLimit } from "./rate-limits";
 import { requireUser } from "./session";
-import { tellStaffOfReport } from "./slack";
+import { slackSetUp, tellStaffOfReport } from "./slack";
 
 /** Each reason as a report keeps it. */
 const REASONS: Partial<Record<ReportReason, string>> = {
@@ -24,6 +25,21 @@ const REASONS: Partial<Record<ReportReason, string>> = {
   [ReportReason.EXPLICIT]: "explicit",
   [ReportReason.IMPERSONATION]: "impersonation",
   [ReportReason.OTHER]: "other",
+};
+
+/** A report told in Slack, its message kept to go with it. */
+const postReport = async (
+  id: string,
+  report: Parameters<typeof tellStaffOfReport>[2]
+): Promise<void> => {
+  const slackTs = await tellStaffOfReport(env, id, report);
+  if (slackTs !== undefined) {
+    await drizzle(env.DB)
+      .update(reports)
+      .set({ slackTs })
+      .where(eq(reports.id, id))
+      .run();
+  }
 };
 
 export const registerChatService = (router: ConnectRouter): void => {
@@ -61,21 +77,23 @@ export const registerChatService = (router: ConnectRouter): void => {
       if (reported === null) {
         throw new ConnectError("Nothing to report", Code.NotFound);
       }
+      const id = crypto.randomUUID();
       await drizzle(env.DB)
         .insert(reports)
         .values({
           context: reported.context,
           createdAt: new Date(),
           groupId,
-          id: crypto.randomUUID(),
+          id,
           reason: why,
           reporterId: user.id,
           seq: target.case === "line" ? Number(target.value.seq) : null,
+          slackTried: slackSetUp(env),
           targetId: reported.targetId,
           threadId: target.case === "line" ? target.value.threadId : null,
         })
         .run();
-      waitUntil(tellStaffOfReport(env, { ...reported, why }));
+      waitUntil(postReport(id, { ...reported, why }));
       return create(ReportResponseSchema, {});
     },
   });

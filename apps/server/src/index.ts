@@ -1,6 +1,7 @@
 import { createConnectRouter } from "@connectrpc/connect";
 import { createFetchHandler } from "@connectrpc/connect/protocol";
 
+import { eraseNotedSlackThreads } from "./account-deletion";
 import { registerChatService } from "./chat-service";
 import { registerGroupService } from "./group-service";
 import { registerInviteService } from "./invite-service";
@@ -20,6 +21,7 @@ import {
   SUPPORT_PHOTO_PATH,
 } from "./photos";
 import { tooManySignIns } from "./rate-limits";
+import { eraseDueReports } from "./report-retention";
 import { getAuth, sessionUser } from "./session";
 import type { SessionUser } from "./session";
 import { slackEvents } from "./slack-events";
@@ -262,5 +264,22 @@ export default {
       (await pictureRequest(request, env, pathname)) ??
       new Response("Not found", { status: 404 })
     );
+  },
+  // Daily (`triggers.crons` in wrangler.jsonc): the reports whose year
+  // after an account's deletion is up, and what Slack has not yet taken of
+  // erasing deleted accounts' chat threads.
+  async scheduled(controller, env) {
+    const now = new Date(controller.scheduledTime);
+    // Each goes on should the other fail; a failure fails the run, logged.
+    const runs = await Promise.allSettled([
+      eraseDueReports(env, now),
+      eraseNotedSlackThreads(env, now),
+    ]);
+    const failed = runs.flatMap((run): unknown[] =>
+      run.status === "rejected" ? [run.reason] : []
+    );
+    if (failed.length > 0) {
+      throw new AggregateError(failed, "A daily sweep failed");
+    }
   },
 } satisfies ExportedHandler<Env>;

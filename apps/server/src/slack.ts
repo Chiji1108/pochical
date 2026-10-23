@@ -3,10 +3,10 @@
 // new reports are posted with the way to the admin site. Without the
 // secrets nothing is posted and no reply is taken; Slack failing never
 // fails what the user did.
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, notExists, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
-import { supportChats } from "./db/schema";
+import { erasingSlackThreads, supportChats } from "./db/schema";
 import { photoKey } from "./photos";
 import { photoWords, supportPlace } from "./support-lines";
 import type { SupportLine } from "./support-lines";
@@ -155,7 +155,7 @@ export const signedBySlack = async (
 };
 
 /** Whether this server posts to Slack: not on a computer without it. */
-const slackSetUp = (env: Env): boolean =>
+export const slackSetUp = (env: Env): boolean =>
   slackSecret(env.SLACK_BOT_TOKEN) !== "" &&
   slackSecret(env.SLACK_CHANNEL_ID) !== "";
 
@@ -439,21 +439,16 @@ const CLOCK_SKEW_S = 60;
 const LOOK_PAGE = 200;
 
 /**
- * The message `matches` finds in the channel (conversations.history) or in
- * `thread` (conversations.replies), posted since `since` or a little
- * before; undefined when there is none. For a retry after Slack's answer
- * to a post was lost, which may have been taken all the same: reading
- * needs channels:history or groups:history, which the message event the
- * app takes replies by needs too.
+ * The messages a conversations.* method gives for `args`, with their
+ * metadata, page after page.
+ * @yields {Record<string, unknown>[]} Each page's messages.
+ * @throws {SlackRefusedError} When Slack refuses a page.
  */
-const findPosted = async (
+const messagePages = async function* messagePages(
   env: Env,
-  since: Date,
-  thread: string | null,
-  matches: (message: Record<string, unknown>) => boolean
-): Promise<string | undefined> => {
-  const method =
-    thread === null ? "conversations.history" : "conversations.replies";
+  method: string,
+  args: Record<string, unknown>
+): AsyncGenerator<Record<string, unknown>[]> {
   let cursor = "";
   do {
     // oxlint-disable-next-line no-await-in-loop -- page after page
@@ -463,27 +458,67 @@ const findPosted = async (
       {
         include_all_metadata: true,
         limit: LOOK_PAGE,
-        oldest: (since.getTime() / 1000 - CLOCK_SKEW_S).toFixed(6),
-        ...(thread === null ? {} : { ts: thread }),
+        ...args,
         ...(cursor === "" ? {} : { cursor }),
       },
-      "a look for a line",
+      "a look for messages",
       true
     );
     const messages: unknown[] = Array.isArray(page.messages)
       ? page.messages
       : [];
-    const found = messages.find(
-      (message) => isRecord(message) && matches(message)
-    );
-    const ts = isRecord(found) ? stringOf(found.ts) : undefined;
-    if (ts !== undefined) {
-      return ts;
-    }
+    yield messages.filter(isRecord);
     const next = page.response_metadata;
     cursor = (isRecord(next) ? stringOf(next.next_cursor) : undefined) ?? "";
   } while (cursor !== "");
+};
+
+/**
+ * The message `matches` finds in the channel (conversations.history) or in
+ * `thread` (conversations.replies), posted since `since` or a little
+ * before, and by `until` or a little after when given; undefined when
+ * there is none. For a retry after Slack's answer to a post was lost,
+ * which may have been taken all the same: reading needs channels:history
+ * or groups:history, which the message event the app takes replies by
+ * needs too.
+ */
+const findPosted = async (
+  env: Env,
+  since: Date,
+  thread: string | null,
+  matches: (message: Record<string, unknown>) => boolean,
+  until?: Date
+): Promise<string | undefined> => {
+  const pages = messagePages(
+    env,
+    thread === null ? "conversations.history" : "conversations.replies",
+    {
+      oldest: (since.getTime() / 1000 - CLOCK_SKEW_S).toFixed(6),
+      ...(until === undefined
+        ? {}
+        : { latest: (until.getTime() / 1000 + CLOCK_SKEW_S).toFixed(6) }),
+      ...(thread === null ? {} : { ts: thread }),
+    }
+  );
+  for await (const messages of pages) {
+    const ts = stringOf(messages.find(matches)?.ts);
+    if (ts !== undefined) {
+      return ts;
+    }
+  }
   return undefined;
+};
+
+/**
+ * Slack's warnings on a post logged: it takes a post whose metadata it
+ * finds wrong without the metadata, by which the post is found again.
+ */
+const warnOfPost = (posted: Record<string, unknown>, what: string): void => {
+  const said = posted.response_metadata;
+  const warnings = isRecord(said) ? said.warnings : undefined;
+  if (Array.isArray(warnings) && warnings.length > 0) {
+    console.warn(`Slack warned of ${what}`, warnings);
+  }
 };
 
 /**
@@ -504,11 +539,7 @@ const postForRelay = async (
     { ...args, metadata: lineMetadata(line) },
     what
   );
-  const said = posted.response_metadata;
-  const warnings = isRecord(said) ? said.warnings : undefined;
-  if (Array.isArray(warnings) && warnings.length > 0) {
-    console.warn("Slack warned of a relay post", warnings);
-  }
+  warnOfPost(posted, "a relay post");
   const ts = stringOf(posted.ts);
   if (ts === undefined) {
     throw new SlackRefusedError(what, passing("no_ts"));
@@ -550,13 +581,37 @@ const keepThread = async (
   userId: string,
   ts: string
 ): Promise<void> => {
-  // Two first lines at once keep the thread the first kept.
-  await drizzle(env.DB)
-    .update(supportChats)
-    .set({ slackThreadTs: ts })
-    .where(
-      and(eq(supportChats.userId, userId), isNull(supportChats.slackThreadTs))
-    );
+  const db = drizzle(env.DB);
+  // Two first lines at once keep the thread the first kept. A chat erased
+  // as its account went while the thread was being posted has no row to
+  // keep it on, so the thread is noted to be erased instead.
+  await db.batch([
+    db
+      .update(supportChats)
+      .set({ slackThreadTs: ts })
+      .where(
+        and(eq(supportChats.userId, userId), isNull(supportChats.slackThreadTs))
+      ),
+    db
+      .insert(erasingSlackThreads)
+      .select(
+        db
+          .select({
+            notedAt: sql<number>`${Date.now()}`.as("noted_at"),
+            threadTs: sql<string>`${ts}`.as("thread_ts"),
+          })
+          .from(sql`(select 1)`)
+          .where(
+            notExists(
+              db
+                .select({ userId: supportChats.userId })
+                .from(supportChats)
+                .where(eq(supportChats.userId, userId))
+            )
+          )
+      )
+      .onConflictDoNothing(),
+  ]);
 };
 
 /** A chat's thread, started by the user's first line. */
@@ -917,12 +972,40 @@ const reportLinesOf = (context: string): string[] => {
 };
 
 /**
- * A member's report, as the admin site keeps it: why, the group, who
+ * The metadata a report's message carries, as a relay post's does: the
+ * report it is, by which the message is found again should Slack's answer
+ * to the post be lost.
+ */
+const REPORT_EVENT = "pochical_report";
+
+const isReportMessage =
+  (id: string) =>
+  (message: Record<string, unknown>): boolean => {
+    const { metadata } = message;
+    return (
+      isRecord(metadata) &&
+      metadata.event_type === REPORT_EVENT &&
+      isRecord(metadata.event_payload) &&
+      metadata.event_payload.report_id === id
+    );
+  };
+
+/**
+ * How long after a report is made its message may be posted: the post is
+ * tried in the report's own request, which the runtime ends 30 seconds
+ * after answering it (waitUntil).
+ */
+const REPORT_POST_WITHIN_MS = 30_000;
+
+/**
+ * A member's report `id`, as the admin site keeps it: why, the group, who
  * reported whom, and for a line, it and the few around it, the reported
- * one marked; with the way to the admin site.
+ * one marked; with the way to the admin site. The message posted, if
+ * Slack took it and said which.
  */
 export const tellStaffOfReport = async (
   env: Env,
+  id: string,
   report: {
     why: string;
     groupName: string;
@@ -930,10 +1013,11 @@ export const tellStaffOfReport = async (
     targetName: string;
     context: string;
   }
-): Promise<void> => {
+): Promise<string | undefined> => {
   const lines = reportLinesOf(report.context);
   const what = lines.length === 0 ? "メンバーを通報" : "メッセージを通報";
-  await slackCall(env, "chat.postMessage", {
+  const posted = await slackCall(env, "chat.postMessage", {
+    metadata: { event_payload: { report_id: id }, event_type: REPORT_EVENT },
     text: [
       `新しい通報：${REASON_WORDS[report.why] ?? report.why}（${what}）`,
       `グループ：${toSlackText(report.groupName)}`,
@@ -942,18 +1026,205 @@ export const tellStaffOfReport = async (
       `<${ADMIN_SITE}/reports|管理サイトで開く>`,
     ].join("\n"),
   });
+  if (posted !== null) {
+    warnOfPost(posted, "a report post");
+  }
+  return stringOf(posted?.ts);
 };
 
 /**
- * The user's account is deleted (by them, or by 全消去): said in their
- * chat's thread, whose lines are gone from the app and the admin site.
+ * A call to Slack that is done once Slack takes it or says that what it
+ * acts on is already gone (`gone`); SlackRefusedError thrown otherwise.
  */
-export const tellStaffOfDeletion = async (
+const settle = async (
+  env: Env,
+  method: string,
+  args: Record<string, unknown>,
+  gone: readonly string[]
+): Promise<void> => {
+  const answer = await askSlack(env, method, args);
+  if ("refused" in answer && !gone.includes(answer.refused.why)) {
+    throw new SlackRefusedError(method, answer.refused);
+  }
+};
+
+/**
+ * Whether a report's message is gone from Slack, as the report goes:
+ * deleted by the ts the report kept; else, for a report whose post was
+ * tried, found first by its metadata among the messages posted while its
+ * request ran, and deleted, a report with none found having none; and for
+ * one never to be posted, none to begin with. False while Slack does not
+ * answer or delete it, for the next sweep to try again.
+ */
+export const eraseReportPost = async (
+  env: Env,
+  report: {
+    id: string;
+    createdAt: Date;
+    slackTried: boolean;
+    slackTs: string | null;
+  }
+): Promise<boolean> => {
+  if (!report.slackTried) {
+    return true;
+  }
+  try {
+    const ts =
+      report.slackTs ??
+      (await findPosted(
+        env,
+        report.createdAt,
+        null,
+        isReportMessage(report.id),
+        new Date(report.createdAt.getTime() + REPORT_POST_WITHIN_MS)
+      ));
+    if (ts !== undefined) {
+      await settle(env, "chat.delete", { ts }, ["message_not_found"]);
+    }
+    return true;
+  } catch (error) {
+    if (error instanceof SlackRefusedError) {
+      return false;
+    }
+    throw error;
+  }
+};
+
+/**
+ * What a deleted account's chat thread keeps of the app's posts: its
+ * first message, in place of the user's words, saying the account was
+ * deleted, for Pochical's people reading their own replies under it.
+ */
+const DELETED_EVENT = "pochical_account_deleted";
+
+const DELETED_WORDS =
+  "（このユーザーのアカウントは削除されました。ユーザーのメッセージと写真は、アプリ・管理サイト・Slackから削除されています）";
+
+/**
+ * Every message of `thread` once, its first included, which Slack gives
+ * again on every page (conversations.replies); none for a thread Slack no
+ * longer has.
+ */
+const threadMessages = async (
   env: Env,
   thread: string
+): Promise<Record<string, unknown>[]> => {
+  const byTs = new Map<unknown, Record<string, unknown>>();
+  try {
+    for await (const messages of messagePages(env, "conversations.replies", {
+      ts: thread,
+    })) {
+      for (const message of messages) {
+        byTs.set(message.ts, message);
+      }
+    }
+  } catch (error) {
+    if (
+      error instanceof SlackRefusedError &&
+      error.refusal.why === "thread_not_found"
+    ) {
+      return [];
+    }
+    throw error;
+  }
+  return [...byTs.values()];
+};
+
+/** The app's bot and its user, as Slack names them for its token. */
+type SlackApp = { bot?: string; user?: string };
+
+/**
+ * What the app put on one message of a deleted account's chat thread
+ * gone: the message itself when the app posted it (the thread's first
+ * said as deleted instead, its metadata naming no one), else the user's
+ * reactions the app put on it (reactions.remove); then the files the app
+ * uploaded with it, the user's photos (files.delete).
+ */
+const eraseAppPartOf = async (
+  env: Env,
+  app: SlackApp,
+  thread: string,
+  message: Record<string, unknown>
 ): Promise<void> => {
-  await slackCall(env, "chat.postMessage", {
-    text: "（このユーザーのアカウントは削除されました。このチャットはアプリと管理サイトから消えています）",
-    thread_ts: thread,
-  });
+  const { metadata, ts } = message;
+  if (typeof ts !== "string") {
+    return;
+  }
+  const byApp =
+    (app.user !== undefined && message.user === app.user) ||
+    (app.bot !== undefined && message.bot_id === app.bot);
+  if (byApp && ts !== thread) {
+    await settle(env, "chat.delete", { ts }, ["message_not_found"]);
+  } else if (byApp) {
+    if (!isRecord(metadata) || metadata.event_type !== DELETED_EVENT) {
+      await settle(
+        env,
+        "chat.update",
+        {
+          blocks: [],
+          metadata: { event_payload: {}, event_type: DELETED_EVENT },
+          text: DELETED_WORDS,
+          ts,
+        },
+        ["message_not_found"]
+      );
+    }
+  } else {
+    const reactions: unknown[] = Array.isArray(message.reactions)
+      ? message.reactions
+      : [];
+    for (const reaction of reactions) {
+      if (
+        isRecord(reaction) &&
+        Array.isArray(reaction.users) &&
+        reaction.users.includes(app.user)
+      ) {
+        // oxlint-disable-next-line no-await-in-loop -- Slack takes one at a time
+        await settle(
+          env,
+          "reactions.remove",
+          { name: reaction.name, timestamp: ts },
+          ["no_reaction", "message_not_found"]
+        );
+      }
+    }
+  }
+  const files: unknown[] = Array.isArray(message.files) ? message.files : [];
+  for (const file of files) {
+    if (isRecord(file) && app.user !== undefined && file.user === app.user) {
+      // oxlint-disable-next-line no-await-in-loop -- as above
+      await settle(env, "files.delete", { file: file.id }, [
+        "file_deleted",
+        "file_not_found",
+      ]);
+    }
+  }
+};
+
+/**
+ * Whether what the app put in a deleted account's chat thread is gone
+ * (eraseAppPartOf, each message): the app's bot named by auth.test, the
+ * thread read with conversations.replies. Pochical's people's own replies
+ * stay, which the app's token cannot delete. False while Slack does not
+ * take it, for the daily cron to try again. Run again, it finds only what
+ * is left to do.
+ */
+export const eraseSupportThread = async (
+  env: Env,
+  thread: string
+): Promise<boolean> => {
+  try {
+    const me = await slackTake(env, "auth.test", {}, "who the app is");
+    const app = { bot: stringOf(me.bot_id), user: stringOf(me.user_id) };
+    for (const message of await threadMessages(env, thread)) {
+      // oxlint-disable-next-line no-await-in-loop -- Slack takes one at a time
+      await eraseAppPartOf(env, app, thread, message);
+    }
+    return true;
+  } catch (error) {
+    if (error instanceof SlackRefusedError) {
+      return false;
+    }
+    throw error;
+  }
 };

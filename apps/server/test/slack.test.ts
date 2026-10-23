@@ -1,8 +1,9 @@
 import { chatRules } from "@pochical/design/chat";
-import { runInDurableObject } from "cloudflare:test";
+import { createScheduledController, runInDurableObject } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import worker from "../src/index";
 import {
   fromSlackText,
   isRecord,
@@ -35,6 +36,10 @@ const SHARED_TS = "1700000300.000001";
 /** How the messages a photo is shared in begin, as conversations.* say. */
 const SHARED_PREFIX = "1700000400.";
 
+/** The app's bot and its user, as Slack names them (auth.test). */
+const APP_BOT = "B0";
+const APP_USER = "U-APP";
+
 /** A message in the channel as Slack keeps it, for conversations.* here. */
 type SlackMessage = Record<string, unknown> & { ts: string };
 
@@ -66,6 +71,57 @@ const slackAnswer = (
         ),
         ok: true,
       };
+    }
+    case "auth.test": {
+      return { bot_id: APP_BOT, ok: true, user_id: APP_USER };
+    }
+    case "chat.delete": {
+      const at = messages.findIndex((message) => message.ts === args.ts);
+      if (at === -1) {
+        return { error: "message_not_found", ok: false };
+      }
+      messages.splice(at, 1);
+      return { ok: true };
+    }
+    case "chat.update": {
+      const message = messages.find((each) => each.ts === args.ts);
+      if (message === undefined) {
+        return { error: "message_not_found", ok: false };
+      }
+      Object.assign(message, { metadata: args.metadata, text: args.text });
+      return { ok: true };
+    }
+    case "reactions.remove": {
+      const message = messages.find((each) => each.ts === args.timestamp);
+      const reactions: unknown[] = Array.isArray(message?.reactions)
+        ? message.reactions
+        : [];
+      const reaction = reactions.find(
+        (each) =>
+          isRecord(each) &&
+          each.name === args.name &&
+          Array.isArray(each.users) &&
+          each.users.includes(APP_USER)
+      );
+      if (!isRecord(reaction) || !Array.isArray(reaction.users)) {
+        return { error: "no_reaction", ok: false };
+      }
+      reaction.users = reaction.users.filter((user) => user !== APP_USER);
+      return { ok: true };
+    }
+    case "files.delete": {
+      const holding = messages.find(
+        (message) =>
+          Array.isArray(message.files) &&
+          message.files.some((file) => isRecord(file) && file.id === args.file)
+      );
+      if (holding === undefined || !Array.isArray(holding.files)) {
+        return { error: "file_deleted", ok: false };
+      }
+      holding.files = holding.files.filter(
+        (file) => !isRecord(file) || file.id !== args.file
+      );
+      return { ok: true };
     }
     case "conversations.replies": {
       return {
@@ -120,14 +176,14 @@ const argsOf = async (
  * What reached Slack's Web API, as each method and its arguments; Slack's
  * file host takes uploads and gives back a small PNG. Slack refuses the
  * calls `refused` says to, by the method and how many came before, and
- * keeps the messages posted and photos shared, for conversations.* to
- * give back.
+ * keeps the messages posted and photos shared in `messages`, for
+ * conversations.* to give back.
  */
 const slackCalls = (
-  refused: (method: string, before: number) => boolean | Refusal = () => false
+  refused: (method: string, before: number) => boolean | Refusal = () => false,
+  messages: SlackMessage[] = []
 ) => {
   const calls: { method: string; args: Record<string, unknown> }[] = [];
-  const messages: SlackMessage[] = [];
   // Each file uploaded, by its id, its name.
   const uploaded = new Map<string, string>();
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
@@ -147,7 +203,12 @@ const slackCalls = (
       refusal === false || (refusal !== true && refusal.taken === true);
     const answer = taken ? slackAnswer(method, args, messages) : {};
     if (taken && method === "chat.postMessage") {
-      messages.push({ ...args, ts: String(answer.ts) });
+      messages.push({
+        ...args,
+        bot_id: APP_BOT,
+        ts: String(answer.ts),
+        user: APP_USER,
+      });
     }
     if (taken && method === "files.getUploadURLExternal") {
       uploaded.set(String(answer.file_id), String(args.filename));
@@ -157,12 +218,15 @@ const slackCalls = (
       const files: unknown[] = Array.isArray(args.files) ? args.files : [];
       messages.push({
         // As Slack gives the files the app shared at once.
-        bot_id: "B0",
+        bot_id: APP_BOT,
         files: files.map((file) => ({
+          id: isRecord(file) ? file.id : undefined,
           name: isRecord(file) ? uploaded.get(String(file.id)) : undefined,
+          user: APP_USER,
         })),
         thread_ts: args.thread_ts,
         ts: `${SHARED_PREFIX}${String(posts).padStart(6, "0")}`,
+        user: APP_USER,
       });
     }
     return refusal === false ? Response.json(answer) : refusalAnswer(refusal);
@@ -1211,5 +1275,165 @@ describe("a support chat Slack does not take", () => {
     // Tried again now, the line before it first, then waiting longer.
     await expect(triedAtOnce(userId)).resolves.toBe(2 * MINUTE_S);
     expect(postsIn(calls)).toBe(2);
+  });
+});
+
+/** The Worker's daily cron, run as if at `at`. */
+const sweep = async (at: number): Promise<void> => {
+  await worker.scheduled(
+    createScheduledController({ cron: "0 18 * * *", scheduledTime: at }),
+    env
+  );
+};
+
+describe("a deleted account's support chat, in Slack", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("loses the app's posts and files there, its first saying the account was deleted, Pochical's people's replies kept", async () => {
+    const messages: SlackMessage[] = [];
+    let slackDown = false;
+    const calls = slackCalls(
+      (method) => slackDown && method !== "chat.postMessage",
+      messages
+    );
+    const token = await signInAnonymously();
+    const { edit, say, socket, userId } = await supportChat(token);
+    await say("色を変えたい");
+    await sendPhoto(token, edit);
+    await say("お願いします");
+    const thread = await threadOf(userId);
+    const staff = {
+      files: [{ id: "F-STAFF", user: "U-STAFF" }],
+      // The user's 👍 on it, put there by the app, and a staff member's.
+      reactions: [{ name: "+1", users: [APP_USER, "U-STAFF"] }],
+      text: "設定から変えられます",
+      thread_ts: thread,
+      ts: "1700000100.000001",
+      user: "U-STAFF",
+    };
+    messages.push(structuredClone(staff));
+    socket.close();
+
+    // Slack down as the account goes: the deletion is done all the same,
+    // and the app's posts wait for the cron.
+    slackDown = true;
+    const deleted = await call(
+      "UserService/DeleteAccount",
+      { appleAuthorizationCode: "" },
+      token
+    );
+    await vi.waitFor(() => {
+      expect(calls.at(-1)?.method).toBe("auth.test");
+    });
+    const waiting = messages.length;
+
+    slackDown = false;
+    const now = Date.now();
+    await sweep(now);
+    const erased = structuredClone(messages);
+    const tried = calls.length;
+    // Looked at again a day on, as a late post may land, with nothing
+    // left to delete; then no more.
+    await sweep(now + 2 * 24 * 60 * 60 * 1000);
+    const again = calls.slice(tried).map(({ method }) => method);
+    const looked = calls.length;
+    await sweep(now + 3 * 24 * 60 * 60 * 1000);
+    expect({
+      again,
+      deleted: deleted.status,
+      erased,
+      later: calls.length - looked,
+      waiting,
+    }).toStrictEqual({
+      again: ["auth.test", "conversations.replies"],
+      deleted: 200,
+      erased: [
+        {
+          bot_id: APP_BOT,
+          channel: "C-SUPPORT",
+          metadata: {
+            event_payload: {},
+            event_type: "pochical_account_deleted",
+          },
+          text: "（このユーザーのアカウントは削除されました。ユーザーのメッセージと写真は、アプリ・管理サイト・Slackから削除されています）",
+          ts: thread,
+          user: APP_USER,
+        },
+        { ...staff, reactions: [{ name: "+1", users: ["U-STAFF"] }] },
+      ],
+      later: 0,
+      waiting: 4,
+    });
+  });
+
+  it("loses a thread whose first message lands after the account went", async () => {
+    const messages: SlackMessage[] = [];
+    slackCalls(() => false, messages);
+    const answer = vi.mocked(fetch).getMockImplementation();
+    // Plain flags, as a promise made in one Durable Object's context
+    // cannot be settled from another's.
+    let reached = false;
+    let held = true;
+    vi.mocked(fetch).mockImplementation(async (input, init) => {
+      if (new Request(input, init).url.endsWith("/chat.postMessage")) {
+        reached = true;
+        await vi.waitUntil(() => !held, { interval: 5, timeout: 5000 });
+      }
+      if (answer === undefined) {
+        throw new Error("Slack is not answered");
+      }
+      return await answer(input, init);
+    });
+    const token = await signInAnonymously();
+    const { frames, socket, userId } = await supportChat(token);
+    sendFrame(socket, {
+      case: "chatEdits",
+      value: {
+        edits: [
+          {
+            kind: {
+              case: "send",
+              value: {
+                content: {
+                  kind: { case: "words", value: { text: "色を変えたい" } },
+                },
+                device: "",
+                threadId: "group",
+              },
+            },
+            opId: crypto.randomUUID(),
+          },
+        ],
+      },
+    });
+    await untilAcked(frames);
+    await vi.waitUntil(() => reached);
+    socket.close();
+    const deleting = call(
+      "UserService/DeleteAccount",
+      { appleAuthorizationCode: "" },
+      token
+    );
+    // The post lands once the chat is gone from D1's index.
+    await vi.waitUntil(async () => {
+      const left = await env.DB.prepare(
+        "select count(*) as n from support_chats where user_id = ?"
+      )
+        .bind(userId)
+        .first<number>("n");
+      return left === 0;
+    });
+    held = false;
+    const deleted = await deleting;
+    expect(deleted.status).toBe(200);
+    await vi.waitFor(() => {
+      expect(messages).toHaveLength(1);
+    });
+    await sweep(Date.now() + 2 * 24 * 60 * 60 * 1000);
+    expect(messages.map(({ metadata }) => metadata)).toStrictEqual([
+      { event_payload: {}, event_type: "pochical_account_deleted" },
+    ]);
   });
 });

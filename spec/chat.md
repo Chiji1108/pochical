@@ -156,6 +156,7 @@ The stores require a way to report what people post and to block someone (App St
   - their shifts still show: the group exists to share shifts, and leaving the group or taking them out is the step for that.
 - A block is undone with ブロックを解除 on their profile, or in 設定 › チャット › ブロック中のメンバー (shown while there is one), asked first.
 - The server also filters what is posted for known abusive material before it reaches the group; what it catches is not delivered.
+- A report made by or about someone who deletes their account is kept a year after the deletion, then erased with its Slack message (spec/sync-protocol.md, Reports after a deletion). A line taken back, or the app's notice, is not reported.
 
 ## Unread lines and typing
 

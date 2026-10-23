@@ -8,7 +8,13 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { eraseGroup, eraseUser } from "./account-deletion";
 import { user, verification } from "./db/auth-schema";
-import { invites, reports, supportChats, supportSlack } from "./db/schema";
+import {
+  deletedAccounts,
+  invites,
+  reports,
+  supportChats,
+  supportSlack,
+} from "./db/schema";
 import { bucketPages, deletePhotosUnder } from "./photos";
 
 /** What a reset erases, as it is now. */
@@ -97,9 +103,10 @@ export const previewReset = async (env: Env): Promise<ResetPreview> => {
  * but for Apple's tokens, which only a fresh code from the person
  * revokes (signing in with Apple again makes a new user); then any
  * group still kept that no user's erasure reached; then what members
- * reported and better-auth's sign-ins under way; and last every object
- * left in the bucket. Run again, it erases what a run cut off left, and
- * after one that finished, nothing.
+ * reported, with the deleted accounts noted for it, and better-auth's
+ * sign-ins under way; and last every object left in the bucket. Run
+ * again, it erases what a run cut off left, and after one that finished,
+ * nothing.
  */
 export const resetEverything = async (env: Env): Promise<void> => {
   const { users } = await holders(env);
@@ -114,6 +121,7 @@ export const resetEverything = async (env: Env): Promise<void> => {
   }
   const db = drizzle(env.DB);
   await db.delete(reports);
+  await db.delete(deletedAccounts);
   await db.delete(verification);
   await deletePhotosUnder(env, "");
 };
