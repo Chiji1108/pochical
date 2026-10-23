@@ -21,12 +21,11 @@ struct NewGroupPage: View {
   /// The mark picked by hand, which then stays as the name changes; none
   /// while the mark follows the name.
   @State private var pickedMark: GroupMarkValue?
-  /// Made once for the group being made and sent with every try, so a
-  /// retry after a lost answer makes no second group.
-  @State private var requestID = UUID().uuidString.lowercased()
-  /// The mark the group is being made with, kept while it is made: the
-  /// group coming in takes its color, which the guess would then skip.
-  @State private var making: GroupMarkValue?
+  /// What 作る sent last, kept until the group is made: sent again as it
+  /// was while nothing on the page has changed, so a retry after a lost
+  /// answer makes no second group.
+  @State private var sent: NewGroupRequest?
+  @State private var making = false
   @State private var failed = false
   @State private var photoGone = false
 
@@ -67,7 +66,7 @@ struct NewGroupPage: View {
     }
     .toolbar {
       ToolbarItem(placement: .confirmationAction) {
-        if making != nil {
+        if making {
           ProgressView()
         } else {
           Button("作る", role: .confirm) { make() }
@@ -87,26 +86,29 @@ struct NewGroupPage: View {
     }
   }
 
-  /// The mark being made with, else the one picked, else the one the name
-  /// and the user's groups give: in the first color those groups do not
-  /// use yet, as /design picks a new group's.
+  /// The mark picked, else the one the name and the user's groups give:
+  /// in the first color those groups do not use yet, as /design picks a
+  /// new group's. Once sent, the guess stays as sent while the name does:
+  /// the group made from it takes its color, which a new guess would skip.
   private var mark: GroupMarkValue {
-    making ?? pickedMark
-      ?? guessedMark(
-        for: name, color: nextColor(groups.map(\.color), slots: colors.marks.count))
+    if let pickedMark { return pickedMark }
+    if let sent, sent.name == trimmed(name) { return sent.mark }
+    return guessedMark(
+      for: name, color: nextColor(groups.map(\.color), slots: colors.marks.count))
   }
 
   private func make() {
-    let mark = mark
-    making = mark
+    let request = NewGroupRequest.asking(
+      name: trimmed(name), mark: mark, displayName: trimmed(myName), after: sent)
+    sent = request
+    making = true
     Task {
       do {
         // A picked photo goes up first, for the group to take.
-        if !mark.photoID.isEmpty {
-          try await groupCalls.sendMarkPhoto(mark.photoID)
+        if !request.mark.photoID.isEmpty {
+          try await groupCalls.sendMarkPhoto(request.mark.photoID)
         }
-        let made = try await groupCalls.create(
-          name: trimmed(name), mark: mark, displayName: trimmed(myName), requestID: requestID)
+        let made = try await groupCalls.create(request)
         // Still making until the group has come and the page has turned
         // into メンバーを招待 (GroupsScreen), so 作る is not there to tap
         // again meanwhile.
@@ -115,12 +117,13 @@ struct NewGroupPage: View {
       } catch is MarkPhotoGone {
         // Back to following the name, as before a photo was picked.
         pickedMark = nil
+        sent = nil
         photoGone = true
       } catch {
         ReviewPrompt.troubled = true
         failed = true
       }
-      making = nil
+      making = false
     }
   }
 }
