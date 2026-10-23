@@ -33,7 +33,7 @@ Pochical is a monorepo: native SwiftUI (`apps/ios`) and Jetpack Compose (`apps/a
 ## How to ship
 
 - main takes pull requests only; name the Linear issue (team POC) in the PR, and file skipped findings or follow-ups there.
-- Before merging: run `/code-review` and address it, CI must be green, and review threads resolved. Merge main into the branch first when other PRs landed. Never merge on red.
+- Before merging: run `/code-review` and address it, CI must be green, and review threads resolved. Merge main into the branch first when a PR that landed since touches the same files or behavior, so the two are checked together; one that touches neither needs no merge, as CI runs on the PR merged with main as it stood (`pull/<n>/merge`) and main's ruleset does not require the branch to be up to date. Never merge on red.
 - The required `ios` status stands for Xcode Cloud (`.github/workflows/ios.yml`): it passes when the PR's own changes leave `apps/ios` and `spec/vectors` alone, or once Xcode Cloud's PR build has passed on the head (or, when it never finished there, on the newest earlier commit of the PR with the same files there), and fails when that build fails. Xcode Cloud's Files and Folders start condition watches the same paths as `.github/scripts/ios-gate.sh`; change both together. When Xcode Cloud never starts on a head that needs it, or is cancelled there, start its build by hand in App Store Connect.
 - Once `ios` is a required check in main's ruleset, auto-merge (`gh pr merge --auto --match-head-commit <sha>`) may be used when `/code-review` is addressed and Codex's review of that head is clean; the required checks, `ios` among them, then decide when it merges.
 - Deploys happen through Cloudflare Workers Builds on merge; never deploy by hand.
