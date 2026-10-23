@@ -67,6 +67,7 @@ dependencies {
   api(libs.room.runtime)
   ksp(libs.room.compiler)
   implementation(libs.okhttp)
+  implementation(libs.connect.kotlin.okhttp)
   implementation(libs.kotlinx.serialization.json)
   implementation(libs.lifecycle.process)
   implementation(libs.work.runtime)

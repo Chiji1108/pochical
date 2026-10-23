@@ -29,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,6 +49,7 @@ import app.pochical.design.Metrics
 import app.pochical.kit.AccountState
 import app.pochical.kit.LinkResult
 import app.pochical.kit.LinkedAccount
+import app.pochical.kit.NotSignedIn
 import app.pochical.kit.SyncAccount
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -58,7 +60,11 @@ val LocalAccount = staticCompositionLocalOf<SyncAccount> { error("No account pro
 /** 設定's アカウント row: the provider signed in with, or ログインしていません. */
 @Composable
 fun AccountRow(open: (RootPage) -> Unit) {
-  val state by LocalAccount.current.state.collectAsState()
+  val account = LocalAccount.current
+  val state by account.state.collectAsState()
+  val signedIn = state is AccountState.SignedIn
+  // As the server says: linked here, on another device, or no longer.
+  LaunchedEffect(signedIn) { if (signedIn) account.refreshLinked() }
   val linked = (state as? AccountState.SignedIn)?.linked
   ListItem(
     headlineContent = { Text(stringResource(R.string.account)) },
@@ -106,7 +112,7 @@ fun AccountPage(onBack: () -> Unit) {
         }
         item { Footnote(stringResource(R.string.account_signed_in_note)) }
       } else {
-        item { SignInSection(signedIn = state is AccountState.SignedIn) }
+        item { SignInSection(state) }
       }
     }
   }
@@ -114,7 +120,8 @@ fun AccountPage(onBack: () -> Unit) {
 
 /** What signing in keeps, and the way in, ready once the device has its session. */
 @Composable
-private fun SignInSection(signedIn: Boolean) {
+private fun SignInSection(state: AccountState) {
+  val signedIn = state is AccountState.SignedIn
   val account = LocalAccount.current
   val context = LocalContext.current
   val scope = rememberCoroutineScope()
@@ -137,7 +144,8 @@ private fun SignInSection(signedIn: Boolean) {
       textAlign = TextAlign.Center,
     )
     Spacer(Modifier.size(16.dp))
-    GoogleButton(enabled = signedIn && !busy, busy = busy) {
+    GoogleButton(enabled = signedIn, busy = busy) {
+      if (busy) return@GoogleButton
       busy = true
       scope.launch {
         problem =
@@ -149,6 +157,9 @@ private fun SignInSection(signedIn: Boolean) {
             }
           } catch (e: CancellationException) {
             throw e
+          } catch (_: NotSignedIn) {
+            // Said in place of the app, as the server no longer knows the session.
+            null
           } catch (_: NoGoogleAccount) {
             SignInProblem.NoGoogleAccount
           } catch (_: Exception) {
@@ -160,7 +171,13 @@ private fun SignInSection(signedIn: Boolean) {
     }
   }
   Footnote(
-    stringResource(if (signedIn) R.string.account_sign_in_note else R.string.account_sign_in_offline)
+    stringResource(
+      when (state) {
+        is AccountState.SignedIn -> R.string.account_sign_in_note
+        AccountState.SigningIn -> R.string.account_sign_in_offline
+        AccountState.SessionEnded -> R.string.account_sign_in_session_ended
+      }
+    )
   )
   problem?.let { shown ->
     AlertDialog(

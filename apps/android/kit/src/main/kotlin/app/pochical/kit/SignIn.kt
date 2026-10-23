@@ -4,6 +4,7 @@ import java.io.IOException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -14,7 +15,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
-/** The server answered a sign-in without a session the app can keep. */
+/** The server answered a sign-in without a session the app can keep, as one it cannot read. */
 class SignInRefused(status: Int) : IOException("Sign-in answered $status")
 
 @Serializable private data class SignInAnswer(val user: User) {
@@ -38,7 +39,12 @@ suspend fun signInAnonymously(http: OkHttpClient, server: HttpUrl): StoredSessio
     http.newCall(request).execute().use { response ->
       val token = response.header("set-auth-token")
       if (!response.isSuccessful || token.isNullOrEmpty()) throw SignInRefused(response.code)
-      val answer = answers.decodeFromString(SignInAnswer.serializer(), response.body.string())
+      val answer =
+        try {
+          answers.decodeFromString(SignInAnswer.serializer(), response.body.string())
+        } catch (_: SerializationException) {
+          throw SignInRefused(response.code)
+        }
       StoredSession(token, answer.user.id)
     }
   }

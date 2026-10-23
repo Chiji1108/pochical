@@ -21,6 +21,7 @@
   <string name="account_sign_in_body">機種変更しても、スマホとタブレットでも、同じシフトとグループを使えます。</string>
   <string name="account_sign_in_note">この端末のデータがそのまま引き継がれます。ログインしなくても、この端末ではそのまま使えます。</string>
   <string name="account_sign_in_offline">インターネットにつながると、ログインできます。</string>
+  <string name="account_sign_in_session_ended">ほかの端末でログアウトしたか、アカウントが削除されたため、いまはログインできません。</string>
   <string name="account_continue_with_google">Googleで続ける</string>
   <string name="account_sign_in_failed">ログインできませんでした。時間をおいてもう一度お試しください。</string>
   <string name="account_no_google_title">Googleアカウントがありません</string>

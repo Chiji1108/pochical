@@ -1,10 +1,12 @@
 package app.pochical
 
 import android.content.Context
+import android.util.Log
 import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.ClearCredentialException
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.NoCredentialException
@@ -42,12 +44,17 @@ suspend fun signInWithGoogle(context: Context): ProviderToken? {
       throw NoGoogleAccount(e)
     } catch (e: GetCredentialException) {
       throw GoogleSignInFailed(e)
-    } finally {
-      manager.clearCredentialState(ClearCredentialStateRequest())
     }
+  try {
+    manager.clearCredentialState(ClearCredentialStateRequest())
+  } catch (e: ClearCredentialException) {
+    // The token is had; Credential Manager keeps no session of its own to clear on Android.
+    Log.i("PochicalAccount", "Google's credential state was not cleared: $e")
+  }
   if (credential !is CustomCredential || credential.type != GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
     throw GoogleSignInFailed()
   }
-  val idToken = GoogleIdTokenCredential.createFrom(credential.data).idToken
-  return ProviderToken(LinkedAccount.Provider.Google, idToken, nonce)
+  val google = GoogleIdTokenCredential.createFrom(credential.data)
+  // Google's id for the account is its email.
+  return ProviderToken(LinkedAccount.Provider.Google, google.idToken, nonce, email = google.id)
 }

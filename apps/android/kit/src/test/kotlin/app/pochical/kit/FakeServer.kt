@@ -6,6 +6,8 @@ import app.pochical.v1.Change
 import app.pochical.v1.ClientFrame
 import app.pochical.v1.ServerError
 import app.pochical.v1.ServerFrame
+import app.pochical.v1.SignInProvider
+import app.pochical.v1.getMeResponse
 import app.pochical.v1.acked
 import app.pochical.v1.change
 import app.pochical.v1.changes
@@ -14,6 +16,7 @@ import app.pochical.v1.serverError
 import app.pochical.v1.serverFrame
 import app.pochical.v1.welcome
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import mockwebserver3.Dispatcher
 import mockwebserver3.MockResponse
@@ -22,6 +25,7 @@ import mockwebserver3.RecordedRequest
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
+import okio.Buffer
 import okio.ByteString
 import okio.ByteString.Companion.toByteString
 
@@ -42,6 +46,15 @@ class FakeServer : AutoCloseable {
 
   /** How many anonymous sign-ins it answered. */
   val signIns = AtomicInteger()
+
+  /** How long the anonymous sign-in takes to answer, in milliseconds. */
+  @Volatile var signInDelayMs = 0L
+
+  /** What the anonymous sign-in answers in its body, null for the user as better-auth gives it. */
+  @Volatile var signInBody: String? = null
+
+  /** The provider `GetMe` says the user is linked to. */
+  @Volatile var provider = SignInProvider.SIGN_IN_PROVIDER_UNSPECIFIED
 
   /** What `/link-social` answers: 200 links, 409 is an account in use. */
   @Volatile var linkStatus = 200
@@ -64,9 +77,19 @@ class FakeServer : AutoCloseable {
             "/api/auth/sign-in/anonymous" ->
               MockResponse.Builder()
                 .also { signIns.incrementAndGet() }
+                .headersDelay(signInDelayMs, TimeUnit.MILLISECONDS)
                 .addHeader("set-auth-token", token)
-                .body("""{"token":"$token","user":{"id":"$userId","isAnonymous":true}}""")
+                .body(signInBody ?: """{"token":"$token","user":{"id":"$userId","isAnonymous":true}}""")
                 .build()
+            "/pochical.v1.UserService/GetMe" ->
+              if (request.headers["Authorization"] != "Bearer $token") {
+                MockResponse.Builder().code(401).body("""{"code":"unauthenticated"}""").build()
+              } else {
+                MockResponse.Builder()
+                  .addHeader("Content-Type", "application/proto")
+                  .body(Buffer().write(getMeResponse { userId = this@FakeServer.userId; provider = this@FakeServer.provider }.toByteArray()))
+                  .build()
+              }
             "/api/auth/link-social" -> {
               links += request.headers["Authorization"] to request.body!!.utf8()
               MockResponse.Builder().code(linkStatus).body("{}").build()
