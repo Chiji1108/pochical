@@ -17,8 +17,8 @@
 // `chatRules.photoMaxEdge` on a side is refused before anything goes up,
 // as the group would refuse its line; the apps shrink theirs to it. Lines
 // the group refuses are named, and the script fails. Local only
-// (http://localhost:8787, or CHAT_TRY_API's); the user it made stays in
-// the group, to be removed from the app.
+// (POCHICAL_DEV_SERVER, http://localhost:8787 by default); the user it
+// made stays in the group, to be removed from the app.
 //
 //   bun tools/chat-try/index.ts <invite code> --photos <dir> [--album] [--face <jpeg>]
 //
@@ -38,8 +38,9 @@ import {
   ClientFrameSchema,
   ServerFrameSchema,
 } from "../../apps/server/src/gen/pochical/v1/sync_pb";
+import { devServer } from "../dev-server";
 
-const api = process.env.CHAT_TRY_API ?? "http://localhost:8787";
+const api = devServer;
 const GROUP_THREAD = "group";
 const PROTOCOL_VERSION = 1;
 const DEFAULT_COUNT = 10;

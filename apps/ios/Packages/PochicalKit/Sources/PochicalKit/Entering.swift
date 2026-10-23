@@ -23,26 +23,25 @@ private func keepingDetails(of entry: DayEntry?, shift: PatternID) -> DayEntry {
 }
 
 /// The day selected next after entering `shift` on `day`: one day on, or
-/// two past a next day it filled, but never past the month's last day,
-/// where entering stays until 完了.
+/// two past a next day it filled, but never past `last`, the page's last
+/// day (the month's, or a シフトの期間's period's), where entering stays
+/// until 完了.
 public func selectedAfterEntering(
-  _ shift: PatternID?, on day: Day, patterns: [PatternID: Pattern]
+  _ shift: PatternID?, on day: Day, through last: Day, patterns: [PatternID: Pattern]
 ) -> Day {
   let fillsNextDay = nextDay(of: shift, patterns) != nil
-  let next = day.adding(days: fillsNextDay ? 2 : 1)
-  let last = day.daysOfMonth.last!
-  return min(next, last)
+  return min(day.adding(days: fillsNextDay ? 2 : 1), last)
 }
 
-/// The blank days 完了 asks about in `month`'s month: those before its last
-/// entered day. Blanks after it are left alone, as more likely not decided
-/// yet (spec/shift-patterns.md, Blanks when entering ends).
-public func gapDays(in month: Day, days: [Day: DayEntry]) -> [Day] {
-  let monthDays = month.daysOfMonth
-  guard let lastEntered = monthDays.last(where: { days[$0] != nil }) else {
+/// The blank days 完了 asks about on a page: those before its last entered
+/// day. Blanks after it are left alone, as more likely not decided yet
+/// (spec/shift-patterns.md, Blanks when entering ends).
+public func gapDays(in page: Period, days: [Day: DayEntry]) -> [Day] {
+  let pageDays = page.days
+  guard let lastEntered = pageDays.last(where: { days[$0] != nil }) else {
     return []
   }
-  return monthDays.filter { $0 < lastEntered && days[$0] == nil }
+  return pageDays.filter { $0 < lastEntered && days[$0] == nil }
 }
 
 /// The pattern entered on the day after `shift`, none when it names a

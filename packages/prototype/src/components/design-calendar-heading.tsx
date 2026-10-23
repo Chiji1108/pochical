@@ -10,6 +10,7 @@ import {
 import type { MotionValue } from "motion/react";
 import type { ReactNode } from "react";
 
+import type { Period } from "../lib/design-days";
 import {
   addDays,
   dateKey,
@@ -26,6 +27,7 @@ import { SummaryRow } from "./design-list";
 import { IconMenu, MenuItem } from "./design-menu";
 import { MonthName } from "./design-month-name";
 import { MonthTitleButton, monthTitle } from "./design-month-picker";
+import { usePages } from "./design-pages";
 import {
   monthIndex,
   RollingName,
@@ -86,9 +88,12 @@ export const heading = {
 // 今月のお休み, or 10月のお休み away from this month. The month and the
 // number roll as the heading's name does, following a drag of the pages
 // to the month coming in, so the row is already right as the page
-// lands; the words around them stay put.
+// lands; the words around them stay put. A シフトの期間's page is この期間,
+// as the heading over it names its days (spec/calendar.md, The shift
+// period); only its number rolls.
 export function MonthSummary({
   month,
+  byPeriod = false,
   days,
   onOpen,
   person,
@@ -97,6 +102,7 @@ export function MonthSummary({
   beside,
 }: {
   month: Date;
+  byPeriod?: boolean;
   // The days off, or with `person` the days they are on.
   days: number;
   onOpen: () => void;
@@ -110,7 +116,8 @@ export function MonthSummary({
   const counted = person === undefined ? "のお休み" : `、${person}と一緒`;
   const reduceMotion = useReducedMotion();
   const turn = useTurn(monthIndex(month), swiped);
-  const monthOf = (by: number) => formatMonthFromToday(monthAfter(month, by));
+  const monthOf = (by: number) =>
+    byPeriod ? "この期間" : formatMonthFromToday(monthAfter(month, by));
   const dragged = progress && beside;
   return (
     <SummaryRow
@@ -163,6 +170,7 @@ export function MonthSummary({
 // instead.
 export function MonthHeading({
   month,
+  period,
   mode,
   onPick,
   onSurprise,
@@ -171,6 +179,8 @@ export function MonthHeading({
   beside,
 }: {
   month: Date;
+  // A シフトの期間's page, named by its days rather than its month.
+  period?: Period;
   mode: "view" | "edit" | "week";
   onPick: (month: Date) => void;
   onSurprise: () => void;
@@ -185,6 +195,7 @@ export function MonthHeading({
     <MonthName
       beside={beside}
       month={month}
+      period={period}
       progress={progress}
       swiped={swiped}
     />
@@ -258,16 +269,26 @@ export function HeadingActions({
   onCalendar: () => void;
 }) {
   const weekTools = useWeek();
+  const pages = usePages();
   const week = mode === "week";
-  const unit = week ? "週" : "月";
+  // A シフトの期間's page is no month: its way back is to the page
+  // holding today.
+  let unit: "週" | "月" | "日" = "月";
+  if (week) {
+    unit = "週";
+  } else if (pages.byPeriod) {
+    unit = "日";
+  }
+  // What the arrows move by: a week, a month, or a period.
+  const stepUnit = week || !pages.byPeriod ? unit : "期間";
   const atToday = week
     ? weekTools
         .weekDates(detailDate ?? designToday)
         .some((date) => dateKey(date) === dateKey(designToday))
-    : isSameMonth(month, designToday);
+    : isSameMonth(month, pages.today);
   const previous = (
     <button
-      aria-label={`前の${unit}`}
+      aria-label={`前の${stepUnit}`}
       className={heading.step}
       onClick={() => {
         onStep(-1);
@@ -287,10 +308,10 @@ export function HeadingActions({
       .weekDates(addDays(detailDate ?? designToday, days))
       .some((date) => dateKey(date) === dateKey(designToday));
   const isThisMonth = (by: number) =>
-    isSameMonth(monthAfter(month, by), designToday);
+    isSameMonth(monthAfter(month, by), pages.today);
   const next = (
     <button
-      aria-label={`次の${unit}`}
+      aria-label={`次の${stepUnit}`}
       className={heading.step}
       onClick={() => {
         onStep(1);
@@ -317,6 +338,9 @@ export function HeadingActions({
       closeLabel={closeLabel}
       mode={mode}
       next={next}
+      saveLabel={
+        pages.byPeriod ? "この期間のシフトを保存" : "この月のシフトを保存"
+      }
       onCalendar={onCalendar}
       onDone={onDone}
       onImage={onImage}
@@ -333,6 +357,7 @@ export function HeadingActions({
 // the eye to leaving rather than to the day. The month showing someone's
 // days has × too, as it is a view to leave, not a month to save.
 function SwipeCorner({
+  saveLabel,
   closeLabel,
   mode,
   previous,
@@ -342,6 +367,7 @@ function SwipeCorner({
   onCalendar,
   onDone,
 }: {
+  saveLabel: string;
   closeLabel?: string;
   mode: "view" | "edit" | "week";
   previous: ReactNode;
@@ -364,7 +390,7 @@ function SwipeCorner({
       {mode === "view" && closeLabel === undefined && saves ? (
         <IconMenu
           icon={<Download aria-hidden="true" size={21} />}
-          label="この月のシフトを保存"
+          label={saveLabel}
         >
           <MenuItem
             icon={<ImageIcon aria-hidden="true" size={18} />}

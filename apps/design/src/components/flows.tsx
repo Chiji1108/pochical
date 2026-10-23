@@ -10,6 +10,7 @@ import {
   dateKey,
   gapDaysIn,
   initialDesignSchedule,
+  periodOf,
 } from "@pochical/prototype/lib/design-days";
 import type { Schedule } from "@pochical/prototype/lib/design-days";
 import { chatKey, groupChat } from "@pochical/prototype/lib/design-group-data";
@@ -79,6 +80,21 @@ export function FirstRun() {
   );
 }
 
+// A roster's work is asked the period its shifts come for, which becomes
+// the calendar's page.
+export function FirstRunRoster() {
+  return (
+    <FrameRow>
+      <OnboardingFrame label="期間" note="繰り返しがない人" screen="period" />
+      <OnboardingFrame
+        label="始まる日"
+        note="月の途中から始まる人"
+        screen="periodDay"
+      />
+    </FrameRow>
+  );
+}
+
 export function FirstRunWithAccount() {
   return (
     <FrameRow>
@@ -105,7 +121,7 @@ function filledGaps(schedule: Schedule): Schedule {
   return {
     ...schedule,
     ...Object.fromEntries(
-      gapDaysIn(schedule, october).map((date) => [
+      gapDaysIn(schedule, periodOf(october, 1)).map((date) => [
         dateKey(date),
         { shift: "off" as const },
       ])
@@ -125,7 +141,7 @@ function GapFrame({
   note?: string;
   schedule?: Schedule;
 } & Partial<GapSheetProps>) {
-  const days = gapDaysIn(schedule, october);
+  const days = gapDaysIn(schedule, periodOf(october, 1));
   return (
     <CalendarFrame
       label={label}

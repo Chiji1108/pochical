@@ -1,4 +1,4 @@
-import { rotationTemplates } from "@pochical/design/patterns";
+import { rosterTemplates, rotationTemplates } from "@pochical/design/patterns";
 import poodle from "@pochical/prototype/assets/poodle.png?url";
 import {
   ProviderButtons,
@@ -30,6 +30,7 @@ import { monthAfter } from "@pochical/prototype/lib/design-days";
 import { useDevice } from "@pochical/prototype/lib/design-device";
 import { presetList } from "@pochical/prototype/lib/design-patterns";
 import type { Shift } from "@pochical/prototype/lib/design-patterns";
+import { useSettings } from "@pochical/prototype/lib/design-settings-store";
 import { designMonth } from "@pochical/prototype/lib/design-today";
 import {
   createUserStore,
@@ -68,7 +69,9 @@ export type OnboardingScreen =
   | "login"
   | "kind"
   | "rotation"
-  | "anchor";
+  | "anchor"
+  | "period"
+  | "periodDay";
 
 function stepOf(screen: OnboardingScreen): Step | undefined {
   if (screen === "kind" || screen === "rotation") {
@@ -77,6 +80,10 @@ function stepOf(screen: OnboardingScreen): Step | undefined {
   if (screen === "anchor") {
     const template = rotationTemplates[1] ?? rotationTemplates[0];
     return template ? { name: "order", template } : undefined;
+  }
+  if (screen === "period" || screen === "periodDay") {
+    const template = rosterTemplates[2] ?? rosterTemplates[0];
+    return template ? { name: screen, template } : undefined;
   }
   return undefined;
 }
@@ -102,7 +109,13 @@ export function DesignOnboarding({
     note?: string;
   }>();
 
-  function finish({ patternKeys, sequence, anchor }: WorkSetup, note?: string) {
+  function finish(
+    { patternKeys, sequence, anchor, periodStart }: WorkSetup,
+    note?: string
+  ) {
+    if (periodStart !== undefined) {
+      useSettings.getState().setPeriodStart(periodStart);
+    }
     // A repeating order fills the days without ポチポチ入力, so the
     // reminders are offered as the calendar shows instead.
     if (sequence !== undefined && sequence.length > 0) {
