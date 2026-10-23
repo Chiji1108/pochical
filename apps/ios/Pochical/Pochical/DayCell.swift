@@ -6,6 +6,7 @@ import SwiftUI
 struct DayCell: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.look) private var look
+  @Environment(\.english) private var english
   @Environment(\.dayCellHeight) private var height
   let day: Day
   let entry: DayEntry?
@@ -114,7 +115,8 @@ struct DayCell: View {
   }
 
   private var date: some View {
-    Text(withMonth ? day.slashText : String(day.day))
+    // 11/1, or Nov 1 with 月と曜日 in English.
+    Text(withMonth ? (english ? "\(day.shortMonth(english: true)) \(day.day)" : day.slashText) : String(day.day))
       .font(.system(size: 11, weight: isToday ? .heavy : outside ? .regular : .semibold))
       .foregroundStyle(dateColor)
       .background(alignment: .bottom) {
