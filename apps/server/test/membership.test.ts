@@ -1,14 +1,11 @@
 import { socketRules } from "@pochical/design/socket";
-import {
-  listDurableObjectIds,
-  runDurableObjectAlarm,
-  runInDurableObject,
-} from "cloudflare:test";
+import { listDurableObjectIds, runInDurableObject } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 
 import { NEWS_RETRY_FIRST_MS } from "../src/group-do";
 import { CURRENT_PROTOCOL_VERSION } from "../src/protocol";
+import { runAlarm } from "./alarms";
 import {
   call,
   failTelling,
@@ -67,7 +64,7 @@ const alarmComes = async (groupId: string): Promise<void> => {
   await runInDurableObject(group, (_, state) => {
     state.storage.sql.exec("update membership_outbox set due_at = 0");
   });
-  await runDurableObjectAlarm(group);
+  await runAlarm(group);
 };
 
 /** How many tries to tell `userId` of the group have failed in a row. */

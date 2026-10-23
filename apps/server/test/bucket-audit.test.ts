@@ -1,4 +1,4 @@
-import { runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
+import { runInDurableObject } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/durable-sqlite";
@@ -14,6 +14,7 @@ import {
   sharePersonPhoto,
   uploadedPhotoKey,
 } from "../src/photos";
+import { runAlarm } from "./alarms";
 import { call, ORIGIN } from "./helpers";
 import {
   PAIR_ROSTER,
@@ -139,7 +140,7 @@ const seedBucket = async () => {
   });
   await untilAcked(mine.frames);
   // The sweep deletes the photo taken back, and notes it so.
-  await runDurableObjectAlarm(env.GROUPS.getByName(groupId));
+  await runAlarm(env.GROUPS.getByName(groupId));
   const linked = crypto.randomUUID();
   await runInDurableObject(env.GROUPS.getByName(groupId), (_, state) => {
     const db = drizzle(state.storage);
@@ -338,7 +339,7 @@ describe("the photos bucket's audit", () => {
     afterGrace();
     await exports.AdminEntrypoint.cleanBucket(Date.now(), "staff@pochical.app");
     // The sweep the delete set notes it taken back, once R2 has none.
-    await runDurableObjectAlarm(env.GROUPS.getByName(groupId));
+    await runAlarm(env.GROUPS.getByName(groupId));
 
     // The photo no line carried is taken back, so its id is never stored
     // again.

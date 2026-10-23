@@ -3,13 +3,13 @@ import { env, exports } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { eraseGroup, eraseUser } from "../src/account-deletion";
-import type { GroupDO } from "../src/group-do";
 import {
   personPhotoKey,
   photoKey,
   smallKey,
   uploadedPhotoKey,
 } from "../src/photos";
+import { runAlarm } from "./alarms";
 import { call, ORIGIN } from "./helpers";
 import {
   PAIR_ROSTER,
@@ -53,12 +53,7 @@ const notesOf = async (groupId: string): Promise<Record<string, string>> =>
 
 /** A Group DO's alarm run now, whenever it was set for. */
 const groupAlarm = async (groupId: string): Promise<void> => {
-  await runInDurableObject(
-    env.GROUPS.getByName(groupId),
-    async (instance: GroupDO) => {
-      await instance.alarm();
-    }
-  );
+  await runAlarm(env.GROUPS.getByName(groupId));
 };
 
 /** R2's deletes refused until restored, as when it is out of reach. */

@@ -12,18 +12,9 @@ import {
   toSlackText,
 } from "../src/slack";
 import { supportPlace } from "../src/support-lines";
+import { alarmsSettled, runAlarm } from "./alarms";
 import { call, ORIGIN, signInAnonymously } from "./helpers";
-import {
-  alarmsSettled,
-  watchAlarms,
-  relayed,
-  sendFrame,
-  supportChat,
-  tryNow,
-  untilAcked,
-} from "./sync-helpers";
-
-watchAlarms();
+import { relayed, sendFrame, supportChat, untilAcked } from "./sync-helpers";
 
 const SECRET = "slack-signing-secret";
 
@@ -969,13 +960,13 @@ const nextTry = async (userId: string): Promise<number | null> => {
  */
 const relayOnce = async (userId: string): Promise<number | null> => {
   vi.setSystemTime(vi.getRealSystemTime());
-  await tryNow(userId);
+  await runAlarm(env.GROUPS.getByName(supportPlace(userId)));
   return await nextTry(userId);
 };
 
 /** When the relay comes back after the try a change asked for. */
 const triedAtOnce = async (userId: string): Promise<number | null> => {
-  await alarmsSettled(userId);
+  await alarmsSettled(env.GROUPS.getByName(supportPlace(userId)));
   return await nextTry(userId);
 };
 
