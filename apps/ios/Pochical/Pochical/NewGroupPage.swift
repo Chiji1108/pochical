@@ -24,7 +24,9 @@ struct NewGroupPage: View {
   /// Made once for the group being made and sent with every try, so a
   /// retry after a lost answer makes no second group.
   @State private var requestID = UUID().uuidString.lowercased()
-  @State private var making = false
+  /// The mark the group is being made with, kept while it is made: the
+  /// group coming in takes its color, which the guess would then skip.
+  @State private var making: GroupMarkValue?
   @State private var failed = false
   @State private var photoGone = false
 
@@ -65,7 +67,7 @@ struct NewGroupPage: View {
     }
     .toolbar {
       ToolbarItem(placement: .confirmationAction) {
-        if making {
+        if making != nil {
           ProgressView()
         } else {
           Button("作る", role: .confirm) { make() }
@@ -85,17 +87,18 @@ struct NewGroupPage: View {
     }
   }
 
-  /// The mark picked, else the one the name and the user's groups give:
-  /// in the first color those groups do not use yet, as /design picks a
-  /// new group's.
+  /// The mark being made with, else the one picked, else the one the name
+  /// and the user's groups give: in the first color those groups do not
+  /// use yet, as /design picks a new group's.
   private var mark: GroupMarkValue {
-    pickedMark
+    making ?? pickedMark
       ?? guessedMark(
         for: name, color: nextColor(groups.map(\.color), slots: colors.marks.count))
   }
 
   private func make() {
-    making = true
+    let mark = mark
+    making = mark
     Task {
       do {
         // A picked photo goes up first, for the group to take.
@@ -117,7 +120,7 @@ struct NewGroupPage: View {
         ReviewPrompt.troubled = true
         failed = true
       }
-      making = false
+      making = nil
     }
   }
 }
