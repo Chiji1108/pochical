@@ -146,8 +146,9 @@ jobs:
           git branch --force main origin/main
           mise run proto:breaking
 
-  # apps/android: the debug build, unit tests and lint. The runner's Android
-  # SDK has the platform and build tools the Gradle project names.
+  # apps/android: the debug and release builds, unit tests and lint. The
+  # runner's Android SDK has the platform and build tools the Gradle project
+  # names.
   android:
     needs: changes
     if: needs.changes.outputs.android == 'true'
@@ -165,4 +166,7 @@ jobs:
         with:
           cache-provider: basic
       - run: mise run android:build
+      # The minified release bundle, signed with the debug key here: R8 and
+      # its rules are checked before main releases it.
+      - run: mise run android:release
       - run: mise run android:test

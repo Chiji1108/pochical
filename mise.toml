@@ -134,6 +134,11 @@ description = "Build the Android app's debug APK"
 dir = "{{config_root}}/apps/android"
 run = "./gradlew assembleDebug"
 
+[tasks."android:release"]
+description = "Build the Android app's minified release bundle (AAB), signed with the upload key when one is given, else the debug key"
+dir = "{{config_root}}/apps/android"
+run = "./gradlew bundleRelease"
+
 [tasks."android:test"]
 description = "Run the Android modules' unit tests and lint"
 dir = "{{config_root}}/apps/android"
