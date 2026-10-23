@@ -1,6 +1,6 @@
 import { PATTERNS_PER_PAGE } from "@pochical/design/limits";
 import { readyPatternOrder } from "@pochical/design/patterns";
-import { css, cx } from "@pochical/styled-system/css";
+import { css } from "@pochical/styled-system/css";
 import { Fragment, useContext, useState } from "react";
 
 import {
@@ -13,12 +13,8 @@ import type { Pattern, PresetShift } from "../lib/design-patterns";
 import { designToday } from "../lib/design-today";
 import { useShownDays, useUser } from "../lib/design-user-store";
 import { ChoiceList, ChoiceRow } from "./design-choices";
-import {
-  LimitedInput,
-  markPreview,
-  markValue,
-  TimeRange,
-} from "./design-fields";
+import { LimitedInput, markValue, TimeRange } from "./design-fields";
+import { markFrame, PictureHeader } from "./design-group-parts";
 import { BackButton, HeaderAction, PageHeader } from "./design-header";
 import {
   AddRow,
@@ -96,34 +92,14 @@ function lookAlike(a: Look, b: Look, style: ShiftMarkStyle) {
 }
 
 const editor = {
-  // 印と色を変える under the mark, in the accent as a link's words.
-  change: css({ color: "accent.default", textStyle: "caption" }),
   // The switch with its note under it, as one section.
   inUse: css({ display: "flex", flexDirection: "column", gap: "8px" }),
-  // The pattern at the top, pressed to open 印と色.
-  lookLink: css({
-    border: 0,
-    cursor: "pointer",
-    textAlign: "start",
-    width: "100%",
-  }),
   // A lookalike's warning under the look page's choices.
   lookalike: css({
     color: "danger.default",
     margin: "-8px 4px 0",
     textStyle: "caption",
   }),
-  // The mark over 印と色を変える.
-  mark: css({
-    alignItems: "center",
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-  }),
-  // The name over the time, beside the mark at the top.
-  name: css({ display: "flex", flexDirection: "column", gap: "2px" }),
-  time: css({ color: "text.tertiary", textStyle: "footnote" }),
-  unnamed: css({ color: "text.tertiary" }),
 };
 
 // Where the ポチポチ入力's buttons go on to their next page, over the
@@ -550,29 +526,19 @@ function PatternEditor({
         }
         title={isNew ? "パターンを追加" : "パターンを編集"}
       />
-      {/* The way into its mark, as Contacts' edit screen puts 編集 under
-          the photo. */}
-      <button
-        aria-label={`印と色を変える、${markDescription}`}
-        className={cx(markPreview(), editor.lookLink)}
-        onClick={() => {
+      {/* The pattern's mark, the way into it, as a group's and a face's. */}
+      <PictureHeader
+        description={markDescription}
+        label="印と色を変える"
+        onOpen={() => {
           setSubPage("look");
         }}
-        type="button"
-      >
-        <span className={editor.mark}>
-          <MarkGlyph look={draft} size={44} style={style} />
-          <small className={editor.change}>印と色を変える</small>
-        </span>
-        <span className={editor.name}>
-          {/* Until it is named, what it is, faint: not 名前を入力, which
-              read as a field to press. */}
-          <strong className={draft.name ? undefined : editor.unnamed}>
-            {draft.name || "新しいパターン"}
-          </strong>
-          <small className={editor.time}>{timeText(patternOf(draft))}</small>
-        </span>
-      </button>
+        picture={
+          <span className={markFrame({ size: "large" })}>
+            <MarkGlyph look={draft} size={44} style={style} />
+          </span>
+        }
+      />
       <List>
         <ListRow
           label="名前"

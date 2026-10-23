@@ -540,7 +540,12 @@ export function PhotoPicker({
     close();
   };
   return (
-    <div className={photoPicker.root}>
+    <PictureHeader
+      corner={<Camera size={14} />}
+      label={label}
+      onOpen={open}
+      picture={picture}
+    >
       <input
         accept="image/*"
         capture="user"
@@ -564,20 +569,6 @@ export function PhotoPicker({
         }}
         type="file"
       />
-      <button
-        aria-label={label}
-        className={photoPicker.edit}
-        onClick={open}
-        type="button"
-      >
-        {picture}
-        <span aria-hidden="true" className={photoPicker.badge}>
-          <Camera size={14} />
-        </span>
-      </button>
-      <button className={photoPicker.action} onClick={open} type="button">
-        {label}
-      </button>
       <Sheet label={label} onOpenChange={setSheetOpen} open={sheetOpen}>
         <List>
           <ListRow
@@ -647,6 +638,50 @@ export function PhotoPicker({
         photo={picked}
         shape={shape}
       />
+    </PictureHeader>
+  );
+}
+
+// A picture at the top of a page that changes it, what tapping it does
+// under it in the accent: a face, a group's mark or a pattern's. A corner
+// badge says what it opens, as the camera says a photo.
+export function PictureHeader({
+  picture,
+  label,
+  description,
+  corner,
+  onOpen,
+  children,
+}: {
+  picture: ReactNode;
+  label: string;
+  // What the picture is, read after the label.
+  description?: string;
+  corner?: ReactNode;
+  onOpen: () => void;
+  children?: ReactNode;
+}) {
+  return (
+    <div className={photoPicker.root}>
+      <button
+        aria-label={
+          description === undefined ? label : `${label}、${description}`
+        }
+        className={photoPicker.edit}
+        onClick={onOpen}
+        type="button"
+      >
+        {picture}
+        {corner !== undefined && (
+          <span aria-hidden="true" className={photoPicker.badge}>
+            {corner}
+          </span>
+        )}
+      </button>
+      <button className={photoPicker.action} onClick={onOpen} type="button">
+        {label}
+      </button>
+      {children}
     </div>
   );
 }

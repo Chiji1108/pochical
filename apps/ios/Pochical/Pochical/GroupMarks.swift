@@ -125,6 +125,26 @@ private func initialLetter(of name: String) -> String {
 let markPhotoGoneTitle = "写真をもう一度選んでください"
 let markPhotoGoneMessage = "選んだ写真がこの端末から消えていたため、アイコンを元に戻しました。"
 
+/// The frame a mark stands on at the top of the page that changes it, a
+/// group's or a pattern's: an emoji's too, as large as the join screen's.
+struct MarkFrame: ViewModifier {
+  static let size: CGFloat = 76
+  @Environment(\.themeColors) private var colors
+
+  func body(content: Content) -> some View {
+    content
+      .frame(width: Self.size, height: Self.size)
+      .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.xxl))
+      .clipShape(RoundedRectangle(cornerRadius: Radius.xxl))
+  }
+}
+
+extension View {
+  func markFrame() -> some View {
+    modifier(MarkFrame())
+  }
+}
+
 /// The kinds of mark the tabs pick from; a photo is picked above them.
 private enum MarkKind: Hashable {
   case icon, emoji, letter
@@ -134,7 +154,6 @@ private enum MarkKind: Hashable {
 /// then one of it, from rows of eight by kind or from everything (ほかの…を
 /// 選ぶ), and for an icon or letters their color.
 struct GroupMarkPage: View {
-  @Environment(\.themeColors) private var colors
   @Environment(\.groupCalls) private var groupCalls
   let name: String
   @Binding var mark: GroupMarkValue
@@ -154,10 +173,8 @@ struct GroupMarkPage: View {
           // Drawn marks are picked with the tabs below, so this only
           // brings in a photo.
           PhotoEditor(label: mark.photoID.isEmpty ? "写真を使う" : "写真を変更", shape: .square) {
-            // On its frame, an emoji's too, as large as the join screen's.
-            GroupMarkView(mark: mark, size: 76, shelf: shelf)
-              .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.xxl))
-              .clipShape(RoundedRectangle(cornerRadius: Radius.xxl))
+            GroupMarkView(mark: mark, size: MarkFrame.size, shelf: shelf)
+              .markFrame()
           } onPhoto: { jpeg in
             await usePhoto(jpeg)
           }
