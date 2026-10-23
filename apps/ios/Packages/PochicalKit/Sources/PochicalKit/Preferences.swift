@@ -45,9 +45,6 @@ extension OwnValues {
 }
 
 extension DeviceSettings {
-  /// The keys of the parts kept with the account.
-  static let preferenceKeys = ["theme", "look", "week", "heading", "picture", "calendarAdd"]
-
   /// The parts kept with the account, each as its key's JSON.
   var preferences: [String: String] {
     let encoder = JSONEncoder()
