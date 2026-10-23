@@ -51,7 +51,7 @@ import {
   themeRoles,
 } from "../src/themes";
 import type { Preset } from "../src/themes";
-import { textStyles } from "../src/type";
+import { monoFont, textStyles } from "../src/type";
 import { widgetRules } from "../src/widgets";
 import { kotlinHolidays, swiftHolidays, webHolidays } from "./holidays";
 import {
@@ -166,6 +166,8 @@ function json() {
       noteMarkerSteps,
       roleSteps,
     },
+    // The web's alone: the native apps show no code.
+    fonts: { mono: monoFont },
     increasedContrast,
     invite: inviteRules,
     limits: {

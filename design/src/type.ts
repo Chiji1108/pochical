@@ -19,3 +19,10 @@ export const textStyles = {
 } as const;
 
 export type TextStyle = keyof typeof textStyles;
+
+// The web's one font for code: the design documents' names of pieces and
+// tokens, Fumadocs UI's inline code and the admin site's IDs. The system's
+// own monospaced font first (SF Mono, as iOS's .monospaced design), then
+// each platform's. The native apps show no code, so it is the web's alone.
+export const monoFont =
+  'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
