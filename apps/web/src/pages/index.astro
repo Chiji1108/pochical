@@ -28,14 +28,6 @@ const NEAR = { rootMargin: "100% 0px" };
 // where the site's own falls short of 4.5:1.
 const ON_SKY_TEXT = "#5c6159";
 
-// The /design phone's frame colors, as the workspace gives them.
-const page = css({
-  "--ws-bezel": "#333631",
-  "--ws-bezel-edge": "#b9bdb6",
-  "--ws-bezel-shadow": "#30392f35",
-  "--ws-island": "#242724",
-});
-
 const hero = {
   copy: css({
     _wide: {
@@ -284,7 +276,7 @@ const closing = {
 ---
 
 <Site description={site.description} path="/" title="シフトを、ポチッと。">
-  <main class={page} id="main">
+  <main id="main">
     <section class={hero.root}>
       <div class={hero.copy}>
         <Sky client:idle place="top" />
