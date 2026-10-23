@@ -1,7 +1,9 @@
+import { createScheduledController } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ORIGIN, signInAnonymously } from "./helpers";
+import worker from "../src/index";
+import { inOneLimitWindow, ORIGIN, signInAnonymously } from "./helpers";
 import { idToken, link, providerKeys } from "./provider-helpers";
 
 const base64url = (bytes: Uint8Array): string =>
@@ -37,10 +39,16 @@ const authorize = async (params: Record<string, string>) =>
   );
 
 /** Apple posting its answer back, as its form_post does. */
-const applePosts = async (form: Record<string, string>) =>
+const applePosts = async (
+  form: Record<string, string>,
+  headers: Record<string, string> = {}
+) =>
   await exports.default.fetch(`${ORIGIN}/apple/callback`, {
     body: new URLSearchParams(form),
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      ...headers,
+    },
     method: "POST",
     redirect: "manual",
   });
@@ -235,5 +243,54 @@ describe("Sign in with Apple's web page, for Android", () => {
       body: REFUSED,
       status: 400,
     });
+  });
+
+  it("holds back answers posted from one address", async () => {
+    const request = await appRequest();
+    const answer = {
+      code: "apple-code",
+      id_token: "a.b.c",
+      state: request.challenge,
+    };
+    const answers = await inOneLimitWindow(async (round) => {
+      const address = { "CF-Connecting-IP": `192.0.2.${round + 1}` };
+      const kept: string[] = [];
+      for (let attempt = 0; attempt < 21; attempt += 1) {
+        // oxlint-disable-next-line no-await-in-loop -- counted in order
+        const back = backToApp(await applePosts(answer, address));
+        kept.push(back.params.code === undefined ? "refused" : "kept");
+      }
+      return kept;
+    });
+    expect(answers).toStrictEqual([
+      ...Array.from({ length: 20 }, () => "kept"),
+      "refused",
+    ]);
+  });
+
+  it("erases at the daily sweep the handoffs never redeemed", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const stale = await appRequest();
+    const { code: staleCode } = await signedInAtApple(stale, "apple-web-4");
+    vi.setSystemTime(Date.now() + 121_000);
+    const fresh = await appRequest();
+    const { code } = await signedInAtApple(fresh, "apple-web-5");
+    const kept = async () =>
+      await env.DB.prepare(
+        "select count(*) as n from verification where identifier = ?"
+      )
+        .bind(`apple-handoff:${staleCode}`)
+        .first<number>("n");
+    const before = await kept();
+    await worker.scheduled(
+      createScheduledController({
+        cron: "0 18 * * *",
+        scheduledTime: Date.now(),
+      }),
+      env
+    );
+    const after = await kept();
+    const redeemed = await redeem(code, fresh.verifier);
+    expect([before, after, redeemed.status]).toStrictEqual([1, 0, 200]);
   });
 });

@@ -269,7 +269,7 @@ describe("deleting an account", () => {
     ]);
   });
 
-  it("revokes with the Services ID a code Apple's web page gave", async () => {
+  it("revokes with the Services ID, and its redirect URI, a code Apple's web page gave", async () => {
     const asked: { path: string; form: URLSearchParams }[] = [];
     providerKeys((request) => {
       const url = new URL(request.url);
@@ -293,13 +293,17 @@ describe("deleting an account", () => {
     expect([
       deleted,
       await signedIn(token),
-      asked.map(({ form, path }) => [path, form.get("client_id")]),
+      asked.map(({ form, path }) => [
+        path,
+        form.get("client_id"),
+        form.get("redirect_uri"),
+      ]),
     ]).toStrictEqual([
       200,
       401,
       [
-        ["/auth/token", "app.pochical.signin"],
-        ["/auth/revoke", "app.pochical.signin"],
+        ["/auth/token", "app.pochical.signin", `${ORIGIN}/apple/callback`],
+        ["/auth/revoke", "app.pochical.signin", null],
       ],
     ]);
   });

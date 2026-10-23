@@ -7,6 +7,7 @@ import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { revokeApple } from "./apple";
+import { appleCallbackUrl } from "./apple-handoff";
 import { account } from "./db/auth-schema";
 import {
   erasingSlackThreads,
@@ -133,7 +134,9 @@ export const deleteAccount = async (
         Code.FailedPrecondition
       );
     }
-    const client = apple.fromWeb ? env.APPLE_SERVICES_ID : env.APPLE_APP_ID;
+    const client = apple.fromWeb
+      ? { id: env.APPLE_SERVICES_ID, redirectUri: appleCallbackUrl(env) }
+      : { id: env.APPLE_APP_ID };
     const revoked = await revokeApple(
       env,
       { client, code: apple.code },

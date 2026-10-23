@@ -4,7 +4,6 @@ import android.net.Uri
 import android.util.Base64
 import java.io.IOException
 import java.security.MessageDigest
-import java.security.SecureRandom
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -36,7 +35,7 @@ private val answers = Json { ignoreUnknownKeys = true }
  */
 class AppleWebSignIn(private val server: HttpUrl, private val http: OkHttpClient) {
   /** A new sign-in, with its own verifier and nonce. */
-  fun start(): Attempt = Attempt(signInNonce(), base64Url(ByteArray(32).also(SecureRandom()::nextBytes)))
+  fun start(): Attempt = Attempt(nonce = signInNonce(), verifier = signInNonce())
 
   /** One sign-in: the page the browser opens, and the account from what it returns to. */
   inner class Attempt internal constructor(private val nonce: String, private val verifier: String) {
@@ -47,7 +46,8 @@ class AppleWebSignIn(private val server: HttpUrl, private val http: OkHttpClient
     val url: Uri =
       Uri.parse(
         server
-          .newBuilder("/apple/authorize")!!
+          .resolve("/apple/authorize")!!
+          .newBuilder()
           .addQueryParameter("challenge", challenge)
           .addQueryParameter("nonce", sha256(nonce).joinToString("") { "%02x".format(it) })
           .build()

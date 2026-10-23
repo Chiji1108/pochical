@@ -15,7 +15,11 @@ import {
   generateCodeChallenge,
 } from "@better-auth/core/oauth2";
 import { generateRandomString } from "better-auth/crypto";
+import { and, like, lt } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/d1";
 
+import { verification } from "./db/auth-schema";
+import { overLimit } from "./rate-limits";
 import { getAuth } from "./session";
 
 const APPLE_AUTHORIZE_PATH = "/apple/authorize";
@@ -41,7 +45,13 @@ type Handoff = {
   authorizationCode: string;
 };
 
-const handoffId = (code: string): string => `apple-handoff:${code}`;
+/** Where Apple's page posts its answer, as the Services ID registers it. */
+export const appleCallbackUrl = (env: Env): string =>
+  new URL(APPLE_CALLBACK_PATH, env.BETTER_AUTH_URL).href;
+
+const HANDOFF = "apple-handoff:";
+
+const handoffId = (code: string): string => `${HANDOFF}${code}`;
 
 const isHandoff = (value: unknown): value is Handoff =>
   typeof value === "object" &&
@@ -78,7 +88,7 @@ const authorize = async (url: URL, env: Env): Promise<Response> => {
     id: "apple",
     nonce,
     options: { clientId: env.APPLE_SERVICES_ID },
-    redirectURI: new URL(APPLE_CALLBACK_PATH, env.BETTER_AUTH_URL).href,
+    redirectURI: appleCallbackUrl(env),
     responseMode: "form_post",
     responseType: "code id_token",
     scopes: ["email"],
@@ -92,7 +102,7 @@ const authorize = async (url: URL, env: Env): Promise<Response> => {
  * app with the state; or what went wrong, the person cancelling apart.
  * The ID token is checked where it is used, as one from iOS is.
  */
-const answered = async (request: Request): Promise<Response> => {
+const answered = async (request: Request, env: Env): Promise<Response> => {
   const form = await request.formData();
   const field = (name: string): string => {
     const value = form.get(name);
@@ -107,7 +117,14 @@ const answered = async (request: Request): Promise<Response> => {
   if (field("error") === "user_cancelled_authorize") {
     return toApp({ error: "cancelled", state });
   }
-  if (idToken === "" || authorizationCode === "") {
+  if (
+    idToken === "" ||
+    authorizationCode === "" ||
+    (await overLimit(
+      env.APPLE_CALLBACK_LIMIT,
+      request.headers.get("CF-Connecting-IP")
+    ))
+  ) {
     return toApp({ error: "failed", state });
   }
   const code = generateRandomString(43, "a-z", "A-Z", "0-9");
@@ -170,10 +187,29 @@ export const appleHandoff = async (
     return await authorize(url, env);
   }
   if (url.pathname === APPLE_CALLBACK_PATH && request.method === "POST") {
-    return await answered(request);
+    return await answered(request, env);
   }
   if (url.pathname === APPLE_REDEEM_PATH && request.method === "POST") {
     return await redeem(request);
   }
   return undefined;
+};
+
+/**
+ * Handoffs never redeemed, past their two minutes, gone (the daily cron):
+ * redeeming takes the rest.
+ */
+export const eraseExpiredHandoffs = async (
+  env: Env,
+  now: Date
+): Promise<void> => {
+  await drizzle(env.DB)
+    .delete(verification)
+    .where(
+      and(
+        like(verification.identifier, `${HANDOFF}%`),
+        lt(verification.expiresAt, now)
+      )
+    )
+    .run();
 };

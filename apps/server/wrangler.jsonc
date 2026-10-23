@@ -84,8 +84,9 @@
     { "binding": "PUSH_OUTCOMES", "dataset": "pochical_push_outcomes" },
   ],
   // Cloudflare's rate limiting, counted per location and kept by nobody:
-  // anonymous sign-ins by the client's address, groups made, link
-  // previews asked for and lines to Pochical's people by the user.
+  // anonymous sign-ins and Apple's answers for Android by the client's
+  // address, groups made, link previews asked for and lines to Pochical's
+  // people by the user.
   // The numbers live here, where the limiters are made (src/rate-limits.ts).
   "ratelimits": [
     {
@@ -110,6 +111,13 @@
     {
       "name": "SUPPORT_LIMIT",
       "namespace_id": "1004",
+      "simple": { "limit": 20, "period": 60 },
+    },
+    // Apple's answers posted back for Android's sign-in, by the address of
+    // the browser posting them: each keeps a row until it is redeemed.
+    {
+      "name": "APPLE_CALLBACK_LIMIT",
+      "namespace_id": "1005",
       "simple": { "limit": 20, "period": 60 },
     },
   ],

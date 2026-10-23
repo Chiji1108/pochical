@@ -15,6 +15,13 @@ const APPLE = "https://appleid.apple.com";
 /** How long a client secret is good for: one deletion's two calls. */
 const SECRET_SECONDS = 300;
 
+/**
+ * Who Apple gave a code to: the iOS app, or the Services ID of Apple's web
+ * page, whose codes are taken only with the redirect URI they were asked
+ * with.
+ */
+export type AppleClient = { id: string; redirectUri?: string };
+
 /** What revoking came to. */
 export type Revoked = "revoked" | "refused" | "unset";
 
@@ -60,7 +67,7 @@ const subjectOf = (idToken: unknown): unknown => {
  */
 export const revokeApple = async (
   env: Env,
-  { client, code }: { client: string; code: string },
+  { client, code }: { client: AppleClient; code: string },
   subject: string
 ): Promise<Revoked> => {
   const key: string | undefined = env.APPLE_SIGNIN_KEY;
@@ -70,19 +77,22 @@ export const revokeApple = async (
   }
   const now = Math.floor(Date.now() / 1000);
   const app = {
-    client_id: client,
+    client_id: client.id,
     client_secret: await signES256(key, keyId, {
       aud: APPLE,
       exp: now + SECRET_SECONDS,
       iat: now,
       iss: env.APNS_TEAM_ID,
-      sub: client,
+      sub: client.id,
     }),
   };
   const exchanged = await callApple("/auth/token", {
     ...app,
     code,
     grant_type: "authorization_code",
+    ...(client.redirectUri === undefined
+      ? {}
+      : { redirect_uri: client.redirectUri }),
   });
   const { body } = exchanged;
   const refresh = isRecord(body) ? body.refresh_token : undefined;
