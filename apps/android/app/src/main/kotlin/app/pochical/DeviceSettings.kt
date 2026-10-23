@@ -35,6 +35,7 @@ data class DeviceSettings(
   /** The テーマ's id, as /design's preset, kept as it came so one this app does not know survives. */
   @SerialName("theme") val themeId: String = Theme.Pochical.id,
   val appearance: Appearance = Appearance.System,
+  val look: Look = Look(),
 ) {
   /** The テーマ in use; one no longer known is the app's own. */
   val theme: Theme
@@ -47,6 +48,28 @@ enum class Appearance {
   @SerialName("system") System,
   @SerialName("light") Light,
   @SerialName("dark") Dark,
+}
+
+/**
+ * The marks' look (/design's スタイル), kept with the account as iOS's Look
+ * is: the shape, an icon's fill, and whether each shift keeps its own color
+ * (色分け) or all take the テーマ's (ワントーン). How days off show in each
+ * shape comes with the style page (POC-208).
+ */
+@Serializable
+data class Look(
+  val style: MarkStyle = MarkStyle.Icon,
+  /** Filled (塗り) or outlined (線); icons alone have the choice. */
+  val fill: Boolean = true,
+  val colored: Boolean = true,
+)
+
+/** How a pattern's mark is drawn: its icon, its emoji or its letter on a tile. */
+@Serializable
+enum class MarkStyle {
+  @SerialName("icon") Icon,
+  @SerialName("emoji") Emoji,
+  @SerialName("badge") Badge,
 }
 
 /** The device settings as the screens read them, and the way to change them, as iOS's Settings. */
