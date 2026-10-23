@@ -46,7 +46,7 @@ Many people leave days off blank, moving on with 翌日へ. Rather than stop the
 
 ## A pattern's page
 
-パターンを編集 and パターンを追加 have no section titles. At the top is the pattern as it is being changed: its mark with 印と色を変える under it in the accent, its name and time beside. The whole card opens 印と色, as Contacts' edit screen puts 編集 under the photo, one button to VoiceOver that names the mark. Below come 名前, 時間なし and the time; then 休みとして数える and 翌日のパターン; then, on a saved pattern's page, 入力に出す with its footer (Patterns no longer used); and このパターンを削除 last, alone.
+パターンを編集 and パターンを追加 have no section titles. At the top is the pattern's mark alone, as it is being changed, with 印と色を変える under it in the accent, drawn as a group's アイコン and a face's 写真を編集 head their pages: the same header, the mark on the frame a group's mark stands on. The name and time are in the rows below, so the top does not say them again. The mark and its words open 印と色, one button to VoiceOver that names the mark. Below come 名前, 時間なし and the time; then 休みとして数える and 翌日のパターン; then, on a saved pattern's page, 入力に出す with its footer (Patterns no longer used); and このパターンを削除 last, alone.
 
 ## Picking a mark's icon
 

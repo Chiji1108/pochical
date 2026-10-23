@@ -260,7 +260,7 @@ extension Pochical_V1_Change {
 }
 
 /// The most a device waits before a try to reconnect, `tries` counting the
-/// tries since the last Welcome, this one included: `firstMs` doubled for
+/// tries since a socket last caught up, this one included: `firstMs` doubled for
 /// each try before it, up to `mostMs` (spec/vectors/reconnect.json). The
 /// wait is drawn at random from 0 up to it.
 public func reconnectWaitMost(tries: Int, firstMs: Int, mostMs: Int) -> Int {

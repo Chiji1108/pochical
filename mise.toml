@@ -54,7 +54,7 @@ dir = "{{config_root}}/proto"
 run = "buf breaking --against '../.git#branch=main,subdir=proto'"
 
 [tasks."sync:check"]
-description = "Fail if the Changes the iOS app reads changed without raising Sync.schema (--write records it once raised)"
+description = "Fail if the Changes the apps read changed without raising their sync schema, iOS's Sync.schema and Android's SYNC_SCHEMA (--write records it once raised)"
 run = ["bun test tools/sync-schema", "bun tools/sync-schema/check.ts"]
 
 [tasks.server]
@@ -139,6 +139,26 @@ run = "./gradlew bundleRelease"
 description = "Run the Android modules' unit tests and lint"
 dir = "{{config_root}}/apps/android"
 run = "./gradlew test lint"
+
+[tasks."android:db:check"]
+description = "Fail if building the Android app changed a database version's schema Room exports (its identity hash: a shape changed without its version raised) or wrote one not committed (run after a build)"
+run = """
+status=0
+hash() { grep -o '"identityHash": *"[^"]*"' | head -1; }
+for file in $(git diff --name-only -- apps/android/kit/schemas); do
+  if [ "$(git show "HEAD:$file" | hash)" != "$(hash < "$file")" ]; then
+    echo "$file: the database's shape changed under the same version. Raise AppDatabase.VERSION, which erases the database until release, and commit kit/schemas (AGENTS.md)."
+  else
+    echo "$file: Room wrote the same shape anew; commit it."
+  fi
+  status=1
+done
+for file in $(git ls-files --others --exclude-standard -- apps/android/kit/schemas); do
+  echo "$file: a new database version's schema; commit it."
+  status=1
+done
+exit $status
+"""
 
 [tasks."ios:photo-touches"]
 description = "Run the chat photo line's touch UI tests in a simulator, erasing it, against a server it starts on :8787: <simulator name> [derived data]"

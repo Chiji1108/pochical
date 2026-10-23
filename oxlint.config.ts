@@ -26,7 +26,6 @@ export default defineConfig({
         "apps/design/**",
         "apps/try/**",
         "packages/prototype/**",
-        "packages/showcase/**",
       ],
       rules: {
         complexity: "warn",

@@ -16,4 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "pochical"
 
-include(":app", ":design", ":proto")
+include(":app", ":design", ":kit", ":proto")

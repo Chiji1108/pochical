@@ -49,7 +49,6 @@
         "@pochical/design": "workspace:*",
         "@pochical/jsx": "workspace:*",
         "@pochical/prototype": "workspace:*",
-        "@pochical/showcase": "workspace:*",
         "@pochical/styled-system": "workspace:*",
         "@tanstack/react-router": "1.170.45",
         "@tanstack/react-start": "1.169.3",
@@ -104,9 +103,7 @@
         "@pochical/design": "workspace:*",
         "@pochical/jsx": "workspace:*",
         "@pochical/prototype": "workspace:*",
-        "@pochical/showcase": "workspace:*",
         "@pochical/styled-system": "workspace:*",
-        "lucide-react": "^1.61.0",
         "motion": "^14.4.0",
         "qrcode.react": "^4.2.0",
         "react": "19.3.1",
@@ -212,21 +209,6 @@
         "@types/react": "~19.3.0",
         "@types/react-dom": "^19.2.0",
         "sharp": "0.35.5",
-        "typescript": "~7.0.2",
-        "vite": "^8.0.0",
-      },
-    },
-    "packages/showcase": {
-      "name": "@pochical/showcase",
-      "dependencies": {
-        "@pochical/jsx": "workspace:*",
-        "@pochical/prototype": "workspace:*",
-        "@pochical/styled-system": "workspace:*",
-        "lucide-react": "^1.61.0",
-        "react": "19.3.1",
-      },
-      "devDependencies": {
-        "@types/react": "~19.3.0",
         "typescript": "~7.0.2",
         "vite": "^8.0.0",
       },
@@ -766,8 +748,6 @@
     "@pochical/prototype": ["@pochical/prototype@workspace:packages/prototype"],
 
     "@pochical/server": ["@pochical/server@workspace:apps/server"],
-
-    "@pochical/showcase": ["@pochical/showcase@workspace:packages/showcase"],
 
     "@pochical/styled-system": ["@pochical/styled-system@workspace:packages/styled-system"],
 
