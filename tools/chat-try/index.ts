@@ -21,6 +21,12 @@
 // the group, to be removed from the app.
 //
 //   bun tools/chat-try/index.ts <invite code> --photos <dir> [--album] [--face <jpeg>]
+//
+// With `--react <emoji> --to <words>` it sends no lines: it puts that
+// reaction on the latest line of exactly those words instead, as another
+// member reacting while the chat is open.
+//
+//   bun tools/chat-try/index.ts <invite code> --react <emoji> --to <words> [--face <jpeg>]
 
 import { readdir } from "node:fs/promises";
 import path from "node:path";
@@ -44,6 +50,19 @@ const fail = (message: string): never => {
   process.exit(1);
 };
 
+// Waits for the group's answer, failing once it has not come in
+// ACK_TIMEOUT_MS (the socket closed, the server gone).
+const inTime = async <T>(answer: Promise<T>): Promise<T> => {
+  const late = setTimeout(() => {
+    fail("no answer from the group");
+  }, ACK_TIMEOUT_MS);
+  try {
+    return await answer;
+  } finally {
+    clearTimeout(late);
+  }
+};
+
 const flags = new Set(["--rich", "--album"]);
 const args = process.argv.slice(2).filter((arg) => !flags.has(arg));
 const rich = process.argv.includes("--rich");
@@ -55,9 +74,11 @@ const valueOf = (flag: string): string | undefined => {
 const every = Number(valueOf("--every") ?? 0);
 const photoDir = valueOf("--photos");
 const face = valueOf("--face");
+const reaction = valueOf("--react");
+const reactTo = valueOf("--to");
 const [code, countArg] = args.filter(
   (_, index) =>
-    !["--every", "--photos", "--face"].some((flag) => {
+    !["--every", "--photos", "--face", "--react", "--to"].some((flag) => {
       const at = args.indexOf(flag);
       return at !== -1 && (index === at || index === at + 1);
     })
@@ -275,6 +296,12 @@ const socket = new WebSocket(
 socket.binaryType = "arraybuffer";
 
 const welcomed = Promise.withResolvers<undefined>();
+// The catch-up has all come: the Pong to the Ping after Welcome.
+const caughtUp = Promise.withResolvers<undefined>();
+// The latest line of each words, by its seq.
+const seqOfWords = new Map<string, bigint>();
+// Who chose each emoji on each line, by its seq, as the group last sent it.
+const reactionsOf = new Map<bigint, Map<string, string[]>>();
 // The sends the group took as lines.
 const taken = new Set<string>();
 socket.addEventListener("open", () => {
@@ -293,10 +320,25 @@ socket.addEventListener("message", (event) => {
   const frame = fromBinary(ServerFrameSchema, new Uint8Array(event.data));
   if (frame.kind.case === "welcome") {
     welcomed.resolve(undefined);
+  } else if (frame.kind.case === "pong") {
+    caughtUp.resolve(undefined);
   } else if (frame.kind.case === "changes") {
     for (const { kind } of frame.kind.value.changes) {
       if (kind.case === "chatLine") {
         taken.add(kind.value.opId);
+        const { content, reactions, seq } = kind.value;
+        // The latest of lines of the same words, whatever order the
+        // catch-up brings them in (by cursor, not seq).
+        if (
+          content?.kind.case === "words" &&
+          seq > (seqOfWords.get(content.kind.value.text) ?? 0n)
+        ) {
+          seqOfWords.set(content.kind.value.text, seq);
+        }
+        reactionsOf.set(
+          seq,
+          new Map(reactions.map(({ emoji, userIds }) => [emoji, userIds]))
+        );
       }
     }
   } else if (frame.kind.case === "acked") {
@@ -309,6 +351,58 @@ socket.addEventListener("message", (event) => {
 });
 socket.addEventListener("error", () => fail("socket: could not connect"));
 await welcomed.promise;
+
+if (reaction !== undefined) {
+  socket.send(
+    toBinary(
+      ClientFrameSchema,
+      create(ClientFrameSchema, {
+        kind: { case: "ping", value: { nonce: 1 } },
+      })
+    )
+  );
+  await inTime(caughtUp.promise);
+  const seq =
+    seqOfWords.get(reactTo ?? "") ?? fail(`no line of the words ${reactTo}`);
+  const opId = crypto.randomUUID();
+  const acked = Promise.withResolvers<undefined>();
+  sent.set(opId, { answered: acked, what: reaction });
+  socket.send(
+    toBinary(
+      ClientFrameSchema,
+      create(ClientFrameSchema, {
+        kind: {
+          case: "chatEdits",
+          value: {
+            edits: [
+              {
+                kind: {
+                  case: "react",
+                  value: {
+                    emoji: reaction,
+                    on: true,
+                    seq,
+                    threadId: GROUP_THREAD,
+                  },
+                },
+                opId,
+              },
+            ],
+          },
+        },
+      })
+    )
+  );
+  await inTime(acked.promise);
+  socket.close();
+  // The group answers every edit, taken or not: the line it sent again
+  // says whether the reaction is on it.
+  if (!(reactionsOf.get(seq)?.get(reaction)?.includes(userId) ?? false)) {
+    fail(`refused by the group: ${reaction} on ${reactTo}`);
+  }
+  console.log(`${name}として${reactTo}に${reaction}を付けました`);
+  process.exit(0);
+}
 
 const lines = richLines(userId);
 const uploaded = await Promise.all(
@@ -344,15 +438,13 @@ if (every > 0) {
 }
 // Until the group has answered every send: the lines it took come before
 // its Acked, and a send acked with no line was refused.
-const unanswered = setTimeout(() => {
-  fail("no answer from the group");
-}, ACK_TIMEOUT_MS);
-await Promise.all(
-  [...sent.values()].map(async ({ answered }) => {
-    await answered.promise;
-  })
+await inTime(
+  Promise.all(
+    [...sent.values()].map(async ({ answered }) => {
+      await answered.promise;
+    })
+  )
 );
-clearTimeout(unanswered);
 socket.close();
 const refused = [...sent]
   .filter(([opId]) => !taken.has(opId))

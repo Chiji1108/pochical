@@ -12,6 +12,7 @@ object Chat {
   const val draftSettleMs = 500
   const val floatingDayMs = 1500
   const val foldLines = 10
+  const val jumpFlashMs = 1000
   const val largeEmojiMax = 3
   const val largeEmojiSize = 48
   const val lineGap = 4

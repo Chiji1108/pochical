@@ -3,18 +3,22 @@
 // named entrypoint (spec/admin.md). Nothing here has a public address: the
 // apps and the internet reach only the default entrypoint's fetch.
 import { create } from "@bufbuild/protobuf";
+import { withinLimit } from "@pochical/design/text";
 import { WorkerEntrypoint } from "cloudflare:workers";
-import { desc } from "drizzle-orm";
+import { and, count, desc, eq, gt, gte, lt, or, sql } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { auditBucket, cleanBucket } from "./bucket-audit";
 import type { BucketAudit, BucketCleanup } from "./bucket-audit";
-import { supportChats } from "./db/schema";
+import { account, session, user } from "./db/auth-schema";
+import { adminActions, pushTokens, reports, supportChats } from "./db/schema";
 import { ChatEditSchema } from "./gen/pochical/v1/sync_pb";
 import { GROUP_THREAD } from "./group-chat";
 import { photoKey } from "./photos";
 import { previewReset, resetEverything } from "./reset";
 import type { ResetPreview } from "./reset";
+import { getAuth } from "./session";
 import { supportPlace } from "./support-lines";
 import type { SupportLine } from "./support-lines";
 
@@ -43,18 +47,161 @@ export type SupportChatPage = {
   atStart: boolean;
 };
 
-/** What a member reported, with what they saw. */
+/** Where a report stands with Pochical's people (spec/admin.md, 通報). */
+export const REPORT_STATES = ["open", "acted", "dismissed"] as const;
+export type ReportState = (typeof REPORT_STATES)[number];
+
+/** Each state as 記録 says it. */
+const STATE_WORDS: Record<ReportState, string> = {
+  acted: "対応済み",
+  dismissed: "問題なし",
+  open: "未対応",
+};
+
+const isReportState = (state: string): state is ReportState =>
+  REPORT_STATES.some((one) => one === state);
+
+/** The most a report's note holds, in characters as a reader counts them. */
+export const REPORT_NOTE_MAX = 1000;
+
+/** What a member reported, with what they saw, and where it stands. */
 export type ReportSummary = {
+  id: string;
   atMs: number;
   reason: string;
   groupId: string;
   reporterId: string;
   targetId: string;
   context: string;
+  state: ReportState;
+  note: string;
+  /** When Pochical's people last set its state, and who; null while open. */
+  handled: { atMs: number; by: string } | null;
+};
+
+/** One thing Pochical's people did on the admin site (記録). */
+export type AdminAction = {
+  atMs: number;
+  by: string;
+  action: string;
+  target: string;
+  detail: string;
+};
+
+/** A user as the list of them shows them: from D1 alone. */
+export type UserSummary = {
+  userId: string;
+  createdAtMs: number;
+  anonymous: boolean;
+  /** How they sign in besides anonymously: apple. */
+  signIns: string[];
+  /** Their chat with Pochical's people waits for an answer (未返信). */
+  unanswered: number;
+  /** When Pochical's people suspended them; null while they are not. */
+  suspendedAtMs: number | null;
+};
+
+/** Where a page of users ends, for the page after it. */
+export type UserCursor = { createdAtMs: number; userId: string };
+
+/** A page of users, and where the next begins; none after the last. */
+export type UserList = { users: UserSummary[]; next: UserCursor | null };
+
+/** One user's page: what D1 and their own DO know of them. */
+export type UserPage = UserSummary & {
+  /** Their usual name; empty before they set one. */
+  name: string;
+  /** The groups they are in or have left, the latest joined first. */
+  groups: {
+    groupId: string;
+    name: string;
+    joinedAtMs: number;
+    leftAtMs: number | null;
+  }[];
+  /** The sessions signed in, one a device, and their push tokens. */
+  sessions: number;
+  pushTokens: number;
+  /** Their chat with Pochical's people, if they ever opened it. */
+  supportChat: { lastAtMs: number } | null;
+  /** What they reported, and what members reported of them. */
+  reportsBy: ReportSummary[];
+  reportsAbout: ReportSummary[];
+  /** How many there are of each, beyond the latest the lists hold. */
+  reportsByCount: number;
+  reportsAboutCount: number;
 };
 
 /** The most a list gives at once. */
 const PAGE = 200;
+
+/**
+ * How a user signs in besides anonymously (apple), in the same query as
+ * them: a list binds no id for each of its users, which D1 holds to 100.
+ */
+const signInsSql = sql<
+  string | null
+>`(select group_concat(${account.providerId}) from ${account} where ${account.userId} = ${user.id})`;
+
+const signInsIn = (joined: string | null): string[] =>
+  joined === null ? [] : joined.split(",");
+
+/** The reports, the latest first: all, or those `where` picks. */
+const reportsWhere = async (
+  env: Env,
+  where?: SQL
+): Promise<ReportSummary[]> => {
+  const rows = await drizzle(env.DB)
+    .select()
+    .from(reports)
+    .where(where)
+    // Those waiting first, then the latest.
+    .orderBy(sql`${reports.status} = 'open' desc`, desc(reports.createdAt))
+    .limit(PAGE);
+  return rows.map((row) => ({
+    atMs: row.createdAt.getTime(),
+    context: row.context,
+    groupId: row.groupId,
+    handled:
+      row.handledAt === null
+        ? null
+        : { atMs: row.handledAt.getTime(), by: row.handledBy ?? "" },
+    id: row.id,
+    note: row.note,
+    reason: row.reason,
+    reporterId: row.reporterId,
+    // A state not of these would be a bug's; it is shown as waiting.
+    state: isReportState(row.status) ? row.status : "open",
+    targetId: row.targetId,
+  }));
+};
+
+/** A note for 記録 of what Pochical's people did, now. */
+const actionRow = (
+  action: Omit<AdminAction, "atMs">,
+  id: string = crypto.randomUUID()
+) => ({ ...action, at: new Date(), id });
+
+/**
+ * What Pochical's people did, noted for 記録 once it is done. `id` keeps
+ * one note of an action sent again (an answer pressed twice is one
+ * answer). A note that cannot be written is logged, never thrown: what it
+ * notes has happened already, and the page must say so.
+ */
+const noteDone = async (
+  env: Env,
+  action: Omit<AdminAction, "atMs">,
+  id?: string
+): Promise<void> => {
+  try {
+    await drizzle(env.DB)
+      .insert(adminActions)
+      .values(actionRow(action, id))
+      .onConflictDoNothing()
+      .run();
+  } catch (error) {
+    console.error("Noting an admin action failed", action, error);
+  }
+};
 
 export class AdminEntrypoint extends WorkerEntrypoint<Env> {
   /** Every user's chat, the latest first, from D1's index of them. */
@@ -103,7 +250,8 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
   async answerSupport(
     userId: string,
     text: string,
-    opId: string
+    opId: string,
+    by: string
   ): Promise<boolean> {
     // Only a chat the user opened: one never set up takes nothing.
     const place = this.env.GROUPS.getByName(supportPlace(userId));
@@ -119,7 +267,20 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
         opId,
       }),
     ]);
-    return seqs.length > 0;
+    if (seqs.length === 0) {
+      return false;
+    }
+    await noteDone(
+      this.env,
+      {
+        action: "answer",
+        by,
+        detail: text.trim().slice(0, 80),
+        target: userId,
+      },
+      `answer:${opId}`
+    );
+    return true;
   }
 
   /** A photo in a user's chat, its bytes and their type; null when gone. */
@@ -156,11 +317,36 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
    * that passed the grace since is deleted unseen. It cannot be undone;
    * run again, it deletes what a run cut short left.
    */
-  async cleanBucket(asOfMs: number): Promise<BucketCleanup> {
+  async cleanBucket(asOfMs: number, by: string): Promise<BucketCleanup> {
     if (!Number.isFinite(asOfMs)) {
       throw new TypeError("No audit's time to delete as of");
     }
-    return await cleanBucket(this.env, Math.min(asOfMs, Date.now()));
+    try {
+      const cleanup = await cleanBucket(this.env, Math.min(asOfMs, Date.now()));
+      const deleted = cleanup.rows.reduce(
+        (sum, row) => sum + row.deleted.count,
+        0
+      );
+      const failed = cleanup.rows.reduce(
+        (sum, row) => sum + row.failed.count,
+        0
+      );
+      await noteDone(this.env, {
+        action: "cleanBucket",
+        by,
+        detail: `${deleted} 件を消した、${failed} 件失敗`,
+        target: "",
+      });
+      return cleanup;
+    } catch (error) {
+      await noteDone(this.env, {
+        action: "cleanBucket",
+        by,
+        detail: "途中で止まった",
+        target: "",
+      });
+      throw error;
+    }
   }
 
   /** What 全消去 would erase now: it only reads. */
@@ -173,31 +359,312 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
    * release only. It cannot be undone; run again, it erases what a run
    * cut short left, and after one that finished, nothing.
    */
-  async reset(): Promise<void> {
-    await resetEverything(this.env);
+  async reset(by: string): Promise<void> {
+    // Noted whether it finished or stopped part way, saying which; 全消去
+    // leaves the notes of what was done, this one among them.
+    const noted = { action: "reset", by, target: "" };
+    try {
+      await resetEverything(this.env);
+    } catch (error) {
+      await noteDone(this.env, { ...noted, detail: "途中で止まった" });
+      throw error;
+    }
+    await noteDone(this.env, { ...noted, detail: "" });
   }
 
   /** What members reported, the latest first. */
   async reports(): Promise<ReportSummary[]> {
-    const { results } = await this.env.DB.prepare(
-      "select created_at, reason, group_id, reporter_id, target_id, context from reports order by created_at desc limit ?"
-    )
-      .bind(PAGE)
-      .all<{
-        created_at: number;
-        reason: string;
-        group_id: string;
-        reporter_id: string;
-        target_id: string;
-        context: string;
-      }>();
-    return results.map((row) => ({
-      atMs: row.created_at,
-      context: row.context,
-      groupId: row.group_id,
-      reason: row.reason,
-      reporterId: row.reporter_id,
-      targetId: row.target_id,
+    return await reportsWhere(this.env);
+  }
+
+  /**
+   * A report's state and note set by Pochical's people, and who did it.
+   * False, setting nothing, for no such report, a state not of
+   * REPORT_STATES, or a note longer than REPORT_NOTE_MAX.
+   */
+  async handleReport(
+    reportId: string,
+    state: string,
+    note: string,
+    by: string
+  ): Promise<boolean> {
+    const kept = note.trim();
+    if (!isReportState(state) || !withinLimit(kept, REPORT_NOTE_MAX)) {
+      return false;
+    }
+    const handled = state === "open" ? null : new Date();
+    const db = drizzle(this.env.DB);
+    // The state and its note in 記録 together, in one transaction.
+    const [updated] = await db.batch([
+      db
+        .update(reports)
+        .set({
+          handledAt: handled,
+          handledBy: handled === null ? null : by,
+          note: kept,
+          status: state,
+        })
+        .where(eq(reports.id, reportId))
+        .returning({ id: reports.id }),
+      db.insert(adminActions).select(
+        db
+          .select({
+            action: sql<string>`'report'`.as("action"),
+            at: sql<number>`${Date.now()}`.as("at"),
+            by: sql<string>`${by}`.as("by"),
+            detail: sql<string>`${
+              kept === ""
+                ? STATE_WORDS[state]
+                : `${STATE_WORDS[state]}：${kept}`
+            }`.as("detail"),
+            id: sql<string>`${crypto.randomUUID()}`.as("id"),
+            target: reports.id,
+          })
+          .from(reports)
+          .where(eq(reports.id, reportId))
+      ),
+    ]);
+    if (updated.length === 0) {
+      return false;
+    }
+    return true;
+  }
+
+  /** What waits for Pochical's people: reports open, chats unanswered. */
+  async waiting(): Promise<{ reports: number; chats: number }> {
+    const db = drizzle(this.env.DB);
+    const [open, unanswered] = await Promise.all([
+      db
+        .select({ n: count() })
+        .from(reports)
+        .where(eq(reports.status, "open"))
+        .get(),
+      db
+        .select({ n: count() })
+        .from(supportChats)
+        .where(gt(supportChats.unanswered, 0))
+        .get(),
+    ]);
+    return { chats: unanswered?.n ?? 0, reports: open?.n ?? 0 };
+  }
+
+  /** What Pochical's people did on the admin site, the latest first. */
+  async actions(): Promise<AdminAction[]> {
+    const rows = await drizzle(this.env.DB)
+      .select()
+      .from(adminActions)
+      .orderBy(desc(adminActions.at))
+      .limit(PAGE);
+    return rows.map((row) => ({
+      action: row.action,
+      atMs: row.at.getTime(),
+      by: row.by,
+      detail: row.detail,
+      target: row.target,
     }));
+  }
+
+  /**
+   * The user suspended (or, with `on` false, let back): they sign in
+   * nowhere while suspended, and every device of theirs is signed out at
+   * once, its sockets closed, as signing out does (spec/admin.md,
+   * ユーザー). False, changing nothing, for an id with no account.
+   */
+  async suspend(userId: string, on: boolean, by: string): Promise<boolean> {
+    const updated = await drizzle(this.env.DB)
+      .update(user)
+      // Suspended again (a retry, a second press), it keeps when it began.
+      .set({
+        suspendedAt: on
+          ? sql`coalesce(${user.suspendedAt}, ${Date.now()})`
+          : null,
+      })
+      .where(eq(user.id, userId))
+      .returning({ id: user.id });
+    if (updated.length === 0) {
+      return false;
+    }
+    if (on) {
+      // better-auth's own, which runs the hook that closes their sockets.
+      const auth = await getAuth().$context;
+      await auth.internalAdapter.deleteUserSessions(userId);
+    }
+    await noteDone(this.env, {
+      action: on ? "suspend" : "unsuspend",
+      by,
+      detail: "",
+      target: userId,
+    });
+    return true;
+  }
+
+  /**
+   * The user taken out of the group by Pochical's people (spec/admin.md,
+   * ユーザー), as a member takes another out: the group's line says
+   * 〇〇がグループから外されました. Only a user with an account, and a group
+   * their own DO lists them in now, so no DO is made by asking; false,
+   * changing nothing, otherwise.
+   */
+  async removeFromGroup(
+    userId: string,
+    groupId: string,
+    by: string
+  ): Promise<boolean> {
+    const known = await drizzle(this.env.DB)
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.id, userId))
+      .get();
+    if (known === undefined) {
+      return false;
+    }
+    if (!(await this.env.USERS.getByName(userId).isMember(groupId))) {
+      return false;
+    }
+    const group = this.env.GROUPS.getByName(groupId);
+    const taken = await group.removeByPochical(userId);
+    if (taken) {
+      const named = await group.getProfile();
+      await noteDone(this.env, {
+        action: "removeFromGroup",
+        by,
+        detail: named?.name ?? "",
+        target: userId,
+      });
+    }
+    return taken;
+  }
+
+  /**
+   * The users whose id starts with `prefix`, the latest signed up first:
+   * every user for an empty one, a page at a time. `after` is the last
+   * user of the page before, whose followers come next; none for the
+   * first page.
+   */
+  async users(
+    prefix: string,
+    after: UserCursor | null = null
+  ): Promise<UserList> {
+    const db = drizzle(this.env.DB);
+    const rows = await db
+      .select({
+        anonymous: user.isAnonymous,
+        createdAt: user.createdAt,
+        signIns: signInsSql,
+        suspendedAt: user.suspendedAt,
+        unanswered: supportChats.unanswered,
+        userId: user.id,
+      })
+      .from(user)
+      .leftJoin(supportChats, eq(supportChats.userId, user.id))
+      // The ids starting with it, as a range of the primary key's order, so
+      // no character is taken as a pattern and the index finds them.
+      .where(
+        and(
+          gte(user.id, prefix),
+          lt(user.id, `${prefix}\uFFFF`),
+          // After the page before, in the list's own order: signed up
+          // earlier, or at the same moment with a lower id.
+          after === null
+            ? undefined
+            : or(
+                lt(user.createdAt, new Date(after.createdAtMs)),
+                and(
+                  eq(user.createdAt, new Date(after.createdAtMs)),
+                  lt(user.id, after.userId)
+                )
+              )
+        )
+      )
+      .orderBy(desc(user.createdAt), desc(user.id))
+      // One past the page, to know whether another follows it.
+      .limit(PAGE + 1);
+    const users = rows.slice(0, PAGE).map((row) => ({
+      anonymous: row.anonymous ?? false,
+      createdAtMs: row.createdAt.getTime(),
+      signIns: signInsIn(row.signIns),
+      suspendedAtMs: row.suspendedAt?.getTime() ?? null,
+      unanswered: row.unanswered ?? 0,
+      userId: row.userId,
+    }));
+    const last = users.at(-1);
+    return {
+      next:
+        rows.length > PAGE && last !== undefined
+          ? { createdAtMs: last.createdAtMs, userId: last.userId }
+          : null,
+      users,
+    };
+  }
+
+  /**
+   * One user's page, or null for an id with no account. Their own DO is
+   * asked only once D1 has their row, so asking makes none.
+   */
+  async user(userId: string): Promise<UserPage | null> {
+    const db = drizzle(this.env.DB);
+    const row = await db
+      .select({
+        anonymous: user.isAnonymous,
+        createdAt: user.createdAt,
+        signIns: signInsSql,
+        suspendedAt: user.suspendedAt,
+      })
+      .from(user)
+      .where(eq(user.id, userId))
+      .get();
+    if (row === undefined) {
+      return null;
+    }
+    const reportCount = async (where: SQL) => {
+      const counted = await db
+        .select({ n: count() })
+        .from(reports)
+        .where(where)
+        .get();
+      return counted?.n ?? 0;
+    };
+    const [own, signedIn, tokens, chat, by, about, byCount, aboutCount] =
+      await Promise.all([
+        this.env.USERS.getByName(userId).adminView(),
+        db
+          .select({ n: count() })
+          .from(session)
+          .where(eq(session.userId, userId))
+          .get(),
+        db
+          .select({ n: count() })
+          .from(pushTokens)
+          .innerJoin(session, eq(session.id, pushTokens.sessionId))
+          .where(eq(session.userId, userId))
+          .get(),
+        db
+          .select()
+          .from(supportChats)
+          .where(eq(supportChats.userId, userId))
+          .get(),
+        reportsWhere(this.env, eq(reports.reporterId, userId)),
+        reportsWhere(this.env, eq(reports.targetId, userId)),
+        reportCount(eq(reports.reporterId, userId)),
+        reportCount(eq(reports.targetId, userId)),
+      ]);
+    return {
+      anonymous: row.anonymous ?? false,
+      createdAtMs: row.createdAt.getTime(),
+      groups: own.groups,
+      name: own.name,
+      pushTokens: tokens?.n ?? 0,
+      reportsAbout: about,
+      reportsAboutCount: aboutCount,
+      reportsBy: by,
+      reportsByCount: byCount,
+      sessions: signedIn?.n ?? 0,
+      signIns: signInsIn(row.signIns),
+      supportChat:
+        chat === undefined ? null : { lastAtMs: chat.lastAt.getTime() },
+      suspendedAtMs: row.suspendedAt?.getTime() ?? null,
+      unanswered: chat?.unanswered ?? 0,
+      userId,
+    };
   }
 }

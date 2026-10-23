@@ -1,6 +1,6 @@
 # Widgets
 
-What the home and lock screen widgets show, and how it is worked out. Both native apps build one entry per day from the person's own shifts and settings (WidgetKit's `TimelineEntry`, Glance's state), and the widget views draw only from that entry. The web prototype's `widgetEntry` in `packages/prototype/src/lib/design-widgets.ts` follows this spec, and `/design/widgets` shows the views. A day's `time` and `change`, and what 次の休み counts (`offs`), are pinned by `spec/vectors/widgets.json`.
+What the home and lock screen widgets show, and how it is worked out. Both native apps build one entry per day from the person's own shifts and settings (WidgetKit's `TimelineEntry`, Glance's state), and the widget views draw only from that entry. The web prototype's `widgetEntry` in `packages/prototype/src/lib/design-widgets.ts` follows this spec, and the pages under `/design/widgets` show the views, a page for each kind. A day's `time` and `change`, and what 次の休み counts (`offs`), are pinned by `spec/vectors/widgets.json`.
 
 ## When an entry is made
 
@@ -106,7 +106,7 @@ Each kind is one widget in the gallery, offering the sizes in the table above; o
 | カレンダー | medium, large (Android 4×2, 4×4) | カレンダー | 2週間と、1か月のシフト。 |
 | いまのシフト | small; lock screen round and rectangular | いまのシフト | 勤務があと何時間か。なければ次の勤務まで。 |
 
-What a gallery shows of a kind before it is placed: on the iPhone the person's own entry once they have entered days (WidgetKit's snapshot), else the sample week /design/widgets shows on an ordinary day (ふつう), which is also the placeholder while an entry loads. Android's picker shows the sample, as a generated preview where the launcher supports it (Android 15), else as a picture of it.
+What a gallery shows of a kind before it is placed: on the iPhone the person's own entry once they have entered days (WidgetKit's snapshot), else the sample week the pages under /design/widgets show on an ordinary day (ふつう), which is also the placeholder while an entry loads. Android's picker shows the sample, as a generated preview where the launcher supports it (Android 15), else as a picture of it.
 
 ## Colors
 

@@ -892,10 +892,37 @@ const demoStates: State[] = [
   },
 ];
 
+// The design documents' pages of pieces and of widgets
+// (apps/design/content/design).
+const componentPages = [
+  "buttons",
+  "lists",
+  "inputs",
+  "choices",
+  "sheets",
+  "pochical",
+];
+const widgetPages = [
+  "simple",
+  "next-off",
+  "upcoming",
+  "now",
+  "calendar",
+  "lock",
+];
+
 const designStates: State[] = [
   // Every phone of the design pages: the calendar in its states, light
   // and dark, and the first-run screens.
   { name: "design/states", path: "/design/states" },
+  {
+    // The テーマ in dark, behind the page's second tab.
+    name: "design/states-dark-themes",
+    path: "/design/states",
+    steps: async (page) => {
+      await page.getByRole("tab", { name: "ダーク" }).click();
+    },
+  },
   { name: "design/flows", path: "/design/flows" },
   {
     // The first run's order moved to start on another day. The flow page
@@ -909,23 +936,30 @@ const designStates: State[] = [
         .dispatchEvent("click");
     },
   },
-  // Every shared piece on its own, each in its sample box.
-  {
-    name: "design/components",
-    path: "/design/components",
+  // Every shared piece on its own, each in its sample box, a page of
+  // groups at a time.
+  ...componentPages.map((page) => ({
+    name: `design/components/${page}`,
+    path: `/design/components/${page}`,
     root: "[data-sample]",
-  },
-  // The pages themselves around the phones: toolbars, headings and
-  // captions.
+  })),
+  // Each document as a whole, the chrome around it left out: its title,
+  // its words, and the pieces and screens it shows.
   ...[
-    ["design", "/"],
-    ["design/states", "/design/states"],
-    ["design/flows", "/design/flows"],
-    ["design/components", "/design/components"],
-    ["design/colors", "/design/colors"],
-    ["design/assets", "/design/assets"],
-    ["design/widgets", "/design/widgets"],
-  ].map(([name, path]) => ({ name: `page/${name}`, path, root: "main" })),
+    "/",
+    "/design/colors",
+    "/design/components",
+    ...componentPages.map((page) => `/design/components/${page}`),
+    "/design/flows",
+    "/design/states",
+    "/design/widgets",
+    ...widgetPages.map((page) => `/design/widgets/${page}`),
+    "/design/assets",
+  ].map((path) => ({
+    name: `page${path === "/" ? "/design" : path}`,
+    path,
+    root: "#nd-page",
+  })),
 ];
 
 // The apps layout-diff measures, each under its own dev server.

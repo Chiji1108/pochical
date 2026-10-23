@@ -1,5 +1,5 @@
 {
-  "originHash" : "2c3005093ffab16c6fd0c2e989ad7e571100454bb7c31a81f21cbc736431c7e1",
+  "originHash" : "fc00340135466453db28e62506ff906a4f9f10d3b9f2ced96991bad141e3b077",
   "pins" : [
     {
       "identity" : "chatlayout",
@@ -44,6 +44,15 @@
       "state" : {
         "revision" : "30f7a7e72e0607d304fbf69c799474bd5fb6d1ce",
         "version" : "13.2.0"
+      }
+    },
+    {
+      "identity" : "pow",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/EmergeTools/Pow",
+      "state" : {
+        "revision" : "1b4b1dda28c50b95f0872927ee2226fe8b58950e",
+        "version" : "1.0.6"
       }
     },
     {

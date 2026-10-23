@@ -600,7 +600,8 @@ describe("an answer from Pochical's people", () => {
     await exports.AdminEntrypoint.answerSupport(
       userId,
       "ほかにもありますか",
-      crypto.randomUUID()
+      crypto.randomUUID(),
+      "staff@pochical.app"
     );
     await vi.waitFor(() => {
       expect(alerts()).toHaveLength(2);

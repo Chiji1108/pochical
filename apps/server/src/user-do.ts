@@ -5,6 +5,7 @@ import { DurableObject } from "cloudflare:workers";
 import {
   and,
   count as rowCount,
+  desc,
   eq,
   gt,
   inArray,
@@ -688,6 +689,34 @@ export class UserDO extends DurableObject<Env> {
         .get();
     });
     broadcastChanges(this.ctx, [chatSettingsChange(changed)]);
+  }
+
+  /**
+   * The user's name and the groups they are in or have left, the latest
+   * joined first, as the admin site's page of them shows them
+   * (spec/admin.md, ユーザー).
+   */
+  adminView(): {
+    name: string;
+    groups: {
+      groupId: string;
+      name: string;
+      joinedAtMs: number;
+      leftAtMs: number | null;
+    }[];
+  } {
+    const groups = this.db
+      .select()
+      .from(memberships)
+      .orderBy(desc(memberships.joinedAt))
+      .all()
+      .map((row) => ({
+        groupId: row.groupId,
+        joinedAtMs: row.joinedAt.getTime(),
+        leftAtMs: row.leftAt?.getTime() ?? null,
+        name: row.name,
+      }));
+    return { groups, name: this.profileOf().name };
   }
 
   /** The usual name and photo, each empty before the user sets them. */

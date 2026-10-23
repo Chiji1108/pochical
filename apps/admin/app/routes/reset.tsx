@@ -4,6 +4,7 @@ import { data, Form, useNavigation } from "react-router";
 import type { ShouldRevalidateFunctionArgs } from "react-router";
 
 import { sizeOf } from "../size";
+import { staffOf } from "../staff";
 import {
   alert,
   button,
@@ -34,7 +35,7 @@ export const action = async ({ request }: Route.ActionArgs) => {
   if (form.get("confirm") !== WORD) {
     return data({ error: `「${WORD}」と入力してください。` }, { status: 400 });
   }
-  return await env.SERVER.reset().then(
+  return await env.SERVER.reset(staffOf(request)).then(
     () => ({ doneAtMs: Date.now() }),
     (error: unknown) => {
       console.error("全消去 stopped part way", error);

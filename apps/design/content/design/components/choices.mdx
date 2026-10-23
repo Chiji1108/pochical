@@ -1,0 +1,43 @@
+---
+title: 選ぶ
+description: 切り替え、いくつかから1つを選ぶところ、タイルとめくり、チップとタグ。
+---
+
+import {
+  Chips,
+  Choices,
+  Switches,
+  Tiles,
+} from "../../../src/components/inventory/choices";
+
+## 切り替え
+
+SegmentedControl に Segment を並べます。中身は見本でも言葉だけでもよく、高さは regular(62px)、tall(大きな見本)、compact(言葉だけ)の3つ。SwiftUI の segmented Picker、Compose の SegmentedButton にあたります。比べる案の切り替え(design-segment)はアプリの外なので別です。
+
+<Pieces>
+  <Switches />
+</Pieces>
+
+## 1つを選ぶ
+
+いくつかから1つを選ぶところ。ChoiceGrid に Choice を並べ、見た目(色の丸、アイコン、アプリアイコン)はその場所が決めます。行で選ぶときは ChoiceList と ChoiceRow で、選んだ行にチェックが付きます。Ark UI の RadioGroup なので矢印キーで選べます。SwiftUI の Picker、Compose の selectable にあたります。
+
+<Pieces>
+  <Choices />
+</Pieces>
+
+## タイルとめくり
+
+絵の下に名前を置いて選ぶタイルと、横にめくる並び。選んだタイルは枠と地が付き、名前が太字になります。
+
+<Pieces>
+  <Tiles />
+</Pieces>
+
+## チップとタグ
+
+押せる Chip と、見せるだけの Tag。どちらも ChipGroup で折り返して並べます。Tag は accent(グループの知らせ)、neutral(ページの上)、raised(塗られたカードの上)の3色と、sm・md の2つの大きさです。
+
+<Pieces>
+  <Chips />
+</Pieces>

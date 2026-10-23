@@ -11,26 +11,14 @@ import {
 import type { OwnData } from "@pochical/prototype/lib/design-user-store";
 import { parseDesignVariants } from "@pochical/prototype/lib/design-variants";
 import { css, cva } from "@pochical/styled-system/css";
-import { ArrowRight, CornerDownRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Fragment, useState } from "react";
 import type { ReactNode } from "react";
 
-// Real screens drawn small and not touchable, for /design/flows and
-// /design/states, so the documents never drift from the app. Frames open
-// on their screen through the components' initial props.
+// Real screens drawn small and not touchable, for the flows and states
+// pages, so the documents never drift from the app. Frames open on their
+// screen through the components' initial props.
 const variants = parseDesignVariants({});
-
-// The sections down the page, their frames drawn at this share of a
-// phone's size.
-export const frameSections = css({
-  "--frame-scale": "0.42",
-  display: "flex",
-  flexDirection: "column",
-  gap: "48px",
-  margin: "0 auto",
-  maxWidth: "1400px",
-  padding: "0 16px 64px",
-});
 
 const frameStyle = {
   // Pointing on to the next frame, level with the screens' middles.
@@ -39,20 +27,6 @@ const frameStyle = {
     color: "text.quaternary",
     flexShrink: 0,
     marginTop: "-40px",
-  }),
-  branch: css({
-    alignItems: "center",
-    color: "text.tertiary",
-    display: "flex",
-    fontSize: "12px",
-    fontWeight: 600,
-    gap: "6px",
-    margin: "0 0 10px 4px",
-  }),
-  description: css({
-    color: "text.tertiary",
-    fontSize: "12px",
-    margin: "-8px 0 14px 4px",
   }),
   frame: css({
     "& > figcaption": {
@@ -81,9 +55,11 @@ const frameStyle = {
     transformOrigin: "top left",
     width: "390px",
   }),
-  // Frames in a row scroll sideways when they outrun the page.
+  // Frames drawn at this share of a phone's size, in a row that scrolls
+  // sideways when it outruns the page.
   row: cva({
     base: {
+      "--frame-scale": "0.42",
       alignItems: "flex-start",
       display: "flex",
       gap: "10px",
@@ -94,7 +70,6 @@ const frameStyle = {
     },
     variants: { fan: { true: { gap: "18px" } } },
   }),
-  rows: css({ "& + &": { marginTop: "22px" } }),
   screen: css({
     borderRadius: "calc(53px * var(--frame-scale))",
     flexShrink: 0,
@@ -103,68 +78,32 @@ const frameStyle = {
     position: "relative",
     width: "calc(390px * var(--frame-scale))",
   }),
-  section: css({
-    "& > h2": {
-      color: "text.primary",
-      fontSize: "17px",
-      fontWeight: 700,
-      margin: "0 0 14px 4px",
-    },
-  }),
 };
-
-export function FrameSection({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children: ReactNode;
-}) {
-  return (
-    <section aria-label={title} className={frameStyle.section}>
-      <h2>{title}</h2>
-      {description && <p className={frameStyle.description}>{description}</p>}
-      {children}
-    </section>
-  );
-}
 
 // Frames in order with arrows between, or with `fan`, frames side by side
 // without arrows: the pages one step branches out to, or states to compare.
 export function FrameRow({
-  branch,
   fan = false,
   children,
 }: {
-  branch?: string;
   fan?: boolean;
   children: ReactNode[] | ReactNode;
 }) {
   const frames = Array.isArray(children) ? children : [children];
   return (
-    <div className={frameStyle.rows}>
-      {branch && (
-        <p className={frameStyle.branch}>
-          <CornerDownRight aria-hidden="true" size={14} />
-          {branch}
-        </p>
-      )}
-      <ol className={frameStyle.row({ fan })}>
-        {frames.map((frame, index) => (
-          // oxlint-disable-next-line react/no-array-index-key -- frames never move
-          <Fragment key={index}>
-            {index > 0 && !fan && (
-              <li aria-hidden="true" className={frameStyle.arrow}>
-                <ArrowRight size={18} />
-              </li>
-            )}
-            <li>{frame}</li>
-          </Fragment>
-        ))}
-      </ol>
-    </div>
+    <ol className={frameStyle.row({ fan })}>
+      {frames.map((frame, index) => (
+        // oxlint-disable-next-line react/no-array-index-key -- frames never move
+        <Fragment key={index}>
+          {index > 0 && !fan && (
+            <li aria-hidden="true" className={frameStyle.arrow}>
+              <ArrowRight size={18} />
+            </li>
+          )}
+          <li>{frame}</li>
+        </Fragment>
+      ))}
+    </ol>
   );
 }
 

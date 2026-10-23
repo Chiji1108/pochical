@@ -72,6 +72,15 @@ public  final class ChatNotice extends
      * <code>KIND_PROFILE_CHANGED = 5;</code>
      */
     KIND_PROFILE_CHANGED(5),
+    /**
+     * <pre>
+     * 〇〇がグループから外されました: Pochical's people took them out
+     * (spec/admin.md, ユーザー); the line's writer is who was taken out.
+     * </pre>
+     *
+     * <code>KIND_REMOVED_BY_POCHICAL = 6;</code>
+     */
+    KIND_REMOVED_BY_POCHICAL(6),
     UNRECOGNIZED(-1),
     ;
 
@@ -119,6 +128,15 @@ public  final class ChatNotice extends
      * <code>KIND_PROFILE_CHANGED = 5;</code>
      */
     public static final int KIND_PROFILE_CHANGED_VALUE = 5;
+    /**
+     * <pre>
+     * 〇〇がグループから外されました: Pochical's people took them out
+     * (spec/admin.md, ユーザー); the line's writer is who was taken out.
+     * </pre>
+     *
+     * <code>KIND_REMOVED_BY_POCHICAL = 6;</code>
+     */
+    public static final int KIND_REMOVED_BY_POCHICAL_VALUE = 6;
 
 
     @java.lang.Override
@@ -147,6 +165,7 @@ public  final class ChatNotice extends
         case 3: return KIND_REMOVED;
         case 4: return KIND_INVITE_REMADE;
         case 5: return KIND_PROFILE_CHANGED;
+        case 6: return KIND_REMOVED_BY_POCHICAL;
         default: return null;
       }
     }
