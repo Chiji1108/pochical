@@ -65,12 +65,7 @@ const styles = {
     pointerEvents: "none",
     width: "390px",
   }),
-  // With the /design phone's frame colors, as the top page gives them.
   root: css({
-    "--ws-bezel": "#333631",
-    "--ws-bezel-edge": "#b9bdb6",
-    "--ws-bezel-shadow": "#30392f35",
-    "--ws-island": "#242724",
     alignItems: "flex-start",
     bg: "var(--paper)",
     color: "var(--ink)",
