@@ -2,6 +2,7 @@ import { css, cva, cx } from "@pochical/styled-system/css";
 import { CalendarDays, Settings2, UsersRound } from "lucide-react";
 import { useId } from "react";
 
+import { useAppFeatures } from "../lib/design-features";
 import { groupsUnread } from "../lib/design-group-data";
 import { useUser } from "../lib/design-user-store";
 import { badge } from "./design-group-parts";
@@ -81,13 +82,21 @@ export function TabBar({
 }) {
   const unread = useUnread();
   const id = useId();
+  const features = useAppFeatures();
+  const offered = tabs.filter(
+    ({ tab }) => tab === "calendar" || features.has(tab)
+  );
+  // An app with one place to be has no tab bar, as on the platforms.
+  if (offered.length < 2) {
+    return null;
+  }
   return (
     <nav
       aria-label="タブ"
       className={cx(floatingGlass, tabBar.bar)}
       data-tab-bar=""
     >
-      {tabs.map(({ tab, label, icon: Icon }) => (
+      {offered.map(({ tab, label, icon: Icon }) => (
         <button
           aria-current={active === tab ? "page" : undefined}
           // Named as the tab alone; what waits in it is said after.

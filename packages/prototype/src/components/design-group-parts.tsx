@@ -270,12 +270,8 @@ export const hub = {
 // contact cards have it; the choices open in a sheet.
 export const photoPicker = {
   action: css({
-    bg: "transparent",
-    border: 0,
     color: "accent.default",
-    cursor: "pointer",
     fontWeight: 600,
-    padding: 0,
     textStyle: "body",
   }),
   badge: css({
@@ -302,19 +298,19 @@ export const photoPicker = {
     textStyle: "callout",
     width: "100%",
   }),
+  // The picture and its words, one button.
   edit: css({
+    alignItems: "center",
     bg: "transparent",
     border: 0,
     cursor: "pointer",
-    padding: 0,
-    position: "relative",
-  }),
-  root: css({
-    alignItems: "center",
     display: "flex",
     flexDirection: "column",
     gap: "12px",
+    padding: 0,
   }),
+  picture: css({ display: "grid", position: "relative" }),
+  root: css({ display: "flex", justifyContent: "center" }),
 };
 
 export const memberButton = css({
@@ -540,7 +536,12 @@ export function PhotoPicker({
     close();
   };
   return (
-    <div className={photoPicker.root}>
+    <PictureHeader
+      corner={<Camera size={14} />}
+      label={label}
+      onOpen={open}
+      picture={picture}
+    >
       <input
         accept="image/*"
         capture="user"
@@ -564,20 +565,6 @@ export function PhotoPicker({
         }}
         type="file"
       />
-      <button
-        aria-label={label}
-        className={photoPicker.edit}
-        onClick={open}
-        type="button"
-      >
-        {picture}
-        <span aria-hidden="true" className={photoPicker.badge}>
-          <Camera size={14} />
-        </span>
-      </button>
-      <button className={photoPicker.action} onClick={open} type="button">
-        {label}
-      </button>
       <Sheet label={label} onOpenChange={setSheetOpen} open={sheetOpen}>
         <List>
           <ListRow
@@ -647,6 +634,52 @@ export function PhotoPicker({
         photo={picked}
         shape={shape}
       />
+    </PictureHeader>
+  );
+}
+
+// A picture at the top of a page that changes it, what tapping it does
+// under it in the accent: a face, a group's mark or a pattern's. A corner
+// badge says what it opens, as the camera says a photo.
+export function PictureHeader({
+  picture,
+  label,
+  description,
+  corner,
+  onOpen,
+  children,
+}: {
+  picture: ReactNode;
+  label: string;
+  // What the picture is, read after the label.
+  description?: string;
+  corner?: ReactNode;
+  onOpen: () => void;
+  children?: ReactNode;
+}) {
+  return (
+    <div className={photoPicker.root}>
+      <button
+        aria-label={
+          description === undefined ? label : `${label}、${description}`
+        }
+        className={photoPicker.edit}
+        onClick={onOpen}
+        type="button"
+      >
+        <span className={photoPicker.picture}>
+          {picture}
+          {corner !== undefined && (
+            <span aria-hidden="true" className={photoPicker.badge}>
+              {corner}
+            </span>
+          )}
+        </span>
+        <span aria-hidden="true" className={photoPicker.action}>
+          {label}
+        </span>
+      </button>
+      {children}
     </div>
   );
 }

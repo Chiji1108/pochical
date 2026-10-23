@@ -66,12 +66,8 @@ description = "Run the admin site's dev server, beside mise run server"
 run = "bun run --cwd apps/admin dev"
 
 [tasks.design]
-description = "Run the design documents' dev server (/design) at http://localhost:3200"
+description = "Run the design documents' and /demo's dev server at http://localhost:3200"
 run = "bun run --cwd apps/design dev"
-
-[tasks.demo]
-description = "Run the demo's dev server (/demo) at http://localhost:3201"
-run = "bun run --cwd apps/demo dev"
 
 [tasks.try]
 description = "Run the app to try's dev server at http://localhost:3202"
@@ -182,11 +178,11 @@ run = "bun run --cwd apps/server typecheck"
 
 [tasks."design:layout"]
 description = "Measure the design documents' pages, or compare them with a saved run: save <name> | check <name> (needs mise run design)"
-run = "bun tools/layout-diff/index.ts --app design"
+run = "bun tools/layout-diff/index.ts --pages design"
 
-[tasks."demo:layout"]
-description = "Measure /demo's screens and page, or compare them with a saved run: save <name> | check <name> (needs mise run demo)"
-run = "bun tools/layout-diff/index.ts --app demo"
+[tasks."design:demo-layout"]
+description = "Measure /demo's screens and page, or compare them with a saved run: save <name> | check <name> (needs mise run design)"
+run = "bun tools/layout-diff/index.ts --pages demo"
 
 [tasks."api:try"]
 description = "Try the server's groups and invitations by hand: create [name] [emoji] | join | preview | remake | cleanup [--local]"

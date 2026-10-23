@@ -1,2 +1,5 @@
+# Open to everyone, and kept out of search until release by index.html's
+# noindex, which a crawler reads only where it is let in: a page shut out
+# here can still be listed from links to it.
 User-agent: *
-Disallow: /
+Allow: /
