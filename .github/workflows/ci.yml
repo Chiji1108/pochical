@@ -59,6 +59,8 @@ jobs:
               - "apps/android/proto/**"
               - "apps/ios/Packages/PochicalKit/Sources/PochicalKit/Sync.swift"
               - "apps/ios/Packages/PochicalKit/sync-wire.json"
+              - "apps/android/kit/src/main/kotlin/app/pochical/kit/Sync.kt"
+              - "apps/android/kit/sync-wire.json"
               - "tools/sync-schema/**"
               - "mise.toml"
               - ".github/workflows/ci.yml"
@@ -171,3 +173,4 @@ jobs:
       # its rules are checked before main releases it.
       - run: mise run android:release
       - run: mise run android:test
+      - run: mise run android:db:check

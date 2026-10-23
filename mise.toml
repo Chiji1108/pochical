@@ -54,7 +54,7 @@ dir = "{{config_root}}/proto"
 run = "buf breaking --against '../.git#branch=main,subdir=proto'"
 
 [tasks."sync:check"]
-description = "Fail if the Changes the iOS app reads changed without raising Sync.schema (--write records it once raised)"
+description = "Fail if the Changes the apps read changed without raising their sync schema, iOS's Sync.schema and Android's SYNC_SCHEMA (--write records it once raised)"
 run = ["bun test tools/sync-schema", "bun tools/sync-schema/check.ts"]
 
 [tasks.server]
@@ -143,6 +143,17 @@ run = "./gradlew bundleRelease"
 description = "Run the Android modules' unit tests and lint"
 dir = "{{config_root}}/apps/android"
 run = "./gradlew test lint"
+
+[tasks."android:db:check"]
+description = "Fail if building the Android app rewrote a database version's schema Room exports, a shape changed without its version raised (run after a build)"
+run = '''
+changed=$(git status --porcelain -- apps/android/kit/schemas)
+if [ -n "$changed" ]; then
+  printf '%s\n' "$changed"
+  echo "The Android database's schema changed: raise AppDatabase.VERSION for a new shape, which erases the database until release, and commit kit/schemas (AGENTS.md)."
+  exit 1
+fi
+'''
 
 [tasks."ios:photo-touches"]
 description = "Run the chat photo line's touch UI tests in a simulator, erasing it, against a server it starts on :8787: <simulator name> [derived data]"
