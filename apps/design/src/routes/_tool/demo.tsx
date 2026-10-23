@@ -25,7 +25,7 @@ import { parseDesignVariants } from "@pochical/prototype/lib/design-variants";
 import type { DesignVariants } from "@pochical/prototype/lib/design-variants";
 import { wallpaperSamples } from "@pochical/prototype/lib/material-you";
 import { css } from "@pochical/styled-system/css";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, RotateCcw, Smartphone } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -193,9 +193,9 @@ function DemoPage() {
   return (
     <DesignPage style={pageStyle(theme)}>
       <div className={toolbar.root}>
-        <a href="/">
+        <Link params={{ _splat: "" }} to="/$">
           <ArrowLeft aria-hidden="true" size={16} /> デザイン資料
-        </a>
+        </Link>
         <div className={toolbar.actions}>
           <a className={toolbar.action} href={tryUrl}>
             <Smartphone aria-hidden="true" size={14} />
