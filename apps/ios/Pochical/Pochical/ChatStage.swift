@@ -130,9 +130,8 @@ struct LinesRow: Equatable {
   var environment = EnvironmentValues()
   /// Each item's look, as last laid out.
   var looks: [String: AnyHashable] = [:]
-  /// The lines are moving to an update: each cell cut to its frame
-  /// meanwhile (LineCell).
-  var moving = false
+  /// Where the lines' parts play their effects, over the lines.
+  var effects: ChatEffects?
   /// Each item's height as measured, at its look and the width it had.
   private var heights: [String: (look: AnyHashable, width: CGFloat, height: CGFloat)] = [:] {
     didSet {
@@ -364,6 +363,9 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
       systemName: "arrowshape.turn.up.left.circle.fill",
       withConfiguration: UIImage.SymbolConfiguration(pointSize: 28)))
   private let replyFeel = UIImpactFeedbackGenerator(style: .light)
+  /// Over the lines, under the pins and the composer: what plays past a
+  /// line for a moment (ChatEffects).
+  private let effectsLayer = ChatEffectsLayer()
   /// Holds a line's bubble for its reactions and menu.
   private lazy var press = TouchedPress(target: self, action: #selector(pressed))
   /// The line whose bubble the press is on, and the cell's space it was
@@ -422,11 +424,12 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
       let environment = model.environment
       let space = cell.space
       let drawing = model.drawing(of: id)
+      let effects = model.effects
       cell.measure = { width in model.height(of: id, width: width) }
-      cell.clipsToBounds = model.moving
       cell.contentConfiguration = UIHostingConfiguration {
         LineCellContent(
-          id: id, content: content, environment: environment, space: space, drawing: drawing)
+          id: id, content: content, environment: environment, space: space, drawing: drawing,
+          effects: effects)
       }
       .margins(.all, 0)
     }
@@ -461,6 +464,8 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     replyArrow.alpha = 0
     lines.addSubview(replyArrow)
     view.addSubview(lines)
+    model.effects = effectsLayer.effects
+    view.addSubview(effectsLayer)
 
     host(empty, sizing: .intrinsicContentSize)
     host(top, sizing: .preferredContentSize)
@@ -557,6 +562,7 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     place()
     layoutMenu()
     makeRoomForMenu()
+    followEffects()
   }
 
   override func viewWillDisappear(_ animated: Bool) {
@@ -582,6 +588,7 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     composer.rootView = AnyView(
       Hosted(width: width, content: settings.composer).environment(\.self, environment))
     replyArrow.tintColor = UIColor(environment.themeColors.textTertiary)
+    effectsLayer.environment = environment
     let alpha: CGFloat = settings.shown ? 1 : 0
     if lines.alpha != alpha {
       UIView.animate(withDuration: alpha == 1 ? 0.15 : 0, delay: 0, options: .curveEaseOut) {
@@ -654,6 +661,7 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
       UIView.performWithoutAnimation {
         source.applySnapshotUsingReloadData(snapshot, commitAlongsideUpdates: {})
         lines.layoutIfNeeded()
+        followEffects()
       }
       laidOutAnew()
       return true
@@ -673,7 +681,6 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
         guard let self else { return }
         let next = updating?.next
         updating = nil
-        move(false)
         // The lines waiting go in next; changing none, these have landed.
         if let next, setLines(next) { return }
         landed()
@@ -682,8 +689,10 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
       }
       keep(held)
       // An open or closing menu's line moved by the update, its bubble
-      // with it, in the same animation.
+      // with it, and what plays on a line with the line, in the same
+      // animation.
       layoutMenu()
+      followEffects()
     }
     // In one animation of the lines' own, however they changed: lines
     // coming in, and lines growing or shrinking in place (a reaction, an
@@ -692,7 +701,6 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     // its timing from an animation by duration around it; around a spring
     // by perceived duration (springDuration:) it keeps UIKit's own.
     if animated {
-      move(true)
       UIView.animate(
         withDuration: Double(Chat.lineMoveMs) / 1000, delay: 0, usingSpringWithDamping: 1,
         initialSpringVelocity: 0, options: .allowUserInteraction, animations: update)
@@ -700,18 +708,6 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
       update()
     }
     return true
-  }
-
-  /// The lines start or stop moving to an update: the cells cut to their
-  /// frames while they move, uncut at rest. A line drawn again taller is
-  /// laid out at once at its new height (LineCell), its cell growing to it
-  /// in the lines' animation, so what it gains (a reaction, a link's page,
-  /// the words past 続きを読む) shows as the cell grows, never over the line
-  /// next to it first; at rest, what a line draws past its cell for a
-  /// moment (a reaction's pop and spray) is whole.
-  private func move(_ moving: Bool) {
-    model.moving = moving
-    for cell in lines.visibleCells { cell.clipsToBounds = moving }
   }
 
   /// The item the lines are on, where its top stands among the lines seen,
@@ -1426,6 +1422,19 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
       keyboardTop: keyboard < bottom - 1 ? keyboard : nil)
   }
 
+  /// The effects' layer over the lines as they are laid out now, in
+  /// whatever animation laid them out: each item on the screen where the
+  /// layout has it, from the layout's attributes, as the menu is placed.
+  private func followEffects() {
+    var frames: [String: CGRect] = [:]
+    for path in lines.indexPathsForVisibleItems where path.item < ids.count {
+      if let frame = layout.layoutAttributesForItem(at: path)?.frame {
+        frames[ids[path.item]] = frame
+      }
+    }
+    effectsLayer.follow(lines, items: frames)
+  }
+
   /// A keyboard up goes down when the bubble, the bar and the menu do not
   /// fit over it where the bubble is (MenuPlacement), and they go down
   /// with the line as it does. Asked again as the keyboard changes while
@@ -1478,6 +1487,7 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
   }
 
   func scrollViewDidScroll(_ scrollView: UIScrollView) {
+    followEffects()
     seePlace()
   }
 
@@ -1651,8 +1661,14 @@ private final class LineCell: UICollectionViewCell {
   /// The height of the item it draws, at a width.
   var measure: ((CGFloat) -> CGFloat)?
 
+  /// Cut to its frame: a line laid out taller at once (layoutSubviews)
+  /// shows what it gains (a reaction, a link's page, the words past
+  /// 続きを読む) as the cell grows, never over the line next to it first.
+  /// What plays past a line for a moment plays over the lines instead
+  /// (ChatEffects).
   override init(frame: CGRect) {
     super.init(frame: frame)
+    clipsToBounds = true
   }
 
   /// Its line laid out whole, at once, at the cell's new size, so the
@@ -1704,6 +1720,8 @@ private struct LineCellContent: View {
   let environment: EnvironmentValues
   let space: LineSpace
   let drawing: KeptDrawing
+  /// The chat's effects; none for a line only measured, which plays none.
+  var effects: ChatEffects?
   var measuring = false
 
   var body: some View {
@@ -1716,6 +1734,7 @@ private struct LineCellContent: View {
       .coordinateSpace(.named(LineSpace.name))
       .environment(\.lineSpace, space)
       .environment(\.keptDrawing, drawing)
+      .environment(\.chatEffects, effects)
       .environment(\.measuringLine, measuring)
       .environment(\.self, environment)
   }

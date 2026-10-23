@@ -256,6 +256,8 @@ struct LineView: View {
   /// coming, the keyboard moving).
   let actions: Handler<(lineID: String, action: LineAction)>
   @Environment(\.openURL) private var openURL
+  /// It has been drawn: what comes to it now comes while it is seen.
+  @State private var shown = false
   /// What its words take to draw, kept while its row looks the same.
   @Environment(\.keptDrawing) private var kept
 
@@ -357,9 +359,10 @@ struct LineView: View {
           if !reactions.isEmpty {
             ReactionRow(
               lineID: lineID, reactions: reactions, meID: meID, nameOf: nameOf,
-              counted: countedReactions, marks: marks, onReact: { act(.react($0)) }
+              counted: countedReactions, marks: marks, shown: shown,
+              onReact: { act(.react($0)) }
             )
-            .transition(ReactionRow.transition(reduceMotion, colors))
+            .transition(ReactionRow.rowTransition(reduceMotion))
           }
         }
         .animation(ReactionRow.motion(reduceMotion), value: reactions.isEmpty)
@@ -373,7 +376,7 @@ struct LineView: View {
       // sizes, where the words need the width more, as Messages gives it.
       .padding(mine ? .leading : .trailing, typeSize.isAccessibilitySize ? 16 : 40)
     }
-    .particleLayer(name: ReactionRow.sprays)
+    .onAppear { shown = true }
     // The line reads as one, everything done on it its actions, an
     // album's photos with it; a card of days or a poll keeps its own
     // parts, the line said first by its time.
