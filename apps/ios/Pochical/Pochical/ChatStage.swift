@@ -1401,7 +1401,9 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
       if let self, let layer { menuClosed(layer) }
     }
     window.addSubview(layer)
-    effectsLayer.menuOpened(ground: layer.effects, lifting: ids[path.item])
+    effectsLayer.menuOpened(ground: layer.effects, lifting: ids[path.item]) { [weak layer] in
+      layer?.removeFromSuperview()
+    }
     menuLayer = layer
     menuAnchor = (ids[path.item], spot.frame)
     UIView.performWithoutAnimation { layoutMenu() }
@@ -1468,7 +1470,7 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     menuLayer = nil
     menuAnchor = nil
     settings?.onMenuClosed()
-    effectsLayer.menuClosed { layer.removeFromSuperview() }
+    effectsLayer.menuClosed()
     // VoiceOver back on the line.
     if UIAccessibility.isVoiceOverRunning,
       let index = item.flatMap({ ids.firstIndex(of: $0) })

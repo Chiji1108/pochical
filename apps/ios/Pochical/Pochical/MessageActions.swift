@@ -199,6 +199,7 @@ struct MenuMetrics {
     addSubview(lift)
     effects.isUserInteractionEnabled = false
     effects.accessibilityElementsHidden = true
+    effects.autoresizingMask = [.flexibleWidth, .flexibleHeight]
     addSubview(effects)
     if let bar {
       hold(bar, in: barPart)
@@ -269,7 +270,6 @@ struct MenuMetrics {
   private func apply() {
     guard let placement else { return }
     scrim.frame = bounds
-    effects.frame = bounds
     switch phase {
     case .rising:
       scrim.alpha = 0
@@ -358,9 +358,9 @@ struct MenuMetrics {
     UIAccessibility.post(notification: .screenChanged, argument: nil)
   }
 
-  /// Goes, quick at first and settling, then tells `onClosed`, its parts
-  /// gone and taking nothing while what plays on its effects plays out;
-  /// acts meanwhile, as the system's menu does. `fade` takes the bubble away
+  /// Goes, quick at first and settling, taking nothing from the start,
+  /// then tells `onClosed` with its parts gone, staying while what plays
+  /// on its effects plays out; acts meanwhile, as the system's menu does. `fade` takes the bubble away
   /// too, its line gone from the chat.
   func close(fade: Bool = false, then action: (() -> Void)? = nil) {
     if case .closing = phase { return }
@@ -368,12 +368,12 @@ struct MenuMetrics {
       fade: fade, from: anchor, bar: bar == nil ? nil : barPart.center, menu: menuPart.center)
     finger = nil
     state.underFinger = nil
+    isUserInteractionEnabled = false
+    accessibilityViewIsModal = false
+    accessibilityElementsHidden = true
     animate(Chat.menuCloseSpring, animations: apply) { [weak self] in
       guard let self else { return }
       for part in [scrim, lift, barPart, menuPart] { part.removeFromSuperview() }
-      isUserInteractionEnabled = false
-      accessibilityViewIsModal = false
-      accessibilityElementsHidden = true
       onClosed()
     }
     action?()

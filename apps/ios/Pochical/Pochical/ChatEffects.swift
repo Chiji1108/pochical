@@ -104,24 +104,26 @@ final class ChatEffectsLayer: UIView {
         playing = playing.filter { $0.key.item != id }
       }
     }
-
-    /// Takes `part`'s effect away, and the item's frame with nothing left
-    /// on it.
-    mutating func end(_ part: EffectPart) {
-      playing.removeValue(forKey: part)?.host.view.removeFromSuperview()
-      if let view = items[part.item], view.subviews.isEmpty {
-        view.removeFromSuperview()
-        items[part.item] = nil
-      }
-    }
   }
 
-  /// A menu's ground, for the item whose bubble it lifts.
+  /// A menu's ground, for the item whose bubble it lifts. Its items'
+  /// frames are its own, made as effects begin there.
   private struct Menu {
     var ground: Ground
     let item: String
-    /// Takes the menu away once it has closed.
-    var remove: (() -> Void)?
+    /// Takes the menu away.
+    let remove: () -> Void
+    var closed = false
+
+    /// Takes `part`'s effect away, and its item's frame with nothing left
+    /// on it.
+    mutating func end(_ part: EffectPart) {
+      ground.playing.removeValue(forKey: part)?.host.view.removeFromSuperview()
+      if let view = ground.items[part.item], view.subviews.isEmpty {
+        view.removeFromSuperview()
+        ground.items[part.item] = nil
+      }
+    }
   }
 
   /// An effect's SwiftUI, held at its part's frame in its item's.
@@ -177,23 +179,24 @@ final class ChatEffectsLayer: UIView {
   }
 
   /// A menu has opened, lifting the bubble of the item `item`: what comes
-  /// to the item from now on plays on `ground`, the menu's.
-  func menuOpened(ground: UIView, lifting item: String) {
-    menus.append(Menu(ground: Ground(view: ground), item: item))
+  /// to the item from now on plays on `ground`, the menu's, and `remove`
+  /// takes the menu away once it has closed and what plays there has
+  /// played out.
+  func menuOpened(ground: UIView, lifting item: String, remove: @escaping () -> Void) {
+    menus.append(Menu(ground: Ground(view: ground), item: item, remove: remove))
   }
 
   /// The open menu has closed: what comes to its item plays on the lines
-  /// again, and `remove` takes the menu away once what plays on it has
-  /// played out.
-  func menuClosed(then remove: @escaping () -> Void) {
-    guard let index = menus.lastIndex(where: { $0.remove == nil }) else { return remove() }
-    menus[index].remove = remove
+  /// again.
+  func menuClosed() {
+    guard let index = menus.lastIndex(where: { !$0.closed }) else { return }
+    menus[index].closed = true
     removePlayedOut()
   }
 
   /// The open menu's place in `menus`, when it lifts `item`.
   private func menu(lifting item: String) -> Int? {
-    guard let index = menus.lastIndex(where: { $0.remove == nil }), menus[index].item == item
+    guard let index = menus.lastIndex(where: { !$0.closed }), menus[index].item == item
     else { return nil }
     return index
   }
@@ -268,8 +271,8 @@ final class ChatEffectsLayer: UIView {
   /// Takes away the closed menus nothing plays on any more.
   private func removePlayedOut() {
     menus.removeAll { menu in
-      guard let remove = menu.remove, menu.ground.items.isEmpty else { return false }
-      remove()
+      guard menu.closed, menu.ground.items.isEmpty else { return false }
+      menu.remove()
       return true
     }
   }
@@ -285,7 +288,7 @@ final class ChatEffectsLayer: UIView {
 
   fileprivate func end(_ part: EffectPart) {
     onLines.playing.removeValue(forKey: part)?.host.view.removeFromSuperview()
-    for index in menus.indices { menus[index].ground.end(part) }
+    for index in menus.indices { menus[index].end(part) }
     removePlayedOut()
   }
 }
