@@ -466,7 +466,7 @@ private final class FakeAccountServer: AccountServer {
   // The app ends and starts again meanwhile: still erasing, as no one.
   let again = AccountSession(
     database: made.database, server: made.server, keychain: made.keychain, shared: made.shared,
-    eraseFiles: {})
+    eraseFiles: {}, socketServer: made.socketURL)
   #expect(again.phase == .erasing)
   #expect(again.erasing?.why == .deleted)
   #expect(again.userID == nil)
@@ -538,7 +538,7 @@ private final class FakeAccountServer: AccountServer {
 /// waits for the anonymous sign-in rather than going as no one.
 @MainActor @Test func aCallMadeWhileSigningInGoesOnceSignedIn() async throws {
   let made = try await Made()
-  let calls = GroupCalls(current: made.session.current)
+  let calls = GroupCalls(current: made.session.current, server: made.socketURL)
   let asking = Task { try await calls.headers() }
   try await Task.sleep(for: .milliseconds(100))
   made.session.cameToFront()
@@ -586,7 +586,7 @@ private final class FakeAccountServer: AccountServer {
   own.refusesToForget.withLock { $0 = true }
   try await made.session.signOut()
   #expect(made.session.phase == .erasing)
-  let calls = GroupCalls(current: made.session.current)
+  let calls = GroupCalls(current: made.session.current, server: made.socketURL)
   let clock = ContinuousClock()
   let started = clock.now
   await #expect(throws: NotSignedIn.self) { try await calls.headers() }
@@ -709,7 +709,7 @@ private final class FakeAccountServer: AccountServer {
         Task { @MainActor in
           relaunched.session = AccountSession(
             database: made.database, server: made.server, keychain: made.keychain,
-            shared: made.shared, eraseFiles: {})
+            shared: made.shared, eraseFiles: {}, socketServer: made.socketURL)
         }
       }
     }
@@ -903,7 +903,7 @@ func aChangesAnswerSettlesA401ThatCameWhileItWaited(_ pending: Pending, _ answer
   #expect(try made.keychain.kept() == StoredSession(token: "a", userID: "A", ended: true))
   let again = AccountSession(
     database: made.database, server: made.server, keychain: made.keychain, shared: made.shared,
-    eraseFiles: {})
+    eraseFiles: {}, socketServer: made.socketURL)
   #expect(again.phase == made.session.phase)
   #expect(again.userID == made.session.userID)
 }
@@ -939,7 +939,7 @@ func aChangesAnswerSettlesA401ThatCameWhileItWaited(_ pending: Pending, _ answer
   #expect(made.session.phase == .signedIn)
   let again = AccountSession(
     database: made.database, server: made.server, keychain: made.keychain, shared: made.shared,
-    eraseFiles: {})
+    eraseFiles: {}, socketServer: made.socketURL)
   #expect(again.phase == made.session.phase)
   #expect(again.userID == made.session.userID)
 }

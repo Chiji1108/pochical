@@ -13,14 +13,17 @@
 //   cleanup                deletes the users this tool made and the link
 //
 // Production (https://api.pochical.app) by default; --local uses
-// `mise run server` (http://localhost:8787) and `mise run web`
-// (http://localhost:3000). What it made is kept in tools/api-try/out/state.json
+// `mise run server` (POCHICAL_DEV_SERVER, http://localhost:8787 by
+// default) and `mise run web` (http://localhost:3000). What it made is
+// kept in tools/api-try/out/state.json
 // for the next command. cleanup deletes through wrangler, so it needs the
 // Cloudflare login wrangler uses; the groups' Durable Objects stay, but
 // nothing can reach them once their users and link are gone.
 
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
+
+import { devServer } from "../dev-server";
 
 type User = { name: string; token: string; userId: string };
 
@@ -35,7 +38,7 @@ const local = process.argv.includes("--local");
 const [command = "", ...rest] = process.argv
   .slice(2)
   .filter((arg) => arg !== "--local");
-const api = local ? "http://localhost:8787" : "https://api.pochical.app";
+const api = local ? devServer : "https://api.pochical.app";
 const site = local ? "http://localhost:3000" : "https://pochical.app";
 const outDir = path.join(import.meta.dir, "out");
 const statePath = path.join(outDir, "state.json");
