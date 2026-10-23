@@ -2,7 +2,7 @@ import { css, cx } from "@pochical/styled-system/css";
 import { ArrowLeft } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 
-// The pages the phones are shown on, /demo (apps/demo) and the app to try
+// The pages the phones are shown on, /demo (apps/design) and the app to try
 // on a computer (apps/try): their ground, the toolbar at the top, and the
 // captions under the phones. They are the workspace around the app, so the
 // native apps have no counterpart. The design documents (apps/design) set

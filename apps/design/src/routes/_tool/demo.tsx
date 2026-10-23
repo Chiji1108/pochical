@@ -29,15 +29,16 @@ import {
   DesignToolbar,
   toolbarAction,
 } from "@pochical/showcase/components/design-page";
-import { VariantPanel } from "@pochical/showcase/components/design-variant-panel";
-import { designUrl, tryUrl } from "@pochical/showcase/lib/app-urls";
-import { pageMeta } from "@pochical/showcase/lib/page-meta";
+import { tryUrl } from "@pochical/showcase/lib/app-urls";
 import { css } from "@pochical/styled-system/css";
 import { createFileRoute } from "@tanstack/react-router";
 import { RotateCcw, Smartphone } from "lucide-react";
 import { useEffect, useState } from "react";
 
-export const Route = createFileRoute("/demo")({
+import { VariantPanel } from "../../components/design-variant-panel";
+import { pageMeta } from "../../lib/page-meta";
+
+export const Route = createFileRoute("/_tool/demo")({
   component: DemoPage,
   head: () => ({
     ...pageMeta("デモ", "ブラウザで触れるポチカルの試作"),
@@ -124,7 +125,7 @@ const demo = {
 const tryLabel = css({ "@media (max-width: 760px)": { srOnly: true } });
 
 // The app to touch: one person on a phone, their home screen beside it,
-// and the open design choices. The design documents live under /design.
+// and the open design choices, outside the documents' layout.
 function DemoPage() {
   const variants = Route.useSearch();
   const navigate = Route.useNavigate();
@@ -150,7 +151,7 @@ function DemoPage() {
   };
   return (
     <DesignPage style={pageStyle(theme)}>
-      <DesignToolbar documentsHref={designUrl("/")}>
+      <DesignToolbar documentsHref="/">
         <a className={toolbarAction} href={tryUrl("/")}>
           <Smartphone aria-hidden="true" size={14} />
           <span className={tryLabel}>自分のスマホで試す</span>
