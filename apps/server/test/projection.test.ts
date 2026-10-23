@@ -3,13 +3,19 @@ import { runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { invites } from "../src/db/schema";
 import { ChangesSchema, DayField } from "../src/gen/pochical/v1/sync_pb";
 import { PUSH_RETRY_FIRST_MS } from "../src/user-do";
 import type { UserDO } from "../src/user-do";
-import { alarmOf, alarmRunsOf, alarmsSettled, runAlarm } from "./alarms";
+import {
+  alarmOf,
+  alarmRunsOf,
+  alarmsSettled,
+  ownRun,
+  runAlarm,
+} from "./alarms";
 import { call, signInAnonymously, userIdOf } from "./helpers";
 import {
   changesIn,
@@ -365,5 +371,32 @@ describe("a member's shifts in their groups", () => {
     await runInDurableObject(user, async (_, state) => {
       await state.storage.deleteAlarm();
     });
+  });
+
+  it("keeps the alarm a change made while it pushes set, not the failed group's later retry", async () => {
+    const { maker, user } = await someone();
+    let changing = false;
+    // The change's alarm comes before the retry: its clock is held 5
+    // seconds ahead, so the runtime does not run it as the test reads it.
+    const changeAt = Date.now() + 5000;
+    await failPushesTo(user, ["!unreachable"], (instance) => {
+      if (changing) {
+        changing = false;
+        vi.useFakeTimers({ toFake: ["Date"] });
+        vi.setSystemTime(changeAt);
+        instance.setMarkLook("round", true);
+        vi.useRealTimers();
+      }
+    });
+    await enterADay(maker);
+    await alarmsSettled(user);
+    changing = true;
+    const stored = await runInDurableObject(user, async (instance, state) => {
+      await instance.alarm(ownRun());
+      const left = await state.storage.getAlarm();
+      await state.storage.deleteAlarm();
+      return left;
+    });
+    expect(stored).toBe(changeAt);
   });
 });

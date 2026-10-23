@@ -3,7 +3,7 @@ import { env, exports } from "cloudflare:workers";
 import { describe, expect, it, vi } from "vitest";
 
 import { photoKey, sharePersonPhoto, smallKey } from "../src/photos";
-import { alarmsSettled, runAlarm } from "./alarms";
+import { alarmsSettled, ownRun, runAlarm } from "./alarms";
 import { call, ORIGIN, signInAnonymously, userIdOf } from "./helpers";
 import {
   changesBesidesNotices,
@@ -610,7 +610,7 @@ describe("a group's photo once stored", () => {
     });
     await runInDurableObject(group, async (instance) => {
       // The sweep is waiting on storage once the alarm returns.
-      const sweeping = instance.alarm();
+      const sweeping = instance.alarm(ownRun());
       // Shared again while the sweep waits: the copy finds it still stored.
       await instance.sharePhoto(stray, makerId);
       await sweeping;
@@ -645,7 +645,7 @@ describe("a group's photo once stored", () => {
       .spyOn(env.PHOTOS, "get")
       .mockRejectedValueOnce(new Error("R2 out of reach"));
     const retryAt = await runInDurableObject(group, async (instance, state) => {
-      const sweeping = instance.alarm();
+      const sweeping = instance.alarm(ownRun());
       await instance.sharePhoto(stray, makerId);
       await sweeping;
       return await state.storage.getAlarm();
@@ -682,7 +682,7 @@ describe("a group's photo once stored", () => {
     });
     const noted = await runInDurableObject(group, async (instance) => {
       // The sweep is waiting on storage's delete once the alarm returns.
-      const sweeping = instance.alarm();
+      const sweeping = instance.alarm(ownRun());
       const note = await instance.storePhoto("lost", makerId, OTHER_JPEG, {
         contentType: "image/jpeg",
         small: false,

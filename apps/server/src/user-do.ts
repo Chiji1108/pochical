@@ -167,9 +167,6 @@ type SyncedLog = {
 export class UserDO extends DurableObject<Env> {
   private readonly db: DrizzleSqliteDODatabase;
   private readonly alarms: Alarm;
-  // Set when a change asks for a push, so an alarm running meanwhile
-  // leaves the next one to it.
-  private pushRequested = false;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -1044,18 +1041,15 @@ export class UserDO extends DurableObject<Env> {
    * which would leave the values waiting for the user's next change, so
    * the alarm comes back for a failed group itself, each group waiting by
    * its own failures. A change made while it runs has set the next alarm
-   * already, which is kept. The user's own photos noted as going are
+   * already, which is kept when earlier. The user's own photos noted as going are
    * deleted first, and come back so should storage fail.
    */
-  async alarm(run?: AlarmInvocationInfo): Promise<void> {
-    if (run !== undefined) {
-      await this.alarms.begin(run);
-    }
+  async alarm(run: AlarmInvocationInfo): Promise<void> {
+    this.alarms.begin(run);
     const userId = this.ctx.id.name;
     if (userId === undefined) {
       return;
     }
-    this.pushRequested = false;
     const retries: number[] = [];
     const photosWait = await this.deleteGoingPhotos(userId);
     if (photosWait !== undefined) {
@@ -1086,9 +1080,9 @@ export class UserDO extends DurableObject<Env> {
         .where(eq(memberships.groupId, groupId))
         .run();
     }
-    if (!this.pushRequested && retries.length > 0) {
-      await this.alarms.set(Date.now() + Math.min(...retries));
-    }
+    await this.alarms.end(
+      retries.length > 0 ? Date.now() + Math.min(...retries) : undefined
+    );
   }
 
   /**
@@ -1114,7 +1108,6 @@ export class UserDO extends DurableObject<Env> {
   }
 
   private schedulePush(): void {
-    this.pushRequested = true;
     void this.alarms.set(Date.now());
   }
 

@@ -30,6 +30,8 @@ type Runs = {
   threw: { ended: number; error: unknown } | undefined;
   /** Woken as each run begins and ends. */
   next: PromiseWithResolvers<void>;
+  /** The alarm settle set of its own, while it waits on it. */
+  own: number | undefined;
 };
 
 /** Each object's runs, by its state, so they go with it. */
@@ -43,6 +45,7 @@ const runsOf = (state: DurableObjectState): Runs => {
       going: false,
       last: { left: null, scheduled: undefined },
       next: Promise.withResolvers(),
+      own: undefined,
       threw: undefined,
     };
     runsByState.set(state, runs);
@@ -55,21 +58,30 @@ const wake = (runs: Runs): void => {
   runs.next = Promise.withResolvers();
 };
 
-type Alarm = (
-  this: DurableObject,
-  ...info: [AlarmInvocationInfo?]
-) => Promise<void>;
+type Alarm = (this: DurableObject, run: AlarmInvocationInfo) => Promise<void>;
+
+/** What tests' own calls of an alarm pass, which the watch leaves alone. */
+const ownRuns = new WeakSet<AlarmInvocationInfo>();
+
+/**
+ * What a test passes calling an object's alarm itself: a run set for
+ * `at`, now unless given, as the runtime passes each run it begins.
+ */
+export const ownRun = (at = Date.now()): AlarmInvocationInfo => {
+  const run = { isRetry: false, retryCount: 0, scheduledTime: at };
+  ownRuns.add(run);
+  return run;
+};
 
 /**
  * An alarm as the code has it, each run the runtime begins seen, and the
  * alarm it leaves read before it ends, while the runtime runs no other.
- * A test's own call, which carries nothing of what it was run for, is
- * left alone.
+ * A test's own call (ownRun) is left alone.
  */
 const watched = (taken: Alarm): Alarm =>
-  async function watchedAlarm(this: DurableObject, ...info) {
-    const [invocation] = info;
-    if (invocation === undefined) {
+  async function watchedAlarm(this: DurableObject, invocation) {
+    const info = [invocation];
+    if (ownRuns.has(invocation)) {
       await Reflect.apply(taken, this, info);
       return;
     }
@@ -77,6 +89,16 @@ const watched = (taken: Alarm): Alarm =>
     runs.going = true;
     wake(runs);
     try {
+      // Settle's own alarm, set after the runtime took this run up, only
+      // to wait on it: gone as it begins, as the run keeps an alarm set
+      // before it ends and would run again for it.
+      if (
+        runs.own !== undefined &&
+        invocation.scheduledTime !== runs.own &&
+        (await this.ctx.storage.getAlarm()) === runs.own
+      ) {
+        await this.ctx.storage.deleteAlarm();
+      }
       await Reflect.apply(taken, this, info);
       runs.last = {
         left: await this.ctx.storage.getAlarm(),
@@ -105,7 +127,7 @@ const until = async (runs: Runs, done: () => boolean): Promise<void> => {
  * each the runtime has taken up among them, begun or not. "now" brings
  * one set for later to now first, as the runtime would run it then; one
  * for later is otherwise kept, and hides a run taken up before a call set
- * it (GroupDO's wakeBy). A run that ends throwing after it is called
+ * it (Alarm.setBy, as GroupDO's photos are swept). A run that ends throwing after it is called
  * fails the wait, as the runtime would only run it again. Whether an
  * alarm was set as it was called.
  */
@@ -124,6 +146,7 @@ export const settle = async (
   }
   for (;;) {
     const own = vi.getRealSystemTime() + 1;
+    runs.own = own;
     // oxlint-disable-next-line no-await-in-loop -- again for one left due
     await storage.setAlarm(own);
     let left: number | null;
@@ -136,6 +159,7 @@ export const settle = async (
       }
       ({ left } = runs.last);
     } while (left === own && runs.last.scheduled !== own);
+    runs.own = undefined;
     if (left === null || left > vi.getRealSystemTime()) {
       return set !== null;
     }

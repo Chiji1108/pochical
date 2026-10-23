@@ -9,7 +9,7 @@ import {
   smallKey,
   uploadedPhotoKey,
 } from "../src/photos";
-import { alarmsSettled, runAlarm } from "./alarms";
+import { alarmsSettled, ownRun, runAlarm } from "./alarms";
 import { call, ORIGIN } from "./helpers";
 import {
   PAIR_ROSTER,
@@ -197,7 +197,7 @@ describe("the photos bucket", () => {
           "update group_photos set state = 'deleting', uploaded_at = 0 where id = ?",
           id
         );
-        const sweeping = instance.alarm();
+        const sweeping = instance.alarm(ownRun());
         land(undefined);
         await Promise.all([storing, sweeping]);
         return state.storage.sql

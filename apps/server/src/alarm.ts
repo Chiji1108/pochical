@@ -8,6 +8,11 @@
  * run's time is kept here as each run begins, and an alarm asked for it
  * is set a millisecond after it, which the scheduler takes as any other.
  * Remove this once workerd schedules such a set.
+ *
+ * One set for the run's time before the run began is the exception: the
+ * run is already to see the change that set it, and storage keeps that
+ * time with nothing to run it. Read here as no alarm, it goes as the run
+ * ends.
  */
 export class Alarm {
   /** When the latest run this object began was set for. */
@@ -17,6 +22,11 @@ export class Alarm {
 
   constructor(storage: DurableObjectStorage) {
     this.storage = storage;
+  }
+
+  /** Called as each run of the alarm begins, with what the runtime gave it. */
+  begin(run: AlarmInvocationInfo): void {
+    this.lastRun = run.scheduledTime;
   }
 
   /**
@@ -29,16 +39,29 @@ export class Alarm {
     await this.storage.setAlarm(time === this.lastRun ? time + 1 : time);
   }
 
-  /**
-   * Called as each run of the alarm begins, with what the runtime gave it.
-   * Storage holding the run's own time means a set for it came after the
-   * runtime took the run up and before it began, and was kept, not
-   * scheduled: it is set again, now a millisecond after.
-   */
-  async begin(run: AlarmInvocationInfo): Promise<void> {
-    this.lastRun = run.scheduledTime;
-    if ((await this.storage.getAlarm()) === run.scheduledTime) {
-      await this.set(run.scheduledTime);
+  /** The alarm set for `due` at the latest: one set earlier stays. */
+  async setBy(due: number): Promise<void> {
+    const set = await this.stored();
+    if (set === null || set > due) {
+      await this.set(due);
     }
+  }
+
+  /**
+   * As a run ends: the alarm set for `due`, what is still to do, unless
+   * one was set earlier meanwhile, as by a change made while it ran.
+   */
+  async end(due: number | undefined): Promise<void> {
+    if (due !== undefined) {
+      await this.setBy(due);
+    } else if ((await this.storage.getAlarm()) === this.lastRun) {
+      await this.storage.deleteAlarm();
+    }
+  }
+
+  /** The alarm that will run, if any. */
+  private async stored(): Promise<number | null> {
+    const set = await this.storage.getAlarm();
+    return set === this.lastRun ? null : set;
   }
 }
