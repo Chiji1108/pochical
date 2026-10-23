@@ -101,8 +101,17 @@ final class ChatEffectsLayer: UIView {
       for (id, view) in items where shown[id] == nil {
         view.removeFromSuperview()
         items[id] = nil
-        playing = playing.filter { $0.key.item != id }
+        for part in playing.keys where part.item == id { end(part) }
       }
+    }
+
+    /// Takes `part`'s effect away, played out or not.
+    mutating func end(_ part: EffectPart) {
+      playing.removeValue(forKey: part)?.remove()
+    }
+
+    func part(playing burst: Burst) -> EffectPart? {
+      playing.first { $0.value.burst === burst }?.key
     }
   }
 
@@ -118,7 +127,7 @@ final class ChatEffectsLayer: UIView {
     /// Takes `part`'s effect away, and its item's frame with nothing left
     /// on it.
     mutating func end(_ part: EffectPart) {
-      ground.playing.removeValue(forKey: part)?.host.view.removeFromSuperview()
+      ground.end(part)
       if let view = ground.items[part.item], view.subviews.isEmpty {
         view.removeFromSuperview()
         ground.items[part.item] = nil
@@ -126,10 +135,17 @@ final class ChatEffectsLayer: UIView {
     }
   }
 
-  /// An effect's SwiftUI, held at its part's frame in its item's.
+  /// An effect's SwiftUI, held at its part's frame in its item's until it
+  /// has played out.
   private struct Played {
     let burst: Burst
     let host: UIHostingController<AnyView>
+
+    /// Takes it off the screen, where it tells of its end no more.
+    func remove() {
+      burst.onPlayedOut = {}
+      host.view.removeFromSuperview()
+    }
   }
 
   override init(frame: CGRect) {
@@ -243,6 +259,9 @@ final class ChatEffectsLayer: UIView {
   /// animation it is asked in.
   private func begin(in item: UIView, at frame: CGRect) -> Played {
     let burst = Burst()
+    burst.onPlayedOut = { [weak self, weak burst] in
+      if let self, let burst { playedOut(burst) }
+    }
     let host = UIHostingController(rootView: Self.content(burst, environment))
     host.sizingOptions = []
     host.safeAreaRegions = []
@@ -268,6 +287,16 @@ final class ChatEffectsLayer: UIView {
     return view
   }
 
+  /// `burst` has played out: it goes from where it played, and a closed
+  /// menu it was the last on with it.
+  private func playedOut(_ burst: Burst) {
+    if let part = onLines.part(playing: burst) { onLines.end(part) }
+    for index in menus.indices {
+      if let part = menus[index].ground.part(playing: burst) { menus[index].end(part) }
+    }
+    removePlayedOut()
+  }
+
   /// Takes away the closed menus nothing plays on any more.
   private func removePlayedOut() {
     menus.removeAll { menu in
@@ -287,7 +316,7 @@ final class ChatEffectsLayer: UIView {
   }
 
   fileprivate func end(_ part: EffectPart) {
-    onLines.playing.removeValue(forKey: part)?.host.view.removeFromSuperview()
+    onLines.end(part)
     for index in menus.indices { menus[index].end(part) }
     removePlayedOut()
   }
@@ -298,6 +327,8 @@ final class ChatEffectsLayer: UIView {
   var pops = 0
   var sprays = 0
   var emoji = ""
+  /// Every pop and spray asked for has played to its end.
+  @ObservationIgnored var onPlayedOut: () -> Void = {}
 }
 
 /// A part's pop and spray, at its frame: Pow's, drawn round where the part
@@ -310,6 +341,10 @@ private struct BurstView: View {
   /// and a spray play on a change after the view is there.
   @State private var popped = 0
   @State private var sprayed = 0
+  /// What of the burst has played to its end: the pops whose animation
+  /// has finished, and the sprays whose particles have all gone.
+  @State private var poppedOut = 0
+  @State private var sprayedOut = 0
 
   private static let sprays = "chat-effect-sprays"
 
@@ -322,8 +357,15 @@ private struct BurstView: View {
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     // Fading in as they leave the part, as in a particle layer of their
-    // own (Pow's).
-    .changeEffect(.spray(layer: .named(Self.sprays)) { Text(burst.emoji) }, value: sprayed)
+    // own (Pow's). The particles are drawn only while some fly, and go as
+    // the last lands.
+    .changeEffect(
+      .spray(layer: .named(Self.sprays)) {
+        Text(burst.emoji).onDisappear {
+          sprayedOut = sprayed
+          endIfPlayedOut()
+        }
+      }, value: sprayed)
     .particleLayer(name: Self.sprays)
     .onAppear(perform: catchUp)
     .onChange(of: burst.pops) { catchUp() }
@@ -331,7 +373,19 @@ private struct BurstView: View {
   }
 
   private func catchUp() {
-    withAnimation { popped = burst.pops }
+    if popped != burst.pops {
+      let pops = burst.pops
+      withAnimation {
+        popped = pops
+      } completion: {
+        poppedOut = pops
+        endIfPlayedOut()
+      }
+    }
     sprayed = burst.sprays
+  }
+
+  private func endIfPlayedOut() {
+    if poppedOut == burst.pops, sprayedOut == burst.sprays { burst.onPlayedOut() }
   }
 }

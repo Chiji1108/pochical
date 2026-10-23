@@ -360,8 +360,8 @@ struct MenuMetrics {
 
   /// Goes, quick at first and settling, taking nothing from the start,
   /// then tells `onClosed` with its parts gone, staying while what plays
-  /// on its effects plays out; acts meanwhile, as the system's menu does. `fade` takes the bubble away
-  /// too, its line gone from the chat.
+  /// on its effects plays out; acts meanwhile, as the system's menu does.
+  /// `fade` takes the bubble away too, its line gone from the chat.
   func close(fade: Bool = false, then action: (() -> Void)? = nil) {
     if case .closing = phase { return }
     phase = .closing(
