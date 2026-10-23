@@ -19,6 +19,20 @@ val marketingVersion =
         .singleOrNull() ?: error("The iOS targets' MARKETING_VERSION must be one version")
     }
 
+// Credential Manager asks Google for ID tokens for the Web client, the
+// audience the server checks (spec/sync-protocol.md, Signing in): the first
+// of the server's GOOGLE_CLIENT_IDS. Google knows the app itself by its
+// Android OAuth clients, its package and signing certificates', in the same
+// Google Cloud project, which the app never names.
+val googleWebClientId =
+  providers
+    .fileContents(rootProject.layout.projectDirectory.file("../server/wrangler.jsonc"))
+    .asText
+    .map { wrangler ->
+      Regex(""""GOOGLE_CLIENT_IDS":\s*\[\s*"([^"]+)"""").find(wrangler)?.groupValues?.get(1)
+        ?: error("The server's GOOGLE_CLIENT_IDS must name the Web client first")
+    }
+
 android {
   namespace = "app.pochical"
   compileSdk = libs.versions.compileSdk.get().toInt()
@@ -28,6 +42,10 @@ android {
     targetSdk = libs.versions.compileSdk.get().toInt()
     versionCode = providers.gradleProperty("pochicalVersionCode").orElse("1").get().toInt()
     versionName = marketingVersion.get()
+    buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${googleWebClientId.get()}\"")
+  }
+  buildFeatures {
+    buildConfig = true
   }
   signingConfigs {
     // Play's upload key never enters the repository: CI passes it as
@@ -74,6 +92,9 @@ dependencies {
   implementation(libs.datastore)
   implementation(libs.splashscreen)
   implementation(libs.lifecycle.runtime.compose)
+  implementation(libs.credentials)
+  implementation(libs.credentials.play.services.auth)
+  implementation(libs.googleid)
 
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)
