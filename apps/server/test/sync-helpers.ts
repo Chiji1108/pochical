@@ -16,7 +16,7 @@ import type {
 } from "../src/gen/pochical/v1/sync_pb";
 import { CURRENT_PROTOCOL_VERSION } from "../src/protocol";
 import { supportPlace } from "../src/support-lines";
-import { alarmsSettled, runAlarm } from "./alarms";
+import { runAlarm, settle, settleAfterTest } from "./alarms";
 import { call, openSocket, signInAnonymously, userIdOf } from "./helpers";
 
 // Sync sockets in tests: their frames as they arrive, and the edits sent
@@ -207,16 +207,13 @@ export const rosterIn = (frame: ServerFrame) =>
 
 const placeOf = (userId: string) => env.GROUPS.getByName(supportPlace(userId));
 
-/** A chat's place as it holds its relay: its next alarm and lines untold. */
-const relayOf = async (userId: string) =>
-  await runInDurableObject(placeOf(userId), async (_, state) => ({
-    alarm: await state.storage.getAlarm(),
-    behind: state.storage.sql
-      .exec<{ behind: number }>(
-        "select count(*) as behind from chat_lines where cursor > coalesce((select cursor from support_relay), 0)"
-      )
-      .one().behind,
-  }));
+/** How many of a chat's lines are not yet told outside. */
+const untoldIn = (state: DurableObjectState): number =>
+  state.storage.sql
+    .exec<{ untold: number }>(
+      "select count(*) as untold from chat_lines where cursor > coalesce((select cursor from support_relay), 0)"
+    )
+    .one().untold;
 
 /**
  * Waits until the chat is told outside up to its newest line: the try a
@@ -224,15 +221,15 @@ const relayOf = async (userId: string) =>
  * failure, brought to now.
  */
 export const relayed = async (userId: string): Promise<void> => {
-  await alarmsSettled(placeOf(userId));
-  let relay = await relayOf(userId);
-  while (relay.behind > 0 && relay.alarm !== null) {
-    // oxlint-disable-next-line no-await-in-loop -- each try after the last
-    await runAlarm(placeOf(userId));
-    // oxlint-disable-next-line no-await-in-loop -- read once it has run
-    relay = await relayOf(userId);
-  }
-  expect(relay.behind).toBe(0);
+  await runInDurableObject(placeOf(userId), async (_, state) => {
+    await settle(state, "as set");
+    // oxlint-disable-next-line no-await-in-loop -- read after each try
+    while (untoldIn(state) > 0 && (await state.storage.getAlarm()) !== null) {
+      // oxlint-disable-next-line no-await-in-loop -- each try after the last
+      await settle(state, "now");
+    }
+    expect(untoldIn(state)).toBe(0);
+  });
 };
 
 type ChatKind = Extract<
@@ -247,6 +244,7 @@ type ChatKind = Extract<
  */
 export const supportChat = async (token: string) => {
   const userId = await userIdOf(token);
+  settleAfterTest(supportPlace(userId), () => placeOf(userId));
   const { socket, frames } = await syncSocket("/v1/me/support/socket", token);
   await frames.next();
   const takeEdits = async (edits: NonNullable<ChatKind>): Promise<void> => {

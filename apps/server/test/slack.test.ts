@@ -12,7 +12,7 @@ import {
   toSlackText,
 } from "../src/slack";
 import { supportPlace } from "../src/support-lines";
-import { alarmsSettled, runAlarm } from "./alarms";
+import { alarmOf, alarmsSettled, runAlarm } from "./alarms";
 import { call, ORIGIN, signInAnonymously } from "./helpers";
 import { relayed, sendFrame, supportChat, untilAcked } from "./sync-helpers";
 
@@ -947,10 +947,7 @@ describe("a user's photo, in Slack", () => {
  * Whole seconds while the test holds the clock still.
  */
 const nextTry = async (userId: string): Promise<number | null> => {
-  const at = await runInDurableObject(
-    env.GROUPS.getByName(supportPlace(userId)),
-    async (_, state) => await state.storage.getAlarm()
-  );
+  const at = await alarmOf(env.GROUPS.getByName(supportPlace(userId)));
   return at === null ? null : (at - Date.now()) / 1000;
 };
 

@@ -292,7 +292,7 @@ describe("a group's photos", () => {
     await uploadedAgo(chatRules.unsentAfterMs - 60_000, "fresh");
 
     // The uploads set the alarm, so a group that goes quiet sweeps too.
-    await expect(runAlarm(group)).resolves.toBeGreaterThan(0);
+    await expect(runAlarm(group)).resolves.toBeTruthy();
     const kept = {
       fresh: await stored("fresh"),
       lost: await stored("lost"),
@@ -320,7 +320,7 @@ describe("a group's photos", () => {
 
     // The alarm comes back for the one still within its time.
     await uploadedAgo(chatRules.unsentAfterMs, "fresh");
-    await expect(runAlarm(group)).resolves.toBeGreaterThan(0);
+    await expect(runAlarm(group)).resolves.toBeTruthy();
     await expect(stored("fresh")).resolves.toBeFalsy();
   });
 
@@ -336,7 +336,7 @@ describe("a group's photos", () => {
       );
     });
     await photo("PUT", groupId, "second", maker, JPEG);
-    await runAlarm(group);
+    await expect(runAlarm(group)).resolves.toBeTruthy();
     await expect(
       env.PHOTOS.head(photoKey(groupId, "first"))
     ).resolves.not.toBeNull();
@@ -414,7 +414,7 @@ const sweepAll = async (groupId: string): Promise<boolean> => {
       Date.now() - chatRules.unsentAfterMs
     );
   });
-  return (await runAlarm(group)) > 0;
+  return await runAlarm(group);
 };
 
 describe("a group's photo once stored", () => {
@@ -575,7 +575,7 @@ describe("a group's photo once stored", () => {
             .one().at
       )
     ).resolves.toBeGreaterThan(long);
-    await runAlarm(group);
+    await expect(runAlarm(group)).resolves.toBeTruthy();
     await expect(storedBytes(groupId, "again")).resolves.toStrictEqual(JPEG);
     // And its line still goes.
     const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
@@ -650,7 +650,7 @@ describe("a group's photo once stored", () => {
     // Not copied in again yet, and the alarm comes back for it.
     await expect(storedBytes(groupId, stray)).resolves.toBeNull();
     expect(retryAt).not.toBeNull();
-    await runAlarm(group);
+    await expect(runAlarm(group)).resolves.toBeTruthy();
     await expect(storedBytes(groupId, stray)).resolves.toStrictEqual(JPEG);
     await expect(
       runInDurableObject(group, (_, state) =>
