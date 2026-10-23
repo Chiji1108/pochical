@@ -4,7 +4,7 @@
 // the mask Android 13's themed icons tint, and the 512-pixel icon Google
 // Play's store listing asks for beside the sources.
 // Run again after changing the drawing or the colors: bun run icon:android
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
 
 import sharp from "sharp";
 
@@ -31,18 +31,33 @@ const GENERATED =
 
 const moss = colorsOf("moss");
 const foreground = paintedPixels(lightness, width, height, moss, true);
-// The dog's share of each pixel of the icon, as white on black, made the
-// opacity of a white drawing: lines and ground clear, as on the icon.
+// The dog's share of each pixel, as white on black, made the opacity of a
+// white drawing: the themed icon tints the dog and leaves the lines clear.
+// The ground and the lines take one color there, as on ダーク's icon, so
+// it borrows ダーク's rim to keep the nose and the marks above the head,
+// which sit outside the outline.
 const dogShare = paintedPixels(lightness, width, height, {
   ...moss,
   dog: "#ffffff",
   ground: "#000000",
   line: "#000000",
+  rim: colorsOf("dark").rim,
 });
 const monochrome = new Uint8ClampedArray(dogShare.length).fill(255);
 for (let offset = 3; offset < monochrome.length; offset += RGBA) {
   monochrome[offset] = dogShare[offset - 3] ?? 0;
 }
+
+// The mipmaps hold the launcher icon alone, so a density or layer dropped
+// here leaves nothing behind.
+const folders = await readdir(RES);
+await Promise.all(
+  folders
+    .filter((folder) => folder.startsWith("mipmap-"))
+    .map(async (folder) => {
+      await rm(`${RES}${folder}`, { force: true, recursive: true });
+    })
+);
 
 await Promise.all(
   Object.entries(DENSITIES).map(async ([density, scale]) => {

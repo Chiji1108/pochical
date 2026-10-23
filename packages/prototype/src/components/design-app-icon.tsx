@@ -225,7 +225,7 @@ export function inkBounds(
 
 // The drawing's pixels in the icon's colors, RGBA at the source's size,
 // from the source's lightness: what the page paints on its canvas and the
-// scripts (scripts/app-icon.ts) write out. With a clear ground, only
+// icon scripts (scripts/app-icon.ts and its callers) write out. With a clear ground, only
 // the dog and its rim are painted and the rest is see-through.
 export function paintedPixels(
   lightness: Uint8Array,
