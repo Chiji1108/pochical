@@ -83,10 +83,10 @@ class SyncClient internal constructor(
   val state: StateFlow<SocketState> = mutableState.asStateFlow()
 
   /**
-   * What the OS said of the network since, taken in order by the socket's loop: what it ends is the
-   * socket open as it is taken.
+   * What the OS last said of the network, taken by the socket's loop: what it ends is the socket
+   * open as it is taken. Only the last word counts, so a client long closed holds one at most.
    */
-  private val network = Channel<SocketEvent>(Channel.UNLIMITED)
+  private val network = Channel<SocketEvent>(Channel.CONFLATED)
 
   /** When the server last answered the keepalive. */
   @Volatile private var lastReplyMs = 0L
@@ -126,11 +126,14 @@ class SyncClient internal constructor(
           val most = reconnectWaitMost(state.tries, SyncSocket.reconnectFirstMs, SyncSocket.reconnectMostMs)
           val waited = async { delay(random.nextLong(most + 1L)) }
           val changed = async { mutableState.first { it != state } }
-          select {
-            waited.onAwait { on(SocketEvent.WaitOver) }
-            changed.onAwait {}
-            network.onReceive { on(it) }
-          }
+          // The network going while it waits changes nothing: the wait drawn goes on.
+          do {
+            select {
+              waited.onAwait { on(SocketEvent.WaitOver) }
+              changed.onAwait {}
+              network.onReceive { on(it) }
+            }
+          } while (mutableState.value == state)
           coroutineContext.cancelChildren()
         }
         is SocketState.Opening -> {
@@ -173,9 +176,10 @@ class SyncClient internal constructor(
       var ended: SocketEvent?
       do {
         val message =
+          // The network before frames still queued: the next socket's catch-up brings them again.
           select {
-            messages.onReceive { it }
             network.onReceive { SocketMessage.Ended(it) }
+            messages.onReceive { it }
           }
         ended =
           when (message) {
