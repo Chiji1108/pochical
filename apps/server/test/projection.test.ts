@@ -9,7 +9,7 @@ import { invites } from "../src/db/schema";
 import { ChangesSchema, DayField } from "../src/gen/pochical/v1/sync_pb";
 import { PUSH_RETRY_FIRST_MS } from "../src/user-do";
 import type { UserDO } from "../src/user-do";
-import { alarmOf, alarmsSettled, runAlarm } from "./alarms";
+import { alarmOf, alarmRunsOf, alarmsSettled, runAlarm } from "./alarms";
 import { call, signInAnonymously, userIdOf } from "./helpers";
 import {
   changesIn,
@@ -339,9 +339,7 @@ describe("a member's shifts in their groups", () => {
     // The change comes as the push below fails, once: every round it
     // made would fail and make it again, on past the file's last test.
     let changing = false;
-    let rounds = 0;
     await failPushesTo(user, ["!unreachable"], (instance) => {
-      rounds += 1;
       if (changing) {
         changing = false;
         // Out of the group and in again, which pushes to it whole.
@@ -359,10 +357,10 @@ describe("a member's shifts in their groups", () => {
 
     await alarmsSettled(user);
     changing = true;
-    rounds = 0;
+    const before = await alarmRunsOf(user);
     // The change is a round of its own, at once, not after the retry.
     await expect(runAlarm(user)).resolves.toBeTruthy();
-    expect(rounds).toBe(2);
+    await expect(alarmRunsOf(user)).resolves.toBe(before + 2);
     // Nor that round's retry, to fail as the file's tests end.
     await runInDurableObject(user, async (_, state) => {
       await state.storage.deleteAlarm();

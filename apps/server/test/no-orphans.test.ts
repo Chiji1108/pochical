@@ -9,7 +9,7 @@ import {
   smallKey,
   uploadedPhotoKey,
 } from "../src/photos";
-import { runAlarm } from "./alarms";
+import { alarmsSettled, runAlarm } from "./alarms";
 import { call, ORIGIN } from "./helpers";
 import {
   PAIR_ROSTER,
@@ -50,11 +50,6 @@ const notesOf = async (groupId: string): Promise<Record<string, string>> =>
         .map(({ id, state: held }) => [id, held])
     )
   );
-
-/** A Group DO's alarm run now, whenever it was set for. */
-const groupAlarm = async (groupId: string): Promise<void> => {
-  await runAlarm(env.GROUPS.getByName(groupId));
-};
 
 /** R2's deletes refused until restored, as when it is out of reach. */
 const failingDeletes = () =>
@@ -124,18 +119,19 @@ describe("the photos bucket", () => {
       });
       await untilAcked(mine.frames);
       // The sweep the take-back set fails at R2: the note says so still.
-      await groupAlarm(groupId);
-      await expect(stored(photoKey(groupId, id))).resolves.toBeTruthy();
-      await expect(notesOf(groupId)).resolves.toMatchObject({
-        [id]: "takingBack",
-      });
+      await runAlarm(env.GROUPS.getByName(groupId));
+      await expect(
+        Promise.all([stored(photoKey(groupId, id)), notesOf(groupId)])
+      ).resolves.toMatchObject([true, { [id]: "takingBack" }]);
       // Its upload again is refused meanwhile, as for one taken back.
       await expect(
         upload(`/v1/groups/${groupId}/photos/${id}`, maker)
       ).resolves.toBe(409);
 
       deletes.mockRestore();
-      await groupAlarm(groupId);
+      await expect(
+        runAlarm(env.GROUPS.getByName(groupId))
+      ).resolves.toBeTruthy();
       await expect(
         Promise.all([
           stored(photoKey(groupId, id)),
@@ -163,14 +159,16 @@ describe("the photos bucket", () => {
         { groupId, photoId: "", usual: true },
         guest
       );
-      await groupAlarm(groupId);
+      await runAlarm(env.GROUPS.getByName(groupId));
       await expect(stored(photoKey(groupId, own))).resolves.toBeTruthy();
       await expect(notesOf(groupId)).resolves.toMatchObject({
         [own]: "deleting",
       });
 
       deletes.mockRestore();
-      await groupAlarm(groupId);
+      await expect(
+        runAlarm(env.GROUPS.getByName(groupId))
+      ).resolves.toBeTruthy();
       await expect(stored(photoKey(groupId, own))).resolves.toBeFalsy();
       await expect(notesOf(groupId)).resolves.not.toHaveProperty(own);
     });
@@ -179,6 +177,8 @@ describe("the photos bucket", () => {
       const { groupId, makerId } = await pair();
       const group = env.GROUPS.getByName(groupId);
       const id = crypto.randomUUID();
+      // No run of the runtime's goes with the test's own below.
+      await alarmsSettled(group);
       const kept = await runInDurableObject(group, async (instance, state) => {
         // R2 takes the upload's bytes only once let.
         const { promise: landed, resolve: land } =
@@ -238,12 +238,14 @@ describe("the photos bucket", () => {
       });
       await untilAcked(mine.frames);
       // Noted as going, then forgotten only once R2 has deleted it.
-      await groupAlarm(groupId);
+      await runAlarm(env.GROUPS.getByName(groupId));
       await expect(notesOf(groupId)).resolves.toMatchObject({
         [id]: "deleting",
       });
       deletes.mockRestore();
-      await groupAlarm(groupId);
+      await expect(
+        runAlarm(env.GROUPS.getByName(groupId))
+      ).resolves.toBeTruthy();
       await expect(stored(photoKey(groupId, id))).resolves.toBeFalsy();
       await expect(notesOf(groupId)).resolves.not.toHaveProperty(id);
     });

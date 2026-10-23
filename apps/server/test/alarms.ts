@@ -7,37 +7,45 @@ import { UserDO } from "../src/user-do";
 
 // Durable Objects' alarms in tests are run by the runtime alone, one at a
 // time for each object, and no switch of the pool, Miniflare or workerd
-// turns that off. Once the runtime takes one up it reads as none, though
-// the pool begins it only after it has fetched the Worker's module from
-// vitest's main process. So a test waits on runs as they begin and end,
-// and sets an alarm itself when it reads none: the runtime runs that one
-// after any it has taken up.
+// turns that off. Once the runtime takes one up it reads as none, and it
+// begins it only once the object is free and the pool has fetched the
+// Worker's module from vitest's main process: nothing in the object shows
+// such a run. One set for the very millisecond of a run taken up is kept,
+// and never run. So a test waits only on runs of an alarm it set itself,
+// a millisecond after any taken up, which the runtime runs after them.
+// Where nothing was owed, that run is the object's alarm with nothing to
+// do, as the runtime may run any alarm again.
 
 /** A Durable Object's alarm runs, as the runtime begins and ends them. */
 type Runs = {
   ended: number;
-  /** The run going: the runtime runs one at a time. */
-  going: Promise<void> | undefined;
-  /** How the last run ended: the alarm it left set, or why it threw. */
-  last: { left: number | null; threw: false } | { error: unknown; threw: true };
+  /** Whether one is going: the runtime runs one at a time. */
+  going: boolean;
+  /**
+   * What the last to end without throwing was set for, and the alarm it
+   * left set, read before it ended.
+   */
+  last: { left: number | null; scheduled: number | undefined };
+  /** The latest to throw, by how many had ended with it. */
+  threw: { ended: number; error: unknown } | undefined;
   /** Woken as each run begins and ends. */
   next: PromiseWithResolvers<void>;
 };
 
-/** Each object's runs, by its id. */
-const runsById = new Map<string, Runs>();
+/** Each object's runs, by its state, so they go with it. */
+const runsByState = new WeakMap<DurableObjectState, Runs>();
 
-const runsOf = (id: DurableObjectId): Runs => {
-  const key = id.toString();
-  let runs = runsById.get(key);
+const runsOf = (state: DurableObjectState): Runs => {
+  let runs = runsByState.get(state);
   if (runs === undefined) {
     runs = {
       ended: 0,
-      going: undefined,
-      last: { left: null, threw: false },
+      going: false,
+      last: { left: null, scheduled: undefined },
       next: Promise.withResolvers(),
+      threw: undefined,
     };
-    runsById.set(key, runs);
+    runsByState.set(state, runs);
   }
   return runs;
 };
@@ -46,13 +54,6 @@ const wake = (runs: Runs): void => {
   runs.next.resolve();
   runs.next = Promise.withResolvers();
 };
-
-/**
- * Due by `soon` or by the runtime's clock, whichever is later: the
- * runtime's, which a test holding Date does not stop.
- */
-const isDue = (time: number | null, soon: number): boolean =>
-  time !== null && time <= Math.max(soon, vi.getRealSystemTime());
 
 type Alarm = (
   this: DurableObject,
@@ -67,79 +68,77 @@ type Alarm = (
  */
 const watched = (taken: Alarm): Alarm =>
   async function watchedAlarm(this: DurableObject, ...info) {
-    if (info[0] === undefined) {
+    const [invocation] = info;
+    if (invocation === undefined) {
       await Reflect.apply(taken, this, info);
       return;
     }
-    const runs = runsOf(this.ctx.id);
-    const run = (async () => {
-      await Reflect.apply(taken, this, info);
-      runs.last = { left: await this.ctx.storage.getAlarm(), threw: false };
-    })();
-    runs.going = run;
+    const runs = runsOf(this.ctx);
+    runs.going = true;
     wake(runs);
     try {
-      await run;
+      await Reflect.apply(taken, this, info);
+      runs.last = {
+        left: await this.ctx.storage.getAlarm(),
+        scheduled: invocation.scheduledTime,
+      };
     } catch (error) {
-      runs.last = { error, threw: true };
+      runs.threw = { ended: runs.ended + 1, error };
       throw error;
     } finally {
-      runs.going = undefined;
+      runs.going = false;
       runs.ended += 1;
       wake(runs);
     }
   };
 
-const noneGoing = async (runs: Runs): Promise<void> => {
-  while (runs.going !== undefined) {
-    // oxlint-disable-next-line no-await-in-loop -- until none is going
-    await runs.going;
+/** Waits on the object's runs as they begin and end until `done`. */
+const until = async (runs: Runs, done: () => boolean): Promise<void> => {
+  while (!done()) {
+    // oxlint-disable-next-line no-await-in-loop -- until it is done
+    await runs.next.promise;
   }
 };
 
 /**
  * Inside the object, waits until no run of its alarm is going or due:
  * each the runtime has taken up among them, begun or not. "now" brings
- * one set for later to now first, as the runtime would run it then. A
- * run that throws fails the wait, as the runtime would only run it again.
- * Whether an alarm was set as it was called.
- *
- * Read as none, an alarm may be taken up and not yet begun, so one is
- * set for the next millisecond, which the runtime runs after it, or runs
- * with nothing to do. Not for now: one set for the very time of the run
- * taken up is kept but never run. One set for later, kept as it is,
- * hides a run taken up before a call set it (GroupDO's wakeBy).
+ * one set for later to now first, as the runtime would run it then; one
+ * for later is otherwise kept, and hides a run taken up before a call set
+ * it (GroupDO's wakeBy). A run that ends throwing after it is called
+ * fails the wait, as the runtime would only run it again. Whether an
+ * alarm was set as it was called.
  */
 export const settle = async (
   state: DurableObjectState,
   when: "as set" | "now"
 ): Promise<boolean> => {
   const { storage } = state;
-  const runs = runsOf(state.id);
-  await noneGoing(runs);
+  const runs = runsOf(state);
+  await until(runs, () => !runs.going);
   // No run begins while storage answers, so none is missed from here.
   const since = runs.ended;
-  const soon = vi.getRealSystemTime() + 1;
   const set = await storage.getAlarm();
-  const later = set !== null && !isDue(set, soon);
-  if (set === null || (later && when === "now")) {
-    await storage.setAlarm(soon);
+  if (when === "as set" && set !== null && set > vi.getRealSystemTime()) {
+    return true;
   }
-  const owed = !later || when === "now";
   for (;;) {
-    // oxlint-disable-next-line no-await-in-loop -- the run going ends
-    await noneGoing(runs);
-    const { last } = runs;
-    if (runs.ended > since && last.threw) {
-      throw new Error("An alarm's run threw", { cause: last.error });
-    }
-    const due =
-      runs.ended === since ? owed : !last.threw && isDue(last.left, soon);
-    if (!due) {
+    const own = vi.getRealSystemTime() + 1;
+    // oxlint-disable-next-line no-await-in-loop -- again for one left due
+    await storage.setAlarm(own);
+    let left: number | null;
+    do {
+      const after = runs.ended;
+      // oxlint-disable-next-line no-await-in-loop -- each run as it ends
+      await until(runs, () => !runs.going && runs.ended > after);
+      if (runs.threw !== undefined && runs.threw.ended > since) {
+        throw new Error("An alarm's run threw", { cause: runs.threw.error });
+      }
+      ({ left } = runs.last);
+    } while (left === own && runs.last.scheduled !== own);
+    if (left === null || left > vi.getRealSystemTime()) {
       return set !== null;
     }
-    // oxlint-disable-next-line no-await-in-loop -- the runtime begins one
-    await runs.next.promise;
   }
 };
 
@@ -168,6 +167,10 @@ export const alarmOf = async (
     stub,
     async (_, state) => await state.storage.getAlarm()
   );
+
+/** How many runs of the object's alarm the runtime has ended. */
+export const alarmRunsOf = async (stub: DurableObjectStub): Promise<number> =>
+  await runInDurableObject(stub, (_, state) => runsOf(state).ended);
 
 /** The objects the running test leaves with no run going or due. */
 const afterTest = new Map<string, () => DurableObjectStub>();

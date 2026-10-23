@@ -1,7 +1,8 @@
 import { env, exports } from "cloudflare:workers";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { personPhotoKey, photoKey } from "../src/photos";
+import { alarmsSettled } from "./alarms";
 import { call, ORIGIN, signInAnonymously, userIdOf } from "./helpers";
 import { changesIn, pair, push, syncSocket } from "./sync-helpers";
 
@@ -138,11 +139,10 @@ describe("members' photos", () => {
     expect(
       memberOf(changesIn(await group.frames.next()), makerId)
     ).toMatchObject([{ kind: { value: { left: true, photoId: "" } } }]);
-    await vi.waitFor(async () => {
-      await expect(
-        env.PHOTOS.head(photoKey(groupId, photoId))
-      ).resolves.toBeNull();
-    });
+    await alarmsSettled(env.GROUPS.getByName(groupId));
+    await expect(
+      env.PHOTOS.head(photoKey(groupId, photoId))
+    ).resolves.toBeNull();
   });
 
   it("show on the join screen to whoever holds the invitation", async () => {
@@ -288,10 +288,9 @@ describe("a group's photo mark", () => {
     await upload(`/v1/me/photos/${photoId}`, maker);
     await renamed(groupId, { photoId }, maker);
     await renamed(groupId, { color: 2, letter: "い" }, maker);
-    await vi.waitFor(async () => {
-      await expect(
-        env.PHOTOS.head(photoKey(groupId, photoId))
-      ).resolves.toBeNull();
-    });
+    await alarmsSettled(env.GROUPS.getByName(groupId));
+    await expect(
+      env.PHOTOS.head(photoKey(groupId, photoId))
+    ).resolves.toBeNull();
   });
 });

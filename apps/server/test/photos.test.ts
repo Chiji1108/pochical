@@ -3,7 +3,7 @@ import { env, exports } from "cloudflare:workers";
 import { describe, expect, it, vi } from "vitest";
 
 import { photoKey, sharePersonPhoto, smallKey } from "../src/photos";
-import { runAlarm } from "./alarms";
+import { alarmsSettled, runAlarm } from "./alarms";
 import { call, ORIGIN, signInAnonymously, userIdOf } from "./helpers";
 import {
   changesBesidesNotices,
@@ -600,6 +600,8 @@ describe("a group's photo once stored", () => {
     const group = env.GROUPS.getByName(groupId);
     const stray = await ownPhoto(maker);
     await sharePersonPhoto(env, makerId, stray, groupId);
+    // No run of the runtime's goes with the test's own below.
+    await alarmsSettled(group);
     await runInDurableObject(group, (_, state) => {
       state.storage.sql.exec(
         "update group_photos set uploaded_at = ?",
@@ -631,6 +633,8 @@ describe("a group's photo once stored", () => {
     const group = env.GROUPS.getByName(groupId);
     const stray = await ownPhoto(maker);
     await sharePersonPhoto(env, makerId, stray, groupId);
+    // No run of the runtime's goes with the test's own below.
+    await alarmsSettled(group);
     await runInDurableObject(group, (_, state) => {
       state.storage.sql.exec(
         "update group_photos set uploaded_at = ?",
@@ -668,6 +672,8 @@ describe("a group's photo once stored", () => {
     const { groupId, maker, makerId } = await pair();
     const group = env.GROUPS.getByName(groupId);
     await photo("PUT", groupId, "lost", maker, JPEG);
+    // No run of the runtime's goes with the test's own below.
+    await alarmsSettled(group);
     await runInDurableObject(group, (_, state) => {
       state.storage.sql.exec(
         "update group_photos set uploaded_at = ?",
