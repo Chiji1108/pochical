@@ -165,8 +165,10 @@ const breakdown = {
     margin: 0,
     textStyle: "title3",
   }),
+  // Inline after the count, on its baseline, lowered a little.
   chevron: css({
     color: "text.quaternary",
+    display: "inline",
     marginLeft: "8px",
     verticalAlign: "-2px",
   }),

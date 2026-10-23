@@ -64,7 +64,7 @@ struct RootView: View {
   }
 
   var body: some View {
-    RootNavigation(navigator: navigator, tint: colors.accentDefault, tabs: hosted(tabs)) { page in
+    RootNavigation(navigator: navigator, tabs: hosted(tabs)) { page in
       hosted(self.page(page).environment(\.photoShelf, navigator.photoShelf(of: page)))
     }
     .ignoresSafeArea()
@@ -214,7 +214,6 @@ struct RootView: View {
           AppEnvironment(
             settings: settings, groupCalls: groupCalls, session: session, openPlace: openPlace)
         )
-        .tint(colors.accentDefault)
         .toggleStyle(ThemedSwitch())
         .environment(\.look, settings.device.look)
         .environment(\.english, settings.device.heading.english)

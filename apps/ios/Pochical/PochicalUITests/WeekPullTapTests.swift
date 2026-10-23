@@ -13,6 +13,19 @@ final class WeekPullTapTests: XCTestCase {
     XCTAssertFalse(opened.isSelected, "the day open before closes")
   }
 
+  /// The next day tapped takes the open one's place in its sheet, which
+  /// stays where it is (POC-195).
+  func testTapKeepsTheSheet() throws {
+    let (opened, other) = try openADay()
+    checkSheetFollows(
+      app, from: (opened, "\(thisMonth)月15日"), to: (other, dayName(of: other)), "in the calendar")
+  }
+
+  /// "10月16日" of a day's "10月16日、未入力".
+  private func dayName(of day: XCUIElement) -> String {
+    String(day.label.prefix { $0 != "、" })
+  }
+
   func testSlowPullFoldingBackPicksNoDay() throws {
     let (opened, other) = try openADay()
     let start = other.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))

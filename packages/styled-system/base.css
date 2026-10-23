@@ -21,7 +21,9 @@
     background: var(--paper);
     text-rendering: optimizeLegibility;
   }
-  * {
+  *,
+  ::before,
+  ::after {
     box-sizing: border-box;
   }
   html {
@@ -43,7 +45,11 @@
   a {
     -webkit-tap-highlight-color: transparent;
   }
+  /* A button is as wide and tall as its own styles make it: Safari's
+     padding (2px over, 3px under) would set what it holds half a pixel
+     high. */
   button {
+    padding: 0;
     cursor: pointer;
   }
   button:disabled {
@@ -54,6 +60,12 @@
   a,
   summary {
     touch-action: manipulation;
+  }
+  /* A field's hint in the quieter words' role, at full strength, as the
+     apps draw it: Firefox would otherwise also fade it. */
+  ::placeholder {
+    color: var(--colors-text-tertiary);
+    opacity: 1;
   }
   a:hover {
     color: var(--green);

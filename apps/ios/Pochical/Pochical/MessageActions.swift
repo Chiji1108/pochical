@@ -73,7 +73,12 @@ struct MenuMetrics {
   let bar: CGSize
   let rowHeight: CGFloat
   let menuWidth: CGFloat
-  static let groupGap: CGFloat = 9
+  /// The sizes of iOS 26's own menus (the bar's ⋯), as measured on the
+  /// simulator: a row 42 points at the default text size, growing with
+  /// it, and groups apart by 21 with a 1-point rule in their middle.
+  static let systemRow: CGFloat = 42
+  static let groupGap: CGFloat = 21
+  static let rule: CGFloat = 1
   static let menuInset: CGFloat = 6
   /// The menu's corners, and how far in from them its rows are lit.
   static let menuCorner = Radius.xxl
@@ -86,7 +91,7 @@ struct MenuMetrics {
     let count = CGFloat(reactionChoices.count + 1)
     cell = min(scaled(40), (width - 2 * margin - 8 - 2 * (count - 1)) / count)
     bar = CGSize(width: count * cell + 2 * (count - 1) + 8, height: cell + 8)
-    rowHeight = scaled(Metrics.touch)
+    rowHeight = scaled(Self.systemRow)
     menuWidth = min(scaled(250), width - 2 * margin)
   }
 
@@ -494,6 +499,8 @@ private struct ReactionBar: View {
 /// when its items, grown with a large text size, are taller than the room.
 private struct MenuItems: View {
   @Environment(\.themeColors) private var colors
+  @Environment(\.dynamicTypeSize) private var typeSize
+  @ScaledMetric(relativeTo: .body) private var iconWidth = 24.0
   let request: MessageActionsRequest
   let metrics: MenuMetrics
   let state: MenuState
@@ -508,24 +515,31 @@ private struct MenuItems: View {
           // menus are.
           if index > 0, action.startsGroup {
             Rectangle()
-              .fill(colors.separator)
-              .frame(height: 0.5)
+              .fill(Color(uiColor: .tertiarySystemFill))
+              .frame(height: MenuMetrics.rule)
               .padding(.horizontal, 16)
               .frame(height: MenuMetrics.groupGap)
           }
           Button {
             pick(.action(action.id))
           } label: {
-            HStack {
+            // The symbol before the words, in a column of its own so the
+            // words line up, as iOS 26's menus draw their items; the
+            // words alone at the accessibility sizes, as theirs are.
+            HStack(spacing: 12) {
+              if !typeSize.isAccessibilitySize {
+                Image(systemName: action.systemImage)
+                  .frame(width: iconWidth)
+              }
               Text(action.title)
                 // One line in its row, however large the text.
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
-              Spacer(minLength: 12)
-              Image(systemName: action.systemImage)
+              Spacer(minLength: 0)
             }
             .font(.body)
-            .foregroundStyle(action.destructive ? colors.dangerDefault : colors.textPrimary)
+            .foregroundStyle(
+              action.destructive ? AnyShapeStyle(colors.dangerDefault) : AnyShapeStyle(.primary))
             .padding(.horizontal, 12)
             .frame(height: metrics.rowHeight)
             .contentShape(.rect)

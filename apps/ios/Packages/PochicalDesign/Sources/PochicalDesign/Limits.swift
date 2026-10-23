@@ -34,6 +34,9 @@ public enum SyncLimits {
 /// The most days one chat message shares.
 public let sharedDaysMax = 31
 
+/// The fewest days a poll puts to the vote.
+public let pollMinDays = 2
+
 /// The most people in one group.
 public let groupMaxMembers = 100
 

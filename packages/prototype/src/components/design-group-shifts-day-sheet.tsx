@@ -1,4 +1,4 @@
-import { SHARED_DAYS_MAX } from "@pochical/design/limits";
+import { POLL_MIN_DAYS, SHARED_DAYS_MAX } from "@pochical/design/limits";
 import { css, cva, cx } from "@pochical/styled-system/css";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useContext, useState } from "react";
@@ -7,7 +7,6 @@ import { addDays, dateKey, formatDay, monthAfter } from "../lib/design-days";
 import { everyoneOff, sameMonth } from "../lib/design-group-data";
 import type { Member } from "../lib/design-group-data";
 import { designToday } from "../lib/design-today";
-import { Segment, SegmentedControl } from "./design-choices";
 import { monthGrid } from "./design-date-picker";
 import { todayMark } from "./design-day-cell";
 import { MONTH_WEEKS } from "./design-day-grid";
@@ -86,34 +85,37 @@ const shareDays = {
   }),
 };
 
-// Picking days to share: days everyone is off first, then any day on a
-// small calendar. Several can be picked at once. In a group chat, 共有 |
-// 投票 at its top puts them to the vote instead, seen from the moment it
-// opens: one way in for both, as their sheet is the same.
+// Picking days: days everyone is off first, then any day on a small
+// calendar. Several can be picked at once. One sheet for sharing them and
+// for putting them to the vote, which it is is how it was opened (＋'s
+// 日にちを共有 or 日にちの投票), never changed inside it.
 export function DaySheet({
   open,
   onOpenChange,
   members,
   onShare,
-  pollable = false,
+  poll = false,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   members: Member[];
-  // `poll`: put to the vote rather than shared as they are.
-  onShare: (days: Date[], poll: boolean) => void;
-  // In a group chat, several days can be put to the vote.
-  pollable?: boolean;
+  onShare: (days: Date[]) => void;
+  // Put to the vote rather than shared as they are.
+  poll?: boolean;
 }) {
   return (
-    <Sheet label="日にちを共有" onOpenChange={onOpenChange} open={open}>
+    <Sheet
+      label={poll ? "日にちの投票" : "日にちを共有"}
+      onOpenChange={onOpenChange}
+      open={open}
+    >
       <DaySheetBody
         members={members}
         onClose={() => {
           onOpenChange(false);
         }}
         onShare={onShare}
-        pollable={pollable}
+        poll={poll}
       />
     </Sheet>
   );
@@ -132,23 +134,21 @@ function DaySheetBody({
   members,
   onClose,
   onShare,
-  pollable,
+  poll,
 }: {
   members: Member[];
   onClose: () => void;
-  onShare: (days: Date[], poll: boolean) => void;
-  pollable: boolean;
+  onShare: (days: Date[]) => void;
+  poll: boolean;
 }) {
-  const [mode, setMode] = useState<"share" | "poll">("share");
-  const poll = pollable && mode === "poll";
   const weekTools = useWeek();
   const [month, setMonth] = useState(
     new Date(designToday.getFullYear(), designToday.getMonth(), 1)
   );
   const [picked, setPicked] = useState<Date[]>([]);
   const toast = useContext(ToastContext);
-  // A poll needs two days to choose from.
-  const canPoll = pollable && picked.length > 1;
+  // A poll needs days to choose from.
+  const least = poll ? POLL_MIN_DAYS : 1;
   const isPicked = (date: Date) =>
     picked.some((item) => dateKey(item) === dateKey(date));
   const toggle = (date: Date) => {
@@ -171,27 +171,14 @@ function DaySheetBody({
     <>
       <DecideHeading
         action="送る"
-        disabled={picked.length === 0 || (poll && !canPoll)}
+        disabled={picked.length < least}
         onAction={() => {
-          onShare(picked, canPoll && poll);
+          onShare(picked);
         }}
         onCancel={onClose}
         title={poll ? "日にちの投票" : "日にちを共有"}
       />
       <div className={daySheetStack}>
-        {pollable && (
-          <SegmentedControl
-            // Its own part, 24px clear of the calendar as parts are,
-            // where the calendar's rows keep their 12px.
-            className={modeSwitch}
-            label="日にちをどうするか"
-            onValueChange={setMode}
-            value={mode}
-          >
-            <Segment value="share">共有</Segment>
-            <Segment value="poll">投票</Segment>
-          </SegmentedControl>
-        )}
         {suggestions.length > 0 && (
           <div className={shareDays.suggest}>
             <span className={shareDays.togetherLabel}>みんな休み</span>
@@ -296,8 +283,6 @@ function DaySheetBody({
   );
 }
 
-const modeSwitch = css({ marginBottom: "12px" });
-
 // Room for two lines of the note, the most its words take, so the sheet
 // keeps its height as days are picked (the note shortens once a poll has
 // two) and 送る stays under the finger, as the calendar's six weeks do.
@@ -305,8 +290,8 @@ const dayNoteStyle = css({ minHeight: "2lh" });
 
 // What sending will do, under the days.
 function dayNote(count: number, poll: boolean) {
-  if (poll && count < 2) {
-    return "候補の日を2日以上選んでください。うすく色のついた日は、みんな休みの日です。";
+  if (poll && count < POLL_MIN_DAYS) {
+    return `候補の日を${POLL_MIN_DAYS}日以上選んでください。うすく色のついた日は、みんな休みの日です。`;
   }
   if (count === 0) {
     return "うすく色のついた日は、みんな休みの日です。";
