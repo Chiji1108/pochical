@@ -23,7 +23,7 @@ public  final class PreferenceValue extends
     PreferenceValueOrBuilder {
   private PreferenceValue() {
     key_ = "";
-    value_ = com.google.protobuf.ByteString.EMPTY;
+    message_ = com.google.protobuf.ByteString.EMPTY;
   }
   private int bitField0_;
   public static final int KEY_FIELD_NUMBER = 1;
@@ -93,65 +93,6 @@ public  final class PreferenceValue extends
 
   }
 
-  public static final int VALUE_FIELD_NUMBER = 2;
-  private com.google.protobuf.ByteString value_;
-  /**
-   * <pre>
-   * The message the key names (preferences.proto), encoded,
-   * syncLimits.preferenceLength bytes at most. Unset: none kept, so each
-   * device keeps its own.
-   * </pre>
-   *
-   * <code>optional bytes value = 2 [json_name = "value"];</code>
-   * @return Whether the value field is set.
-   */
-  @java.lang.Override
-  public boolean hasValue() {
-    return ((bitField0_ & 0x00000001) != 0);
-  }
-  /**
-   * <pre>
-   * The message the key names (preferences.proto), encoded,
-   * syncLimits.preferenceLength bytes at most. Unset: none kept, so each
-   * device keeps its own.
-   * </pre>
-   *
-   * <code>optional bytes value = 2 [json_name = "value"];</code>
-   * @return The value.
-   */
-  @java.lang.Override
-  public com.google.protobuf.ByteString getValue() {
-    return value_;
-  }
-  /**
-   * <pre>
-   * The message the key names (preferences.proto), encoded,
-   * syncLimits.preferenceLength bytes at most. Unset: none kept, so each
-   * device keeps its own.
-   * </pre>
-   *
-   * <code>optional bytes value = 2 [json_name = "value"];</code>
-   * @param value The value to set.
-   */
-  private void setValue(com.google.protobuf.ByteString value) {
-    java.util.Objects.requireNonNull(value);
-  bitField0_ |= 0x00000001;
-    value_ = value;
-  }
-  /**
-   * <pre>
-   * The message the key names (preferences.proto), encoded,
-   * syncLimits.preferenceLength bytes at most. Unset: none kept, so each
-   * device keeps its own.
-   * </pre>
-   *
-   * <code>optional bytes value = 2 [json_name = "value"];</code>
-   */
-  private void clearValue() {
-    bitField0_ = (bitField0_ & ~0x00000001);
-    value_ = getDefaultInstance().getValue();
-  }
-
   public static final int HLC_FIELD_NUMBER = 3;
   private app.pochical.v1.Hlc hlc_;
   /**
@@ -159,7 +100,7 @@ public  final class PreferenceValue extends
    */
   @java.lang.Override
   public boolean hasHlc() {
-    return ((bitField0_ & 0x00000002) != 0);
+    return ((bitField0_ & 0x00000001) != 0);
   }
   /**
    * <code>.pochical.v1.Hlc hlc = 3 [json_name = "hlc"];</code>
@@ -174,7 +115,7 @@ public  final class PreferenceValue extends
   private void setHlc(app.pochical.v1.Hlc value) {
     java.util.Objects.requireNonNull(value);
     hlc_ = value;
-    bitField0_ |= 0x00000002;
+    bitField0_ |= 0x00000001;
   }
   /**
    * <code>.pochical.v1.Hlc hlc = 3 [json_name = "hlc"];</code>
@@ -189,14 +130,73 @@ public  final class PreferenceValue extends
     } else {
       hlc_ = value;
     }
-    bitField0_ |= 0x00000002;
+    bitField0_ |= 0x00000001;
   }
   /**
    * <code>.pochical.v1.Hlc hlc = 3 [json_name = "hlc"];</code>
    */
   private void clearHlc() {
     hlc_ = null;
+    bitField0_ = (bitField0_ & ~0x00000001);
+  }
+
+  public static final int MESSAGE_FIELD_NUMBER = 4;
+  private com.google.protobuf.ByteString message_;
+  /**
+   * <pre>
+   * The message the key names (preferences.proto), encoded,
+   * syncLimits.preferenceLength bytes at most. Unset: none kept, so each
+   * device keeps its own.
+   * </pre>
+   *
+   * <code>optional bytes message = 4 [json_name = "message"];</code>
+   * @return Whether the message field is set.
+   */
+  @java.lang.Override
+  public boolean hasMessage() {
+    return ((bitField0_ & 0x00000002) != 0);
+  }
+  /**
+   * <pre>
+   * The message the key names (preferences.proto), encoded,
+   * syncLimits.preferenceLength bytes at most. Unset: none kept, so each
+   * device keeps its own.
+   * </pre>
+   *
+   * <code>optional bytes message = 4 [json_name = "message"];</code>
+   * @return The message.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString getMessage() {
+    return message_;
+  }
+  /**
+   * <pre>
+   * The message the key names (preferences.proto), encoded,
+   * syncLimits.preferenceLength bytes at most. Unset: none kept, so each
+   * device keeps its own.
+   * </pre>
+   *
+   * <code>optional bytes message = 4 [json_name = "message"];</code>
+   * @param value The message to set.
+   */
+  private void setMessage(com.google.protobuf.ByteString value) {
+    java.util.Objects.requireNonNull(value);
+  bitField0_ |= 0x00000002;
+    message_ = value;
+  }
+  /**
+   * <pre>
+   * The message the key names (preferences.proto), encoded,
+   * syncLimits.preferenceLength bytes at most. Unset: none kept, so each
+   * device keeps its own.
+   * </pre>
+   *
+   * <code>optional bytes message = 4 [json_name = "message"];</code>
+   */
+  private void clearMessage() {
     bitField0_ = (bitField0_ & ~0x00000002);
+    message_ = getDefaultInstance().getMessage();
   }
 
   public static app.pochical.v1.PreferenceValue parseFrom(
@@ -373,66 +373,6 @@ public  final class PreferenceValue extends
     }
 
     /**
-     * <pre>
-     * The message the key names (preferences.proto), encoded,
-     * syncLimits.preferenceLength bytes at most. Unset: none kept, so each
-     * device keeps its own.
-     * </pre>
-     *
-     * <code>optional bytes value = 2 [json_name = "value"];</code>
-     * @return Whether the value field is set.
-     */
-    @java.lang.Override
-    public boolean hasValue() {
-      return instance.hasValue();
-    }
-    /**
-     * <pre>
-     * The message the key names (preferences.proto), encoded,
-     * syncLimits.preferenceLength bytes at most. Unset: none kept, so each
-     * device keeps its own.
-     * </pre>
-     *
-     * <code>optional bytes value = 2 [json_name = "value"];</code>
-     * @return The value.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString getValue() {
-      return instance.getValue();
-    }
-    /**
-     * <pre>
-     * The message the key names (preferences.proto), encoded,
-     * syncLimits.preferenceLength bytes at most. Unset: none kept, so each
-     * device keeps its own.
-     * </pre>
-     *
-     * <code>optional bytes value = 2 [json_name = "value"];</code>
-     * @param value The value to set.
-     * @return This builder for chaining.
-     */
-    public Builder setValue(com.google.protobuf.ByteString value) {
-      copyOnWrite();
-      instance.setValue(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * The message the key names (preferences.proto), encoded,
-     * syncLimits.preferenceLength bytes at most. Unset: none kept, so each
-     * device keeps its own.
-     * </pre>
-     *
-     * <code>optional bytes value = 2 [json_name = "value"];</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearValue() {
-      copyOnWrite();
-      instance.clearValue();
-      return this;
-    }
-
-    /**
      * <code>.pochical.v1.Hlc hlc = 3 [json_name = "hlc"];</code>
      */
     @java.lang.Override
@@ -479,6 +419,66 @@ public  final class PreferenceValue extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The message the key names (preferences.proto), encoded,
+     * syncLimits.preferenceLength bytes at most. Unset: none kept, so each
+     * device keeps its own.
+     * </pre>
+     *
+     * <code>optional bytes message = 4 [json_name = "message"];</code>
+     * @return Whether the message field is set.
+     */
+    @java.lang.Override
+    public boolean hasMessage() {
+      return instance.hasMessage();
+    }
+    /**
+     * <pre>
+     * The message the key names (preferences.proto), encoded,
+     * syncLimits.preferenceLength bytes at most. Unset: none kept, so each
+     * device keeps its own.
+     * </pre>
+     *
+     * <code>optional bytes message = 4 [json_name = "message"];</code>
+     * @return The message.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString getMessage() {
+      return instance.getMessage();
+    }
+    /**
+     * <pre>
+     * The message the key names (preferences.proto), encoded,
+     * syncLimits.preferenceLength bytes at most. Unset: none kept, so each
+     * device keeps its own.
+     * </pre>
+     *
+     * <code>optional bytes message = 4 [json_name = "message"];</code>
+     * @param value The message to set.
+     * @return This builder for chaining.
+     */
+    public Builder setMessage(com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setMessage(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The message the key names (preferences.proto), encoded,
+     * syncLimits.preferenceLength bytes at most. Unset: none kept, so each
+     * device keeps its own.
+     * </pre>
+     *
+     * <code>optional bytes message = 4 [json_name = "message"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearMessage() {
+      copyOnWrite();
+      instance.clearMessage();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.PreferenceValue)
   }
   @java.lang.Override
@@ -497,12 +497,12 @@ public  final class PreferenceValue extends
           java.lang.Object[] objects = new java.lang.Object[] {
             "bitField0_",
             "key_",
-            "value_",
             "hlc_",
+            "message_",
           };
           java.lang.String info =
-              "\u0000\u0003\u0000\u0001\u0001\u0003\u0003\u0000\u0000\u0000\u0001\u0208\u0002\u100a" +
-              "\u0000\u0003\u1009\u0001";
+              "\u0000\u0003\u0000\u0001\u0001\u0004\u0003\u0000\u0000\u0000\u0001\u0208\u0003\u1009" +
+              "\u0000\u0004\u100a\u0001";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

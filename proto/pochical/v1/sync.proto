@@ -508,11 +508,14 @@ message CoworkerEdit {
 message PreferenceValue {
   // Which preference, as the apps name it: an id (syncLimits.idLength).
   string key = 1;
+  // The value as JSON text, before each preference was its key's message.
+  reserved 2;
+  reserved "value";
+  Hlc hlc = 3;
   // The message the key names (preferences.proto), encoded,
   // syncLimits.preferenceLength bytes at most. Unset: none kept, so each
   // device keeps its own.
-  optional bytes value = 2;
-  Hlc hlc = 3;
+  optional bytes message = 4;
 }
 
 message PreferenceEdits {

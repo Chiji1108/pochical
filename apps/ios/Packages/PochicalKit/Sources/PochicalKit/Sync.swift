@@ -17,7 +17,7 @@ public enum Sync {
   /// `mise run sync:check` fails when `Change`'s messages in proto/ change
   /// while this stays, and its `--write` records each raise in
   /// `sync-wire.json`.
-  static let schema = 5
+  static let schema = 6
 
   /// A device that took its values under an older schema moves every
   /// cursor back to the start, its User DO's and every place's, so its

@@ -37,7 +37,7 @@ extension OwnValues {
   static func setPreference(_ key: String, to value: Data, now: Int64, in db: Database) throws {
     var preference = Pochical_V1_PreferenceValue()
     preference.key = key
-    preference.value = value
+    preference.message = value
     preference.hlc = try nextClock(now: now, in: db)
     var change = Pochical_V1_Change()
     change.preference = preference

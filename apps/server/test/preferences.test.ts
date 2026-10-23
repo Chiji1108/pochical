@@ -39,7 +39,7 @@ const preferenceEdit = (
   ms: number
 ) => ({
   case: "preferenceEdits" as const,
-  value: { edits: [{ opId, value: { hlc: clock(ms), key, value } }] },
+  value: { edits: [{ opId, value: { hlc: clock(ms), key, message: value } }] },
 });
 
 describe("syncing a user's preferences", () => {
@@ -60,7 +60,7 @@ describe("syncing a user's preferences", () => {
             {
               kind: {
                 case: "preference",
-                value: { key: "theme", value: zen },
+                value: { key: "theme", message: zen },
               },
             },
           ],
@@ -76,7 +76,7 @@ describe("syncing a user's preferences", () => {
     const laptop = await device(token);
     expect(
       changesIn(await laptop.frames.next()).map(({ kind }) => kind.value)
-    ).toMatchObject([{ key: "theme", value: zen }]);
+    ).toMatchObject([{ key: "theme", message: zen }]);
   });
 
   it("keeps each key's last value apart from the others'", async () => {
@@ -95,7 +95,7 @@ describe("syncing a user's preferences", () => {
             {
               kind: {
                 case: "preference",
-                value: { key: "week", value: monday },
+                value: { key: "week", message: monday },
               },
             },
           ],
@@ -108,8 +108,8 @@ describe("syncing a user's preferences", () => {
     expect(
       changesIn(await laptop.frames.next()).map(({ kind }) => kind.value)
     ).toMatchObject([
-      { key: "theme", value: zen },
-      { key: "week", value: monday },
+      { key: "theme", message: zen },
+      { key: "week", message: monday },
     ]);
   });
 
@@ -132,7 +132,7 @@ describe("syncing a user's preferences", () => {
                 value: {
                   hlc: { deviceId: "server" },
                   key: "week",
-                  value: monday,
+                  message: monday,
                 },
               },
             },
@@ -145,7 +145,7 @@ describe("syncing a user's preferences", () => {
     const cleared = changesIn(await phone.frames.next());
     expect(cleared[0]?.kind.value).toMatchObject({ key: "week" });
     expect(cleared[0]?.kind.value).not.toHaveProperty(
-      "value",
+      "message",
       expect.anything()
     );
   });

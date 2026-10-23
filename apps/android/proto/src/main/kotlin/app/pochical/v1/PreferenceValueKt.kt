@@ -62,48 +62,6 @@ public object PreferenceValueKt {
     }
 
     /**
-     * ```
-     * The message the key names (preferences.proto), encoded,
-     * syncLimits.preferenceLength bytes at most. Unset: none kept, so each
-     * device keeps its own.
-     * ```
-     *
-     * `optional bytes value = 2 [json_name = "value"];`
-     */
-    public var value: com.google.protobuf.ByteString
-      @kotlin.jvm.JvmName("getValue")
-        get() = _builder.value
-      @kotlin.jvm.JvmName("setValue")
-        set(value) {
-        _builder.value = value
-      }
-    /**
-     * ```
-     * The message the key names (preferences.proto), encoded,
-     * syncLimits.preferenceLength bytes at most. Unset: none kept, so each
-     * device keeps its own.
-     * ```
-     *
-     * `optional bytes value = 2 [json_name = "value"];`
-     */
-    public fun clearValue() {
-      _builder.clearValue()
-    }
-    /**
-     * ```
-     * The message the key names (preferences.proto), encoded,
-     * syncLimits.preferenceLength bytes at most. Unset: none kept, so each
-     * device keeps its own.
-     * ```
-     *
-     * `optional bytes value = 2 [json_name = "value"];`
-     * @return Whether the value field is set.
-     */
-    public fun hasValue(): kotlin.Boolean {
-      return _builder.hasValue()
-    }
-
-    /**
      * `.pochical.v1.Hlc hlc = 3 [json_name = "hlc"];`
      */
     public var hlc: app.pochical.v1.Hlc
@@ -129,6 +87,48 @@ public object PreferenceValueKt {
 
     public val PreferenceValueKt.Dsl.hlcOrNull: app.pochical.v1.Hlc?
       get() = _builder.hlcOrNull
+
+    /**
+     * ```
+     * The message the key names (preferences.proto), encoded,
+     * syncLimits.preferenceLength bytes at most. Unset: none kept, so each
+     * device keeps its own.
+     * ```
+     *
+     * `optional bytes message = 4 [json_name = "message"];`
+     */
+    public var message: com.google.protobuf.ByteString
+      @kotlin.jvm.JvmName("getMessage")
+        get() = _builder.message
+      @kotlin.jvm.JvmName("setMessage")
+        set(value) {
+        _builder.message = value
+      }
+    /**
+     * ```
+     * The message the key names (preferences.proto), encoded,
+     * syncLimits.preferenceLength bytes at most. Unset: none kept, so each
+     * device keeps its own.
+     * ```
+     *
+     * `optional bytes message = 4 [json_name = "message"];`
+     */
+    public fun clearMessage() {
+      _builder.clearMessage()
+    }
+    /**
+     * ```
+     * The message the key names (preferences.proto), encoded,
+     * syncLimits.preferenceLength bytes at most. Unset: none kept, so each
+     * device keeps its own.
+     * ```
+     *
+     * `optional bytes message = 4 [json_name = "message"];`
+     * @return Whether the message field is set.
+     */
+    public fun hasMessage(): kotlin.Boolean {
+      return _builder.hasMessage()
+    }
   }
 }
 public inline fun app.pochical.v1.PreferenceValue.copy(block: `app.pochical.v1`.PreferenceValueKt.Dsl.() -> kotlin.Unit): app.pochical.v1.PreferenceValue =

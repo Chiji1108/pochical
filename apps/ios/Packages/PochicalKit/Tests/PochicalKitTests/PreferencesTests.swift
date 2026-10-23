@@ -28,7 +28,7 @@ import Testing
     }
   }
   #expect(sent.map(\.key) == ["week"])
-  let week = try Pochical_V1_WeekPreference(serializedBytes: try #require(sent.first).value)
+  let week = try Pochical_V1_WeekPreference(serializedBytes: try #require(sent.first).message)
   #expect(week.start == 1)
 }
 
@@ -38,7 +38,7 @@ import Testing
   try await database.write { db in
     var value = Pochical_V1_PreferenceValue()
     value.key = "theme"
-    value.value = try Pochical_V1_ThemePreference.with { $0.id = "zen" }.serializedData()
+    value.message = try Pochical_V1_ThemePreference.with { $0.id = "zen" }.serializedData()
     var change = Pochical_V1_Change()
     change.cursor = 1
     change.preference = value
