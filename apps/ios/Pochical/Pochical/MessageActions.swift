@@ -147,6 +147,9 @@ struct MenuMetrics {
   /// out at the transformed size, its words breaking anew.
   private let barPart = UIView()
   private let menuPart = UIView()
+  /// Where the effects on the line it lifts play (ChatEffectsLayer): over
+  /// the dimming and the lifted bubble, under the bar and the menu.
+  let effects = UIView()
   private let bubble: UIHostingController<AnyView>
   private let bar: UIHostingController<AnyView>?
   private let menu: UIHostingController<AnyView>
@@ -187,10 +190,6 @@ struct MenuMetrics {
     scrim.alpha = 0
     scrim.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(tappedOff)))
     addSubview(scrim)
-    if let bar {
-      hold(bar, in: barPart)
-      addSubview(barPart)
-    }
     lift.clipsToBounds = true
     // A tap on the lifted bubble is a tap off the menu.
     lift.isUserInteractionEnabled = false
@@ -198,6 +197,13 @@ struct MenuMetrics {
     scaled.addSubview(bubble.view)
     lift.addSubview(scaled)
     addSubview(lift)
+    effects.isUserInteractionEnabled = false
+    effects.accessibilityElementsHidden = true
+    addSubview(effects)
+    if let bar {
+      hold(bar, in: barPart)
+      addSubview(barPart)
+    }
     hold(menu, in: menuPart)
     addSubview(menuPart)
     barPart.alpha = 0
@@ -263,6 +269,7 @@ struct MenuMetrics {
   private func apply() {
     guard let placement else { return }
     scrim.frame = bounds
+    effects.frame = bounds
     switch phase {
     case .rising:
       scrim.alpha = 0
@@ -351,8 +358,9 @@ struct MenuMetrics {
     UIAccessibility.post(notification: .screenChanged, argument: nil)
   }
 
-  /// Goes, quick at first and settling, then tells `onClosed`; acts
-  /// meanwhile, as the system's menu does. `fade` takes the bubble away
+  /// Goes, quick at first and settling, then tells `onClosed`, its parts
+  /// gone and taking nothing while what plays on its effects plays out;
+  /// acts meanwhile, as the system's menu does. `fade` takes the bubble away
   /// too, its line gone from the chat.
   func close(fade: Bool = false, then action: (() -> Void)? = nil) {
     if case .closing = phase { return }
@@ -360,7 +368,14 @@ struct MenuMetrics {
       fade: fade, from: anchor, bar: bar == nil ? nil : barPart.center, menu: menuPart.center)
     finger = nil
     state.underFinger = nil
-    animate(Chat.menuCloseSpring, animations: apply) { [weak self] in self?.onClosed() }
+    animate(Chat.menuCloseSpring, animations: apply) { [weak self] in
+      guard let self else { return }
+      for part in [scrim, lift, barPart, menuPart] { part.removeFromSuperview() }
+      isUserInteractionEnabled = false
+      accessibilityViewIsModal = false
+      accessibilityElementsHidden = true
+      onClosed()
+    }
     action?()
   }
 
