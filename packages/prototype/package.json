@@ -8,6 +8,7 @@
     "./lib/*": "./src/lib/*.ts"
   },
   "scripts": {
+    "icon:android": "bun scripts/android-app-icons.ts",
     "icon:ios": "bun scripts/ios-app-icons.ts",
     "icon:site": "bun scripts/site-icon.ts",
     "typecheck": "tsc --noEmit",
