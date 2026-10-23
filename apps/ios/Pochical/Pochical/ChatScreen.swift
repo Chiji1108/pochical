@@ -239,7 +239,6 @@ struct ChatScreen: View {
     // keyboard.
     .ignoresSafeArea()
     .sensoryFeedback(.success, trigger: done)
-    .sensoryFeedback(.impact(weight: .light), trigger: marks.reacted)
     .task(
       id: JumpKey(
         target: jumpTarget, first: chat.state.lines.first?.seq, held: chat.state.heldFrom)

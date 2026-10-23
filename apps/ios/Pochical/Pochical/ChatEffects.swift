@@ -284,6 +284,8 @@ private struct BurstView: View {
   @State private var popped = 0
   @State private var sprayed = 0
 
+  private static let sprays = "chat-effect-sprays"
+
   var body: some View {
     ZStack {
       // Each pop its own view, coming in anew.
@@ -292,7 +294,10 @@ private struct BurstView: View {
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
-    .emojiSpray(burst.emoji, count: sprayed)
+    // Fading in as they leave the part, as in a particle layer of their
+    // own (Pow's).
+    .changeEffect(.spray(layer: .named(Self.sprays)) { Text(burst.emoji) }, value: sprayed)
+    .particleLayer(name: Self.sprays)
     .onAppear(perform: catchUp)
     .onChange(of: burst.pops) { catchUp() }
     .onChange(of: burst.sprays) { catchUp() }
