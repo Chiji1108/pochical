@@ -20,6 +20,8 @@ struct EmojiSpray: ViewModifier {
   private static let particles = 11
   /// Pow's spring, critically damped, carrying each spray from 0 to 1.
   private static let spring = Spring(mass: 1, stiffness: 30, damping: 2 * 30.0.squareRoot())
+  /// How long a spray lasts: until it is as near its end as Pow's ends.
+  private static let duration = spring.settlingDuration(target: 1.0, epsilon: 0.04)
   /// Room round the view the particles fly in, most of it above.
   private static let room = EdgeInsets(top: 320, leading: 160, bottom: 40, trailing: 160)
 
@@ -39,7 +41,8 @@ struct EmojiSpray: ViewModifier {
           )
           .allowsHitTesting(false)
           .onChange(of: timeline.date) { _, now in
-            sprays.removeAll { now.timeIntervalSince($0.start) > Self.spring.settlingDuration }
+            let over = { (spray: Spray) in now.timeIntervalSince(spray.start) > Self.duration }
+            if sprays.contains(where: over) { sprays.removeAll(where: over) }
           }
         }
       }
