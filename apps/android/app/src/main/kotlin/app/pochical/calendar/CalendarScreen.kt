@@ -4,6 +4,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.database.ContentObserver
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -28,6 +31,7 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
@@ -87,19 +91,18 @@ fun CalendarScreen() {
   // The pages count from the month the screen opened on, so they stay put
   // when today moves into another month.
   val firstMonth = rememberSaveable { YearMonth.from(today).minusMonths(MONTHS_AROUND.toLong()).toString() }
-  val monthAt = { page: Int -> YearMonth.parse(firstMonth).plusMonths(page.toLong()) }
-  val pageOf = { month: YearMonth -> ChronoUnit.MONTHS.between(YearMonth.parse(firstMonth), month).toInt() }
-  val pager = rememberPagerState(initialPage = MONTHS_AROUND) { 2 * MONTHS_AROUND + 1 }
+  // Every month the pages hold, which 月を選ぶ offers too.
+  val months = YearMonth.parse(firstMonth).let { it..it.plusMonths(2L * MONTHS_AROUND) }
+  val monthAt = { page: Int -> months.start.plusMonths(page.toLong()) }
+  val pageOf = { month: YearMonth -> ChronoUnit.MONTHS.between(months.start, month).toInt() }
+  val pager = rememberPagerState(initialPage = MONTHS_AROUND) { pageOf(months.endInclusive) + 1 }
   val scope = rememberCoroutineScope()
   val thisMonthPage = pageOf(YearMonth.from(today))
   val turnTo = { month: YearMonth ->
-    scope.launch {
-      val page = pageOf(month).coerceIn(0, pager.pageCount - 1)
-      if (reduceMotion) pager.scrollToPage(page) else pager.animateScrollToPage(page)
-    }
+    scope.launch { if (reduceMotion) pager.scrollToPage(pageOf(month)) else pager.animateScrollToPage(pageOf(month)) }
   }
   Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))) {
-    Heading(pager, monthAt, thisMonthPage, reduceMotion, onPick = { turnTo(it) }, onThisMonth = { turnTo(YearMonth.from(today)) })
+    Heading(pager, months, monthAt, thisMonthPage, reduceMotion, onPick = { turnTo(it) }, onThisMonth = { turnTo(YearMonth.from(today)) })
     WeekdayRow(week, Modifier.padding(horizontal = SCREEN_EDGE))
     BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
       val cell = dayHeight(fitting = maxHeight - DAY_GAP)
@@ -127,6 +130,7 @@ fun CalendarScreen() {
 @Composable
 private fun Heading(
   pager: PagerState,
+  months: ClosedRange<YearMonth>,
   monthAt: (Int) -> YearMonth,
   thisMonthPage: Int,
   reduceMotion: Boolean,
@@ -160,22 +164,33 @@ private fun Heading(
     }
   }
   if (picking) {
-    MonthPicker(monthAt(pager.currentPage), onPick = onPick, onDismiss = { picking = false })
+    MonthPicker(monthAt(pager.currentPage), months, onPick = onPick, onDismiss = { picking = false })
   }
 }
 
 /**
  * 月を選ぶ: Material's date picker in a dialog, turned to the month shown,
- * as Android has no picker of months alone. A day picked turns the pages to
- * its month; 表示 turns them to the month the picker shows.
+ * as Android has no picker of months alone, offering the pages' `months`.
+ * A day picked turns the pages to its month; 表示 turns them to the month
+ * the picker shows, or the nearest the pages hold.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MonthPicker(month: YearMonth, onPick: (YearMonth) -> Unit, onDismiss: () -> Unit) {
+private fun MonthPicker(
+  month: YearMonth,
+  months: ClosedRange<YearMonth>,
+  onPick: (YearMonth) -> Unit,
+  onDismiss: () -> Unit,
+) {
   val state =
     rememberDatePickerState(
       initialDisplayedMonthMillis = month.atDay(1).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
-      yearRange = (month.year - MONTHS_AROUND / 12)..(month.year + MONTHS_AROUND / 12),
+      yearRange = months.start.year..months.endInclusive.year,
+      selectableDates =
+        object : SelectableDates {
+          override fun isSelectableDate(utcTimeMillis: Long) =
+            YearMonth.from(Instant.ofEpochMilli(utcTimeMillis).atZone(ZoneOffset.UTC)) in months
+        },
     )
   // A day picked turns to its month at once, as nothing more is asked of it.
   LaunchedEffect(state.selectedDateMillis) {
@@ -188,7 +203,7 @@ private fun MonthPicker(month: YearMonth, onPick: (YearMonth) -> Unit, onDismiss
     confirmButton = {
       TextButton(
         onClick = {
-          onPick(YearMonth.from(Instant.ofEpochMilli(state.displayedMonthMillis).atZone(ZoneOffset.UTC)))
+          onPick(YearMonth.from(Instant.ofEpochMilli(state.displayedMonthMillis).atZone(ZoneOffset.UTC)).coerceIn(months))
           onDismiss()
         }
       ) {
@@ -291,11 +306,25 @@ private fun rememberToday(): LocalDate {
   return today
 }
 
-/** Whether the person turned animations off (Android's 「アニメーションを削除」), which Compose does not say itself. */
+/**
+ * Whether the person turned animations off (Android's 「アニメーションを削除」),
+ * which Compose does not say itself; followed while the screen is open, as
+ * it may change while the app is in the background.
+ */
 @Composable
 internal fun rememberReducedMotion(): Boolean {
-  val context = LocalContext.current
-  return remember(context) {
-    Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+  val resolver = LocalContext.current.contentResolver
+  fun read() = Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+  var reduced by remember(resolver) { mutableStateOf(read()) }
+  DisposableEffect(resolver) {
+    val observer =
+      object : ContentObserver(Handler(Looper.getMainLooper())) {
+        override fun onChange(selfChange: Boolean) {
+          reduced = read()
+        }
+      }
+    resolver.registerContentObserver(Settings.Global.getUriFor(Settings.Global.ANIMATOR_DURATION_SCALE), false, observer)
+    onDispose { resolver.unregisterContentObserver(observer) }
   }
+  return reduced
 }
