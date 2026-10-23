@@ -1,8 +1,8 @@
+import { workspace } from "@pochical/prototype/components/design-page";
 import { useDesignTheme } from "@pochical/prototype/components/design-providers";
 import { pageStyle } from "@pochical/prototype/components/design-theme";
 import { parseDesignVariants } from "@pochical/prototype/lib/design-variants";
 import type { DesignVariants } from "@pochical/prototype/lib/design-variants";
-import { workspace } from "@pochical/showcase/components/design-page";
 import { css, cx } from "@pochical/styled-system/css";
 import { Link } from "@tanstack/react-router";
 import { Step, Steps } from "fumadocs-ui/components/steps";

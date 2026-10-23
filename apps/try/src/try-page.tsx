@@ -1,4 +1,5 @@
 import { DesignApp } from "@pochical/prototype/components/design-app";
+import { DesignPage } from "@pochical/prototype/components/design-page";
 import {
   DesignProviders,
   useDesignTheme,
@@ -14,14 +15,7 @@ import {
 import { useSamplePerson } from "@pochical/prototype/lib/design-sample-person";
 import { UserStoreContext } from "@pochical/prototype/lib/design-user-store";
 import { parseDesignVariants } from "@pochical/prototype/lib/design-variants";
-import {
-  DesignPage,
-  DesignToolbar,
-  toolbarAction,
-} from "@pochical/showcase/components/design-page";
-import { designUrl } from "@pochical/showcase/lib/app-urls";
 import { css, cx } from "@pochical/styled-system/css";
-import { ChevronRight } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
@@ -115,18 +109,6 @@ const onComputer = {
     justifyContent: "center",
     padding: "32px 16px 48px",
   }),
-  // The toolbars' pill, standing on its own.
-  link: cx(
-    toolbarAction,
-    css({
-      alignItems: "center",
-      alignSelf: "flex-start",
-      color: "text.tertiary",
-      display: "inline-flex",
-      fontSize: "12px",
-      gap: "8px",
-    })
-  ),
   note: css({
     "& h1": {
       fontSize: "22px",
@@ -151,8 +133,7 @@ const onComputer = {
   }),
 };
 
-// What this app is for, a QR code that opens this page on a phone, and /demo
-// for switching the samples.
+// What this app is for, and a QR code that opens this page on a phone.
 function OpenOnPhone() {
   const url = `${location.origin}${location.pathname}`;
   return (
@@ -169,13 +150,6 @@ function OpenOnPhone() {
           value={url}
         />
       </div>
-      <p>サンプルや比べる案を切り替えながら触るなら、デモで。</p>
-      <a
-        className={onComputer.link}
-        href={designUrl(`/demo?${new URLSearchParams(variants)}`)}
-      >
-        デモで見る <ChevronRight aria-hidden="true" size={14} />
-      </a>
     </section>
   );
 }
@@ -254,7 +228,6 @@ export function TryPage() {
   if (computer) {
     return (
       <DesignPage style={pageStyle(theme)}>
-        <DesignToolbar documentsHref={designUrl("/")} />
         <div className={onComputer.layout}>
           <div className={onComputer.phone}>{app}</div>
           <OpenOnPhone />
