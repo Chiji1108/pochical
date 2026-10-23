@@ -11,7 +11,6 @@ import {
   badge,
   button,
   card,
-  cardStyle,
   code,
   codeStyle,
   dialog,
@@ -21,6 +20,8 @@ import {
   page,
   PageHeader,
   sectionTitle,
+  Stat,
+  stats,
   table,
 } from "../ui";
 import { when } from "../when";
@@ -113,26 +114,20 @@ export default function BucketAudit({
         description="写真のバケットを、それぞれを指すものと突き合わせます。棚卸しは読むだけです。"
         title="棚卸し"
       />
-      <div
-        className={css({
-          display: "grid",
-          gap: "3",
-          gridTemplateColumns: { base: "1fr", md: "repeat(3, 1fr)" },
-        })}
-      >
+      <div className={stats}>
         <Stat
           detail={sizeOf(audit.orphans.bytes)}
-          label="どこからも指されないもの"
+          name="どこからも指されないもの"
           value={`${audit.orphans.count} 件`}
         />
         <Stat
           detail={`Group DO ${audit.groupsAsked}、User DO ${audit.usersAsked}`}
-          label="聞いた持ち主"
+          name="聞いた持ち主"
           value={`${audit.groupsAsked + audit.usersAsked}`}
         />
         <Stat
           detail={`${audit.graceMs / 3_600_000} 時間以内に置かれたものは判定しません`}
-          label="時点"
+          name="時点"
           value={when(audit.atMs)}
         />
       </div>
@@ -317,41 +312,5 @@ export default function BucketAudit({
         </div>
       </section>
     </main>
-  );
-}
-
-/** One figure of the audit: what it is, it, and what it is made of. */
-function Stat({
-  detail,
-  label,
-  value,
-}: {
-  detail: string;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div
-      className={css(cardStyle, {
-        display: "flex",
-        flexDirection: "column",
-        gap: "1",
-        paddingBlock: "4",
-        paddingInline: "5",
-      })}
-    >
-      <span className={meta}>{label}</span>
-      <span
-        className={css({
-          fontSize: "xl",
-          fontVariantNumeric: "tabular-nums",
-          fontWeight: 600,
-          letterSpacing: "-0.01em",
-        })}
-      >
-        {value}
-      </span>
-      <span className={meta}>{detail}</span>
-    </div>
   );
 }

@@ -1,6 +1,12 @@
 import icon from "@pochical/prototype/assets/icon-192.png?url";
 import { css } from "@pochical/styled-system/css";
-import { Archive, Flag, MessagesSquare, TriangleAlert } from "lucide-react";
+import {
+  Archive,
+  Flag,
+  MessagesSquare,
+  TriangleAlert,
+  Users,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import {
@@ -14,6 +20,7 @@ import {
 } from "react-router";
 
 import type { Route } from "./+types/root";
+import { SearchUsers } from "./search";
 import { themeCss } from "./theme";
 import { alert, page, PageHeader } from "./ui";
 
@@ -46,6 +53,7 @@ const PLACES: { group: string; places: Place[] }[] = [
     places: [
       { Icon: MessagesSquare, label: "サポート", to: "/", under: "/support/" },
       { Icon: Flag, label: "通報", to: "/reports" },
+      { Icon: Users, label: "ユーザー", to: "/users", under: "/users/" },
     ],
   },
   {
@@ -122,7 +130,8 @@ const placeLink = css({
   fontSize: "sm",
   gap: "2.5",
   height: "8",
-  paddingInline: "2",
+  // Closer on a narrow screen, so the five pages fit along the bar.
+  paddingInline: { base: "1.5", md: "2" },
   transition: "background 120ms, color 120ms",
   whiteSpace: "nowrap",
 });
@@ -153,12 +162,13 @@ function Sidebar() {
           </span>
         </span>
       </Link>
+      <SearchUsers />
       <nav
         aria-label="ページ"
         className={css({
           display: "flex",
           flexDirection: { base: "row", md: "column" },
-          gap: { base: "1", md: "5" },
+          gap: { base: "0.5", md: "5" },
         })}
       >
         {PLACES.map(({ group, places }) => (

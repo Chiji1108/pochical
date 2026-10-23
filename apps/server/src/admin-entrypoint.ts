@@ -4,12 +4,14 @@
 // apps and the internet reach only the default entrypoint's fetch.
 import { create } from "@bufbuild/protobuf";
 import { WorkerEntrypoint } from "cloudflare:workers";
-import { desc } from "drizzle-orm";
+import { and, count, desc, eq, gte, lt, or, sql } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { auditBucket, cleanBucket } from "./bucket-audit";
 import type { BucketAudit, BucketCleanup } from "./bucket-audit";
-import { supportChats } from "./db/schema";
+import { account, session, user } from "./db/auth-schema";
+import { pushTokens, reports, supportChats } from "./db/schema";
 import { ChatEditSchema } from "./gen/pochical/v1/sync_pb";
 import { GROUP_THREAD } from "./group-chat";
 import { photoKey } from "./photos";
@@ -53,8 +55,81 @@ export type ReportSummary = {
   context: string;
 };
 
+/** A user as the list of them shows them: from D1 alone. */
+export type UserSummary = {
+  userId: string;
+  createdAtMs: number;
+  anonymous: boolean;
+  /** How they sign in besides anonymously: apple. */
+  signIns: string[];
+  /** Their chat with Pochical's people waits for an answer (未返信). */
+  unanswered: number;
+};
+
+/** Where a page of users ends, for the page after it. */
+export type UserCursor = { createdAtMs: number; userId: string };
+
+/** A page of users, and where the next begins; none after the last. */
+export type UserList = { users: UserSummary[]; next: UserCursor | null };
+
+/** One user's page: what D1 and their own DO know of them. */
+export type UserPage = UserSummary & {
+  /** Their usual name; empty before they set one. */
+  name: string;
+  /** The groups they are in or have left, the latest joined first. */
+  groups: {
+    groupId: string;
+    name: string;
+    joinedAtMs: number;
+    leftAtMs: number | null;
+  }[];
+  /** The sessions signed in, one a device, and their push tokens. */
+  sessions: number;
+  pushTokens: number;
+  /** Their chat with Pochical's people, if they ever opened it. */
+  supportChat: { lastAtMs: number } | null;
+  /** What they reported, and what members reported of them. */
+  reportsBy: ReportSummary[];
+  reportsAbout: ReportSummary[];
+  /** How many there are of each, beyond the latest the lists hold. */
+  reportsByCount: number;
+  reportsAboutCount: number;
+};
+
 /** The most a list gives at once. */
 const PAGE = 200;
+
+/**
+ * How a user signs in besides anonymously (apple), in the same query as
+ * them: a list binds no id for each of its users, which D1 holds to 100.
+ */
+const signInsSql = sql<
+  string | null
+>`(select group_concat(${account.providerId}) from ${account} where ${account.userId} = ${user.id})`;
+
+const signInsIn = (joined: string | null): string[] =>
+  joined === null ? [] : joined.split(",");
+
+/** The reports, the latest first: all, or those `where` picks. */
+const reportsWhere = async (
+  env: Env,
+  where?: SQL
+): Promise<ReportSummary[]> => {
+  const rows = await drizzle(env.DB)
+    .select()
+    .from(reports)
+    .where(where)
+    .orderBy(desc(reports.createdAt))
+    .limit(PAGE);
+  return rows.map((row) => ({
+    atMs: row.createdAt.getTime(),
+    context: row.context,
+    groupId: row.groupId,
+    reason: row.reason,
+    reporterId: row.reporterId,
+    targetId: row.targetId,
+  }));
+};
 
 export class AdminEntrypoint extends WorkerEntrypoint<Env> {
   /** Every user's chat, the latest first, from D1's index of them. */
@@ -179,25 +254,135 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
 
   /** What members reported, the latest first. */
   async reports(): Promise<ReportSummary[]> {
-    const { results } = await this.env.DB.prepare(
-      "select created_at, reason, group_id, reporter_id, target_id, context from reports order by created_at desc limit ?"
-    )
-      .bind(PAGE)
-      .all<{
-        created_at: number;
-        reason: string;
-        group_id: string;
-        reporter_id: string;
-        target_id: string;
-        context: string;
-      }>();
-    return results.map((row) => ({
-      atMs: row.created_at,
-      context: row.context,
-      groupId: row.group_id,
-      reason: row.reason,
-      reporterId: row.reporter_id,
-      targetId: row.target_id,
+    return await reportsWhere(this.env);
+  }
+
+  /**
+   * The users whose id starts with `prefix`, the latest signed up first:
+   * every user for an empty one, a page at a time. `after` is the last
+   * user of the page before, whose followers come next; none for the
+   * first page.
+   */
+  async users(
+    prefix: string,
+    after: UserCursor | null = null
+  ): Promise<UserList> {
+    const db = drizzle(this.env.DB);
+    const rows = await db
+      .select({
+        anonymous: user.isAnonymous,
+        createdAt: user.createdAt,
+        signIns: signInsSql,
+        unanswered: supportChats.unanswered,
+        userId: user.id,
+      })
+      .from(user)
+      .leftJoin(supportChats, eq(supportChats.userId, user.id))
+      // The ids starting with it, as a range of the primary key's order, so
+      // no character is taken as a pattern and the index finds them.
+      .where(
+        and(
+          gte(user.id, prefix),
+          lt(user.id, `${prefix}\uFFFF`),
+          // After the page before, in the list's own order: signed up
+          // earlier, or at the same moment with a lower id.
+          after === null
+            ? undefined
+            : or(
+                lt(user.createdAt, new Date(after.createdAtMs)),
+                and(
+                  eq(user.createdAt, new Date(after.createdAtMs)),
+                  lt(user.id, after.userId)
+                )
+              )
+        )
+      )
+      .orderBy(desc(user.createdAt), desc(user.id))
+      // One past the page, to know whether another follows it.
+      .limit(PAGE + 1);
+    const users = rows.slice(0, PAGE).map((row) => ({
+      anonymous: row.anonymous ?? false,
+      createdAtMs: row.createdAt.getTime(),
+      signIns: signInsIn(row.signIns),
+      unanswered: row.unanswered ?? 0,
+      userId: row.userId,
     }));
+    const last = users.at(-1);
+    return {
+      next:
+        rows.length > PAGE && last !== undefined
+          ? { createdAtMs: last.createdAtMs, userId: last.userId }
+          : null,
+      users,
+    };
+  }
+
+  /**
+   * One user's page, or null for an id with no account. Their own DO is
+   * asked only once D1 has their row, so asking makes none.
+   */
+  async user(userId: string): Promise<UserPage | null> {
+    const db = drizzle(this.env.DB);
+    const row = await db
+      .select({
+        anonymous: user.isAnonymous,
+        createdAt: user.createdAt,
+        signIns: signInsSql,
+      })
+      .from(user)
+      .where(eq(user.id, userId))
+      .get();
+    if (row === undefined) {
+      return null;
+    }
+    const reportCount = async (where: SQL) => {
+      const counted = await db
+        .select({ n: count() })
+        .from(reports)
+        .where(where)
+        .get();
+      return counted?.n ?? 0;
+    };
+    const [own, signedIn, tokens, chat, by, about, byCount, aboutCount] =
+      await Promise.all([
+        this.env.USERS.getByName(userId).adminView(),
+        db
+          .select({ n: count() })
+          .from(session)
+          .where(eq(session.userId, userId))
+          .get(),
+        db
+          .select({ n: count() })
+          .from(pushTokens)
+          .innerJoin(session, eq(session.id, pushTokens.sessionId))
+          .where(eq(session.userId, userId))
+          .get(),
+        db
+          .select()
+          .from(supportChats)
+          .where(eq(supportChats.userId, userId))
+          .get(),
+        reportsWhere(this.env, eq(reports.reporterId, userId)),
+        reportsWhere(this.env, eq(reports.targetId, userId)),
+        reportCount(eq(reports.reporterId, userId)),
+        reportCount(eq(reports.targetId, userId)),
+      ]);
+    return {
+      anonymous: row.anonymous ?? false,
+      createdAtMs: row.createdAt.getTime(),
+      groups: own.groups,
+      name: own.name,
+      pushTokens: tokens?.n ?? 0,
+      reportsAbout: about,
+      reportsAboutCount: aboutCount,
+      reportsBy: by,
+      reportsByCount: byCount,
+      sessions: signedIn?.n ?? 0,
+      signIns: signInsIn(row.signIns),
+      supportChat:
+        chat === undefined ? null : { lastAtMs: chat.lastAt.getTime() },
+      unanswered: chat?.unanswered ?? 0,
+      userId,
+    };
   }
 }
