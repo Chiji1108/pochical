@@ -12,6 +12,7 @@ import app.pochical.v1.patternOrder
 import app.pochical.v1.patternValue
 import app.pochical.v1.preferenceValue
 import app.pochical.v1.repeatOrders
+import com.google.protobuf.ByteString
 import java.time.LocalDate
 import java.util.UUID
 
@@ -140,13 +141,16 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
   /** Lists the coworkers in this order. */
   suspend fun orderCoworkers(ids: List<String>) = database.write { orderCoworkers(ids) }
 
-  /** Sets one of the preferences kept with the account to [value], its JSON, or clears it. */
-  suspend fun setPreference(key: String, value: String?) = database.write {
+  /**
+   * Sets one of the preferences kept with the account to [message], its key's message encoded
+   * (proto/pochical/v1/preferences.proto), or clears it.
+   */
+  suspend fun setPreference(key: String, message: ByteArray?) = database.write {
     val clock = nextClock(now())
     edit(change {
       preference = preferenceValue {
         this.key = key
-        if (value != null) this.value = value
+        if (message != null) this.message = ByteString.copyFrom(message)
         hlc = clock
       }
     })

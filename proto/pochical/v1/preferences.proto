@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+package pochical.v1;
+
+// What each of the user's preferences holds, the value of a PreferenceValue
+// encoded as the message its key names (spec/sync-protocol.md,
+// Preferences). The apps alone read them; the server keeps the bytes. An
+// app writes every field it has, and a field added later reads as its zero
+// in what an older app wrote, so a new field is named for its zero to be
+// the app's own default.
+
+// "theme": the テーマ.
+message ThemePreference {
+  // The テーマ's id (design/src/themes.ts); one an app does not know is the
+  // app's own.
+  string id = 1;
+}
+
+// "look": the スタイル, the marks' shape and the options kept for each shape.
+message LookPreference {
+  // "icon", "emoji" or "badge" (letters), as MarkLook's.
+  string style = 1;
+  // Icons drawn filled (塗り) rather than as lines.
+  bool fill = 2;
+  // シフトの色: each shift in its own color rather than all in the テーマ's.
+  bool colored = 3;
+  MarkOptions icon = 4;
+  MarkOptions emoji = 5;
+  MarkOptions badge = 6;
+}
+
+// How days are drawn in one shape, and "picture"'s value: how a month saved
+// as a picture draws them.
+message MarkOptions {
+  // The shift's name under its mark (シフト名).
+  bool names = 1;
+  // 休みの見せ方 of a pattern that counts as off and is not in offs:
+  // "highlight" (強調), "mark" (印だけ) or "blank" (空白).
+  string off = 2;
+  // 休みの見せ方 by pattern id, for those set apart from off.
+  map<string, string> offs = 3;
+}
+
+// "week": the calendar's week.
+message WeekPreference {
+  // The day it starts on, 0 for Sunday to 6 for Saturday.
+  int32 start = 1;
+  // Sundays and Saturdays color the weekdays' heading; holidays color their
+  // date.
+  bool sunday = 2;
+  bool saturday = 3;
+  bool holiday = 4;
+}
+
+// "period": シフトの期間, what each page of the calendar holds.
+message PeriodPreference {
+  // The day of the month a period starting mid-month starts on, 2 to 28;
+  // 0, its zero, for the month itself (1日〜末日).
+  int32 start_day = 1;
+}
+
+// "heading": the calendar's month heading.
+message HeadingPreference {
+  // 月と曜日 in English: months as Sep, weekdays as Thu.
+  bool english = 1;
+  // A tap on the month's name lights おたのしみ's sky rather than picking a
+  // month.
+  bool surprise = 2;
+  // Which sky is up (design/src/skies.ts); unset until the name is first
+  // tapped.
+  optional string sky = 3;
+}
+
+// "calendarAdd": what 端末カレンダーに追加 puts in besides the shifts.
+message CalendarAddPreference {
+  // The patterns picked otherwise than they start, by pattern id: put in,
+  // or left out.
+  map<string, bool> chosen = 1;
+  // メモも入れる.
+  bool notes = 2;
+  // 一緒に働く人も入れる.
+  bool people = 3;
+}

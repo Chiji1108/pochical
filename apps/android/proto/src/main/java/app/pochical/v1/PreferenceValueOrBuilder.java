@@ -31,38 +31,6 @@ public interface PreferenceValueOrBuilder extends
       getKeyBytes();
 
   /**
-   * <pre>
-   * As the apps write it, JSON, syncLimits.preferenceLength characters at
-   * most. Unset: none kept, so each device keeps its own.
-   * </pre>
-   *
-   * <code>optional string value = 2 [json_name = "value"];</code>
-   * @return Whether the value field is set.
-   */
-  boolean hasValue();
-  /**
-   * <pre>
-   * As the apps write it, JSON, syncLimits.preferenceLength characters at
-   * most. Unset: none kept, so each device keeps its own.
-   * </pre>
-   *
-   * <code>optional string value = 2 [json_name = "value"];</code>
-   * @return The value.
-   */
-  java.lang.String getValue();
-  /**
-   * <pre>
-   * As the apps write it, JSON, syncLimits.preferenceLength characters at
-   * most. Unset: none kept, so each device keeps its own.
-   * </pre>
-   *
-   * <code>optional string value = 2 [json_name = "value"];</code>
-   * @return The bytes for value.
-   */
-  com.google.protobuf.ByteString
-      getValueBytes();
-
-  /**
    * <code>.pochical.v1.Hlc hlc = 3 [json_name = "hlc"];</code>
    * @return Whether the hlc field is set.
    */
@@ -72,4 +40,27 @@ public interface PreferenceValueOrBuilder extends
    * @return The hlc.
    */
   app.pochical.v1.Hlc getHlc();
+
+  /**
+   * <pre>
+   * The message the key names (preferences.proto), encoded,
+   * syncLimits.preferenceLength bytes at most. Unset: none kept, so each
+   * device keeps its own.
+   * </pre>
+   *
+   * <code>optional bytes message = 4 [json_name = "message"];</code>
+   * @return Whether the message field is set.
+   */
+  boolean hasMessage();
+  /**
+   * <pre>
+   * The message the key names (preferences.proto), encoded,
+   * syncLimits.preferenceLength bytes at most. Unset: none kept, so each
+   * device keeps its own.
+   * </pre>
+   *
+   * <code>optional bytes message = 4 [json_name = "message"];</code>
+   * @return The message.
+   */
+  com.google.protobuf.ByteString getMessage();
 }
