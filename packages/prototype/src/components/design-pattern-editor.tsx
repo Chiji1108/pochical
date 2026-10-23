@@ -3,7 +3,11 @@ import { readyPatternOrder } from "@pochical/design/patterns";
 import { css, cx } from "@pochical/styled-system/css";
 import { Fragment, useContext, useState } from "react";
 
-import { patternsWithout } from "../lib/design-days";
+import {
+  patternsWithout,
+  refusesArchiving,
+  repeatsPattern,
+} from "../lib/design-days";
 import { presetList, presetPatterns } from "../lib/design-patterns";
 import type { Pattern, PresetShift } from "../lib/design-patterns";
 import { designToday } from "../lib/design-today";
@@ -166,15 +170,6 @@ export function PatternsPage({
   // with it.
   const daysOf = (id: string) =>
     Object.values(schedule).filter((entry) => entry?.shift === id).length;
-  // A period in use or to come still needs it; one over does not.
-  const inOrder = (id: string) =>
-    rules.some((rule, index) => {
-      const next = rules[index + 1];
-      const puts =
-        rule.sequence.includes(id) ||
-        (rule.holidaysOff === true && rule.holidayShift === id);
-      return puts && (!next || next.start > designToday);
-    });
   // Gone from the list; the days that name it show empty, as it is gone.
   const remove = (id: string) => {
     setItems((previous) => patternsWithout(previous, id));
@@ -187,7 +182,13 @@ export function PatternsPage({
       <PatternEditor
         initial={editing}
         days={daysOf(editing.id)}
-        inOrder={inOrder(editing.id)}
+        archivingRefused={refusesArchiving(
+          rules,
+          editing.id,
+          editing.archived === true,
+          designToday
+        )}
+        inOrder={repeatsPattern(rules, editing.id, designToday)}
         isNew={isNew}
         onBack={() => {
           setEditing(undefined);
@@ -437,6 +438,7 @@ const addPage = {
 };
 
 function PatternEditor({
+  archivingRefused,
   initial,
   days,
   inOrder,
@@ -446,10 +448,12 @@ function PatternEditor({
   onSave,
   onDelete,
 }: {
+  // Turning 入力に出す off would be refused, as an order still repeats it.
+  archivingRefused: boolean;
   initial: PatternDraft;
   // How many days use this pattern.
   days: number;
-  // In the repeating order in use, which would break without it.
+  // An order in use or to come repeats it, so it cannot be deleted.
   inOrder: boolean;
   isNew: boolean;
   others: Pattern[];
@@ -483,9 +487,6 @@ function PatternEditor({
   };
   const canSave = draft.name.trim() !== "";
   const markDescription = useMarkDescription(draft);
-  // A repeating order in use or to come puts it on days, so it stays in
-  // use; one already archived may still come back.
-  const blocksArchiving = inOrder && initial.archived !== true;
   // Another pattern that style could not tell apart from this one.
   const lookalike = (tab: ShiftMarkStyle) =>
     others.find((other) => lookAlike(other, draft, tab));
@@ -645,7 +646,7 @@ function PatternEditor({
           <List>
             <SwitchRow
               checked={draft.archived !== true}
-              disabled={blocksArchiving && draft.archived !== true}
+              disabled={archivingRefused && draft.archived !== true}
               label="入力に出す"
               onChange={(checked) => {
                 setDraft({ ...draft, archived: checked ? undefined : true });
@@ -653,14 +654,14 @@ function PatternEditor({
             />
           </List>
           <Note>
-            {blocksArchiving
+            {archivingRefused
               ? "繰り返しの並びに入っているので、オフにしたり削除したりできません。先に「繰り返し」で並びを変えてください。"
               : "オフにすると、ポチポチ入力のボタンに出なくなります。入っている日には、そのまま出ます。"}
           </Note>
         </div>
       )}
       {/* Said once: above, under the switch, while that is blocked too. */}
-      {!isNew && inOrder && !blocksArchiving && (
+      {!isNew && inOrder && !archivingRefused && (
         <Note>
           繰り返しの並びに入っているので、削除できません。先に「繰り返し」で並びを変えてください。
         </Note>

@@ -66,7 +66,9 @@ import {
   holidayShiftOf,
   patternsWithout,
   plannedShifts,
+  refusesArchiving,
   repeatSchedule,
+  repeatsPattern,
   selectedAfter,
   shownDays,
   timeChangeOf,
@@ -437,6 +439,25 @@ describe("spec/vectors/patterns.json", () => {
         nextDay,
       }))
     );
+  for (const {
+    name,
+    orders,
+    today,
+    id,
+    archived,
+    expected,
+  } of patternChanges.refused) {
+    test(name, () => {
+      const rules = orders.map((order) => ({
+        ...order,
+        start: dayOf(order.start),
+      }));
+      expect({
+        archiving: refusesArchiving(rules, id, archived, dayOf(today)),
+        deleting: repeatsPattern(rules, id, dayOf(today)),
+      }).toEqual(expected);
+    });
+  }
   for (const { name, patterns, id, expected } of patternChanges.deleted) {
     test(name, () => {
       expect(idsOf(patternsWithout(patterns.map(patternOf), id))).toEqual(
