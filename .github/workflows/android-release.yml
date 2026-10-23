@@ -86,5 +86,5 @@ jobs:
           packageName: app.pochical
           releaseFiles: apps/android/app/build/outputs/bundle/release/app-release.aab
           mappingFile: apps/android/app/build/outputs/mapping/release/mapping.txt
-          track: internal
+          tracks: internal
           status: completed
