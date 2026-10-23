@@ -1,0 +1,81 @@
+package app.pochical.kit
+
+import android.content.Context
+import androidx.room3.Database
+import androidx.room3.Room
+import androidx.room3.RoomDatabase
+import androidx.room3.withWriteTransaction
+import androidx.sqlite.SQLiteConnection
+import androidx.sqlite.execSQL
+
+/**
+ * The device's database: what it holds of the user's own values and of their groups, and its outbox
+ * (spec/sync-protocol.md).
+ *
+ * Nothing is released yet, so what the device stores changes shape with no migration: a new
+ * [VERSION] erases the database, which syncs again from the server (AGENTS.md). Room refuses to open
+ * a database whose shape changed under the same version, and CI fails a build that rewrites the
+ * schema `kit/schemas` holds for a version, so a shape change cannot ship without its version raised.
+ * At release, destructive migration is turned off and migrations follow from then on.
+ */
+@Database(
+  version = AppDatabase.VERSION,
+  entities =
+    [
+      DayRow::class,
+      PatternRow::class,
+      PatternOrderRow::class,
+      RepeatOrderRow::class,
+      CoworkerRow::class,
+      CoworkerOrderRow::class,
+      PreferenceRow::class,
+      ServerValue::class,
+      OutboxEdit::class,
+      SyncState::class,
+      GroupRow::class,
+      GroupMemberRow::class,
+      MemberDayRow::class,
+      MemberPatternRow::class,
+      MemberOrderRow::class,
+      GroupCursorRow::class,
+    ],
+)
+abstract class AppDatabase : RoomDatabase() {
+  internal abstract fun sync(): SyncDao
+
+  /** What the screens read, as it changes. */
+  abstract fun values(): Values
+
+  /** Runs [block] in one write transaction, as everything sync takes in or sends from does. */
+  internal suspend fun <T> write(block: suspend SyncDao.() -> T): T = withWriteTransaction { sync().block() }
+
+  companion object {
+    const val VERSION = 1
+
+    /** The app's database in [context]'s files, or one in memory alone for tests. */
+    fun open(context: Context, inMemory: Boolean = false): AppDatabase =
+      (if (inMemory) Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
+        else Room.databaseBuilder(context, AppDatabase::class.java, "pochical.db"))
+        .fallbackToDestructiveMigration(dropAllTables = true)
+        .addCallback(TakeAllAgainIfOlder)
+        .build()
+  }
+}
+
+/**
+ * A device that took its values under an older sync schema than the app's moves every cursor back
+ * to the start, its User DO's and every group's, so its next Hellos bring everything again, read as
+ * the app reads now (spec/sync-protocol.md, Change log and cursor). Its values stay until
+ * overwritten, so its screens still show offline, and its outbox stays to send.
+ */
+private object TakeAllAgainIfOlder : RoomDatabase.Callback() {
+  override suspend fun onOpen(connection: SQLiteConnection) {
+    // One transaction, so the schema is never raised without its cursors rewound.
+    connection.execSQL("BEGIN IMMEDIATE")
+    connection.execSQL(
+      "UPDATE groupCursors SET cursor = 0 WHERE (SELECT schema FROM syncState WHERE id = 1) < $SYNC_SCHEMA"
+    )
+    connection.execSQL("UPDATE syncState SET cursor = 0, schema = $SYNC_SCHEMA WHERE schema < $SYNC_SCHEMA")
+    connection.execSQL("COMMIT")
+  }
+}
