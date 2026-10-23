@@ -47,7 +47,6 @@ enum ChatItemID {
   static let head = "head"
   static let unread = "unread"
   private static let linePrefix = "line-"
-  private static let reactionsPrefix = "reactions-"
   private static let typingPrefix = "typing-"
   private static let dayPrefix = "day-"
 
@@ -58,23 +57,6 @@ enum ChatItemID {
   static func line(_ opID: String) -> String { linePrefix + opID }
 
   static func isLine(_ id: String) -> Bool { id.hasPrefix(linePrefix) }
-
-  /// A line's reactions, under it: an item of their own, laid out where
-  /// they go as they come and go while the line moves to make room.
-  static func reactions(_ opID: String) -> String { reactionsPrefix + opID }
-
-  static func isReactions(_ id: String) -> Bool { id.hasPrefix(reactionsPrefix) }
-
-  /// The reactions of the line `lineID`.
-  static func reactions(of lineID: String) -> String {
-    reactionsPrefix + lineID.dropFirst(linePrefix.count)
-  }
-
-  /// The line whose reactions the item `id` is, or the item itself: what
-  /// is done to a line (dragged to reply) is done to all of it.
-  static func line(of id: String) -> String {
-    isReactions(id) ? line(String(id.dropFirst(reactionsPrefix.count))) : id
-  }
 
   /// Someone writing now, under the latest line.
   static func typing(_ userID: String) -> String { typingPrefix + userID }
@@ -203,40 +185,13 @@ enum LineAction {
   case menu(String)
 }
 
-/// The writer's face, by their run's first line.
-let lineFaceSize: CGFloat = 32
-
-/// Where a line's parts stand across the chat: others' by the writer's
-/// face (room for it kept on every line of a run, so a run's lines line
-/// up), one's own on the right, and room kept on the other side. A line
-/// and its reactions, under it, stand alike.
-struct LineFrame<Face: View, Content: View>: View {
-  @Environment(\.dynamicTypeSize) private var typeSize
-  let mine: Bool
-  @ViewBuilder let face: Face
-  @ViewBuilder let content: Content
-
-  var body: some View {
-    HStack(alignment: .top, spacing: 8) {
-      if !mine { face.frame(width: lineFaceSize) }
-      content
-        // Room for the tail of a run's first bubble by the face. By the
-        // screen's edge the tail reaches into the margin, as LINE's and
-        // Messages' do.
-        .padding(.leading, mine ? 0 : BubbleShape.tailReach)
-        .frame(maxWidth: .infinity, alignment: mine ? .trailing : .leading)
-        // The room kept on the other side, less at the accessibility text
-        // sizes, where the words need the width more, as Messages gives it.
-        .padding(mine ? .leading : .trailing, typeSize.isAccessibilitySize ? 16 : 40)
-    }
-  }
-}
-
 /// A line of words: others' on the left with their face and, at the start
 /// of a run, their name; one's own on the right in the accent, dimmed
 /// while it waits to be sent. The time beside the bubble, 編集済み over it.
 struct LineView: View {
   @Environment(\.themeColors) private var colors
+  @Environment(\.dynamicTypeSize) private var typeSize
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.rootNavigator) private var navigator
   /// The line's opID, which its actions name it by.
   let lineID: String
@@ -304,6 +259,8 @@ struct LineView: View {
   /// What its words take to draw, kept while its row looks the same.
   @Environment(\.keptDrawing) private var kept
 
+  private static var avatar: CGFloat { 32 }
+
   /// A member's name in the group as it is now, for their mentions.
   private func nameOf(_ id: String) -> String {
     memberName(id, in: names)
@@ -337,25 +294,26 @@ struct LineView: View {
   }
 
   var body: some View {
-    LineFrame(mine: mine) {
-      Group {
-        if let writer, appFace {
-          AppIconChoice.current.image(size: lineFaceSize)
-            .accessibilityLabel(writer)
-        } else if let writer {
-          Button { act(.openProfile) } label: {
-            MemberAvatar(name: writer, photoID: writerPhoto, shelf: shelf, size: lineFaceSize)
+    HStack(alignment: .top, spacing: 8) {
+      if !mine {
+        Group {
+          if let writer, appFace {
+            AppIconChoice.current.image(size: Self.avatar)
+              .accessibilityLabel(writer)
+          } else if let writer {
+            Button { act(.openProfile) } label: {
+              MemberAvatar(name: writer, photoID: writerPhoto, shelf: shelf, size: Self.avatar)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("\(writer)のプロフィール")
+          } else {
+            Color.clear
           }
-          .buttonStyle(.plain)
-          .accessibilityLabel("\(writer)のプロフィール")
-        } else {
-          Color.clear
         }
+        .frame(width: Self.avatar, height: writer == nil ? 0 : Self.avatar)
+        // Said with the line, whose actions open the profile.
+        .accessibilityHidden(true)
       }
-      .frame(height: writer == nil ? 0 : lineFaceSize)
-      // Said with the line, whose actions open the profile.
-      .accessibilityHidden(true)
-    } content: {
       VStack(alignment: mine ? .trailing : .leading, spacing: 4) {
         if let writer, named {
           Text(writer)
@@ -393,8 +351,29 @@ struct LineView: View {
             .foregroundStyle(colors.dangerDefault)
             .accessibilityHidden(true)
         }
+        // The row itself comes and goes as a pill does, with the line's
+        // first reaction and its last.
+        Group {
+          if !reactions.isEmpty {
+            ReactionRow(
+              lineID: lineID, reactions: reactions, meID: meID, nameOf: nameOf,
+              counted: countedReactions, marks: marks, onReact: { act(.react($0)) }
+            )
+            .transition(ReactionRow.transition(reduceMotion, colors))
+          }
+        }
+        .animation(ReactionRow.motion(reduceMotion), value: reactions.isEmpty)
       }
+      // Room for the tail of a run's first bubble by the face; every line
+      // keeps it, so a run's lines line up. By the screen's edge the tail
+      // reaches into the margin, as LINE's and Messages' do.
+      .padding(.leading, mine ? 0 : BubbleShape.tailReach)
+      .frame(maxWidth: .infinity, alignment: mine ? .trailing : .leading)
+      // The room kept on the other side, less at the accessibility text
+      // sizes, where the words need the width more, as Messages gives it.
+      .padding(mine ? .leading : .trailing, typeSize.isAccessibilitySize ? 16 : 40)
     }
+    .particleLayer(name: ReactionRow.sprays)
     // The line reads as one, everything done on it its actions, an
     // album's photos with it; a card of days or a poll keeps its own
     // parts, the line said first by its time.

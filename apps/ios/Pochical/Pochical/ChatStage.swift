@@ -130,9 +130,9 @@ struct LinesRow: Equatable {
   var environment = EnvironmentValues()
   /// Each item's look, as last laid out.
   var looks: [String: AnyHashable] = [:]
-  /// The items coming in by the update being put in whose parts come in
-  /// as they do while the chat is open (itemEntering).
-  var entering: Set<String> = []
+  /// The lines are moving to an update: each cell cut to its frame
+  /// meanwhile (LineCell).
+  var moving = false
   /// Each item's height as measured, at its look and the width it had.
   private var heights: [String: (look: AnyHashable, width: CGFloat, height: CGFloat)] = [:] {
     didSet {
@@ -356,9 +356,8 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
   private lazy var swipe = SwipePan(target: self, action: #selector(swiped))
   /// The line being dragged, which way, and whether it is far enough.
   private var swiping: (id: String, way: ReplySwipe, far: Bool)?
-  /// The cells moved, the line's and its reactions', put back as the line
-  /// is let go or drawn in others.
-  private var swipedCells: [UICollectionViewCell] = []
+  /// The cell moved, put back as the line is let go or drawn in another.
+  private weak var swipedCell: UICollectionViewCell?
   /// Beside the line dragged, showing as it goes.
   private let replyArrow = UIImageView(
     image: UIImage(
@@ -423,13 +422,11 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
       let environment = model.environment
       let space = cell.space
       let drawing = model.drawing(of: id)
-      let entering = model.entering.contains(id)
       cell.measure = { width in model.height(of: id, width: width) }
-      cell.rises = ChatItemID.isReactions(id)
+      cell.clipsToBounds = model.moving
       cell.contentConfiguration = UIHostingConfiguration {
         LineCellContent(
-          id: id, content: content, environment: environment, space: space, drawing: drawing,
-          entering: entering)
+          id: id, content: content, environment: environment, space: space, drawing: drawing)
       }
       .margins(.all, 0)
     }
@@ -667,13 +664,8 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     // there at once, and so are all of them drawn anew in another look.
     let earlier = cameAbove(old, in: new)
     let animated = !earlier && !rows.restyled && !rows.reduceMotion && !userScrolling
-    // Reactions coming to a line already there come in where they go, by
-    // their own SwiftUI, as the line moves up to make room.
-    let popping = reactionsCame(old, in: new)
-    model.entering = popping
-    let below = cameBelow(old, in: new).subtracting(popping)
-    let fading = new != old && !earlier && rows.reduceMotion ? below : []
-    updating = Updating(risingIn: animated ? below : [], popping: popping)
+    let fading = new != old && !earlier && rows.reduceMotion ? cameBelow(old, in: new) : []
+    updating = Updating(risingIn: animated ? cameBelow(old, in: new) : [])
     let update = { [weak self] in
       guard let self else { return }
       source.apply(snapshot, animatingDifferences: animated, commitAlongsideUpdates: {}) {
@@ -681,7 +673,7 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
         guard let self else { return }
         let next = updating?.next
         updating = nil
-        model.entering = []
+        move(false)
         // The lines waiting go in next; changing none, these have landed.
         if let next, setLines(next) { return }
         landed()
@@ -700,6 +692,7 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     // its timing from an animation by duration around it; around a spring
     // by perceived duration (springDuration:) it keeps UIKit's own.
     if animated {
+      move(true)
       UIView.animate(
         withDuration: Double(Chat.lineMoveMs) / 1000, delay: 0, usingSpringWithDamping: 1,
         initialSpringVelocity: 0, options: .allowUserInteraction, animations: update)
@@ -707,6 +700,18 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
       update()
     }
     return true
+  }
+
+  /// The lines start or stop moving to an update: the cells cut to their
+  /// frames while they move, uncut at rest. A line drawn again taller is
+  /// laid out at once at its new height (LineCell), its cell growing to it
+  /// in the lines' animation, so what it gains (a reaction, a link's page,
+  /// the words past 続きを読む) shows as the cell grows, never over the line
+  /// next to it first; at rest, what a line draws past its cell for a
+  /// moment (a reaction's pop and spray) is whole.
+  private func move(_ moving: Bool) {
+    model.moving = moving
+    for cell in lines.visibleCells { cell.clipsToBounds = moving }
   }
 
   /// The item the lines are on, where its top stands among the lines seen,
@@ -746,16 +751,6 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     return new[..<at].contains { ChatItemID.isLine($0) && !old.contains($0) }
   }
 
-  /// The reactions new to `new` of lines it keeps from `old`: come while
-  /// the chat is open, not with their line.
-  private func reactionsCame(_ old: [String], in new: [String]) -> Set<String> {
-    let kept = Set(old)
-    return Set(
-      new.filter {
-        ChatItemID.isReactions($0) && !kept.contains($0) && kept.contains(ChatItemID.line(of: $0))
-      })
-  }
-
   /// The items new to `new` below the last line it keeps from `old`:
   /// someone writing, kept under them, is passed over, so a line sent
   /// while they write rises too.
@@ -774,18 +769,14 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
 
   /// An item coming in at the foot starts a line's height lower, unseen,
   /// rising into place with the lines as they slide up to it, as a line
-  /// sent comes in in the messaging apps; reactions coming to a line stand
-  /// where they go, coming in by their own SwiftUI; others fade in,
-  /// ChatLayout's own. The same as it is first asked and as its height is
-  /// measured.
+  /// sent comes in in the messaging apps; others fade in, ChatLayout's
+  /// own. The same as it is first asked and as its height is measured.
   func initialLayoutAttributesForInsertedItem(
     _ chatLayout: CollectionViewChatLayout, at indexPath: IndexPath,
     modifying originalAttributes: ChatLayoutAttributes, on state: InitialAttributesRequestType
   ) {
-    let id = indexPath.item < ids.count ? ids[indexPath.item] : nil
-    if let id, updating?.popping.contains(id) == true { return }
     originalAttributes.alpha = 0
-    if let id, updating?.risingIn.contains(id) == true {
+    if indexPath.item < ids.count, updating?.risingIn.contains(ids[indexPath.item]) == true {
       originalAttributes.center.y += originalAttributes.frame.height
     }
   }
@@ -968,7 +959,9 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
   /// To the item asked for, laid out now: gliding, or put there at once.
   private func go(to asked: Showing) {
     lines.layoutIfNeeded()
-    guard let frame = extent(of: asked.id) else {
+    guard let index = ids.firstIndex(of: asked.id),
+      let frame = layout.layoutAttributesForItem(at: IndexPath(item: index, section: 0))?.frame
+    else {
       hold(.free)
       return
     }
@@ -1003,24 +996,6 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
   /// Nothing more to go to, the lines gone: told so.
   func letGo() {
     hold(.free)
-  }
-
-  /// Where the item `id` stands in the lines as laid out: a line with its
-  /// reactions, the item under it, as the one thing it is to the reader
-  /// (its foot, where it is gone to and whether it is seen).
-  private func extent(of id: String) -> CGRect? {
-    ids.firstIndex(of: id).flatMap(extent(at:))
-  }
-
-  private func extent(at index: Int) -> CGRect? {
-    guard index < ids.count,
-      let frame = layout.layoutAttributesForItem(at: IndexPath(item: index, section: 0))?.frame
-    else { return nil }
-    let under = index + 1
-    guard under < ids.count, ids[under] == ChatItemID.reactions(of: ids[index]),
-      let reactions = layout.layoutAttributesForItem(at: IndexPath(item: under, section: 0))?.frame
-    else { return frame }
-    return frame.union(reactions)
   }
 
   /// Where an item's top goes below the top of the lines seen.
@@ -1168,12 +1143,10 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     if day != scroll.topDay { scroll.topDay = day }
     if pinned.push != scroll.dayPush { scroll.dayPush = pinned.push }
     let foot = lines.contentOffset.y + lines.bounds.height - inset.bottom + 1
-    let seen = laid.map(\.indexPath.item)
-      .filter { item in
-        item < ids.count && ChatItemID.isLine(ids[item])
-          && (extent(at: item)?.maxY ?? .infinity) <= foot
-      }
-      .map { ids[$0] }
+    let seen = laid
+      .filter { $0.frame.maxY <= foot }
+      .compactMap { $0.indexPath.item < ids.count ? ids[$0.indexPath.item] : nil }
+      .filter(ChatItemID.isLine)
     if seen != scroll.seen { scroll.seen = seen }
     layoutMenu()
   }
@@ -1209,7 +1182,7 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     // From the screen's edge going back is still the system's.
     let at = touch.location(in: lines)
     if swipeStart.x > Self.backEdge, let path = lines.indexPathForItem(at: at),
-      path.item < ids.count, settings?.replySwipe(ChatItemID.line(of: ids[path.item])) == .rightward
+      path.item < ids.count, settings?.replySwipe(ids[path.item]) == .rightward
     {
       let back = navigationController?.interactiveContentPopGestureRecognizer
       back?.isEnabled = false
@@ -1243,10 +1216,9 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     let moved = swipe.velocity(in: lines)
     guard abs(moved.x) > abs(moved.y) * 2, let settings, !settings.holds else { return false }
     let at = view.convert(swipeStart, to: lines)
-    guard let path = lines.indexPathForItem(at: at), path.item < ids.count else { return false }
-    // A line's reactions drag with it, as one.
-    let id = ChatItemID.line(of: ids[path.item])
-    guard let way = settings.replySwipe(id) else { return false }
+    guard let path = lines.indexPathForItem(at: at), path.item < ids.count,
+      let way = settings.replySwipe(ids[path.item])
+    else { return false }
     switch way {
     case .rightward:
       // Not from the screen's edge, which is the system's.
@@ -1254,7 +1226,7 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     case .leftward:
       guard moved.x < 0 else { return false }
     }
-    swiping = (id, way, false)
+    swiping = (ids[path.item], way, false)
     return true
   }
 
@@ -1283,33 +1255,25 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     }
   }
 
-  /// The cell drawing the item `id`, if it is laid out.
-  private func cell(of id: String) -> UICollectionViewCell? {
-    ids.firstIndex(of: id).flatMap { lines.cellForItem(at: IndexPath(item: $0, section: 0)) }
-  }
-
   /// Draws the line `id` dragged `along` toward the middle, past
   /// chatRules.replySwipe less and less, the arrow beside it.
   private func drag(_ id: String, way: ReplySwipe, by along: CGFloat) {
-    guard let cell = cell(of: id) else {
+    guard let index = ids.firstIndex(of: id),
+      let cell = lines.cellForItem(at: IndexPath(item: index, section: 0))
+    else {
       letGoOfSwipe()
       return
     }
-    // The line and its reactions, drawn in other cells as the lines
-    // change meanwhile.
-    let dragged = [cell] + [self.cell(of: ChatItemID.reactions(of: id))].compactMap { $0 }
-    for old in swipedCells where !dragged.contains(where: { $0 === old }) {
-      old.transform = .identity
+    // The line drawn in another cell as the lines change meanwhile.
+    if swipedCell !== cell {
+      swipedCell?.transform = .identity
+      swipedCell = cell
     }
-    swipedCells = dragged
     let full = CGFloat(Chat.replySwipe)
     let shift = along <= full ? along : full + (along - full) * CGFloat(Chat.replySwipeRubber)
     let sign: CGFloat = way == .rightward ? 1 : -1
-    // The cells themselves: their hosted content keeps a transform of
-    // its own.
-    for cell in dragged {
-      cell.transform = CGAffineTransform(translationX: sign * shift, y: 0)
-    }
+    // The cell itself: its hosted content keeps a transform of its own.
+    cell.transform = CGAffineTransform(translationX: sign * shift, y: 0)
     // Where the line stands in its cell, unmoved, inside the room kept
     // for its tail.
     let size = replyArrow.intrinsicContentSize
@@ -1333,10 +1297,10 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
   /// reduced, and the arrow goes.
   private func letGoOfSwipe() {
     swiping = nil
-    let cells = swipedCells
-    swipedCells = []
+    let cell = swipedCell
+    swipedCell = nil
     let back = {
-      for cell in cells { cell.transform = .identity }
+      cell?.transform = .identity
       self.replyArrow.alpha = 0
     }
     if reduceMotion {
@@ -1646,8 +1610,6 @@ private struct Updating {
   /// The items coming in at the foot, which rise into place from under
   /// the lines' foot as the lines slide up.
   let risingIn: Set<String>
-  /// Reactions coming to lines already there, which come in where they go.
-  let popping: Set<String>
   /// The latest lines come meanwhile, put in next.
   var next: Rows?
 }
@@ -1688,25 +1650,9 @@ private final class LineCell: UICollectionViewCell {
   var space = LineSpace()
   /// The height of the item it draws, at a width.
   var measure: ((CGFloat) -> CGFloat)?
-  /// It draws over the items by it, uncut: a line's reactions, whose pop
-  /// and spray of emoji reach past their row, over the line they are under.
-  var rises = false {
-    didSet { clipsToBounds = !rises }
-  }
 
   override init(frame: CGRect) {
     super.init(frame: frame)
-    // Its line drawn again taller is laid out at once at its new height,
-    // the cell growing to it in the lines' animation: what the line gains
-    // (an edit, a link's page, the words past 続きを読む) shows as the cell
-    // grows, never over the line next to it first.
-    clipsToBounds = true
-  }
-
-  /// Over the items by it, by the layout's own order and its rising.
-  override func apply(_ layoutAttributes: UICollectionViewLayoutAttributes) {
-    super.apply(layoutAttributes)
-    layer.zPosition = CGFloat(layoutAttributes.zIndex) + (rises ? 1 : 0)
   }
 
   /// Its line laid out whole, at once, at the cell's new size, so the
@@ -1759,7 +1705,6 @@ private struct LineCellContent: View {
   let space: LineSpace
   let drawing: KeptDrawing
   var measuring = false
-  var entering = false
 
   var body: some View {
     content
@@ -1772,7 +1717,6 @@ private struct LineCellContent: View {
       .environment(\.lineSpace, space)
       .environment(\.keptDrawing, drawing)
       .environment(\.measuringLine, measuring)
-      .environment(\.itemEntering, entering)
       .environment(\.self, environment)
   }
 }

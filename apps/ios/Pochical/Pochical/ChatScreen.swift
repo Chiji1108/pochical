@@ -188,7 +188,7 @@ struct ChatScreen: View {
       row: { id in
         AnyView(
           lineRow(
-            id, item: byID[ChatItemID.line(of: id)], first: listed.first?.id, names: names,
+            id, item: byID[id], first: listed.first?.id, names: names,
             showsTime: !timeless.contains(id)))
       },
       top: AnyView(top),
@@ -201,8 +201,7 @@ struct ChatScreen: View {
       composer: AnyView(composer),
       empty: AnyView(empty),
       scroll: scroll, proxy: scroller, following: $following,
-      shown: placed, holds: acting != nil,
-      dayOver: { dayOver(ChatItemID.line(of: $0), in: listed) },
+      shown: placed, holds: acting != nil, dayOver: { dayOver($0, in: listed) },
       replySwipe: { replySwipe(byID[$0]) },
       onReply: { id in
         if let line = answered(byID[id]) { reply(to: line) }
@@ -588,12 +587,6 @@ struct ChatScreen: View {
         blockedWriter: blockedWriter, shownAnyway: shownAnyway, unfolded: unfoldedLine,
         common: common)
       rows.append(LinesRow(id: item.id, look: AnyHashable(look)))
-      if case .line(let line, _) = item, let reactions = shownReactions(line) {
-        rows.append(
-          LinesRow(
-            id: ChatItemID.reactions(line.opID),
-            look: AnyHashable(ReactionsLook(reactions: reactions, counted: ofTwo, common: common))))
-      }
     }
     for userID in writers {
       rows.append(LinesRow(id: ChatItemID.typing(userID), look: AnyHashable(common)))
@@ -613,12 +606,6 @@ struct ChatScreen: View {
       } else if let userID = ChatItemID.typer(of: id) {
         TypingLine(name: memberName(userID, in: names), photoID: faces[userID] ?? "")
           .padding(.top, CGFloat(Chat.runGap - Chat.lineGap))
-      } else if ChatItemID.isReactions(id) {
-        if case .line(let line, _) = item, let reactions = shownReactions(line) {
-          LineReactions(
-            lineID: line.opID, mine: line.authorID == meID, reactions: reactions, meID: meID,
-            names: names, counted: ofTwo, marks: marks, actions: lineActions)
-        }
       } else if let item {
         // Lines close within a run, parted where the writer changes; the
         // first has the list's own margin over it.
@@ -1065,16 +1052,6 @@ struct ChatScreen: View {
   /// lines fold away; a one-to-one chat with them shows all it has.
   private func writerBlocked(_ line: ChatLineRow) -> Bool {
     otherID == nil && blocked.contains(line.authorID)
-  }
-
-  /// The line's reactions as the chat shows them, under a line drawn as
-  /// one; none for a line without, or one folded away or not a message.
-  private func shownReactions(_ line: ChatLineRow) -> [LineReaction]? {
-    guard !line.reactions.isEmpty, !folded(line) else { return nil }
-    switch line.content {
-    case .words, .photos, .days, .poll: return line.reactions
-    case .notice, .unsent, .hidden: return nil
-    }
   }
 
   /// The line is folded away for its blocked writer, not shown at a tap.
@@ -1833,13 +1810,6 @@ private struct RowsLook: Hashable {
   let deleted: Set<String>
   let members: [GroupMember]
   let left: Set<String>
-}
-
-/// All a line's reactions' row draws.
-private struct ReactionsLook: Hashable {
-  let reactions: [LineReaction]
-  let counted: Bool
-  let common: RowsLook
 }
 
 /// All a line's row draws.
