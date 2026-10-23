@@ -24,6 +24,9 @@ const outside = new Set([
   "design-frames.tsx",
   "design-home-screen.tsx",
   "design-phone.tsx",
+  // The workspace's own switches beside the phones, as design-page.tsx's
+  // toolbar in @pochical/showcase.
+  "design-variant-panel.tsx",
   "design-widget-frame.tsx",
   "shift-mark.tsx",
 ]);

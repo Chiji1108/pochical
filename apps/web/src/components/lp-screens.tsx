@@ -26,19 +26,31 @@ import type {
   OffLooks,
   ShiftMarkStyle,
 } from "@pochical/prototype/components/shift-mark";
-import { initialDesignSchedule } from "@pochical/prototype/lib/design-days";
+import {
+  dateKey,
+  daysOfMonth,
+  initialDesignSchedule,
+} from "@pochical/prototype/lib/design-days";
+import { calendarAlone } from "@pochical/prototype/lib/design-features";
 import { presetList } from "@pochical/prototype/lib/design-patterns";
 import { useSamplePerson } from "@pochical/prototype/lib/design-sample-person";
-import { UserStoreContext } from "@pochical/prototype/lib/design-user-store";
+import { designMonth } from "@pochical/prototype/lib/design-today";
+import {
+  UserStoreContext,
+  useShownDays,
+} from "@pochical/prototype/lib/design-user-store";
 import type { OwnData } from "@pochical/prototype/lib/design-user-store";
 import { parseDesignVariants } from "@pochical/prototype/lib/design-variants";
+import { useReducedMotion } from "@pochical/prototype/lib/device-media";
 import { css, cva } from "@pochical/styled-system/css";
-import { AnimatePresence, MotionConfig } from "motion/react";
+import { ArrowUpRight, Smartphone } from "lucide-react";
+import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import { useState, useSyncExternalStore } from "react";
 import type { ComponentProps, ReactNode } from "react";
 
 import { pressesOf, subscribe } from "../lib/presses";
 import type { SkyPlace } from "../lib/presses";
+import type { PrimaryAction } from "../lib/primary-action";
 
 // The top page's pieces drawn by the app's own code: its sky, the hero's
 // phone and the features' screens, each an island of pages/index.astro.
@@ -161,22 +173,119 @@ const heroSchedule = Object.fromEntries(
   )
 );
 
-// The app itself, the same one apps/try runs, to tap right on
-// the page.
-export function HeroPhone() {
+// The app itself, the same one apps/try runs, to tap right on the page:
+// its calendar alone, so picking and entering shifts is all there is to
+// do, and nothing asks the way a phone's system would. Under it, how to
+// use it, and once the month is filled, the page's one action.
+export function HeroPhone({ action }: { action: PrimaryAction }) {
   const person = useSamplePerson({ schedule: heroSchedule });
   return (
     <Motion>
       <DesignProviders fresh>
         <UserStoreContext value={person}>
-          <DesignApp
-            initialDay={HERO_FIRST_BLANK}
-            initialEditing
-            variants={variants}
-          />
+          <div className={hero.phone}>
+            <DesignApp
+              features={calendarAlone}
+              initialDay={HERO_FIRST_BLANK}
+              initialEditing
+              variants={variants}
+            />
+          </div>
+          <HeroFoot action={action} />
         </UserStoreContext>
       </DesignProviders>
     </Motion>
+  );
+}
+
+// The phone with its foot under it. Wide, the hero is a grid
+// (pages/index.astro): the phone on the right, and the foot on the left
+// under the words.
+const hero = {
+  action: css({
+    _hover: { bg: "var(--green)" },
+    alignItems: "center",
+    bg: "var(--ink)",
+    borderRadius: "12px",
+    color: "white",
+    display: "inline-flex",
+    fontSize: "15px",
+    fontWeight: 700,
+    gap: "10px",
+    letterSpacing: "0.04em",
+    padding: "14px 22px",
+  }),
+  done: css({
+    _wide: { alignItems: "flex-start" },
+    alignItems: "center",
+    display: "flex",
+    flexDirection: "column",
+    gap: "14px",
+  }),
+  hint: css({ color: "var(--muted)", fontSize: "12px", lineHeight: 1.9 }),
+  lead: css({
+    fontSize: "14px",
+    fontWeight: 650,
+    letterSpacing: "0.035em",
+  }),
+  phone: css({ _wide: { gridColumn: 2, gridRow: "1 / span 2" } }),
+  root: css({
+    _wide: { gridColumn: 1, gridRow: 2, textAlign: "left" },
+    textAlign: "center",
+  }),
+};
+
+// The month the hero opens on, filled when none of its days is blank:
+// each entered, or the blanks before the last one entered filled by the
+// sheet at 完了. Once filled it stays so, a day cleared after that taking
+// nothing back.
+function HeroFoot({ action }: { action: PrimaryAction }) {
+  const schedule = useShownDays(designMonth);
+  const filled = daysOfMonth(designMonth).every(
+    (date) => schedule[dateKey(date)] !== undefined
+  );
+  const [done, setDone] = useState(false);
+  if (filled && !done) {
+    setDone(true);
+  }
+  const still = useReducedMotion();
+  return (
+    <div aria-live="polite" className={hero.root}>
+      <AnimatePresence initial={false} mode="wait">
+        {done ? (
+          <motion.div
+            animate={{ opacity: 1, y: 0 }}
+            className={hero.done}
+            initial={{ opacity: 0, y: still ? 0 : 8 }}
+            key="done"
+            transition={{ duration: 0.3, ease: "easeOut" }}
+          >
+            <p className={hero.lead}>ひと月ぶん、埋まりました。</p>
+            <a
+              className={hero.action}
+              href={action.href}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              <Smartphone aria-hidden="true" size={20} />
+              {action.label}
+              <ArrowUpRight aria-hidden="true" size={16} />
+            </a>
+          </motion.div>
+        ) : (
+          <motion.p
+            className={hero.hint}
+            exit={{ opacity: 0 }}
+            key="hint"
+            transition={{ duration: 0.2 }}
+          >
+            そのまま触れます。シフトをポチッと押してみてください。
+            <br />
+            左右にスワイプすると、月が変わります。
+          </motion.p>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 

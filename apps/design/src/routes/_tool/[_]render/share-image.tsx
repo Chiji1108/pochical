@@ -10,11 +10,12 @@ import { useSamplePerson } from "@pochical/prototype/lib/design-sample-person";
 import { UserStoreContext } from "@pochical/prototype/lib/design-user-store";
 import type { UserStore } from "@pochical/prototype/lib/design-user-store";
 import { parseDesignVariants } from "@pochical/prototype/lib/design-variants";
-import { pageMeta } from "@pochical/showcase/lib/page-meta";
 import { css } from "@pochical/styled-system/css";
 import { createFileRoute } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/_render/share-image")({
+import { pageMeta } from "../../../lib/page-meta";
+
+export const Route = createFileRoute("/_tool/_render/share-image")({
   component: ShareImage,
   head: () =>
     pageMeta(

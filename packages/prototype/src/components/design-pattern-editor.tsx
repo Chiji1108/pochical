@@ -1,9 +1,13 @@
 import { PATTERNS_PER_PAGE } from "@pochical/design/limits";
 import { readyPatternOrder } from "@pochical/design/patterns";
-import { css } from "@pochical/styled-system/css";
+import { css, cx } from "@pochical/styled-system/css";
 import { Fragment, useContext, useState } from "react";
 
-import { patternsWithout } from "../lib/design-days";
+import {
+  patternsWithout,
+  refusesArchiving,
+  repeatsPattern,
+} from "../lib/design-days";
 import { presetList, presetPatterns } from "../lib/design-patterns";
 import type { Pattern, PresetShift } from "../lib/design-patterns";
 import { designToday } from "../lib/design-today";
@@ -29,13 +33,14 @@ import type { LookField } from "./design-look-editor";
 import { inChipOrder, ReadyPatternChips, toggled } from "./design-ready-chips";
 import { ConfirmDialog } from "./design-sheet";
 import { SortableList } from "./design-sortable-list";
-import { Button, DestructiveButton, Note, Section } from "./design-ui";
+import { DestructiveButton, Note, Section } from "./design-ui";
 import {
   guessLook,
   MarkGlyph,
   nextColor,
   sameIcon,
   ShiftMarkStyleContext,
+  useMarkDescription,
 } from "./shift-mark";
 import type { Look, ShiftMarkStyle } from "./shift-mark";
 
@@ -91,11 +96,29 @@ function lookAlike(a: Look, b: Look, style: ShiftMarkStyle) {
 }
 
 const editor = {
+  // 印と色を変える under the mark, in the accent as a link's words.
+  change: css({ color: "accent.default", textStyle: "caption" }),
+  // The switch with its note under it, as one section.
+  inUse: css({ display: "flex", flexDirection: "column", gap: "8px" }),
+  // The pattern at the top, pressed to open 印と色.
+  lookLink: css({
+    border: 0,
+    cursor: "pointer",
+    textAlign: "start",
+    width: "100%",
+  }),
   // A lookalike's warning under the look page's choices.
   lookalike: css({
     color: "danger.default",
     margin: "-8px 4px 0",
     textStyle: "caption",
+  }),
+  // The mark over 印と色を変える.
+  mark: css({
+    alignItems: "center",
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
   }),
   // The name over the time, beside the mark at the top.
   name: css({ display: "flex", flexDirection: "column", gap: "2px" }),
@@ -147,27 +170,9 @@ export function PatternsPage({
   // with it.
   const daysOf = (id: string) =>
     Object.values(schedule).filter((entry) => entry?.shift === id).length;
-  // A period in use or to come still needs it; one over does not.
-  const inOrder = (id: string) =>
-    rules.some((rule, index) => {
-      const next = rules[index + 1];
-      const puts =
-        rule.sequence.includes(id) ||
-        (rule.holidaysOff === true && rule.holidayShift === id);
-      return puts && (!next || next.start > designToday);
-    });
   // Gone from the list; the days that name it show empty, as it is gone.
   const remove = (id: string) => {
     setItems((previous) => patternsWithout(previous, id));
-  };
-  // No longer used, or used again: archived, a pattern keeps its days'
-  // marks but leaves the keys, and goes under 使わなくなったパターン.
-  const setArchived = (id: string, archived: boolean) => {
-    setItems((previous) =>
-      previous.map((item) =>
-        item.id === id ? { ...item, archived: archived || undefined } : item
-      )
-    );
   };
   const used = items.filter((item) => item.archived !== true);
   const archived = items.filter((item) => item.archived === true);
@@ -177,17 +182,19 @@ export function PatternsPage({
       <PatternEditor
         initial={editing}
         days={daysOf(editing.id)}
-        inOrder={inOrder(editing.id)}
+        archivingRefused={refusesArchiving(
+          rules,
+          editing.id,
+          editing.archived === true,
+          designToday
+        )}
+        inOrder={repeatsPattern(rules, editing.id, designToday)}
         isNew={isNew}
         onBack={() => {
           setEditing(undefined);
         }}
         onDelete={() => {
           remove(editing.id);
-          setEditing(undefined);
-        }}
-        onArchive={(on) => {
-          setArchived(editing.id, on);
           setEditing(undefined);
         }}
         onSave={(draft) => {
@@ -431,6 +438,7 @@ const addPage = {
 };
 
 function PatternEditor({
+  archivingRefused,
   initial,
   days,
   inOrder,
@@ -439,20 +447,19 @@ function PatternEditor({
   onBack,
   onSave,
   onDelete,
-  onArchive,
 }: {
+  // Turning 入力に出す off would be refused, as an order still repeats it.
+  archivingRefused: boolean;
   initial: PatternDraft;
   // How many days use this pattern.
   days: number;
-  // In the repeating order in use, which would break without it.
+  // An order in use or to come repeats it, so it cannot be deleted.
   inOrder: boolean;
   isNew: boolean;
   others: Pattern[];
   onBack: () => void;
   onSave: (draft: PatternDraft) => void;
   onDelete: () => void;
-  // Archives it, or brings it back into use.
-  onArchive: (archived: boolean) => void;
 }) {
   const style = useContext(ShiftMarkStyleContext);
   const [draft, setDraft] = useState(initial);
@@ -479,6 +486,7 @@ function PatternEditor({
     });
   };
   const canSave = draft.name.trim() !== "";
+  const markDescription = useMarkDescription(draft);
   // Another pattern that style could not tell apart from this one.
   const lookalike = (tab: ShiftMarkStyle) =>
     others.find((other) => lookAlike(other, draft, tab));
@@ -542,8 +550,20 @@ function PatternEditor({
         }
         title={isNew ? "パターンを追加" : "パターンを編集"}
       />
-      <div className={markPreview()}>
-        <MarkGlyph look={draft} size={44} style={style} />
+      {/* The way into its mark, as Contacts' edit screen puts 編集 under
+          the photo. */}
+      <button
+        aria-label={`印と色を変える、${markDescription}`}
+        className={cx(markPreview(), editor.lookLink)}
+        onClick={() => {
+          setSubPage("look");
+        }}
+        type="button"
+      >
+        <span className={editor.mark}>
+          <MarkGlyph look={draft} size={44} style={style} />
+          <small className={editor.change}>印と色を変える</small>
+        </span>
         <span className={editor.name}>
           {/* Until it is named, what it is, faint: not 名前を入力, which
               read as a field to press. */}
@@ -552,117 +572,98 @@ function PatternEditor({
           </strong>
           <small className={editor.time}>{timeText(patternOf(draft))}</small>
         </span>
-      </div>
-      <Section title="基本">
-        <List>
+      </button>
+      <List>
+        <ListRow
+          label="名前"
+          control={
+            <>
+              <LimitedInput
+                align="end"
+                look="inline"
+                kind="shiftName"
+                onValueChange={rename}
+                placeholder="例：日勤"
+                value={draft.name}
+              />
+            </>
+          }
+        />
+        <SwitchRow
+          label="時間なし"
+
+          checked={draft.allDay}
+          onChange={(checked) => {
+            setDraft({ ...draft, allDay: checked });
+          }}
+        />
+        {!draft.allDay && (
           <ListRow
-            label="名前"
+            label="時間"
             control={
-              <>
-                <LimitedInput
-                  align="end"
-                  look="inline"
-                  kind="shiftName"
-                  onValueChange={rename}
-                  placeholder="例：日勤"
-                  value={draft.name}
-                />
-              </>
+              <TimeRange
+                end={draft.end}
+                onChange={(field, value) => {
+                  setDraft({ ...draft, [field]: value });
+                }}
+                start={draft.start}
+              />
             }
           />
-          <SwitchRow
-            label="時間なし"
+        )}
+      </List>
+      <List>
+        <SwitchRow
+          // What it changes that every calendar shows; groups and
+          // widgets follow from it being a day off.
+          detail="今月のお休みの日数に入ります"
+          label="休みとして数える"
 
-            checked={draft.allDay}
-            onChange={(checked) => {
-              setDraft({ ...draft, allDay: checked });
-            }}
-          />
-          {!draft.allDay && (
-            <ListRow
-              label="時間"
-              control={
-                <TimeRange
-                  end={draft.end}
-                  onChange={(field, value) => {
-                    setDraft({ ...draft, [field]: value });
-                  }}
-                  start={draft.start}
-                />
-              }
+          checked={draft.countsAsOff}
+          onChange={(checked) => {
+            setDraft({ ...draft, countsAsOff: checked });
+          }}
+        />
+        <ListRow
+          onClick={() => {
+            setSubPage("nextDay");
+          }}
+          label="翌日のパターン"
+          value={
+            <>
+              {nextDay && <MarkGlyph look={nextDay} size={18} style={style} />}
+              {nextDay?.name ?? "なし"}
+            </>
+          }
+          valueClassName={markValue}
+        />
+      </List>
+      {/* A state undone as easily, so a switch saved with the rest, as
+          iOS's; a new pattern is in use. Archived, it keeps its days'
+          marks but leaves the keys. */}
+      {!isNew && (
+        <div className={editor.inUse}>
+          <List>
+            <SwitchRow
+              checked={draft.archived !== true}
+              disabled={archivingRefused && draft.archived !== true}
+              label="入力に出す"
+              onChange={(checked) => {
+                setDraft({ ...draft, archived: checked ? undefined : true });
+              }}
             />
-          )}
-          <SwitchRow
-            // What it changes that every calendar shows; groups and
-            // widgets follow from it being a day off.
-            detail="今月のお休みの日数に入ります"
-            label="休みとして数える"
-
-            checked={draft.countsAsOff}
-            onChange={(checked) => {
-              setDraft({ ...draft, countsAsOff: checked });
-            }}
-          />
-          <ListRow
-            onClick={() => {
-              setSubPage("nextDay");
-            }}
-            label="翌日のパターン"
-            value={
-              <>
-                {nextDay && (
-                  <MarkGlyph look={nextDay} size={18} style={style} />
-                )}
-                {nextDay?.name ?? "なし"}
-              </>
-            }
-            valueClassName={markValue}
-          />
-        </List>
-      </Section>
-      <Section title="見た目">
-        <List>
-          <ListRow
-            onClick={() => {
-              setSubPage("look");
-            }}
-            label="印と色"
-            value={
-              <>
-                <MarkGlyph look={draft} size={20} style={style} />
-              </>
-            }
-            valueClassName={markValue}
-          />
-        </List>
-      </Section>
-      {!isNew && initial.archived === true && (
-        <Button
-          className={archiveButton}
-          onClick={() => {
-            onArchive(false);
-          }}
-          size="small"
-          variant="text"
-        >
-          また使う
-        </Button>
+          </List>
+          <Note>
+            {archivingRefused
+              ? "繰り返しの並びに入っているので、オフにしたり削除したりできません。先に「繰り返し」で並びを変えてください。"
+              : "オフにすると、ポチポチ入力のボタンに出なくなります。入っている日には、そのまま出ます。"}
+          </Note>
+        </div>
       )}
-      {!(isNew || inOrder || initial.archived === true) && (
-        <Button
-          className={archiveButton}
-          onClick={() => {
-            onArchive(true);
-          }}
-          size="small"
-          variant="text"
-        >
-          使わないパターンにする
-        </Button>
-      )}
-      {!isNew && inOrder && (
+      {/* Said once: above, under the switch, while that is blocked too. */}
+      {!isNew && inOrder && !archivingRefused && (
         <Note>
-          繰り返しの並びに入っているので、削除したり使わないパターンにしたりできません。先に「繰り返し」で並びを変えてください。
+          繰り返しの並びに入っているので、削除できません。先に「繰り返し」で並びを変えてください。
         </Note>
       )}
       {!(isNew || inOrder) && (
@@ -682,7 +683,7 @@ function PatternEditor({
       {confirming && (
         <ConfirmDialog
           action="削除"
-          message={`${days}日の予定に入っている「${initial.name}」も一緒に消えます。元に戻せません。日の印を残すなら「使わないパターンにする」を選んでください。`}
+          message={`${days}日の予定に入っている「${initial.name}」も一緒に消えます。元に戻せません。日の印を残すなら「入力に出す」をオフにしてください。`}
           onCancel={() => {
             setConfirming(false);
           }}
@@ -696,9 +697,6 @@ function PatternEditor({
     </>
   );
 }
-
-// Archiving, a quiet action over 削除, centered as it is.
-const archiveButton = css({ alignSelf: "center" });
 
 // The value of なし among the patterns' ids.
 const noNextDay = "none";

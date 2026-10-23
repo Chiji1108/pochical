@@ -10,12 +10,19 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SplatRouteImport } from './routes/$'
+import { Route as ToolRouteImport } from './routes/_tool'
 import { Route as DesignRouteImport } from './routes/design'
+import { Route as ToolDemoRouteImport } from './routes/_tool/demo'
 import { Route as ApiSearchRouteImport } from './routes/api.search'
+import { Route as ToolRenderShareImageRouteImport } from './routes/_tool/[_]render/share-image'
 
 const SplatRoute = SplatRouteImport.update({
   id: '/$',
   path: '/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ToolRoute = ToolRouteImport.update({
+  id: '/_tool',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DesignRoute = DesignRouteImport.update({
@@ -23,38 +30,66 @@ const DesignRoute = DesignRouteImport.update({
   path: '/design',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ToolDemoRoute = ToolDemoRouteImport.update({
+  id: '/demo',
+  path: '/demo',
+  getParentRoute: () => ToolRoute,
+} as any)
 const ApiSearchRoute = ApiSearchRouteImport.update({
   id: '/api/search',
   path: '/api/search',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ToolRenderShareImageRoute = ToolRenderShareImageRouteImport.update({
+  id: '/_render/share-image',
+  path: '/_render/share-image',
+  getParentRoute: () => ToolRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/$': typeof SplatRoute
+  '/': typeof ToolRouteWithChildren
   '/design': typeof DesignRoute
+  '/demo': typeof ToolDemoRoute
   '/api/search': typeof ApiSearchRoute
+  '/_render/share-image': typeof ToolRenderShareImageRoute
 }
 export interface FileRoutesByTo {
   '/$': typeof SplatRoute
+  '/': typeof ToolRouteWithChildren
   '/design': typeof DesignRoute
+  '/demo': typeof ToolDemoRoute
   '/api/search': typeof ApiSearchRoute
+  '/_render/share-image': typeof ToolRenderShareImageRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/$': typeof SplatRoute
+  '/_tool': typeof ToolRouteWithChildren
   '/design': typeof DesignRoute
+  '/_tool/demo': typeof ToolDemoRoute
   '/api/search': typeof ApiSearchRoute
+  '/_tool/_render/share-image': typeof ToolRenderShareImageRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/$' | '/design' | '/api/search'
+  fullPaths:
+    '/$' | '/' | '/design' | '/demo' | '/api/search' | '/_render/share-image'
   fileRoutesByTo: FileRoutesByTo
-  to: '/$' | '/design' | '/api/search'
-  id: '__root__' | '/$' | '/design' | '/api/search'
+  to: '/$' | '/' | '/design' | '/demo' | '/api/search' | '/_render/share-image'
+  id:
+    | '__root__'
+    | '/$'
+    | '/_tool'
+    | '/design'
+    | '/_tool/demo'
+    | '/api/search'
+    | '/_tool/_render/share-image'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   SplatRoute: typeof SplatRoute
+  ToolRoute: typeof ToolRouteWithChildren
   DesignRoute: typeof DesignRoute
   ApiSearchRoute: typeof ApiSearchRoute
 }
@@ -68,12 +103,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_tool': {
+      id: '/_tool'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof ToolRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/design': {
       id: '/design'
       path: '/design'
       fullPath: '/design'
       preLoaderRoute: typeof DesignRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_tool/demo': {
+      id: '/_tool/demo'
+      path: '/demo'
+      fullPath: '/demo'
+      preLoaderRoute: typeof ToolDemoRouteImport
+      parentRoute: typeof ToolRoute
     }
     '/api/search': {
       id: '/api/search'
@@ -82,11 +131,31 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSearchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_tool/_render/share-image': {
+      id: '/_tool/_render/share-image'
+      path: '/_render/share-image'
+      fullPath: '/_render/share-image'
+      preLoaderRoute: typeof ToolRenderShareImageRouteImport
+      parentRoute: typeof ToolRoute
+    }
   }
 }
 
+interface ToolRouteChildren {
+  ToolDemoRoute: typeof ToolDemoRoute
+  ToolRenderShareImageRoute: typeof ToolRenderShareImageRoute
+}
+
+const ToolRouteChildren: ToolRouteChildren = {
+  ToolDemoRoute: ToolDemoRoute,
+  ToolRenderShareImageRoute: ToolRenderShareImageRoute,
+}
+
+const ToolRouteWithChildren = ToolRoute._addFileChildren(ToolRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   SplatRoute: SplatRoute,
+  ToolRoute: ToolRouteWithChildren,
   DesignRoute: DesignRoute,
   ApiSearchRoute: ApiSearchRoute,
 }
