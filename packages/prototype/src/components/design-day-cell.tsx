@@ -15,7 +15,6 @@ import { isDayOff, presetPatterns, usePatterns } from "../lib/design-patterns";
 import type { Pattern, Shift } from "../lib/design-patterns";
 import { designToday } from "../lib/design-today";
 import { dayName } from "../lib/text-limits";
-import { shortMonthOf } from "./design-month-name";
 import { holidayName, useWeek } from "./design-week";
 import {
   CellNamesContext,
@@ -279,12 +278,7 @@ export function DayCell({
       ? undefined
       : dayOffStyle(dayOff, offLook === "highlight", tint);
   const today = dateKey(date) === dateKey(designToday);
-  const { english, isColoredHoliday } = useWeek();
-  const holiday = isColoredHoliday(date);
-  // The 1st where a period's page turns the month: 11/1, or Nov 1 with
-  // 月と曜日 in English.
-  const monthDayOf = (day: Date) =>
-    english ? `${shortMonthOf(day, true)} ${day.getDate()}` : formatSlash(day);
+  const holiday = useWeek().isColoredHoliday(date);
   const change = blank ? undefined : timeChangeOf(entry, pattern);
   // A note is about the day, not the shift, so the date is marked, with a
   // stroke as in a paper diary, apart from the shift's 早出 and 残業
@@ -314,7 +308,7 @@ export function DayCell({
         )}
       >
         <span className={cx(onToday && todayMark, noted && dayParts.noted)}>
-          {withMonth ? monthDayOf(date) : date.getDate()}
+          {withMonth ? formatSlash(date) : date.getDate()}
         </span>
       </span>
       {shift && !hideOff && (
