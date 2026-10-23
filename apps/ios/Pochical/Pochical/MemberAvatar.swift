@@ -52,7 +52,6 @@ let samplePhoto = "sample:"
 /// usual one or deleting it when that applies. A photo taken or picked is
 /// moved and zoomed in its frame (`PhotoCrop`) before it is used.
 struct PhotoEditor<Picture: View>: View {
-  @Environment(\.themeColors) private var colors
   /// Said under the picture, as what tapping it does.
   let label: String
   /// Whether there is a photo to delete.
@@ -100,7 +99,12 @@ struct PhotoEditor<Picture: View>: View {
         Button("写真を削除", systemImage: "trash", role: .destructive) { run(onRemove) }
       }
     } label: {
-      face
+      PictureHeader(label: label) {
+        picture()
+          .overlay {
+            if busy { ProgressView() }
+          }
+      }
     }
     .disabled(busy)
     .frame(maxWidth: .infinity)
@@ -184,24 +188,29 @@ struct PhotoEditor<Picture: View>: View {
     await onPhoto(shrunk.jpeg)
   }
 
-  /// The picture, and the label under it.
-  private var face: some View {
-    VStack(spacing: 8) {
-      picture()
-        .overlay {
-          if busy { ProgressView() }
-        }
-      Text(label)
-        .font(.subheadline)
-        .foregroundStyle(colors.accentDefault)
-    }
-  }
-
   private func run(_ action: @escaping () async -> Void) {
     busy = true
     Task {
       defer { busy = false }
       await action()
+    }
+  }
+}
+
+/// A picture at the top of a page that changes it, what tapping it does
+/// under it in the accent (/design's PictureHeader): a face, a group's mark
+/// or a pattern's.
+struct PictureHeader<Picture: View>: View {
+  @Environment(\.themeColors) private var colors
+  let label: String
+  @ViewBuilder let picture: () -> Picture
+
+  var body: some View {
+    VStack(spacing: 8) {
+      picture()
+      Text(label)
+        .font(.subheadline)
+        .foregroundStyle(colors.accentDefault)
     }
   }
 }
