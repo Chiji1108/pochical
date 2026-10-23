@@ -236,11 +236,12 @@ private enum LookPart: Hashable {
   case emoji, icon, symbol
 }
 
-/// パターンを追加 or パターンを編集: the name, the time, whether it counts as
-/// a day off, the next day's pattern, whether it is still in use and the
-/// mark; deleting at the foot.
+/// パターンを追加 or パターンを編集: the pattern at the top, the way into its
+/// mark; the name and the time; whether it counts as a day off and the
+/// next day's pattern; whether it is still in use; deleting at the foot.
 struct PatternEditor: View {
   @Environment(\.themeColors) private var colors
+  @Environment(\.look) private var look
   @Environment(\.dismiss) private var dismiss
   @Dependency(\.defaultDatabase) private var database
   @Environment(\.write) private var write
@@ -281,20 +282,34 @@ struct PatternEditor: View {
     }
     let saved = shaped
     Form {
+      // The pattern as it is being changed, and the way into its mark, as
+      // Contacts' edit screen puts 編集 under the photo.
       Section {
-        HStack(spacing: 16) {
-          ShiftMark(pattern: saved, size: 44)
-          VStack(alignment: .leading, spacing: 2) {
-            Text(draft.name.isEmpty ? "新しいパターン" : draft.name)
-              .font(.headline)
-              .foregroundStyle(draft.name.isEmpty ? colors.textTertiary : colors.textPrimary)
-            Text(patternTimeText(saved.time))
-              .font(.footnote)
-              .foregroundStyle(colors.textTertiary)
+        PageLink(indicator: false) {
+          LookEditor(draft: $draft, picked: $picked, others: others)
+        } label: {
+          HStack(spacing: 16) {
+            VStack(spacing: 6) {
+              ShiftMark(pattern: saved, size: 44)
+              Text("印と色を変える")
+                .font(.caption)
+                .foregroundStyle(colors.accentDefault)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+              Text(draft.name.isEmpty ? "新しいパターン" : draft.name)
+                .font(.headline)
+                .foregroundStyle(draft.name.isEmpty ? colors.textTertiary : colors.textPrimary)
+              Text(patternTimeText(saved.time))
+                .font(.footnote)
+                .foregroundStyle(colors.textTertiary)
+            }
           }
-          Spacer()
+          .padding(.vertical, 4)
         }
-        .padding(.vertical, 4)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("印と色を変える")
+        .accessibilityValue(markDescription)
+        .accessibilityAddTraits(.isButton)
       }
       .settingsRows()
 
@@ -315,6 +330,10 @@ struct PatternEditor: View {
           // at a row's first words, here the dash between the times.
           .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
         }
+      }
+      .settingsRows()
+
+      Section {
         Toggle(isOn: $draft.countsAsOff) {
           Text("休みとして数える")
           Text("今月のお休みの日数に入ります")
@@ -333,36 +352,25 @@ struct PatternEditor: View {
             }
           }
         }
-        // A state undone as easily, so a switch saved with the rest, as
-        // iOS's; a new pattern is in use.
-        if !isNew {
+      }
+      .settingsRows()
+
+      // A state undone as easily, so a switch saved with the rest, as
+      // iOS's; a new pattern is in use.
+      if !isNew {
+        Section {
           // Locked only where turning it off is refused: one turned off
           // before an order took it on may still be turned back on.
           Toggle("入力に出す", isOn: inUse)
             .disabled(archivingRefused && !draft.archived)
-        }
-      } header: {
-        Text("基本")
-      } footer: {
-        if !isNew {
+        } footer: {
           Text(
             archivingRefused
               ? "繰り返しの並びに入っているので、オフにしたり削除したりできません。先に「繰り返し」で並びを変えてください。"
               : "オフにすると、ポチポチ入力のボタンに出なくなります。入っている日には、そのまま出ます。")
         }
+        .settingsRows()
       }
-      .settingsRows()
-
-      Section("見た目") {
-        PageLink {
-          LookEditor(draft: $draft, picked: $picked, others: others)
-        } label: {
-          LabeledContent("印と色") {
-            ShiftMark(pattern: saved, size: 20)
-          }
-        }
-      }
-      .settingsRows()
 
       // Said once: under the switch, while that is blocked too.
       if !isNew, !archivingRefused {
@@ -422,6 +430,18 @@ struct PatternEditor: View {
   /// orders change: it cannot be deleted until then.
   private var repeating: Bool {
     repeats(initial.id, in: repeatOrders.compactMap(\.order))
+  }
+
+  /// The mark as the person's スタイル draws it, and its color, for
+  /// VoiceOver.
+  private var markDescription: String {
+    let mark =
+      switch look.style {
+      case .icon: MarkIconNames.names[draft.icon] ?? draft.icon
+      case .emoji: draft.emoji
+      case .badge: draft.symbol
+      }
+    return look.colored ? "\(mark)、\(colors.mark(draft.color).name)" : mark
   }
 
   /// 入力に出す: whether it is in use, archived when off.

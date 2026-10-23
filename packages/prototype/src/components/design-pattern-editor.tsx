@@ -1,6 +1,6 @@
 import { PATTERNS_PER_PAGE } from "@pochical/design/limits";
 import { readyPatternOrder } from "@pochical/design/patterns";
-import { css } from "@pochical/styled-system/css";
+import { css, cx } from "@pochical/styled-system/css";
 import { Fragment, useContext, useState } from "react";
 
 import { patternsWithout } from "../lib/design-days";
@@ -96,6 +96,24 @@ const editor = {
     color: "danger.default",
     margin: "-8px 4px 0",
     textStyle: "caption",
+  }),
+  // 印と色を変える under the mark, in the accent as a link's words.
+  change: css({ color: "accent.default", textStyle: "caption" }),
+  // The switch with its note under it, as one section.
+  inUse: css({ display: "flex", flexDirection: "column", gap: "8px" }),
+  // The pattern at the top, pressed to open 印と色.
+  lookLink: css({
+    border: 0,
+    cursor: "pointer",
+    textAlign: "start",
+    width: "100%",
+  }),
+  // The mark over 印と色を変える.
+  mark: css({
+    alignItems: "center",
+    display: "flex",
+    flexDirection: "column",
+    gap: "6px",
   }),
   // The name over the time, beside the mark at the top.
   name: css({ display: "flex", flexDirection: "column", gap: "2px" }),
@@ -529,8 +547,20 @@ function PatternEditor({
         }
         title={isNew ? "パターンを追加" : "パターンを編集"}
       />
-      <div className={markPreview()}>
-        <MarkGlyph look={draft} size={44} style={style} />
+      {/* The way into its mark, as Contacts' edit screen puts 編集 under
+          the photo. */}
+      <button
+        aria-label="印と色を変える"
+        className={cx(markPreview(), editor.lookLink)}
+        onClick={() => {
+          setSubPage("look");
+        }}
+        type="button"
+      >
+        <span className={editor.mark}>
+          <MarkGlyph look={draft} size={44} style={style} />
+          <small className={editor.change}>印と色を変える</small>
+        </span>
         <span className={editor.name}>
           {/* Until it is named, what it is, faint: not 名前を入力, which
               read as a field to press. */}
@@ -539,76 +569,78 @@ function PatternEditor({
           </strong>
           <small className={editor.time}>{timeText(patternOf(draft))}</small>
         </span>
-      </div>
-      <Section title="基本">
-        <List>
+      </button>
+      <List>
+        <ListRow
+          label="名前"
+          control={
+            <>
+              <LimitedInput
+                align="end"
+                look="inline"
+                kind="shiftName"
+                onValueChange={rename}
+                placeholder="例：日勤"
+                value={draft.name}
+              />
+            </>
+          }
+        />
+        <SwitchRow
+          label="時間なし"
+
+          checked={draft.allDay}
+          onChange={(checked) => {
+            setDraft({ ...draft, allDay: checked });
+          }}
+        />
+        {!draft.allDay && (
           <ListRow
-            label="名前"
+            label="時間"
             control={
-              <>
-                <LimitedInput
-                  align="end"
-                  look="inline"
-                  kind="shiftName"
-                  onValueChange={rename}
-                  placeholder="例：日勤"
-                  value={draft.name}
-                />
-              </>
+              <TimeRange
+                end={draft.end}
+                onChange={(field, value) => {
+                  setDraft({ ...draft, [field]: value });
+                }}
+                start={draft.start}
+              />
             }
           />
-          <SwitchRow
-            label="時間なし"
+        )}
+      </List>
+      <List>
+        <SwitchRow
+          // What it changes that every calendar shows; groups and
+          // widgets follow from it being a day off.
+          detail="今月のお休みの日数に入ります"
+          label="休みとして数える"
 
-            checked={draft.allDay}
-            onChange={(checked) => {
-              setDraft({ ...draft, allDay: checked });
-            }}
-          />
-          {!draft.allDay && (
-            <ListRow
-              label="時間"
-              control={
-                <TimeRange
-                  end={draft.end}
-                  onChange={(field, value) => {
-                    setDraft({ ...draft, [field]: value });
-                  }}
-                  start={draft.start}
-                />
-              }
-            />
-          )}
-          <SwitchRow
-            // What it changes that every calendar shows; groups and
-            // widgets follow from it being a day off.
-            detail="今月のお休みの日数に入ります"
-            label="休みとして数える"
-
-            checked={draft.countsAsOff}
-            onChange={(checked) => {
-              setDraft({ ...draft, countsAsOff: checked });
-            }}
-          />
-          <ListRow
-            onClick={() => {
-              setSubPage("nextDay");
-            }}
-            label="翌日のパターン"
-            value={
-              <>
-                {nextDay && (
-                  <MarkGlyph look={nextDay} size={18} style={style} />
-                )}
-                {nextDay?.name ?? "なし"}
-              </>
-            }
-            valueClassName={markValue}
-          />
-          {/* A state undone as easily, so a switch saved with the rest, as
-              iOS's; a new pattern is in use. Archived, it keeps its days'
-              marks but leaves the keys. */}
-          {!isNew && (
+          checked={draft.countsAsOff}
+          onChange={(checked) => {
+            setDraft({ ...draft, countsAsOff: checked });
+          }}
+        />
+        <ListRow
+          onClick={() => {
+            setSubPage("nextDay");
+          }}
+          label="翌日のパターン"
+          value={
+            <>
+              {nextDay && <MarkGlyph look={nextDay} size={18} style={style} />}
+              {nextDay?.name ?? "なし"}
+            </>
+          }
+          valueClassName={markValue}
+        />
+      </List>
+      {/* A state undone as easily, so a switch saved with the rest, as
+          iOS's; a new pattern is in use. Archived, it keeps its days'
+          marks but leaves the keys. */}
+      {!isNew && (
+        <div className={editor.inUse}>
+          <List>
             <SwitchRow
               checked={draft.archived !== true}
               disabled={blocksArchiving && draft.archived !== true}
@@ -617,32 +649,14 @@ function PatternEditor({
                 setDraft({ ...draft, archived: checked ? undefined : true });
               }}
             />
-          )}
-        </List>
-        {!isNew && (
+          </List>
           <Note>
             {blocksArchiving
               ? "繰り返しの並びに入っているので、オフにしたり削除したりできません。先に「繰り返し」で並びを変えてください。"
               : "オフにすると、ポチポチ入力のボタンに出なくなります。入っている日には、そのまま出ます。"}
           </Note>
-        )}
-      </Section>
-      <Section title="見た目">
-        <List>
-          <ListRow
-            onClick={() => {
-              setSubPage("look");
-            }}
-            label="印と色"
-            value={
-              <>
-                <MarkGlyph look={draft} size={20} style={style} />
-              </>
-            }
-            valueClassName={markValue}
-          />
-        </List>
-      </Section>
+        </div>
+      )}
       {/* Said once: above, under the switch, while that is blocked too. */}
       {!isNew && inOrder && !blocksArchiving && (
         <Note>
