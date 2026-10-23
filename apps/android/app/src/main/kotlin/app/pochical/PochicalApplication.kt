@@ -33,11 +33,14 @@ interface AppGraph : MetroAppComponentProviders {
   }
 }
 
-class PochicalApplication : Application(), MetroApplication {
+class PochicalApplication : Application(), MetroApplication, PochicalKit.Holder {
   private val graph by lazy { createGraphFactory<AppGraph.Factory>().create(this) }
 
   override val appComponentProviders: MetroAppComponentProviders
     get() = graph
+
+  override val pochicalKit: PochicalKit
+    get() = graph.kit
 
   override fun onCreate() {
     super.onCreate()

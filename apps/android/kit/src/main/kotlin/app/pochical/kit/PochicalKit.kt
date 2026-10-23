@@ -16,6 +16,11 @@ import okhttp3.OkHttpClient
  * they make, and the account that syncs them with the server (BuildConfig.SERVER).
  */
 class PochicalKit(context: Context) {
+  /** The app, which holds the one kit for what runs without its screens, as [SendOutboxWorker]. */
+  interface Holder {
+    val pochicalKit: PochicalKit
+  }
+
   val database: AppDatabase = AppDatabase.open(context)
   val edits = OwnEdits(database)
   val account =
@@ -27,6 +32,7 @@ class PochicalKit(context: Context) {
       http = OkHttpClient(),
       scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
       network = DefaultNetworkWatch(context),
+      sendInBackground = { SendOutboxWorker.enqueue(context) },
     )
 
   /**

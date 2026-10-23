@@ -5,15 +5,18 @@ plugins {
   alias(libs.plugins.room)
 }
 
+// `mise run server` as the emulator reaches it on this computer; another port with
+// -PpochicalServer=http://10.0.2.2:<port>, for a server beside another checkout's.
+val localServer = providers.gradleProperty("pochicalServer").orElse("http://10.0.2.2:8787").get()
+
 android {
   namespace = "app.pochical.kit"
   compileSdk = libs.versions.compileSdk.get().toInt()
   defaultConfig {
     minSdk = libs.versions.minSdk.get().toInt()
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-    // The server an instrumented test signs in to: `mise run server` on
-    // this computer, as the emulator reaches it.
-    testInstrumentationRunnerArguments["server"] = "http://10.0.2.2:8787"
+    // The server an instrumented test signs in to.
+    testInstrumentationRunnerArguments["server"] = localServer
   }
   buildFeatures {
     buildConfig = true
@@ -22,7 +25,7 @@ android {
     // A debug build talks to `mise run server` on the computer the emulator
     // runs on, as an iOS Debug build in the simulator does.
     debug {
-      buildConfigField("String", "SERVER", "\"http://10.0.2.2:8787\"")
+      buildConfigField("String", "SERVER", "\"$localServer\"")
     }
     release {
       buildConfigField("String", "SERVER", "\"https://api.pochical.app\"")
@@ -66,6 +69,7 @@ dependencies {
   implementation(libs.okhttp)
   implementation(libs.kotlinx.serialization.json)
   implementation(libs.lifecycle.process)
+  implementation(libs.work.runtime)
 
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)

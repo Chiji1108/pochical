@@ -48,6 +48,8 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
 
   /** Keeps [pattern] as it is now; a new one goes at the end of the order. */
   suspend fun savePattern(id: String, pattern: Pattern) = database.write {
+    // Asked before the edit shows it.
+    val isNew = !hasPattern(id)
     val clock = nextClock(now())
     edit(change {
       this.pattern = patternValue {
@@ -56,8 +58,7 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
         hlc = clock
       }
     })
-    val order = patternIds()
-    if (id !in order) orderPatterns(order + id)
+    if (isNew) orderPatterns(patternIds() - id + id)
   }
 
   /**

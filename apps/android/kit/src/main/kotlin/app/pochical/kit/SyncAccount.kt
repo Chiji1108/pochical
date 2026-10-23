@@ -18,6 +18,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -56,6 +59,12 @@ class SyncAccount(
   network: NetworkWatch? = null,
   private val now: () -> Long = System::currentTimeMillis,
   private val random: Random = Random.Default,
+  /**
+   * Asks the OS for time in the background to send what the outbox holds (WorkManager on Android,
+   * spec/sync-protocol.md, Sockets), the app perhaps ended before it is sent: what runs then calls
+   * [sendOutbox].
+   */
+  private val sendInBackground: () -> Unit = {},
 ) {
   private val mutableState = MutableStateFlow<AccountState>(AccountState.SigningIn)
   val state: StateFlow<AccountState> = mutableState.asStateFlow()
@@ -73,6 +82,8 @@ class SyncAccount(
   private val holds = mutableMapOf<String, Int>()
   private var signingIn: Job? = null
   private var closingUser: Job? = null
+  /** How many [sendOutbox] calls wait: the user's socket stays open for them in the background. */
+  private var sending = 0
 
   init {
     scope.launch { for (command in commands) handle(command) }
@@ -92,6 +103,24 @@ class SyncAccount(
     commands.trySend(Command.Background)
   }
 
+  /**
+   * Connects if need be, signing in too, and sends the outbox until the server has acknowledged it
+   * all, in the foreground or not. True once nothing waits; false when nothing can go, the session
+   * ended. Sharing the user's one socket with the foreground, it sends nothing twice.
+   */
+  suspend fun sendOutbox(): Boolean {
+    commands.send(Command.Send(waiting = true))
+    try {
+      return merge(
+          database.sync().lastWaiting().filter { it == null }.map { true },
+          state.filter { it == AccountState.SessionEnded }.map { false },
+        )
+        .first()
+    } finally {
+      commands.trySend(Command.Send(waiting = false))
+    }
+  }
+
   /** Keeps the group's socket open, while the app is in the foreground, until [GroupHold.release]. */
   fun hold(groupId: String): GroupHold {
     commands.trySend(Command.Hold(groupId))
@@ -108,19 +137,27 @@ class SyncAccount(
         if (current != null) {
           current.user.start()
           holds.keys.forEach { current.group(it).start() }
-        } else if (signingIn?.isActive != true && state.value != AccountState.SessionEnded) {
-          signingIn = scope.launch { signIn() }
+        } else {
+          startSigningIn()
         }
       }
       Command.Background -> {
         foreground = false
-        signingIn?.cancel()
-        if (current != null) {
-          current.groups.values.forEach { it.close() }
-          closingUser = current.scope.launch {
-            database.sync().lastWaiting().first { it == null }
-            current.user.close()
-          }
+        current?.groups?.values?.forEach { it.close() }
+        if (database.sync().lastWaiting().first() != null) {
+          sendInBackground()
+          closingUser = scope.launch { sendOutbox() }
+        } else if (sending == 0) {
+          signingIn?.cancel()
+          current?.user?.close()
+        }
+      }
+      is Command.Send -> {
+        sending += if (command.waiting) 1 else -1
+        when {
+          command.waiting && current != null -> current.user.start()
+          command.waiting -> startSigningIn()
+          sending == 0 && !foreground -> current?.user?.close()
         }
       }
       is Command.Hold -> {
@@ -140,10 +177,8 @@ class SyncAccount(
         val stretch = Stretch(Credentials(generation.incrementAndGet(), command.session.token, command.session.userId, generation::get))
         this.stretch.value = stretch
         mutableState.value = AccountState.SignedIn(command.session.userId)
-        if (foreground) {
-          stretch.user.start()
-          holds.keys.forEach { stretch.group(it).start() }
-        }
+        if (foreground || sending > 0) stretch.user.start()
+        if (foreground) holds.keys.forEach { stretch.group(it).start() }
       }
       is Command.SessionUnknown -> {
         if (current?.credentials?.generation != command.generation) return
@@ -159,9 +194,15 @@ class SyncAccount(
     }
   }
 
+  private fun startSigningIn() {
+    if (signingIn?.isActive != true && state.value != AccountState.SessionEnded) {
+      signingIn = scope.launch { signIn() }
+    }
+  }
+
   /**
-   * The kept session, or a new anonymous one, tried again after a wait that doubles while the app
-   * stays in the foreground; then the database is claimed for its user. A database another user
+   * The kept session, or a new anonymous one, tried again after a wait that doubles while the account
+   * still needs it; then the database is claimed for its user. A database another user
    * left, whose session the device no longer has, is erased first, as nothing can send what it holds
    * any more (spec/sync-protocol.md, Sockets).
    */
@@ -215,6 +256,9 @@ class SyncAccount(
     data object Foreground : Command
 
     data object Background : Command
+
+    /** A [sendOutbox] began waiting, or stopped. */
+    data class Send(val waiting: Boolean) : Command
 
     data class Hold(val groupId: String) : Command
 

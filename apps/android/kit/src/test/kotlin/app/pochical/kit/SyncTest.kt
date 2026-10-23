@@ -32,7 +32,10 @@ private class Device(server: FakeServer, now: () -> Long = System::currentTimeMi
   val sessionFile = File(createTempDirectory().toFile(), "session")
   val sessions = SessionStore(sessionFile, MarkedSeal)
   val edits = OwnEdits(database, now)
-  val account = SyncAccount(database, sessions, server.url, OkHttpClient(), scope, now = now)
+  /** How many times the account asked the OS for time to send in the background. */
+  val backgroundSends = java.util.concurrent.atomic.AtomicInteger()
+  val account =
+    SyncAccount(database, sessions, server.url, OkHttpClient(), scope, now = now) { backgroundSends.incrementAndGet() }
 
   suspend fun note(date: String) = database.values().days(date, date).first().singleOrNull()?.note
 
@@ -111,6 +114,27 @@ class SyncTest {
     phone.account.foreground()
     withTimeout(10_000) { phone.outboxEmptied() }
     assertEquals("オフライン", server.day("2026-10-03", NOTE)?.day?.value)
+  }
+
+  @Test
+  fun leavingWithEditsWaitingAsksForTimeAndWhatRunsThenSendsThem() = runBlocking<Unit> {
+    val phone = device()
+    phone.account.foreground()
+    withTimeout(10_000) { phone.current() }
+    phone.account.background()
+    withTimeout(10_000) { phone.account.userSocket.first { it == SocketState.Closed } }
+    assertEquals("nothing waits, so nothing is asked", 0, phone.backgroundSends.get())
+
+    // An app ended in the background comes back without its screens, for the work alone.
+    val ended = Device(server).also { devices += it }
+    ended.sessions.write(phone.sessions.read()!!)
+    ended.edits.setDay("2026-10-07", DayField.DAY_FIELD_NOTE, "閉じる前")
+    ended.account.background()
+    eventually { ended.backgroundSends.get() == 1 }
+    assertTrue(withTimeout(10_000) { ended.account.sendOutbox() })
+    assertEquals("閉じる前", server.day("2026-10-07", NOTE)?.day?.value)
+    // Still in the background, the socket closes once it is sent.
+    withTimeout(10_000) { ended.account.userSocket.first { it == SocketState.Closed } }
   }
 
   @Test
