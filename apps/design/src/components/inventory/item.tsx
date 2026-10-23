@@ -8,7 +8,7 @@ import type { ReactNode } from "react";
 // components, and complete by tests/design-catalog.test.ts.
 
 const styles = {
-  // Two across on a wide page; one on a phone.
+  // A wide one two columns across, or the one column on a phone.
   item: cva({
     base: {
       "& > figcaption": {
@@ -50,7 +50,8 @@ const styles = {
     margin: "4px 0 0",
     rowGap: "2px",
   }),
-  // A piece keeps within its box, or fills a wide one.
+  // A piece keeps within its box. A wide box stacks its pieces one under
+  // another and stretches them across, as a screen's column does.
   sample: cva({
     base: {
       "& > *": { maxWidth: "100%" },
@@ -64,11 +65,16 @@ const styles = {
       minHeight: "88px",
       padding: "16px",
     },
-    variants: { wide: { true: { "& > *": { width: "100%" } } } },
+    variants: {
+      wide: {
+        true: { alignItems: "stretch", flexDirection: "column", gap: "12px" },
+      },
+    },
   }),
 };
 
-// A group's pieces, two across on a wide page and one on a phone.
+// A group's pieces, as many across as fit at 200px or wider, and one on
+// a phone.
 export function Items({ children }: { children: ReactNode }) {
   return <div className={styles.items}>{children}</div>;
 }

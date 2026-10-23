@@ -4,7 +4,7 @@ import presetPanda from "@pandacss/preset-panda";
 import { increasedContrast } from "@pochical/design/colors";
 import { radii, shadows, sizes, stateLayers } from "@pochical/design/metrics";
 import { colorRoleNames } from "@pochical/design/themes";
-import { textStyles } from "@pochical/design/type";
+import { monoFont, textStyles } from "@pochical/design/type";
 
 // Panda CSS for the prototype's pieces (@pochical/prototype), shared by
 // every app that shows them. The colors stay the CSS variables that
@@ -154,9 +154,10 @@ export const config = defineConfig({
           },
         },
         // Emoji marks and icons draw in the system's emoji font wherever
-        // they sit.
+        // they sit; code in the web's one font for it (design/src/type.ts).
         fonts: {
           emoji: { value: '"Apple Color Emoji", "Segoe UI Emoji", sans-serif' },
+          mono: { value: monoFont },
         },
         // The corners by size (design/src/metrics.ts), and a circle for
         // round avatars and dots.
