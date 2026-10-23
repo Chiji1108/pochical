@@ -1,4 +1,5 @@
 import { markColorIn, markColors } from "@pochical/design/colors";
+import { iconNames } from "@pochical/design/mark-icon-names";
 import { markIconPaths } from "@pochical/design/mark-icon-paths";
 import { markIconGlyphs } from "@pochical/design/mark-icons";
 import type { MarkIcon } from "@pochical/design/mark-icons";
@@ -253,6 +254,21 @@ function useThemeMarkColor() {
 export const MonochromeContext = createContext<{ monochrome: boolean }>({
   monochrome: false,
 });
+
+// The mark as the viewer's スタイル draws it, for a screen reader: the
+// icon's name, the emoji or the letter, and the color it is drawn in, as
+// iOS says it.
+export function useMarkDescription(look: Look) {
+  const style = useContext(ShiftMarkStyleContext);
+  const { monochrome } = useContext(MonochromeContext);
+  const color = useMarkColors()[look.color]?.name;
+  const mark = {
+    badge: look.symbol,
+    emoji: look.emoji,
+    icon: iconNames[look.icon],
+  }[style];
+  return style === "emoji" || monochrome || !color ? mark : `${mark}、${color}`;
+}
 
 // The color a mark is drawn in, after the theme-only setting.
 export function useDisplayColor(markColor: MarkColor) {

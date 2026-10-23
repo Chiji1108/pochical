@@ -1,10 +1,10 @@
-import showcase from "@pochical/showcase/panda";
+import { appConfig } from "@pochical/styled-system/config";
 
-// Panda CSS for this app, shared with the other two, with its layers named
-// apart from Tailwind CSS's (base, utilities), which Fumadocs UI brings
-// (src/styles.css).
+// Panda CSS for this app, from @pochical/styled-system's config, with its
+// layers named apart from Tailwind CSS's (base, utilities), which
+// Fumadocs UI brings (src/styles.css).
 export default {
-  ...showcase,
+  ...appConfig,
   layers: {
     base: "panda-base",
     recipes: "panda-recipes",

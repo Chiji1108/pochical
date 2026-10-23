@@ -8,7 +8,7 @@ import { setTimeout as wait } from "node:timers/promises";
 
 import { chromium } from "playwright-core";
 
-const url = process.argv[2] ?? "http://localhost:3201/demo";
+const url = process.argv[2] ?? "http://localhost:3200/demo";
 const runs = Number(process.argv[3] ?? "12");
 
 const resize = process.argv.includes("--resize");

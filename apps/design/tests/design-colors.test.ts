@@ -23,7 +23,10 @@ const outside = new Set([
   "design-colors.tsx",
   "design-frames.tsx",
   "design-home-screen.tsx",
+  // The workspace around the phones, and its own switches beside them.
+  "design-page.tsx",
   "design-phone.tsx",
+  "design-variant-panel.tsx",
   "design-widget-frame.tsx",
   // An invitation's share image, in the site's colors (styles.css) as the
   // site's own share image is.

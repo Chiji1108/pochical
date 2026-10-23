@@ -34,7 +34,6 @@ jobs:
             typescript:
               - "apps/web/**"
               - "apps/design/**"
-              - "apps/demo/**"
               - "apps/try/**"
               - "apps/server/**"
               - "apps/admin/**"
@@ -70,7 +69,7 @@ jobs:
               - "mise.toml"
               - ".github/workflows/ci.yml"
 
-  # apps/web, apps/design, apps/demo, apps/try, apps/server, apps/admin,
+  # apps/web, apps/design, apps/try, apps/server, apps/admin,
   # packages/ and tools/: lint
   # and format, types, tests.
   typescript:
@@ -95,11 +94,9 @@ jobs:
       # The site builds, and its Worker's bundle and config validate.
       - run: bun run build && bunx wrangler deploy --dry-run
         working-directory: apps/web
-      # The design, demo and try Workers build, and their configs validate.
+      # The design and try Workers build, and their configs validate.
       - run: bun run build && bunx wrangler deploy --dry-run
         working-directory: apps/design
-      - run: bun run build && bunx wrangler deploy --dry-run
-        working-directory: apps/demo
       - run: bun run build && bunx wrangler deploy --dry-run
         working-directory: apps/try
       # The server and admin Workers bundle and their configs validate, as
