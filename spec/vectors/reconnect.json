@@ -1,5 +1,5 @@
 {
-  "about": "How long a device may wait before a try to reconnect (spec/sync-protocol.md, Reconnecting): tries counts the tries since a socket last caught up (the Pong to the Ping after Welcome, Keepalive), this one included; the most is firstMs doubled for each try before it, up to mostMs (socketRules.reconnectFirstMs and reconnectMostMs in design/src/socket.ts), and the device waits a time drawn at random from 0 up to that most.",
+  "about": "How long a device may wait before a try to reconnect (spec/sync-protocol.md, Reconnecting): tries counts the tries since a socket last caught up (the Pong to the Ping after Welcome, Keepalive), this one included; the most is firstMs doubled for each try before it, up to mostMs (socketRules.reconnectFirstMs and reconnectMostMs in design/src/socket.ts), and the device waits a time drawn at random from 0 up to that most. defaultNetwork: what the sockets hear as the OS tells which network is the device's default (Keepalive). It starts from the default as the watch begins (null for none), and each step is the default the OS tells of next (null for none): the one already the default is not heard, none is lost, and any other is changed (another taking over, or one after none), whereupon an open socket closes and every socket tries at once.",
   "waitMost": [
     {
       "name": "the first try",
@@ -28,6 +28,44 @@
       "firstMs": 1000,
       "mostMs": 60000,
       "expected": 60000
+    }
+  ],
+  "defaultNetwork": [
+    {
+      "name": "the default as the watch begins, told again",
+      "from": "wifi",
+      "steps": ["wifi"],
+      "expected": []
+    },
+    {
+      "name": "Wi-Fi taking over while cellular is still up",
+      "from": "cellular",
+      "steps": ["wifi"],
+      "expected": ["changed"]
+    },
+    {
+      "name": "no default network",
+      "from": "wifi",
+      "steps": [null],
+      "expected": ["lost"]
+    },
+    {
+      "name": "the same network back after none",
+      "from": "wifi",
+      "steps": [null, "wifi"],
+      "expected": ["lost", "changed"]
+    },
+    {
+      "name": "Wi-Fi to cellular, cellular lost, Wi-Fi again",
+      "from": "wifi",
+      "steps": ["cellular", null, "wifi"],
+      "expected": ["changed", "lost", "changed"]
+    },
+    {
+      "name": "none as the watch begins, then one",
+      "from": null,
+      "steps": [null, "cellular"],
+      "expected": ["changed"]
     }
   ]
 }

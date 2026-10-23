@@ -5,9 +5,11 @@ import app.pochical.design.SyncSocket
 import app.pochical.v1.ClientFrame
 import app.pochical.v1.DayField
 import java.io.File
+import java.time.LocalDate
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.random.Random
 import kotlin.io.path.createTempDirectory
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -254,5 +256,34 @@ class SyncTest {
     eventually { server.sockets.size == 3 }
     val tookMs = System.currentTimeMillis() - changedMs
     assertTrue("tried in $tookMs ms, not after the wait", tookMs < SyncSocket.reconnectFirstMs / 2)
+  }
+
+  @Test
+  fun aSocketMovesBeforeTakingFramesStillQueued() = runBlocking {
+    val network = FakeNetwork()
+    val phone = device(network = network)
+    phone.account.foreground()
+    withTimeout(10_000) { phone.current() }
+
+    // The database held, the socket takes its first frame no further and the rest queue behind it.
+    val held = CompletableDeferred<Unit>()
+    val release = CompletableDeferred<Unit>()
+    val holding = phone.scope.launch {
+      phone.database.write {
+        held.complete(Unit)
+        release.await()
+      }
+    }
+    held.await()
+    val dates = (0L until 50L).map { LocalDate.of(2026, 11, 1).plusDays(it).toString() }
+    server.noteElsewhere(dates)
+    delay(500)
+    network.changed()
+    release.complete(Unit)
+    holding.join()
+
+    eventually { server.sockets.size == 2 && server.sockets[1].isNotEmpty() }
+    val hello = server.sockets[1].first().hello
+    assertTrue("moved at cursor ${hello.cursor}, not after all ${dates.size} frames", hello.cursor < dates.size)
   }
 }

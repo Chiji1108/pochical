@@ -270,3 +270,24 @@ public func reconnectWaitMost(tries: Int, firstMs: Int, mostMs: Int) -> Int {
   }
   return min(most, mostMs)
 }
+
+/// What the sockets hear of the device's default network (spec/sync-protocol.md,
+/// Keepalive): none, or another than the one before.
+enum NetworkChange: Equatable, Sendable {
+  case lost
+  case changed
+}
+
+/// Which network is the device's default (spec/vectors/reconnect.json,
+/// defaultNetwork), `now` the one as the watch begins, nil for none.
+struct DefaultNetwork<Network: Equatable & Sendable>: Sendable {
+  private(set) var now: Network?
+
+  /// `network` is the default now, nil for none: what the sockets hear of
+  /// it, nothing when it already was.
+  mutating func becomes(_ network: Network?) -> NetworkChange? {
+    guard network != now else { return nil }
+    now = network
+    return network == nil ? .lost : .changed
+  }
+}

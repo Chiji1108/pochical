@@ -45,26 +45,27 @@ class DefaultNetworkWatch(private val context: Context) : NetworkWatch {
 }
 
 /**
- * Which network is the default, from a default network callback's onAvailable and onLost, [N] being
- * the OS's handle of a network and [now] the default as the watch begins, null for none. The OS
- * says onAvailable for each network that becomes the default, the one already the default as the
- * watch begins included, but onLost only for the default itself: another taking over is told by
- * its onAvailable alone, while the one before lingers until the OS tears it down.
+ * Which network is the default (spec/vectors/reconnect.json, defaultNetwork), [N] being the OS's
+ * handle of a network and [now] the default as the watch begins, null for none. A default network
+ * callback says onAvailable for each network that becomes the default, the one already the default
+ * as the watch begins included, but onLost only for the default itself: another taking over is
+ * told by its onAvailable alone, while the one before lingers until the OS tears it down.
  */
 class DefaultNetwork<N : Any>(
   private var now: N?,
   private val lost: () -> Unit,
   private val changed: (N) -> Unit,
 ) {
-  fun available(network: N) {
-    if (network == now) return
-    now = network
-    changed(network)
-  }
+  fun available(network: N) = becomes(network)
 
   fun lost(network: N) {
-    if (network != now) return
-    now = null
-    lost()
+    if (network == now) becomes(null)
+  }
+
+  /** [network] is the default now, null for none. */
+  fun becomes(network: N?) {
+    if (network == now) return
+    now = network
+    if (network == null) lost() else changed(network)
   }
 }
