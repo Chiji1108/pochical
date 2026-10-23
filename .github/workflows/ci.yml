@@ -62,9 +62,10 @@ jobs:
               - "mise.toml"
               - ".github/workflows/ci.yml"
             # design/ and proto/ reach the app through the code generated
-            # into apps/android.
+            # into apps/android; :kit's tests read spec/vectors.
             android:
               - "apps/android/**"
+              - "spec/vectors/**"
               - "mise.toml"
               - ".github/workflows/ci.yml"
 
