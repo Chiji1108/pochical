@@ -36,6 +36,7 @@ import {
   nextColor,
   sameIcon,
   ShiftMarkStyleContext,
+  useMarkDescription,
 } from "./shift-mark";
 import type { Look, ShiftMarkStyle } from "./shift-mark";
 
@@ -481,6 +482,7 @@ function PatternEditor({
     });
   };
   const canSave = draft.name.trim() !== "";
+  const markDescription = useMarkDescription(draft);
   // A repeating order in use or to come puts it on days, so it stays in
   // use; one already archived may still come back.
   const blocksArchiving = inOrder && initial.archived !== true;
@@ -550,7 +552,7 @@ function PatternEditor({
       {/* The way into its mark, as Contacts' edit screen puts 編集 under
           the photo. */}
       <button
-        aria-label="印と色を変える"
+        aria-label={`印と色を変える、${markDescription}`}
         className={cx(markPreview(), editor.lookLink)}
         onClick={() => {
           setSubPage("look");

@@ -432,8 +432,8 @@ struct PatternEditor: View {
     repeats(initial.id, in: repeatOrders.compactMap(\.order))
   }
 
-  /// The mark as the person's スタイル draws it, and its color, for
-  /// VoiceOver.
+  /// The mark as the person's スタイル draws it, and the color it is drawn
+  /// in, for VoiceOver.
   private var markDescription: String {
     let mark =
       switch look.style {
@@ -441,7 +441,7 @@ struct PatternEditor: View {
       case .emoji: draft.emoji
       case .badge: draft.symbol
       }
-    return look.colored ? "\(mark)、\(colors.mark(draft.color).name)" : mark
+    return look.colored && look.style != .emoji ? "\(mark)、\(colors.mark(draft.color).name)" : mark
   }
 
   /// 入力に出す: whether it is in use, archived when off.
