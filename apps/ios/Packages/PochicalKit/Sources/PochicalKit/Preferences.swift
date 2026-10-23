@@ -77,6 +77,7 @@ extension DeviceSettings {
     },
     PreferencePart("look", \.look.message) { $0.look = try Look($1) },
     PreferencePart("week", \.week.message) { $0.week = try Week($1) },
+    PreferencePart("period", \.period.message) { $0.period = try ShiftPeriod($1) },
     PreferencePart("heading", \.heading.message) { $0.heading = Heading($1) },
     PreferencePart("picture", \.picture.options.message) { $0.picture.options = try MarkOptions($1) },
     PreferencePart("calendarAdd", \.calendarAdd.message) { $0.calendarAdd = CalendarAdd($1) },
@@ -175,6 +176,27 @@ extension DeviceSettings.Week {
       $0.saturday = saturday
       $0.holiday = holiday
     }
+  }
+}
+
+/// A period said to start on a day it may not (spec/calendar.md, The
+/// shift period).
+struct PeriodStartOutOfRange: Error {
+  let startDay: Int32
+}
+
+extension ShiftPeriod {
+  /// 0, the message's zero, is the month itself (1日〜末日).
+  init(_ message: Pochical_V1_PeriodPreference) throws {
+    let start = message.startDay == 0 ? 1 : Int(message.startDay)
+    guard start != 1 || message.startDay == 0, Self.starts.contains(start) else {
+      throw PeriodStartOutOfRange(startDay: message.startDay)
+    }
+    self.init(start: start)
+  }
+
+  var message: Pochical_V1_PeriodPreference {
+    .with { $0.startDay = start == 1 ? 0 : Int32(start) }
   }
 }
 

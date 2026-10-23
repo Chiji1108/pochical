@@ -4,6 +4,7 @@
     "calendarAdd": "pochical.v1.CalendarAddPreference",
     "heading": "pochical.v1.HeadingPreference",
     "look": "pochical.v1.LookPreference",
+    "period": "pochical.v1.PeriodPreference",
     "picture": "pochical.v1.MarkOptions",
     "theme": "pochical.v1.ThemePreference",
     "week": "pochical.v1.WeekPreference"
@@ -37,6 +38,9 @@
         "offs": {}
       },
       "style": "icon"
+    },
+    "period": {
+      "startDay": 0
     },
     "picture": {
       "names": true,
@@ -130,6 +134,13 @@
         "notes": true,
         "people": true
       }
+    },
+    {
+      "name": "シフトの期間 from the 15th",
+      "key": "period",
+      "value": {
+        "startDay": 15
+      }
     }
   ],
   "unreadable": [
@@ -176,6 +187,20 @@
         "saturday": true,
         "start": 7,
         "sunday": true
+      }
+    },
+    {
+      "name": "a period starting on a day no month is sure to have",
+      "key": "period",
+      "value": {
+        "startDay": 29
+      }
+    },
+    {
+      "name": "a period starting on the 1st, which is the month, said as 0",
+      "key": "period",
+      "value": {
+        "startDay": 1
       }
     },
     {

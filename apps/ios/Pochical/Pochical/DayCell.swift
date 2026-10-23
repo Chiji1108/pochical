@@ -31,6 +31,9 @@ struct DayCell: View {
   /// A blank day drawn faint as the gap sheet would fill it, read as the
   /// blank it still is.
   var preview = false
+  /// Dated with its month, 11/1: the 1st where a シフトの期間's page turns
+  /// the month (spec/calendar.md, The shift period).
+  var withMonth = false
   /// Picks the day: to enter while entering, else to open.
   var onSelect: Handler<Day>?
 
@@ -111,7 +114,7 @@ struct DayCell: View {
   }
 
   private var date: some View {
-    Text(day.day, format: .number)
+    Text(withMonth ? day.slashText : String(day.day))
       .font(.system(size: 11, weight: isToday ? .heavy : outside ? .regular : .semibold))
       .foregroundStyle(dateColor)
       .background(alignment: .bottom) {

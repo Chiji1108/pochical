@@ -45,6 +45,23 @@ internal suspend fun SyncDao.claim(userId: String): Boolean {
   return state.owner.isEmpty() || state.owner == userId
 }
 
+/**
+ * Erases what the database holds of a user, every table named one by one, keeping only the
+ * device's own id and clock: it is no one's after, until the next user claims it
+ * (spec/sync-protocol.md, Sockets).
+ */
+internal suspend fun SyncDao.eraseUserData() {
+  deleteOutbox()
+  resetOwn()
+  deleteGroups()
+  deleteAllMembers()
+  deleteAllMemberDays()
+  deleteAllMemberPatterns()
+  deleteAllMemberOrders()
+  deleteGroupCursors()
+  upsert(state().copy(cursor = 0, owner = ""))
+}
+
 /** Welcome: the device's time is corrected by the server's from now on (HLC). */
 internal suspend fun SyncDao.welcome(sentMs: Long, receivedMs: Long, serverMs: Long) {
   upsert(state().copy(offsetMs = clockOffset(sentMs, receivedMs, serverMs)))

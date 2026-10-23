@@ -2,8 +2,8 @@ import PochicalDesign
 import PochicalKit
 import Testing
 
-// spec/vectors/repeat.json, own-days.json, entering.json, patterns.json and
-// time-change.json, read as the files write them and turned into the
+// spec/vectors/repeat.json, own-days.json, entering.json, periods.json,
+// patterns.json and time-change.json, read as the files write them and turned into the
 // package's types.
 
 /// A day's values as the vectors write them, by date.
@@ -241,12 +241,14 @@ struct EnteringVectors: Decodable, Sendable {
     let shift: String?
     let expected: [String: VectorDay]
     let selects: Day
+    /// The page, the date's month unless given.
+    let page: [Day]?
   }
 
   struct Gaps: VectorCase {
     let name: String
     let days: [Day]
-    let month: String
+    let page: [Day]
     let expected: [Day]
   }
 
@@ -261,13 +263,107 @@ func enter(_ vector: EnteringVectors.Enter) {
     vector.shift, on: vector.date, in: byDay(vector.days).mapValues(\.entry),
     patterns: patterns)
   #expect(after == byDay(vector.expected).mapValues(\.entry))
-  #expect(selectedAfterEntering(vector.shift, on: vector.date, patterns: patterns) == vector.selects)
+  let last = vector.page?.last ?? Period(of: vector.date, start: 1).last
+  #expect(
+    selectedAfterEntering(vector.shift, on: vector.date, through: last, patterns: patterns)
+      == vector.selects)
 }
 
 @Test(arguments: try vectors("entering", as: EnteringVectors.self).gaps)
 func gaps(_ vector: EnteringVectors.Gaps) {
   let days = Dictionary(uniqueKeysWithValues: vector.days.map { ($0, DayEntry(shift: "day")) })
-  #expect(gapDays(in: Day("\(vector.month)-01")!, days: days) == vector.expected)
+  let page = Period(first: vector.page[0], last: vector.page[1])
+  #expect(gapDays(in: page, days: days) == vector.expected)
+}
+
+struct PeriodsVectors: Decodable, Sendable {
+  struct Containing: VectorCase {
+    let name: String
+    let start: Int
+    let day: Day
+    let expected: [Day]
+  }
+
+  struct Stepped: VectorCase {
+    let name: String
+    let start: Int
+    let page: [Day]
+    let by: Int
+    let expected: [Day]
+  }
+
+  struct Picked: VectorCase {
+    let name: String
+    let start: Int
+    let month: String
+    let expected: [Day]
+  }
+
+  struct Weeks: VectorCase {
+    struct Expected: Decodable, Sendable {
+      let first: Day
+      let last: Day
+      let weeks: Int
+    }
+
+    let name: String
+    let weekStart: Int
+    let page: [Day]
+    let expected: Expected
+  }
+
+  struct Written: VectorCase {
+    let name: String
+    let period: [Day]
+    let short: String
+    let year: String
+    let full: String
+    let english: String
+  }
+
+  let containing: [Containing]
+  let stepped: [Stepped]
+  let picked: [Picked]
+  let weeks: [Weeks]
+  let written: [Written]
+}
+
+private func days(of period: Period) -> [Day] {
+  [period.first, period.last]
+}
+
+@Test(arguments: try vectors("periods", as: PeriodsVectors.self).containing)
+func periodHolding(_ vector: PeriodsVectors.Containing) {
+  #expect(days(of: Period(holding: vector.day, start: vector.start)) == vector.expected)
+}
+
+@Test(arguments: try vectors("periods", as: PeriodsVectors.self).stepped)
+func periodStepped(_ vector: PeriodsVectors.Stepped) {
+  let month = vector.page[0].addingMonths(vector.by)
+  #expect(days(of: Period(of: month, start: vector.start)) == vector.expected)
+}
+
+@Test(arguments: try vectors("periods", as: PeriodsVectors.self).picked)
+func periodPicked(_ vector: PeriodsVectors.Picked) throws {
+  let month = try #require(Day("\(vector.month)-01"))
+  #expect(days(of: Period(of: month, start: vector.start)) == vector.expected)
+}
+
+@Test(arguments: try vectors("periods", as: PeriodsVectors.self).weeks)
+func periodWeeks(_ vector: PeriodsVectors.Weeks) {
+  let weeks = Period(first: vector.page[0], last: vector.page[1]).weeks(weekStart: vector.weekStart)
+  #expect(weeks.first?.first == vector.expected.first)
+  #expect(weeks.last?.last == vector.expected.last)
+  #expect(weeks.count == vector.expected.weeks)
+}
+
+@Test(arguments: try vectors("periods", as: PeriodsVectors.self).written)
+func periodWritten(_ vector: PeriodsVectors.Written) {
+  let period = Period(first: vector.period[0], last: vector.period[1])
+  #expect(period.text == vector.short)
+  #expect(period.yearText == vector.year)
+  #expect(period.fullText == vector.full)
+  #expect(period.title(english: true) == vector.english)
 }
 
 struct PatternsVectors: Decodable, Sendable {
