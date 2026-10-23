@@ -11,26 +11,13 @@ public interface TakeAccountRequestOrBuilder extends
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**
-   * <code>string apple_id_token = 1 [json_name = "appleIdToken"];</code>
-   * @return The appleIdToken.
+   * <code>.pochical.v1.ProviderToken account = 3 [json_name = "account"];</code>
+   * @return Whether the account field is set.
    */
-  java.lang.String getAppleIdToken();
+  boolean hasAccount();
   /**
-   * <code>string apple_id_token = 1 [json_name = "appleIdToken"];</code>
-   * @return The bytes for appleIdToken.
+   * <code>.pochical.v1.ProviderToken account = 3 [json_name = "account"];</code>
+   * @return The account.
    */
-  com.google.protobuf.ByteString
-      getAppleIdTokenBytes();
-
-  /**
-   * <code>string nonce = 2 [json_name = "nonce"];</code>
-   * @return The nonce.
-   */
-  java.lang.String getNonce();
-  /**
-   * <code>string nonce = 2 [json_name = "nonce"];</code>
-   * @return The bytes for nonce.
-   */
-  com.google.protobuf.ByteString
-      getNonceBytes();
+  app.pochical.v1.ProviderToken getAccount();
 }

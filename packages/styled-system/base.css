@@ -41,6 +41,15 @@
   input {
     font: inherit;
   }
+  /* Code in the one font for it (the mono token), the same with Tailwind's
+     preflight on the page as without: the browser's own monospace differs
+     from it in Safari and Firefox. */
+  code,
+  kbd,
+  samp,
+  pre {
+    font-family: var(--fonts-mono);
+  }
   button,
   a {
     -webkit-tap-highlight-color: transparent;

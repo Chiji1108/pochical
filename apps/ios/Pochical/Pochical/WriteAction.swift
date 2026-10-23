@@ -16,6 +16,24 @@ struct WriteAction {
     return keeping { try database.write(edit) }
   }
 
+  /// The same, a `Refusal` the rules throw handed to `refused` for the
+  /// page to say why, as nothing went wrong.
+  @MainActor @discardableResult
+  func callAsFunction<Refusal: Error>(
+    _ edit: (Database) throws -> Void, refused: (Refusal) -> Void
+  ) -> Bool {
+    @Dependency(\.defaultDatabase) var database
+    do {
+      try database.write(edit)
+      return true
+    } catch let refusal as Refusal {
+      refused(refusal)
+      return false
+    } catch {
+      return keeping { throw error }
+    }
+  }
+
   /// Keeps what goes with an edit outside the database (a photo of a line
   /// on the device's disk) the same way.
   @MainActor @discardableResult
@@ -49,9 +67,7 @@ enum NotKeptAlert {
 
   static func show() {
     guard !shown, waiting == nil else { return }
-    let scene = UIApplication.shared.connectedScenes.lazy
-      .compactMap { $0 as? UIWindowScene }.first { $0.activationState == .foregroundActive }
-    guard var top = scene?.keyWindow?.rootViewController else {
+    guard let top = UIApplication.shared.topViewController else {
       waiting = NotificationCenter.default.addObserver(
         forName: UIScene.didActivateNotification, object: nil, queue: .main
       ) { _ in
@@ -63,7 +79,6 @@ enum NotKeptAlert {
       }
       return
     }
-    while let presented = top.presentedViewController { top = presented }
     if let moving = top.transitionCoordinator ?? top.navigationControllers.lazy
       .compactMap(\.transitionCoordinator).first
     {

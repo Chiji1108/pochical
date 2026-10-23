@@ -14,21 +14,24 @@ struct AccountRow: View {
       AccountPage(linked: $linked)
     } label: {
       LabeledContent("アカウント") {
-        if linked == nil {
-          Text("ログインしていません")
+        if let linked {
+          ProviderName(provider: linked.provider)
         } else {
-          ProviderName()
+          Text("ログインしていません")
         }
       }
     }
     // As the server says: linked here, or on another of the person's
-    // devices, or no longer.
+    // devices, or no longer; the email only this device's sign-in read.
     .task {
-      guard let isLinked = await session.linked() else { return }
-      if !isLinked {
-        linked = nil
-      } else if linked == nil {
-        linked = LinkedAccount(provider: .apple, email: nil)
+      let provider: LinkedAccount.Provider?
+      do {
+        provider = try await session.linkedProvider()
+      } catch {
+        return
+      }
+      if linked?.provider != provider {
+        linked = provider.map { LinkedAccount(provider: $0, email: nil) }
       }
       LinkedAccount.keep(linked)
     }
@@ -38,10 +41,12 @@ struct AccountRow: View {
 /// The provider signed in with, its mark before its name, as 設定's
 /// アプリアイコン row shows its icon.
 private struct ProviderName: View {
+  let provider: LinkedAccount.Provider
+
   var body: some View {
     HStack(spacing: 8) {
-      Image(systemName: "apple.logo")
-      Text("Apple")
+      ProviderMark(provider: provider)
+      Text(provider.name)
     }
   }
 }
@@ -104,13 +109,12 @@ struct AccountPage: View {
               .foregroundStyle(colors.textTertiary)
           } label: {
             HStack(spacing: 12) {
-              Image(systemName: "apple.logo")
-                .font(.system(size: 16))
+              ProviderMark(provider: linked.provider)
                 .foregroundStyle(colors.textPrimary)
                 .frame(width: 30, height: 30)
                 .background(colors.backgroundCard, in: Circle())
                 .accessibilityHidden(true)
-              Text("Apple")
+              Text(linked.provider.name)
             }
           }
         } header: {
@@ -163,7 +167,7 @@ struct AccountPage: View {
     }
   }
 
-  /// What signing in keeps, and Sign in with Apple.
+  /// What signing in keeps, and the ways in.
   private var signIn: some View {
     Section {
       VStack(spacing: 8) {
@@ -186,7 +190,7 @@ struct AccountPage: View {
       .padding(.vertical, 8)
       .settingsOnPage()
       .listRowSeparator(.hidden)
-      AppleSignInButton { account, _ in
+      SignInButtons { account, _ in
         withAnimation { linked = account }
       }
       .settingsOnPage()
@@ -211,10 +215,10 @@ struct AccountPage: View {
     FirstRun.again()
   }
 
-  /// Deletes the account (spec/sync-protocol.md, Deleting an account):
-  /// Apple asked once more first, for the code the server revokes Apple's
-  /// tokens with; then the device holds nothing of the user, and goes on
-  /// as someone new.
+  /// Deletes the account (spec/sync-protocol.md, Deleting an account): a
+  /// user linked to Apple has Apple asked once more first, for the code
+  /// the server revokes Apple's tokens with; then the device holds nothing
+  /// of the user, and goes on as someone new.
   private func deleteAccount() async {
     busy = true
     defer { busy = false }

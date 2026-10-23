@@ -3164,6 +3164,9 @@
       }
     }
   },
+  "fonts": {
+    "mono": "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace"
+  },
   "increasedContrast": {
     "accent-border": "accent-default",
     "border-default": "border-strong",
@@ -3242,6 +3245,7 @@
     "sizes": {
       "action": 40,
       "control": 52,
+      "signIn": 50,
       "touch": 44
     },
     "spacingStep": 4,

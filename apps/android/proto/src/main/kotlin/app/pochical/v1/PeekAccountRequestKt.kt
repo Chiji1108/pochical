@@ -30,40 +30,36 @@ public object PeekAccountRequestKt {
     internal fun _build(): app.pochical.v1.PeekAccountRequest = _builder.build()
 
     /**
-     * `string apple_id_token = 1 [json_name = "appleIdToken"];`
+     * `.pochical.v1.ProviderToken account = 3 [json_name = "account"];`
      */
-    public var appleIdToken: kotlin.String
-      @kotlin.jvm.JvmName("getAppleIdToken")
-        get() = _builder.appleIdToken
-      @kotlin.jvm.JvmName("setAppleIdToken")
+    public var account: app.pochical.v1.ProviderToken
+      @kotlin.jvm.JvmName("getAccount")
+        get() = _builder.account
+      @kotlin.jvm.JvmName("setAccount")
         set(value) {
-        _builder.appleIdToken = value
+        _builder.account = value
       }
     /**
-     * `string apple_id_token = 1 [json_name = "appleIdToken"];`
+     * `.pochical.v1.ProviderToken account = 3 [json_name = "account"];`
      */
-    public fun clearAppleIdToken() {
-      _builder.clearAppleIdToken()
+    public fun clearAccount() {
+      _builder.clearAccount()
+    }
+    /**
+     * `.pochical.v1.ProviderToken account = 3 [json_name = "account"];`
+     * @return Whether the account field is set.
+     */
+    public fun hasAccount(): kotlin.Boolean {
+      return _builder.hasAccount()
     }
 
-    /**
-     * `string nonce = 2 [json_name = "nonce"];`
-     */
-    public var nonce: kotlin.String
-      @kotlin.jvm.JvmName("getNonce")
-        get() = _builder.nonce
-      @kotlin.jvm.JvmName("setNonce")
-        set(value) {
-        _builder.nonce = value
-      }
-    /**
-     * `string nonce = 2 [json_name = "nonce"];`
-     */
-    public fun clearNonce() {
-      _builder.clearNonce()
-    }
+    public val PeekAccountRequestKt.Dsl.accountOrNull: app.pochical.v1.ProviderToken?
+      get() = _builder.accountOrNull
   }
 }
 public inline fun app.pochical.v1.PeekAccountRequest.copy(block: `app.pochical.v1`.PeekAccountRequestKt.Dsl.() -> kotlin.Unit): app.pochical.v1.PeekAccountRequest =
   `app.pochical.v1`.PeekAccountRequestKt.Dsl._create(this.toBuilder()).apply { block() }._build()
+
+public val app.pochical.v1.PeekAccountRequestOrBuilder.accountOrNull: app.pochical.v1.ProviderToken?
+  get() = if (hasAccount()) getAccount() else null
 

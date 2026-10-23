@@ -20,6 +20,46 @@ fileprivate nonisolated struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobu
   typealias Version = _2
 }
 
+/// Where a person signs in besides anonymously (spec/sync-protocol.md,
+/// Signing in).
+public nonisolated enum Pochical_V1_SignInProvider: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
+  case unspecified // = 0
+  case apple // = 1
+  case google // = 2
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .unspecified
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .unspecified
+    case 1: self = .apple
+    case 2: self = .google
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .unspecified: return 0
+    case .apple: return 1
+    case .google: return 2
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static let allCases: [Pochical_V1_SignInProvider] = [
+    .unspecified,
+    .apple,
+    .google,
+  ]
+
+}
+
 public nonisolated struct Pochical_V1_SetChatMutedRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -195,6 +235,28 @@ public nonisolated struct Pochical_V1_GetMeResponse: Sendable {
   /// Signed in without Apple or Google yet; linking one keeps the user.
   public var anonymous: Bool = false
 
+  /// The provider the user is linked to; unspecified while anonymous.
+  public var provider: Pochical_V1_SignInProvider = .unspecified
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// A provider's ID token as the app got it signing in, which proves the
+/// person holds the provider's account.
+public nonisolated struct Pochical_V1_ProviderToken: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var provider: Pochical_V1_SignInProvider = .unspecified
+
+  public var idToken: String = String()
+
+  /// The nonce the app asked the provider with.
+  public var nonce: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -229,13 +291,20 @@ public nonisolated struct Pochical_V1_PeekAccountRequest: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var appleIDToken: String = String()
-
-  public var nonce: String = String()
+  public var account: Pochical_V1_ProviderToken {
+    get {_account ?? Pochical_V1_ProviderToken()}
+    set {_account = newValue}
+  }
+  /// Returns true if `account` has been explicitly set.
+  public var hasAccount: Bool {self._account != nil}
+  /// Clears the value of `account`. Subsequent reads from it will return its default value.
+  public mutating func clearAccount() {self._account = nil}
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _account: Pochical_V1_ProviderToken? = nil
 }
 
 /// What a user holds that the person entered, for telling a few taps tried
@@ -266,13 +335,20 @@ public nonisolated struct Pochical_V1_TakeAccountRequest: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var appleIDToken: String = String()
-
-  public var nonce: String = String()
+  public var account: Pochical_V1_ProviderToken {
+    get {_account ?? Pochical_V1_ProviderToken()}
+    set {_account = newValue}
+  }
+  /// Returns true if `account` has been explicitly set.
+  public var hasAccount: Bool {self._account != nil}
+  /// Clears the value of `account`. Subsequent reads from it will return its default value.
+  public mutating func clearAccount() {self._account = nil}
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _account: Pochical_V1_ProviderToken? = nil
 }
 
 public nonisolated struct Pochical_V1_TakeAccountResponse: Sendable {
@@ -288,6 +364,10 @@ public nonisolated struct Pochical_V1_TakeAccountResponse: Sendable {
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate nonisolated let _protobuf_package = "pochical.v1"
+
+nonisolated extension Pochical_V1_SignInProvider: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0SIGN_IN_PROVIDER_UNSPECIFIED\0\u{1}SIGN_IN_PROVIDER_APPLE\0\u{1}SIGN_IN_PROVIDER_GOOGLE\0")
+}
 
 nonisolated extension Pochical_V1_SetChatMutedRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SetChatMutedRequest"
@@ -633,7 +713,7 @@ nonisolated extension Pochical_V1_GetMeRequest: SwiftProtobuf.Message, SwiftProt
 
 nonisolated extension Pochical_V1_GetMeResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".GetMeResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_id\0\u{1}anonymous\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_id\0\u{1}anonymous\0\u{1}provider\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -643,6 +723,7 @@ nonisolated extension Pochical_V1_GetMeResponse: SwiftProtobuf.Message, SwiftPro
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.userID) }()
       case 2: try { try decoder.decodeSingularBoolField(value: &self.anonymous) }()
+      case 3: try { try decoder.decodeSingularEnumField(value: &self.provider) }()
       default: break
       }
     }
@@ -655,12 +736,56 @@ nonisolated extension Pochical_V1_GetMeResponse: SwiftProtobuf.Message, SwiftPro
     if self.anonymous != false {
       try visitor.visitSingularBoolField(value: self.anonymous, fieldNumber: 2)
     }
+    if self.provider != .unspecified {
+      try visitor.visitSingularEnumField(value: self.provider, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pochical_V1_GetMeResponse, rhs: Pochical_V1_GetMeResponse) -> Bool {
     if lhs.userID != rhs.userID {return false}
     if lhs.anonymous != rhs.anonymous {return false}
+    if lhs.provider != rhs.provider {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pochical_V1_ProviderToken: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ProviderToken"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}provider\0\u{3}id_token\0\u{1}nonce\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.provider) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.idToken) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.nonce) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.provider != .unspecified {
+      try visitor.visitSingularEnumField(value: self.provider, fieldNumber: 1)
+    }
+    if !self.idToken.isEmpty {
+      try visitor.visitSingularStringField(value: self.idToken, fieldNumber: 2)
+    }
+    if !self.nonce.isEmpty {
+      try visitor.visitSingularStringField(value: self.nonce, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pochical_V1_ProviderToken, rhs: Pochical_V1_ProviderToken) -> Bool {
+    if lhs.provider != rhs.provider {return false}
+    if lhs.idToken != rhs.idToken {return false}
+    if lhs.nonce != rhs.nonce {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -717,7 +842,7 @@ nonisolated extension Pochical_V1_DeleteAccountResponse: SwiftProtobuf.Message, 
 
 nonisolated extension Pochical_V1_PeekAccountRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PeekAccountRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}apple_id_token\0\u{1}nonce\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\u{3}account\0\u{b}apple_id_token\0\u{b}nonce\0\u{c}\u{1}\u{1}\u{c}\u{2}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -725,26 +850,25 @@ nonisolated extension Pochical_V1_PeekAccountRequest: SwiftProtobuf.Message, Swi
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.appleIDToken) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.nonce) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._account) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.appleIDToken.isEmpty {
-      try visitor.visitSingularStringField(value: self.appleIDToken, fieldNumber: 1)
-    }
-    if !self.nonce.isEmpty {
-      try visitor.visitSingularStringField(value: self.nonce, fieldNumber: 2)
-    }
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._account {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pochical_V1_PeekAccountRequest, rhs: Pochical_V1_PeekAccountRequest) -> Bool {
-    if lhs.appleIDToken != rhs.appleIDToken {return false}
-    if lhs.nonce != rhs.nonce {return false}
+    if lhs._account != rhs._account {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -797,7 +921,7 @@ nonisolated extension Pochical_V1_PeekAccountResponse: SwiftProtobuf.Message, Sw
 
 nonisolated extension Pochical_V1_TakeAccountRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".TakeAccountRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}apple_id_token\0\u{1}nonce\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\u{3}account\0\u{b}apple_id_token\0\u{b}nonce\0\u{c}\u{1}\u{1}\u{c}\u{2}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -805,26 +929,25 @@ nonisolated extension Pochical_V1_TakeAccountRequest: SwiftProtobuf.Message, Swi
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.appleIDToken) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.nonce) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._account) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.appleIDToken.isEmpty {
-      try visitor.visitSingularStringField(value: self.appleIDToken, fieldNumber: 1)
-    }
-    if !self.nonce.isEmpty {
-      try visitor.visitSingularStringField(value: self.nonce, fieldNumber: 2)
-    }
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._account {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pochical_V1_TakeAccountRequest, rhs: Pochical_V1_TakeAccountRequest) -> Bool {
-    if lhs.appleIDToken != rhs.appleIDToken {return false}
-    if lhs.nonce != rhs.nonce {return false}
+    if lhs._account != rhs._account {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -206,6 +206,9 @@ export const listRow = {
     _hover: { "&:is(button)": { bg: "fill.tertiary" } },
     cursor: "pointer",
   }),
+  // One that cannot be changed now, dimmed as the system dims a disabled
+  // row, its card left as it is.
+  disabled: css({ "& > *": { opacity: 0.5 } }),
   danger: css({
     "& > *": { color: "danger.default" },
     color: "danger.default",
@@ -441,10 +444,12 @@ export function SwitchRow({
   swatch,
   leading,
   className,
+  disabled,
 }: {
   label: ReactNode;
   detail?: ReactNode;
   checked: boolean;
+  disabled?: boolean;
   onChange: (checked: boolean) => void;
   swatch?: string;
   // Before the label, as a ListRow's: a group's mark.
@@ -456,10 +461,11 @@ export function SwitchRow({
       checked={checked}
       className={cx(
         detail === undefined ? listRow.root : listRow.twoLine,
-        listRow.pressable,
+        disabled === true ? listRow.disabled : listRow.pressable,
         className
       )}
       data-list-row=""
+      disabled={disabled}
       onCheckedChange={(details) => {
         onChange(details.checked);
       }}

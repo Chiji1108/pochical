@@ -6,6 +6,9 @@ import Testing
 
 @testable import PochicalKit
 
+/// The ID token a switch signs in with.
+private let apple = ProviderToken(provider: .apple, idToken: "id", nonce: "n")
+
 /// Shut until opened, for a call to wait at while a test does something
 /// meanwhile.
 private final class Gate: Sendable {
@@ -41,18 +44,22 @@ private final class FakeAccountServer: AccountServer {
   struct Asked {
     var signedOut: [String] = []
     var deleted: [String] = []
+    /// The Apple code each deletion came with.
+    var codes: [String] = []
     var me = 0
   }
 
   let asked = Mutex(Asked())
   let made = Mutex(0)
   let refusing = Mutex<Set<String>>([])
+  /// The provider GetMe says the user is linked to.
+  let linkedTo = Mutex<LinkedAccount.Provider?>(.apple)
   /// How deleting the account fails, when it does.
   let deletion = Mutex<DeletionFailure?>(nil)
   /// Called as a deletion succeeds, before its answer is back.
   let whenDeleted = Mutex<(@Sendable () -> Void)?>(nil)
   /// Called as Apple's sign-in succeeds, before its answer is back.
-  let whenSignedInApple = Mutex<(@Sendable () -> Void)?>(nil)
+  let whenSignedIn = Mutex<(@Sendable () -> Void)?>(nil)
   /// Each call named here waits at its gate.
   let gates = Mutex<[String: Gate]>([:])
 
@@ -76,11 +83,9 @@ private final class FakeAccountServer: AccountServer {
     return StoredSession(token: "anon-token-\(n)", userID: "anon-\(n)")
   }
 
-  func signInApple(idToken: String, nonce: String, on token: String) async throws
-    -> StoredSession
-  {
-    try await reach("signInApple")
-    whenSignedInApple.withLock { $0 }?()
+  func signIn(with account: ProviderToken, on token: String) async throws -> StoredSession {
+    try await reach("signIn")
+    whenSignedIn.withLock { $0 }?()
     return StoredSession(token: "account-token", userID: "account")
   }
 
@@ -89,21 +94,24 @@ private final class FakeAccountServer: AccountServer {
     asked.withLock { $0.signedOut.append(token) }
   }
 
-  func linkApple(idToken: String, nonce: String, on token: String) async throws -> LinkResult {
+  func link(_ account: ProviderToken, on token: String) async throws -> LinkResult {
     .linked
   }
 
-  func me(_ token: String) async throws -> (userID: String, anonymous: Bool) {
+  func me(_ token: String) async throws -> (userID: String, linked: LinkedAccount.Provider?) {
     asked.withLock { $0.me += 1 }
     try await reach("me")
-    return ("of-\(token)", false)
+    return ("of-\(token)", linkedTo.withLock { $0 })
   }
 
   func deleteAccount(_ token: String, appleAuthorizationCode: String) async throws(DeletionFailure)
   {
     if let gate = gates.withLock({ $0["deleteAccount"] }) { await gate.wait() }
     if let failure = deletion.withLock({ $0 }) { throw failure }
-    asked.withLock { $0.deleted.append(token) }
+    asked.withLock {
+      $0.deleted.append(token)
+      $0.codes.append(appleAuthorizationCode)
+    }
     whenDeleted.withLock { $0 }?()
   }
 }
@@ -251,9 +259,9 @@ private final class FakeAccountServer: AccountServer {
   made.session.cameToFront()
   #expect(await eventually { made.sockets.asked > 0 })
   let before = try made.session.current.credentials()
-  let gate = made.server.hold("signInApple")
+  let gate = made.server.hold("signIn")
 
-  let switching = Task { try await made.session.useAccount(appleIDToken: "id", nonce: "n") }
+  let switching = Task { try await made.session.useAccount(apple) }
   #expect(await eventually { made.session.phase == .changing })
   // The app coming to the front, a badge, a place opened and the app
   // going to the background, all while it switches.
@@ -306,7 +314,7 @@ private final class FakeAccountServer: AccountServer {
   made.session.onErase = { erased += 1 }
 
   await #expect(throws: (any Error).self) {
-    try await made.session.useAccount(appleIDToken: "id", nonce: "n")
+    try await made.session.useAccount(apple)
   }
   #expect(made.session.phase == .signedIn)
   #expect(made.session.userID == "A")
@@ -371,15 +379,32 @@ private final class FakeAccountServer: AccountServer {
   #expect(await eventually { made.socketTokens == ["a", "anon-token-1"] })
 }
 
+@MainActor @Test func onlyAUserTheServerSaysIsLinkedToAppleHasAppleAskedBeforeDeleting()
+  async throws
+{
+  for (linked, code) in [(LinkedAccount.Provider.apple, "code"), (.google, "")] {
+    let made = try await Made.signedIn(as: "a", "A")
+    made.server.linkedTo.withLock { $0 = linked }
+    let asked = Mutex(0)
+    #expect(
+      try await made.session.deleteAccount(appleCode: {
+        asked.withLock { $0 += 1 }
+        return "code"
+      }))
+    #expect(asked.withLock { $0 } == (linked == .apple ? 1 : 0))
+    #expect(made.server.asked.withLock(\.codes) == [code])
+  }
+}
+
 @MainActor @Test func anAnswerForTheAccountBeforeIsDropped() async throws {
   let made = try await Made.signedIn(as: "a", "A")
   #expect(await eventually { made.owner == "A" })
   let gate = made.server.hold("me")
-  let asking = Task { await made.session.linked() }
+  let asking = Task { try await made.session.linkedProvider() }
   #expect(await eventually { made.server.asked.withLock(\.me) == 1 })
   try await made.session.signOut()
   gate.open()
-  #expect(await asking.value == nil)
+  await #expect(throws: AccountChanged.self) { try await asking.value }
 }
 
 
@@ -461,7 +486,7 @@ private final class FakeAccountServer: AccountServer {
   #expect(await eventually { made.sockets.asked >= 2 })
   let seen = made.sockets.asked
 
-  try await made.session.useAccount(appleIDToken: "id", nonce: "n")
+  try await made.session.useAccount(apple)
   // Only the user's own socket, as the account: the place was the user before's.
   #expect(await eventually { made.sockets.asked > seen })
   try await Task.sleep(for: .milliseconds(300))
@@ -780,7 +805,7 @@ enum Pending: CaseIterable, Sendable {
     switch self {
     case .deleting: "deleteAccount"
     case .signingOut: "signOut"
-    case .switching: "signInApple"
+    case .switching: "signIn"
     }
   }
 }
@@ -815,7 +840,7 @@ func aChangesAnswerSettlesA401ThatCameWhileItWaited(_ pending: Pending, _ answer
     switch pending {
     case .deleting: _ = try await made.session.deleteAccount(appleCode: { "code" })
     case .signingOut: try await made.session.signOut()
-    case .switching: try await made.session.useAccount(appleIDToken: "id", nonce: "n")
+    case .switching: try await made.session.useAccount(apple)
     }
   }
   #expect(await eventually { made.session.phase == .changing })
@@ -862,8 +887,8 @@ func aChangesAnswerSettlesA401ThatCameWhileItWaited(_ pending: Pending, _ answer
       sql: #"CREATE TRIGGER "keep" BEFORE DELETE ON "coworkers" BEGIN SELECT RAISE(ABORT, 'kept'); END"#)
   }
   made.session.cameToFront()
-  let gate = made.server.hold("signInApple")
-  let switching = Task { try await made.session.useAccount(appleIDToken: "id", nonce: "n") }
+  let gate = made.server.hold("signIn")
+  let switching = Task { try await made.session.useAccount(apple) }
   #expect(await eventually { made.session.phase == .changing })
   let asked = made.sockets.asked
   made.sockets.status.withLock { $0 = "401 Unauthorized" }
@@ -894,8 +919,8 @@ func aChangesAnswerSettlesA401ThatCameWhileItWaited(_ pending: Pending, _ answer
       sql: #"CREATE TRIGGER "keep" BEFORE DELETE ON "coworkers" BEGIN SELECT RAISE(ABORT, 'kept'); END"#)
   }
   made.session.cameToFront()
-  let gate = made.server.hold("signInApple")
-  let switching = Task { try await made.session.useAccount(appleIDToken: "id", nonce: "n") }
+  let gate = made.server.hold("signIn")
+  let switching = Task { try await made.session.useAccount(apple) }
   #expect(await eventually { made.session.phase == .changing })
   let asked = made.sockets.asked
   made.sockets.status.withLock { $0 = "401 Unauthorized" }

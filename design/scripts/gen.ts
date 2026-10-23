@@ -38,6 +38,7 @@ import {
   stateLayers,
 } from "../src/metrics";
 import { reviewRules } from "../src/review";
+import { googleButton } from "../src/sign-in";
 import { socketRules } from "../src/socket";
 import {
   colorRoleNames,
@@ -51,7 +52,7 @@ import {
   themeRoles,
 } from "../src/themes";
 import type { Preset } from "../src/themes";
-import { textStyles } from "../src/type";
+import { monoFont, textStyles } from "../src/type";
 import { widgetRules } from "../src/widgets";
 import { kotlinHolidays, swiftHolidays, webHolidays } from "./holidays";
 import {
@@ -166,6 +167,8 @@ function json() {
       noteMarkerSteps,
       roleSteps,
     },
+    // The web's alone: the native apps show no code.
+    fonts: { mono: monoFont },
     increasedContrast,
     invite: inviteRules,
     limits: {
@@ -325,6 +328,18 @@ function swift() {
     ),
     "}",
     "",
+    "/// Google's sign-in button in its guidelines' colors (design/src/sign-in.ts).",
+    "public struct GoogleButtonColors: Sendable {",
+    "  public let fill: Color",
+    "  public let stroke: Color",
+    "  public let text: Color",
+    "",
+    ...Object.entries(googleButton).map(
+      ([scheme, { fill, stroke, text }]) =>
+        `  public static let ${scheme} = GoogleButtonColors(fill: ${swiftColor(fill)}, stroke: ${swiftColor(stroke)}, text: ${swiftColor(text)})`
+    ),
+    "}",
+    "",
     "/// Pochical's own motion, for withAnimation.",
     "public enum Springs {",
     ...Object.entries(springs).map(
@@ -470,6 +485,16 @@ function kotlin() {
     ...Object.entries(shadows).map(
       ([name, { blur, color, y }]) =>
         `    val ${name} = Shadow(${y}.dp, ${blur}.dp, ThemeColors::${camel(color)})`
+    ),
+    "  }",
+    "}",
+    "",
+    "/** Google's sign-in button in its guidelines' colors (design/src/sign-in.ts). */",
+    "data class GoogleButtonColors(val fill: Color, val stroke: Color, val text: Color) {",
+    "  companion object {",
+    ...Object.entries(googleButton).map(
+      ([scheme, { fill, stroke, text }]) =>
+        `    val ${pascal(scheme)} = GoogleButtonColors(${kotlinColor(fill)}, ${kotlinColor(stroke)}, ${kotlinColor(text)})`
     ),
     "  }",
     "}",

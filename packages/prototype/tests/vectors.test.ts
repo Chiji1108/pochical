@@ -11,6 +11,7 @@ import chatMessages from "../../../spec/vectors/chat.json";
 import entering from "../../../spec/vectors/entering.json";
 import hlc from "../../../spec/vectors/hlc.json";
 import localEdits from "../../../spec/vectors/local-edits.json";
+import monthWeeks from "../../../spec/vectors/month.json";
 import ownDays from "../../../spec/vectors/own-days.json";
 import patternChanges from "../../../spec/vectors/patterns.json";
 import periods from "../../../spec/vectors/periods.json";
@@ -27,6 +28,7 @@ import { bytesOf } from "../src/components/design-chat-photos";
 import { periodTitleOf } from "../src/components/design-month-name";
 import {
   defaultWeekSettings,
+  monthDatesFrom,
   periodDatesFrom,
 } from "../src/components/design-week";
 import { guessLook, nextColor } from "../src/components/shift-mark";
@@ -71,7 +73,9 @@ import {
   holidayShiftOf,
   patternsWithout,
   plannedShifts,
+  refusesArchiving,
   repeatSchedule,
+  repeatsPattern,
   selectedAfter,
   shownDays,
   timeChangeOf,
@@ -224,6 +228,19 @@ describe("spec/vectors/repeat.json", () => {
       expect(withoutOrder(orders.map(ruleOf), dayOf(start))).toEqual(
         expected.map(ruleOf)
       );
+    });
+  }
+});
+
+describe("spec/vectors/month.json", () => {
+  for (const { name, month, weekStart, expected } of monthWeeks.weeks) {
+    test(name, () => {
+      const days = monthDatesFrom(dayOf(`${month}-01`), weekStart).map(dateKey);
+      expect({
+        first: days.at(0),
+        last: days.at(-1),
+        weeks: days.length / 7,
+      }).toEqual(expected);
     });
   }
 });
@@ -498,6 +515,25 @@ describe("spec/vectors/patterns.json", () => {
         nextDay,
       }))
     );
+  for (const {
+    name,
+    orders,
+    today,
+    id,
+    archived,
+    expected,
+  } of patternChanges.refused) {
+    test(name, () => {
+      const rules = orders.map((order) => ({
+        ...order,
+        start: dayOf(order.start),
+      }));
+      expect({
+        archiving: refusesArchiving(rules, id, archived, dayOf(today)),
+        deleting: repeatsPattern(rules, id, dayOf(today)),
+      }).toEqual(expected);
+    });
+  }
   for (const { name, patterns, id, expected } of patternChanges.deleted) {
     test(name, () => {
       expect(idsOf(patternsWithout(patterns.map(patternOf), id))).toEqual(

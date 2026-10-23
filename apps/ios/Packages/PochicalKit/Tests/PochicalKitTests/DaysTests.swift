@@ -399,6 +399,21 @@ struct PatternsVectors: Decodable, Sendable {
     let expected: [PatternLink]
   }
 
+  struct Refused: VectorCase {
+    struct Expected: Decodable, Equatable, Sendable {
+      let archiving: Bool
+      let deleting: Bool
+    }
+
+    let name: String
+    let orders: [VectorOrder]
+    let today: Day
+    let id: String
+    let archived: Bool
+    let expected: Expected
+  }
+
+  let refused: [Refused]
   let deleted: [Deleted]
   let newJob: [NewJob]
   let readyCopies: [ReadyCopy]
@@ -406,6 +421,16 @@ struct PatternsVectors: Decodable, Sendable {
 
 func links(_ patterns: [Pattern]) -> [PatternLink] {
   patterns.map { PatternLink(id: $0.id, nextDay: $0.nextDay, archived: $0.archived ? true : nil) }
+}
+
+@Test(arguments: try vectors("patterns", as: PatternsVectors.self).refused)
+func refused(_ vector: PatternsVectors.Refused) {
+  let orders = vector.orders.map(\.order)
+  let refused = PatternsVectors.Refused.Expected(
+    archiving: refusesArchiving(
+      vector.id, archived: vector.archived, orders: orders, today: vector.today),
+    deleting: repeats(vector.id, in: orders, today: vector.today))
+  #expect(refused == vector.expected)
 }
 
 @Test(arguments: try vectors("patterns", as: PatternsVectors.self).deleted)

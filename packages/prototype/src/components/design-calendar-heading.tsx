@@ -18,6 +18,7 @@ import {
   isSameMonth,
   monthAfter,
 } from "../lib/design-days";
+import { useAppFeatures } from "../lib/design-features";
 import { useSettings } from "../lib/design-settings-store";
 import { designToday } from "../lib/design-today";
 import { useReducedMotion } from "../lib/device-media";
@@ -376,6 +377,7 @@ function SwipeCorner({
   onCalendar: () => void;
   onDone: () => void;
 }) {
+  const saves = useAppFeatures().has("save");
   return (
     <div className={heading.corner}>
       {mode !== "edit" && (
@@ -385,7 +387,7 @@ function SwipeCorner({
         </div>
       )}
       {mode !== "edit" && back}
-      {mode === "view" && closeLabel === undefined ? (
+      {mode === "view" && closeLabel === undefined && saves ? (
         <IconMenu
           icon={<Download aria-hidden="true" size={21} />}
           label={saveLabel}

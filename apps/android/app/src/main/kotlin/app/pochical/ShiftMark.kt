@@ -14,12 +14,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import app.pochical.calendar.TimeChange
 import app.pochical.design.MarkColor
 import app.pochical.design.MarkIcons
 
@@ -29,7 +32,9 @@ private const val ICON_GRID = 256f
 /**
  * A pattern's mark, `size` across, in `look`: its icon, its emoji, or its
  * letter on a tile of its color's tint, as iOS's ShiftMark. An icon id with
- * no glyph, "letter" among them, is the letter in a thin ring.
+ * no glyph, "letter" among them, is the letter in a thin ring. 早出 and
+ * 残業 (`change`) are small triangles in its top corners, the day's start
+ * at the left and its end at the right.
  */
 @Composable
 fun ShiftMark(
@@ -39,15 +44,30 @@ fun ShiftMark(
   color: Int,
   size: Dp,
   modifier: Modifier = Modifier,
+  change: TimeChange? = null,
   look: Look = LocalDeviceSettings.current.device.look,
 ) {
   val mark = LocalThemeColors.current.mark(if (look.colored) color else 0)
+  // Emoji bring colors of their own, so their corners take secondary text's gray.
+  val cornerColor = if (look.style == MarkStyle.Emoji) LocalThemeColors.current.textSecondary else mark.color
   val fontSize = with(LocalDensity.current) { size.toSp() }
+  val drawn = if (change == null) modifier else modifier.drawWithContent {
+    drawContent()
+    val side = size.toPx() * 0.32f
+    val reach = 2.dp.toPx()
+    val right = this.size.width + reach
+    if (change.early) {
+      drawPath(triangle(Offset(-reach, -reach), Offset(side - reach, -reach), Offset(-reach, side - reach)), cornerColor)
+    }
+    if (change.late) {
+      drawPath(triangle(Offset(right, -reach), Offset(right - side, -reach), Offset(right, side - reach)), cornerColor)
+    }
+  }
   when (look.style) {
-    MarkStyle.Emoji -> Text(emoji, modifier, fontSize = fontSize)
+    MarkStyle.Emoji -> Text(emoji, drawn, fontSize = fontSize)
     MarkStyle.Badge ->
       Box(
-        modifier
+        drawn
           .sizeIn(minWidth = size, minHeight = size)
           .background(mark.tint, RoundedCornerShape(size * 0.28f)),
         contentAlignment = Alignment.Center,
@@ -57,13 +77,21 @@ fun ShiftMark(
     MarkStyle.Icon -> {
       val layers = markLayers(icon, filled = look.fill)
       if (layers == null) {
-        LetterInRing(symbol, mark, size, modifier)
+        LetterInRing(symbol, mark, size, drawn)
       } else {
-        IconLayers(layers, mark, size, modifier)
+        IconLayers(layers, mark, size, drawn)
       }
     }
   }
 }
+
+private fun triangle(a: Offset, b: Offset, c: Offset) =
+  Path().apply {
+    moveTo(a.x, a.y)
+    lineTo(b.x, b.y)
+    lineTo(c.x, c.y)
+    close()
+  }
 
 /** The layers of the icon `id`, filled (duotone) or not (regular); none for an id with no glyph. */
 fun markLayers(id: String, filled: Boolean): List<MarkIcons.Layer>? =

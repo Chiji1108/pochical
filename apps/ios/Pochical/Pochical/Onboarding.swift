@@ -274,7 +274,7 @@ private struct LoginStep: View {
       description: "前の端末で使っていたシフトとグループを、そのまま戻します。",
       footnote: "はじめて使うときは、戻って「はじめる」から始めてください。"
     ) {
-      AppleSignInButton { _, how in
+      SignInButtons { _, how in
         // The account's data comes in, and its patterns end the first
         // run; one that brought none goes on with the questions.
         if how == .switched {

@@ -19,22 +19,25 @@ public interface UserServiceClientInterface {
    *  every line they wrote taken back, their chat with Pochical's people,
    *  and their sign-ins. A user linked to Sign in with Apple sends a fresh
    *  authorization code, with which the server revokes the app's Apple
-   *  tokens as Apple asks; FAILED_PRECONDITION without one Apple takes.
+   *  tokens as Apple asks; FAILED_PRECONDITION without one Apple takes. A
+   *  user linked to Google sends none, as the server holds no Google token
+   *  to revoke.
    */
   public suspend fun deleteAccount(request: DeleteAccountRequest, headers: Headers = emptyMap()): ResponseMessage<DeleteAccountResponse>
 
   /**
-   *  What the account a Sign in with Apple ID token is linked to holds,
-   *  when it is another user's than the caller (spec/sync-protocol.md,
-   *  Switching to an account in use): the ID token, with the nonce it was
-   *  asked with, proves the person holds it. NOT_FOUND when the account is
-   *  no other user's; UNAUTHENTICATED for a token that does not check out.
+   *  What the account a provider's ID token is of holds, when it is linked
+   *  to another user than the caller (spec/sync-protocol.md, Switching to
+   *  an account in use): the ID token, with the nonce it was asked with,
+   *  proves the person holds it. NOT_FOUND when the account is no other
+   *  user's; UNAUTHENTICATED for a token that does not check out;
+   *  INVALID_ARGUMENT for no provider.
    */
   public suspend fun peekAccount(request: PeekAccountRequest, headers: Headers = emptyMap()): ResponseMessage<PeekAccountResponse>
 
   /**
    *  Keeps this device's data: the account's user is deleted, everything
-   *  of it with it, and its Sign in with Apple account linked to the caller
+   *  of it with it, and its provider's account linked to the caller
    *  instead, in one call. As PeekAccount for the token.
    */
   public suspend fun takeAccount(request: TakeAccountRequest, headers: Headers = emptyMap()): ResponseMessage<TakeAccountResponse>
