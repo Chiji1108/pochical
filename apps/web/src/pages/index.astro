@@ -3,7 +3,13 @@ import siteIcon from "@pochical/prototype/assets/icon.png?url";
 import { site } from "@pochical/prototype/lib/brand";
 import { defaultDayBeforeTime } from "@pochical/prototype/lib/design-reminders";
 import { css } from "@pochical/styled-system/css";
-import { BellRing, CalendarPlus, ImageDown, UserRound } from "lucide-react";
+import {
+  BellRing,
+  CalendarPlus,
+  CalendarRange,
+  ImageDown,
+  UserRound,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import {
@@ -196,6 +202,11 @@ const extras: { Icon: LucideIcon; title: string; body: string }[] = [
     Icon: ImageDown,
     body: "ひと月を1枚の画像に。写真に保存しても、そのまま送っても。",
     title: "月まるごと画像で保存",
+  },
+  {
+    Icon: CalendarRange,
+    body: "シフトが15日から翌月14日の分で出るなら、カレンダーの1ページをその期間に。お休みの数も、画像やカレンダーへの保存も、その期間で。",
+    title: "15日始まりのシフトにも",
   },
 ];
 
