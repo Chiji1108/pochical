@@ -17,7 +17,7 @@ import androidx.room3.PrimaryKey
 data class DayRow(
   /** "YYYY-MM-DD". */
   @PrimaryKey val date: String,
-  /** A pattern's id, or `DayRules.noShift` for a day cleared on purpose. */
+  /** A pattern's id, or `Days.noShift` for a day cleared on purpose. */
   val pattern: String? = null,
   val start: String? = null,
   val end: String? = null,

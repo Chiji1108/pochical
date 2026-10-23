@@ -13,14 +13,13 @@ import app.pochical.v1.patternValue
 import app.pochical.v1.preferenceValue
 import app.pochical.v1.repeatOrders
 import com.google.protobuf.ByteString
+import java.time.LocalDate
 import java.util.UUID
 
 /**
  * The person's edits of their own values, each stamped with the device's next clock and kept in
  * the outbox in the same transaction as it shows (spec/sync-protocol.md, Outbox), whether a socket
- * is open or not: the user's socket sends it once it is. What a day shows over its repeating order
- * (ポチポチ入力, a day's detail) is worked out by the calendar's logic, which comes with its screens,
- * and ends in these.
+ * is open or not: the user's socket sends it once it is.
  */
 class OwnEdits(private val database: AppDatabase, private val now: () -> Long = System::currentTimeMillis) {
   /** Sets one field of a day, or clears it with null; nothing when it already shows that. */
@@ -45,6 +44,31 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
         hlc = clock
       }
     })
+  }
+
+  /**
+   * Sets the days in [edits] to show what they say, or nothing (null), as a day's detail does
+   * (iOS OwnValues.set): each field whose own value changes is an edit of its own, and only what
+   * differs from the repeating orders is kept as the person's (spec/vectors/own-days.json).
+   */
+  suspend fun setDays(edits: Map<LocalDate, ShownDay?>) = database.write {
+    val first = edits.keys.minOrNull() ?: return@write
+    val last = edits.keys.max()
+    val calendar = ownCalendar(first, last)
+    val edited = editedOwnDays(calendar.own, calendar.planned(first, last), edits)
+    for (day in edits.keys.sorted()) {
+      for ((field, value) in changedFields(calendar.own[day], edited[day])) {
+        val clock = nextClock(now())
+        edit(change {
+          this.day = dayValue {
+            date = day.toString()
+            this.field = field
+            if (value != null) this.value = value
+            hlc = clock
+          }
+        })
+      }
+    }
   }
 
   /** Keeps [pattern] as it is now; a new one goes at the end of the order. */
@@ -95,9 +119,11 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
     }, clearFrom)
   }
 
-  /** Adds someone to 一緒に働く人, at the end of the list, and gives back their id. */
-  suspend fun addCoworker(name: String): String = database.write {
-    val id = newId()
+  /**
+   * Adds someone to 一緒に働く人, at the end of the list, and gives back their id: [id] when the caller
+   * names them before this is written, as a day's detail does to put them on the day too.
+   */
+  suspend fun addCoworker(name: String, id: String = newId()): String = database.write {
     putCoworker(id, name)
     orderCoworkers(coworkerOrder() + id)
     id
@@ -162,6 +188,7 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
       }
     })
   }
-
-  private fun newId() = UUID.randomUUID().toString().lowercase()
 }
+
+/** A new id for a value, an edit or a device: a UUID as the wire writes them, lowercase. */
+fun newId(): String = UUID.randomUUID().toString().lowercase()

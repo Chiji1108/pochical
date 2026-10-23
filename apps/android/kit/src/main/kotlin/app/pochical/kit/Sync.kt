@@ -15,7 +15,6 @@ import app.pochical.v1.PreferenceEdit
 import app.pochical.v1.PreferenceEdits
 import app.pochical.v1.RepeatOrdersEdit
 import app.pochical.v1.RepeatOrdersEdits
-import java.util.UUID
 
 /**
  * The sync schema the app reads Changes by. Raise it whenever the app starts reading a Change, or a
@@ -32,7 +31,7 @@ const val SYNC_SCHEMA = 2
 
 /** The row, or a new device's: a new id, no clock, no offset, no cursor. */
 internal suspend fun SyncDao.state(): SyncState =
-  syncState() ?: SyncState(deviceId = UUID.randomUUID().toString().lowercase())
+  syncState() ?: SyncState(deviceId = newId())
 
 /**
  * Takes the database for [userId]'s: one that is no one's becomes theirs, with what was entered

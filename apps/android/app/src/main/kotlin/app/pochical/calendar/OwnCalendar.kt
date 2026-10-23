@@ -59,12 +59,12 @@ interface OwnCalendar {
   fun note(day: LocalDate): String?
 }
 
-/**
- * Where the calendar comes from and where its edits go: the synced days
- * once the app keeps them (POC-203), the sample month until then.
- */
+/** Where the calendar comes from and where its edits go ([SyncedDays]). */
 interface OwnDays {
   val calendar: StateFlow<OwnCalendar>
+
+  /** Returns once [calendar] holds what the device keeps, not the nothing it starts from. */
+  suspend fun awaitRead()
 
   /** Puts `entry` on `day`; none clears its shift with its hours and people, keeping the memo. */
   fun set(day: LocalDate, entry: DayEntry?)
