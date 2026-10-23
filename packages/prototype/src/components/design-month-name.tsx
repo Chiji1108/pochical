@@ -192,6 +192,7 @@ export function MonthName({
             <span className={monthName.unit}>
               <RollingName
                 {...beside(endOf)}
+                letters={english}
                 progress={progress}
                 still={reduceMotion}
                 text={endOf(month)}

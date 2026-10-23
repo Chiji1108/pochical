@@ -44,9 +44,10 @@ struct MonthName: View {
         .foregroundStyle(colors.textTertiary)
       HStack(alignment: .firstTextBaseline, spacing: 4) {
         if period.byPeriod {
-          RollingText(text: first(month), coming: first(coming), share: share)
+          // English months a letter at a time, as a month's name rolls.
+          rolling(first(month), coming: first(coming), share: share)
             .font(.system(size: 36, weight: .semibold))
-          RollingText(text: last(month), coming: last(coming), share: share)
+          rolling(last(month), coming: last(coming), share: share)
             .font(.system(size: 14, weight: .medium))
         } else if english {
           // A lettered calendar's month, lower case and cut short: sep.
@@ -72,6 +73,14 @@ struct MonthName: View {
     let page = period.page(month)
     return page.first.year == page.last.year
       ? String(page.first.year) : "\(page.first.year) – \(page.last.year)"
+  }
+
+  @ViewBuilder private func rolling(_ text: String, coming: String, share: CGFloat) -> some View {
+    if english {
+      RollingLetters(text: text, coming: coming, share: share)
+    } else {
+      RollingText(text: text, coming: coming, share: share)
+    }
   }
 
   /// A period's day as the heading writes it: 10/15, or oct. 15.
