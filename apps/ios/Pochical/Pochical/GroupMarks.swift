@@ -137,7 +137,10 @@ struct GroupMarkPage: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.groupCalls) private var groupCalls
   let name: String
-  @State var mark: GroupMarkValue
+  /// The mark as its opener has it, which a pick changes through
+  /// `onPick`: the page keeps no copy, so it follows what the opener
+  /// works out (a new group's guess as the user's groups load).
+  let mark: GroupMarkValue
   /// Where the group's photo mark is read from (GroupMarkView).
   var shelf: PhotoShelf?
   let onPick: (GroupMarkValue) -> Void
@@ -181,7 +184,7 @@ struct GroupMarkPage: View {
           MarkChoiceGrid(withPicked(ReadyPatterns.groupMarkEmojis, mark.emoji), chosen: mark.emoji) { emoji in
             Text(emoji).font(.system(size: 26))
           } pick: { emoji in
-            set(GroupMarkValue(emoji: emoji))
+            onPick(GroupMarkValue(emoji: emoji))
           }
           Button("ほかの絵文字を選ぶ", systemImage: "plus") { choosingEmoji = true }
         case .icon:
@@ -189,7 +192,7 @@ struct GroupMarkPage: View {
             GroupMarkView(mark: GroupMarkValue(icon: icon, color: mark.color), size: 22, bare: true)
               .accessibilityLabel(MarkIconNames.names[icon] ?? icon)
           } pick: { icon in
-            set(GroupMarkValue(icon: icon, color: mark.color))
+            onPick(GroupMarkValue(icon: icon, color: mark.color))
           }
           Button("ほかのアイコンを選ぶ", systemImage: "plus") { choosingIcon = true }
         case .letter:
@@ -197,7 +200,7 @@ struct GroupMarkPage: View {
             MarkLetterField(
               letter: mark.letter.isEmpty ? firstLetter : mark.letter, limit: TextLimits.groupMark
             ) { letters in
-              set(GroupMarkValue(letter: letters, color: mark.color))
+              onPick(GroupMarkValue(letter: letters, color: mark.color))
             }
           }
         }
@@ -209,9 +212,9 @@ struct GroupMarkPage: View {
         Section("色") {
           MarkColorGrid(chosen: mark.color) { slot in
             if shown == .icon {
-              set(GroupMarkValue(icon: mark.icon.isEmpty ? ReadyPatterns.groupMarkIcons[0] : mark.icon, color: slot))
+              onPick(GroupMarkValue(icon: mark.icon.isEmpty ? ReadyPatterns.groupMarkIcons[0] : mark.icon, color: slot))
             } else {
-              set(GroupMarkValue(letter: mark.letter.isEmpty ? firstLetter : mark.letter, color: slot))
+              onPick(GroupMarkValue(letter: mark.letter.isEmpty ? firstLetter : mark.letter, color: slot))
             }
           }
         }
@@ -230,7 +233,7 @@ struct GroupMarkPage: View {
       IconPickerSheet(picked: mark.icon) { icon in
         GroupMarkView(mark: GroupMarkValue(icon: icon, color: mark.color), size: 24, bare: true)
       } onPick: { icon in
-        set(GroupMarkValue(icon: icon, color: mark.color))
+        onPick(GroupMarkValue(icon: icon, color: mark.color))
       }
     }
     .alert("写真を使えませんでした", isPresented: $photoFailed) {
@@ -241,21 +244,16 @@ struct GroupMarkPage: View {
     .sheet(isPresented: $choosingEmoji) {
       EmojiKeyboardSheet { emoji in
         guard isEmoji(emoji) else { return }
-        set(GroupMarkValue(emoji: emoji))
+        onPick(GroupMarkValue(emoji: emoji))
       }
     }
-  }
-
-  private func set(_ picked: GroupMarkValue) {
-    mark = picked
-    onPick(picked)
   }
 
   /// A photo taken or picked, kept on the device until the group is saved
   /// with it (`sendMarkPhoto`).
   private func usePhoto(_ jpeg: Data) async {
     do {
-      set(GroupMarkValue(photoID: try groupCalls.holdMarkPhoto(jpeg)))
+      onPick(GroupMarkValue(photoID: try groupCalls.holdMarkPhoto(jpeg)))
       kind = nil
     } catch {
       photoFailed = true
