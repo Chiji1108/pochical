@@ -91,7 +91,7 @@ private struct ReactionPill: View {
 
   var body: some View {
     pill
-      // Its spray drawn over the row rather than on the pill, which keeps
+      // Its spray drawn over the line rather than on the pill, which keeps
       // its own frame to be touched and read by.
       .changeEffect(
         .spray(layer: .named(ReactionRow.sprays)) { Text(reaction.emoji) }, value: sprayed,
