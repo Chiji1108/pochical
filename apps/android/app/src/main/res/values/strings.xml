@@ -13,4 +13,13 @@
   <string name="appearance_dark_by_theme">ダーク（%1$s）</string>
   <string name="appearance_system">端末に合わせると、端末の設定に合わせてライトとダークが切り替わります。</string>
   <string name="appearance_always_dark">テーマの「%1$s」はいつもダークで表示されます。ほかのテーマにすると、ここでの設定に戻ります。</string>
+  <string name="cancel">キャンセル</string>
+  <string name="calendar_this_month">今月</string>
+  <string name="calendar_pick_month">月を選ぶ</string>
+  <string name="calendar_show_month">表示</string>
+  <string name="day_unentered">未入力</string>
+  <string name="day_has_memo">メモあり</string>
+  <string name="day_early">早出</string>
+  <string name="day_late">残業</string>
+  <string name="day_hours_moved">時間変更</string>
 </resources>

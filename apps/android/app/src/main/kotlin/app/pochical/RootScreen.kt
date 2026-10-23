@@ -13,6 +13,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
+import app.pochical.calendar.CalendarScreen
 
 /**
  * The tabs, under the pages `navigator` has over them: a page slides in from

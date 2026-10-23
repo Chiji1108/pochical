@@ -15,6 +15,8 @@ import androidx.datastore.core.DataStore
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import app.pochical.calendar.LocalOwnDays
+import app.pochical.calendar.OwnDays
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoMap
 import dev.zacsweers.metro.Inject
@@ -25,7 +27,10 @@ import kotlinx.coroutines.launch
 @ContributesIntoMap(AppScope::class, binding<Activity>())
 @ActivityKey
 @Inject
-class MainActivity(private val deviceSettings: DataStore<DeviceSettings>) : ComponentActivity() {
+class MainActivity(
+  private val deviceSettings: DataStore<DeviceSettings>,
+  private val ownDays: OwnDays,
+) : ComponentActivity() {
   private var settings by mutableStateOf<DeviceSettings?>(null)
 
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -44,7 +49,7 @@ class MainActivity(private val deviceSettings: DataStore<DeviceSettings>) : Comp
             lifecycleScope.launch { deviceSettings.updateData(change) }
           }
         }
-      CompositionLocalProvider(LocalDeviceSettings provides state) {
+      CompositionLocalProvider(LocalDeviceSettings provides state, LocalOwnDays provides ownDays) {
         PochicalTheme(device) { RootScreen(rememberRootNavigator()) }
       }
     }

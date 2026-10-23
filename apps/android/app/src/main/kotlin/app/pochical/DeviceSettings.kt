@@ -36,6 +36,7 @@ data class DeviceSettings(
   @SerialName("theme") val themeId: String = Theme.Pochical.id,
   val appearance: Appearance = Appearance.System,
   val look: Look = Look(),
+  val week: Week = Week(),
 ) {
   /** The テーマ in use; one no longer known is the app's own. */
   val theme: Theme
@@ -62,6 +63,19 @@ data class Look(
   /** Filled (塗り) or outlined (線); icons alone have the choice. */
   val fill: Boolean = true,
   val colored: Boolean = true,
+)
+
+/**
+ * The calendar's week (設定 > カレンダー, kept with the account): the day it
+ * starts on, 0 for Sunday through 6 for Saturday, and whether Sundays and
+ * Saturdays color the weekdays' heading and holidays their date.
+ */
+@Serializable
+data class Week(
+  val start: Int = 0,
+  val sunday: Boolean = true,
+  val saturday: Boolean = true,
+  val holiday: Boolean = true,
 )
 
 /** How a pattern's mark is drawn: its icon, its emoji or its letter on a tile. */
