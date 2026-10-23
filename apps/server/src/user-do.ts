@@ -18,6 +18,7 @@ import { drizzle } from "drizzle-orm/durable-sqlite";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 
+import { Alarm } from "./alarm";
 import { sendAlert, sendWithdrawal } from "./apns";
 import type { Alert, Sent } from "./apns";
 import { deleteOrphans } from "./bucket-audit";
@@ -165,6 +166,7 @@ type SyncedLog = {
  */
 export class UserDO extends DurableObject<Env> {
   private readonly db: DrizzleSqliteDODatabase;
+  private readonly alarms: Alarm;
   // Set when a change asks for a push, so an alarm running meanwhile
   // leaves the next one to it.
   private pushRequested = false;
@@ -172,6 +174,7 @@ export class UserDO extends DurableObject<Env> {
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
     this.db = drizzle(ctx.storage);
+    this.alarms = new Alarm(ctx.storage);
     answerKeepalive(ctx);
     // Nothing reaches the user before their tables are up to date.
     void ctx.blockConcurrencyWhile(async () => {
@@ -833,7 +836,7 @@ export class UserDO extends DurableObject<Env> {
     // Noted with the alarm that deletes it, should SetProfile stop before
     // it names the photo.
     this.db.insert(goingPhotos).values({ photoId }).onConflictDoNothing().run();
-    void this.ctx.storage.setAlarm(Date.now());
+    void this.alarms.set(Date.now());
     // Read whole first: a body streamed to R2 inside blockConcurrencyWhile
     // stalls until the call is cancelled.
     await this.env.PHOTOS.put(key, await upload.arrayBuffer(), {
@@ -1044,7 +1047,10 @@ export class UserDO extends DurableObject<Env> {
    * already, which is kept. The user's own photos noted as going are
    * deleted first, and come back so should storage fail.
    */
-  async alarm(): Promise<void> {
+  async alarm(run?: AlarmInvocationInfo): Promise<void> {
+    if (run !== undefined) {
+      await this.alarms.begin(run);
+    }
     const userId = this.ctx.id.name;
     if (userId === undefined) {
       return;
@@ -1081,7 +1087,7 @@ export class UserDO extends DurableObject<Env> {
         .run();
     }
     if (!this.pushRequested && retries.length > 0) {
-      await this.ctx.storage.setAlarm(Date.now() + Math.min(...retries));
+      await this.alarms.set(Date.now() + Math.min(...retries));
     }
   }
 
@@ -1109,7 +1115,7 @@ export class UserDO extends DurableObject<Env> {
 
   private schedulePush(): void {
     this.pushRequested = true;
-    void this.ctx.storage.setAlarm(Date.now());
+    void this.alarms.set(Date.now());
   }
 
   /**

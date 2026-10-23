@@ -10,6 +10,7 @@ import { drizzle } from "drizzle-orm/durable-sqlite";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 
+import { Alarm } from "./alarm";
 import type { Alert } from "./apns";
 import { deleteGroupOrphans, groupReferences } from "./bucket-audit";
 import type { GroupReferences, Orphan, OwnerCleanup } from "./bucket-audit";
@@ -239,6 +240,7 @@ const noticeOf = (userId: string, by: Leaving): Notice => {
 
 export class GroupDO extends DurableObject<Env> {
   private readonly db: DrizzleSqliteDODatabase;
+  private readonly alarms: Alarm;
   // Set when a support chat's change asks for its relay, so a relay
   // running meanwhile leaves the next alarm to it.
   private relayRequested = false;
@@ -257,6 +259,7 @@ export class GroupDO extends DurableObject<Env> {
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
     this.db = drizzle(ctx.storage);
+    this.alarms = new Alarm(ctx.storage);
     answerKeepalive(ctx);
     // Nothing reaches the group before its tables are up to date.
     void ctx.blockConcurrencyWhile(async () => {
@@ -926,7 +929,7 @@ export class GroupDO extends DurableObject<Env> {
   private sweepIf(photosGoing: boolean): void {
     if (photosGoing) {
       this.sweepRequested = true;
-      void this.ctx.storage.setAlarm(Date.now());
+      void this.alarms.set(Date.now());
     }
   }
 
@@ -1125,7 +1128,7 @@ export class GroupDO extends DurableObject<Env> {
   private async wakeBy(due: number): Promise<void> {
     const set = await this.ctx.storage.getAlarm();
     if (set === null || set > due) {
-      await this.ctx.storage.setAlarm(due);
+      await this.alarms.set(due);
     }
   }
 
@@ -1452,7 +1455,7 @@ export class GroupDO extends DurableObject<Env> {
     }
     if (changed.length > 0 && this.placeKind() === "support") {
       this.relayRequested = true;
-      this.ctx.waitUntil(this.ctx.storage.setAlarm(Date.now()));
+      this.ctx.waitUntil(this.alarms.set(Date.now()));
     }
     return { refused, refusedSends, sent };
   }
@@ -1466,7 +1469,10 @@ export class GroupDO extends DurableObject<Env> {
    * next (`sweepPhotos`). News of a membership due is told, and the alarm
    * comes back for any not taken, until it is.
    */
-  async alarm(): Promise<void> {
+  async alarm(run?: AlarmInvocationInfo): Promise<void> {
+    if (run !== undefined) {
+      await this.alarms.begin(run);
+    }
     this.relayRequested = false;
     this.sweepRequested = false;
     const userId = this.supportUser();
@@ -1486,7 +1492,7 @@ export class GroupDO extends DurableObject<Env> {
       ...(newsDue === undefined ? [] : [newsDue]),
     ];
     if (dues.length > 0) {
-      await this.ctx.storage.setAlarm(Math.min(...dues));
+      await this.alarms.set(Math.min(...dues));
     }
   }
 
