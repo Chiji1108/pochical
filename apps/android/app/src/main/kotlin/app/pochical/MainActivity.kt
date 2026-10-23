@@ -62,7 +62,11 @@ class MainActivity(
             lifecycleScope.launch { deviceSettings.updateData(change) }
           }
         }
-      CompositionLocalProvider(LocalDeviceSettings provides state, LocalOwnDays provides ownDays) {
+      CompositionLocalProvider(
+        LocalDeviceSettings provides state,
+        LocalOwnDays provides ownDays,
+        LocalAccount provides kit.account,
+      ) {
         PochicalTheme(device) { RootScreen(rememberRootNavigator()) }
       }
     }

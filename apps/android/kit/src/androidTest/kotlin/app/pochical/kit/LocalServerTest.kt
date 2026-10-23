@@ -5,7 +5,6 @@ import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.pochical.v1.DayField
-import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -27,7 +26,7 @@ import org.junit.runner.RunWith
 /**
  * Sync end to end against the server `mise run server` runs on this computer, which the emulator
  * reaches at 10.0.2.2 (the `server` instrumentation argument): two devices of one anonymous user,
- * each with its own database and Keystore-sealed session, the second given the first's session as a
+ * each with its own database and session in Block Store, the second given the first's session as a
  * new phone restored from it would be.
  */
 @RunWith(AndroidJUnit4::class)
@@ -39,7 +38,7 @@ class LocalServerTest {
 
   private inner class Device(name: String) {
     val database = AppDatabase.open(context, inMemory = true)
-    val sessions = SessionStore(File(context.cacheDir, "session-$name").apply { delete() }, KeystoreSeal("e2e-$name"))
+    val sessions = SessionStore(BlockStoreBytes(context, "e2e-$name").apply { runBlocking { delete() } })
     val edits = OwnEdits(database)
     val account = SyncAccount(database, sessions, server, http, scope)
 

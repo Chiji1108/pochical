@@ -31,14 +31,8 @@ fun SettingsScreen(open: (RootPage) -> Unit) {
   val device = LocalDeviceSettings.current.device
   Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.tab_settings)) }) }) { padding ->
     LazyColumn(contentPadding = padding) {
-      item {
-        Text(
-          stringResource(R.string.settings_display),
-          style = MaterialTheme.typography.titleSmall,
-          color = MaterialTheme.colorScheme.primary,
-          modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp),
-        )
-      }
+      item { AccountRow(open) }
+      item { SectionHeader(stringResource(R.string.settings_display)) }
       item {
         ListItem(
           headlineContent = { Text(stringResource(R.string.appearance)) },
@@ -65,3 +59,25 @@ private fun appearanceName(device: DeviceSettings): String =
   } else {
     stringResource(device.appearance.title)
   }
+
+/** A section's heading in a settings list. */
+@Composable
+fun SectionHeader(text: String) {
+  Text(
+    text,
+    style = MaterialTheme.typography.titleSmall,
+    color = MaterialTheme.colorScheme.primary,
+    modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp),
+  )
+}
+
+/** What a settings list says under its rows. */
+@Composable
+fun Footnote(text: String) {
+  Text(
+    text,
+    style = MaterialTheme.typography.bodyMedium,
+    color = MaterialTheme.colorScheme.onSurfaceVariant,
+    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+  )
+}
