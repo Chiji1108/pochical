@@ -3,7 +3,8 @@
 # simulator against `mise run server`: a tapped chat notification opens
 # its chat over the グループ tab alone, from the background over another
 # tab's page and from a cold start (POC-157). It starts the server itself,
-# so nothing else may be on :8787, and erases the simulator it is given.
+# so nothing else may be on POCHICAL_DEV_SERVER (:8787 by default), and
+# erases the simulator it is given.
 #
 #   mise run ios:notification-taps -- "<simulator name>" [derived data]
 #
