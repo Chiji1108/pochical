@@ -109,10 +109,6 @@ final class ChatEffectsLayer: UIView {
     mutating func end(_ part: EffectPart) {
       playing.removeValue(forKey: part)?.remove()
     }
-
-    func part(playing burst: Burst) -> EffectPart? {
-      playing.first { $0.value.burst === burst }?.key
-    }
   }
 
   /// A menu's ground, for the item whose bubble it lifts. Its items'
@@ -243,24 +239,24 @@ final class ChatEffectsLayer: UIView {
       let ground = menus[index].ground.view
       guard let item = menus[index].ground.items[part.item] ?? itemFrame(part.item, on: ground)
       else { return nil }
-      let played = begin(in: item, at: frame)
+      let played = begin(part, in: item, at: frame)
       menus[index].ground.items[part.item] = item
       menus[index].ground.playing[part] = played
       return played
     }
     if let played = onLines.playing[part] { return played }
     guard let item = onLines.items[part.item] else { return nil }
-    let played = begin(in: item, at: frame)
+    let played = begin(part, in: item, at: frame)
     onLines.playing[part] = played
     return played
   }
 
-  /// An effect's SwiftUI in `item`, put at `frame` at once, whatever
-  /// animation it is asked in.
-  private func begin(in item: UIView, at frame: CGRect) -> Played {
+  /// The SwiftUI of an effect on `part` in `item`, put at `frame` at once,
+  /// whatever animation it is asked in, and gone when it has played out.
+  private func begin(_ part: EffectPart, in item: UIView, at frame: CGRect) -> Played {
     let burst = Burst()
     burst.onPlayedOut = { [weak self, weak burst] in
-      if let self, let burst { playedOut(burst) }
+      if let self, let burst { playedOut(burst, on: part) }
     }
     let host = UIHostingController(rootView: Self.content(burst, environment))
     host.sizingOptions = []
@@ -289,10 +285,10 @@ final class ChatEffectsLayer: UIView {
 
   /// `burst` has played out: it goes from where it played, and a closed
   /// menu it was the last on with it.
-  private func playedOut(_ burst: Burst) {
-    if let part = onLines.part(playing: burst) { onLines.end(part) }
-    for index in menus.indices {
-      if let part = menus[index].ground.part(playing: burst) { menus[index].end(part) }
+  private func playedOut(_ burst: Burst, on part: EffectPart) {
+    if onLines.playing[part]?.burst === burst { onLines.end(part) }
+    for index in menus.indices where menus[index].ground.playing[part]?.burst === burst {
+      menus[index].end(part)
     }
     removePlayedOut()
   }

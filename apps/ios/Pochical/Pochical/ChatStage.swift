@@ -1485,6 +1485,7 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
   func closeMenuNow() {
     guard let menuLayer else { return }
     menuLayer.close(fade: true)
+    menuLayer.takePartsAway()
     menuClosed(menuLayer)
   }
 

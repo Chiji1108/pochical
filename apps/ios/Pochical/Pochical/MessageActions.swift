@@ -373,10 +373,15 @@ struct MenuMetrics {
     accessibilityElementsHidden = true
     animate(Chat.menuCloseSpring, animations: apply) { [weak self] in
       guard let self else { return }
-      for part in [scrim, lift, barPart, menuPart] { part.removeFromSuperview() }
+      takePartsAway()
       onClosed()
     }
     action?()
+  }
+
+  /// Takes away all but its effects, closing or not.
+  func takePartsAway() {
+    for part in [scrim, lift, barPart, menuPart] { part.removeFromSuperview() }
   }
 
   private func animate(
