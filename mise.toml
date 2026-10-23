@@ -63,7 +63,7 @@ usage = '''
 flag "--port <port>" default="8787"
 arg "[wrangler]..." help="passed on to wrangler dev" var=#true
 '''
-run = 'bun run --cwd apps/server dev --port {{usage.port}} --var BETTER_AUTH_URL:http://localhost:{{usage.port}} {{usage.wrangler | join(sep=" ")}}'
+run = 'bun run --cwd apps/server dev --port {{usage.port}} --var BETTER_AUTH_URL:http://localhost:{{usage.port}} {% for a in usage.wrangler %}{{ a | quote }} {% endfor %}'
 
 [tasks.admin]
 description = "Run the admin site's dev server, beside mise run server"
