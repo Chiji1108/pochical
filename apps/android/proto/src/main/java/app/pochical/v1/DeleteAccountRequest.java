@@ -89,6 +89,50 @@ public  final class DeleteAccountRequest extends
 
   }
 
+  public static final int APPLE_CODE_FROM_WEB_FIELD_NUMBER = 2;
+  private boolean appleCodeFromWeb_;
+  /**
+   * <pre>
+   * True when the code came through Apple's web page (Android's), given
+   * to the server's Services ID rather than the iOS app: Apple takes a
+   * code only from the client it gave it to.
+   * </pre>
+   *
+   * <code>bool apple_code_from_web = 2 [json_name = "appleCodeFromWeb"];</code>
+   * @return The appleCodeFromWeb.
+   */
+  @java.lang.Override
+  public boolean getAppleCodeFromWeb() {
+    return appleCodeFromWeb_;
+  }
+  /**
+   * <pre>
+   * True when the code came through Apple's web page (Android's), given
+   * to the server's Services ID rather than the iOS app: Apple takes a
+   * code only from the client it gave it to.
+   * </pre>
+   *
+   * <code>bool apple_code_from_web = 2 [json_name = "appleCodeFromWeb"];</code>
+   * @param value The appleCodeFromWeb to set.
+   */
+  private void setAppleCodeFromWeb(boolean value) {
+    
+    appleCodeFromWeb_ = value;
+  }
+  /**
+   * <pre>
+   * True when the code came through Apple's web page (Android's), given
+   * to the server's Services ID rather than the iOS app: Apple takes a
+   * code only from the client it gave it to.
+   * </pre>
+   *
+   * <code>bool apple_code_from_web = 2 [json_name = "appleCodeFromWeb"];</code>
+   */
+  private void clearAppleCodeFromWeb() {
+
+    appleCodeFromWeb_ = false;
+  }
+
   public static app.pochical.v1.DeleteAccountRequest parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -260,6 +304,52 @@ public  final class DeleteAccountRequest extends
       return this;
     }
 
+    /**
+     * <pre>
+     * True when the code came through Apple's web page (Android's), given
+     * to the server's Services ID rather than the iOS app: Apple takes a
+     * code only from the client it gave it to.
+     * </pre>
+     *
+     * <code>bool apple_code_from_web = 2 [json_name = "appleCodeFromWeb"];</code>
+     * @return The appleCodeFromWeb.
+     */
+    @java.lang.Override
+    public boolean getAppleCodeFromWeb() {
+      return instance.getAppleCodeFromWeb();
+    }
+    /**
+     * <pre>
+     * True when the code came through Apple's web page (Android's), given
+     * to the server's Services ID rather than the iOS app: Apple takes a
+     * code only from the client it gave it to.
+     * </pre>
+     *
+     * <code>bool apple_code_from_web = 2 [json_name = "appleCodeFromWeb"];</code>
+     * @param value The appleCodeFromWeb to set.
+     * @return This builder for chaining.
+     */
+    public Builder setAppleCodeFromWeb(boolean value) {
+      copyOnWrite();
+      instance.setAppleCodeFromWeb(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * True when the code came through Apple's web page (Android's), given
+     * to the server's Services ID rather than the iOS app: Apple takes a
+     * code only from the client it gave it to.
+     * </pre>
+     *
+     * <code>bool apple_code_from_web = 2 [json_name = "appleCodeFromWeb"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearAppleCodeFromWeb() {
+      copyOnWrite();
+      instance.clearAppleCodeFromWeb();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.DeleteAccountRequest)
   }
   @java.lang.Override
@@ -277,9 +367,11 @@ public  final class DeleteAccountRequest extends
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
             "appleAuthorizationCode_",
+            "appleCodeFromWeb_",
           };
           java.lang.String info =
-              "\u0000\u0001\u0000\u0000\u0001\u0001\u0001\u0000\u0000\u0000\u0001\u0208";
+              "\u0000\u0002\u0000\u0000\u0001\u0002\u0002\u0000\u0000\u0000\u0001\u0208\u0002\u0007" +
+              "";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

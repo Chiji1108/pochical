@@ -271,6 +271,11 @@ public nonisolated struct Pochical_V1_DeleteAccountRequest: Sendable {
   /// deleting; empty for a user not linked to Apple.
   public var appleAuthorizationCode: String = String()
 
+  /// True when the code came through Apple's web page (Android's), given
+  /// to the server's Services ID rather than the iOS app: Apple takes a
+  /// code only from the client it gave it to.
+  public var appleCodeFromWeb: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -793,7 +798,7 @@ nonisolated extension Pochical_V1_ProviderToken: SwiftProtobuf.Message, SwiftPro
 
 nonisolated extension Pochical_V1_DeleteAccountRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DeleteAccountRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}apple_authorization_code\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}apple_authorization_code\0\u{3}apple_code_from_web\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -802,6 +807,7 @@ nonisolated extension Pochical_V1_DeleteAccountRequest: SwiftProtobuf.Message, S
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.appleAuthorizationCode) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.appleCodeFromWeb) }()
       default: break
       }
     }
@@ -811,11 +817,15 @@ nonisolated extension Pochical_V1_DeleteAccountRequest: SwiftProtobuf.Message, S
     if !self.appleAuthorizationCode.isEmpty {
       try visitor.visitSingularStringField(value: self.appleAuthorizationCode, fieldNumber: 1)
     }
+    if self.appleCodeFromWeb != false {
+      try visitor.visitSingularBoolField(value: self.appleCodeFromWeb, fieldNumber: 2)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pochical_V1_DeleteAccountRequest, rhs: Pochical_V1_DeleteAccountRequest) -> Bool {
     if lhs.appleAuthorizationCode != rhs.appleAuthorizationCode {return false}
+    if lhs.appleCodeFromWeb != rhs.appleCodeFromWeb {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

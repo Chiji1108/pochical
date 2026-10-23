@@ -52,10 +52,14 @@ const inGroup = async (groupId: string, sql: string) =>
     state.storage.sql.exec(sql).toArray()
   );
 
-const deleteAccount = async (token: string, appleAuthorizationCode = "") => {
+const deleteAccount = async (
+  token: string,
+  appleAuthorizationCode = "",
+  appleCodeFromWeb = false
+) => {
   const response = await call(
     "UserService/DeleteAccount",
-    { appleAuthorizationCode },
+    { appleAuthorizationCode, appleCodeFromWeb },
     token
   );
   return response.status;
@@ -262,6 +266,41 @@ describe("deleting an account", () => {
       [400, 400, 400, 200, 200, 401],
       "refresh-1",
       "app.pochical",
+    ]);
+  });
+
+  it("revokes with the Services ID a code Apple's web page gave", async () => {
+    const asked: { path: string; form: URLSearchParams }[] = [];
+    providerKeys((request) => {
+      const url = new URL(request.url);
+      if (url.host !== "appleid.apple.com") {
+        return undefined;
+      }
+      void request.text().then((text) => {
+        asked.push({ form: new URLSearchParams(text), path: url.pathname });
+      });
+      const body = btoa(JSON.stringify({ sub: "apple-web" }));
+      return url.pathname === "/auth/token"
+        ? Response.json({
+            id_token: `head.${body}.signature`,
+            refresh_token: "refresh-web",
+          })
+        : new Response(null, { status: 200 });
+    });
+    const token = await signInAnonymously();
+    await link(token, "apple", await idToken("apple", "apple-web", "n1"), "n1");
+    const deleted = await deleteAccount(token, "web-code", true);
+    expect([
+      deleted,
+      await signedIn(token),
+      asked.map(({ form, path }) => [path, form.get("client_id")]),
+    ]).toStrictEqual([
+      200,
+      401,
+      [
+        ["/auth/token", "app.pochical.signin"],
+        ["/auth/revoke", "app.pochical.signin"],
+      ],
     ]);
   });
 

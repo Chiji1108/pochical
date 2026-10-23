@@ -109,9 +109,12 @@ export const eraseUser = async (
   return noted[0]?.threadTs;
 };
 
+/** Sign in with Apple's code sent to delete, and how the app got it. */
+export type AppleCode = { code: string; fromWeb: boolean };
+
 /**
  * Deletes everything of the user's account: Apple's tokens revoked first
- * (from `appleCode`, FAILED_PRECONDITION when one is needed and Apple
+ * (from `apple`'s code, FAILED_PRECONDITION when one is needed and Apple
  * takes none); their part in every group they were ever in, a group they
  * were the last of gone whole; their chat with Pochical's people, with
  * the app's posts of it in Slack; their own values; and last their sign-ins, which
@@ -120,17 +123,22 @@ export const eraseUser = async (
 export const deleteAccount = async (
   env: Env,
   userId: string,
-  appleCode: string
+  apple: AppleCode
 ): Promise<void> => {
-  const apple = await appleAccountOf(env, userId);
-  if (apple !== undefined) {
-    if (appleCode === "") {
+  const subject = await appleAccountOf(env, userId);
+  if (subject !== undefined) {
+    if (apple.code === "") {
       throw new ConnectError(
         "Sign in with Apple again first",
         Code.FailedPrecondition
       );
     }
-    const revoked = await revokeApple(env, appleCode, apple);
+    const client = apple.fromWeb ? env.APPLE_SERVICES_ID : env.APPLE_APP_ID;
+    const revoked = await revokeApple(
+      env,
+      { client, code: apple.code },
+      subject
+    );
     if (revoked === "refused") {
       throw new ConnectError(
         "Apple did not take the code",

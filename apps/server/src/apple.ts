@@ -1,10 +1,12 @@
 // Sign in with Apple's tokens revoked as an account is deleted, as Apple
 // asks apps that offer it (spec/sync-protocol.md, Deleting an account).
 // The server keeps none of Apple's tokens, so the app asks Apple for a
-// fresh authorization code just before; it is exchanged for the app's
-// refresh token, which is revoked. Both calls are signed with a client
-// secret: a JWT from the Sign in with Apple key (APPLE_SIGNIN_KEY), for
-// the app's bundle id, from the team (APNS_TEAM_ID, the team's one id).
+// fresh authorization code just before; it is exchanged for a refresh
+// token, which is revoked. Both calls are signed with a client secret: a
+// JWT from the Sign in with Apple key (APPLE_SIGNIN_KEY), for the client
+// the code was given to (the iOS app's bundle id, or the Services ID of
+// Apple's web page, through which Android signs in), from the team
+// (APNS_TEAM_ID, the team's one id).
 
 import { signES256 } from "./es256";
 
@@ -50,15 +52,15 @@ const subjectOf = (idToken: unknown): unknown => {
 };
 
 /**
- * Revokes the app's Apple tokens for the person, from `code`, which must
- * be of the Apple account linked (`subject`): "refused" when Apple takes
- * neither the code nor the token, or the code is another account's;
- * "unset" when this server has no Sign in with Apple key, as a local one
- * may not.
+ * Revokes Apple's tokens for the person, from `code`, given to `client`,
+ * which must be of the Apple account linked (`subject`): "refused" when
+ * Apple takes neither the code nor the token, or the code is another
+ * account's; "unset" when this server has no Sign in with Apple key, as a
+ * local one may not.
  */
 export const revokeApple = async (
   env: Env,
-  code: string,
+  { client, code }: { client: string; code: string },
   subject: string
 ): Promise<Revoked> => {
   const key: string | undefined = env.APPLE_SIGNIN_KEY;
@@ -68,13 +70,13 @@ export const revokeApple = async (
   }
   const now = Math.floor(Date.now() / 1000);
   const app = {
-    client_id: env.APPLE_APP_ID,
+    client_id: client,
     client_secret: await signES256(key, keyId, {
       aud: APPLE,
       exp: now + SECRET_SECONDS,
       iat: now,
       iss: env.APNS_TEAM_ID,
-      sub: env.APPLE_APP_ID,
+      sub: client,
     }),
   };
   const exchanged = await callApple("/auth/token", {

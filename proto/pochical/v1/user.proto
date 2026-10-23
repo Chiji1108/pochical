@@ -159,6 +159,10 @@ message DeleteAccountRequest {
   // Sign in with Apple's authorization code, asked for again just before
   // deleting; empty for a user not linked to Apple.
   string apple_authorization_code = 1;
+  // True when the code came through Apple's web page (Android's), given
+  // to the server's Services ID rather than the iOS app: Apple takes a
+  // code only from the client it gave it to.
+  bool apple_code_from_web = 2;
 }
 
 message DeleteAccountResponse {}

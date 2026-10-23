@@ -52,6 +52,11 @@
     "BETTER_AUTH_URL": "https://api.pochical.app",
     // The iOS app's bundle id: Sign in with Apple's ID tokens are for it.
     "APPLE_APP_ID": "app.pochical",
+    // Sign in with Apple's Services ID (Apple Developer › Identifiers),
+    // grouped with the iOS app's: Android signs in through Apple's web
+    // page for it, which returns to this server (src/apple-handoff.ts), so
+    // its ID tokens are for it. Not secret.
+    "APPLE_SERVICES_ID": "app.pochical.signin",
     // The Google OAuth clients (Google Cloud › APIs & Services ›
     // Credentials) whose ID tokens sign in: the Web client first, which
     // the apps ask Google's tokens for, then the iOS app's. The Android

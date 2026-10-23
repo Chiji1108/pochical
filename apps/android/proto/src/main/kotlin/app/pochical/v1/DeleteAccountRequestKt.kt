@@ -55,6 +55,35 @@ public object DeleteAccountRequestKt {
     public fun clearAppleAuthorizationCode() {
       _builder.clearAppleAuthorizationCode()
     }
+
+    /**
+     * ```
+     * True when the code came through Apple's web page (Android's), given
+     * to the server's Services ID rather than the iOS app: Apple takes a
+     * code only from the client it gave it to.
+     * ```
+     *
+     * `bool apple_code_from_web = 2 [json_name = "appleCodeFromWeb"];`
+     */
+    public var appleCodeFromWeb: kotlin.Boolean
+      @kotlin.jvm.JvmName("getAppleCodeFromWeb")
+        get() = _builder.appleCodeFromWeb
+      @kotlin.jvm.JvmName("setAppleCodeFromWeb")
+        set(value) {
+        _builder.appleCodeFromWeb = value
+      }
+    /**
+     * ```
+     * True when the code came through Apple's web page (Android's), given
+     * to the server's Services ID rather than the iOS app: Apple takes a
+     * code only from the client it gave it to.
+     * ```
+     *
+     * `bool apple_code_from_web = 2 [json_name = "appleCodeFromWeb"];`
+     */
+    public fun clearAppleCodeFromWeb() {
+      _builder.clearAppleCodeFromWeb()
+    }
   }
 }
 public inline fun app.pochical.v1.DeleteAccountRequest.copy(block: `app.pochical.v1`.DeleteAccountRequestKt.Dsl.() -> kotlin.Unit): app.pochical.v1.DeleteAccountRequest =

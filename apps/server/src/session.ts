@@ -14,6 +14,7 @@ let auth: Auth | undefined;
 export const getAuth = (): Auth => {
   auth ??= createAuth(env.DB, {
     appleAppId: env.APPLE_APP_ID,
+    appleServicesId: env.APPLE_SERVICES_ID,
     baseURL: env.BETTER_AUTH_URL,
     googleClientIds: [...env.GOOGLE_CLIENT_IDS],
     // Its sockets close on the user's DO, their groups' and their chat

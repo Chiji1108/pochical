@@ -31,4 +31,16 @@ public interface DeleteAccountRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getAppleAuthorizationCodeBytes();
+
+  /**
+   * <pre>
+   * True when the code came through Apple's web page (Android's), given
+   * to the server's Services ID rather than the iOS app: Apple takes a
+   * code only from the client it gave it to.
+   * </pre>
+   *
+   * <code>bool apple_code_from_web = 2 [json_name = "appleCodeFromWeb"];</code>
+   * @return The appleCodeFromWeb.
+   */
+  boolean getAppleCodeFromWeb();
 }

@@ -30,8 +30,11 @@ type AuthConfig = {
   // Where the apps reach the server; better-auth builds its URLs from it.
   baseURL: string;
   secret: string;
-  // The iOS app's bundle id, which Sign in with Apple's ID tokens are for.
+  // What Sign in with Apple's ID tokens are for: the iOS app's bundle id,
+  // and the Services ID of Apple's web page, through which Android signs
+  // in (src/apple-handoff.ts).
   appleAppId: string;
+  appleServicesId: string;
   // The Google OAuth clients whose ID tokens are taken: the Web client,
   // which the apps ask Google's tokens for (serverClientID), and the iOS
   // client.
@@ -101,7 +104,14 @@ const withoutTokens = <Row extends object>(row: Row) => ({
  */
 export const createAuth = (
   d1: D1Database,
-  { appleAppId, baseURL, googleClientIds, onSessionEnd, secret }: AuthConfig
+  {
+    appleAppId,
+    appleServicesId,
+    baseURL,
+    googleClientIds,
+    onSessionEnd,
+    secret,
+  }: AuthConfig
 ) =>
   betterAuth({
     // Linking Apple or Google keeps the anonymous user, whose email is the
@@ -194,12 +204,14 @@ export const createAuth = (
       expiresIn: COOKIE_SECONDS_MOST,
     },
     // The apps sign in with Apple and Google by their ID tokens alone,
-    // never through a redirect, so neither takes a client secret. Apple's
-    // are checked against the iOS app's bundle id, Google's against the
-    // OAuth clients' ids (its audience).
+    // never through better-auth's redirect, so neither takes a client
+    // secret here: Android gets Apple's from Apple's web page through the
+    // server's own handoff (src/apple-handoff.ts). Apple's are checked
+    // against the iOS app's bundle id and the Services ID, Google's
+    // against the OAuth clients' ids (its audience).
     socialProviders: {
       apple: {
-        appBundleIdentifier: appleAppId,
+        audience: [appleAppId, appleServicesId],
         clientId: appleAppId,
         clientSecret: "",
       },
