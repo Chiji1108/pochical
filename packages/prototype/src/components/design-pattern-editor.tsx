@@ -622,7 +622,7 @@ function PatternEditor({
         {!isNew && (
           <Note>
             {blocksArchiving
-              ? "繰り返しの並びに入っているので、オフにできません。先に「繰り返し」で並びを変えてください。"
+              ? "繰り返しの並びに入っているので、オフにしたり削除したりできません。先に「繰り返し」で並びを変えてください。"
               : "オフにすると、ポチポチ入力のボタンに出なくなります。入っている日には、そのまま出ます。"}
           </Note>
         )}
@@ -643,7 +643,8 @@ function PatternEditor({
           />
         </List>
       </Section>
-      {!isNew && inOrder && (
+      {/* Said once: above, under the switch, while that is blocked too. */}
+      {!isNew && inOrder && !blocksArchiving && (
         <Note>
           繰り返しの並びに入っているので、削除できません。先に「繰り返し」で並びを変えてください。
         </Note>

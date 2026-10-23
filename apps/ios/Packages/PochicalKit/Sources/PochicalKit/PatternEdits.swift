@@ -6,10 +6,22 @@ import SQLiteData
 // (spec/shift-patterns.md): each pattern a whole value, and their order
 // one more, every change an edit through the outbox like a day's.
 
+/// An edit of a pattern the rules refuse, for the page to say why.
+public enum PatternRefusal: Error, Equatable {
+  /// A repeating order in use or to come puts it on days: it can be
+  /// neither archived nor deleted until that order changes.
+  case repeating
+}
+
 extension OwnValues {
   /// Keeps `pattern` as it is now, a new one at the end of the order.
+  /// Archiving one a repeating order still has is refused.
   public static func save(_ pattern: Pattern, now: Int64, in db: Database) throws {
-    let isNew = try PatternRow.find(pattern.id).fetchOne(db) == nil
+    let saved = try PatternRow.find(pattern.id).fetchOne(db)
+    let isNew = saved == nil
+    if pattern.archived, saved?.archived != true, try isRepeating(pattern.id, in: db) {
+      throw PatternRefusal.repeating
+    }
     var value = Pochical_V1_PatternValue()
     value.id = pattern.id
     value.pattern = pattern.wire
@@ -25,7 +37,11 @@ extension OwnValues {
 
   /// Deletes a pattern (spec/shift-patterns.md, Deleting a pattern): it
   /// goes from the list and its order, and nothing that names it changes.
+  /// One a repeating order still has is refused.
   public static func deletePattern(_ id: PatternID, now: Int64, in db: Database) throws {
+    if try isRepeating(id, in: db) {
+      throw PatternRefusal.repeating
+    }
     var value = Pochical_V1_PatternValue()
     value.id = id
     value.hlc = try nextClock(now: now, in: db)
@@ -51,14 +67,7 @@ extension OwnValues {
   public static func isRepeating(_ id: PatternID, today: Day = .today, in db: Database) throws
     -> Bool
   {
-    let all = try repeatOrders(in: db)
-    // A period in use or to come still needs it; one over does not.
-    return all.indices.contains { index in
-      let order = all[index]
-      let over = index + 1 < all.count && all[index + 1].start <= today
-      return !over
-        && (order.sequence.contains(id) || (order.holidaysOff && order.holidayShift == id))
-    }
+    repeats(id, in: try repeatOrders(in: db), today: today)
   }
 
   /// How many days show the pattern, of their own or from an order: from
@@ -74,6 +83,26 @@ extension OwnValues {
       days: days, patterns: try PatternRow.fetchAll(db),
       patternOrder: try PatternOrderRow.fetchAll(db), orders: orders)
     return calendar.shown(from: first, through: last).values.count { $0.shift == id }
+  }
+}
+
+/// Whether one of `orders`, in their order, in use or to come puts the
+/// pattern on days.
+func repeats(_ id: PatternID, in orders: [RepeatOrder], today: Day) -> Bool {
+  // A period in use or to come still needs it; one over does not.
+  orders.indices.contains { index in
+    let order = orders[index]
+    let over = index + 1 < orders.count && orders[index + 1].start <= today
+    return !over
+      && (order.sequence.contains(id) || (order.holidaysOff && order.holidayShift == id))
+  }
+}
+
+extension OwnCalendar {
+  /// Whether a repeating order in use or to come puts the pattern on days,
+  /// as `OwnValues.isRepeating` reads it.
+  public func repeats(_ id: PatternID, today: Day = .today) -> Bool {
+    PochicalKit.repeats(id, in: orders, today: today)
   }
 }
 

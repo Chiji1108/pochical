@@ -206,6 +206,9 @@ export const listRow = {
     _hover: { "&:is(button)": { bg: "fill.tertiary" } },
     cursor: "pointer",
   }),
+  // One that cannot be changed now, dimmed as the system dims a disabled
+  // row, its card left as it is.
+  disabled: css({ "& > *": { opacity: 0.5 } }),
   danger: css({
     "& > *": { color: "danger.default" },
     color: "danger.default",
@@ -376,8 +379,6 @@ const toggle = {
   }),
   track: css({
     _checked: { bg: "accent.switch" },
-    // As the system dims a switch it cannot turn.
-    _disabled: { cursor: "default", opacity: 0.5 },
     _focusVisible: {
       outline: "2px solid token(colors.accent.default)",
       outlineOffset: "2px",
@@ -460,7 +461,7 @@ export function SwitchRow({
       checked={checked}
       className={cx(
         detail === undefined ? listRow.root : listRow.twoLine,
-        listRow.pressable,
+        disabled === true ? listRow.disabled : listRow.pressable,
         className
       )}
       data-list-row=""

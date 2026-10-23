@@ -246,6 +246,7 @@ struct PatternEditor: View {
   @Environment(\.write) private var write
   @FetchAll private var rows: [PatternRow]
   @FetchAll private var order: [PatternOrderRow]
+  @FetchAll private var repeatOrders: [RepeatOrderRow]
   let initial: Pattern
   let isNew: Bool
   /// Kept: said to the page that opened it.
@@ -257,7 +258,9 @@ struct PatternEditor: View {
   @State private var picked: Set<LookPart>
   /// Shown days with the pattern, asked before deleting.
   @State private var deleting: Int?
-  @State private var repeating = false
+  /// A save or delete the rules refused, as a repeating order took the
+  /// pattern on since the page showed it.
+  @State private var refusal: PatternRefusal?
 
   init(pattern: Pattern, isNew: Bool, onSaved: @escaping () -> Void = {}) {
     initial = pattern
@@ -310,7 +313,7 @@ struct PatternEditor: View {
           }
           // From the row's edge, as under the others: a list starts the line
           // at a row's first words, here the dash between the times.
-          .alignmentGuide(.listRowSeparatorLeading) { $0[.leading] }
+          .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
         }
         Toggle(isOn: $draft.countsAsOff) {
           Text("休みとして数える")
@@ -342,7 +345,7 @@ struct PatternEditor: View {
         if !isNew {
           Text(
             blocksArchiving
-              ? "繰り返しの並びに入っているので、オフにできません。先に「繰り返し」で並びを変えてください。"
+              ? "繰り返しの並びに入っているので、オフにしたり削除したりできません。先に「繰り返し」で並びを変えてください。"
               : "オフにすると、ポチポチ入力のボタンに出なくなります。入っている日には、そのまま出ます。")
         }
       }
@@ -359,7 +362,8 @@ struct PatternEditor: View {
       }
       .settingsRows()
 
-      if !isNew {
+      // Said once: under the switch, while that is blocked too.
+      if !isNew, !blocksArchiving {
         Section {
           if repeating {
             Text("繰り返しの並びに入っているので、削除できません。先に「繰り返し」で並びを変えてください。")
@@ -384,9 +388,6 @@ struct PatternEditor: View {
           .disabled(draft.name.trimmingCharacters(in: .whitespaces).isEmpty)
       }
     }
-    .task {
-      repeating = (try? await database.read { try OwnValues.isRepeating(initial.id, in: $0) }) ?? false
-    }
     .alert(
       "「\(initial.name)」を削除しますか？",
       isPresented: Binding($deleting),
@@ -399,6 +400,11 @@ struct PatternEditor: View {
         "\(days)日の予定に入っている「\(initial.name)」も一緒に消えます。元に戻せません。日の印を残すなら「入力に出す」をオフにしてください。"
       )
     }
+    .alert("繰り返しの並びに入っています", isPresented: Binding($refusal)) {
+      Button("OK", role: .cancel) {}
+    } message: {
+      Text("先に「繰り返し」で並びを変えてください。")
+    }
   }
 
   /// The draft as it would be kept: its name trimmed and its time, unless
@@ -408,6 +414,13 @@ struct PatternEditor: View {
     pattern.name = draft.name.trimmingCharacters(in: .whitespaces)
     pattern.time = allDay ? nil : ShiftTime(start: start, end: end)
     return pattern
+  }
+
+  /// Whether a repeating order in use or to come has it, kept as the
+  /// orders change: it can be neither archived nor deleted until then.
+  private var repeating: Bool {
+    OwnCalendar(days: [], patterns: [], patternOrder: [], orders: repeatOrders)
+      .repeats(initial.id)
   }
 
   /// 入力に出す: whether it is in use, archived when off.
@@ -436,7 +449,8 @@ struct PatternEditor: View {
 
   private func save() {
     let pattern = shaped
-    guard write({ try OwnValues.save(pattern, now: nowMs(), in: $0) }) else { return }
+    guard write({ try OwnValues.save(pattern, now: nowMs(), in: $0) }, refused: { refusal = $0 })
+    else { return }
     onSaved()
     dismiss()
   }
@@ -452,7 +466,9 @@ struct PatternEditor: View {
   }
 
   private func delete() {
-    if write({ try OwnValues.deletePattern(initial.id, now: nowMs(), in: $0) }) { dismiss() }
+    if write({ try OwnValues.deletePattern(initial.id, now: nowMs(), in: $0) }, refused: { refusal = $0 }) {
+      dismiss()
+    }
   }
 }
 
