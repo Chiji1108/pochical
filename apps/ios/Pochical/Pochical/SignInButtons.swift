@@ -195,6 +195,9 @@ private struct AppleButton: View {
       Task { await completed(result) }
     }
     .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+    // ASAuthorizationAppleIDButton takes its style only when made, so a
+    // button of the other style is another button.
+    .id(colorScheme)
     .frame(height: Metrics.signIn)
     .clipShape(Capsule())
   }
