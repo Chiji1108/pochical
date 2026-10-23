@@ -34,7 +34,7 @@ interface Values {
   )
   fun coworkers(): Flow<List<CoworkerRow>>
 
-  /** The preferences the account holds, each its JSON by key. */
+  /** The preferences the account holds, each its message's bytes by key. */
   @Query("SELECT * FROM preferences") fun preferences(): Flow<List<PreferenceRow>>
 
   /** The user's groups in the order they joined them. */
