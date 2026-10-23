@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- A debug build talks to `mise run server` on the computer the emulator runs on, over plain
+       HTTP (BuildConfig.SERVER), which Android 17 counts as the local network: granted with
+       `adb shell pm grant app.pochical android.permission.ACCESS_LOCAL_NETWORK`. -->
+  <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
+
+  <application android:networkSecurityConfig="@xml/local_server" />
+</manifest>
