@@ -21,7 +21,9 @@ export const invites = sqliteTable("invites", {
 
 // What members have reported to Pochical (spec/chat.md, Reporting and
 // blocking), kept with what they saw, so a line taken back since can still
-// be looked at. Nobody in the group is told.
+// be looked at. Nobody in the group is told. A report goes, with its post
+// in Slack, a year after the account of whoever made it or is reported
+// was deleted (report-retention.ts).
 export const reports = sqliteTable(
   "reports",
   {
@@ -42,6 +44,9 @@ export const reports = sqliteTable(
     reporterId: text("reporter_id").notNull(),
     // The line reported, when it is one: its place in its chat.
     seq: integer(),
+    // The message it was posted as in Pochical's people's Slack channel,
+    // deleted with it; none until posted, or with no Slack.
+    slackTs: text("slack_ts"),
     // open while it waits for Pochical's people; acted once they acted on
     // it, dismissed once they found nothing to act on.
     status: text().notNull().default("open"),
@@ -52,6 +57,14 @@ export const reports = sqliteTable(
   },
   (table) => [index("reports_status").on(table.status, table.createdAt)]
 );
+
+// The accounts deleted whose reports, made by or about them, are still
+// kept (spec/sync-protocol.md, Deleting an account): when each was
+// deleted, for those reports to go a year after, and it with them.
+export const deletedAccounts = sqliteTable("deleted_accounts", {
+  deletedAt: integer("deleted_at", { mode: "timestamp_ms" }).notNull(),
+  userId: text("user_id").primaryKey(),
+});
 
 // An index of every user's chat with Pochical's people, whose lines are
 // kept in its own Group DO (support:{userId}, spec/chat.md, The chat with

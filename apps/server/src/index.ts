@@ -20,6 +20,7 @@ import {
   SUPPORT_PHOTO_PATH,
 } from "./photos";
 import { tooManySignIns } from "./rate-limits";
+import { eraseDueReports } from "./report-retention";
 import { getAuth, sessionUser } from "./session";
 import type { SessionUser } from "./session";
 import { slackEvents } from "./slack-events";
@@ -262,5 +263,10 @@ export default {
       (await pictureRequest(request, env, pathname)) ??
       new Response("Not found", { status: 404 })
     );
+  },
+  // Daily (`triggers.crons` in wrangler.jsonc): the reports whose year
+  // after an account's deletion is up.
+  async scheduled(controller, env) {
+    await eraseDueReports(env, new Date(controller.scheduledTime));
   },
 } satisfies ExportedHandler<Env>;

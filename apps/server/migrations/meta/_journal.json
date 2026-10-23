@@ -127,6 +127,13 @@
       "when": 1792719361899,
       "tag": "0017_user_suspended",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1792724956304,
+      "tag": "0018_report_retention",
+      "breakpoints": true
     }
   ]
 }

@@ -919,7 +919,8 @@ const reportLinesOf = (context: string): string[] => {
 /**
  * A member's report, as the admin site keeps it: why, the group, who
  * reported whom, and for a line, it and the few around it, the reported
- * one marked; with the way to the admin site.
+ * one marked; with the way to the admin site. The message posted, if
+ * Slack took it.
  */
 export const tellStaffOfReport = async (
   env: Env,
@@ -930,10 +931,10 @@ export const tellStaffOfReport = async (
     targetName: string;
     context: string;
   }
-): Promise<void> => {
+): Promise<string | undefined> => {
   const lines = reportLinesOf(report.context);
   const what = lines.length === 0 ? "メンバーを通報" : "メッセージを通報";
-  await slackCall(env, "chat.postMessage", {
+  const posted = await slackCall(env, "chat.postMessage", {
     text: [
       `新しい通報：${REASON_WORDS[report.why] ?? report.why}（${what}）`,
       `グループ：${toSlackText(report.groupName)}`,
@@ -942,6 +943,19 @@ export const tellStaffOfReport = async (
       `<${ADMIN_SITE}/reports|管理サイトで開く>`,
     ].join("\n"),
   });
+  return stringOf(posted?.ts);
+};
+
+/**
+ * A report's message in Slack deleted, as the report goes: whether it is
+ * gone, as it is once Slack no longer has it.
+ */
+export const deleteReportPost = async (
+  env: Env,
+  ts: string
+): Promise<boolean> => {
+  const answer = await askSlack(env, "chat.delete", { ts });
+  return "taken" in answer || answer.refused.why === "message_not_found";
 };
 
 /**

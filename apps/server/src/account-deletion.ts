@@ -9,6 +9,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { revokeApple } from "./apple";
 import { account } from "./db/auth-schema";
 import { invites, supportChats, supportSlack } from "./db/schema";
+import { noteDeletedAccount } from "./report-retention";
 import { getAuth } from "./session";
 import { tellStaffOfDeletion } from "./slack";
 import { supportPlace } from "./support-lines";
@@ -43,9 +44,10 @@ export const eraseGroup = async (env: Env, groupId: string): Promise<void> => {
 /**
  * Everything of a user gone but Apple's tokens: their part in every group
  * they were ever in, a group they were the last of gone whole; their chat
- * with Pochical's people, said in its Slack thread; their own values; and
- * last their sign-ins and provider accounts, which closes what is still
- * open. Also how switching to an account in use deletes the side not kept.
+ * with Pochical's people, said in its Slack thread; their own values; the
+ * reports by or about them set to go a year on; and last their sign-ins
+ * and provider accounts, which closes what is still open. Also how
+ * switching to an account in use deletes the side not kept.
  */
 export const eraseUser = async (env: Env, userId: string): Promise<void> => {
   const user = env.USERS.getByName(userId);
@@ -75,6 +77,8 @@ export const eraseUser = async (env: Env, userId: string): Promise<void> => {
   }
   // With their own photos, and their uploads not taken.
   await user.erase();
+  // The reports by or about them go a year from now.
+  await noteDeletedAccount(env, userId, new Date());
   const auth = await getAuth().$context;
   await auth.internalAdapter.deleteUser(userId);
 };
