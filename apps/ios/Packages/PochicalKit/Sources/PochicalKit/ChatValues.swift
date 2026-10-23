@@ -1118,7 +1118,7 @@ extension Chats {
 /// the group, its line's author being who did it.
 public struct LineNotice: Codable, Hashable, Sendable {
   public enum Kind: String, Codable, Sendable {
-    case joined, left, removed, inviteRemade, profileChanged
+    case joined, left, removed, removedByPochical, inviteRemade, profileChanged
   }
   public var kind: Kind
   /// Who was taken out.
@@ -1137,7 +1137,8 @@ public struct LineNotice: Codable, Hashable, Sendable {
 
   init?(_ wire: Pochical_V1_ChatNotice) {
     let kinds: [Pochical_V1_ChatNotice.Kind: Kind] = [
-      .joined: .joined, .left: .left, .removed: .removed, .inviteRemade: .inviteRemade,
+      .joined: .joined, .left: .left, .removed: .removed,
+      .removedByPochical: .removedByPochical, .inviteRemade: .inviteRemade,
       .profileChanged: .profileChanged,
     ]
     guard let kind = kinds[wire.kind] else { return nil }
@@ -1152,6 +1153,9 @@ public struct LineNotice: Codable, Hashable, Sendable {
     case .joined: "\(by)がグループに参加しました"
     case .left: "\(by)がグループを抜けました"
     case .removed: "\(by)が\(subject)をグループから外しました"
+    // Pochical's people took them out (spec/admin.md): the line's writer
+    // is who was taken out.
+    case .removedByPochical: "\(by)がグループから外されました"
     case .inviteRemade: "\(by)が招待リンクを作り直しました"
     case .profileChanged:
       if !name.isEmpty && markChanged {

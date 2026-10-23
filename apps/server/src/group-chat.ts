@@ -308,6 +308,7 @@ const noticeKinds = {
   left: ChatNotice_Kind.LEFT,
   profileChanged: ChatNotice_Kind.PROFILE_CHANGED,
   removed: ChatNotice_Kind.REMOVED,
+  removedByPochical: ChatNotice_Kind.REMOVED_BY_POCHICAL,
 } as const;
 
 type OnLine = ReturnType<ReturnType<typeof onLines>>;

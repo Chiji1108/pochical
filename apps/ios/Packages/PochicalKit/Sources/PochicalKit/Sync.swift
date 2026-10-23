@@ -11,10 +11,11 @@ public enum Sync {
   /// starts reading a Change, or a field of one, it did not read before.
   /// A device moves its cursors past Changes it cannot read, so after the
   /// update it takes everything again (`takeAllAgainIfOlder`). 3: a
-  /// chat line's content as one kind (`ChatLine.content`). `mise run
+  /// chat line's content as one kind (`ChatLine.content`). 4: the notice
+  /// of a member Pochical's people took out (`REMOVED_BY_POCHICAL`). `mise run
   /// sync:check` fails when `Change`'s messages in proto/ change while this
   /// stays, and its `--write` records each raise in `sync-wire.json`.
-  static let schema = 3
+  static let schema = 4
 
   /// A device that took its values under an older schema moves every
   /// cursor back to the start, its User DO's and every place's, so its

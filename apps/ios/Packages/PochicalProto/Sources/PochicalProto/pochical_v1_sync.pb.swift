@@ -2022,6 +2022,10 @@ public nonisolated struct Pochical_V1_ChatNotice: Sendable {
 
     /// 〇〇がグループ名を「name」に変えました, or the group's icon, or both.
     case profileChanged // = 5
+
+    /// 〇〇がグループから外されました: Pochical's people took them out
+    /// (spec/admin.md, ユーザー); the line's writer is who was taken out.
+    case removedByPochical // = 6
     case UNRECOGNIZED(Int)
 
     public init() {
@@ -2036,6 +2040,7 @@ public nonisolated struct Pochical_V1_ChatNotice: Sendable {
       case 3: self = .removed
       case 4: self = .inviteRemade
       case 5: self = .profileChanged
+      case 6: self = .removedByPochical
       default: self = .UNRECOGNIZED(rawValue)
       }
     }
@@ -2048,6 +2053,7 @@ public nonisolated struct Pochical_V1_ChatNotice: Sendable {
       case .removed: return 3
       case .inviteRemade: return 4
       case .profileChanged: return 5
+      case .removedByPochical: return 6
       case .UNRECOGNIZED(let i): return i
       }
     }
@@ -2060,6 +2066,7 @@ public nonisolated struct Pochical_V1_ChatNotice: Sendable {
       .removed,
       .inviteRemade,
       .profileChanged,
+      .removedByPochical,
     ]
 
   }
@@ -5676,7 +5683,7 @@ nonisolated extension Pochical_V1_ChatNotice: SwiftProtobuf.Message, SwiftProtob
 }
 
 nonisolated extension Pochical_V1_ChatNotice.Kind: SwiftProtobuf._ProtoNameProviding {
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0KIND_UNSPECIFIED\0\u{1}KIND_JOINED\0\u{1}KIND_LEFT\0\u{1}KIND_REMOVED\0\u{1}KIND_INVITE_REMADE\0\u{1}KIND_PROFILE_CHANGED\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0KIND_UNSPECIFIED\0\u{1}KIND_JOINED\0\u{1}KIND_LEFT\0\u{1}KIND_REMOVED\0\u{1}KIND_INVITE_REMADE\0\u{1}KIND_PROFILE_CHANGED\0\u{1}KIND_REMOVED_BY_POCHICAL\0")
 }
 
 nonisolated extension Pochical_V1_ChatPhoto: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {

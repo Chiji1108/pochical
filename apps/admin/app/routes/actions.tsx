@@ -22,6 +22,7 @@ export const loader = async () => await env.SERVER.actions();
 const ACTION_NAMES: Record<string, string> = {
   answer: "返信",
   cleanBucket: "棚卸しの削除",
+  removeFromGroup: "グループから外す",
   report: "通報の対応",
   reset: "全消去",
   suspend: "ユーザーの停止",
@@ -31,6 +32,7 @@ const ACTION_NAMES: Record<string, string> = {
 // The page of whom or what each action was done to.
 const PAGE_OF: Record<string, (target: string) => string> = {
   answer: (userId) => `/support/${userId}`,
+  removeFromGroup: (userId) => `/users/${userId}`,
   report: () => "/reports",
   suspend: (userId) => `/users/${userId}`,
   unsuspend: (userId) => `/users/${userId}`,

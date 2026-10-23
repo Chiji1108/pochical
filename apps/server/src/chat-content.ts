@@ -15,7 +15,13 @@ export type KeptPhoto = {
 
 /** What happened to the group, as a notice line keeps it. */
 export type Notice = {
-  kind: "joined" | "left" | "removed" | "inviteRemade" | "profileChanged";
+  kind:
+    | "joined"
+    | "left"
+    | "removed"
+    | "removedByPochical"
+    | "inviteRemade"
+    | "profileChanged";
   markChanged?: boolean;
   name?: string;
   subjectId?: string;

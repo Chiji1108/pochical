@@ -39,24 +39,27 @@ export const loader = async ({ params }: Route.LoaderArgs) => {
   return user;
 };
 
-// The user suspended, or let back (spec/admin.md, ユーザー), by whoever
-// Access let in; then the page again (Post/Redirect/Get).
+// What Pochical's people do to the user (spec/admin.md, ユーザー), by
+// whoever Access let in: suspend them or let them back (suspend=on|off),
+// or take them out of a group (removeFrom=groupId); then the page again
+// (Post/Redirect/Get).
 export const action = async ({ params, request, url }: Route.ActionArgs) => {
   const form = await request.formData();
-  const asked = form.get("suspend");
-  if (asked !== "on" && asked !== "off") {
+  const by = staffOf(request);
+  const suspend = form.get("suspend");
+  const removeFrom = form.get("removeFrom");
+  let done: Promise<boolean>;
+  if (suspend === "on" || suspend === "off") {
+    done = env.SERVER.suspend(params.userId, suspend === "on", by);
+  } else if (typeof removeFrom === "string" && removeFrom !== "") {
+    done = env.SERVER.removeFromGroup(params.userId, removeFrom, by);
+  } else {
     return data(
-      { error: "停止か解除かが分かりませんでした。" },
+      { error: "何をするのかが分かりませんでした。" },
       { status: 400 }
     );
   }
-  const on = asked === "on";
-  const done = await env.SERVER.suspend(
-    params.userId,
-    on,
-    staffOf(request)
-  ).catch(() => false);
-  if (!done) {
+  if (!(await done.catch(() => false))) {
     return data({ error: "変えられませんでした。" }, { status: 502 });
   }
   return redirect(url.pathname);
@@ -70,6 +73,7 @@ export default function User({
 }: Route.ComponentProps) {
   const busy = useNavigation().state !== "idle";
   const suspended = user.suspendedAtMs !== null;
+  const name = user.name === "" ? "名前なし" : user.name;
   return (
     <main className={page}>
       <PageHeader
@@ -118,7 +122,7 @@ export default function User({
           <span
             className={css({ alignItems: "center", display: "flex", gap: "2" })}
           >
-            {user.name === "" ? "名前なし" : user.name}
+            {name}
             {suspended && user.suspendedAtMs !== null && (
               <span className={badge({ tone: "danger" })}>
                 {`${when(user.suspendedAtMs)} から停止中`}
@@ -152,7 +156,11 @@ export default function User({
           >
             キャンセル
           </button>
-          <button className={button({ variant: "danger" })} type="submit">
+          <button
+            className={button({ variant: "danger" })}
+            disabled={busy}
+            type="submit"
+          >
             停止する
           </button>
         </Form>
@@ -202,8 +210,17 @@ export default function User({
                     </td>
                     <td>
                       {group.leftAtMs === null ? (
-                        <span className={badge({ tone: "accent" })}>
-                          参加中
+                        <span
+                          className={css({
+                            alignItems: "center",
+                            display: "flex",
+                            gap: "2",
+                          })}
+                        >
+                          <span className={badge({ tone: "accent" })}>
+                            参加中
+                          </span>
+                          <RemoveFromGroup busy={busy} group={group} />
                         </span>
                       ) : (
                         <span className={badge()}>
@@ -231,5 +248,62 @@ export default function User({
         <ReportTable empty="通報していません。" reports={user.reportsBy} />
       </section>
     </main>
+  );
+}
+
+/**
+ * グループから外す for one group, asked first: the group's members see
+ * 〇〇がグループから外されました, and the user leaves it as if a member took
+ * them out.
+ */
+function RemoveFromGroup({
+  busy,
+  group,
+}: {
+  busy: boolean;
+  group: { groupId: string; name: string };
+}) {
+  const id = `remove-${group.groupId}`;
+  return (
+    <>
+      <button
+        className={css(button.raw({ variant: "outline" }), {
+          height: "7",
+          paddingInline: "2.5",
+        })}
+        command="show-modal"
+        commandfor={id}
+        type="button"
+      >
+        外す
+      </button>
+      <dialog className={dialog} id={id}>
+        <h2 className={sectionTitle}>{`「${group.name}」から外しますか？`}</h2>
+        <p className={css({ color: "text.secondary" })}>
+          グループのチャットに、このグループでのその人の名前で「〇〇がグループから外されました」と出ます。シフトなど、このグループでのその人のものはグループから消えます。また招待されれば、入り直せます。
+        </p>
+        <Form
+          className={css(actionsStyle, { justifyContent: "flex-end" })}
+          method="post"
+        >
+          <input name="removeFrom" type="hidden" value={group.groupId} />
+          <button
+            className={button({ variant: "outline" })}
+            command="close"
+            commandfor={id}
+            type="button"
+          >
+            キャンセル
+          </button>
+          <button
+            className={button({ variant: "danger" })}
+            disabled={busy}
+            type="submit"
+          >
+            外す
+          </button>
+        </Form>
+      </dialog>
+    </>
   );
 }
