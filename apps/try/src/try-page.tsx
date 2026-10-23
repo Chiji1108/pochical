@@ -31,7 +31,7 @@ const variants = parseDesignVariants({});
 // What this is, for anyone the link reaches: said beside the framed phone
 // on a computer, and once over the app on a phone.
 const prototypeNote =
-  "入力した内容はどこにも送られず、開き直すとサンプルに戻ります。";
+  "入力した内容はこの端末の外に出ません。シフトやグループは、開き直すとサンプルに戻ります。";
 
 // The phone's screens fill the page, with nothing of the page to scroll
 // or bounce behind them.

@@ -130,7 +130,18 @@ function DemoPage() {
   const variants = Route.useSearch();
   const navigate = Route.useNavigate();
   const theme = useDesignTheme();
-  // The phone stood in for: its platform and wallpaper.
+  // The phone stood in for is the demo's own while it is open, as it was
+  // on a page of its own: it starts as a new phone, and what the demo
+  // changes in it goes back as it was on leaving for the documents, whose
+  // phones share it.
+  useEffect(() => {
+    const before = useDevice.getState();
+    useDevice.setState(useDevice.getInitialState(), true);
+    return () => {
+      useDevice.setState(before, true);
+    };
+  }, []);
+  // Its platform and wallpaper.
   useEffect(() => {
     useDevice.setState({
       platform: variants.platform,

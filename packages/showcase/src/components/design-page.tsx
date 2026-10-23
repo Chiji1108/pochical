@@ -16,13 +16,16 @@ const NARROW = "@media (max-width: 760px)";
 // the app's pieces sits on it, the design documents' pieces too
 // (apps/design/src/components/mdx.tsx), with `design-page` as the hook for the pieces'
 // focus rings and button colors (@pochical/styled-system's globalCss).
+// Its ground is the browser's bars' color around a page on it too.
+export const workspaceGround = "#fbfaf7";
+
 export const workspace = cx(
   "design-page",
   css({
     "--ws-bezel": "#333631",
     "--ws-bezel-edge": "#b9bdb6",
     "--ws-bezel-shadow": "#30392f35",
-    "--ws-bg": "#fbfaf7",
+    "--ws-bg": workspaceGround,
     "--ws-bg-translucent": "#fbfaf7e8",
     "--ws-island": "#242724",
   })

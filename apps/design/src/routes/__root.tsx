@@ -8,6 +8,7 @@ import {
   useColorScheme,
   useThemeStyle,
 } from "@pochical/prototype/components/design-theme";
+import { workspaceGround } from "@pochical/showcase/components/design-page";
 import {
   createRootRoute,
   HeadContent,
@@ -95,9 +96,6 @@ function Html({ children }: { children: ReactNode }) {
   );
 }
 
-// The workspace's ground, --ws-bg in @pochical/showcase's design-page.tsx.
-const workspaceGround = "#fbfaf7";
-
 // A tool (_tool.tsx) draws on the workspace's ground, light whatever 外観
 // the documents keep, so its <html> takes neither their colors nor dark.
 function ThemedHtml({ children }: { children: ReactNode }) {
@@ -122,10 +120,15 @@ function ThemedHtml({ children }: { children: ReactNode }) {
       <body>
         {/* Movement follows the device's 視差効果を減らす setting. */}
         <MotionConfig reducedMotion="user">
-          {/* Light and dark follow 外観 above, not next-themes. */}
-          <RootProvider i18n={japanese} theme={{ enabled: false }}>
-            {children}
-          </RootProvider>
+          {/* Light and dark follow 外観 above, not next-themes. A tool
+              has none of Fumadocs UI's chrome, its search among it. */}
+          {tool ? (
+            children
+          ) : (
+            <RootProvider i18n={japanese} theme={{ enabled: false }}>
+              {children}
+            </RootProvider>
+          )}
         </MotionConfig>
         <Scripts />
       </body>

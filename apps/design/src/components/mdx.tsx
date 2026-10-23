@@ -8,7 +8,7 @@ import { Link } from "@tanstack/react-router";
 import { Step, Steps } from "fumadocs-ui/components/steps";
 import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 import defaultMdxComponents from "fumadocs-ui/mdx";
-import { ExternalLink } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import type { MDXComponents } from "mdx/types";
 import type { ReactNode } from "react";
 
@@ -64,7 +64,7 @@ function DemoLink({ state }: { state?: Partial<DesignVariants> }) {
       to="/demo"
     >
       この状態をデモで見る
-      <ExternalLink aria-hidden="true" className="size-3.5" />
+      <ChevronRight aria-hidden="true" className="size-3.5" />
     </Link>
   );
 }
