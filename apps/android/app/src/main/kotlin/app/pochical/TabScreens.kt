@@ -34,6 +34,7 @@ fun GroupsScreen() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(open: (RootPage) -> Unit) {
+  val device = LocalDeviceSettings.current.device
   Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.tab_settings)) }) }) { padding ->
     LazyColumn(contentPadding = padding) {
       item {
@@ -47,6 +48,7 @@ fun SettingsScreen(open: (RootPage) -> Unit) {
       item {
         ListItem(
           headlineContent = { Text(stringResource(R.string.appearance)) },
+          supportingContent = { Text(appearanceName(device)) },
           modifier = Modifier.clickable { open(RootPage.Appearance) },
         )
       }
@@ -60,3 +62,12 @@ private fun Placeholder(name: String) {
     Text(name, style = MaterialTheme.typography.titleLarge)
   }
 }
+
+/** 外観 as the screens are drawn: a テーマ drawn dark says so, whatever 外観 keeps for after it. */
+@Composable
+private fun appearanceName(device: DeviceSettings): String =
+  if (device.theme.isAlwaysDark) {
+    stringResource(R.string.appearance_dark_by_theme, device.theme.displayName)
+  } else {
+    stringResource(device.appearance.title)
+  }

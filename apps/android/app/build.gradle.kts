@@ -64,10 +64,13 @@ dependencies {
   implementation(libs.navigation3.runtime)
   implementation(libs.navigation3.ui)
   implementation(libs.metrox.android)
-  implementation(libs.kotlinx.serialization.core)
+  implementation(libs.kotlinx.serialization.json)
+  implementation(libs.datastore)
+  implementation(libs.splashscreen)
   implementation(libs.lifecycle.runtime.compose)
 
   testImplementation(libs.junit)
+  testImplementation(libs.kotlinx.coroutines.test)
 }
 
 kotlin {

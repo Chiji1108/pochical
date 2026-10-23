@@ -7,4 +7,10 @@
   <string name="settings_display">表示</string>
   <string name="appearance">外観</string>
   <string name="back">戻る</string>
+  <string name="appearance_system_name">端末に合わせる</string>
+  <string name="appearance_light">ライト</string>
+  <string name="appearance_dark">ダーク</string>
+  <string name="appearance_dark_by_theme">ダーク（%1$s）</string>
+  <string name="appearance_system">端末に合わせると、端末の設定に合わせてライトとダークが切り替わります。</string>
+  <string name="appearance_always_dark">テーマの「%1$s」はいつもダークで表示されます。ほかのテーマにすると、ここでの設定に戻ります。</string>
 </resources>
