@@ -1,6 +1,8 @@
 package app.pochical.kit
 
 import android.util.Log
+import com.connectrpc.Code
+import com.connectrpc.ConnectException
 import app.pochical.design.SyncSocket
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicBoolean
@@ -10,6 +12,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.async
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
@@ -34,14 +38,18 @@ sealed interface AccountState {
   /** Signing in: a first launch, or offline before its first sign-in reached the server. */
   data object SigningIn : AccountState
 
-  data class SignedIn(val userId: String) : AccountState
+  /** Signed in as [userId], linked to [linked], null while anonymous. */
+  data class SignedIn(val userId: String, val linked: LinkedAccount?) : AccountState
 
   /**
    * The server does not know the session (ログアウトされています): nothing syncs, nothing is
-   * cleared, until the person chooses (sign-in proper, POC-204, offers the choices).
+   * cleared, until the person chooses (spec/sync-protocol.md, Reconnecting).
    */
   data object SessionEnded : AccountState
 }
+
+/** The device has no session now: it is signing in, or the server ended it. */
+class NotSignedIn : Exception()
 
 /**
  * The one owner on the device of who it is and of every socket (iOS: AccountSession): it signs in
@@ -82,12 +90,16 @@ class SyncAccount(
   private val holds = mutableMapOf<String, Int>()
   private var signingIn: Job? = null
   private var closingUser: Job? = null
+  /** A new session the store could not keep yet; only [signIn], one at a time, reads and writes it. */
+  private var unkept: StoredSession? = null
+  /** How many links the device has made; an answer to GetMe asked before the last is stale. */
+  private var links = 0L
   /** How many [sendOutbox] calls wait: the user's socket stays open for them in the background. */
   private var sending = 0
 
   init {
     scope.launch { for (command in commands) handle(command) }
-    network?.watch(lost = { commands.trySend(Command.NetworkLost) }, back = { commands.trySend(Command.NetworkBack) })
+    network?.watch(lost = { commands.trySend(Command.NetworkLost) }, changed = { commands.trySend(Command.NetworkChanged) })
   }
 
   /** The app came to the foreground: signs in if it is not, and opens the sockets. */
@@ -119,6 +131,52 @@ class SyncAccount(
     } finally {
       commands.trySend(Command.Send(waiting = false))
     }
+  }
+
+  /**
+   * Links the provider's account to the signed-in user (spec/sync-protocol.md, Signing in), keeping
+   * the session with the account it is now linked to. [NotSignedIn] before the device has a session,
+   * or once the server says it does not know it; [LinkRefused] otherwise. Once asked, it runs to the
+   * end whether or not its caller waits, so a link the server made is never left unkept here.
+   */
+  suspend fun link(account: ProviderToken): LinkResult {
+    val credentials = stretch.value?.credentials ?: throw NotSignedIn()
+    return scope
+      .async {
+        val result =
+          try {
+            linkSocial(http, server, credentials.token, account)
+          } catch (e: LinkRefused) {
+            when (e.status) {
+              401 -> {
+                commands.send(Command.SessionUnknown(credentials.generation))
+                throw NotSignedIn()
+              }
+              // Linked already, as from another of the person's devices: said as the server says it.
+              417 -> commands.send(Command.AskLinked(credentials.generation))
+            }
+            throw e
+          }
+        if (result == LinkResult.Linked) commands.send(Command.Linked(credentials.generation, account.account, asOf = null))
+        result
+      }
+      .await()
+  }
+
+  /**
+   * Asks the server which provider the user is linked to (`GetMe`), as a session restored or linked
+   * elsewhere may not say, and keeps it with the session; an email this device read stays while the
+   * provider does. Nothing changes when the server cannot be asked.
+   */
+  private suspend fun askLinked(credentials: Credentials, asOf: Long) {
+    val provider =
+      try {
+        UserCalls(http, server, credentials.token).linkedProvider()
+      } catch (e: ConnectException) {
+        if (e.code == Code.UNAUTHENTICATED) commands.send(Command.SessionUnknown(credentials.generation))
+        return
+      }
+    commands.send(Command.Linked(credentials.generation, provider?.let { LinkedAccount(it, email = null) }, asOf))
   }
 
   /** Keeps the group's socket open, while the app is in the foreground, until [GroupHold.release]. */
@@ -176,9 +234,12 @@ class SyncAccount(
       is Command.SignedIn -> {
         val stretch = Stretch(Credentials(generation.incrementAndGet(), command.session.token, command.session.userId, generation::get))
         this.stretch.value = stretch
-        mutableState.value = AccountState.SignedIn(command.session.userId)
+        mutableState.value = AccountState.SignedIn(command.session.userId, command.session.linked)
         if (foreground || sending > 0) stretch.user.start()
         if (foreground) holds.keys.forEach { stretch.group(it).start() }
+        if (command.kept) keepAgain()
+        val asOf = links
+        stretch.scope.launch { askLinked(stretch.credentials, asOf) }
       }
       is Command.SessionUnknown -> {
         if (current?.credentials?.generation != command.generation) return
@@ -186,17 +247,62 @@ class SyncAccount(
         generation.incrementAndGet()
         current.end()
         stretch.value = null
-        withContext(Dispatchers.IO) { sessions.read()?.let { sessions.write(it.copy(ended = true)) } }
+        try {
+          sessions.read()?.let { sessions.write(it.copy(ended = true)) }
+        } catch (e: StoreUnreachable) {
+          // Not kept as ended, a relaunch tries the session again and hears the same.
+          Log.i(TAG, "The ended session could not be noted: $e")
+        }
         mutableState.value = AccountState.SessionEnded
       }
+      is Command.AskLinked -> {
+        if (current?.credentials?.generation != command.generation) return
+        val asOf = links
+        current.scope.launch { askLinked(current.credentials, asOf) }
+      }
+      is Command.Linked -> {
+        if (current?.credentials?.generation != command.generation) return
+        // A link made here wins over what the server said of the user before it.
+        if (command.asOf == null) links += 1 else if (command.asOf != links) return
+        val before = (state.value as? AccountState.SignedIn)?.linked
+        val after =
+          when {
+            command.account == null -> null
+            command.account.email == null && command.account.provider == before?.provider -> before
+            else -> command.account
+          }
+        if (after == before) return
+        try {
+          val kept = sessions.read()
+          if (kept != null) sessions.write(kept.copy(linked = after)) else Log.i(TAG, "No session kept to note the account with")
+        } catch (e: StoreUnreachable) {
+          // The server holds the link, and GetMe says it again at the next refresh.
+          Log.i(TAG, "The linked account could not be kept: $e")
+        }
+        mutableState.value = AccountState.SignedIn(current.credentials.userId, after)
+      }
       Command.NetworkLost -> current?.clients()?.forEach { it.networkLost() }
-      Command.NetworkBack -> current?.clients()?.forEach { it.networkBack() }
+      Command.NetworkChanged -> current?.clients()?.forEach { it.networkChanged() }
     }
   }
 
   private fun startSigningIn() {
-    if (signingIn?.isActive != true && state.value != AccountState.SessionEnded) {
-      signingIn = scope.launch { signIn() }
+    val before = signingIn
+    if (before?.isActive != true && state.value != AccountState.SessionEnded) {
+      // One cancelled may still be keeping the user it made: this one starts from what it kept.
+      signingIn = scope.launch {
+        before?.join()
+        signIn()
+      }
+    }
+  }
+
+  /** Keeps the session again, so it goes to the cloud backup once a screen lock lets Block Store encrypt it. */
+  private suspend fun keepAgain() {
+    try {
+      sessions.read()?.let { sessions.write(it) }
+    } catch (e: StoreUnreachable) {
+      Log.i(TAG, "The kept session could not be kept again: $e")
     }
   }
 
@@ -207,17 +313,27 @@ class SyncAccount(
    * any more (spec/sync-protocol.md, Sockets).
    */
   private suspend fun signIn() {
-    val kept = withContext(Dispatchers.IO) { sessions.read() }
+    val kept =
+      try {
+        sessions.read()
+      } catch (e: StoreUnreachable) {
+        Log.i(TAG, "The kept session cannot be reached, tried again in the foreground: $e")
+        return
+      }
     if (kept?.ended == true) {
       mutableState.value = AccountState.SessionEnded
       return
     }
+    if (kept != null) Log.i(TAG, "Signed in as kept, ${kept.userId}")
     var tries = 0
     var session = kept
     while (session == null) {
       try {
-        session = signInAnonymously(http, server).also { withContext(Dispatchers.IO) { sessions.write(it) } }
+        session = withContext(NonCancellable) { newSession() }
         Log.i(TAG, "Signed in anonymously as ${session.userId}")
+      } catch (e: StoreUnreachable) {
+        Log.i(TAG, "The new session could not be kept, tried again in the foreground: $e")
+        return
       } catch (e: IOException) {
         tries += 1
         Log.i(TAG, "Signing in failed: $e")
@@ -231,7 +347,20 @@ class SyncAccount(
         claim(userId)
       }
     }
-    commands.send(Command.SignedIn(session))
+    commands.send(Command.SignedIn(session, kept = kept != null))
+  }
+
+  /**
+   * A new anonymous session, kept: the device makes one anonymous user at most. Run uncancelled, as
+   * going to the background cancels signing in, so a user the server made is kept before anything
+   * stops; one the store could not keep is held for the next try rather than made again.
+   */
+  private suspend fun newSession(): StoredSession {
+    val session = unkept ?: signInAnonymously(http, server)
+    unkept = session
+    sessions.write(session)
+    unkept = null
+    return session
   }
 
   /** One stretch of the account: whom it connects as, and the sockets it opened as them. */
@@ -264,13 +393,24 @@ class SyncAccount(
 
     data class Release(val groupId: String) : Command
 
-    data class SignedIn(val session: StoredSession) : Command
+    /** Signed in as [session], [kept] from before rather than made now. */
+    data class SignedIn(val session: StoredSession, val kept: Boolean) : Command
 
     data class SessionUnknown(val generation: Long) : Command
 
+    /**
+     * The stretch [generation]'s user is linked to [account], null while anonymous; one without an
+     * email names the provider alone, as the server does. [asOf] is how many links the device had
+     * made when GetMe was asked, null for a link made here.
+     */
+    data class Linked(val generation: Long, val account: LinkedAccount?, val asOf: Long?) : Command
+
+    /** Ask the server which provider the stretch [generation]'s user is linked to. */
+    data class AskLinked(val generation: Long) : Command
+
     data object NetworkLost : Command
 
-    data object NetworkBack : Command
+    data object NetworkChanged : Command
   }
 
   private companion object {

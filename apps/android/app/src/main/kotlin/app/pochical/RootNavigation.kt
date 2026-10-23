@@ -43,6 +43,9 @@ data object Tabs : RootRoute
 /** A page over the tabs. */
 @Serializable
 sealed interface RootPage : RootRoute, NavKey {
+  /** アカウント, from 設定. */
+  @Serializable data object Account : RootPage
+
   /** 外観, from 設定's 表示. */
   @Serializable data object Appearance : RootPage
 

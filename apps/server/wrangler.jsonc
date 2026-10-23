@@ -54,8 +54,9 @@
     "APPLE_APP_ID": "app.pochical",
     // The Google OAuth clients (Google Cloud › APIs & Services ›
     // Credentials) whose ID tokens sign in: the Web client first, which
-    // the apps ask Google's tokens for, then the iOS app's. Client ids are
-    // not secret.
+    // the apps ask Google's tokens for, then the iOS app's. The Android
+    // build reads the Web client's from here (apps/android/app); its own
+    // Android clients are never an audience. Client ids are not secret.
     "GOOGLE_CLIENT_IDS": [
       "608132058597-2ldp23dv5lqc7ld5omtob4pk04cglre1.apps.googleusercontent.com",
       "608132058597-dpqpcmsadl021doot4vun3fcmerddffj.apps.googleusercontent.com",

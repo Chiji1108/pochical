@@ -4,7 +4,7 @@ import app.pochical.kit.SocketEvent.CaughtUp
 import app.pochical.kit.SocketEvent.ClockAhead
 import app.pochical.kit.SocketEvent.Close
 import app.pochical.kit.SocketEvent.Dropped
-import app.pochical.kit.SocketEvent.NetworkBack
+import app.pochical.kit.SocketEvent.NetworkChanged
 import app.pochical.kit.SocketEvent.Refused
 import app.pochical.kit.SocketEvent.Start
 import app.pochical.kit.SocketEvent.WaitOver
@@ -30,9 +30,16 @@ class SocketStateTest {
     val waiting = SocketState.Closed.after(Start, Dropped, WaitOver, Dropped)
     assertEquals(SocketState.Waiting(3), waiting)
     assertEquals(SocketState.Opening(1), waiting.on(Start))
-    assertEquals(SocketState.Opening(1), waiting.on(NetworkBack))
-    // An open socket stays as it is.
-    assertEquals(SocketState.Current, SocketState.Current.after(Start, NetworkBack))
+    assertEquals(SocketState.Opening(1), waiting.on(NetworkChanged))
+    // An open socket stays as it is when the app comes back.
+    assertEquals(SocketState.Current, SocketState.Current.on(Start))
+  }
+
+  @Test
+  fun anotherDefaultNetworkMovesAnOpenSocketAtOnce() {
+    assertEquals(SocketState.Opening(1), SocketState.Current.on(NetworkChanged))
+    assertEquals(SocketState.Opening(1), SocketState.CatchingUp(2).on(NetworkChanged))
+    assertEquals(SocketState.Opening(1), SocketState.Opening(4).on(NetworkChanged))
   }
 
   @Test
@@ -44,14 +51,14 @@ class SocketStateTest {
   fun aRefusalStopsTryingUntilTheAccountChanges() {
     for (why in listOf(Stop.SignedOut, Stop.ProtocolTooOld, Stop.NotTheOwner)) {
       val stopped = SocketState.Opening(1).on(Refused(why))
-      assertEquals(SocketState.Stopped(why), stopped.after(Start, NetworkBack, WaitOver, Close, Start))
+      assertEquals(SocketState.Stopped(why), stopped.after(Start, NetworkChanged, WaitOver, Close, Start))
     }
   }
 
   @Test
   fun aGroupNotJoinedIsTriedAgainOnlyWhenOpenedAgain() {
     val stopped = SocketState.CatchingUp(1).on(Refused(Stop.NotMember))
-    assertEquals(SocketState.Stopped(Stop.NotMember), stopped.after(NetworkBack, WaitOver))
+    assertEquals(SocketState.Stopped(Stop.NotMember), stopped.after(NetworkChanged, WaitOver))
     assertEquals(SocketState.Opening(1), stopped.on(Start))
   }
 
@@ -59,6 +66,6 @@ class SocketStateTest {
   fun closingStopsTheWaitAndTheSocket() {
     assertEquals(SocketState.Closed, SocketState.Waiting(5).on(Close))
     assertEquals(SocketState.Closed, SocketState.Current.on(Close))
-    assertEquals(SocketState.Closed, SocketState.Closed.after(Dropped, WaitOver, NetworkBack))
+    assertEquals(SocketState.Closed, SocketState.Closed.after(Dropped, WaitOver, NetworkChanged))
   }
 }

@@ -38,6 +38,7 @@ fun RootScreen(navigator: RootNavigator) {
   ) { route ->
     when (route) {
       Tabs -> NavEntry(route) { TabsScreen(navigator, rememberPageNavigation(navigator)) }
+      RootPage.Account -> NavEntry(route) { AccountPage(onBack = rememberPageNavigation(navigator)::back) }
       RootPage.Appearance ->
         NavEntry(route) { AppearancePage(onBack = rememberPageNavigation(navigator)::back) }
       is RootPage.ShiftChoice ->
