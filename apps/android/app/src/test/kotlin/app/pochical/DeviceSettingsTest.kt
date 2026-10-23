@@ -1,10 +1,12 @@
 package app.pochical
 
+import androidx.datastore.core.DataStore
 import app.pochical.design.Theme
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -17,15 +19,17 @@ class DeviceSettingsTest {
 
   private val file by lazy { File(folder.root, "device-settings.json") }
 
-  /** Reads the settings as a store opened anew on the file does, as the app does when it starts again. */
-  private suspend fun readAgain(): DeviceSettings {
-    val scope = CoroutineScope(Dispatchers.IO)
+  /** Runs `use` on a store opened anew on the file, as the app does when it starts again, then closes it. */
+  private suspend fun <T> withStore(use: suspend (DataStore<DeviceSettings>) -> T): T {
+    val job = Job()
     try {
-      return deviceSettingsStore(file, scope).data.first()
+      return use(deviceSettingsStore(file, CoroutineScope(job + Dispatchers.IO)))
     } finally {
-      scope.cancel()
+      job.cancelAndJoin()
     }
   }
+
+  private suspend fun readAgain(): DeviceSettings = withStore { it.settings.first() }
 
   @Test
   fun aDeviceNeverSetShowsPochicalAsThePhoneIs() = runTest {
@@ -34,11 +38,9 @@ class DeviceSettingsTest {
 
   @Test
   fun whatIsSetIsKeptForTheNextStart() = runTest {
-    val scope = CoroutineScope(Dispatchers.IO)
-    deviceSettingsStore(file, scope).updateData {
-      it.copy(themeId = Theme.Sakura.id, appearance = Appearance.Dark)
+    withStore { store ->
+      store.updateData { it.copy(themeId = Theme.Sakura.id, appearance = Appearance.Dark) }
     }
-    scope.cancel()
 
     val kept = readAgain()
     assertEquals(Theme.Sakura, kept.theme)
@@ -60,6 +62,13 @@ class DeviceSettingsTest {
     file.writeText("""{"theme":"matcha"}""")
 
     assertEquals(DeviceSettings(Theme.Matcha.id, Appearance.System), readAgain())
+  }
+
+  @Test
+  fun anAppearanceThisAppDoesNotKnowLeavesTheThemeAsItWas() = runTest {
+    file.writeText("""{"theme":"sakura","appearance":"auto"}""")
+
+    assertEquals(DeviceSettings(Theme.Sakura.id, Appearance.System), readAgain())
   }
 
   @Test

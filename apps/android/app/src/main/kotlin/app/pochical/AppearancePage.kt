@@ -15,16 +15,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import androidx.datastore.core.DataStore
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import kotlinx.coroutines.launch
 
 /**
  * 外観: light or dark as the phone is, or one of them always, picked from
@@ -33,9 +28,9 @@ import kotlinx.coroutines.launch
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppearancePage(deviceSettings: DataStore<DeviceSettings>, onBack: () -> Unit) {
-  val settings by deviceSettings.data.collectAsStateWithLifecycle(initialValue = null)
-  val scope = rememberCoroutineScope()
+fun AppearancePage(onBack: () -> Unit) {
+  val settings = LocalDeviceSettings.current
+  val current = settings.device
   Scaffold(
     topBar = {
       TopAppBar(
@@ -48,7 +43,6 @@ fun AppearancePage(deviceSettings: DataStore<DeviceSettings>, onBack: () -> Unit
       )
     },
   ) { padding ->
-    val current = settings ?: return@Scaffold
     LazyColumn(Modifier.selectableGroup(), contentPadding = padding) {
       items(Appearance.entries) { appearance ->
         val picked = appearance == current.appearance
@@ -57,7 +51,7 @@ fun AppearancePage(deviceSettings: DataStore<DeviceSettings>, onBack: () -> Unit
           leadingContent = { RadioButton(selected = picked, onClick = null) },
           modifier =
             Modifier.selectable(selected = picked, role = Role.RadioButton) {
-              scope.launch { deviceSettings.updateData { it.copy(appearance = appearance) } }
+              settings.change { it.copy(appearance = appearance) }
             },
         )
       }

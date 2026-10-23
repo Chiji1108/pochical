@@ -29,6 +29,7 @@ dependencies {
   implementation(libs.metrox.android)
   implementation(libs.kotlinx.serialization.json)
   implementation(libs.datastore)
+  implementation(libs.splashscreen)
   implementation(libs.lifecycle.runtime.compose)
 
   testImplementation(libs.junit)

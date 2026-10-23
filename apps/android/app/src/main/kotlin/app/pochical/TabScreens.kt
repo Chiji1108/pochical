@@ -13,13 +13,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.datastore.core.DataStore
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 /** カレンダー, which its month heads, with no bar of its own (POC-206 draws it). */
 @Composable
@@ -36,8 +33,8 @@ fun GroupsScreen() {
 /** 設定: each row's page pushed over the tabs. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(deviceSettings: DataStore<DeviceSettings>, open: (RootPage) -> Unit) {
-  val settings by deviceSettings.data.collectAsStateWithLifecycle(initialValue = null)
+fun SettingsScreen(open: (RootPage) -> Unit) {
+  val device = LocalDeviceSettings.current.device
   Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.tab_settings)) }) }) { padding ->
     LazyColumn(contentPadding = padding) {
       item {
@@ -51,7 +48,7 @@ fun SettingsScreen(deviceSettings: DataStore<DeviceSettings>, open: (RootPage) -
       item {
         ListItem(
           headlineContent = { Text(stringResource(R.string.appearance)) },
-          supportingContent = { settings?.let { Text(stringResource(it.appearance.title)) } },
+          supportingContent = { Text(appearanceName(device)) },
           modifier = Modifier.clickable { open(RootPage.Appearance) },
         )
       }
@@ -65,3 +62,12 @@ private fun Placeholder(name: String) {
     Text(name, style = MaterialTheme.typography.titleLarge)
   }
 }
+
+/** 外観 as the screens are drawn: a テーマ drawn dark says so, whatever 外観 keeps for after it. */
+@Composable
+private fun appearanceName(device: DeviceSettings): String =
+  if (device.theme.isAlwaysDark) {
+    stringResource(R.string.appearance_dark_by_theme, device.theme.displayName)
+  } else {
+    stringResource(device.appearance.title)
+  }

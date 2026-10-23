@@ -8,10 +8,13 @@
     android:supportsRtl="true"
     android:theme="@style/Theme.Pochical">
     <!-- Made by the app's Metro graph through MetroX's AppComponentFactory,
-         which lint does not know of. -->
+         which lint does not know of. Compose follows a change of light or
+         dark itself, 外観's own among them, without the activity made anew. -->
     <activity
       android:name=".MainActivity"
+      android:configChanges="uiMode"
       android:exported="true"
+      android:theme="@style/Theme.Pochical.Starting"
       tools:ignore="Instantiatable">
       <intent-filter>
         <action android:name="android.intent.action.MAIN" />

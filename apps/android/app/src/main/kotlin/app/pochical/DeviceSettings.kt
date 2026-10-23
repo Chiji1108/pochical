@@ -1,5 +1,7 @@
 package app.pochical
 
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.datastore.core.CorruptionException
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
@@ -7,11 +9,14 @@ import androidx.datastore.core.Serializer
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import app.pochical.design.Theme
 import java.io.File
+import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
@@ -44,10 +49,21 @@ enum class Appearance {
   @SerialName("dark") Dark,
 }
 
+/** The device settings as the screens read them, and the way to change them, as iOS's Settings. */
+@Stable
+class DeviceSettingsState(
+  val device: DeviceSettings,
+  val change: ((DeviceSettings) -> DeviceSettings) -> Unit,
+)
+
+/** The device settings for the screens under the app's root. */
+val LocalDeviceSettings =
+  staticCompositionLocalOf<DeviceSettingsState> { error("No device settings above this screen") }
+
 /**
- * The device settings kept in `file`. A setting missing from what was kept
- * takes its default, and a file that cannot be read is the defaults, as on
- * iOS.
+ * The device settings kept in `file`. A setting missing from what was kept,
+ * or one this app cannot read, takes its default, and a file that cannot be
+ * read at all is the defaults, as on iOS.
  */
 fun deviceSettingsStore(
   file: File,
@@ -60,8 +76,16 @@ fun deviceSettingsStore(
     produceFile = { file },
   )
 
+/** The settings as kept, the defaults while the disk cannot be read, as DataStore's data says to. */
+val DataStore<DeviceSettings>.settings: Flow<DeviceSettings>
+  get() = data.catch { if (it is IOException) emit(DeviceSettings()) else throw it }
+
 private object DeviceSettingsSerializer : Serializer<DeviceSettings> {
-  private val json = Json { ignoreUnknownKeys = true }
+  private val json = Json {
+    ignoreUnknownKeys = true
+    coerceInputValues = true
+    encodeDefaults = true
+  }
 
   override val defaultValue = DeviceSettings()
 

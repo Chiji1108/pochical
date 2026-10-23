@@ -11,7 +11,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.datastore.core.DataStore
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 
@@ -20,7 +19,7 @@ import androidx.navigation3.ui.NavDisplay
  * the end over the screen under it, and a predictive back is Android's own.
  */
 @Composable
-fun RootScreen(navigator: RootNavigator, deviceSettings: DataStore<DeviceSettings>) {
+fun RootScreen(navigator: RootNavigator) {
   NavDisplay(
     backStack = navigator.routes,
     onBack = navigator::back,
@@ -28,23 +27,16 @@ fun RootScreen(navigator: RootNavigator, deviceSettings: DataStore<DeviceSetting
     popTransitionSpec = { slideInHorizontally { -it / 4 } togetherWith slideOutHorizontally { it } },
   ) { route ->
     when (route) {
-      Tabs ->
-        NavEntry(route) { TabsScreen(navigator, rememberPageNavigation(navigator), deviceSettings) }
+      Tabs -> NavEntry(route) { TabsScreen(navigator, rememberPageNavigation(navigator)) }
       RootPage.Appearance ->
-        NavEntry(route) {
-          AppearancePage(deviceSettings, onBack = rememberPageNavigation(navigator)::back)
-        }
+        NavEntry(route) { AppearancePage(onBack = rememberPageNavigation(navigator)::back) }
     }
   }
 }
 
 /** The tab shown, over the tab bar, each tab keeping what it showed as another is gone to. */
 @Composable
-private fun TabsScreen(
-  navigator: RootNavigator,
-  navigation: PageNavigation,
-  deviceSettings: DataStore<DeviceSettings>,
-) {
+private fun TabsScreen(navigator: RootNavigator, navigation: PageNavigation) {
   val tabStates = rememberSaveableStateHolder()
   BackHandler(enabled = navigator.backGoesToFirstTab, onBack = navigator::back)
   NavigationSuiteScaffold(
@@ -66,7 +58,7 @@ private fun TabsScreen(
       when (navigation.tab) {
         RootTab.Calendar -> CalendarScreen()
         RootTab.Groups -> GroupsScreen()
-        RootTab.Settings -> SettingsScreen(deviceSettings, open = navigation::open)
+        RootTab.Settings -> SettingsScreen(open = navigation::open)
       }
     }
   }
