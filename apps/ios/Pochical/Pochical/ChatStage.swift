@@ -130,6 +130,9 @@ struct LinesRow: Equatable {
   var environment = EnvironmentValues()
   /// Each item's look, as last laid out.
   var looks: [String: AnyHashable] = [:]
+  /// The lines are moving to an update: each cell cut to its frame
+  /// meanwhile (LineCell).
+  var moving = false
   /// Each item's height as measured, at its look and the width it had.
   private var heights: [String: (look: AnyHashable, width: CGFloat, height: CGFloat)] = [:] {
     didSet {
@@ -388,7 +391,10 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     view.backgroundColor = .clear
 
     layout.settings.interItemSpacing = CGFloat(Chat.lineGap)
-    layout.settings.additionalInsets = UIEdgeInsets(top: 12, left: 16, bottom: 12, right: 16)
+    // 16 points to the screen's edges, less the room a bubble's tail
+    // reaches into, which each cell keeps inside it (LineCellContent).
+    let side = 16 - BubbleShape.tailReach
+    layout.settings.additionalInsets = UIEdgeInsets(top: 12, left: side, bottom: 12, right: side)
     layout.keepContentOffsetAtBottomOnBatchUpdates = true
     layout.keepContentAtBottomOfVisibleArea = true
     layout.processOnlyVisibleItemsOnAnimatedBatchUpdates = false
@@ -417,6 +423,7 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
       let space = cell.space
       let drawing = model.drawing(of: id)
       cell.measure = { width in model.height(of: id, width: width) }
+      cell.clipsToBounds = model.moving
       cell.contentConfiguration = UIHostingConfiguration {
         LineCellContent(
           id: id, content: content, environment: environment, space: space, drawing: drawing)
@@ -666,6 +673,7 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
         guard let self else { return }
         let next = updating?.next
         updating = nil
+        move(false)
         // The lines waiting go in next; changing none, these have landed.
         if let next, setLines(next) { return }
         landed()
@@ -684,6 +692,7 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     // its timing from an animation by duration around it; around a spring
     // by perceived duration (springDuration:) it keeps UIKit's own.
     if animated {
+      move(true)
       UIView.animate(
         withDuration: Double(Chat.lineMoveMs) / 1000, delay: 0, usingSpringWithDamping: 1,
         initialSpringVelocity: 0, options: .allowUserInteraction, animations: update)
@@ -691,6 +700,18 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
       update()
     }
     return true
+  }
+
+  /// The lines start or stop moving to an update: the cells cut to their
+  /// frames while they move, uncut at rest. A line drawn again taller is
+  /// laid out at once at its new height (LineCell), its cell growing to it
+  /// in the lines' animation, so what it gains (a reaction, a link's page,
+  /// the words past 続きを読む) shows as the cell grows, never over the line
+  /// next to it first; at rest, what a line draws past its cell for a
+  /// moment (a reaction's pop and spray) is whole.
+  private func move(_ moving: Bool) {
+    model.moving = moving
+    for cell in lines.visibleCells { cell.clipsToBounds = moving }
   }
 
   /// The item the lines are on, where its top stands among the lines seen,
@@ -1253,11 +1274,13 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     let sign: CGFloat = way == .rightward ? 1 : -1
     // The cell itself: its hosted content keeps a transform of its own.
     cell.transform = CGAffineTransform(translationX: sign * shift, y: 0)
-    // Where the cell stands, unmoved.
+    // Where the line stands in its cell, unmoved, inside the room kept
+    // for its tail.
     let size = replyArrow.intrinsicContentSize
     let frame = CGRect(
       x: cell.center.x - cell.bounds.width / 2, y: cell.center.y - cell.bounds.height / 2,
-      width: cell.bounds.width, height: cell.bounds.height)
+      width: cell.bounds.width, height: cell.bounds.height
+    ).insetBy(dx: BubbleShape.tailReach, dy: 0)
     let shown = min(1, along / full)
     replyArrow.bounds.size = size
     // In the room the line leaves, at its middle.
@@ -1630,11 +1653,21 @@ private final class LineCell: UICollectionViewCell {
 
   override init(frame: CGRect) {
     super.init(frame: frame)
-    // Its line drawn again taller is laid out at once at its new height,
-    // the cell growing to it in the lines' animation: what the line gains
-    // (a reaction, a link's page, the words past 続きを読む) shows as the
-    // cell grows, never over the line next to it first.
-    clipsToBounds = true
+  }
+
+  /// Its line laid out whole, at once, at the cell's new size, so the
+  /// cell's own frame alone moves it in the lines' animation. A line drawn
+  /// again is given to the cell before its new size, and SwiftUI lays it
+  /// out centered in the old one; laid out again at the new size inside
+  /// the lines' animation, SwiftUI would move each of its parts (the face,
+  /// the name, the time, the bubble) from there on its own, half of what
+  /// the line grew, apart from the cell carrying them.
+  override func layoutSubviews() {
+    UIView.performWithoutAnimation {
+      super.layoutSubviews()
+      contentView.frame = CGRect(origin: .zero, size: bounds.size)
+      contentView.layoutIfNeeded()
+    }
   }
 
   @available(*, unavailable)
@@ -1677,6 +1710,9 @@ private struct LineCellContent: View {
     content
       .id(id)
       .frame(maxWidth: .infinity)
+      // A tail reaching past its bubble's frame toward the screen's edge
+      // stays in the cell, which clips what it draws.
+      .padding(.horizontal, BubbleShape.tailReach)
       .coordinateSpace(.named(LineSpace.name))
       .environment(\.lineSpace, space)
       .environment(\.keptDrawing, drawing)

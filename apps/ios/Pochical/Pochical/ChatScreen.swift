@@ -139,7 +139,7 @@ struct ChatScreen: View {
   @State private var pinsOpen = false
   /// A pinned line being gone to, its earlier lines asked for until held.
   @State private var jumpTarget: Int64?
-  /// The line gone to, ringed for a moment, and the line lifted while its
+  /// The line gone to, lit for a moment, and the line lifted while its
   /// menu is open.
   @State private var marks = LineMarks()
   /// What a pin did, said for a moment over the lines.
@@ -1713,7 +1713,7 @@ struct ChatScreen: View {
     jumpTarget = seq
   }
 
-  /// Scrolls to the line gone to once laid out and rings it; else lays out
+  /// Scrolls to the line gone to once laid out and lights it; else lays out
   /// the page before, coming back as each comes, from the device or, as
   /// it arrives, the server.
   private func goToTarget() async {
@@ -1722,14 +1722,9 @@ struct ChatScreen: View {
     if let line = state.lines.first(where: { $0.seq == target }) {
       jumpTarget = nil
       following = false
-      // Rung once there, not on the way; by itself, as this task ends
-      // with the line gone to.
+      // Lit once there, not on the way.
       scroller.show(ChatItemID.line(line.opID), at: .center, animated: true) {
-        marks.ringed = target
-        Task { @MainActor in
-          try? await Task.sleep(for: .milliseconds(500))
-          withAnimation(.easeOut(duration: 0.7)) { marks.ringed = nil }
-        }
+        marks.jumped(to: target)
       }
     } else if let last = state.lines.last, target > last.seq {
       // Gone to a line after those laid out, past a gap: laid out from it.
@@ -1772,7 +1767,8 @@ struct ChatScreen: View {
     react.seq = UInt64(line.seq)
     react.emoji = emoji
     react.on = !current.reactions.contains { $0.emoji == emoji && $0.userIDs.contains(meID ?? "") }
-    keep(.react(react))
+    guard keep(.react(react)) else { return }
+    marks.chose(emoji, on: line.opID, react.on)
   }
 
   private func unsend(_ line: ChatLineRow) {
