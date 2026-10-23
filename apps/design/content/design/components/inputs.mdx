@@ -1,0 +1,22 @@
+---
+title: 入力と時間
+description: 文字の入力と文字数の上限、時と分の入力。
+---
+
+import { Fields, Times } from "../../../src/components/inventory/inputs";
+
+## 入力
+
+LimitedInput の look で見た目を選びます。inline は行の中、box は地の上に1つ、chip はチップの間。文字数の上限を超えそうになると数を出します。
+
+<Pieces>
+  <Fields />
+</Pieces>
+
+## 時間
+
+TimeField は時と分を別々に選んで、数字を打つか ↑↓ で変えます。24時間表記。React Aria の TimeField(HeroUI のもの)で、SwiftUI の DatePicker(.compact, .hourAndMinute)、Compose の TimeInput にあたります。シフトの開始と終了は TimeRange で並べます。
+
+<Pieces>
+  <Times />
+</Pieces>

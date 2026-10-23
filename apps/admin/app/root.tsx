@@ -1,6 +1,14 @@
 import icon from "@pochical/prototype/assets/icon-192.png?url";
 import { css } from "@pochical/styled-system/css";
-import { Archive, Flag, MessagesSquare, TriangleAlert } from "lucide-react";
+import { env } from "cloudflare:workers";
+import {
+  Archive,
+  Flag,
+  MessagesSquare,
+  ScrollText,
+  TriangleAlert,
+  Users,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import {
@@ -11,11 +19,13 @@ import {
   Outlet,
   Scripts,
   useLocation,
+  useRouteLoaderData,
 } from "react-router";
 
 import type { Route } from "./+types/root";
+import { SearchUsers } from "./search";
 import { themeCss } from "./theme";
-import { alert, page, PageHeader } from "./ui";
+import { alert, badge as badgeStyle, page, PageHeader } from "./ui";
 
 import stylesheet from "./styles.css?url";
 
@@ -30,9 +40,20 @@ export const meta: Route.MetaFunction = () => [
   { title: "ポチカル管理" },
 ];
 
+// What waits for Pochical's people, counted beside its page on every page:
+// read again on each navigation, so the counts stay current as the site is
+// used; none when it cannot be read, which leaves the pages as they are.
+export const loader = async () => await env.SERVER.waiting().catch(() => null);
+
+export const shouldRevalidate = () => true;
+
+type Waiting = { chats: number; reports: number };
+
 type Place = {
   Icon: LucideIcon;
   label: string;
+  // What waits there, counted beside it.
+  waiting?: keyof Waiting;
   // Pages under it, lit with it: a chat under サポート.
   under?: string;
   to: string;
@@ -44,13 +65,21 @@ const PLACES: { group: string; places: Place[] }[] = [
   {
     group: "対応",
     places: [
-      { Icon: MessagesSquare, label: "サポート", to: "/", under: "/support/" },
-      { Icon: Flag, label: "通報", to: "/reports" },
+      {
+        Icon: MessagesSquare,
+        label: "サポート",
+        to: "/",
+        under: "/support/",
+        waiting: "chats",
+      },
+      { Icon: Flag, label: "通報", to: "/reports", waiting: "reports" },
+      { Icon: Users, label: "ユーザー", to: "/users", under: "/users/" },
     ],
   },
   {
     group: "運用",
     places: [
+      { Icon: ScrollText, label: "記録", to: "/actions" },
       { Icon: Archive, label: "棚卸し", to: "/bucket" },
       { Icon: TriangleAlert, label: "全消去", to: "/reset" },
     ],
@@ -74,6 +103,12 @@ const sidebar = css({
   flexDirection: { base: "row", md: "column" },
   gap: { base: "2", md: "6" },
   height: { md: "100dvh" },
+  // On a narrow screen the links run on past the edge, fading there to say
+  // so.
+  maskImage: {
+    base: "linear-gradient(to right, black 85%, transparent)",
+    md: "none",
+  },
   // Its links scroll: sideways along the bar, down a sidebar taller than
   // the window.
   overflowX: { base: "auto", md: "hidden" },
@@ -122,12 +157,14 @@ const placeLink = css({
   fontSize: "sm",
   gap: "2.5",
   height: "8",
-  paddingInline: "2",
+  // Closer on a narrow screen, so the five pages fit along the bar.
+  paddingInline: { base: "1.5", md: "2" },
   transition: "background 120ms, color 120ms",
   whiteSpace: "nowrap",
 });
 
 function Sidebar() {
+  const waiting = useRouteLoaderData<typeof loader>("root") ?? null;
   // A path ending in a slash is the same page (/reports/ is /reports).
   const path = useLocation().pathname.replace(/(?<=.)\/+$/u, "");
   return (
@@ -153,12 +190,13 @@ function Sidebar() {
           </span>
         </span>
       </Link>
+      <SearchUsers />
       <nav
         aria-label="ページ"
         className={css({
           display: "flex",
           flexDirection: { base: "row", md: "column" },
-          gap: { base: "1", md: "5" },
+          gap: { base: "0.5", md: "5" },
         })}
       >
         {PLACES.map(({ group, places }) => (
@@ -171,7 +209,11 @@ function Sidebar() {
             key={group}
           >
             <p className={groupName}>{group}</p>
-            {places.map(({ Icon, label, to, under }) => {
+            {places.map(({ Icon, label, to, under, waiting: counted }) => {
+              const count =
+                counted === undefined || waiting === null
+                  ? 0
+                  : waiting[counted];
               const here =
                 path === to || (under !== undefined && path.startsWith(under));
               return (
@@ -189,6 +231,15 @@ function Sidebar() {
                     strokeWidth={1.75}
                   />
                   {label}
+                  {count > 0 && (
+                    <span
+                      className={css(badgeStyle.raw({ tone: "danger" }), {
+                        marginInlineStart: { md: "auto" },
+                      })}
+                    >
+                      {count}
+                    </span>
+                  )}
                 </Link>
               );
             })}

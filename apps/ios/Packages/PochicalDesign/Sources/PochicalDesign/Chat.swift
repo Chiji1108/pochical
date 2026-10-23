@@ -10,6 +10,7 @@ public enum Chat {
   public static let draftSettleMs = 500
   public static let floatingDayMs = 1500
   public static let foldLines = 10
+  public static let jumpFlashMs = 1000
   public static let largeEmojiMax = 3
   public static let largeEmojiSize = 48
   public static let lineGap = 4

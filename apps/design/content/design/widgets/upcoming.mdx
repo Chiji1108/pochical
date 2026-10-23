@@ -1,0 +1,16 @@
+---
+title: これから
+description: 今日からの日を並べて。小は今日と続く3日、中は今日から5日を列で。
+---
+
+import { HomeWidgets, WidgetSwitches } from "../../../src/components/widgets";
+
+添えるのは変わった時間だけで、メモは日付の下の線だけ。ウィジェットの編集で人を選ぶと、その人の段が並びます（小は今日と明日）。
+
+<Pieces light>
+  <WidgetSwitches page="upcoming" />
+</Pieces>
+
+<Pieces>
+  <HomeWidgets kind="upcoming" />
+</Pieces>

@@ -1,89 +1,56 @@
-import { css } from "@pochical/styled-system/css";
 import { env } from "cloudflare:workers";
+import { data, redirect } from "react-router";
 
-import {
-  badge,
-  card,
-  code,
-  Empty,
-  numeric,
-  page,
-  PageHeader,
-  table,
-} from "../ui";
-import { when } from "../when";
+import { ReportTable } from "../report-table";
+import { staffOf } from "../staff";
+import { alert, page, PageHeader } from "../ui";
 import type { Route } from "./+types/reports";
 
-const REASON_NAMES: Record<string, string> = {
-  explicit: "性的・暴力的",
-  harassment: "嫌がらせ",
-  impersonation: "なりすまし",
-  other: "その他",
-  spam: "スパム",
-};
-
-// What members reported, the latest first, with what they saw.
+// What members reported, those waiting first, then the latest, with what
+// they saw and where each stands.
 export const loader = async () => await env.SERVER.reports();
 
-export default function Reports({ loaderData: reports }: Route.ComponentProps) {
+// A report's state and note, set by whoever Access let in (spec/admin.md,
+// 通報), then the page again (Post/Redirect/Get), so reloading it sends
+// nothing.
+export const action = async ({ request, url }: Route.ActionArgs) => {
+  const form = await request.formData();
+  const value = (name: string) => {
+    const got = form.get(name);
+    return typeof got === "string" ? got : "";
+  };
+  const kept = await env.SERVER.handleReport(
+    value("reportId"),
+    value("state"),
+    value("note"),
+    staffOf(request)
+  ).catch(() => false);
+  return kept
+    ? redirect(url.pathname)
+    : data(
+        {
+          error: "保存できませんでした。メモが長すぎないか確かめてください。",
+        },
+        { status: 400 }
+      );
+};
+
+export default function Reports({
+  actionData,
+  loaderData: reports,
+}: Route.ComponentProps) {
   return (
     <main className={page}>
       <PageHeader
-        description="メンバーが通報したもの。新しい順です。"
+        description="メンバーが通報したもの。未対応を上に、新しい順です。未対応の数はサイドバーにあります。"
         title="通報"
       />
-      <div className={card}>
-        {reports.length === 0 ? (
-          <Empty>通報はまだありません。</Empty>
-        ) : (
-          <table className={table}>
-            <thead>
-              <tr>
-                <th>日時</th>
-                <th>理由</th>
-                <th>グループ</th>
-                <th>通報した人</th>
-                <th>対象</th>
-                <th>内容</th>
-              </tr>
-            </thead>
-            <tbody>
-              {reports.map((report) => (
-                <tr
-                  key={`${report.atMs}-${report.reporterId}-${report.targetId}`}
-                >
-                  <td className={css({ color: "text.tertiary" })}>
-                    <span className={numeric}>{when(report.atMs)}</span>
-                  </td>
-                  <td>
-                    <span className={badge({ tone: "danger" })}>
-                      {REASON_NAMES[report.reason] ?? report.reason}
-                    </span>
-                  </td>
-                  <td className={code}>{report.groupId.slice(0, 8)}</td>
-                  <td className={code}>{report.reporterId.slice(0, 8)}</td>
-                  <td className={code}>{report.targetId.slice(0, 8)}</td>
-                  <td>
-                    <pre
-                      className={css({
-                        background: "fill.quaternary",
-                        borderRadius: "xs",
-                        color: "text.secondary",
-                        fontSize: "xs",
-                        minWidth: "240px",
-                        paddingBlock: "2",
-                        paddingInline: "2.5",
-                      })}
-                    >
-                      {report.context}
-                    </pre>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      {actionData !== undefined && "error" in actionData && (
+        <p className={alert} role="alert">
+          {actionData.error}
+        </p>
+      )}
+      <ReportTable empty="通報はまだありません。" handling reports={reports} />
     </main>
   );
 }
