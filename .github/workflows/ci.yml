@@ -66,8 +66,6 @@ jobs:
             # into apps/android.
             android:
               - "apps/android/**"
-              # versionName is the iOS app's MARKETING_VERSION.
-              - "apps/ios/Pochical/Pochical.xcodeproj/project.pbxproj"
               - "mise.toml"
               - ".github/workflows/ci.yml"
 
