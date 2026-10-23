@@ -75,26 +75,52 @@ final class ChatEffectsLayer: UIView {
       }
     }
   }
-  /// A frame for each item on the screen, as the lines lay it out.
-  private var items: [String: UIView] = [:]
+  /// A frame for each item on the screen, as the lines lay it out, on
+  /// the lines or over a menu.
+  private var items: [Spot: UIView] = [:]
   /// What plays, by the part it plays on.
   private var playing: [EffectPart: Played] = [:]
+  /// The item whose bubble a menu lifts over the window: the lifted bubble
+  /// stands in for its line, so what comes to the line then plays over
+  /// the menu (`overMenu`), its dimming and the bubble included.
+  private var lifted: String?
+  /// Over the open menu in the window, what plays on its line: there
+  /// until all of it has gone, as an effect plays out where it began, its
+  /// SwiftUI never moved (a hosting view moved anew starts afresh).
+  private let overMenu = UIView()
+
+  /// An item's frame, on the lines or over the menu.
+  private struct Spot: Hashable {
+    let item: String
+    let overMenu: Bool
+  }
 
   /// An effect's SwiftUI, held at its part's frame in its item's.
   private struct Played {
     let burst: Burst
     let host: UIHostingController<AnyView>
+    let overMenu: Bool
   }
 
   override init(frame: CGRect) {
     super.init(frame: frame)
     isUserInteractionEnabled = false
     accessibilityElementsHidden = true
+    overMenu.isUserInteractionEnabled = false
+    overMenu.accessibilityElementsHidden = true
+    overMenu.autoresizingMask = [.flexibleWidth, .flexibleHeight]
     effects.layer = self
   }
 
   @available(*, unavailable)
   required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+
+  override func didMoveToWindow() {
+    super.didMoveToWindow()
+    if window == nil {
+      for (part, played) in playing where played.overMenu { end(part) }
+    }
+  }
 
   /// Lays the items' frames out as `lines` has them now, `shown` giving
   /// each item's place in the lines' content, in whatever animation the
@@ -104,35 +130,62 @@ final class ChatEffectsLayer: UIView {
   func follow(_ lines: UIScrollView, items shown: [String: ItemPlace]) {
     frame = lines.frame
     bounds.origin = lines.bounds.origin
-    for (id, view) in items where shown[id] == nil {
+    for (spot, view) in items where shown[spot.item] == nil {
       view.removeFromSuperview()
-      items[id] = nil
-      playing = playing.filter { $0.key.item != id }
+      items[spot] = nil
     }
+    playing = playing.filter { shown[$0.key.item] != nil }
+    clearOverMenu()
     for (id, place) in shown {
-      if let view = items[id] {
+      let spot = Spot(item: id, overMenu: false)
+      if let view = items[spot] {
         put(view, at: place)
       } else {
         // New to the screen: where it is, not moved there.
         let view = UIView()
         UIView.performWithoutAnimation {
-          put(view, at: place)
           addSubview(view)
+          put(view, at: place)
         }
-        items[id] = view
+        items[spot] = view
       }
+      if let over = items[Spot(item: id, overMenu: true)] { put(over, at: place) }
     }
+  }
+
+  /// Puts `menu`, which lifts the bubble of the item `item`, in `window`,
+  /// under what plays over menus; what comes to the item from now on
+  /// plays over it.
+  func putMenu(_ menu: UIView, in window: UIWindow, lifting item: String) {
+    if overMenu.superview === window {
+      window.insertSubview(menu, belowSubview: overMenu)
+    } else {
+      window.addSubview(menu)
+      overMenu.frame = window.bounds
+      window.addSubview(overMenu)
+    }
+    lifted = item
+  }
+
+  /// The menu has gone: what comes to its item plays on the lines again,
+  /// what plays over the menu playing out there.
+  func menuGone() {
+    lifted = nil
+    clearOverMenu()
   }
 
   private func put(_ view: UIView, at place: ItemPlace) {
     view.bounds = CGRect(origin: .zero, size: place.frame.size)
-    view.center = CGPoint(x: place.frame.midX, y: place.frame.midY)
+    view.center = convert(CGPoint(x: place.frame.midX, y: place.frame.midY), to: view.superview)
     view.transform = place.transform
   }
 
   fileprivate func play(_ effect: ChatEffect, on part: EffectPart, at frame: CGRect) {
-    guard let item = items[part.item] else { return }
-    let played = playing[part] ?? begin(part, in: item, at: frame)
+    let over = lifted == part.item
+    // What played before plays on where it began; this plays where its
+    // item is now.
+    if let played = playing[part], played.overMenu != over { end(part) }
+    guard let played = playing[part] ?? begin(part, overMenu: over, at: frame) else { return }
     played.host.view.frame = frame
     switch effect {
     case .pop: played.burst.pops += 1
@@ -142,9 +195,12 @@ final class ChatEffectsLayer: UIView {
     }
   }
 
-  /// Starts what plays on `part`, put at `frame` at once, whatever
-  /// animation it is asked in.
-  private func begin(_ part: EffectPart, in item: UIView, at frame: CGRect) -> Played {
+  /// Starts what plays on `part`, over the menu or on the lines, put at
+  /// `frame` at once, whatever animation it is asked in; none while its
+  /// item is off the screen.
+  private func begin(_ part: EffectPart, overMenu over: Bool, at frame: CGRect) -> Played? {
+    guard let item = over ? spotOverMenu(part.item) : items[Spot(item: part.item, overMenu: false)]
+    else { return nil }
     let burst = Burst()
     let host = UIHostingController(rootView: Self.content(burst, environment))
     host.sizingOptions = []
@@ -154,9 +210,36 @@ final class ChatEffectsLayer: UIView {
       host.view.frame = frame
       item.addSubview(host.view)
     }
-    let played = Played(burst: burst, host: host)
+    let played = Played(burst: burst, host: host, overMenu: over)
     playing[part] = played
     return played
+  }
+
+  /// The item's frame over the menu, where its frame on the lines is.
+  private func spotOverMenu(_ item: String) -> UIView? {
+    let spot = Spot(item: item, overMenu: true)
+    if let view = items[spot] { return view }
+    guard let lines = items[Spot(item: item, overMenu: false)], overMenu.superview != nil
+    else { return nil }
+    let view = UIView()
+    UIView.performWithoutAnimation {
+      overMenu.addSubview(view)
+      view.bounds = lines.bounds
+      view.center = convert(lines.center, to: overMenu)
+      view.transform = lines.transform
+    }
+    items[spot] = view
+    return view
+  }
+
+  /// Takes away the frames over the menu nothing plays in any more, and
+  /// the view over menus once nothing plays there and no menu is open.
+  private func clearOverMenu() {
+    for (spot, view) in items where spot.overMenu && view.subviews.isEmpty {
+      view.removeFromSuperview()
+      items[spot] = nil
+    }
+    if lifted == nil, overMenu.subviews.isEmpty { overMenu.removeFromSuperview() }
   }
 
   private static func content(_ burst: Burst, _ environment: EnvironmentValues) -> AnyView {
@@ -169,6 +252,7 @@ final class ChatEffectsLayer: UIView {
 
   fileprivate func end(_ part: EffectPart) {
     playing.removeValue(forKey: part)?.host.view.removeFromSuperview()
+    clearOverMenu()
   }
 }
 
