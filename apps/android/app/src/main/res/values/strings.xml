@@ -13,4 +13,10 @@
   <string name="appearance_dark_by_theme">ダーク（%1$s）</string>
   <string name="appearance_system">端末に合わせると、端末の設定に合わせてライトとダークが切り替わります。</string>
   <string name="appearance_always_dark">テーマの「%1$s」はいつもダークで表示されます。ほかのテーマにすると、ここでの設定に戻ります。</string>
+  <string name="cancel">キャンセル</string>
+  <string name="calendar_this_month">今月</string>
+  <string name="calendar_pick_month">月を選ぶ</string>
+  <string name="calendar_show_month">表示</string>
+  <!-- Sunday first, as the settings count weekdays. -->
+  <string name="calendar_weekday_letters" translatable="false">日月火水木金土</string>
 </resources>

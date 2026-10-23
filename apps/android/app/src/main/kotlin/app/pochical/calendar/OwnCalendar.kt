@@ -1,5 +1,6 @@
 package app.pochical.calendar
 
+import androidx.compose.runtime.staticCompositionLocalOf
 import java.time.LocalDate
 import kotlinx.coroutines.flow.StateFlow
 
@@ -74,3 +75,6 @@ interface OwnDays {
   /** Adds `name` at the end of 一緒に働く人. */
   fun addCoworker(name: String): Coworker
 }
+
+/** The person's days for the screens under the app's root. */
+val LocalOwnDays = staticCompositionLocalOf<OwnDays> { error("No days above this screen") }
