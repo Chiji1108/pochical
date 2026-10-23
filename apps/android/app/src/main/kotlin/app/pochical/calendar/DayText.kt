@@ -1,6 +1,7 @@
 package app.pochical.calendar
 
 import java.time.LocalDate
+import java.time.YearMonth
 
 // How days are written, in one place so another language changes them
 // here (spec/calendar.md, How days are written).
@@ -17,3 +18,7 @@ val LocalDate.monthDayText: String
 /** 11月1日(日) */
 val LocalDate.fullText: String
   get() = "$monthDayText(${weekdayLetter(weekday)})"
+
+/** 2026年11月 */
+val YearMonth.yearMonthText: String
+  get() = "${year}年${monthValue}月"

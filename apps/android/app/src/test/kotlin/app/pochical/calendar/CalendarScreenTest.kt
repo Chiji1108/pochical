@@ -5,6 +5,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -12,6 +13,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
@@ -55,7 +57,7 @@ class CalendarScreenTest {
     }
   }
 
-  private fun heading(month: YearMonth) = "${month.year}年${month.monthValue}月"
+  private fun heading(month: YearMonth) = month.yearMonthText
 
   /** Taps `day`'s cell on the month shown. */
   private fun tap(day: LocalDate) {
@@ -162,6 +164,23 @@ class CalendarScreenTest {
     compose.waitForIdle()
     assertNull(days.calendar.value.shown(day, day)[day])
     assertEquals("棚卸し", days.calendar.value.note(day))
+  }
+
+  @Test
+  fun thisWeekComesBackFromADayAtEitherEndOfTheMonths() {
+    show()
+    for (page in listOf(0, 240)) {
+      compose.onNode(hasScrollToIndexAction()).performScrollToIndex(page)
+      compose.waitForIdle()
+      val month = YearMonth.from(today).plusMonths(page - 120L)
+      val day = if (page == 0) month.atDay(1) else month.atEndOfMonth()
+      tap(day)
+      compose.onNodeWithText(day.fullText).assertIsDisplayed()
+      compose.onNodeWithText("今週").performClick()
+      compose.waitForIdle()
+      compose.onNodeWithText(today.fullText).assertIsDisplayed()
+      back()
+    }
   }
 
   @Test

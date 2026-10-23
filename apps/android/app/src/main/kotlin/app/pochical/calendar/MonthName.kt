@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.pochical.LocalThemeColors
+import app.pochical.design.PochicalTextStyles
 import java.time.YearMonth
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -43,16 +44,11 @@ fun MonthName(pages: Float, monthAt: (Int) -> YearMonth, reduceMotion: Boolean, 
   Column(
     modifier.clearAndSetSemantics {
       heading()
-      contentDescription = "${month.year}年${month.monthValue}月"
+      contentDescription = month.yearMonthText
     },
     verticalArrangement = Arrangement.spacedBy(4.dp),
   ) {
-    RollingText(
-      month.year.toString(),
-      coming.year.toString(),
-      share,
-      TextStyle(fontSize = 11.sp, color = colors.textTertiary),
-    )
+    RollingText(month.year.toString(), coming.year.toString(), share, PochicalTextStyles.caption2.copy(color = colors.textTertiary))
     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
       RollingText(
         month.monthValue.toString(),

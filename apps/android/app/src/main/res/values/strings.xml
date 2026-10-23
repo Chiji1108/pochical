@@ -43,4 +43,9 @@
   <string name="day_clear_lost">%1$sも消えます。</string>
   <string name="calendar_pick_month">月を選ぶ</string>
   <string name="calendar_show_month">表示</string>
+  <string name="day_unentered">未入力</string>
+  <string name="day_has_memo">メモあり</string>
+  <string name="day_early">早出</string>
+  <string name="day_late">残業</string>
+  <string name="day_hours_moved">時間変更</string>
 </resources>

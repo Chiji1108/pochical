@@ -71,6 +71,8 @@ fun DayDetail(
   peopleOpen: Boolean,
   onPeopleOpenChange: (Boolean) -> Unit,
   onStep: (Int) -> Unit,
+  /** Whether the day before (-1) or after (1) is one the calendar reaches. */
+  canStep: (Int) -> Boolean,
   onClose: () -> Unit,
   onPickShift: () -> Unit,
   modifier: Modifier = Modifier,
@@ -85,10 +87,10 @@ fun DayDetail(
         Modifier.weight(1f).semantics { heading() },
         style = MaterialTheme.typography.titleMedium,
       )
-      IconButton(onClick = { onStep(-1) }) {
+      IconButton(onClick = { onStep(-1) }, enabled = canStep(-1)) {
         Icon(painterResource(R.drawable.ic_chevron_left), stringResource(R.string.day_before))
       }
-      IconButton(onClick = { onStep(1) }) {
+      IconButton(onClick = { onStep(1) }, enabled = canStep(1)) {
         Icon(painterResource(R.drawable.ic_chevron_right), stringResource(R.string.day_after))
       }
       IconButton(onClick = onClose) { Icon(painterResource(R.drawable.ic_close), stringResource(R.string.close)) }
