@@ -7,6 +7,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldValue
 import androidx.compose.material3.adaptive.navigationsuite.rememberNavigationSuiteScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -54,7 +55,10 @@ private fun TabsScreen(navigator: RootNavigator, navigation: PageNavigation) {
   BackHandler(enabled = navigator.backGoesToFirstTab, onBack = navigator::back)
   // The tab bar gives way to a day's week, as iOS's and /design's do.
   var barHidden by rememberSaveable { mutableStateOf(false) }
-  val suite = rememberNavigationSuiteScaffoldState()
+  val suite =
+    rememberNavigationSuiteScaffoldState(
+      if (barHidden) NavigationSuiteScaffoldValue.Hidden else NavigationSuiteScaffoldValue.Visible
+    )
   LaunchedEffect(barHidden) { if (barHidden) suite.hide() else suite.show() }
   NavigationSuiteScaffold(
     state = suite,

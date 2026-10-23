@@ -46,7 +46,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -140,7 +142,11 @@ private fun HoursRow(entry: DayEntry, time: ShiftTime, onChange: (DayEntry) -> U
     supportingContent =
       change?.let {
         {
-          val moves = listOfNotNull("早出".takeIf { change.early }, "残業".takeIf { change.late })
+          val moves =
+            listOfNotNull(
+              stringResource(R.string.day_early).takeIf { change.early },
+              stringResource(R.string.day_late).takeIf { change.late },
+            )
           Text(if (moves.isEmpty()) stringResource(R.string.day_hours_changed) else moves.joinToString("・"))
         }
       },
@@ -272,14 +278,14 @@ private fun PeopleRows(
 
 @Composable
 private fun NameDialog(onAdd: (String) -> Unit, onDismiss: () -> Unit) {
-  var name by rememberSaveable { mutableStateOf("") }
+  var name by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
   AlertDialog(
     onDismissRequest = onDismiss,
     title = { Text(stringResource(R.string.day_people_add_title)) },
     text = {
       OutlinedTextField(
         name,
-        { name = limitText(it, TextLimits.personName) },
+        { name = it.limited(TextLimits.personName) },
         label = { Text(stringResource(R.string.name)) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
@@ -288,7 +294,7 @@ private fun NameDialog(onAdd: (String) -> Unit, onDismiss: () -> Unit) {
     confirmButton = {
       TextButton(
         onClick = {
-          name.trim().takeIf { it.isNotEmpty() }?.let(onAdd)
+          limitText(name.text, TextLimits.personName).trim().takeIf { it.isNotEmpty() }?.let(onAdd)
           onDismiss()
         }
       ) {
@@ -307,23 +313,24 @@ private fun NameDialog(onAdd: (String) -> Unit, onDismiss: () -> Unit) {
  */
 @Composable
 private fun MemoField(day: LocalDate, note: String?, days: OwnDays, modifier: Modifier = Modifier) {
-  var draft by rememberSaveable { mutableStateOf(note.orEmpty()) }
+  var draft by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue(note.orEmpty())) }
   val keep by rememberUpdatedState {
-    if (draft != note.orEmpty()) days.setNote(day, draft)
+    val memo = limitText(draft.text, TextLimits.dayNote)
+    if (memo != note.orEmpty()) days.setNote(day, memo)
   }
   DisposableEffect(Unit) { onDispose { keep() } }
   LifecycleEventEffect(Lifecycle.Event.ON_STOP) { keep() }
   OutlinedTextField(
     draft,
-    { draft = limitText(it, TextLimits.dayNote) },
+    { draft = it.limited(TextLimits.dayNote) },
     modifier.fillMaxWidth().onFocusChanged { if (!it.isFocused) keep() },
     label = { Text(stringResource(R.string.day_memo)) },
     trailingIcon =
-      if (draft.isNotEmpty()) {
+      if (draft.text.isNotEmpty()) {
         {
           IconButton(
             onClick = {
-              draft = ""
+              draft = TextFieldValue()
               days.setNote(day, "")
             }
           ) {
@@ -376,4 +383,15 @@ private fun ClearButton(entry: DayEntry, coworkers: List<Coworker>, onClear: () 
       dismissButton = { TextButton(onClick = { asking = false }) { Text(stringResource(R.string.cancel)) } },
     )
   }
+}
+
+/**
+ * The field's text cut to `limit` characters once it is committed: while the
+ * IME is still composing (kana before conversion), it is left whole, or the
+ * composition would be cut off under the person's fingers.
+ */
+private fun TextFieldValue.limited(limit: Int): TextFieldValue {
+  if (composition != null) return this
+  val text = limitText(text, limit)
+  return if (text == this.text) this else TextFieldValue(text, TextRange(text.length))
 }

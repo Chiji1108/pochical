@@ -66,7 +66,14 @@ data class DayLook(
  * stroke under it, and its shift's mark; today framed inside the day.
  */
 @Composable
-fun DayCell(look: DayLook, height: Dp, colorsHoliday: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun DayCell(
+  look: DayLook,
+  height: Dp,
+  colorsHoliday: Boolean,
+  onClick: () -> Unit,
+  modifier: Modifier = Modifier,
+  enabled: Boolean = true,
+) {
   val colors = LocalThemeColors.current
   val style = LocalDeviceSettings.current.device.look
   val pattern = look.pattern
@@ -102,7 +109,7 @@ fun DayCell(look: DayLook, height: Dp, colorsHoliday: Boolean, onClick: () -> Un
         }
       )
       .clip(shape)
-      .clickable(role = Role.Button, onClick = onClick)
+      .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
       .padding(vertical = CELL_PADDING)
       .clearAndSetSemantics {
         contentDescription = description
