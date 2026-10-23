@@ -23,9 +23,11 @@ class ShiftChoicePageTest {
   fun anotherShiftKeepsTheDaysMemoAndPeopleButNotItsHours() {
     val today = LocalDate.now()
     val day = today.withDayOfMonth(8)
-    val days = SampleDays(today)
+    val test = sampleDays(today)
+    val days = test.days
     val someone = days.addCoworker("佐藤")
     days.set(day, DayEntry("day", end = "20:00", people = listOf(someone.id)))
+    test.awaitCalendar { it.shown(day, day)[day]?.people?.isNotEmpty() == true }
     var backs = 0
     val settings = DeviceSettings()
     compose.setContent {
@@ -38,8 +40,10 @@ class ShiftChoicePageTest {
     }
     compose.onNodeWithText("夜勤").performClick()
     compose.waitForIdle()
-    assertEquals(DayEntry("night", people = listOf(someone.id)), days.calendar.value.shown(day, day)[day])
-    assertEquals("棚卸し", days.calendar.value.note(day))
+    val calendar = test.awaitCalendar { it.shown(day, day)[day]?.shift == "night" }
+    assertEquals(DayEntry("night", people = listOf(someone.id)), calendar.shown(day, day)[day])
+    assertEquals("棚卸し", calendar.note(day))
     assertEquals(1, backs)
+    test.close()
   }
 }

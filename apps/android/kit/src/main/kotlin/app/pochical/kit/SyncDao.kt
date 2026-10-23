@@ -15,6 +15,9 @@ internal interface SyncDao {
 
   @Query("SELECT * FROM days WHERE date = :date") suspend fun day(date: String): DayRow?
 
+  @Query("SELECT * FROM days WHERE date >= :from AND date <= :through")
+  suspend fun days(from: String, through: String): List<DayRow>
+
   @Upsert suspend fun upsert(day: DayRow)
 
   @Query("DELETE FROM days WHERE date = :date") suspend fun deleteDay(date: String)
@@ -41,6 +44,10 @@ internal interface SyncDao {
   suspend fun coworkerOrder(): List<String>
 
   @Query("SELECT patterns.id $PATTERNS_IN_ORDER") suspend fun patternIds(): List<String>
+
+  @Query("SELECT patterns.* $PATTERNS_IN_ORDER") suspend fun patterns(): List<PatternRow>
+
+  @Query("SELECT * FROM repeatOrders ORDER BY position") suspend fun repeatOrders(): List<RepeatOrderRow>
 
   @Query("SELECT coworkers.id $COWORKERS_IN_ORDER") suspend fun coworkerIds(): List<String>
 
