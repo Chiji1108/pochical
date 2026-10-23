@@ -8,3 +8,7 @@ dependencies {
   api(libs.connect.kotlin)
   api(libs.connect.kotlin.google.javalite.ext)
 }
+
+kotlin {
+  jvmToolchain(libs.versions.jvm.get().toInt())
+}

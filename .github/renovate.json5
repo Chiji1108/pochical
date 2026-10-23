@@ -117,6 +117,12 @@
       ],
     },
     {
+      description: "Metro is a Kotlin compiler plugin, each release built for the Kotlin versions its docs/compatibility.md names",
+      matchDepNames: ["org.jetbrains.kotlin.**", "dev.zacsweers.metro**"],
+      groupName: "Kotlin and Metro",
+      separateMajorMinor: false,
+    },
+    {
       description: "Renovate rewrites only the bumped packages' pins in Package.resolved, and none for the Xcode project's own packages",
       matchFileNames: ["**/Package.swift", "**/project.pbxproj"],
       prBodyNotes: [
