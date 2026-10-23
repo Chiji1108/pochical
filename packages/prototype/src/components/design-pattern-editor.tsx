@@ -91,12 +91,6 @@ function lookAlike(a: Look, b: Look, style: ShiftMarkStyle) {
 }
 
 const editor = {
-  // A lookalike's warning under the look page's choices.
-  lookalike: css({
-    color: "danger.default",
-    margin: "-8px 4px 0",
-    textStyle: "caption",
-  }),
   // 印と色を変える under the mark, in the accent as a link's words.
   change: css({ color: "accent.default", textStyle: "caption" }),
   // The switch with its note under it, as one section.
@@ -107,6 +101,12 @@ const editor = {
     cursor: "pointer",
     textAlign: "start",
     width: "100%",
+  }),
+  // A lookalike's warning under the look page's choices.
+  lookalike: css({
+    color: "danger.default",
+    margin: "-8px 4px 0",
+    textStyle: "caption",
   }),
   // The mark over 印と色を変える.
   mark: css({
