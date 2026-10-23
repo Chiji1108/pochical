@@ -48,7 +48,7 @@ export const reports = sqliteTable(
     // it is when Slack is set up, noted with the report before the post is
     // tried: a message of it may then be in Slack, which goes with it
     // (slack.ts, eraseReportPost). A row that does not say counts as
-    // tried, so no message is ever left behind as never posted.
+    // tried, the side on which its message is looked for.
     slackTried: integer("slack_tried", { mode: "boolean" })
       .notNull()
       .default(true),
@@ -72,6 +72,16 @@ export const reports = sqliteTable(
 export const deletedAccounts = sqliteTable("deleted_accounts", {
   deletedAt: integer("deleted_at", { mode: "timestamp_ms" }).notNull(),
   userId: text("user_id").primaryKey(),
+});
+
+// The Slack threads of deleted accounts' chats with Pochical's people whose
+// app posts may still be there (spec/sync-protocol.md, Deleting an
+// account): noted as the chat goes, and kept, for the daily cron to try
+// again, until a try a day or more after the note finds none left. No
+// user is named: the thread is all that is needed to find them.
+export const erasingSlackThreads = sqliteTable("erasing_slack_threads", {
+  notedAt: integer("noted_at", { mode: "timestamp_ms" }).notNull(),
+  threadTs: text("thread_ts").primaryKey(),
 });
 
 // An index of every user's chat with Pochical's people, whose lines are
@@ -141,7 +151,8 @@ export const pushTokens = sqliteTable(
   (table) => [index("push_tokens_session").on(table.sessionId)]
 );
 
-// What Pochical's people did on the admin site, the latest kept for good:
+// What Pochical's people did on the admin site, the latest kept for good,
+// but a report's notes, which go with the report (report-retention.ts):
 // who (their address on Cloudflare Access), when, what, and to whom
 // (spec/admin.md, 記録).
 export const adminActions = sqliteTable(

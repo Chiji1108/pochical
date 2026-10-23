@@ -1,11 +1,11 @@
 import type { MessageInitShape } from "@bufbuild/protobuf";
 import { createScheduledController } from "cloudflare:test";
-import { env } from "cloudflare:workers";
+import { env, exports } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ChatEditSchema } from "../src/gen/pochical/v1/sync_pb";
 import worker from "../src/index";
-import { call, userIdOf } from "./helpers";
+import { call, signInAnonymously, userIdOf } from "./helpers";
 import { pair, sendFrame, syncSocket, untilAcked } from "./sync-helpers";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -22,7 +22,6 @@ const told = async (groupId: string) =>
 
 /** A third member of the pair's group, as their session token. */
 const join = async (inviteCode: string): Promise<string> => {
-  const { signInAnonymously } = await import("./helpers");
   const token = await signInAnonymously();
   await call(
     "GroupService/JoinGroup",
@@ -127,11 +126,12 @@ const slack = ({
       const ts = "ts" in args ? String(args.ts) : "";
       const answer = deleting();
       if (answer.ok === true) {
+        const at = channel.findIndex((message) => message.ts === ts);
+        if (at === -1) {
+          return Response.json({ error: "message_not_found", ok: false });
+        }
+        channel.splice(at, 1);
         deleted.push(ts);
-        channel.splice(
-          channel.findIndex((message) => message.ts === ts),
-          1
-        );
       }
       return Response.json(answer);
     }
@@ -208,6 +208,15 @@ describe("reports after an account is deleted", () => {
     await vi.waitFor(async () => {
       await expect(told(groupId)).resolves.toBe(1);
     });
+    const id = await env.DB.prepare("select id from reports where group_id = ?")
+      .bind(groupId)
+      .first<string>("id");
+    await exports.AdminEntrypoint.handleReport(
+      String(id),
+      "acted",
+      "本人に注意した",
+      "staff@pochical.app"
+    );
     await expect(deleteAccount(guest)).resolves.toBe(200);
     const due = Date.now() + YEAR_MS;
 
@@ -216,7 +225,31 @@ describe("reports after an account is deleted", () => {
 
     slackBusy = false;
     await sweep(due + DAY_MS);
-    expect([await kept(groupId), deleted]).toStrictEqual([[], posted]);
+    const notes = await env.DB.prepare(
+      "select count(*) as n from admin_actions where target = ?"
+    )
+      .bind(id)
+      .first<number>("n");
+    expect([await kept(groupId), deleted, notes]).toStrictEqual([
+      [],
+      posted,
+      0,
+    ]);
+  });
+
+  it("keeps the reports of an account whose deletion stopped before its sign-ins went", async () => {
+    const { groupId, guest, makerId } = await pair();
+    const guestId = await userIdOf(guest);
+    slack();
+    await expect(reportMember(groupId, guest, makerId)).resolves.toBe(200);
+    // As a deletion cut off after the note leaves it, the account still here.
+    await env.DB.prepare(
+      "insert into deleted_accounts (user_id, deleted_at) values (?, ?)"
+    )
+      .bind(guestId, Date.now())
+      .run();
+    await sweep(Date.now() + YEAR_MS);
+    await expect(kept(groupId)).resolves.toHaveLength(1);
   });
 
   it("finds a post whose answer was lost before erasing its report, and erases one Slack refused", async () => {

@@ -5,7 +5,8 @@
 import { and, eq, inArray, lte, notInArray, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
-import { deletedAccounts, reports } from "./db/schema";
+import { user } from "./db/auth-schema";
+import { adminActions, deletedAccounts, reports } from "./db/schema";
 import { eraseReportPost } from "./slack";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -36,7 +37,8 @@ export const noteDeletedAccount = async (
 /**
  * Every report naming an account deleted long enough ago erased by `now`'s
  * sweep: those due before the next sweep comes, so none outlives its year.
- * A report's post in Slack goes first, found there by its metadata when
+ * A report goes with its notes in 記録 (`admin_actions`), which hold
+ * Pochical's people's words on it. Its post in Slack goes first, found there by its metadata when
  * the report does not know it; one Slack does not find or delete yet keeps
  * its report, and its account's note, for the next sweep. Run again, it
  * finds nothing more to do.
@@ -47,9 +49,17 @@ export const eraseDueReports = async (env: Env, now: Date): Promise<void> => {
     .select({ userId: deletedAccounts.userId })
     .from(deletedAccounts)
     .where(
-      lte(
-        deletedAccounts.deletedAt,
-        new Date(now.getTime() + SWEEP_EVERY_MS - REPORT_KEPT_MS)
+      and(
+        lte(
+          deletedAccounts.deletedAt,
+          new Date(now.getTime() + SWEEP_EVERY_MS - REPORT_KEPT_MS)
+        ),
+        // A deletion that stopped after noting the account and before its
+        // sign-ins went leaves it here, its reports kept until it is gone.
+        notInArray(
+          deletedAccounts.userId,
+          db.select({ id: user.id }).from(user)
+        )
       )
     );
   const naming = or(
@@ -69,7 +79,17 @@ export const eraseDueReports = async (env: Env, now: Date): Promise<void> => {
     // oxlint-disable-next-line no-await-in-loop -- Slack takes one at a time
     if (await eraseReportPost(env, report)) {
       // oxlint-disable-next-line no-await-in-loop -- as above
-      await db.delete(reports).where(eq(reports.id, report.id));
+      await db.batch([
+        db.delete(reports).where(eq(reports.id, report.id)),
+        db
+          .delete(adminActions)
+          .where(
+            and(
+              eq(adminActions.action, "report"),
+              eq(adminActions.target, report.id)
+            )
+          ),
+      ]);
     }
   }
   await db

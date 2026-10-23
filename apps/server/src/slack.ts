@@ -976,6 +976,12 @@ export const tellStaffOfReport = async (
       `<${ADMIN_SITE}/reports|管理サイトで開く>`,
     ].join("\n"),
   });
+  // Slack takes a post whose metadata it finds wrong without it, warning.
+  const said = posted?.response_metadata;
+  const warnings = isRecord(said) ? said.warnings : undefined;
+  if (Array.isArray(warnings) && warnings.length > 0) {
+    console.warn("Slack warned of a report post", warnings);
+  }
   return stringOf(posted?.ts);
 };
 
@@ -1024,15 +1030,127 @@ export const eraseReportPost = async (
 };
 
 /**
- * The user's account is deleted (by them, or by 全消去): said in their
- * chat's thread, whose lines are gone from the app and the admin site.
+ * What a deleted account's chat thread keeps of the app's posts: its
+ * first message, in place of the user's words, saying the account was
+ * deleted, for Pochical's people reading their own replies under it.
  */
-export const tellStaffOfDeletion = async (
+const DELETED_EVENT = "pochical_account_deleted";
+
+const DELETED_WORDS =
+  "（このユーザーのアカウントは削除されました。ユーザーのメッセージと写真は、アプリ・管理サイト・Slackから削除されています）";
+
+/**
+ * A call to Slack that is done once Slack takes it or says that what it
+ * acts on is already gone (`gone`); SlackRefusedError thrown otherwise.
+ */
+const settle = async (
+  env: Env,
+  method: string,
+  args: Record<string, unknown>,
+  gone: readonly string[]
+): Promise<void> => {
+  const answer = await askSlack(env, method, args);
+  if ("refused" in answer && !gone.includes(answer.refused.why)) {
+    throw new SlackRefusedError(method, answer.refused);
+  }
+};
+
+/** Every message of `thread`, its first included (conversations.replies). */
+const threadMessages = async (
   env: Env,
   thread: string
-): Promise<void> => {
-  await slackCall(env, "chat.postMessage", {
-    text: "（このユーザーのアカウントは削除されました。このチャットはアプリと管理サイトから消えています）",
-    thread_ts: thread,
-  });
+): Promise<Record<string, unknown>[]> => {
+  const messages: Record<string, unknown>[] = [];
+  let cursor = "";
+  do {
+    // oxlint-disable-next-line no-await-in-loop -- page after page
+    const answer = await askSlack(
+      env,
+      "conversations.replies",
+      {
+        include_all_metadata: true,
+        limit: LOOK_PAGE,
+        ts: thread,
+        ...(cursor === "" ? {} : { cursor }),
+      },
+      true
+    );
+    if ("refused" in answer) {
+      if (answer.refused.why === "thread_not_found") {
+        return messages;
+      }
+      throw new SlackRefusedError("a look at a thread", answer.refused);
+    }
+    const page = answer.taken;
+    if (Array.isArray(page.messages)) {
+      messages.push(...page.messages.filter(isRecord));
+    }
+    const next = page.response_metadata;
+    cursor = (isRecord(next) ? stringOf(next.next_cursor) : undefined) ?? "";
+  } while (cursor !== "");
+  return messages;
+};
+
+/**
+ * Whether the app's posts in a deleted account's chat thread are gone:
+ * each message and file the app posted there deleted (chat.delete,
+ * files.delete), the thread's first message said as deleted instead
+ * (chat.update), its metadata naming no one; Pochical's people's own
+ * replies stay, which the app's token cannot delete. False while Slack
+ * does not take it, for the daily cron to try again. Run again, it finds
+ * only what is left to do.
+ */
+export const eraseSupportThread = async (
+  env: Env,
+  thread: string
+): Promise<boolean> => {
+  try {
+    const me = await slackTake(env, "auth.test", {}, "who the app is");
+    const appUser = stringOf(me.user_id);
+    const appBot = stringOf(me.bot_id);
+    const byApp = (message: Record<string, unknown>): boolean =>
+      (appUser !== undefined && message.user === appUser) ||
+      (appBot !== undefined && message.bot_id === appBot);
+    for (const message of await threadMessages(env, thread)) {
+      const files: unknown[] = Array.isArray(message.files)
+        ? message.files
+        : [];
+      for (const file of files) {
+        if (isRecord(file) && appUser !== undefined && file.user === appUser) {
+          // oxlint-disable-next-line no-await-in-loop -- Slack takes one at a time
+          await settle(env, "files.delete", { file: file.id }, [
+            "file_deleted",
+            "file_not_found",
+          ]);
+        }
+      }
+      const { metadata, ts } = message;
+      if (!byApp(message) || typeof ts !== "string") {
+        continue;
+      }
+      if (ts !== thread) {
+        // oxlint-disable-next-line no-await-in-loop -- as above
+        await settle(env, "chat.delete", { ts }, ["message_not_found"]);
+      } else if (!isRecord(metadata) || metadata.event_type !== DELETED_EVENT) {
+        // oxlint-disable-next-line no-await-in-loop -- as above
+        await settle(
+          env,
+          "chat.update",
+          {
+            blocks: [],
+            metadata: { event_payload: {}, event_type: DELETED_EVENT },
+            text: DELETED_WORDS,
+            ts,
+          },
+          ["message_not_found"]
+        );
+      }
+    }
+    return true;
+  } catch (error) {
+    if (error instanceof SlackRefusedError) {
+      return false;
+    }
+    throw error;
+  }
 };

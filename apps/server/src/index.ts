@@ -1,6 +1,7 @@
 import { createConnectRouter } from "@connectrpc/connect";
 import { createFetchHandler } from "@connectrpc/connect/protocol";
 
+import { eraseNotedSlackThreads } from "./account-deletion";
 import { registerChatService } from "./chat-service";
 import { registerGroupService } from "./group-service";
 import { registerInviteService } from "./invite-service";
@@ -265,8 +266,11 @@ export default {
     );
   },
   // Daily (`triggers.crons` in wrangler.jsonc): the reports whose year
-  // after an account's deletion is up.
+  // after an account's deletion is up, and what Slack has not yet taken of
+  // erasing deleted accounts' chat threads.
   async scheduled(controller, env) {
-    await eraseDueReports(env, new Date(controller.scheduledTime));
+    const now = new Date(controller.scheduledTime);
+    await eraseNotedSlackThreads(env, now);
+    await eraseDueReports(env, now);
   },
 } satisfies ExportedHandler<Env>;

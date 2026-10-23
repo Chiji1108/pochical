@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "a7431418-c06b-4521-9934-2ea6dcc364d9",
+  "id": "bc1e5ba3-120f-4d3d-a0e1-127d5aa73e05",
   "prevId": "1ee8f46b-28c0-43e7-ba4c-678a8973fcc0",
   "tables": {
     "admin_actions": {
@@ -78,6 +78,30 @@
         },
         "user_id": {
           "name": "user_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "erasing_slack_threads": {
+      "name": "erasing_slack_threads",
+      "columns": {
+        "noted_at": {
+          "name": "noted_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "thread_ts": {
+          "name": "thread_ts",
           "type": "text",
           "primaryKey": true,
           "notNull": true,
