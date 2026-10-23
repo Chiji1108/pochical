@@ -130,6 +130,9 @@ struct LinesRow: Equatable {
   var environment = EnvironmentValues()
   /// Each item's look, as last laid out.
   var looks: [String: AnyHashable] = [:]
+  /// The lines are moving to an update: each cell cut to its frame
+  /// meanwhile (LineCell).
+  var moving = false
   /// Each item's height as measured, at its look and the width it had.
   private var heights: [String: (look: AnyHashable, width: CGFloat, height: CGFloat)] = [:] {
     didSet {
@@ -420,6 +423,7 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
       let space = cell.space
       let drawing = model.drawing(of: id)
       cell.measure = { width in model.height(of: id, width: width) }
+      cell.clipsToBounds = model.moving
       cell.contentConfiguration = UIHostingConfiguration {
         LineCellContent(
           id: id, content: content, environment: environment, space: space, drawing: drawing)
@@ -669,6 +673,7 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
         guard let self else { return }
         let next = updating?.next
         updating = nil
+        move(false)
         // The lines waiting go in next; changing none, these have landed.
         if let next, setLines(next) { return }
         landed()
@@ -687,6 +692,7 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     // its timing from an animation by duration around it; around a spring
     // by perceived duration (springDuration:) it keeps UIKit's own.
     if animated {
+      move(true)
       UIView.animate(
         withDuration: Double(Chat.lineMoveMs) / 1000, delay: 0, usingSpringWithDamping: 1,
         initialSpringVelocity: 0, options: .allowUserInteraction, animations: update)
@@ -694,6 +700,18 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
       update()
     }
     return true
+  }
+
+  /// The lines start or stop moving to an update: the cells cut to their
+  /// frames while they move, uncut at rest. A line drawn again taller is
+  /// laid out at once at its new height (LineCell), its cell growing to it
+  /// in the lines' animation, so what it gains (a reaction, a link's page,
+  /// the words past 続きを読む) shows as the cell grows, never over the line
+  /// next to it first; at rest, what a line draws past its cell for a
+  /// moment (a reaction's pop and spray) is whole.
+  private func move(_ moving: Bool) {
+    model.moving = moving
+    for cell in lines.visibleCells { cell.clipsToBounds = moving }
   }
 
   /// The item the lines are on, where its top stands among the lines seen,
@@ -1635,11 +1653,6 @@ private final class LineCell: UICollectionViewCell {
 
   override init(frame: CGRect) {
     super.init(frame: frame)
-    // Its line drawn again taller is laid out at once at its new height,
-    // the cell growing to it in the lines' animation: what the line gains
-    // (a reaction, a link's page, the words past 続きを読む) shows as the
-    // cell grows, never over the line next to it first.
-    clipsToBounds = true
   }
 
   /// Its line laid out whole, at once, at the cell's new size, so the
