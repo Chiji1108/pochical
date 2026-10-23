@@ -2,14 +2,7 @@
 /// Sunday through 6 for Saturday): whole weeks covering the month, with
 /// the days of the months around it filling the first and last.
 public func monthWeeks(_ month: Day, weekStart: Int) -> [[Day]] {
-  let first = month.firstOfMonth
-  let lead = ((first.weekday - weekStart) % 7 + 7) % 7
-  let count = month.daysOfMonth.count
-  let weeks = (lead + count + 6) / 7
-  let start = first.adding(days: -lead)
-  return (0..<weeks).map { week in
-    (0..<7).map { start.adding(days: week * 7 + $0) }
-  }
+  Period(of: month, start: 1).weeks(weekStart: weekStart)
 }
 
 /// The person's own calendar as the device holds it: their days, patterns
@@ -57,9 +50,8 @@ public struct OwnCalendar: Sendable {
   }
 }
 
-/// Where ポチポチ入力 starts in `month`'s month: its first day without a
-/// shift in `days`, else its 1st (spec/calendar.md).
-public func firstBlankDay(in month: Day, days: [Day: DayEntry]) -> Day {
-  let monthDays = month.daysOfMonth
-  return monthDays.first { days[$0] == nil } ?? monthDays[0]
+/// Where ポチポチ入力 starts on a page: its first day without a shift in
+/// `days`, else its first day (spec/calendar.md).
+public func firstBlankDay(in page: Period, days: [Day: DayEntry]) -> Day {
+  page.days.first { days[$0] == nil } ?? page.first
 }

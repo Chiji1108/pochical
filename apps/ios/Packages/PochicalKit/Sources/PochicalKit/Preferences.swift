@@ -46,7 +46,7 @@ extension OwnValues {
 
 extension DeviceSettings {
   /// The keys of the parts kept with the account.
-  static let preferenceKeys = ["theme", "look", "week", "heading", "picture", "calendarAdd"]
+  static let preferenceKeys = ["theme", "look", "week", "period", "heading", "picture", "calendarAdd"]
 
   /// The parts kept with the account, each as its key's JSON.
   var preferences: [String: String] {
@@ -56,7 +56,8 @@ extension DeviceSettings {
       (try? encoder.encode(value)).flatMap { String(data: $0, encoding: .utf8) }
     }
     let parts: [String: String?] = [
-      "theme": json(themeID), "look": json(look), "week": json(week), "heading": json(heading),
+      "theme": json(themeID), "look": json(look), "week": json(week), "period": json(period),
+      "heading": json(heading),
       "picture": json(picture.options), "calendarAdd": json(calendarAdd),
     ]
     return parts.compactMapValues(\.self)
@@ -71,6 +72,7 @@ extension DeviceSettings {
     if let theme = value("theme", as: String.self) { themeID = theme }
     if let look = value("look", as: Look.self) { self.look = look }
     if let week = value("week", as: Week.self) { self.week = week }
+    if let period = value("period", as: ShiftPeriod.self) { self.period = period }
     if let heading = value("heading", as: Heading.self) { self.heading = heading }
     if let options = value("picture", as: MarkOptions.self) { picture.options = options }
     if let calendarAdd = value("calendarAdd", as: CalendarAdd.self) {

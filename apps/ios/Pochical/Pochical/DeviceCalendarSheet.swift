@@ -71,14 +71,14 @@ import UIKit
     store.calendar(withIdentifier: id)
   }
 
-  /// Puts the month's events in the calendar. Those Pochical put in for its
+  /// Puts the page's events in the calendar. Those Pochical put in for its
   /// days before go first, from any device and any calendar, found by the
-  /// day each names (`dayURL`), so a month added again is put in anew
+  /// day each names (`dayURL`), so a page added again is put in anew
   /// rather than twice, whatever was reinstalled or synced since.
-  func add(_ events: [ShiftEvent], of month: Day, by user: String, to calendarID: String) throws {
+  func add(_ events: [ShiftEvent], of page: Period, by user: String, to calendarID: String) throws {
     guard let target = store.calendar(withIdentifier: calendarID) else { return }
     do {
-      for old in marked(month, by: user) {
+      for old in marked(page, by: user) {
         try store.remove(old, span: .thisEvent, commit: false)
       }
       for shift in events {
@@ -106,16 +106,16 @@ import UIKit
     UserDefaults.standard.set(calendarID, forKey: Self.lastKey)
   }
 
-  /// The events Pochical put in for the month's days as the user's, in
+  /// The events Pochical put in for the page's days as the user's, in
   /// any calendar that takes changes: those adding again replaces, and
   /// ポチカルで入れた〇月の予定を消す takes out.
-  func marked(_ month: Day, by user: String) -> [EKEvent] {
-    let days = Set(month.daysOfMonth.map(\.key))
-    // From the month's first day to two past its last: a night's event
+  func marked(_ page: Period, by user: String) -> [EKEvent] {
+    let days = Set(page.days.map(\.key))
+    // From the page's first day to two past its last: a night's event
     // ends the day after it.
     let range = store.predicateForEvents(
-      withStart: date(of: month.firstOfMonth, at: 0),
-      end: date(of: month.daysOfMonth.last!, at: 2 * 24 * 60), calendars: nil)
+      withStart: date(of: page.first, at: 0),
+      end: date(of: page.last, at: 2 * 24 * 60), calendars: nil)
     return store.events(matching: range).filter { event in
       guard let mark = Self.mark(of: event.url) else { return false }
       return mark.user == user && days.contains(mark.day)
@@ -123,10 +123,10 @@ import UIKit
     }
   }
 
-  /// Takes out the events Pochical put in for the month as the user's,
+  /// Takes out the events Pochical put in for the page as the user's,
   /// all at once or none, and says how many went.
-  func remove(_ month: Day, by user: String) throws -> Int {
-    let old = marked(month, by: user)
+  func remove(_ page: Period, by user: String) throws -> Int {
+    let old = marked(page, by: user)
     do {
       for event in old {
         try store.remove(event, span: .thisEvent, commit: false)
@@ -176,15 +176,18 @@ import UIKit
 }
 
 /// 端末カレンダーに追加 (/design's SaveSheet, its calendar step): the
-/// month's shifts put in the device's calendar a day each, into the one
-/// picked, days off only of the patterns asked for.
+/// page's shifts, a month's or a シフトの期間's, put in the device's
+/// calendar a day each, into the one picked, days off only of the patterns
+/// asked for.
 struct DeviceCalendarSheet: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
   @Environment(\.openURL) private var openURL
   @Environment(\.meID) private var meID
   @Environment(Settings.self) private var settings
-  let month: Day
+  let page: Period
+  /// A シフトの期間's page, named by its days wherever the month would be.
+  let byPeriod: Bool
   let calendar: OwnCalendar
   /// The person's coworkers' names by id, for 一緒に働く人も入れる.
   let coworkers: [String: String]
@@ -206,13 +209,13 @@ struct DeviceCalendarSheet: View {
     // the account as last left: the memos and people off at first, as a
     // calendar may be shared with family.
     let putting = settings.device.calendarAdd
-    let shown = calendar.shown(from: month, through: month.daysOfMonth.last ?? month)
+    let shown = calendar.shown(from: page.first, through: page.last)
     let listed = listed(shown)
     let picked = putting.shown(of: calendar.patterns)
     let memos = notes
     let names = people(shown)
-    let events = ShiftEvents.month(
-      month, days: shown, patterns: calendar.patternsByID, shown: picked,
+    let events = ShiftEvents.page(
+      page, days: shown, patterns: calendar.patternsByID, shown: picked,
       notes: putting.notes ? memos : [:], people: putting.people ? names : [:])
     // A switch only when it would put something in: a memo goes in any
     // day, those on a day only in its shift's event.
@@ -260,7 +263,7 @@ struct DeviceCalendarSheet: View {
             // mistake, so none is taken out one by one.
             if put > 0 {
               Section {
-                Button("ポチカルで入れた\(month.monthText)の予定を消す", role: .destructive) {
+                Button("ポチカルで入れた\(name)の予定を消す", role: .destructive) {
                   asksToRemove = true
                 }
                 .frame(maxWidth: .infinity)
@@ -278,7 +281,7 @@ struct DeviceCalendarSheet: View {
       ) {
         Button("消す", role: .destructive) { remove() }
       } message: {
-        Text("\(month.monthText)の分を、どのカレンダーからも消します。ほかの予定は消しません。")
+        Text("\(name)の分を、どのカレンダーからも消します。ほかの予定は消しません。")
       }
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
@@ -304,7 +307,7 @@ struct DeviceCalendarSheet: View {
           calendarID = calendars.pickedFirst
         }
         if let meID {
-          put = calendars.marked(month, by: meID).count
+          put = calendars.marked(page, by: meID).count
         }
       }
     }
@@ -343,7 +346,7 @@ struct DeviceCalendarSheet: View {
       }
       .pickerStyle(.navigationLink)
     } header: {
-      Text("\(month.monthText)のシフトを、1日ずつ予定として入れます。")
+      Text("\(name)のシフトを、1日ずつ予定として入れます。")
         .textCase(nil)
     }
     .settingsRows()
@@ -394,7 +397,7 @@ struct DeviceCalendarSheet: View {
   /// and the way to Google Calendar.
   private var footer: some View {
     VStack(alignment: .leading, spacing: 8) {
-      Text("前に入れた\(month.monthText)の予定は、入れ直します。")
+      Text("前に入れた\(name)の予定は、入れ直します。")
       // A calendar of a Google account added to the iPhone goes on to
       // Google Calendar, which few find by themselves (spec/calendar.md).
       Button("Googleカレンダーに入れるには") {
@@ -403,6 +406,11 @@ struct DeviceCalendarSheet: View {
       .font(.footnote)
       .accessibilityHint("ブラウザで開きます")
     }
+  }
+
+  /// The month, or the period by its days: 10月, 10/15〜11/14.
+  private var name: String {
+    byPeriod ? page.text : page.month.monthText
   }
 
   /// The patterns to pick from: those in use, and a pattern left that
@@ -427,7 +435,7 @@ struct DeviceCalendarSheet: View {
   /// Each day's memo in the month.
   private var notes: [Day: String] {
     Dictionary(
-      uniqueKeysWithValues: month.daysOfMonth.compactMap { day in
+      uniqueKeysWithValues: page.days.compactMap { day in
         calendar.note(on: day).map { (day, $0) }
       })
   }
@@ -446,10 +454,10 @@ struct DeviceCalendarSheet: View {
       return
     }
     do {
-      try calendars.add(events, of: month, by: meID, to: calendarID)
+      try calendars.add(events, of: page, by: meID, to: calendarID)
       let name = calendars.calendar(calendarID)?.title ?? ""
       withAnimation {
-        done = ("保存しました", "「\(name)」に\(month.monthText)の予定を\(events.count)件追加しました。")
+        done = ("保存しました", "「\(name)」に\(name)の予定を\(events.count)件追加しました。")
       }
     } catch {
       ReviewPrompt.troubled = true
@@ -463,9 +471,9 @@ struct DeviceCalendarSheet: View {
       return
     }
     do {
-      let removed = try calendars.remove(month, by: meID)
+      let removed = try calendars.remove(page, by: meID)
       withAnimation {
-        done = ("消しました", "ポチカルで入れた\(month.monthText)の予定を\(removed)件消しました。")
+        done = ("消しました", "ポチカルで入れた\(name)の予定を\(removed)件消しました。")
       }
     } catch {
       ReviewPrompt.troubled = true

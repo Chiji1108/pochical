@@ -1,12 +1,13 @@
 import { css } from "@pochical/styled-system/css";
 import { useState } from "react";
 
+import { formatSlash } from "../lib/design-days";
 import type { Shift } from "../lib/design-patterns";
 import { Chip, ChipGroup, Tag } from "./design-choices";
 import { List, SwitchRow } from "./design-list";
 import { Sheet, SheetHeading, SheetPicture, sheetBody } from "./design-sheet";
 import { Button } from "./design-ui";
-import { weekdayNames } from "./design-week";
+import { dateKey, weekdayNames } from "./design-week";
 
 // A pattern that counts as off, and whether the person's look left it
 // blank as the sheet opened: decided then, so switching it on there does
@@ -104,8 +105,13 @@ function GapSheetBody({
         <div className={gap.body}>
           <ChipGroup as="ul" className={spaced}>
             {days.map((day) => (
-              <Tag as="li" key={day.getDate()}>
-                {day.getDate()}日({weekdayNames[day.getDay()]})
+              <Tag as="li" key={dateKey(day)}>
+                {/* A month's 1st past the first month's days, of a シフトの
+                    期間, is dated 11/1(日), as on the page. */}
+                {day.getDate() === 1 && day.getMonth() !== days[0]?.getMonth()
+                  ? formatSlash(day)
+                  : `${day.getDate()}日`}
+                ({weekdayNames[day.getDay()]})
               </Tag>
             ))}
           </ChipGroup>

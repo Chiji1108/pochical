@@ -13,6 +13,9 @@ struct MonthPicturePage: View {
   @Environment(\.colorScheme) private var colorScheme
   @Environment(\.dismiss) private var dismiss
   let month: Day
+  /// A シフトの期間's page, which the picture holds rather than the month
+  /// (spec/calendar.md, The shift period).
+  var period: Period?
   let calendar: OwnCalendar
   @State private var notice: String?
   /// Saves and copies done, each felt as it is (spec/haptics.md).
@@ -39,7 +42,7 @@ struct MonthPicturePage: View {
             .overlay(RoundedRectangle(cornerRadius: Radius.xxl).strokeBorder(colors.separator))
             .shadow(Shadow.md)
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("\(month.yearMonthText)のシフトの画像")
+            .accessibilityLabel("\(name)のシフトの画像")
             // ☀︎ / ☾ on the picture's top edge, as every calendar preview
             // has them; an always-dark テーマ saves its dark.
             .overlay(alignment: .topLeading) {
@@ -130,6 +133,11 @@ struct MonthPicturePage: View {
     }
   }
 
+  /// The month, or the period, as its picture is shared and read.
+  private var name: String {
+    period?.fullText ?? month.yearMonthText
+  }
+
   /// 共有 and 保存 under the page.
   private var actions: some View {
     HStack(spacing: 12) {
@@ -137,7 +145,7 @@ struct MonthPicturePage: View {
       if let image {
         ShareLink(
           item: Image(uiImage: image),
-          preview: SharePreview("\(month.yearMonthText)のシフト", image: Image(uiImage: image))
+          preview: SharePreview("\(name)のシフト", image: Image(uiImage: image))
         ) {
           shareLabel
         }
@@ -174,7 +182,9 @@ struct MonthPicturePage: View {
     let scheme: ColorScheme = dark ? .dark : .light
     var look = settings.device.look
     look.options = settings.device.picture.options
-    return MonthPicture(month: month, calendar: calendar, week: settings.device.week)
+    return MonthPicture(
+      page: period ?? Period(of: month, start: 1), byPeriod: period != nil, calendar: calendar,
+      week: settings.device.week)
       .environment(\.themeColors, settings.device.theme.colors(scheme))
       .environment(\.colorScheme, scheme)
       .environment(\.look, look)
@@ -230,22 +240,25 @@ private struct PictureKey: Equatable {
 /// days as the calendar draws them, and Pochical's name with the store's
 /// icon, so someone who gets it can find the app by the same dog. Days of
 /// the months around it are left blank, and there is no today or memo:
-/// the picture is for any day.
+/// the picture is for any day. A シフトの期間's page is titled by its days,
+/// its days outside it blank, and the 1st of the month inside it dated 11/1
+/// (spec/calendar.md, The shift period).
 struct MonthPicture: View {
   @Environment(\.english) private var english
   @Environment(\.themeColors) private var colors
   @Environment(\.look) private var look
-  let month: Day
+  let page: Period
+  let byPeriod: Bool
   let calendar: OwnCalendar
   let week: DeviceSettings.Week
 
   var body: some View {
-    let weeks = monthWeeks(month, weekStart: week.start)
-    let first = weeks.first?.first ?? month
-    let last = weeks.last?.last ?? month
+    let weeks = page.weeks(weekStart: week.start)
+    let first = weeks.first?.first ?? page.first
+    let last = weeks.last?.last ?? page.last
     let shown = calendar.shown(from: first, through: last)
     VStack(alignment: .leading, spacing: 0) {
-      Text(month.monthWithYear(english: english))
+      Text(byPeriod ? page.title(english: english) : page.month.monthWithYear(english: english))
         .font(.system(size: 15, weight: .semibold))
         .foregroundStyle(colors.textPrimary)
         .padding(.horizontal, 4)
@@ -255,14 +268,14 @@ struct MonthPicture: View {
         ForEach(weeks, id: \.self) { days in
           HStack(spacing: 4) {
             ForEach(days, id: \.self) { day in
-              let inMonth = day.month == month.month
+              let inMonth = page.contains(day)
               let entry = inMonth ? shown[day] : nil
               DayCell(
                 day: day, entry: entry, note: nil,
                 pattern: entry.flatMap { calendar.patternsByID[$0.shift] },
                 outside: !inMonth, isToday: false, isHoliday: day.holidayName != nil,
                 colorsHoliday: week.holiday,
-                offShown: .hidden)
+                offShown: .hidden, withMonth: byPeriod && inMonth && day.day == 1)
             }
           }
         }

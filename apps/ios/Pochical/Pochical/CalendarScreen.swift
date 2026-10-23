@@ -6,7 +6,9 @@ import SwiftUI
 import SwiftUINavigation
 import UIKit
 
-/// カレンダー: the person's month, a page a month, turned by swiping.
+/// カレンダー: the person's month, a page a month, turned by swiping; with
+/// a シフトの期間, a page a period, named by the month it starts in
+/// (spec/calendar.md, The shift period).
 struct CalendarScreen: View {
   @Environment(\.themeColors) private var colors
   @Environment(Settings.self) private var settings
@@ -19,7 +21,9 @@ struct CalendarScreen: View {
   @FetchAll private var coworkerRows: [CoworkerRow]
   @FetchAll private var coworkerOrder: [CoworkerOrderRow]
   @State private var today = Day.today
-  @State private var shownMonth: Day? = Day.today.firstOfMonth
+  /// The month naming the page shown; none for the page holding today,
+  /// which the calendar opens on.
+  @State private var shownMonth: Day?
   /// The day ポチポチ入力 enters next, while entering.
   @State private var entering: Day?
   @State private var gaps: [Day] = []
@@ -99,6 +103,8 @@ struct CalendarScreen: View {
   private static let unfoldFlick: CGFloat = 400
   private static let screenEdge: CGFloat = 16
   private var weekStart: Int { settings.device.week.start }
+  /// シフトの期間, which each page holds.
+  private var period: ShiftPeriod { settings.device.period }
 
   var body: some View {
     let calendar = OwnCalendar(
@@ -119,8 +125,8 @@ struct CalendarScreen: View {
               switch page {
               case .month(let month):
                 MonthPage(
-                  month: month, weekStart: weekStart, days: pageDays(calendar),
-                  openedWeek: opened, fold: fold)
+                  page: period.page(month), byPeriod: period.byPeriod, weekStart: weekStart,
+                  days: pageDays(calendar), openedWeek: opened, fold: fold)
               case .week(let week):
                 WeekPage(week: week, days: pageDays(calendar))
               }
@@ -193,12 +199,17 @@ struct CalendarScreen: View {
     }
     // The tabs give way to entering and to a day's week, as /design's do.
     .toolbarVisibility(entering == nil && shownOpen == nil ? .visible : .hidden, for: .tabBar)
-    // A month turned to while entering starts on its first blank day; a
-    // day picked in a month around it turns to that month.
+    // A page turned to while entering starts on its first blank day; a
+    // day picked on a page around it turns to that page.
     .onChange(of: shownMonth) { _, month in
-      if let month, let day = entering, day.firstOfMonth != month {
-        entering = firstBlankDay(in: month, days: monthDays(month, currentCalendar))
+      if let month, let day = entering, !period.page(month).contains(day) {
+        let page = period.page(month)
+        entering = firstBlankDay(in: page, days: pageDays(page, currentCalendar))
       }
+    }
+    // A シフトの期間 changed in 設定 turns to the page holding today.
+    .onChange(of: period) {
+      shownMonth = nil
     }
     // A widget's day: its month, the day open in its week; from a day
     // already open, as 今週 goes to today's.
@@ -227,9 +238,9 @@ struct CalendarScreen: View {
     }
     .onChange(of: entering) { _, day in
       if day == nil { askForReviewIfDue(afterEntering: true) }
-      if let day, day.firstOfMonth != shownMonth {
+      if let day, period.month(holding: day) != shownMonth {
         withAnimation(Springs.standard) {
-          shownMonth = day.firstOfMonth
+          shownMonth = period.month(holding: day)
         }
       }
     }
@@ -275,20 +286,23 @@ struct CalendarScreen: View {
       .presentationBackground(colors.backgroundBase)
     }
     .sheet(item: $breakingDown, id: \.self) { month in
-      let days = monthDays(month, calendar)
+      let page = period.page(month)
+      let days = pageDays(page, calendar)
       MonthBreakdownSheet(
-        month: month,
+        month: month, period: period.byPeriod ? page : nil,
         counts: calendar.patterns.map { pattern in
           (pattern, days.values.count { $0.shift == pattern.id })
         },
-        unfilled: month.daysOfMonth.count - days.count)
+        unfilled: page.days.count - days.count)
     }
     .sheet(item: $picturing, id: \.self) { month in
-      MonthPicturePage(month: month, calendar: currentCalendar)
+      MonthPicturePage(
+        month: month, period: period.byPeriod ? period.page(month) : nil,
+        calendar: currentCalendar)
     }
     .sheet(item: $addingToCalendar, id: \.self) { month in
       DeviceCalendarSheet(
-        month: month, calendar: currentCalendar,
+        page: period.page(month), byPeriod: period.byPeriod, calendar: currentCalendar,
         coworkers: Dictionary(uniqueKeysWithValues: coworkerRows.map { ($0.id, $0.name) }))
     }
     .onChange(of: gaps) { _, gaps in
@@ -334,24 +348,25 @@ struct CalendarScreen: View {
     .handles(selectDay, by: select)
   }
 
+  /// The month naming the page holding today.
   private var thisMonth: Day {
-    today.firstOfMonth
+    period.month(holding: today)
   }
 
   private var currentCalendar: OwnCalendar {
     OwnCalendar(days: days, patterns: patterns, patternOrder: patternOrder, orders: orders)
   }
 
-  /// The days of `month`'s month that show a shift.
-  /// A month's days whose pattern counts as off.
+  /// The days off on the page `month` names.
   private func daysOff(in month: Day, _ calendar: OwnCalendar) -> Int {
-    monthDays(month, calendar).values.count {
+    pageDays(period.page(month), calendar).values.count {
       calendar.patternsByID[$0.shift]?.countsAsOff == true
     }
   }
 
-  private func monthDays(_ month: Day, _ calendar: OwnCalendar) -> [Day: DayEntry] {
-    calendar.shown(from: month.firstOfMonth, through: month.daysOfMonth.last!)
+  /// The page's days that show a shift.
+  private func pageDays(_ page: Period, _ calendar: OwnCalendar) -> [Day: DayEntry] {
+    calendar.shown(from: page.first, through: page.last)
   }
 
   /// The first day of the week `day` is in, from the week start.
@@ -396,11 +411,12 @@ struct CalendarScreen: View {
   /// The pages: the months, or with a day opened its month, folded into
   /// the week, between the weeks before and after it.
   private var pages: [CalendarPage] {
-    guard let day = opened, let month = shownMonth else {
+    guard let day = opened else {
       return (-Self.monthsAround...Self.monthsAround).map { .month(thisMonth.addingMonths($0)) }
     }
     // The month keeps its place among the pages, so the scroll view stays
     // on it as the weeks come in and go.
+    let month = shownMonth ?? thisMonth
     let place = monthsAfterThis(month)
     let week = weekOf(day)
     return (-Self.monthsAround...Self.monthsAround).map {
@@ -411,7 +427,7 @@ struct CalendarScreen: View {
   /// The page in view: the month, or the week being swiped to.
   private var shownPage: Binding<CalendarPage?> {
     Binding(
-      get: { swipedWeek.map(CalendarPage.week) ?? shownMonth.map(CalendarPage.month) },
+      get: { swipedWeek.map(CalendarPage.week) ?? .month(shownMonth ?? thisMonth) },
       set: { page in
         switch page {
         case .month(let month):
@@ -450,15 +466,12 @@ struct CalendarScreen: View {
     withAnimation(folding) { swipedWeek = weekOf(day) }
   }
 
-  /// The month shown with `day` opened: the one shown while the day's week
+  /// The page shown with `day` opened: the one shown while the day's week
   /// is one of its rows, as each holds a day of it, else the day's own.
   private func monthShowing(_ day: Day) -> Day {
-    if let month = shownMonth,
-      monthWeeks(month, weekStart: weekStart).contains(where: { $0.contains(day) })
-    {
-      return month
-    }
-    return day.firstOfMonth
+    let month = shownMonth ?? thisMonth
+    let rows = period.page(month).weeks(weekStart: weekStart)
+    return rows.contains(where: { $0.contains(day) }) ? month : period.month(holding: day)
   }
 
   /// Days off left blank on the month come back faint while entering and
@@ -502,16 +515,19 @@ struct CalendarScreen: View {
   @ViewBuilder private func bottom(_ calendar: OwnCalendar) -> some View {
     if let day = entering {
       let shown = calendar.shown(from: day, through: day)
+      // Entering stays on the page of the day entered, to its last day.
+      let last = Period(holding: day, start: period.start).last
       EntryTray(
         day: day, week: settings.device.week, patterns: calendar.patterns.inUse,
         canClear: shown[day] != nil,
-        canSkip: day != day.daysOfMonth.last,
+        canSkip: day != last,
         onEnter: { shift in
           // A shift not kept leaves the day to enter again.
           guard keep({ db, now in try OwnValues.enter(shift, on: day, now: now, in: db) }) else {
             return
           }
-          let next = selectedAfterEntering(shift, on: day, patterns: calendar.patternsByID)
+          let next = selectedAfterEntering(
+            shift, on: day, through: last, patterns: calendar.patternsByID)
           entering = next
           let pattern = shift.flatMap { calendar.patternsByID[$0] }
           let following = pattern?.nextDay.flatMap { calendar.patternsByID[$0] }
@@ -522,7 +538,7 @@ struct CalendarScreen: View {
             } ?? "シフトを消しました", on: day, next: next)
         },
         onSkip: {
-          let next = selectedAfterEntering(nil, on: day, patterns: [:])
+          let next = selectedAfterEntering(nil, on: day, through: last, patterns: [:])
           entering = next
           announce("変更せずに進みました", on: day, next: next)
         }
@@ -539,14 +555,14 @@ struct CalendarScreen: View {
         })
       VStack(spacing: 12) {
         MonthSummary(
-          position: position, monthAt: monthOfPage,
+          position: position, monthAt: monthOfPage, byPeriod: period.byPeriod,
           daysOff: { month in counted[month] ?? daysOff(in: month, calendar) }
         ) { month in
           breakingDown = month
         }
         Button {
-          let month = shownMonth ?? thisMonth
-          let first = firstBlankDay(in: month, days: monthDays(month, calendar))
+          let page = period.page(shownMonth ?? thisMonth)
+          let first = firstBlankDay(in: page, days: pageDays(page, calendar))
           // With the tabs giving way, so the tray and the tab bar move as one.
           withAnimation(entryChange) { entering = first }
         } label: {
@@ -562,7 +578,7 @@ struct CalendarScreen: View {
     }
   }
 
-  /// 完了: entering ends, and blank days before the month's last entered
+  /// 完了: entering ends, and blank days before the page's last entered
   /// one are asked about.
   private func finish() {
     guard let day = entering else {
@@ -576,9 +592,8 @@ struct CalendarScreen: View {
     guard holidayShift(of: calendar.patterns.inUse) != nil else {
       return
     }
-    let month = day.firstOfMonth
-    let shown = calendar.shown(from: month, through: month.daysOfMonth.last!)
-    gaps = gapDays(in: month, days: shown)
+    let page = Period(holding: day, start: period.start)
+    gaps = gapDays(in: page, days: pageDays(page, calendar))
   }
 
   /// What 完了 asks about the month's blank days, while there are some
@@ -624,9 +639,12 @@ struct CalendarScreen: View {
   }
 
   /// Says what entering did and where it goes on, for VoiceOver, as
-  /// /design's live region: the month's last day stays until 完了.
+  /// /design's live region: the page's last day stays until 完了.
   private func announce(_ done: String, on day: Day, next: Day) {
-    let after = next == day ? "月末です。入力が終わったら完了を押してください" : "\(next.day)日を選択中"
+    let end = period.byPeriod ? "期間の最後の日です" : "月末です"
+    // The next day by its date alone, in the month of the day entered.
+    let nextName = next.month == day.month ? "\(next.day)日" : next.monthDayText
+    let after = next == day ? "\(end)。入力が終わったら完了を押してください" : "\(nextName)を選択中"
     AccessibilityNotification.Announcement("\(day.monthDayText)、\(done)。\(after)").post()
   }
 
@@ -662,7 +680,8 @@ struct CalendarScreen: View {
     } else {
       HStack(spacing: 12) {
         TodayFade(position: position, todayPage: todayPage) {
-          TodayButton(unit: "月") {
+          // A period's page is no month: its way back is to today's.
+          TodayButton(unit: period.byPeriod ? "日" : "月") {
             withAnimation(Springs.standard) { shownMonth = thisMonth }
           }
         }
@@ -676,7 +695,9 @@ struct CalendarScreen: View {
             addingToCalendar = shownMonth ?? thisMonth
           }
         } label: {
-          Label("この月のシフトを保存", systemImage: "square.and.arrow.down")
+          Label(
+            period.byPeriod ? "この期間のシフトを保存" : "この月のシフトを保存",
+            systemImage: "square.and.arrow.down")
             .labelStyle(.iconOnly)
         }
         .buttonStyle(BarButton())
@@ -694,7 +715,7 @@ struct CalendarScreen: View {
           settings.device.heading.sky = SurpriseSky.next(
             after: settings.device.heading.sky, theme: settings.device.theme)
         } label: {
-          MonthName(position: position, monthAt: monthOfPage)
+          MonthName(position: position, monthAt: monthOfPage, period: period)
         }
         .buttonStyle(.plain)
         .accessibilityHint("空の色を変えます")
@@ -705,10 +726,10 @@ struct CalendarScreen: View {
         ) { picked in
           withAnimation(Springs.standard) { shownMonth = picked }
         } label: {
-          MonthName(position: position, monthAt: monthOfPage)
+          MonthName(position: position, monthAt: monthOfPage, period: period)
         }
       } else {
-        MonthName(position: position, monthAt: monthOfPage)
+        MonthName(position: position, monthAt: monthOfPage, period: period)
       }
       Spacer()
       actions
@@ -729,16 +750,18 @@ struct CalendarScreen: View {
   /// the opened one, the month that week opens in.
   private func monthOfPage(_ index: Int) -> Day {
     let place = index - Self.monthsAround
-    guard let day = opened, let month = shownMonth else {
+    guard let day = opened else {
       return thisMonth.addingMonths(place)
     }
+    let month = shownMonth ?? thisMonth
     let weeks = place - monthsAfterThis(month)
     return weeks == 0 ? month : monthShowing(day.adding(days: 7 * weeks))
   }
 
   /// The page of this month, or with a day opened, of this week.
   private var todayPage: Int {
-    guard let day = opened, let month = shownMonth else { return Self.monthsAround }
+    guard let day = opened else { return Self.monthsAround }
+    let month = shownMonth ?? thisMonth
     return Self.monthsAround + monthsAfterThis(month)
       + weekOf(today).days(since: weekOf(day)) / 7
   }
@@ -801,8 +824,11 @@ struct PageDays {
   /// Picks a day: to enter while entering, else to open.
   let onSelect: Handler<Day>?
 
-  /// A week's row, its days of other months faded when `month` is given.
-  func row(_ week: [Day], shown: [Day: DayEntry], fadingOutside month: Day?) -> some View {
+  /// A week's row, its days off `page` faded when it is given; with
+  /// `byPeriod`, a month's 1st within it dated 11/1.
+  func row(
+    _ week: [Day], shown: [Day: DayEntry], fadingOutside page: Period?, byPeriod: Bool = false
+  ) -> some View {
     HStack(spacing: 4) {
       ForEach(week, id: \.self) { day in
         let entry = shown[day]
@@ -810,12 +836,13 @@ struct PageDays {
         DayCell(
           day: day, entry: entry, note: calendar.note(on: day),
           pattern: previewed ?? entry.flatMap { calendar.patternsByID[$0.shift] },
-          outside: month.map { day.month != $0.month } ?? false, isToday: day == today,
+          outside: page.map { !$0.contains(day) } ?? false, isToday: day == today,
           isHoliday: day.holidayName != nil,
           colorsHoliday: colorsHolidays, offShown: offShown, isSelected: day == selected,
           // Only today's frame gives way to entering: the rest stay as they
           // were, not made again.
           isEntering: isEntering && day == today, preview: previewed != nil,
+          withMonth: byPeriod && day.day == 1 && page?.contains(day) == true,
           onSelect: onSelect
         )
       }
@@ -832,7 +859,9 @@ struct PageDays {
 /// page's height follows. All of it follows `fold`, so a finger pulling the
 /// week open moves it as the animations do.
 struct MonthPage: View {
-  let month: Day
+  /// The page's days: a month, or a シフトの期間's period.
+  let page: Period
+  let byPeriod: Bool
   let weekStart: Int
   let days: PageDays
   /// The day opened, whose week the page folds into.
@@ -856,14 +885,15 @@ struct MonthPage: View {
   private static let leastCell: CGFloat = 44
 
   var body: some View {
-    let weeks = monthWeeks(month, weekStart: weekStart)
+    let weeks = page.weeks(weekStart: weekStart)
     let row = openedWeek.flatMap { day in weeks.firstIndex { $0.contains(day) } } ?? 0
     let shown = days.calendar.shown(from: weeks.first![0], through: weeks.last![6])
     VStack(spacing: Self.rowGap) {
       ForEach(Array(weeks.enumerated()), id: \.element.first) { index, week in
         // Folded away, the rest of the month is out of reach.
         let away = openedWeek != nil && index != row
-        days.row(week, shown: shown, fadingOutside: openedWeek == nil ? month : nil)
+        days.row(
+          week, shown: shown, fadingOutside: openedWeek == nil ? page : nil, byPeriod: byPeriod)
           .opacity(away ? 1 - fold : 1)
           .allowsHitTesting(!away)
           .accessibilityHidden(away)

@@ -332,7 +332,7 @@ export function WeekRow({ onOpen }: { onOpen: () => void }) {
       value={[
         `${weekdayNames[week.weekStart]}曜はじまり`,
         month,
-        ...(periodStart === 1 ? [] : [formatPeriodStart(periodStart)]),
+        ...(periodStart === 1 ? [] : [`${periodStart}日〜`]),
       ].join("・")}
     />
   );

@@ -37,13 +37,15 @@ import Testing
   #expect(monday.last?.last?.key == "2026-11-01")
 }
 
-@Test func entersFromTheMonthsFirstBlankDay() {
-  let month = Day("2026-10-01")!
+@Test func entersFromThePagesFirstBlankDay() {
+  let month = Period(of: Day("2026-10-01")!, start: 1)
   let filled = Dictionary(
-    uniqueKeysWithValues: month.daysOfMonth.prefix(3).map { ($0, DayEntry(shift: "day")) })
+    uniqueKeysWithValues: month.days.prefix(3).map { ($0, DayEntry(shift: "day")) })
   #expect(firstBlankDay(in: month, days: filled).key == "2026-10-04")
-  let full = Dictionary(uniqueKeysWithValues: month.daysOfMonth.map { ($0, DayEntry(shift: "day")) })
+  let full = Dictionary(uniqueKeysWithValues: month.days.map { ($0, DayEntry(shift: "day")) })
   #expect(firstBlankDay(in: month, days: full).key == "2026-10-01")
+  let period = Period(of: Day("2026-10-01")!, start: 15)
+  #expect(firstBlankDay(in: period, days: full).key == "2026-11-01")
 }
 
 @Test func takesHolidaysFromItsRegionElseJapan() {

@@ -51,7 +51,10 @@ struct GapSheet: View {
           // The days, as /design's tags: words to read, not to press.
           WrappingRow(spacing: 8) {
             ForEach(days, id: \.self) { day in
-              Text(day.dayWeekdayText)
+              // A month's 1st past the first month's days, of a シフトの
+              // 期間, is dated 11/1(日), as on the page.
+              let turns = day.day == 1 && day.month != days.first?.month
+              Text(turns ? "\(day.slashText)(\(day.weekdayName))" : day.dayWeekdayText)
                 .font(.footnote)
                 .foregroundStyle(colors.textSecondary)
                 .padding(.horizontal, 12)
