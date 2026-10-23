@@ -388,7 +388,10 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     view.backgroundColor = .clear
 
     layout.settings.interItemSpacing = CGFloat(Chat.lineGap)
-    layout.settings.additionalInsets = UIEdgeInsets(top: 12, left: 16, bottom: 12, right: 16)
+    // 16 points to the screen's edges, less the room a bubble's tail
+    // reaches into, which each cell keeps inside it (LineCellContent).
+    let side = 16 - BubbleShape.tailReach
+    layout.settings.additionalInsets = UIEdgeInsets(top: 12, left: side, bottom: 12, right: side)
     layout.keepContentOffsetAtBottomOnBatchUpdates = true
     layout.keepContentAtBottomOfVisibleArea = true
     layout.processOnlyVisibleItemsOnAnimatedBatchUpdates = false
@@ -1253,11 +1256,13 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     let sign: CGFloat = way == .rightward ? 1 : -1
     // The cell itself: its hosted content keeps a transform of its own.
     cell.transform = CGAffineTransform(translationX: sign * shift, y: 0)
-    // Where the cell stands, unmoved.
+    // Where the line stands in its cell, unmoved, inside the room kept
+    // for its tail.
     let size = replyArrow.intrinsicContentSize
     let frame = CGRect(
       x: cell.center.x - cell.bounds.width / 2, y: cell.center.y - cell.bounds.height / 2,
-      width: cell.bounds.width, height: cell.bounds.height)
+      width: cell.bounds.width, height: cell.bounds.height
+    ).insetBy(dx: BubbleShape.tailReach, dy: 0)
     let shown = min(1, along / full)
     replyArrow.bounds.size = size
     // In the room the line leaves, at its middle.
@@ -1637,6 +1642,21 @@ private final class LineCell: UICollectionViewCell {
     clipsToBounds = true
   }
 
+  /// Its line laid out whole, at once, at the cell's new size, so the
+  /// cell's own frame alone moves it in the lines' animation. A line drawn
+  /// again is given to the cell before its new size, and SwiftUI lays it
+  /// out centered in the old one; laid out again at the new size inside
+  /// the lines' animation, SwiftUI would move each of its parts (the face,
+  /// the name, the time, the bubble) from there on its own, half of what
+  /// the line grew, apart from the cell carrying them.
+  override func layoutSubviews() {
+    UIView.performWithoutAnimation {
+      super.layoutSubviews()
+      contentView.frame = CGRect(origin: .zero, size: bounds.size)
+      contentView.layoutIfNeeded()
+    }
+  }
+
   @available(*, unavailable)
   required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
 
@@ -1677,6 +1697,9 @@ private struct LineCellContent: View {
     content
       .id(id)
       .frame(maxWidth: .infinity)
+      // A tail reaching past its bubble's frame toward the screen's edge
+      // stays in the cell, which clips what it draws.
+      .padding(.horizontal, BubbleShape.tailReach)
       .coordinateSpace(.named(LineSpace.name))
       .environment(\.lineSpace, space)
       .environment(\.keptDrawing, drawing)
