@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.ButtonDefaults
@@ -61,6 +62,9 @@ import app.pochical.LocalDeviceSettings
 import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.Week
+import app.pochical.design.Metrics
+import app.pochical.design.PochicalTextStyles
+import app.pochical.design.Springs
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
@@ -73,10 +77,10 @@ import kotlinx.coroutines.launch
 private const val MONTHS_AROUND = 120
 
 /** Between a page's weeks, and between a week's days. */
-private val DAY_GAP = 4.dp
+private val DAY_GAP = Metrics.spacingStep
 
 /** The shortest a day gets on a short screen, keeping its date and mark clear. */
-private val LEAST_DAY_HEIGHT = 44.dp
+private val LEAST_DAY_HEIGHT = Metrics.touch
 
 private val SCREEN_EDGE = 16.dp
 
@@ -90,27 +94,35 @@ fun CalendarScreen() {
   val reduceMotion = rememberReducedMotion()
   // The pages count from the month the screen opened on, so they stay put
   // when today moves into another month.
-  val firstMonth = rememberSaveable { YearMonth.from(today).minusMonths(MONTHS_AROUND.toLong()).toString() }
-  // Every month the pages hold, which 月を選ぶ offers too.
-  val months = YearMonth.parse(firstMonth).let { it..it.plusMonths(2L * MONTHS_AROUND) }
-  val monthAt = { page: Int -> months.start.plusMonths(page.toLong()) }
-  val pageOf = { month: YearMonth -> ChronoUnit.MONTHS.between(months.start, month).toInt() }
-  val pager = rememberPagerState(initialPage = MONTHS_AROUND) { pageOf(months.endInclusive) + 1 }
+  val openedMonth = rememberSaveable { YearMonth.from(today).toString() }
+  val range = remember(openedMonth) { CalendarRange(YearMonth.parse(openedMonth), MONTHS_AROUND) }
+  val pager = rememberPagerState(initialPage = range.pageOf(YearMonth.parse(openedMonth))) { range.monthPages }
   val scope = rememberCoroutineScope()
-  val thisMonthPage = pageOf(YearMonth.from(today))
   val turnTo = { month: YearMonth ->
-    scope.launch { if (reduceMotion) pager.scrollToPage(pageOf(month)) else pager.animateScrollToPage(pageOf(month)) }
+    scope.launch {
+      if (reduceMotion) {
+        pager.scrollToPage(range.pageOf(month))
+      } else {
+        pager.animateScrollToPage(range.pageOf(month), animationSpec = Springs.standard())
+      }
+    }
   }
   Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))) {
-    Heading(pager, months, monthAt, thisMonthPage, reduceMotion, onPick = { turnTo(it) }, onThisMonth = { turnTo(YearMonth.from(today)) })
+    Heading(pager, range, range.pageOf(YearMonth.from(today)), reduceMotion, onPick = { turnTo(it) }, onThisMonth = { turnTo(YearMonth.from(today)) })
     WeekdayRow(week, Modifier.padding(horizontal = SCREEN_EDGE))
     BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
       val cell = dayHeight(fitting = maxHeight - DAY_GAP)
       // The pages run to the screen's edges, so a month slides out of
       // sight rather than being cut off inside them.
-      HorizontalPager(pager, Modifier.fillMaxWidth(), beyondViewportPageCount = 1, verticalAlignment = Alignment.Top) { page ->
+      HorizontalPager(
+        pager,
+        Modifier.fillMaxWidth(),
+        beyondViewportPageCount = 1,
+        verticalAlignment = Alignment.Top,
+        flingBehavior = PagerDefaults.flingBehavior(pager, snapAnimationSpec = Springs.standard()),
+      ) { page ->
         MonthPage(
-          monthAt(page),
+          range.monthAt(page),
           week,
           calendar,
           today,
@@ -130,8 +142,7 @@ fun CalendarScreen() {
 @Composable
 private fun Heading(
   pager: PagerState,
-  months: ClosedRange<YearMonth>,
-  monthAt: (Int) -> YearMonth,
+  range: CalendarRange,
   thisMonthPage: Int,
   reduceMotion: Boolean,
   onPick: (YearMonth) -> Unit,
@@ -146,7 +157,7 @@ private fun Heading(
     val pickLabel = stringResource(R.string.calendar_pick_month)
     MonthName(
       pages,
-      monthAt,
+      range::monthAt,
       reduceMotion,
       Modifier.clickable(onClickLabel = pickLabel, role = Role.Button) { picking = true },
     )
@@ -164,7 +175,7 @@ private fun Heading(
     }
   }
   if (picking) {
-    MonthPicker(monthAt(pager.currentPage), months, onPick = onPick, onDismiss = { picking = false })
+    MonthPicker(range.monthAt(pager.currentPage), range.months, onPick = onPick, onDismiss = { picking = false })
   }
 }
 
@@ -220,14 +231,13 @@ private fun MonthPicker(
 @Composable
 private fun WeekdayRow(week: Week, modifier: Modifier = Modifier) {
   val colors = LocalThemeColors.current
-  val names = stringResource(R.string.calendar_weekday_letters)
   Row(modifier.padding(bottom = 12.dp).clearAndSetSemantics {}, horizontalArrangement = Arrangement.spacedBy(DAY_GAP)) {
     repeat(7) { index ->
       val weekday = (week.start + index) % 7
       Text(
-        names[weekday].toString(),
+        weekdayLetter(weekday),
         Modifier.weight(1f),
-        fontSize = 11.sp,
+        style = PochicalTextStyles.caption2,
         color =
           when {
             weekday == 0 && week.sunday -> colors.calendarHoliday

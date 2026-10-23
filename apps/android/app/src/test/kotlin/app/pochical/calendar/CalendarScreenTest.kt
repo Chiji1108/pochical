@@ -41,7 +41,7 @@ class CalendarScreenTest {
     }
   }
 
-  private fun heading(month: YearMonth) = "${month.year}年${month.monthValue}月"
+  private fun heading(month: YearMonth) = month.yearMonthText
 
   @Test
   fun opensOnThisMonthWithItsMemos() {

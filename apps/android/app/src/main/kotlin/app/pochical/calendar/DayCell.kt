@@ -16,6 +16,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.TextStyle
@@ -23,10 +25,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import app.pochical.LocalDeviceSettings
 import app.pochical.LocalThemeColors
 import app.pochical.MarkStyle
+import app.pochical.R
 import app.pochical.ShiftMark
 import app.pochical.design.Radius
 import app.pochical.mark
@@ -35,13 +37,10 @@ import java.time.LocalDate
 /** Its height where the screen has room, as /design's and iOS's. */
 val DAY_FULL_HEIGHT = 64.dp
 
-/** A date in its 14dp line, centered in it rather than sitting on the font's own taller line. */
-private val DATE_STYLE =
-  TextStyle(
-    fontSize = 11.sp,
-    lineHeight = 14.sp,
-    lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.Both),
-  )
+private val CELL_PADDING = 4.dp
+private val DATE_SIZE = 11.dp
+private val DATE_LINE = 14.dp
+
 
 /** What a day of a page is drawn with, as it shows. */
 data class DayLook(
@@ -73,8 +72,22 @@ fun DayCell(look: DayLook, height: Dp, colorsHoliday: Boolean, modifier: Modifie
     colors.mark(if (style.colored) it.color else 0)
   }
   val shape = RoundedCornerShape(Radius.md)
+  // The date keeps its size whatever the reader's text size, as iOS's does,
+  // so six weeks always fit; its line is centered rather than sitting on the
+  // font's own taller line.
+  val dateStyle =
+    with(LocalDensity.current) {
+      TextStyle(
+        fontSize = DATE_SIZE.toSp(),
+        lineHeight = DATE_LINE.toSp(),
+        lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.Both),
+      )
+    }
+  val description = description(look)
   Column(
     modifier
+      // Faded whole, with its tint and frame, as iOS's.
+      .alpha(if (look.outside) 0.35f else 1f)
       .height(height)
       .then(if (tile != null) Modifier.background(tile.tint, shape) else Modifier)
       .then(
@@ -84,13 +97,12 @@ fun DayCell(look: DayLook, height: Dp, colorsHoliday: Boolean, modifier: Modifie
           else -> Modifier
         }
       )
-      .alpha(if (look.outside) 0.35f else 1f)
-      .padding(vertical = 4.dp)
-      .clearAndSetSemantics { contentDescription = description(look) },
+      .padding(vertical = CELL_PADDING)
+      .clearAndSetSemantics { contentDescription = description },
     horizontalAlignment = Alignment.CenterHorizontally,
     verticalArrangement = Arrangement.spacedBy(2.dp),
   ) {
-    Box(Modifier.height(14.dp), contentAlignment = Alignment.Center) {
+    Box(Modifier.height(DATE_LINE), contentAlignment = Alignment.Center) {
       if (!look.note.isNullOrEmpty()) {
         // A highlighter stroke over the date's lower half, as in a paper
         // diary; on a day off's tint, the tint's own color a step deeper.
@@ -103,7 +115,7 @@ fun DayCell(look: DayLook, height: Dp, colorsHoliday: Boolean, modifier: Modifie
       }
       Text(
         look.day.dayOfMonth.toString(),
-        style = DATE_STYLE,
+        style = dateStyle,
         fontWeight =
           when {
             look.isToday -> FontWeight.ExtraBold
@@ -126,7 +138,8 @@ fun DayCell(look: DayLook, height: Dp, colorsHoliday: Boolean, modifier: Modifie
           pattern.emoji,
           pattern.symbol,
           pattern.color,
-          size = if (style.style == MarkStyle.Badge) 26.dp else 24.dp,
+          // As large as iOS's where the day has room, smaller on a short screen's shorter days.
+          size = minOf(if (style.style == MarkStyle.Badge) 26.dp else 24.dp, height - CELL_PADDING * 2 - DATE_LINE - 2.dp),
           change = look.entry?.let { timeChange(it.start, it.end, pattern.time) },
         )
       }
@@ -137,17 +150,22 @@ fun DayCell(look: DayLook, height: Dp, colorsHoliday: Boolean, modifier: Modifie
 }
 
 /** What a screen reader hears: the date, a holiday, the shift and its moved hours, and a memo. */
+@Composable
 private fun description(look: DayLook): String = buildList {
-  add("${look.day.monthValue}月${look.day.dayOfMonth}日")
+  add(look.day.monthDayText)
   look.holiday?.let(::add)
-  add(look.pattern?.name ?: "未入力")
+  add(look.pattern?.name ?: stringResource(R.string.day_unentered))
   val pattern = look.pattern
   val entry = look.entry
   val change = if (pattern != null && entry != null) timeChange(entry.start, entry.end, pattern.time) else null
   if (change != null && pattern?.time != null && entry != null) {
-    val moves = listOfNotNull("早出".takeIf { change.early }, "残業".takeIf { change.late })
+    val moves =
+      listOfNotNull(
+        stringResource(R.string.day_early).takeIf { change.early },
+        stringResource(R.string.day_late).takeIf { change.late },
+      )
     val hours = hoursText(entry.start ?: pattern.time.start, entry.end ?: pattern.time.end)
-    add("${if (moves.isEmpty()) "時間変更" else moves.joinToString("・")} $hours")
+    add("${if (moves.isEmpty()) stringResource(R.string.day_hours_moved) else moves.joinToString("・")} $hours")
   }
-  if (!look.note.isNullOrEmpty()) add("メモあり")
+  if (!look.note.isNullOrEmpty()) add(stringResource(R.string.day_has_memo))
 }.joinToString("、")

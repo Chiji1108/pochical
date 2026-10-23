@@ -17,6 +17,9 @@
   <string name="calendar_this_month">今月</string>
   <string name="calendar_pick_month">月を選ぶ</string>
   <string name="calendar_show_month">表示</string>
-  <!-- Sunday first, as the settings count weekdays. -->
-  <string name="calendar_weekday_letters" translatable="false">日月火水木金土</string>
+  <string name="day_unentered">未入力</string>
+  <string name="day_has_memo">メモあり</string>
+  <string name="day_early">早出</string>
+  <string name="day_late">残業</string>
+  <string name="day_hours_moved">時間変更</string>
 </resources>
