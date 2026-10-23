@@ -14,7 +14,7 @@ class RootNavigatorTest {
   fun opensOnTheCalendarWithNothingOverIt() {
     assertEquals(listOf(Tabs), navigator.routes)
     assertEquals(RootTab.Calendar, navigator.tab)
-    assertFalse(navigator.canGoBack)
+    assertFalse(navigator.backGoesToFirstTab)
   }
 
   @Test
@@ -22,6 +22,7 @@ class RootNavigatorTest {
     navigator.select(RootTab.Settings)
     navigator.open(RootPage.Appearance)
     assertEquals(listOf(Tabs, RootPage.Appearance), navigator.routes)
+    assertFalse(navigator.backGoesToFirstTab)
 
     navigator.back()
     assertEquals(listOf(Tabs), navigator.routes)
@@ -31,10 +32,10 @@ class RootNavigatorTest {
   @Test
   fun backOnAnotherTabGoesToTheCalendarBeforeLeaving() {
     navigator.select(RootTab.Groups)
-    assertTrue(navigator.canGoBack)
+    assertTrue(navigator.backGoesToFirstTab)
 
     navigator.back()
     assertEquals(RootTab.Calendar, navigator.tab)
-    assertFalse(navigator.canGoBack)
+    assertFalse(navigator.backGoesToFirstTab)
   }
 }

@@ -1,6 +1,9 @@
 package app.pochical
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
@@ -11,12 +14,17 @@ import androidx.compose.ui.res.stringResource
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 
-/** The tabs, under the pages `navigator` has over them. */
+/**
+ * The tabs, under the pages `navigator` has over them: a page slides in from
+ * the end over the screen under it, and a predictive back is Android's own.
+ */
 @Composable
 fun RootScreen(navigator: RootNavigator) {
   NavDisplay(
     backStack = navigator.routes,
     onBack = navigator::back,
+    transitionSpec = { slideInHorizontally { it } togetherWith slideOutHorizontally { -it / 4 } },
+    popTransitionSpec = { slideInHorizontally { -it / 4 } togetherWith slideOutHorizontally { it } },
   ) { route ->
     when (route) {
       Tabs -> NavEntry(route) { TabsScreen(navigator) }
@@ -29,7 +37,7 @@ fun RootScreen(navigator: RootNavigator) {
 @Composable
 private fun TabsScreen(navigator: RootNavigator) {
   val tabStates = rememberSaveableStateHolder()
-  BackHandler(enabled = navigator.canGoBack, onBack = navigator::back)
+  BackHandler(enabled = navigator.backGoesToFirstTab, onBack = navigator::back)
   NavigationSuiteScaffold(
     navigationSuiteItems = {
       RootTab.entries.forEach { tab ->

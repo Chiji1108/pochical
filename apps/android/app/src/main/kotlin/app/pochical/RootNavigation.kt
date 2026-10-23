@@ -69,9 +69,9 @@ class RootNavigator(private val pages: NavBackStack<RootPage>, tab: MutableState
     this.tab = tab
   }
 
-  /** Whether a back has somewhere to go before it leaves the app. */
-  val canGoBack: Boolean
-    get() = pages.isNotEmpty() || tab != RootTab.entries.first()
+  /** Whether a back on the tabs, no page over them, goes to the first tab rather than leaving the app. */
+  val backGoesToFirstTab: Boolean
+    get() = pages.isEmpty() && tab != RootTab.entries.first()
 
   /**
    * Takes away the top page; with none, goes to the first tab, as Android's
