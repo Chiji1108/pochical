@@ -168,6 +168,12 @@ struct ChatScreen: View {
   @State private var typers: [String: Date] = [:]
   /// The line whose reactions and menu are open.
   @State private var acting: MessageActionsRequest?
+  /// The reactions of the line whose menu is open, as they were as it
+  /// opened: shown until the menu has gone and the line's bubble is back in
+  /// the chat, so what comes to them meanwhile (one picked from the bar,
+  /// others') lands then, as iMessage's tapback does, its pop and spray
+  /// over the chat rather than under the bubble lifted over it.
+  @State private var heldReactions: HeldReactions?
   /// The photos of the lines near those in sight, fetched ahead.
   @State private var photoPrefetch = PhotoPrefetch()
   /// Says others' lines as they come in, for VoiceOver.
@@ -682,7 +688,11 @@ struct ChatScreen: View {
       // A reply starts a run, as its quote begins it.
       let runs = starts || unread || replies
       switch item {
-      case .line(let line, _): items.append(.line(line, startsRun: runs))
+      case .line(var line, _):
+        if let heldReactions, heldReactions.lineID == line.opID {
+          line.reactions = heldReactions.reactions
+        }
+        items.append(.line(line, startsRun: runs))
       case .waiting(let line, _): items.append(.waiting(line, startsRun: runs))
       default: break
       }
@@ -1750,12 +1760,17 @@ struct ChatScreen: View {
   private func openActions(_ request: MessageActionsRequest) {
     acting = request
     marks.lifted = request.lineID
+    heldReactions = chat.state.lines.first { $0.opID == request.lineID }.map {
+      HeldReactions(lineID: $0.opID, reactions: $0.reactions)
+    }
   }
 
-  /// The menu has gone: the line draws its bubble again.
+  /// The menu has gone: the line draws its bubble again, with its
+  /// reactions as they are now.
   private func menuClosed() {
     acting = nil
     marks.lifted = nil
+    heldReactions = nil
   }
 
   /// Puts the reader's `emoji` on the line, or takes it back if it was
@@ -1906,3 +1921,8 @@ private struct ReadsSeen: View {
   }
 }
 
+/// A line's reactions as they were as its menu opened.
+private struct HeldReactions {
+  let lineID: String
+  let reactions: [LineReaction]
+}

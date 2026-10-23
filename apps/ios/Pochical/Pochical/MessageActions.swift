@@ -351,21 +351,16 @@ struct MenuMetrics {
     UIAccessibility.post(notification: .screenChanged, argument: nil)
   }
 
-  /// Goes, quick at first and settling, then tells `onClosed`; does
-  /// `action` meanwhile, as the system's menu does, and `gone` once it has
-  /// gone. `fade` takes the bubble away too, its line gone from the chat.
-  func close(
-    fade: Bool = false, then action: (() -> Void)? = nil, once gone: (() -> Void)? = nil
-  ) {
+  /// Goes, quick at first and settling, then tells `onClosed`; acts
+  /// meanwhile, as the system's menu does. `fade` takes the bubble away
+  /// too, its line gone from the chat.
+  func close(fade: Bool = false, then action: (() -> Void)? = nil) {
     if case .closing = phase { return }
     phase = .closing(
       fade: fade, from: anchor, bar: bar == nil ? nil : barPart.center, menu: menuPart.center)
     finger = nil
     state.underFinger = nil
-    animate(Chat.menuCloseSpring, animations: apply) { [weak self] in
-      self?.onClosed()
-      gone?()
-    }
+    animate(Chat.menuCloseSpring, animations: apply) { [weak self] in self?.onClosed() }
     action?()
   }
 
@@ -435,10 +430,7 @@ struct MenuMetrics {
   private func pick(_ target: MenuTarget) {
     switch target {
     case .reaction(let emoji):
-      // On the line once its bubble is back in the chat, as iMessage's
-      // tapback lands: its pop and spray play over the chat, never under
-      // the bubble lifted over it on its way back.
-      close(once: { [request] in request.onReact(emoji) })
+      close { [request] in request.onReact(emoji) }
     case .moreReactions:
       close(then: request.onMoreReactions)
     case .action(let id):
