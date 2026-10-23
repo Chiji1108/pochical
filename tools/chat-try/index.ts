@@ -327,7 +327,12 @@ socket.addEventListener("message", (event) => {
       if (kind.case === "chatLine") {
         taken.add(kind.value.opId);
         const { content, reactions, seq } = kind.value;
-        if (content?.kind.case === "words") {
+        // The latest of lines of the same words, whatever order the
+        // catch-up brings them in (by cursor, not seq).
+        if (
+          content?.kind.case === "words" &&
+          seq > (seqOfWords.get(content.kind.value.text) ?? 0n)
+        ) {
           seqOfWords.set(content.kind.value.text, seq);
         }
         reactionsOf.set(
