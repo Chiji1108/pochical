@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -16,7 +15,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
@@ -37,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.pochical.ListSheet
 import app.pochical.LocalDeviceSettings
 import app.pochical.LocalThemeColors
 import app.pochical.R
@@ -126,45 +125,38 @@ fun MonthSummary(
 @Composable
 fun MonthBreakdownSheet(breakdown: MonthBreakdown, onDismiss: () -> Unit) {
   val colors = LocalThemeColors.current
-  ModalBottomSheet(onDismissRequest = onDismiss) {
-    LazyColumn {
-      item {
-        Text(
-          stringResource(R.string.breakdown_title),
-          style = MaterialTheme.typography.titleLarge,
-          modifier = Modifier.padding(horizontal = 24.dp).semantics { heading() },
-        )
-        Text(
-          breakdown.month.monthWithYear(LocalDeviceSettings.current.device.heading.english),
-          style = MaterialTheme.typography.bodyMedium,
-          color = colors.textSecondary,
-          modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 8.dp),
-        )
-      }
-      items(breakdown.counts, key = { it.first.id }) { (pattern, days) ->
-        ListItem(
-          headlineContent = { Text(pattern.name) },
-          leadingContent = { ShiftMark(pattern.icon, pattern.emoji, pattern.symbol, pattern.color, 22.dp) },
-          trailingContent = { Days(days) },
-          colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        )
-      }
-      item {
-        ListItem(
-          headlineContent = { Text(stringResource(R.string.breakdown_unfilled), color = colors.textTertiary) },
-          trailingContent = { Days(breakdown.unfilled) },
-          colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        )
-      }
-      item {
-        Text(
-          stringResource(R.string.breakdown_length, breakdown.month.lengthOfMonth()),
-          style = MaterialTheme.typography.bodyMedium,
-          color = colors.textSecondary,
-          textAlign = TextAlign.Center,
-          modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-        )
-      }
+  ListSheet(onDismiss, stringResource(R.string.breakdown_title)) {
+    item {
+      Text(
+        breakdown.month.monthWithYear(LocalDeviceSettings.current.device.heading.english),
+        style = MaterialTheme.typography.bodyMedium,
+        color = colors.textSecondary,
+        modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 8.dp),
+      )
+    }
+    items(breakdown.counts, key = { it.first.id }) { (pattern, days) ->
+      ListItem(
+        headlineContent = { Text(pattern.name) },
+        leadingContent = { ShiftMark(pattern.icon, pattern.emoji, pattern.symbol, pattern.color, 22.dp) },
+        trailingContent = { Days(days) },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+      )
+    }
+    item {
+      ListItem(
+        headlineContent = { Text(stringResource(R.string.breakdown_unfilled), color = colors.textTertiary) },
+        trailingContent = { Days(breakdown.unfilled) },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+      )
+    }
+    item {
+      Text(
+        stringResource(R.string.breakdown_length, breakdown.month.lengthOfMonth()),
+        style = MaterialTheme.typography.bodyMedium,
+        color = colors.textSecondary,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+      )
     }
   }
 }
