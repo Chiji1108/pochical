@@ -11,6 +11,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import app.pochical.kit.DeviceSettings
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test

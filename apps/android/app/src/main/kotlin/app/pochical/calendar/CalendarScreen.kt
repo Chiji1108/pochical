@@ -83,10 +83,10 @@ import app.pochical.LocalDeviceSettings
 import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.RootPage
-import app.pochical.Week
 import app.pochical.design.Metrics
 import app.pochical.design.PochicalTextStyles
 import app.pochical.design.Springs
+import app.pochical.kit.Week
 import app.pochical.kit.firstBlankDay
 import app.pochical.kit.gapDays
 import app.pochical.kit.selectedAfterEntering

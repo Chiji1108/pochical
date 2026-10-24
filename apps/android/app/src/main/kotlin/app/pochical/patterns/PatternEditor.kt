@@ -18,6 +18,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -43,7 +44,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.Footnote
 import app.pochical.LocalDeviceSettings
 import app.pochical.LocalThemeColors
-import app.pochical.MarkStyle
 import app.pochical.PageNavigation
 import app.pochical.R
 import app.pochical.SettingsPage
@@ -54,6 +54,7 @@ import app.pochical.calendar.ShiftTime
 import app.pochical.calendar.TimeDialog
 import app.pochical.design.MarkIconNames
 import app.pochical.design.TextLimits
+import app.pochical.kit.MarkStyle
 import app.pochical.kit.PatternRefusal
 import app.pochical.calendar.row
 import app.pochical.kit.fitsPattern
@@ -318,7 +319,15 @@ fun SwitchRow(title: String, note: String?, on: Boolean, enabled: Boolean = true
   ListItem(
     headlineContent = { Text(title) },
     supportingContent = note?.let { { Text(it) } },
-    trailingContent = { Switch(checked = on, onCheckedChange = null, enabled = enabled) },
+    trailingContent = {
+      // The on track a step quieter than the accent, so the white thumb stands out on 墨 and 黒板 (POC-57).
+      Switch(
+        checked = on,
+        onCheckedChange = null,
+        enabled = enabled,
+        colors = SwitchDefaults.colors(checkedTrackColor = LocalThemeColors.current.accentSwitch),
+      )
+    },
     modifier = Modifier.selectable(selected = on, enabled = enabled, role = Role.Switch) { onChange(!on) },
   )
 }

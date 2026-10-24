@@ -19,6 +19,8 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import app.pochical.design.MarkColor
 import app.pochical.design.Theme
 import app.pochical.design.ThemeColors
+import app.pochical.kit.Appearance
+import app.pochical.kit.DeviceSettings
 
 /**
  * The screens under it in the person's テーマ, light or dark as 外観 says,

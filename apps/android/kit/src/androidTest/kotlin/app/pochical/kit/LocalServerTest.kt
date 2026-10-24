@@ -175,6 +175,45 @@ class LocalServerTest {
   }
 
   @Test
+  fun preferencesReachTheUsersOtherDeviceAndItsOwnStayHome() = runBlocking<Unit> {
+    fun Device.settings() =
+      SyncedSettings(
+        deviceSettingsStore(java.io.File(context.cacheDir, "e2e-${java.util.UUID.randomUUID()}.json"), scope),
+        database,
+        edits,
+        scope,
+      )
+    val phone = Device("preferences")
+    val phoneSettings = phone.settings()
+    phone.account.foreground()
+    withTimeout(20_000) { phone.account.userSocket.first { it == SocketState.Current } }
+    phoneSettings.change {
+      it.copy(
+        themeId = "zen",
+        appearance = Appearance.Dark,
+        week = it.week.copy(start = 1, saturday = false),
+        heading = it.heading.copy(english = true),
+        look = it.look.copy(style = MarkStyle.Emoji).withOffLook(OffLook.Blank, "off", listOf("off")),
+      )
+    }
+    val sent = setOf("heading", "look", "theme", "week")
+    withTimeout(20_000) { phone.database.values().preferences().first { rows -> rows.map { it.key }.toSet() == sent } }
+    withTimeout(20_000) { phone.database.sync().lastWaiting().first { it == null } }
+    Log.i(TAG, "Phone set 禅, Monday weeks, English headings and emoji with 休み blank, acknowledged")
+
+    val tablet = Device("preferences-tablet")
+    val tabletSettings = tablet.settings()
+    tablet.sessions.write(phone.sessions.read()!!)
+    tablet.account.foreground()
+    val taken = withTimeout(20_000) { tabletSettings.settings.first { it.themeId == "zen" } }
+    assertEquals(Week(start = 1, saturday = false), taken.week)
+    assertEquals(true, taken.heading.english)
+    assertEquals(OffLook.Blank, taken.look.options.offLook("off"))
+    assertEquals(Appearance.System, taken.appearance)
+    Log.i(TAG, "Tablet took the phone's preferences and kept its own 外観")
+  }
+
+  @Test
   fun aGroupsMembersAndTheirSharedDaysComeOnItsSocket() = runBlocking<Unit> {
     val date = "2026-10-24"
     val phone = Device("group")
