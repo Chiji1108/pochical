@@ -115,15 +115,16 @@ data class ReminderFiring(
 }
 
 /**
- * What the reminders that are on send after [now], soonest first, for the shifts through [days]
- * from today: what the device has the system wake it for.
+ * What the reminders that are on send after [after] through [through], soonest first: the next one
+ * the device has the system wake it for, and those due once it wakes.
  */
-fun List<Reminder>.upcoming(calendar: OwnCalendar, now: ZonedDateTime, days: Long): List<ReminderFiring> {
-  val today = now.toLocalDate()
+fun List<Reminder>.sending(calendar: OwnCalendar, after: ZonedDateTime, through: ZonedDateTime): List<ReminderFiring> {
+  val zone = after.zone
+  // A shift's reminder comes on its day or the day before.
   return filter { it.on }
-    .flatMap { it.firings(calendar, today, today.plusDays(days)) }
-    .filter { it.at(now.zone) > now }
-    .sortedBy { it.at(now.zone) }
+    .flatMap { it.firings(calendar, after.toLocalDate(), through.toLocalDate().plusDays(1)) }
+    .filter { it.at(zone) > after && it.at(zone) <= through }
+    .sortedBy { it.at(zone) }
 }
 
 /** The pattern's standard hours; none for a pattern without a time. */

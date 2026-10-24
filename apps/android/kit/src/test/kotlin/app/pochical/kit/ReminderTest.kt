@@ -80,7 +80,7 @@ class ReminderTest {
   fun remindable() = vectors.remindable.checkEach({ it.expected }) { case -> case.reminder.reminder.remindable(patterns).map { it.id } }
 
   @Test
-  fun whatComesNextIsOnlyWhatIsStillAheadSoonestFirst() {
+  fun whatIsSentIsWhatComesAfterThroughTheEndSoonestFirst() {
     val zone = ZoneId.of("Asia/Tokyo")
     val calendar = calendar(mapOf("2026-11-02" to ReminderVectors.Day("day"), "2026-11-03" to ReminderVectors.Day("late")))
     val reminders =
@@ -92,11 +92,14 @@ class ReminderTest {
     // The evening's for the 2nd has gone; 開始前 of the 2nd is the morning after.
     val now = ZonedDateTime.of(2026, 11, 1, 21, 0, 0, 0, zone)
 
-    val upcoming = reminders.upcoming(calendar, now, days = 7).map { it.reminderId to it.at(zone).toLocalDateTime().toString() }
+    fun sending(through: ZonedDateTime) =
+      reminders.sending(calendar, now, through).map { it.reminderId to it.at(zone).toLocalDateTime().toString() }
 
     assertEquals(
       listOf("before" to "2026-11-02T07:30", "evening" to "2026-11-02T21:00", "before" to "2026-11-02T23:30"),
-      upcoming,
+      sending(now.plusDays(7)),
     )
+    // Up to and with the end, as the device wakes for one at its minute.
+    assertEquals(listOf("before" to "2026-11-02T07:30", "evening" to "2026-11-02T21:00"), sending(now.plusHours(24)))
   }
 }
