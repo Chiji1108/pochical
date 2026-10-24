@@ -1,5 +1,10 @@
 import { iconNames } from "@pochical/design/mark-icon-names";
-import { groupMarkEmojis, groupMarkIcons } from "@pochical/design/patterns";
+import {
+  groupMarkEmojis,
+  groupMarkFallbackLetter,
+  groupMarkHints,
+  groupMarkIcons,
+} from "@pochical/design/patterns";
 import { css } from "@pochical/styled-system/css";
 import { UserPlus, X } from "lucide-react";
 import { useState } from "react";
@@ -452,24 +457,18 @@ export function profileIn(
   };
 }
 
-// Words in a name that suggest an emoji.
-const groupHints: { words: string[]; emoji: string }[] = [
-  { emoji: "🏠", words: ["家族", "家", "夫婦"] },
-  { emoji: "🎓", words: ["学校", "同期", "クラス", "ゼミ"] },
-  { emoji: "💼", words: ["職場", "会社", "仕事", "病棟"] },
-  { emoji: "✈️", words: ["旅行", "旅"] },
-  { emoji: "🍙", words: ["ごはん", "飲み", "ランチ"] },
-  { emoji: "👭", words: ["友達", "友だち", "仲間"] },
-];
+function letterOfName(name: string) {
+  return firstCharacter(name) || groupMarkFallbackLetter;
+}
 
 // From the name alone: a fitting emoji, or else its first letter.
-function guessGroupMark(name: string, color: number): GroupMark {
-  const hint = groupHints.find(({ words }) =>
+export function guessGroupMark(name: string, color: number): GroupMark {
+  const hint = groupMarkHints.find(({ words }) =>
     words.some((word) => name.includes(word))
   );
   return hint
     ? { emoji: hint.emoji, kind: "emoji" }
-    : { color, kind: "letter", text: firstCharacter(name) };
+    : { color, kind: "letter", text: letterOfName(name) };
 }
 
 export function colorOfMark(mark: GroupMark) {
@@ -512,8 +511,7 @@ function GroupMarkPage({
   const [pickingEmoji, setPickingEmoji] = useState(false);
   const [pickingIcon, setPickingIcon] = useState(false);
   const color = colorOfMark(mark);
-  const letter =
-    mark.kind === "letter" ? mark.text : firstCharacter(name) || "グ";
+  const letter = mark.kind === "letter" ? mark.text : letterOfName(name);
   return (
     <>
       <PageHeader back={back} onBack={onBack} title="アイコン" />

@@ -63,6 +63,19 @@ object ReadyPatterns {
 
   val groupMarkIcons: List<String> = listOf("house", "users", "heart", "baby", "babyCarriage", "handHeart", "pawPrint", "flower", "smiley", "handshake", "partyPopper", "balloon", "beer", "wine", "star", "rainbow", "graduationCap", "books", "backpack", "pencil", "microscope", "teacher", "calculator", "music", "briefcase", "building", "hospital", "storefront", "chefHat", "fireTruck", "factory", "laptop", "soccer", "tennis", "run", "game", "paintBrush", "microphone", "camera", "film", "utensils", "coffee", "cake", "plane", "tent", "mountains", "tree", "island")
 
+  data class GroupMarkHint(val words: List<String>, val emoji: String)
+
+  val groupMarkHints: List<GroupMarkHint> = listOf(
+    GroupMarkHint(listOf("家族", "家", "夫婦"), "🏠"),
+    GroupMarkHint(listOf("学校", "同期", "クラス", "ゼミ"), "🎓"),
+    GroupMarkHint(listOf("職場", "会社", "仕事", "病棟"), "💼"),
+    GroupMarkHint(listOf("旅行", "旅"), "✈️"),
+    GroupMarkHint(listOf("ごはん", "飲み", "ランチ"), "🍙"),
+    GroupMarkHint(listOf("友達", "友だち", "仲間"), "👭"),
+  )
+
+  const val GROUP_MARK_FALLBACK_LETTER = "グ"
+
   data class LookHint(val words: List<String>, val emoji: String, val icon: String)
 
   val lookHints: List<LookHint> = listOf(

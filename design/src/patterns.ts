@@ -473,6 +473,25 @@ export const groupMarkIcons: readonly MarkIcon[] = [
   "island",
 ];
 
+// The words that suggest a group's mark from its name, as a pattern's
+// look does: the first whose word is in the name gives its emoji, else the
+// mark is the name's first letter, or groupMarkFallbackLetter for a name
+// with none (spec/vectors/groups.json, guessMark).
+export const groupMarkHints: readonly {
+  words: readonly string[];
+  emoji: string;
+}[] = [
+  { emoji: "🏠", words: ["家族", "家", "夫婦"] },
+  { emoji: "🎓", words: ["学校", "同期", "クラス", "ゼミ"] },
+  { emoji: "💼", words: ["職場", "会社", "仕事", "病棟"] },
+  { emoji: "✈️", words: ["旅行", "旅"] },
+  { emoji: "🍙", words: ["ごはん", "飲み", "ランチ"] },
+  { emoji: "👭", words: ["友達", "友だち", "仲間"] },
+];
+
+// A group's letters before its name has a letter: グ, for グループ.
+export const groupMarkFallbackLetter = "グ";
+
 // The words that suggest a mark from a pattern's name: the first whose
 // word is in the name gives its emoji and icon. Longer words first, so
 // 待機 wins over a single-letter match (spec/vectors/patterns.json,

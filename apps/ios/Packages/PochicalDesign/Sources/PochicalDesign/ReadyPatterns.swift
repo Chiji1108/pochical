@@ -76,6 +76,19 @@ public enum ReadyPatterns {
   /// The icons offered first for a group's mark.
   public static let groupMarkIcons: [String] = ["house", "users", "heart", "baby", "babyCarriage", "handHeart", "pawPrint", "flower", "smiley", "handshake", "partyPopper", "balloon", "beer", "wine", "star", "rainbow", "graduationCap", "books", "backpack", "pencil", "microscope", "teacher", "calculator", "music", "briefcase", "building", "hospital", "storefront", "chefHat", "fireTruck", "factory", "laptop", "soccer", "tennis", "run", "game", "paintBrush", "microphone", "camera", "film", "utensils", "coffee", "cake", "plane", "tent", "mountains", "tree", "island"]
 
+  /// The words that suggest a group's mark from its name, the first matching winning (spec/vectors/groups.json, guessMark).
+  public static let groupMarkHints: [(words: [String], emoji: String)] = [
+    (["家族", "家", "夫婦"], "🏠"),
+    (["学校", "同期", "クラス", "ゼミ"], "🎓"),
+    (["職場", "会社", "仕事", "病棟"], "💼"),
+    (["旅行", "旅"], "✈️"),
+    (["ごはん", "飲み", "ランチ"], "🍙"),
+    (["友達", "友だち", "仲間"], "👭"),
+  ]
+
+  /// A group's letters when its name has none.
+  public static let groupMarkFallbackLetter = "グ"
+
   /// The words that suggest a mark from a pattern's name, the first matching winning (spec/vectors/patterns.json, guessLook).
   public static let lookHints: [(words: [String], emoji: String, icon: String)] = [
     (["待機", "オンコール"], "📞", "phone"),

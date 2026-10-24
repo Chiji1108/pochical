@@ -4,6 +4,8 @@ import {
   lookFallback,
   lookHints,
   groupMarkEmojis,
+  groupMarkFallbackLetter,
+  groupMarkHints,
   groupMarkIcons,
   markEmojis,
   offeredMarkIcons,
@@ -113,6 +115,16 @@ export const swiftReadyPatterns = (): string[] => [
   "  /// The icons offered first for a group's mark.",
   `  public static let groupMarkIcons: [String] = [${list(groupMarkIcons)}]`,
   "",
+  "  /// The words that suggest a group's mark from its name, the first matching winning (spec/vectors/groups.json, guessMark).",
+  "  public static let groupMarkHints: [(words: [String], emoji: String)] = [",
+  ...groupMarkHints.map(
+    ({ words, emoji }) => `    ([${list(words)}], ${quoted(emoji)}),`
+  ),
+  "  ]",
+  "",
+  "  /// A group's letters when its name has none.",
+  `  public static let groupMarkFallbackLetter = ${quoted(groupMarkFallbackLetter)}`,
+  "",
   "  /// The words that suggest a mark from a pattern's name, the first matching winning (spec/vectors/patterns.json, guessLook).",
   "  public static let lookHints: [(words: [String], emoji: String, icon: String)] = [",
   ...lookHints.map(
@@ -199,6 +211,17 @@ export const kotlinReadyPatterns = (): string[] => [
   `  val groupMarkEmojis: List<String> = listOf(${list(groupMarkEmojis)})`,
   "",
   `  val groupMarkIcons: List<String> = listOf(${list(groupMarkIcons)})`,
+  "",
+  "  data class GroupMarkHint(val words: List<String>, val emoji: String)",
+  "",
+  "  val groupMarkHints: List<GroupMarkHint> = listOf(",
+  ...groupMarkHints.map(
+    ({ words, emoji }) =>
+      `    GroupMarkHint(listOf(${list(words)}), ${quoted(emoji)}),`
+  ),
+  "  )",
+  "",
+  `  const val GROUP_MARK_FALLBACK_LETTER = ${quoted(groupMarkFallbackLetter)}`,
   "",
   "  data class LookHint(val words: List<String>, val emoji: String, val icon: String)",
   "",
