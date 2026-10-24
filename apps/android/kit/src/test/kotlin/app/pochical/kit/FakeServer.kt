@@ -132,6 +132,12 @@ class FakeServer : AutoCloseable {
   /** The ids of the photos put in groups' photos, in the order they came, a small version's ending in ?small. */
   val groupPhotos = CopyOnWriteArrayList<String>()
 
+  /** What each line sent said of the app and the device (`ChatSend.device`), by its words. */
+  val sentDevices = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+  /** The paths the sockets of the chats' places were opened at. */
+  val placeSockets = CopyOnWriteArrayList<String>()
+
   /** What a group's photo put answers: 204 keeps it. */
   @Volatile var photoStatus = 204
 
@@ -293,11 +299,17 @@ class FakeServer : AutoCloseable {
                 null -> MockResponse.Builder().code(401).build().also { refusedSockets.incrementAndGet() }
                 else -> MockResponse.Builder().webSocketUpgrade(Socket(user)).build()
               }
+            "/v1/me/support/socket" ->
+              // The user's chat with Pochical's people, kept as a group's chats are.
+              when (val user = userOf(request.headers["Authorization"])) {
+                null -> MockResponse.Builder().code(401).build()
+                else -> MockResponse.Builder().webSocketUpgrade(GroupSocket(user, Chat.supportPlace)).build().also { placeSockets += request.url.encodedPath }
+              }
             else ->
               if (request.url.encodedPath.matches(Regex("/v1/groups/[^/]+/socket"))) {
                 when (val user = userOf(request.headers["Authorization"])) {
                   null -> MockResponse.Builder().code(401).build()
-                  else -> MockResponse.Builder().webSocketUpgrade(GroupSocket(user, request.url.pathSegments[2])).build()
+                  else -> MockResponse.Builder().webSocketUpgrade(GroupSocket(user, request.url.pathSegments[2])).build().also { placeSockets += request.url.encodedPath }
                 }
               } else if (request.method == "PUT" && request.url.encodedPath.startsWith("/v1/me/photos/")) {
                 ownPhotos += request.url.encodedPath.removePrefix("/v1/me/photos/")
@@ -421,6 +433,7 @@ class FakeServer : AutoCloseable {
             ChatEdit.KindCase.SEND -> {
               val send = edit.send
               if (lines(groupId, send.threadId).any { it.opId == edit.opId }) continue
+              sentDevices[send.content.words.text] = send.device
               if (refuseSends) {
                 refused += refusedSend { opId = edit.opId; reason = RefusedSend.Reason.REASON_DOES_NOT_FIT }
                 continue

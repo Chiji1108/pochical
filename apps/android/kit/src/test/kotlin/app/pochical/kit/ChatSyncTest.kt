@@ -78,6 +78,32 @@ class ChatSyncTest {
   }
 
   @Test
+  fun theChatWithPochicalsPeopleGoesOnItsOwnSocketWithTheAppAndTheDeviceOnEachLine() = runBlocking {
+    val phone = signedIn()
+    val me = server.userId
+    val chats = Chats(phone.database, testLinePhotos(), device = "ポチカル 1.0・Pixel・Android 17")
+    val hold = phone.account.hold(Chat.supportPlace)
+    try {
+      chats.send(Chat.supportPlace, GROUP_THREAD, "使いにくいところ")
+      chats.send("g1", GROUP_THREAD, "おはよう")
+      // Pochical's people answer: a place the user is always in, though no group lists it.
+      server.write(Chat.supportPlace, Chat.pochicalMember, listOf("ありがとうございます"))
+      val support =
+        withTimeout(10_000) { chats.state(Chat.supportPlace, GROUP_THREAD, me, null).first { it.waiting.isEmpty() && it.lines.size == 2 } }
+      assertEquals(setOf(me, Chat.pochicalMember), support.lines.map { it.authorId }.toSet())
+      withTimeout(10_000) { chats.state("g1", GROUP_THREAD, me, null).first { it.waiting.isEmpty() && it.lines.isNotEmpty() } }
+      assertTrue("/v1/me/support/socket" in server.placeSockets)
+      // Only the place whose rules ask for them keeps the app and the device.
+      assertEquals("ポチカル 1.0・Pixel・Android 17", server.sentDevices["使いにくいところ"])
+      assertEquals("", server.sentDevices["おはよう"])
+      assertEquals(PhotoShelf.Support, PhotoShelf.place(Chat.supportPlace))
+      assertEquals(Chat.supportPlace, PhotoShelf.place(Chat.supportPlace).placeId)
+    } finally {
+      hold.release()
+    }
+  }
+
+  @Test
   fun aLineSentJustBeforeLeavingGoesInTheBackground() = runBlocking {
     val phone = signedIn()
     val hold = phone.account.hold("g1")

@@ -1,6 +1,7 @@
 package app.pochical.kit
 
 import android.util.Log
+import app.pochical.design.Chat
 import app.pochical.design.SyncSocket
 import app.pochical.v1.ChatEdit
 import app.pochical.v1.ChatSendContent
@@ -49,7 +50,11 @@ sealed interface Peer {
   /** The user's own: their values, their groups. */
   data object User : Peer
 
-  /** A group's: its members, their shared values and its chats. */
+  /**
+   * A chats' place's, by the id the device keeps its chats by: a group's (its members, their shared
+   * values and its chats), or the user's chat with Pochical's people (`Chat.supportPlace`), kept as
+   * a group's chats are (spec/chat.md, Where a chat is kept).
+   */
   data class Group(val id: String) : Peer
 }
 
@@ -466,7 +471,8 @@ class SyncClient internal constructor(
     val path =
       when (peer) {
         Peer.User -> "/v1/me/socket"
-        is Peer.Group -> "/v1/groups/${peer.id}/socket"
+        // The Worker sets the user's chat with Pochical's people up as it is first reached.
+        is Peer.Group -> if (peer.id == Chat.supportPlace) "/v1/me/support/socket" else "/v1/groups/${peer.id}/socket"
       }
     return server.resolve(path)!!
   }
