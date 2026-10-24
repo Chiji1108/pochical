@@ -69,14 +69,14 @@ private fun facesWidth(compact: Boolean) = if (compact) 28.dp else 34.dp
 
 /**
  * The weekdays over a group's weeks, from the day the week starts on, or over [days] each its own,
- * as the hub's run from today; with room for the [faces] beside the weeks.
+ * as the hub's run from today.
  */
 @Composable
-fun GroupWeekdays(modifier: Modifier = Modifier, compact: Boolean = false, days: List<LocalDate>? = null, faces: Boolean = true) {
+fun GroupWeekdays(modifier: Modifier = Modifier, compact: Boolean = false, days: List<LocalDate>? = null) {
   val colors = LocalThemeColors.current
   val week = LocalDeviceSettings.current.device.week
   Row(modifier.clearAndSetSemantics {}) {
-    if (faces) Spacer(Modifier.width(facesWidth(compact)))
+    Spacer(Modifier.width(facesWidth(compact)))
     repeat(7) { index ->
       val weekday = days?.get(index)?.weekday ?: ((week.start + index) % 7)
       Text(

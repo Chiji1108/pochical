@@ -14,6 +14,7 @@
   <string name="layout_days">一覧</string>
   <string name="layout_weeks">週ごと</string>
   <string name="layout_person">1人ずつ</string>
+  <string name="person_both_off_short">自分も休み</string>
   <string name="person_both_off">薄い枠の日は、自分も休みの日です。</string>
   <string name="legend_open">シフトパターンを見る</string>
   <string name="legend_none">シフトパターンはまだありません</string>

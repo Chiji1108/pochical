@@ -32,6 +32,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import app.pochical.DeviceSettingsState
 import app.pochical.LocalDeviceSettings
@@ -42,9 +44,9 @@ import app.pochical.calendar.DayCell
 import app.pochical.calendar.DayEntry
 import app.pochical.calendar.DayLook
 import app.pochical.calendar.MonthPicker
+import app.pochical.calendar.WeekdayRow
 import app.pochical.calendar.holidayName
 import app.pochical.calendar.monthWeeks
-import app.pochical.calendar.shortText
 import app.pochical.calendar.yearMonthText
 import app.pochical.design.Metrics
 import app.pochical.design.PochicalTextStyles
@@ -53,6 +55,7 @@ import app.pochical.kit.GroupMember
 import app.pochical.kit.PhotoShelf
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.temporal.ChronoUnit
 import kotlinx.coroutines.launch
 
 /** How many months either side of this one 1人ずつ's pages hold. */
@@ -81,17 +84,20 @@ fun GroupPersonView(
 ) {
   val colors = LocalThemeColors.current
   val settings = LocalDeviceSettings.current
+  val bothOffWord = stringResource(R.string.person_both_off_short)
   val thisMonth = YearMonth.from(today)
   // Whom it shows, until picked the first who is not the viewer; kept as the activity is made anew.
   var personId by rememberSaveable { mutableStateOf<String?>(null) }
   val person = members.firstOrNull { it.userId == personId } ?: members.firstOrNull { it.userId != meId } ?: members.firstOrNull() ?: return
   val personIndex = members.indexOf(person)
   val meIndex = members.indexOfFirst { it.userId == meId }
-  val pages = rememberPagerState(initialPage = PERSON_SPAN) { PERSON_SPAN * 2 + 1 }
+  fun pageOf(target: YearMonth) = (PERSON_SPAN + ChronoUnit.MONTHS.between(thisMonth, target).toInt()).coerceIn(0, PERSON_SPAN * 2)
+  // On the picked day's month, as the list goes to the picked day.
+  val pages = rememberPagerState(initialPage = pageOf(picked?.let(YearMonth::from) ?: thisMonth)) { PERSON_SPAN * 2 + 1 }
   val scope = rememberCoroutineScope()
   var choosingMonth by rememberSaveable { mutableStateOf(false) }
   val month = thisMonth.plusMonths((pages.currentPage - PERSON_SPAN).toLong())
-  fun turnTo(target: YearMonth) = scope.launch { pages.animateScrollToPage(PERSON_SPAN + (target.year - thisMonth.year) * 12 + target.monthValue - thisMonth.monthValue) }
+  fun turnTo(target: YearMonth) = scope.launch { pages.animateScrollToPage(pageOf(target)) }
 
   Column(modifier.verticalScroll(rememberScrollState()).padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
     LazyRow(
@@ -112,9 +118,9 @@ fun GroupPersonView(
       Box(Modifier.weight(1f))
       if (month != thisMonth) OutlinedButton(onClick = { turnTo(thisMonth) }) { Text(stringResource(R.string.calendar_this_month)) }
     }
-    GroupWeekdays(Modifier.padding(horizontal = 16.dp), faces = false)
+    WeekdayRow(settings.device.week, Modifier.padding(horizontal = 16.dp))
     // Their marks in their own shape, the rest of the look the viewer's.
-    val theirs = DeviceSettingsState(settings.device.copy(look = settings.device.look.drawing(person)), settings.change)
+    val theirs = remember(settings, person) { DeviceSettingsState(settings.device.copy(look = settings.device.look.drawing(person)), settings.change) }
     HorizontalPager(pages, Modifier.fillMaxWidth().height(DAY_FULL_HEIGHT * 6 + DAY_GAP * 5), verticalAlignment = Alignment.Top) { page ->
       val shown = thisMonth.plusMonths((page - PERSON_SPAN).toLong())
       val weeks = remember(shown, settings.device.week.start) { monthWeeks(shown, settings.device.week.start) }
@@ -129,6 +135,9 @@ fun GroupPersonView(
                 val shift = if (outside) null else shiftOf(personIndex, day)
                 val bothOff =
                   !outside && person.userId != meId && meIndex >= 0 && shift?.pattern?.countsAsOff == true && shiftOf(meIndex, day)?.pattern?.countsAsOff == true
+                Box(
+                  Modifier.weight(1f).semantics(mergeDescendants = true) { if (bothOff) stateDescription = bothOffWord },
+                ) {
                 DayCell(
                   DayLook(
                     day = day,
@@ -144,11 +153,12 @@ fun GroupPersonView(
                   colorsHoliday = settings.device.week.holiday,
                   onClick = { onPick(day) },
                   modifier =
-                    Modifier.weight(1f).then(
+                    Modifier.fillMaxWidth().then(
                       if (bothOff && day != picked) Modifier.border(1.5.dp, colors.accentBorder, RoundedCornerShape(Radius.md)) else Modifier
                     ),
                   enabled = !outside,
                 )
+                }
               }
             }
           }
@@ -160,8 +170,8 @@ fun GroupPersonView(
     }
     val together = daysOf(month).together
     TogetherSummary(
-      if (month == thisMonth) stringResource(R.string.together_of, stringResource(R.string.calendar_this_month)) else stringResource(R.string.together_of, month.shortText(thisMonth)),
-      together.takeIf { members.size > 1 } ?: app.pochical.kit.Together(emptyList(), unsure = false),
+      togetherTitle(month, thisMonth),
+      together,
       onOpen = { onTogether(month) },
       modifier = Modifier.padding(horizontal = 16.dp),
     )

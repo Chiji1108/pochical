@@ -567,7 +567,7 @@ private fun List<Pattern>.daysOff(): List<Pattern> = filter { it.countsAsOff && 
 
 /** The weekday names over the pages, from the week's start, Sundays and Saturdays in their colors unless turned off. */
 @Composable
-private fun WeekdayRow(week: Week, modifier: Modifier = Modifier) {
+internal fun WeekdayRow(week: Week, modifier: Modifier = Modifier) {
   val colors = LocalThemeColors.current
   Row(modifier.padding(bottom = 12.dp).clearAndSetSemantics {}, horizontalArrangement = Arrangement.spacedBy(DAY_GAP)) {
     repeat(7) { index ->

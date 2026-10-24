@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -62,7 +61,6 @@ import app.pochical.calendar.weekStartingOn
 import app.pochical.calendar.yearMonthText
 import app.pochical.design.PochicalTextStyles
 import app.pochical.design.Radius
-import app.pochical.kit.GroupMember
 import app.pochical.kit.GroupRow
 import java.time.LocalDate
 import java.time.YearMonth
@@ -296,7 +294,8 @@ private fun ShiftsPage(group: GroupRow, opening: LocalDate?, onBack: () -> Unit)
     TogetherSheet(togetherTitle(month, thisMonth), days, country, onPick = { day ->
       togetherOf = null
       pickedDay = day.toString()
-      go(day)
+      // 1人ずつ shows the month already; the list goes to the day.
+      if (layout != ShiftsLayout.Person) go(day)
     }) { togetherOf = null }
   }
   if (choosingMonth) {
@@ -311,7 +310,7 @@ private fun ShiftsPage(group: GroupRow, opening: LocalDate?, onBack: () -> Unit)
 
 /** What a month's みんな休み is called: this month's as 今月, another by its name. */
 @Composable
-private fun togetherTitle(month: YearMonth, thisMonth: YearMonth): String =
+fun togetherTitle(month: YearMonth, thisMonth: YearMonth): String =
   stringResource(R.string.together_of, if (month == thisMonth) stringResource(R.string.calendar_this_month) else month.shortText(thisMonth))
 
 /** The month in sight, pinned over the list, which opens 月を選ぶ, and 今日 while today is out of sight (/design's MonthRow). */
