@@ -1,9 +1,9 @@
 package app.pochical.kit
 
 import app.pochical.v1.DayField
+import app.pochical.v1.SignInProvider
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelChildren
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -92,6 +92,25 @@ class SessionEndedTest {
   }
 
   @Test
+  fun signingInToTheAccountAfterStartingAfreshBringsItsDataBack() = runBlocking<Unit> {
+    val phone = endedDevice()
+    phone.account.startAfresh()
+    withTimeout(10_000) { phone.account.state.first { it == AccountState.SignedIn("user-2", linked = null) } }
+    // The account is user-1's, still on the server, whose session the device let go of.
+    server.linkStatus = 409
+    server.inUse = "token-1b" to "user-1"
+    server.provider = SignInProvider.SIGN_IN_PROVIDER_GOOGLE
+    val google = ProviderToken(LinkedAccount.Provider.Google, "header.claims.signature", "nonce-1", "a@example.com")
+
+    assertEquals(SignInResult.Switched, phone.account.signIn(google))
+
+    val account = LinkedAccount(LinkedAccount.Provider.Google, "a@example.com")
+    withTimeout(10_000) { phone.account.state.first { it == AccountState.SignedIn("user-1", account) } }
+    eventually { phone.note("2026-10-04") == "残す" }
+    assertEquals(0, phone.account.deleted.value)
+  }
+
+  @Test
   fun anAppEndedWhileStartingAfreshGoesOnAsLettingTheSessionGo() = runBlocking<Unit> {
     val phone = endedDevice()
     phone.kept.writable = false
@@ -120,10 +139,13 @@ class SessionEndedTest {
     phone.account.foreground()
     withTimeout(10_000) { phone.current() }
     phone.edits.setDay("2026-10-04", DayField.DAY_FIELD_NOTE, "残す")
+    withTimeout(10_000) { phone.outboxEmptied() }
 
     phone.account.startAfresh()
     phone.account.tryAgain()
-    delay(500)
+    // Commands are taken in order: the socket closing for this one says those before were taken.
+    phone.account.background()
+    withTimeout(10_000) { phone.account.userSocket.first { it == SocketState.Closed } }
 
     assertEquals(AccountState.SignedIn("user-1", linked = null), phone.account.state.value)
     assertEquals("残す", phone.note("2026-10-04"))

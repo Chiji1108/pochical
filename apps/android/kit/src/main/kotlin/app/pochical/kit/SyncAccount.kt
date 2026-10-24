@@ -508,14 +508,16 @@ class SyncAccount(
       Command.TryAgain -> {
         if (state.value != AccountState.SessionEnded) return
         try {
-          sessions.read()?.let { sessions.write(it.copy(ended = false)) }
+          // A 401 is never answered with a new user: with no session to try, it stays ended.
+          val kept = sessions.read() ?: return
+          sessions.write(kept.copy(ended = false))
         } catch (e: StoreUnreachable) {
-          // The session is in the store alone: tried again once it can be reached.
+          // The token is in the store alone, so nothing is tried until the person asks again.
           Log.i(TAG, "The ended session could not be tried again: $e")
           return
         }
         mutableState.value = AccountState.SigningIn
-        startSigningIn()
+        if (foreground || sending > 0) startSigningIn()
       }
       Command.StartAfresh -> {
         if (state.value != AccountState.SessionEnded) return
@@ -532,7 +534,7 @@ class SyncAccount(
           beginErasing(kept.userId, AccountState.Erasing.Why.SignedOut)
         } else {
           mutableState.value = AccountState.SigningIn
-          startSigningIn()
+          if (foreground || sending > 0) startSigningIn()
         }
       }
       is Command.LeftBehindGone -> {
