@@ -3,6 +3,7 @@ package app.pochical.reminders
 import android.app.AlarmManager
 import android.app.Application
 import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import androidx.core.app.AlarmManagerCompat
 import androidx.core.app.NotificationCompat
@@ -27,6 +28,8 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * The reminders' notifications, sent by the device itself (spec/calendar.md, Reminders): the system
@@ -45,6 +48,8 @@ class ReminderAlarms(
   private val reminders: Flow<List<Reminder>>,
   private val allowed: StateFlow<Boolean>,
   private val scope: CoroutineScope,
+  /** The time on the device's clock, in its time zone as it is now. */
+  private val clock: () -> ZonedDateTime = { ZonedDateTime.now() },
 ) {
   /** The app, which holds the one ReminderAlarms for the system's broadcasts, as [ReminderReceiver]. */
   interface Holder {
@@ -52,6 +57,12 @@ class ReminderAlarms(
   }
 
   private val alarms = checkNotNull(application.getSystemService(AlarmManager::class.java))
+
+  /** The minute of the alarm set and not yet gone off, kept for as long as the system keeps the alarm. */
+  private val kept = application.getSharedPreferences("reminder-alarm", Context.MODE_PRIVATE)
+
+  /** One at a time: the alarm set, shown or taken away by one before another reads it. */
+  private val turn = Mutex()
   private val mutableExact = MutableStateFlow(AlarmManagerCompat.canScheduleExactAlarms(alarms))
 
   /** Whether the system lets the app wake at the minute, as it last said. */
@@ -77,8 +88,12 @@ class ReminderAlarms(
   fun woke(firedAt: Long?, done: () -> Unit) {
     scope.launch {
       try {
-        if (firedAt != null) fired(firedAt) else readExact()
-        schedule(current())
+        if (firedAt == null) readExact()
+        val scheduled = current()
+        turn.withLock {
+          if (firedAt != null) fired(firedAt, scheduled)
+          set(scheduled)
+        }
       } finally {
         done()
       }
@@ -86,25 +101,36 @@ class ReminderAlarms(
   }
 
   /** The system woke the app for the reminders at [at]: what is due since, if it may be shown. */
-  private suspend fun fired(at: Long) {
-    val (calendar, reminders, allowed) = current()
-    if (!allowed) return
-    val zone = ZoneId.systemDefault()
-    val since = Instant.ofEpochMilli(at - 1).atZone(zone)
-    reminders.sending(calendar, since, ZonedDateTime.now(zone)).forEach { show(it, zone) }
+  private fun fired(at: Long, scheduled: Scheduled) {
+    // Shown or not, the alarm is spent.
+    kept.edit().remove(KEY_SET_FOR).apply()
+    if (!scheduled.allowed) return
+    val now = clock()
+    val since = Instant.ofEpochMilli(at - 1).atZone(now.zone)
+    scheduled.reminders.sending(scheduled.calendar, since, now).forEach { show(it, now.zone) }
   }
 
   private suspend fun current() = Scheduled(calendar.first(), reminders.first(), allowed.value)
 
-  /** Asks the system to wake the app at the next reminder; for none while the app may not notify. */
-  private fun schedule(scheduled: Scheduled) {
-    val zone = ZoneId.systemDefault()
-    val now = ZonedDateTime.now(zone)
+  private suspend fun schedule(scheduled: Scheduled) = turn.withLock { set(scheduled) }
+
+  /**
+   * Asks the system to wake the app at the next reminder; for none while the app may not notify. One
+   * already set and due, which the system has not brought yet, stays, so setting the next never
+   * takes it away: without exact alarms it may come up to an hour late.
+   */
+  private fun set(scheduled: Scheduled) {
+    val now = clock()
+    val zone = now.zone
+    val after = Instant.ofEpochMilli(searchFrom(kept.getLong(KEY_SET_FOR, 0), now.toInstant().toEpochMilli())).atZone(zone)
     val next =
-      if (scheduled.allowed) scheduled.reminders.sending(scheduled.calendar, now, now.plusDays(LOOK_AHEAD_DAYS)).firstOrNull() else null
-    val wake = waking()
-    if (next == null) return alarms.cancel(wake)
+      if (scheduled.allowed) scheduled.reminders.sending(scheduled.calendar, after, now.plusDays(LOOK_AHEAD_DAYS)).firstOrNull() else null
+    if (next == null) {
+      kept.edit().remove(KEY_SET_FOR).apply()
+      return alarms.cancel(waking())
+    }
     val at = next.at(zone).toInstant().toEpochMilli()
+    kept.edit().putLong(KEY_SET_FOR, at).apply()
     val fire = waking(at)
     if (AlarmManagerCompat.canScheduleExactAlarms(alarms)) {
       AlarmManagerCompat.setExactAndAllowWhileIdle(alarms, AlarmManager.RTC_WAKEUP, at, fire)
@@ -144,6 +170,8 @@ class ReminderAlarms(
   private data class Scheduled(val calendar: OwnCalendar, val reminders: List<Reminder>, val allowed: Boolean)
 
   private companion object {
+    const val KEY_SET_FOR = "setFor"
+
     /** The reminders' notifications are told apart by their tags, the reminder and the shift's day. */
     const val TAG_PREFIX = "reminder."
     const val NOTIFICATION_ID = 2
@@ -152,3 +180,13 @@ class ReminderAlarms(
     const val LOOK_AHEAD_DAYS = 366L
   }
 }
+
+/** How late a reminder the system has not brought yet is still shown: the hour Android 12 may hold an inexact alarm. */
+internal const val LATE_MOST_MILLIS = 60 * 60 * 1000L
+
+/**
+ * What the next reminder is looked for after, at [now]: just before the alarm set for [setFor]
+ * while it is due and the system has not brought it yet, up to [LATE_MOST_MILLIS] late, so setting
+ * the next keeps it; else now. Nothing set is 0.
+ */
+internal fun searchFrom(setFor: Long, now: Long): Long = if (setFor in (now - LATE_MOST_MILLIS)..now) setFor - 1 else now
