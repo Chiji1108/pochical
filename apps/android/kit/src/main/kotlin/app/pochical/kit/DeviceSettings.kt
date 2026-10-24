@@ -42,6 +42,11 @@ data class DeviceSettings(
   val picture: PictureLook = PictureLook(),
   /** What 端末カレンダーに追加 puts in besides the shifts, as last left. */
   val calendarAdd: CalendarAdd = CalendarAdd(),
+  /**
+   * Android 13's question whether the app may notify was put: once it is turned down for good, only
+   * the system's settings turn notifications on.
+   */
+  val askedNotifications: Boolean = false,
 ) {
   /** The テーマ in use; one no longer known is the app's own. */
   val theme: Theme

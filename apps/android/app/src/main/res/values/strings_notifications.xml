@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Notifications (spec/chat.md, Notifications; spec/sync-protocol.md, Push). -->
+<resources>
+  <!-- The channels, as the system's settings name them. -->
+  <string name="channel_chat">チャット</string>
+  <string name="channel_chat_about">グループのチャットと個人チャットのメッセージ</string>
+  <string name="channel_support">作っている人とチャット</string>
+  <string name="channel_support_about">ポチカルを作っている人からの返事</string>
+
+  <!-- Worded here from the keys and arguments the server sends, as iOS's Localizable.strings. -->
+  <!-- A title, the group's name or the writer's, and a line's words, as they came. -->
+  <string name="push_text">%1$s</string>
+  <!-- A group chat's line: who wrote it, then what. -->
+  <string name="push_chat_group_text">%1$s: %2$s</string>
+  <string name="push_chat_group_photo">%1$sが写真を送りました</string>
+  <string name="push_chat_group_days">%1$sが日にちを共有しました</string>
+  <string name="push_chat_group_poll">%1$sが日にちの投票を始めました</string>
+  <!-- A one-to-one chat's line, and a group chat's once its writer shows as the message's sender. -->
+  <string name="push_chat_photo">写真を送りました</string>
+  <string name="push_chat_days">日にちを共有しました</string>
+  <string name="push_chat_poll">日にちの投票を始めました</string>
+  <!-- An answer in the chat with Pochical's people: the chat, as 設定's row names it. -->
+  <string name="push_support_title">作っている人とチャット</string>
+  <!-- The user in a conversation's notification, before the group knows their name. -->
+  <string name="push_me">あなた</string>
+
+  <!-- 設定 › 通知 -->
+  <string name="settings_notifications">通知</string>
+  <string name="notifications_chat">チャット</string>
+  <string name="notifications_on">オン</string>
+  <string name="notifications_off">オフ</string>
+  <string name="notifications_system">スマホの通知の設定</string>
+  <string name="notifications_system_about">通知の種類ごとの音や表示を変えられます。</string>
+
+  <!-- /design's PermissionCard: over the notification settings while Pochical may not notify. -->
+  <string name="permission_not_asked">通知はまだオフです</string>
+  <string name="permission_not_asked_about">オンにすると、リマインドとチャットのメッセージが届きます。</string>
+  <string name="permission_ask">通知をオンにする</string>
+  <string name="permission_denied">通知がオフになっています</string>
+  <string name="permission_denied_about">スマホの設定で、ポチカルの通知をオンにしてください。</string>
+  <string name="permission_open_settings">設定を開く</string>
+</resources>

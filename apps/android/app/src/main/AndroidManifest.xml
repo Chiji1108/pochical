@@ -5,6 +5,8 @@
   <!-- Reads a group's QR code (ScanScreen); the camera app takes photos for faces. -->
   <uses-permission android:name="android.permission.CAMERA" />
   <uses-feature android:name="android.hardware.camera" android:required="false" />
+  <!-- The chats' notifications, asked for from 設定 › 通知 (notifications/PermissionCard). -->
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
   <!-- The browsers that open Custom Tabs, which AppleSignIn asks of Auth Tab. -->
   <queries>
@@ -63,6 +65,14 @@
         <data android:pathPrefix="/invite/" />
       </intent-filter>
     </activity>
+    <!-- The server's notifications and the device's token, from FCM (notifications/Push). -->
+    <service
+      android:name=".notifications.PushService"
+      android:exported="false">
+      <intent-filter>
+        <action android:name="com.google.firebase.MESSAGING_EVENT" />
+      </intent-filter>
+    </service>
     <!-- The camera app writes a photo taken for a face or a mark here (PhotoEditor). -->
     <provider
       android:name="androidx.core.content.FileProvider"

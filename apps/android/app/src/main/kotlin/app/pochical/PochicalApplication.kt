@@ -2,11 +2,15 @@ package app.pochical
 
 import android.app.Application
 import androidx.datastore.dataStoreFile
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import app.pochical.calendar.OwnDays
 import app.pochical.calendar.SyncedDays
 import app.pochical.kit.PochicalKit
 import app.pochical.kit.SyncedSettings
 import app.pochical.kit.deviceSettingsStore
+import app.pochical.notifications.Push
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.DependencyGraph
 import dev.zacsweers.metro.Provides
@@ -42,7 +46,15 @@ interface AppGraph : MetroAppComponentProviders {
   @SingleIn(AppScope::class)
   fun pochicalKit(application: Application): PochicalKit = PochicalKit(application)
 
+  /** The notifications from the server. */
+  @Provides
+  @SingleIn(AppScope::class)
+  fun push(application: Application, kit: PochicalKit): Push =
+    Push(application, kit, CoroutineScope(SupervisorJob() + Dispatchers.Default))
+
   val kit: PochicalKit
+
+  val push: Push
 
   @DependencyGraph.Factory
   fun interface Factory {
@@ -50,7 +62,7 @@ interface AppGraph : MetroAppComponentProviders {
   }
 }
 
-class PochicalApplication : Application(), MetroApplication, PochicalKit.Holder {
+class PochicalApplication : Application(), MetroApplication, PochicalKit.Holder, Push.Holder {
   private val graph by lazy { createGraphFactory<AppGraph.Factory>().create(this) }
 
   override val appComponentProviders: MetroAppComponentProviders
@@ -59,8 +71,19 @@ class PochicalApplication : Application(), MetroApplication, PochicalKit.Holder 
   override val pochicalKit: PochicalKit
     get() = graph.kit
 
+  override val push: Push
+    get() = graph.push
+
   override fun onCreate() {
     super.onCreate()
     graph.kit.followProcess()
+    graph.push.start()
+    ProcessLifecycleOwner.get()
+      .lifecycle
+      .addObserver(
+        object : DefaultLifecycleObserver {
+          override fun onStart(owner: LifecycleOwner) = graph.push.foreground()
+        }
+      )
   }
 }
