@@ -3,7 +3,6 @@ package app.pochical
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,9 +26,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,6 +44,7 @@ import app.pochical.calendar.LocalOwnDays
 import app.pochical.calendar.PageDots
 import app.pochical.calendar.Pattern
 import app.pochical.calendar.StylePreview
+import app.pochical.calendar.rememberPreviewScheme
 import app.pochical.calendar.rememberToday
 import app.pochical.calendar.styleSamples
 import app.pochical.design.PochicalTextStyles
@@ -109,13 +106,11 @@ fun StylePage(onBack: () -> Unit) {
   val work = patterns.firstOrNull { !it.countsAsOff }
   val offs = patterns.filter { it.countsAsOff }
   val samples = styleSamples(patterns)
-  // The light or dark the preview and the テーマ cards are seen in, from the preview's ☀︎ / ☾; the screen's until picked.
-  var picked by rememberSaveable { mutableStateOf<Boolean?>(null) }
-  val dark = picked ?: isDark(settings.device, isSystemInDarkTheme())
+  val scheme = rememberPreviewScheme()
   val today = rememberToday()
   SettingsPage(stringResource(R.string.style), onBack) { padding ->
     LazyColumn(contentPadding = padding) {
-      item { StylePreview(patterns, today, dark, { picked = it }, Modifier.padding(horizontal = 16.dp)) }
+      item { StylePreview(scheme, today, Modifier.padding(horizontal = 16.dp)) }
       item {
         Section(stringResource(R.string.style_shape), note = stringResource(R.string.style_shape_note)) {
           Choices(Shape.entries, Shape.of(look), { stringResource(it.title) }, { shape -> settings.change { it.copy(look = shape.look(it.look)) } }) {
@@ -125,7 +120,7 @@ fun StylePage(onBack: () -> Unit) {
         }
       }
       item {
-        Section(stringResource(R.string.style_theme)) { ThemeChoices(samples, dark, settings.device.theme) { theme -> settings.change { it.copy(themeId = theme.id) } } }
+        Section(stringResource(R.string.style_theme)) { ThemeChoices(samples, scheme.dark, settings.device.theme) { theme -> settings.change { it.copy(themeId = theme.id) } } }
       }
       // Emoji keep their own colors, so シフトの色 would change nothing.
       if (look.style != MarkStyle.Emoji) {
