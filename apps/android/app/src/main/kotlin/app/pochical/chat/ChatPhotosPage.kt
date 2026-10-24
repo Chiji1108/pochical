@@ -72,11 +72,16 @@ fun ChatPhotosPage(groupId: String, threadId: String, onBack: () -> Unit) {
   val grid = rememberLazyGridState()
   // The square to bring into sight, as the photo opened large goes to one scrolled away.
   var pending by remember { mutableStateOf<Int?>(null) }
-  // The last square come into sight, the oldest on the screen: the pages before it asked as it nears the oldest held.
+  // The square last come into sight, either way it scrolls: the pages past it asked as it nears an
+  // end of those held, as iOS marks each square as it appears. Not while one is open large, which
+  // shows its own.
   LaunchedEffect(grid, photos) {
-    snapshotFlow { grid.layoutInfo.visibleItemsInfo.lastOrNull()?.index }.distinctUntilChanged().collect { index ->
-      val key = index?.let { photos.getOrNull(it) }?.key ?: return@collect
-      listed.change { show(key) }
+    var seen = emptySet<Int>()
+    snapshotFlow { grid.layoutInfo.visibleItemsInfo.map { it.index }.toSet() }.distinctUntilChanged().collect { visible ->
+      val came = (visible - seen).let { new -> if (new.isEmpty()) null else if (new.max() > (seen.maxOrNull() ?: -1)) new.max() else new.min() }
+      seen = visible
+      val key = came?.let { photos.getOrNull(it) }?.key ?: return@collect
+      if (viewing == null) listed.change { show(key) }
     }
   }
   Box(Modifier.fillMaxSize()) {
@@ -97,10 +102,12 @@ fun ChatPhotosPage(groupId: String, threadId: String, onBack: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(GAP),
             verticalArrangement = Arrangement.spacedBy(GAP),
           ) {
-            items(photos, key = { it.photo.id }) { item ->
+            items(photos, key = { it.layoutKey }) { item ->
               val said = stringResource(R.string.chat_photo_by, names[item.authorId] ?: deleted, monthDay(item.sentAtMs))
+              // Large among the photos listed, the one run they both follow.
               val open = {
-                viewing = OpenPhotos(PhotoRun.opened(listed.run.photos, item.key))
+                listed.change { show(item.key) }
+                viewing = listed
               }
               ChatPhotoImage(
                 item.photo,

@@ -458,6 +458,11 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit, onPhotos: ()
         val folded = if (threadId == GROUP_THREAD) blockedIds else emptySet()
         viewing = OpenPhotos(PhotoRun.opened(chat.lines.flatMap { ChatPhotoItem.of(it, folded) }, PhotoKey(seq, index)))
       },
+      openOwnPhoto = { line, index ->
+        val photos = (line.content as? LineContent.Photos)?.photos.orEmpty()
+        val items = photos.mapIndexed { at, photo -> ChatPhotoItem(PhotoKey(0, at), photo, me.orEmpty(), line.madeAtMs) }
+        viewing = OpenPhotos(PhotoRun.opened(items, PhotoKey(0, index)), follows = false)
+      },
     )
   Box {
     ChatScaffold(groupId, threadId, members, groups, socket, onBack, onPhotos) {
@@ -522,7 +527,10 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit, onPhotos: ()
       }
     }
     LineMenu(menu)
-    viewing?.let { open -> PhotoViewer(groupId, threadId, open, onClose = { viewing = null }) }
+    viewing?.let { open ->
+      FollowPhotos(groupId, threadId, open)
+      PhotoViewer(groupId, threadId, open, onClose = { viewing = null })
+    }
   }
   if (notKept) NotKeptDialog { notKept = false }
   picking?.let { seq ->

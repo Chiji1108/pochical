@@ -50,7 +50,7 @@ class MessageSemanticsTest {
       voters = { _, _ -> },
       groupId = "g1",
       stopSending = {},
-      openPhoto = { _, _ -> },
+      openPhoto = { _, _ -> }, openOwnPhoto = { _, _ -> },
     )
 
   private fun look(content: LineContent, parts: List<LinePart>, said: String) =
@@ -124,7 +124,7 @@ class MessageSemanticsTest {
         menu = LineMenuState(), items = { emptyList() }, reply = {}, jump = {}, nameOf = { it }, notKept = {}, reducedMotion = true,
         lit = null, me = "me", writers = emptyMap(), react = { _, _, _ -> }, moreReactions = {}, choosers = {}, spray = null,
         openLink = {}, together = { _, _ -> emptySet() }, vote = { seq, day, on -> voted = Triple(seq, day, on) }, decide = { deciding = it },
-        voters = { _, _ -> }, groupId = "g1", stopSending = {}, openPhoto = { _, _ -> },
+        voters = { _, _ -> }, groupId = "g1", stopSending = {}, openPhoto = { _, _ -> }, openOwnPhoto = { _, _ -> },
       )
     compose.setContent { CompositionLocalProvider(LocalDeviceSettings provides DeviceSettingsState(DeviceSettings()) {}) { Message(line, handlers) } }
     val actions = actionsOf(line.said)

@@ -178,6 +178,8 @@ class MessageHandlers(
   val stopSending: (opId: String) -> Unit,
   /** A line's photo, by its place in the line, opened large. */
   val openPhoto: (seq: Long, index: Int) -> Unit,
+  /** A photo of the member's line still on its way, opened large alone. */
+  val openOwnPhoto: (line: WaitingLine, index: Int) -> Unit,
 )
 
 /**
@@ -340,7 +342,8 @@ private fun PhotoBody(look: MessageLook, photos: LineContent.Photos, handlers: M
       handlers.groupId,
       waiting,
       onStop = waiting?.takeIf { live }?.let { { handlers.stopSending(it.opId) } },
-      onOpen = look.seq?.takeIf { live }?.let { seq -> { index -> handlers.openPhoto(seq, index) } },
+      // One of the member's own still on its way opens alone; a sent one among the chat's.
+      onOpen = if (!live) null else look.seq?.let { seq -> { index -> handlers.openPhoto(seq, index) } } ?: waiting?.let { { index -> handlers.openOwnPhoto(it, index) } },
     )
   }
   val quote = look.quote

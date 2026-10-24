@@ -23,6 +23,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 /**
  * The chats as the screens read and write them: each chat's lines laid out and the member's own
@@ -299,9 +300,13 @@ class Chats internal constructor(
     }
   }
 
-  /** A chat's photos on the device as they change, for those open large or listed to follow ([PhotoRun.follow]). */
+  /**
+   * A chat's photos on the device as they change, for those open large or listed to follow
+   * ([PhotoRun.follow]): each change of them once, at the group's cursor where it came, read again
+   * only as the chat's lines or the blocks change (the cursor moves with the lines that move it).
+   */
   fun photoLines(groupId: String, threadId: String): Flow<PhotoLines> =
-    observe("chatLines", "blocks", "groupCursors") { Timed(photoLines(groupId, threadId), null) }
+    observe("chatLines", "blocks") { Timed(photoLines(groupId, threadId), null) }.distinctUntilChanged { was, now -> now.samePhotos(was) }
 
   /** Keeps what is being written in a chat, or forgets it when it makes no draft (`keptDraft`). */
   suspend fun keepDraft(groupId: String, threadId: String, draft: KeptDraft) {

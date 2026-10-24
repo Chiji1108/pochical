@@ -59,6 +59,7 @@ import app.pochical.kit.SocketState
 import app.pochical.sharePhoto
 import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
+import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -78,18 +79,35 @@ import me.saket.telephoto.zoomable.rememberZoomableState
 // swiped through the chat's photos one by one as `PhotoRun` holds them, zoomed with a pinch or two
 // taps, pulled down to close. Zooming and pulling are Telephoto's (Apache-2.0).
 
-/** The chat's photos open large, as [run] follows them; [version] tells the screen each change. */
+/**
+ * The chat's photos open large or listed, as [run] follows them; [version] tells the screen each
+ * change of what it shows. [follows] false for photos of the member's own line still on its way,
+ * which open alone, the group holding none of them yet.
+ */
 @Stable
-class OpenPhotos(val run: PhotoRun) {
+class OpenPhotos(val run: PhotoRun, val follows: Boolean = true) {
   var version by mutableIntStateOf(0)
     private set
 
-  /** Changes the run, the screen following. */
+  /** Changes the run, the screen following only when what it shows changed. */
   fun change(step: PhotoRun.() -> Unit) {
+    val before = shows()
     run.step()
+    if (shows() != before) version++
+  }
+
+  /** The socket opened again: the pages not yet answered are asked again. */
+  fun reconnected() {
+    run.reconnected()
     version++
   }
+
+  private fun shows() = listOf(run.photos, run.shown, run.total, run.place)
 }
+
+/** The key a photo is laid out under, unique among the chat's and kept in a Bundle. */
+internal val ChatPhotoItem.layoutKey: String
+  get() = "${key.seq}/${key.index}"
 
 /**
  * The photos of [threadId] open large over the chat or its list: × and the photo's place among all
@@ -102,8 +120,6 @@ class OpenPhotos(val run: PhotoRun) {
  */
 @Composable
 fun PhotoViewer(groupId: String, threadId: String, open: OpenPhotos, onClose: () -> Unit, onShown: (PhotoKey) -> Unit = {}) {
-  val chats = LocalChats.current
-  val account = LocalAccount.current
   val calls = LocalGroupCalls.current
   val files = LocalPhotoFiles.current
   val context = LocalContext.current
@@ -113,8 +129,6 @@ fun PhotoViewer(groupId: String, threadId: String, open: OpenPhotos, onClose: ()
   val shown by rememberUpdatedState(onShown)
   BackHandler { close() }
 
-  FollowPhotos(groupId, threadId, open)
-
   val version = open.version
   val photos = remember(version) { open.run.photos }
   val showing = remember(version) { open.run.shown }
@@ -122,20 +136,23 @@ fun PhotoViewer(groupId: String, threadId: String, open: OpenPhotos, onClose: ()
   if (photos.isEmpty() || showing == null) return
 
   val pager = rememberPagerState(initialPage = open.run.index ?: 0) { photos.size }
-  // The photo shown kept on the screen as the photos around it change (a page coming before it).
+  // The photo shown kept on the screen as the photos around it change (a page coming before it), not
+  // while a swipe goes to another, which tells the run once it settles.
   LaunchedEffect(version) {
     val index = open.run.index ?: return@LaunchedEffect
-    if (pager.currentPage != index) pager.scrollToPage(index)
+    if (!pager.isScrollInProgress && pager.currentPage != index) pager.scrollToPage(index)
   }
   LaunchedEffect(pager, photos) {
     snapshotFlow { pager.settledPage }.distinctUntilChanged().collect { page ->
       val key = photos.getOrNull(page)?.key ?: return@collect
       if (key != open.run.shown) open.change { show(key) }
       shown(key)
-      // The two on each side fetched ahead, as they will show.
+      // The two on each side fetched ahead onto the disk, drawn only as they show.
       val loader = SingletonImageLoader.get(context)
       for (near in (page - 2..page + 2) - page) {
-        photos.getOrNull(near)?.let { loader.enqueue(ImageRequest.Builder(context).data(ChatPhotoData(it.photo.id, groupId, small = false)).build()) }
+        photos.getOrNull(near)?.let {
+          loader.enqueue(ImageRequest.Builder(context).data(ChatPhotoData(it.photo.id, groupId, small = false)).memoryCachePolicy(CachePolicy.DISABLED).build())
+        }
       }
     }
   }
@@ -144,7 +161,7 @@ fun PhotoViewer(groupId: String, threadId: String, open: OpenPhotos, onClose: ()
   val snackbar = remember { SnackbarHostState() }
   var pulled by remember { mutableFloatStateOf(0f) }
   Box(Modifier.fillMaxSize().background(colors.mediaBackground.copy(alpha = 1f - pulled))) {
-    HorizontalPager(pager, Modifier.fillMaxSize(), key = { photos.getOrNull(it)?.photo?.id ?: it }, beyondViewportPageCount = 1) { page ->
+    HorizontalPager(pager, Modifier.fillMaxSize(), key = { photos.getOrNull(it)?.layoutKey ?: it }, beyondViewportPageCount = 1) { page ->
       val photo = photos.getOrNull(page) ?: return@HorizontalPager
       LargePhoto(photo, groupId, onTap = { controls = !controls }, onPulled = { if (page == pager.currentPage) pulled = it }, onDismissed = { close() })
     }
@@ -154,12 +171,15 @@ fun PhotoViewer(groupId: String, threadId: String, open: OpenPhotos, onClose: ()
           IconButton(onClick = { close() }) {
             Icon(painterResource(R.drawable.ic_close), stringResource(R.string.chat_photo_close), tint = colors.mediaText)
           }
-          val place = remember(version) { open.run.place }
+          // The count stays as it was while the group is asked again where the photo is.
+          var said by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+          remember(version) { open.run.place }?.let { said = it }
+          val place = said
           if (place != null && place.second > 1) {
-            val said = stringResource(R.string.chat_photo_place_said, place.first, place.second)
+            val read = stringResource(R.string.chat_photo_place_said, place.first, place.second)
             Text(
               stringResource(R.string.chat_photo_place, place.first, place.second),
-              Modifier.weight(1f).padding(end = 48.dp).semantics { contentDescription = said },
+              Modifier.weight(1f).padding(end = 48.dp).semantics { contentDescription = read },
               color = colors.mediaText,
               style = MaterialTheme.typography.titleMedium,
               textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -168,7 +188,24 @@ fun PhotoViewer(groupId: String, threadId: String, open: OpenPhotos, onClose: ()
         }
         Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
           val photo = photos.getOrNull(pager.currentPage)
-          IconButton(onClick = { photo?.let { scope.launch { runCatchingSafely { sharePhoto(context, wholePhoto(context, calls, files, groupId, it.photo.id)) } } } }) {
+          val notShared = stringResource(R.string.chat_photo_not_shared)
+          IconButton(
+            onClick = {
+              photo?.let {
+                scope.launch {
+                  val opened =
+                    try {
+                      sharePhoto(context, wholePhoto(context, calls, files, groupId, it.photo.id))
+                    } catch (e: CancellationException) {
+                      throw e
+                    } catch (_: Exception) {
+                      false
+                    }
+                  if (!opened) snackbar.showSnackbar(notShared)
+                }
+              }
+            }
+          ) {
             Icon(painterResource(R.drawable.ic_share), stringResource(R.string.chat_photo_share), tint = colors.mediaText)
           }
           IconButton(onClick = { photo?.let { scope.launch { snackbar.showSnackbar(savePhotos(context, calls, files, groupId, listOf(it.photo))) } } }) {
@@ -177,7 +214,7 @@ fun PhotoViewer(groupId: String, threadId: String, open: OpenPhotos, onClose: ()
         }
       }
     }
-    // What saving came to, over the foot's buttons.
+    // What saving and sharing came to, over the foot's buttons.
     SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 64.dp))
   }
 }
@@ -189,6 +226,7 @@ fun PhotoViewer(groupId: String, threadId: String, open: OpenPhotos, onClose: ()
  */
 @Composable
 fun FollowPhotos(groupId: String, threadId: String, open: OpenPhotos) {
+  if (!open.follows) return
   // The group's socket open for its pages while they are followed, the chat behind or not.
   HoldSocket(groupId)
   val chats = LocalChats.current
@@ -199,7 +237,7 @@ fun FollowPhotos(groupId: String, threadId: String, open: OpenPhotos) {
     socket?.photoPages?.filter { it.threadId == threadId }?.collect { page -> open.change { take(page) } }
   }
   val current = socket?.state?.collectAsState()?.value == SocketState.Current
-  LaunchedEffect(current) { if (current) open.change { reconnected() } }
+  LaunchedEffect(current) { if (current) open.reconnected() }
   LaunchedEffect(open.version, socket, current) {
     val socket = socket ?: return@LaunchedEffect
     for (ask in open.run.asks()) if (!current || !socket.requestPhotos(threadId, ask.seq, ask.after)) open.run.unasked(ask)
@@ -246,15 +284,6 @@ private fun LargePhoto(item: ChatPhotoItem, groupId: String, onTap: () -> Unit, 
       onDoubleClick = DoubleClickToZoomListener.cycle(maxZoomFactor = DOUBLE_TAP_ZOOM),
     )
   }
-}
-
-/** Runs [block], a failure nothing more than not done. */
-private suspend fun runCatchingSafely(block: suspend () -> Unit) {
-  try {
-    block()
-  } catch (e: CancellationException) {
-    throw e
-  } catch (_: Exception) {}
 }
 
 /** A pinch zooms up to this many times, as Signal's; a double tap to twice. */
