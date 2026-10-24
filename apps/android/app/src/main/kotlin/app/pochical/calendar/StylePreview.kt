@@ -37,6 +37,7 @@ import app.pochical.design.Metrics
 import app.pochical.design.Radius
 import app.pochical.kit.stylePreviewDays
 import java.time.LocalDate
+import java.time.YearMonth
 import app.pochical.kit.styleSamples as sampleIds
 
 /** The marks the テーマ and シフトの色 choices show side by side (spec/vectors/style-preview.json, samples). */
@@ -46,9 +47,10 @@ fun styleSamples(patterns: List<Pattern>): List<Pattern> {
 }
 
 /**
- * The preview at the top of スタイル (/design's StylePreview): this week and the next as a made-up
- * run of the person's own [patterns] in use, drawn in the settings being chosen, on a card in the
- * テーマ's colors, light or dark as [dark] says, with ☀︎ / ☾ on its edge.
+ * The preview at the top of スタイル and カレンダー (/design's StylePreview): this week and the next
+ * as a made-up run of the person's own [patterns] in use, drawn in the settings being chosen, on a
+ * card in the テーマ's colors, light or dark as [dark] says, with ☀︎ / ☾ on its edge. Under the
+ * month's heading, as カレンダー shows it [withHeading], one week is enough.
  */
 @Composable
 fun StylePreview(
@@ -57,15 +59,16 @@ fun StylePreview(
   dark: Boolean,
   onDarkChange: (Boolean) -> Unit,
   modifier: Modifier = Modifier,
+  withHeading: Boolean = false,
 ) {
   val device = LocalDeviceSettings.current.device
   val theme = device.theme
   val week = device.week
   val first = today.weekStartingOn(week.start)
-  val days = (0 until 14).map { first.plusDays(it.toLong()) }
+  val days = (0 until if (withHeading) 7 else 14).map { first.plusDays(it.toLong()) }
   val shown = stylePreviewDays(days, patterns.map { it.row })
   val byId = patterns.associateBy { it.id }
-  val label = stringResource(R.string.preview_week)
+  val label = stringResource(if (withHeading) R.string.preview_this_week else R.string.preview_week)
   // Room for the switch over the card's top edge.
   Box(modifier.padding(top = 14.dp)) {
     CompositionLocalProvider(LocalThemeColors provides theme.colors(dark || theme.isAlwaysDark)) {
@@ -78,6 +81,10 @@ fun StylePreview(
           .clearAndSetSemantics { contentDescription = label },
         verticalArrangement = Arrangement.spacedBy(4.dp),
       ) {
+        if (withHeading) {
+          val month = YearMonth.from(today)
+          MonthName(0f, { month }, reduceMotion = true, Modifier.padding(start = 8.dp, bottom = 8.dp))
+        }
         WeekdayRow(week)
         for (row in days.chunked(7)) {
           Row(horizontalArrangement = Arrangement.spacedBy(Metrics.spacingStep)) {

@@ -35,6 +35,7 @@ import app.pochical.calendar.DAY_FULL_HEIGHT
 import app.pochical.calendar.DayCell
 import app.pochical.calendar.DayEntry
 import app.pochical.calendar.OffShown
+import app.pochical.calendar.WeekdayRow
 import app.pochical.calendar.DayLook
 import app.pochical.calendar.OwnCalendar
 import app.pochical.calendar.Pattern
@@ -126,18 +127,7 @@ fun RepeatCalendar(
         }
       }
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(DAY_GAP)) {
-      repeat(7) { index ->
-        val weekday = (week.start + index) % 7
-        Text(
-          weekdayLetter(weekday),
-          Modifier.weight(1f),
-          style = PochicalTextStyles.caption2,
-          color = weekdayColor(weekday, holiday = false, week, plain = LocalThemeColors.current.textTertiary),
-          textAlign = TextAlign.Center,
-        )
-      }
-    }
+    WeekdayRow(week)
     BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
       val cell = ((maxHeight - DAY_GAP * 5) / 6).coerceIn(Metrics.touch, DAY_FULL_HEIGHT)
       HorizontalPager(pages, Modifier.fillMaxSize(), verticalAlignment = Alignment.Top) { page ->

@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.pochical.LocalDeviceSettings
 import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.ShiftMark
@@ -134,7 +135,7 @@ fun MonthBreakdownSheet(breakdown: MonthBreakdown, onDismiss: () -> Unit) {
           modifier = Modifier.padding(horizontal = 24.dp).semantics { heading() },
         )
         Text(
-          breakdown.month.yearMonthText,
+          breakdown.month.monthWithYear(LocalDeviceSettings.current.device.heading.english),
           style = MaterialTheme.typography.bodyMedium,
           color = colors.textSecondary,
           modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 8.dp),

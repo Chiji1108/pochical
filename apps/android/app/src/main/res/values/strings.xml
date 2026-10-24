@@ -5,6 +5,20 @@
   <string name="tab_groups">グループ</string>
   <string name="tab_settings">設定</string>
   <string name="settings_display">表示</string>
+  <string name="calendar_settings">カレンダー</string>
+  <string name="calendar_settings_summary">%1$s曜はじまり・%2$s</string>
+  <string name="calendar_names">月と曜日</string>
+  <string name="calendar_names_japanese">日本語</string>
+  <string name="calendar_names_english">英語</string>
+  <string name="calendar_name_tap">月名をタップしたとき</string>
+  <string name="calendar_name_tap_surprise">おたのしみ</string>
+  <string name="calendar_week_start">週の始まり</string>
+  <string name="calendar_weekday">%1$s曜</string>
+  <string name="calendar_colored_days">色をつける日</string>
+  <string name="calendar_saturday">土曜</string>
+  <string name="calendar_sunday">日曜</string>
+  <string name="calendar_holiday">祝日</string>
+  <string name="calendar_colored_days_note">土曜と日曜は曜日の見出しに、祝日は日付に色がつきます。祝日は日曜と同じ赤です。グループの画面やウィジェットでも、この並びと色で表示されます。</string>
   <string name="appearance">外観</string>
   <string name="style">スタイル</string>
   <string name="style_shape">シフトの見た目</string>
@@ -26,6 +40,7 @@
   <string name="off_look_mark">印だけ</string>
   <string name="off_look_blank">空白</string>
   <string name="preview_week">今週と来週の見え方</string>
+  <string name="preview_this_week">今週の見え方</string>
   <string name="preview_scheme">プレビューの明るさ</string>
   <string name="preview_light">ライトで見る</string>
   <string name="preview_dark">ダークで見る</string>
@@ -120,6 +135,7 @@
   <string name="day_clear_hours">時間の変更</string>
   <string name="day_clear_lost">%1$sも消えます。</string>
   <string name="calendar_pick_month">月を選ぶ</string>
+  <string name="calendar_change_sky">空の色を変える</string>
   <string name="calendar_show_month">表示</string>
   <string name="day_unentered">未入力</string>
   <string name="day_has_memo">メモあり</string>
