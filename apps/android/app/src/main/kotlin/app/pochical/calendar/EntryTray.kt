@@ -105,12 +105,7 @@ fun pageCount(count: Int): Int = maxOf(1, (count + PATTERNS_PER_PAGE - 1) / PATT
 @Composable
 private fun TrayDateLabel(day: LocalDate, week: Week, country: String, said: String?) {
   val colors = LocalThemeColors.current
-  val weekdayColor =
-    when {
-      (day.holidayName(country) != null && week.holiday) || (day.weekday == 0 && week.sunday) -> colors.calendarHoliday
-      day.weekday == 6 && week.saturday -> colors.calendarSaturday
-      else -> colors.textTertiary
-    }
+  val weekdayColor = weekdayColor(day.weekday, holiday = day.holidayName(country) != null, week, plain = colors.textTertiary)
   val label = said ?: stringResource(R.string.entering_day, day.monthDayText)
   Row(
     Modifier.heightIn(min = Metrics.touch).clearAndSetSemantics {
@@ -136,19 +131,18 @@ fun PatternKeys(patterns: List<Pattern>, pages: PagerState, onPick: (Pattern) ->
   val paged = patterns.chunked(PATTERNS_PER_PAGE)
   if (paged.size > 1) {
     HorizontalPager(pages, Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) { page ->
-      KeyGrid(paged[page], columns = 5, rows = 2, tall = false, onPick)
+      KeyGrid(paged[page], columns = PAGE_COLUMNS, rows = KEY_ROWS, tall = false, onPick)
     }
   } else {
-    val columns =
-      when (patterns.size) {
-        in 9..Int.MAX_VALUE -> 5
-        7, 8 -> 4
-        5, 6 -> 3
-        else -> maxOf(patterns.size, 1)
-      }
+    // Fewer patterns sit in fewer columns, as /design lays them out: two rows from five on.
+    val columns = if (patterns.size <= 4) maxOf(patterns.size, 1) else minOf((patterns.size + 1) / KEY_ROWS, PAGE_COLUMNS)
     KeyGrid(patterns, columns, rows = (patterns.size + columns - 1) / columns, tall = patterns.size <= 4, onPick)
   }
 }
+
+/** A full page of keys is [PATTERNS_PER_PAGE] in two rows. */
+private const val KEY_ROWS = 2
+private const val PAGE_COLUMNS = (PATTERNS_PER_PAGE + KEY_ROWS - 1) / KEY_ROWS
 
 private val KEY_GAP = 8.dp
 private val KEY_WIDTH = 72.dp

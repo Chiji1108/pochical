@@ -81,6 +81,12 @@ interface OwnDays {
   /** Puts `shift` on each of `days`, the blank days 完了 asks about. */
   fun fill(days: List<LocalDate>, shift: String)
 
+  /**
+   * The days from `from` through `through` that show a shift once every edit made before this is
+   * written, which [calendar] may not show yet: what 完了 asks about must count the last key.
+   */
+  suspend fun shownOnceWritten(from: LocalDate, through: LocalDate): Set<LocalDate>
+
   /** Keeps `note` as the day's memo; "" clears it, leaving the shift. */
   fun setNote(day: LocalDate, note: String)
 

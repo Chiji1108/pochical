@@ -227,6 +227,15 @@ class CalendarScreenTest {
   }
 
   @Test
+  fun aBackEndsEntering() {
+    show()
+    startEntering()
+    back()
+    assertEquals(false, tabBarHidden)
+    compose.onNodeWithText("ポチポチ入力").assertIsDisplayed()
+  }
+
+  @Test
   fun entersOnTheMonthsLastDayUntilDone() {
     show()
     startEntering()
@@ -248,8 +257,7 @@ class CalendarScreenTest {
       tap(day)
       compose.onNodeWithText("消す").performClick()
     }
-    compose.waitForIdle()
-    test.awaitCalendar { calendar -> blanks.all { calendar.shown(it, it).isEmpty() } }
+    // At once, as a person taps it: 完了 counts the keys whose days the calendar may not show yet.
     compose.onNodeWithText("完了").performClick()
     compose.waitForIdle()
     assertEquals(false, tabBarHidden)

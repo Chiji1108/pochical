@@ -8,6 +8,7 @@ import android.database.ContentObserver
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Animatable
@@ -63,6 +64,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -170,7 +172,7 @@ fun CalendarScreen(open: (RootPage) -> Unit, hidesTabBar: (Boolean) -> Unit) {
   var gapKeys by rememberSaveable { mutableStateOf("") }
   val gaps = remember(gapKeys) { gapKeys.split(",").filter { it.isNotEmpty() }.map(LocalDate::parse) }
   var gapPick by rememberSaveable { mutableStateOf<String?>(null) }
-  val offPatterns = calendar.patterns.filter { it.countsAsOff && !it.archived }
+  val offPatterns = calendar.patterns.daysOff()
   val gapFill = offPatterns.find { it.id == gapPick } ?: offPatterns.firstOrNull()
   val hidesBar by rememberUpdatedState(hidesTabBar)
   val showsDay = opened != null && !closing
@@ -214,22 +216,28 @@ fun CalendarScreen(open: (RootPage) -> Unit, hidesTabBar: (Boolean) -> Unit) {
     said = resources.getString(R.string.entering_said, day.monthDayText, done, after)
   }
 
-  // 完了: entering ends, then the month's blank days before its last entered one are asked about,
-  // when a pattern that counts as off could fill them.
+  // 完了, or a back: entering ends, then the month's blank days before its last entered one are
+  // asked about, when a pattern that counts as off could fill them.
   fun finish() {
     val day = enteringKey?.let(LocalDate::parse) ?: return
     enteringKey = null
     said = null
-    if (calendar.patterns.none { it.countsAsOff && !it.archived }) return
+    if (calendar.patterns.daysOff().isEmpty()) return
     val month = YearMonth.from(day)
-    val shown = calendar.shown(month.atDay(1), month.atEndOfMonth())
-    gapKeys = gapDays(month.atDay(1), month.atEndOfMonth(), shown::containsKey).joinToString(",")
+    scope.launch {
+      val shown = days.shownOnceWritten(month.atDay(1), month.atEndOfMonth())
+      gapKeys = gapDays(month.atDay(1), month.atEndOfMonth(), shown::contains).joinToString(",")
+    }
   }
+  BackHandler(enabled = entering != null, onBack = ::finish)
 
   // A month swiped to while entering starts on its first blank day.
   LaunchedEffect(pager.settledPage, entering != null) {
     val month = range.monthAt(pager.settledPage)
-    if (entering != null && YearMonth.from(entering) != month) enteringKey = firstBlank(month).toString()
+    if (entering != null && YearMonth.from(entering) != month) {
+      enteringKey = firstBlank(month).toString()
+      said = null
+    }
   }
 
   suspend fun unfold() {
@@ -362,12 +370,15 @@ fun CalendarScreen(open: (RootPage) -> Unit, hidesTabBar: (Boolean) -> Unit) {
       }
     }
     if (opened == null) {
-      // ポチポチ入力 and its tray trade places in a fade.
-      Crossfade(entering, Modifier.padding(horizontal = SCREEN_EDGE).padding(top = 12.dp, bottom = 12.dp), label = "entering") { day ->
-        if (day == null) {
+      // ポチポチ入力 and its tray trade places in a fade; the tray fading out keeps its last day.
+      val trayDay = remember { mutableStateOf<LocalDate?>(null) }.apply { if (entering != null) value = entering }.value
+      Crossfade(entering != null, Modifier.padding(horizontal = SCREEN_EDGE).padding(top = 12.dp, bottom = 12.dp), label = "entering") { on ->
+        val day = trayDay
+        if (!on || day == null) {
           Button(
             onClick = {
-              val month = range.monthAt(pager.currentPage)
+              // The month the pages settle on, as a swipe while entering starts there too.
+              val month = range.monthAt(pager.settledPage)
               said = null
               enteringKey = firstBlank(month).toString()
             },
@@ -388,6 +399,8 @@ fun CalendarScreen(open: (RootPage) -> Unit, hidesTabBar: (Boolean) -> Unit) {
             canSkip = day != last,
             said = said,
             onEnter = { shift ->
+              // A key of the tray fading out after 完了 enters nothing.
+              if (enteringKey != day.toString()) return@EntryTray
               days.enter(day, shift)
               val next = selectedAfterEntering(shift, day, last, calendar::nextDay)
               enteringKey = next.toString()
@@ -404,6 +417,7 @@ fun CalendarScreen(open: (RootPage) -> Unit, hidesTabBar: (Boolean) -> Unit) {
               )
             },
             onSkip = {
+              if (enteringKey != day.toString()) return@EntryTray
               val next = minOf(day.plusDays(1), last)
               enteringKey = next.toString()
               say(resources.getString(R.string.entering_skipped), day, next)
@@ -534,6 +548,23 @@ private fun MonthPicker(
   }
 }
 
+/**
+ * A weekday's color as the person's カレンダー settings have it: Sundays and holidays in Sunday's
+ * red, Saturdays in their blue, each unless turned off, else [plain].
+ */
+@Composable
+fun weekdayColor(weekday: Int, holiday: Boolean, week: Week, plain: Color): Color {
+  val colors = LocalThemeColors.current
+  return when {
+    (holiday && week.holiday) || (weekday == 0 && week.sunday) -> colors.calendarHoliday
+    weekday == 6 && week.saturday -> colors.calendarSaturday
+    else -> plain
+  }
+}
+
+/** The patterns that count as off and are in use: what 完了's blank days are filled with. */
+private fun List<Pattern>.daysOff(): List<Pattern> = filter { it.countsAsOff && !it.archived }
+
 /** The weekday names over the pages, from the week's start, Sundays and Saturdays in their colors unless turned off. */
 @Composable
 private fun WeekdayRow(week: Week, modifier: Modifier = Modifier) {
@@ -545,12 +576,7 @@ private fun WeekdayRow(week: Week, modifier: Modifier = Modifier) {
         weekdayLetter(weekday),
         Modifier.weight(1f),
         style = PochicalTextStyles.caption2,
-        color =
-          when {
-            weekday == 0 && week.sunday -> colors.calendarHoliday
-            weekday == 6 && week.saturday -> colors.calendarSaturday
-            else -> colors.textTertiary
-          },
+        color = weekdayColor(weekday, holiday = false, week, plain = colors.textTertiary),
         textAlign = TextAlign.Center,
       )
     }

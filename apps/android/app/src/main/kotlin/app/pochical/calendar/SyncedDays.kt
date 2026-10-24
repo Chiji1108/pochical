@@ -9,6 +9,7 @@ import app.pochical.kit.newId
 import app.pochical.kit.ownCalendar
 import app.pochical.v1.DayField
 import java.time.LocalDate
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.SharingStarted
@@ -25,11 +26,13 @@ import app.pochical.kit.OwnCalendar as KitCalendar
  * other devices.
  */
 class SyncedDays(database: AppDatabase, private val edits: OwnEdits, scope: CoroutineScope) : OwnDays {
+  private val values = database.values()
+
   private val unread = Synced(KitCalendar.empty, emptyList())
 
   // Read first when first asked for, so what the launch puts in before then is in that first read.
   override val calendar: StateFlow<OwnCalendar> =
-    combine(database.values().ownCalendar(), database.values().coworkers(), ::Synced)
+    combine(values.ownCalendar(), values.coworkers(), ::Synced)
       .stateIn(scope, SharingStarted.Lazily, unread)
 
   override suspend fun awaitRead() {
@@ -55,6 +58,12 @@ class SyncedDays(database: AppDatabase, private val edits: OwnEdits, scope: Coro
 
   override fun fill(days: List<LocalDate>, shift: String) {
     writes.trySend { edits.fill(days, shift) }
+  }
+
+  override suspend fun shownOnceWritten(from: LocalDate, through: LocalDate): Set<LocalDate> {
+    val shown = CompletableDeferred<Set<LocalDate>>()
+    writes.send { shown.complete(values.ownCalendar().first().shown(from, through).keys) }
+    return shown.await()
   }
 
   override fun setNote(day: LocalDate, note: String) {
