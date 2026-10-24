@@ -21,7 +21,6 @@
   <string name="account_sign_in_body">機種変更しても、スマホとタブレットでも、同じシフトとグループを使えます。</string>
   <string name="account_sign_in_note">はじめてなら、この端末のデータがそのまま引き継がれます。すでにアカウントがあれば、そのデータを開きます。ログインしなくても、この端末ではそのまま使えます。</string>
   <string name="account_sign_in_offline">インターネットにつながると、ログインできます。</string>
-  <string name="account_sign_in_session_ended">ほかの端末でログアウトしたか、アカウントが削除されたため、いまはログインできません。</string>
   <string name="account_continue_with_apple">Appleで続ける</string>
   <string name="account_continue_with_google">Googleで続ける</string>
   <string name="account_sign_in_failed">ログインできませんでした。時間をおいてもう一度お試しください。</string>
@@ -50,6 +49,14 @@
   <string name="account_not_deleted_apple_refused">このアカウントのApple IDか確かめられませんでした。ログインしたときと同じApple IDで、もう一度お試しください。</string>
   <string name="account_not_deleted_later">時間をおいて、もう一度お試しください。</string>
   <string name="account_deleted">アカウントを削除しました</string>
+  <string name="signed_out">ログアウトしました</string>
+  <string name="session_ended">ログアウトされています</string>
+  <string name="session_ended_body">ほかの端末でログアウトしたか、アカウントが削除されたため、同期できません。この端末のデータは、はじめから使うまで消しません。</string>
+  <string name="session_ended_try_again">もう一度つなぐ</string>
+  <string name="session_ended_start_afresh">はじめから使う</string>
+  <string name="start_afresh_title">はじめから使いますか？</string>
+  <string name="start_afresh_body">この端末のデータが消えます。アカウントが残っていれば、Apple または Google でもう一度ログインすると同じデータを使えます。</string>
+  <string name="start_afresh_confirm">データを消してはじめる</string>
   <string name="erasing_body">この端末のデータを消しています。</string>
   <string name="erasing_failed">この端末のデータを消しています。まだ消せていないため、しばらくすると自動でもう一度試します。</string>
   <string name="retry">再試行</string>

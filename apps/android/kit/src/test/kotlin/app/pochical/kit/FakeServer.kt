@@ -77,6 +77,9 @@ class FakeServer : AutoCloseable {
   /** The frames each socket sent, in order, one list a socket. */
   val sockets = CopyOnWriteArrayList<MutableList<ClientFrame>>()
 
+  /** How many of the user's sockets it refused with 401, their session unknown. */
+  val refusedSockets = AtomicInteger()
+
   /** The user the provider's account is linked to, as from another phone, with its session; null for none. */
   @Volatile var inUse: Pair<String, String>? = null
 
@@ -214,7 +217,7 @@ class FakeServer : AutoCloseable {
             }
             "/v1/me/socket" ->
               when (val user = userOf(request.headers["Authorization"])) {
-                null -> MockResponse.Builder().code(401).build()
+                null -> MockResponse.Builder().code(401).build().also { refusedSockets.incrementAndGet() }
                 else -> MockResponse.Builder().webSocketUpgrade(Socket(user)).build()
               }
             else -> MockResponse.Builder().code(404).build()
