@@ -50,6 +50,13 @@ class Chats internal constructor(
     }
 
   /**
+   * The line [seq] as the screen shows it, the member's waiting edits to it in place, however far
+   * from the lines laid out (the line the composer answers); null while the device does not hold it.
+   */
+  fun line(groupId: String, threadId: String, seq: Long): Flow<ChatLine?> =
+    observe("chatLines", "chatOutbox") { now -> Timed(shownLine(groupId, threadId, seq, waitingEdits(groupId, threadId, now)), null) }
+
+  /**
    * The group's chats that have a line, unread lines counted before their lines come, one of the
    * member's own on its way, or a draft: the one-to-one chats its list shows beside its own.
    */

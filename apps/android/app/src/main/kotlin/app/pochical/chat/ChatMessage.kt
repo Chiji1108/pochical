@@ -34,7 +34,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.unit.toSize
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -102,6 +104,9 @@ class MessageLook(
   val said: String,
 )
 
+/** A line gone to, lit once there: [time] tells one going to the same line again. */
+data class Lit(val seq: Long, val time: Long)
+
 /** What the chat's messages do, the same for each. */
 class MessageHandlers(
   val menu: LineMenuState,
@@ -112,8 +117,8 @@ class MessageHandlers(
   val nameOf: (String) -> String,
   val notKept: () -> Unit,
   val reducedMotion: Boolean,
-  /** The line lit as it is gone to, by seq. */
-  val lit: Long?,
+  /** The line lit as it is gone to, each time it is. */
+  val lit: Lit?,
 )
 
 /**
@@ -134,7 +139,7 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
   val openMenu = {
     coordinates?.let { at ->
       val items = handlers.items(look)
-      menu.open(MenuLine(look.key, look.mine, items) { Bubble(look, handlers, onQuote = {}) }, at.boundsInWindow())
+      menu.open(MenuLine(look.key, look.mine, look.waiting != null, items) { Bubble(look, handlers, onQuote = {}) }, at.unclipped())
     }
   }
   val gestures =
@@ -202,19 +207,19 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
         }
         Row(verticalAlignment = Alignment.Bottom) {
           val edited = (look.content as? LineContent.Words)?.edited == true
-          if (look.mine) TimeRoom(look.time, look.waiting, edited, handlers.notKept, Modifier.padding(end = 4.dp))
+          if (look.mine) TimeRoom(look.time, look.waiting, edited, items, Modifier.padding(end = 4.dp))
           Box(
             Modifier.weight(1f, fill = false)
               .onGloballyPositioned { at ->
                 coordinates = at
-                if (lifted) menu.bounds = at.boundsInWindow()
+                if (lifted) menu.bounds = at.unclipped()
               }
               .alpha(if (lifted) 0f else 1f)
               .lineGestures(gestures.takeIf { look.seq != null || look.waiting != null }, look.swipe, drag, { coordinates }, handlers.reducedMotion)
           ) {
             Bubble(look, handlers, onQuote = { look.quote?.let { handlers.jump(it.seq) } })
           }
-          if (!look.mine) TimeRoom(look.time, null, edited, handlers.notKept, Modifier.padding(start = 4.dp))
+          if (!look.mine) TimeRoom(look.time, null, edited, items, Modifier.padding(start = 4.dp))
         }
         if (look.waiting?.failed == true) {
           Text(stringResource(R.string.chat_not_sent), style = MaterialTheme.typography.labelSmall, color = colors.dangerDefault)
@@ -238,9 +243,9 @@ fun Bubble(look: MessageLook, handlers: MessageHandlers, onQuote: () -> Unit) {
   val ink = if (look.mine) colors.accentOnFill else colors.textPrimary
   val light = remember { Animatable(0f) }
   val shine = remember { Animatable(0f) }
-  val lit = look.seq != null && look.seq == handlers.lit
+  val lit = handlers.lit?.takeIf { it.seq == look.seq }
   LaunchedEffect(lit) {
-    if (!lit) return@LaunchedEffect
+    if (lit == null) return@LaunchedEffect
     if (handlers.reducedMotion) {
       light.snapTo(1f)
       delay(Chat.jumpFlashMs.toLong())
@@ -365,6 +370,9 @@ fun messageLook(
     else -> null
   }
 }
+
+/** Where the bubble is in the window, whole: the list's clip would cut one scrolled partly out of sight. */
+private fun LayoutCoordinates.unclipped(): Rect = Rect(positionInWindow(), size.toSize())
 
 /** How dim a line on its way is, as it would be on the chat's ground. */
 private const val WAITING_ALPHA = 0.6f

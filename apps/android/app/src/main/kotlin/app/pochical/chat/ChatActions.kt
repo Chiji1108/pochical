@@ -38,8 +38,6 @@ sealed interface Unsending {
  */
 @Composable
 fun rememberLineActions(
-  groupId: String,
-  threadId: String,
   composer: ComposerState,
   nameOf: (String) -> String,
   snackbar: SnackbarHostState,

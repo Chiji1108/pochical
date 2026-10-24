@@ -20,7 +20,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.pochical.R
-import app.pochical.kit.ChatState
+import app.pochical.kit.ChatLine
 import app.pochical.kit.LineContent
 
 // Replies (返信; spec/chat.md, Replies; /design's BubbleQuote and the composer's reply bar): a line
@@ -30,13 +30,13 @@ import app.pochical.kit.LineContent
 data class LineQuote(val seq: Long, val writer: String?, val words: String)
 
 /**
- * The line [seq] as a quote of it reads: as the device holds it, however far back, else 以前のメッセージ
+ * The line [seq] ([line], null while not held) as a quote of it reads: as the device holds it, however far back, else 以前のメッセージ
  * until it comes; 取り消されたメッセージ once taken back, ブロック中のメンバーのメッセージ for a blocked
  * member's.
  */
 @Composable
-fun lineQuote(seq: Long, chat: ChatState, nameOf: (String) -> String, blocked: Set<String>): LineQuote {
-  val line = chat.line(seq) ?: return LineQuote(seq, null, stringResource(R.string.chat_quote_earlier))
+fun lineQuote(seq: Long, line: ChatLine?, nameOf: (String) -> String, blocked: Set<String>): LineQuote {
+  line ?: return LineQuote(seq, null, stringResource(R.string.chat_quote_earlier))
   return when (val content = line.content) {
     LineContent.Unsent -> LineQuote(seq, nameOf(line.authorId), stringResource(R.string.chat_quote_unsent))
     // A notice takes no reply; a line of a kind the app does not know is quoted as one not held.

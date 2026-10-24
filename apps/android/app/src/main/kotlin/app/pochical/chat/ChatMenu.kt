@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -33,7 +34,9 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
@@ -70,6 +73,8 @@ class LineMenuItem(
 class MenuLine(
   val key: String,
   val mine: Boolean,
+  /** One of the member's lines on its way: its menu is not that of the group's line it becomes. */
+  val waiting: Boolean,
   val items: List<LineMenuItem>,
   val bubble: @Composable () -> Unit,
 )
@@ -169,45 +174,65 @@ fun LineMenu(state: LineMenuState) {
       )
     }
     val bubble = state.bounds.translate(-origin)
+    // The menu's height kept as it fades out, so the line does not move as it goes.
+    val menuHeightShown = remember { intArrayOf(0) }
+    val corner = TransformOrigin(if (line.mine) 1f else 0f, 0f)
     Layout(
       content = {
-        Box { line.bubble() }
+        // Drawn whole at its size; a line too tall for the room is cut short at its end.
+        Box(Modifier.clipToBounds().wrapContentHeight(Alignment.Top, unbounded = true)) { line.bubble() }
         AnimatedVisibility(
           state.visible,
-          enter = fadeIn() + scaleIn(initialScale = 0.8f, transformOrigin = TransformOrigin(if (line.mine) 1f else 0f, 0f)),
-          exit = fadeOut() + scaleOut(targetScale = 0.8f, transformOrigin = TransformOrigin(if (line.mine) 1f else 0f, 0f)),
+          enter = fadeIn() + scaleIn(initialScale = 0.8f, transformOrigin = corner),
+          exit = fadeOut() + scaleOut(targetScale = 0.8f, transformOrigin = corner),
         ) {
           MenuSurface(line, state)
         }
       },
       modifier = Modifier.fillMaxSize(),
     ) { measurables, constraints ->
-      val lifted = measurables[0].measure(Constraints.fixed(bubble.width.roundToInt().coerceAtLeast(0), bubble.height.roundToInt().coerceAtLeast(0)))
       // Gone once it has faded out, while the lifted line goes back.
       val menu = measurables.getOrNull(1)?.measure(constraints.copy(minWidth = 0, minHeight = 0))
-      val menuHeight = menu?.height ?: 0
+      if (menu != null) menuHeightShown[0] = menu.height
+      val menuHeight = menuHeightShown[0]
       val height = constraints.maxHeight
       val floor = height - bottom - margin
       val ceiling = top + margin
+      val width = bubble.width.roundToInt().coerceAtLeast(0)
+      val tall = bubble.height.roundToInt().coerceAtLeast(0)
+      // The room the line has beside the menu: a line taller than it is drawn smaller about its top
+      // corner by the writer, as the system's context menu draws a tall preview, down to half its
+      // size, and past that cut short at its end, so the menu is always whole on the screen.
+      val room = (floor - ceiling - menuHeight - margin).coerceAtLeast(0)
+      val scale = if (tall <= room || tall == 0) 1f else maxOf(room.toFloat() / tall, MOST_SHRUNK)
+      val kept = minOf(tall, (room / scale).roundToInt())
+      val lifted = measurables[0].measure(Constraints.fixed(width, kept))
+      val shown = (kept * scale).roundToInt()
       var bubbleY = bubble.top.roundToInt()
-      val below = bubbleY + lifted.height + margin
+      val below = bubbleY + shown + margin
       val menuY =
         when {
           // Under it, where the line is.
-          below + menuHeight <= floor -> below
+          bubbleY >= ceiling && below + menuHeight <= floor -> below
           // Over it.
-          bubbleY - margin - menuHeight >= ceiling -> bubbleY - margin - menuHeight
+          bubbleY + shown <= floor && bubbleY - margin - menuHeight >= ceiling -> bubbleY - margin - menuHeight
           else -> {
-            // Neither fits: the keyboard goes down for the room, or all move together to stay on the screen.
+            // Neither fits: the keyboard goes down for the room, and all move together to stay on the screen.
             if (imeBottom > 0) crowded = true
-            bubbleY = (floor - menuHeight - margin - lifted.height).coerceAtLeast(ceiling)
-            bubbleY + lifted.height + margin
+            bubbleY = bubbleY.coerceIn(ceiling, (floor - menuHeight - margin - shown).coerceAtLeast(ceiling))
+            bubbleY + shown + margin
           }
         }
       layout(constraints.maxWidth, height) {
-        lifted.place(bubble.left.roundToInt(), bubbleY)
+        // Scaled about its top corner by the writer, which stays where it is.
+        val left = bubble.left.roundToInt()
+        lifted.placeWithLayer(left, bubbleY) {
+          scaleX = scale
+          scaleY = scale
+          transformOrigin = corner
+        }
         if (menu != null) {
-          val menuX = if (line.mine) (bubble.right.roundToInt() - menu.width) else bubble.left.roundToInt()
+          val menuX = if (line.mine) (bubble.right.roundToInt() - menu.width) else left
           menu.place(menuX.coerceIn(margin, (constraints.maxWidth - menu.width - margin).coerceAtLeast(margin)), menuY)
         }
       }
@@ -244,5 +269,8 @@ private fun MenuSurface(line: MenuLine, state: LineMenuState) {
 }
 
 private const val SCRIM = 0.32f
+
+/** The least a line too tall for the room is drawn, before it is cut short instead. */
+private const val MOST_SHRUNK = 0.5f
 private const val LIT = 0.1f
 private val MENU_WIDTH = 200.dp

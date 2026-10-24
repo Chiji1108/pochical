@@ -1,5 +1,6 @@
 package app.pochical.chat
 
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,6 +21,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -68,16 +71,20 @@ class ComposerState(writing: Writing<Nothing>, tookDraft: Boolean) {
   var tookDraft by mutableStateOf(tookDraft)
   val focus = FocusRequester()
 
+  /** Each time 返信 or 編集 asks for the keyboard, which comes up even while the field keeps its focus. */
+  var keyboardAsked by mutableIntStateOf(0)
+    private set
+
   /** 返信: the line [seq] quoted over the composer, which takes the keyboard. */
   fun answer(seq: Long) {
     writing = writing.answer(seq)
-    focus.requestFocus()
+    keyboardAsked++
   }
 
   /** 編集: the line [seq]'s words ([text], as sent) alone in the composer, which takes the keyboard. */
   fun change(seq: Long, text: String, nameOf: (String) -> String) {
     writing = writing.change(seq, text, nameOf)
-    focus.requestFocus()
+    keyboardAsked++
   }
 
   companion object {
@@ -121,6 +128,8 @@ fun Composer(
   threadId: String,
   quote: LineQuote?,
   nameOf: (String) -> String,
+  /** The members' names are read, for a draft's mentions to be named. */
+  namesKnown: Boolean,
   onTyping: (Boolean) -> Unit,
   onSent: () -> Unit,
   onNotKept: () -> Unit,
@@ -130,9 +139,16 @@ fun Composer(
   val scope = rememberCoroutineScope()
   val writing = state.writing
   val currentNameOf by rememberUpdatedState(nameOf)
-  // The draft taken once, as the chat opens; after a rotation the composer keeps its own.
-  LaunchedEffect(Unit) {
-    if (state.tookDraft) return@LaunchedEffect
+  val keyboard = LocalSoftwareKeyboardController.current
+  LaunchedEffect(state.keyboardAsked) {
+    if (state.keyboardAsked == 0) return@LaunchedEffect
+    state.focus.requestFocus()
+    keyboard?.show()
+  }
+  // The draft taken once, as the chat opens and the names its mentions are written with are known;
+  // after a rotation the composer keeps its own.
+  LaunchedEffect(namesKnown) {
+    if (state.tookDraft || !namesKnown) return@LaunchedEffect
     if (state.writing.text.isEmpty()) {
       chats.draft(groupId, threadId)?.let { state.writing = Writing.of(it.text, currentNameOf, it.replyTo, it.editing) }
     }
@@ -176,18 +192,18 @@ fun Composer(
   val sendable = fitsText(writing.sent, TextLimits.chatMessage)
   Surface(modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surfaceContainer) {
     Column(Modifier.navigationBarsPadding()) {
-      AnimatedVisibility(quote != null || editing != null) {
+      val editingWords = stringResource(R.string.chat_editing)
+      val bar =
         when {
-          editing != null -> ComposerBar(stringResource(R.string.chat_editing), null, stringResource(R.string.chat_stop_editing)) { state.writing = writing.stop() }
-          quote != null ->
-            ComposerBar(
-              quote.writer?.let { stringResource(R.string.chat_replying_to, it) } ?: stringResource(R.string.chat_replying),
-              quote.words,
-              stringResource(R.string.chat_stop_replying),
-            ) {
-              state.writing = writing.stop()
-            }
+          editing != null -> Bar(editingWords, null, R.string.chat_stop_editing)
+          quote != null -> Bar(quote.writer?.let { stringResource(R.string.chat_replying_to, it) } ?: stringResource(R.string.chat_replying), quote.words, R.string.chat_stop_replying)
+          else -> null
         }
+      // The bar last shown, kept as it goes so it leaves whole.
+      var shown by remember { mutableStateOf(bar) }
+      if (bar != null) shown = bar
+      AnimatedVisibility(bar != null) {
+        shown?.let { ComposerBar(it.title, it.words, stringResource(it.stop)) { state.writing = state.writing.stop() } }
       }
       Row(Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.Bottom) {
         OutlinedTextField(
@@ -251,6 +267,9 @@ private fun ComposerBar(title: String, words: String?, stop: String, onStop: () 
     }
   }
 }
+
+/** What the bar over the composer says: what it is, the line in one line of words, and its ×. */
+private data class Bar(val title: String, val words: String?, @param:StringRes val stop: Int)
 
 /** The most lines the field grows to before its words scroll. */
 private const val COMPOSER_LINES = 6

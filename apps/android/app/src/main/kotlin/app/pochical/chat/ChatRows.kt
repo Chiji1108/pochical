@@ -36,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -145,22 +146,22 @@ private fun AppLine(words: String, modifier: Modifier) {
  * 編集済み over it once the line's words were changed.
  */
 @Composable
-internal fun TimeRoom(time: String?, waiting: WaitingLine?, edited: Boolean, onNotKept: () -> Unit, modifier: Modifier) {
+internal fun TimeRoom(time: String?, waiting: WaitingLine?, edited: Boolean, notSentItems: List<LineMenuItem>, modifier: Modifier) {
   val colors = LocalThemeColors.current
   Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
     if (edited) Text(stringResource(R.string.chat_edited), style = MaterialTheme.typography.labelSmall, color = colors.textTertiary)
-    TimeOrMark(time, waiting, onNotKept)
+    TimeOrMark(time, waiting, notSentItems)
   }
 }
 
 @Composable
-private fun TimeOrMark(time: String?, waiting: WaitingLine?, onNotKept: () -> Unit) {
+private fun TimeOrMark(time: String?, waiting: WaitingLine?, notSentItems: List<LineMenuItem>) {
   val colors = LocalThemeColors.current
   Box(contentAlignment = Alignment.BottomCenter) {
     // The room a time takes, drawn only when the line shows its own.
     Text("00:00", Modifier.alpha(0f).clearAndSetSemantics {}, style = MaterialTheme.typography.labelSmall)
     when {
-      waiting?.failed == true -> NotSentMark(waiting, onNotKept)
+      waiting?.failed == true -> NotSentMark(notSentItems)
       waiting != null -> {
         val sending = stringResource(R.string.chat_sending)
         Icon(painterResource(R.drawable.ic_schedule), sending, Modifier.size(14.dp), tint = colors.textTertiary)
@@ -172,9 +173,7 @@ private fun TimeOrMark(time: String?, waiting: WaitingLine?, onNotKept: () -> Un
 
 /** The red ! of a line not sent: its menu, headed 送れなかったメッセージ, sends it again or deletes it. */
 @Composable
-private fun NotSentMark(line: WaitingLine, onNotKept: () -> Unit) {
-  val chats = LocalChats.current
-  val scope = rememberCoroutineScope()
+private fun NotSentMark(items: List<LineMenuItem>) {
   var open by remember { mutableStateOf(false) }
   val colors = LocalThemeColors.current
   Box {
@@ -191,20 +190,16 @@ private fun NotSentMark(line: WaitingLine, onNotKept: () -> Unit) {
         style = MaterialTheme.typography.labelMedium,
         color = colors.textSecondary,
       )
-      DropdownMenuItem(
-        text = { Text(stringResource(R.string.chat_send_again)) },
-        onClick = {
-          open = false
-          scope.launch { keeping(onNotKept) { chats.sendAgain(line.opId) } }
-        },
-      )
-      DropdownMenuItem(
-        text = { Text(stringResource(R.string.chat_delete), color = colors.dangerDefault) },
-        onClick = {
-          open = false
-          scope.launch { keeping(onNotKept) { chats.takeBack(line.opId) } }
-        },
-      )
+      // The same items as the line's long press, one list for both.
+      for (item in items) {
+        DropdownMenuItem(
+          text = { Text(item.label, color = if (item.destructive) colors.dangerDefault else Color.Unspecified) },
+          onClick = {
+            open = false
+            item.run()
+          },
+        )
+      }
     }
   }
 }
