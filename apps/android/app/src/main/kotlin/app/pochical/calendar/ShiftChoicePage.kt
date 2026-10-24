@@ -29,6 +29,7 @@ import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.ShiftMark
 import app.pochical.design.PATTERNS_PER_PAGE
+import app.pochical.kit.hoursText
 import java.time.LocalDate
 
 /**

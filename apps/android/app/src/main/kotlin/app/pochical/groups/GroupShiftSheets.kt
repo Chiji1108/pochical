@@ -39,13 +39,13 @@ import app.pochical.R
 import app.pochical.calendar.Pattern
 import app.pochical.calendar.fullText
 import app.pochical.calendar.holidayName
-import app.pochical.calendar.hoursText
 import app.pochical.calendar.pattern
 import app.pochical.design.PochicalTextStyles
 import app.pochical.design.Radius
 import app.pochical.kit.GroupMember
 import app.pochical.kit.PhotoShelf
 import app.pochical.kit.Together
+import app.pochical.kit.hoursText
 import java.time.LocalDate
 
 /**

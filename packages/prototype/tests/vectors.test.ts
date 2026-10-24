@@ -19,6 +19,7 @@ import ownDays from "../../../spec/vectors/own-days.json";
 import patternChanges from "../../../spec/vectors/patterns.json";
 import periods from "../../../spec/vectors/periods.json";
 import reconnect from "../../../spec/vectors/reconnect.json";
+import reminders from "../../../spec/vectors/reminders.json";
 import repeat from "../../../spec/vectors/repeat.json";
 import review from "../../../spec/vectors/review.json";
 import stylePreview from "../../../spec/vectors/style-preview.json";
@@ -140,6 +141,14 @@ import type {
   PatternBook,
   PresetShift,
 } from "../src/lib/design-patterns";
+import {
+  clockText,
+  firings as reminderFirings,
+  notificationText,
+  remindable,
+  reminderName,
+} from "../src/lib/design-reminders";
+import type { Reminder } from "../src/lib/design-reminders";
 import {
   columnHours,
   widgetEntry,
@@ -376,6 +385,79 @@ describe("spec/vectors/time-change.json", () => {
       const time = day.time as [string, string] | null;
       const pattern = patternOf(time ? { time } : {});
       expect(timeChangeOf(entry, pattern) ?? null).toEqual(day.expected);
+    });
+  }
+});
+
+describe("spec/vectors/reminders.json", () => {
+  type VectorReminder = (typeof reminders.firings)[number]["reminder"];
+  const reminderOf = (written: VectorReminder): Reminder =>
+    "time" in written
+      ? {
+          id: "r",
+          kind: "dayBefore",
+          on: true,
+          skip: written.skip,
+          time: written.time,
+        }
+      : {
+          id: "r",
+          kind: "beforeStart",
+          minutes: written.minutes,
+          on: true,
+          skip: written.skip,
+        };
+  const patterns = reminders.patterns.map(({ id, name, time }) =>
+    patternOf(
+      time ? { id, name, time: [time[0] ?? "", time[1] ?? ""] } : { id, name }
+    )
+  );
+  const book: PatternBook = Object.fromEntries(
+    patterns.map((pattern) => [pattern.id, pattern])
+  );
+  for (const {
+    name,
+    reminder: written,
+    days,
+    from,
+    through,
+    expected,
+  } of reminders.firings) {
+    test(name, () => {
+      const reminder = reminderOf(written);
+      const schedule: Schedule = days;
+      const sent = reminderFirings(
+        reminder,
+        schedule,
+        book,
+        dayOf(from),
+        dayOf(through)
+      ).map(({ date, entry, pattern, when }) => ({
+        day: dateKey(when),
+        shiftDay: dateKey(date),
+        time: clockText(when).padStart(5, "0"),
+        ...notificationText(reminder, { entry, pattern }),
+      }));
+      expect(sent).toEqual(
+        expected.map((firing) => ({
+          ...firing,
+          body: firing.body ?? undefined,
+        }))
+      );
+    });
+  }
+  for (const { name, reminder: written, expected } of reminders.names) {
+    test(`name: ${name}`, () => {
+      expect(reminderName(reminderOf(written))).toBe(expected);
+    });
+  }
+  for (const { name, reminder: written, expected } of reminders.remindable) {
+    test(`remindable: ${name}`, () => {
+      expect(
+        remindable(reminderOf(written).kind, patterns).map(
+          (pattern) => pattern.id
+        )
+      ).toEqual(expected);
     });
   }
 });

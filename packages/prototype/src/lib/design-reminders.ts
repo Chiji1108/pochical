@@ -116,33 +116,57 @@ function firingFor(
     return at(addDays(date, -1), reminder.time);
   }
   const start = entry.start ?? pattern.time?.[0];
-  if (!start) {
+  if (start === undefined) {
     return;
   }
-  const begins = at(date, start);
-  return new Date(begins.getTime() - reminder.minutes * 60_000);
+  // On the day's clock, as the apps count it, whatever the clocks do that
+  // night.
+  const { hours, minutes } = clockOf(start);
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    hours,
+    minutes - reminder.minutes
+  );
+}
+
+// What a reminder sends for the shifts from `from` through `through`, in
+// order, as the apps' Reminder.firings.
+export function firings(
+  reminder: Reminder,
+  schedule: Schedule,
+  book: PatternBook,
+  from: Date,
+  through: Date
+): Firing[] {
+  const sent: Firing[] = [];
+  for (let date = from; date <= through; date = addDays(date, 1)) {
+    const entry = schedule[dateKey(date)];
+    const pattern = entry && book[entry.shift];
+    const when = entry && pattern && firingFor(reminder, date, entry, pattern);
+    if (entry && pattern && when) {
+      sent.push({ date, entry, pattern, when });
+    }
+  }
+  return sent;
 }
 
 // The next notification a reminder sends from now, on the person's
-// schedule, if any day ahead has one.
+// schedule, if any day ahead has one: from today, since 開始前 of today's
+// shift may still be ahead.
 export function nextFiring(
   reminder: Reminder,
   schedule: Schedule,
   book: PatternBook
 ): Firing | undefined {
-  // From today, since 開始前 of today's shift may still be ahead.
-  for (let offset = 0; offset <= lookAhead; offset += 1) {
-    const date = addDays(designToday, offset);
-    const entry = schedule[dateKey(date)];
-    const pattern = entry && book[entry.shift];
-    if (!entry || !pattern) {
-      continue;
-    }
-    const when = firingFor(reminder, date, entry, pattern);
-    if (when && when >= designNow) {
-      return { date, entry, pattern, when };
-    }
-  }
+  return firings(
+    reminder,
+    schedule,
+    book,
+    designToday,
+    addDays(designToday, lookAhead)
+  ).find((firing) => firing.when >= designNow);
 }
 
 export function clockText(date: Date) {
