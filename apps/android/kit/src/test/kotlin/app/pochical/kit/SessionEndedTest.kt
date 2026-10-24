@@ -2,9 +2,11 @@ package app.pochical.kit
 
 import app.pochical.v1.DayField
 import app.pochical.v1.SignInProvider
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import okhttp3.OkHttpClient
@@ -47,14 +49,19 @@ class SessionEndedTest {
   }
 
   @Test
-  fun tryingAgainWhileTheServerStillDoesNotKnowTheSessionEndsItAgain() = runBlocking<Unit> {
+  fun tryingAgainWhileTheServerStillDoesNotKnowTheSessionStaysEnded() = runBlocking<Unit> {
     val phone = endedDevice()
     val refused = server.refusedSockets.get()
+    val asked = server.refusedGetMes.get()
+    val states = mutableListOf<AccountState>()
+    val watching = phone.scope.launch(start = CoroutineStart.UNDISPATCHED) { phone.account.state.collect { states += it } }
 
     phone.account.tryAgain()
+    watching.cancel()
 
-    eventually { server.refusedSockets.get() > refused }
-    withTimeout(10_000) { phone.account.state.first { it == AccountState.SessionEnded } }
+    assertEquals("the server asked first", asked + 1, server.refusedGetMes.get())
+    assertEquals("the app never shown", listOf(AccountState.SessionEnded), states.distinct())
+    assertEquals("no socket tried", refused, server.refusedSockets.get())
     assertEquals(StoredSession("token-1", "user-1", ended = true), phone.sessions.read())
     assertEquals("残す", phone.note("2026-10-04"))
     assertEquals("no new anonymous user", 1, server.signIns.get())

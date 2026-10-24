@@ -83,6 +83,9 @@ class FakeServer : AutoCloseable {
   /** How many of the user's sockets it refused with 401, their session unknown. */
   val refusedSockets = AtomicInteger()
 
+  /** How many `GetMe`s it refused with 401, their session unknown. */
+  val refusedGetMes = AtomicInteger()
+
   /** The user the provider's account is linked to, as from another phone, with its session; null for none. */
   @Volatile var inUse: Pair<String, String>? = null
 
@@ -148,7 +151,7 @@ class FakeServer : AutoCloseable {
                 .build()
             "/pochical.v1.UserService/GetMe" ->
               when (val user = userOf(request.headers["Authorization"])) {
-                null -> refused("unauthenticated")
+                null -> refused("unauthenticated").also { refusedGetMes.incrementAndGet() }
                 else ->
                   MockResponse.Builder()
                     .also { getMes += 1 }
