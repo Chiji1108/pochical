@@ -1,6 +1,5 @@
-import { expect, test } from "bun:test";
-
 import { tryUrl } from "@pochical/prototype/lib/try-url";
+import { expect, test } from "vitest";
 
 import { primaryAction } from "../src/lib/primary-action";
 

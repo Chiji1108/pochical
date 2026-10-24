@@ -11,8 +11,8 @@ import {
   inkBounds,
   paintedPixels,
   rgbOf,
-} from "../src/components/design-app-icon";
-import type { IconColors } from "../src/components/design-app-icon";
+} from "../src/lib/app-icon-paint";
+import type { IconColors } from "../src/lib/app-icon-paint";
 
 const SOURCE = new URL("../src/assets/poodle.png", import.meta.url).pathname;
 const CHANNELS = 3;

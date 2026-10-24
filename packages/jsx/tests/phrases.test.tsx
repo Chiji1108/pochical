@@ -1,7 +1,6 @@
-import { expect, test } from "bun:test";
-
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { expect, test } from "vitest";
 
 // The phrases every platform finds (spec/vectors); the iOS app's tests read
 // the same file.

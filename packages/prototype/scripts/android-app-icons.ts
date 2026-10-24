@@ -3,15 +3,12 @@
 // icon of the ground's color behind the drawing, with the drawing alone as
 // the mask Android 13's themed icons tint, and the 512-pixel icon Google
 // Play's store listing asks for beside the sources.
-// Run again after changing the drawing or the colors: bun run icon:android
+// Run again after changing the drawing or the colors: pnpm run icon:android
 import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
 
 import sharp from "sharp";
 
-import {
-  DRAWING_SHARE,
-  paintedPixels,
-} from "../src/components/design-app-icon";
+import { DRAWING_SHARE, paintedPixels } from "../src/lib/app-icon-paint";
 import { colorsOf, cutIcon, height, lightness, paint, width } from "./app-icon";
 
 const MAIN = new URL("../../../apps/android/app/src/main/", import.meta.url)
@@ -31,7 +28,7 @@ const NOTIFICATION_DP = 24;
 const NOTIFICATION_SHARE = 20 / 24;
 const PLAY_SIZE = 512;
 const GENERATED =
-  "<!-- Written by packages/prototype/scripts/android-app-icons.ts (bun run icon:android). -->";
+  "<!-- Written by packages/prototype/scripts/android-app-icons.ts (pnpm run icon:android). -->";
 
 const moss = colorsOf("moss");
 const foreground = paintedPixels(lightness, width, height, moss, true);

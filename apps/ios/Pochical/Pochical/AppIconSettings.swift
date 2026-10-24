@@ -4,7 +4,7 @@ import SwiftUI
 import UIKit
 
 /// The app's icons on the home screen, as /design's アプリアイコン has them
-/// (packages/prototype/src/components/design-app-icon.tsx, written out by `bun run
+/// (packages/prototype/src/lib/app-icon-paint.ts, written out by `pnpm run
 /// icon:ios`): each set in the asset catalog, モス the app's own, and each
 /// with its dark twin for a home screen set to dark icons.
 enum AppIconChoice: String, CaseIterable, Identifiable {

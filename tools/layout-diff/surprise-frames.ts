@@ -1,7 +1,7 @@
 // Records the calendar's おたのしみ as strips of frames, to look at it
 // without a visible browser (a hidden pane throttles animation frames).
 // Run with mise run design up:
-//   bun tools/layout-diff/surprise-frames.ts <light|dark> [taps] [out dir]
+//   pnpm exec tsx tools/layout-diff/surprise-frames.ts <light|dark> [taps] [out dir]
 // Each tap picks its look at random; each strip is the /demo phone at the
 // frames' times after one tap.
 import { mkdirSync } from "node:fs";

@@ -1,19 +1,20 @@
 {
   "name": "@pochical/web",
   "private": true,
+  "license": "PolyForm-Strict-1.0.0",
   "type": "module",
   "scripts": {
     "dev": "astro dev --port 3000",
     "build": "astro build",
     "preview": "astro preview --port 3000",
-    "deploy": "bun run build && wrangler deploy",
+    "deploy": "pnpm run build && wrangler deploy",
     "cf-typegen": "rm -f worker-configuration.d.ts && wrangler types",
     "sync": "astro sync",
-    "prepare": "bun run sync",
+    "prepare": "pnpm run sync",
     "typecheck": "astro check && tsc --noEmit && tsc --noEmit -p tsconfig.tools.json",
-    "test": "bun test",
-    "check": "bun run --cwd ../.. check",
-    "fix": "bun run --cwd ../.. fix"
+    "test": "vitest run",
+    "check": "pnpm --dir ../.. check",
+    "fix": "pnpm --dir ../.. fix"
   },
   "dependencies": {
     "@astrojs/cloudflare": "14.4.2",
@@ -35,10 +36,11 @@
   "devDependencies": {
     "@astrojs/check": "0.9.12",
     "@pandacss/dev": "^2.3.0",
-    "@types/node": "24.19.2",
+    "@types/node": "catalog:",
     "@types/react": "~19.3.0",
     "@types/react-dom": "^19.2.0",
     "typescript": "npm:@typescript/typescript6@~6.0.2",
+    "vitest": "catalog:",
     "wrangler": "^4.151.3"
   }
 }

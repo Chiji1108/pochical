@@ -1,11 +1,11 @@
 // Makes what apps/try needs to open from the home screen as an app of its own:
 // the icons, the manifest, and iOS's launch images in light and dark, all
 // from the site icon (@pochical/prototype's assets/icon.png).
-// Run again after changing the icon: bun run icon:app
+// Run again after changing the icon: pnpm run icon:app
 import { writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
-import { iconColorOptions } from "@pochical/prototype/components/design-app-icon";
+import { iconColorOptions } from "@pochical/prototype/lib/app-icon-paint";
 import { site } from "@pochical/prototype/lib/brand";
 import type { ImageAssets } from "@vite-pwa/assets-generator/api";
 import { generateAssets } from "@vite-pwa/assets-generator/api/generate-assets";
@@ -127,7 +127,7 @@ const splashLinks = Object.values(splash.appleSplashScreen).map((image) => {
 });
 await writeFile(
   SPLASH_LINKS,
-  `// Written by scripts/app-assets.ts (bun run icon:app); do not edit.
+  `// Written by scripts/app-assets.ts (pnpm run icon:app); do not edit.
 // iOS's launch images for apps/try, one per screen size, light and dark.
 export const appSplashScreens = ${JSON.stringify(splashLinks, null, 2)};
 `

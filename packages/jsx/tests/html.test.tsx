@@ -1,6 +1,5 @@
-import { expect, test } from "bun:test";
-
 import { renderToStaticMarkup } from "react-dom/server";
+import { expect, test } from "vitest";
 
 import { phraseHtml } from "../src/html";
 
