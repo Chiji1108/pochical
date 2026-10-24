@@ -1,6 +1,7 @@
 {
   "name": "@pochical/design-docs",
   "private": true,
+  "license": "PolyForm-Strict-1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite dev --port 3200 --strictPort",

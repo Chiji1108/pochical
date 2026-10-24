@@ -1,6 +1,7 @@
 {
   "name": "@pochical/web",
   "private": true,
+  "license": "PolyForm-Strict-1.0.0",
   "type": "module",
   "scripts": {
     "dev": "astro dev --port 3000",
