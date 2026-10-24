@@ -25,7 +25,7 @@ export const Route = createFileRoute("/_tool/_render/share-image")({
 });
 
 // The picture a link to the site shows where it is shared (og:image), which
-// bun run image:share takes from /_render/share-image into @pochical/prototype's assets/share.png:
+// pnpm run image:share takes from /_render/share-image into @pochical/prototype's assets/share.png:
 // the top page's hero in one frame, its words on the app's ポチカル sky and
 // the calendar's phone rising from the bottom edge. Under it, an invitation
 // link's picture for a sample group, which the site's Worker draws for each

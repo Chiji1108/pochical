@@ -6,11 +6,11 @@
   "scripts": {
     "dev": "react-router dev --port 3100 --strictPort",
     "build": "react-router build",
-    "deploy": "bun run build && wrangler deploy",
+    "deploy": "pnpm run build && wrangler deploy",
     "cf-typegen": "rm -f worker-configuration.d.ts && wrangler types --strict-vars=false -c wrangler.jsonc -c ../server/wrangler.jsonc",
     "typegen": "react-router typegen",
-    "prepare": "bun run typegen",
-    "typecheck": "bun run typegen && tsc --noEmit"
+    "prepare": "pnpm run typegen",
+    "typecheck": "pnpm run typegen && tsc --noEmit"
   },
   "dependencies": {
     "@pochical/design": "workspace:*",

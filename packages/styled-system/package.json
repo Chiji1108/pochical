@@ -13,7 +13,7 @@
   },
   "scripts": {
     "codegen": "panda codegen --clean",
-    "prepare": "bun run codegen",
+    "prepare": "pnpm run codegen",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

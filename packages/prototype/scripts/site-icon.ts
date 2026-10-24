@@ -2,12 +2,12 @@
 // app icon's モス colors, the way /design/assets paints the app icons, and
 // the small ones made from it: the home screen's (180) and the one an
 // invitation's share image and the save sheet draw (192).
-// Run again after changing the drawing: bun run icon:site
+// Run again after changing the drawing: pnpm run icon:site
 import { writeFile } from "node:fs/promises";
 
 import sharp from "sharp";
 
-import { ICON_SIZE } from "../src/components/design-app-icon";
+import { ICON_SIZE } from "../src/lib/app-icon-paint";
 import { colorsOf, paint } from "./app-icon";
 
 const ASSETS = new URL("../src/assets/", import.meta.url).pathname;

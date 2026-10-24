@@ -12,7 +12,8 @@ export default defineConfig({
   ignorePatterns,
   options: { typeAware: true },
   overrides: [
-    // The web's tests run on bun:test, so Vitest rules apply to the server only.
+    // Vitest rules apply to the server's tests only, until the others meet
+    // them (#881).
     ...(vitest.overrides ?? []).map((override) => ({
       ...override,
       files: ["apps/server/test/**/*.test.ts"],

@@ -3,7 +3,7 @@
 // unread ones to open on ここから新着, lines arriving while it is open, a
 // page of earlier ones.
 //
-//   bun tools/chat-try/index.ts <invite code> [count] [--every <ms>] [--rich]
+//   pnpm exec tsx tools/chat-try/index.ts <invite code> [count] [--every <ms>] [--rich]
 //
 // A new anonymous user joins with the invite code (the group's 招待 link
 // ends with it) and sends `count` lines (10 by default) to the group chat,
@@ -20,16 +20,17 @@
 // (POCHICAL_DEV_SERVER, http://localhost:8787 by default); the user it
 // made stays in the group, to be removed from the app.
 //
-//   bun tools/chat-try/index.ts <invite code> --photos <dir> [--album] [--face <jpeg>]
+//   pnpm exec tsx tools/chat-try/index.ts <invite code> --photos <dir> [--album] [--face <jpeg>]
 //
 // With `--react <emoji> --to <words>` it sends no lines: it puts that
 // reaction on the latest line of exactly those words instead, as another
 // member reacting while the chat is open.
 //
-//   bun tools/chat-try/index.ts <invite code> --react <emoji> --to <words> [--face <jpeg>]
+//   pnpm exec tsx tools/chat-try/index.ts <invite code> --react <emoji> --to <words> [--face <jpeg>]
 
-import { readdir } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
 
 import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
 import { chatRules } from "@pochical/design/chat";
@@ -87,7 +88,7 @@ const [code, countArg] = args.filter(
 const count = countArg === undefined ? DEFAULT_COUNT : Number(countArg);
 if (code === undefined || !Number.isInteger(count) || count < 1) {
   fail(
-    "bun tools/chat-try/index.ts <invite code> [count] [--every <ms>] [--rich] [--photos <dir> [--album]] [--face <jpeg>]"
+    "pnpm exec tsx tools/chat-try/index.ts <invite code> [count] [--every <ms>] [--rich] [--photos <dir> [--album]] [--face <jpeg>]"
   );
 }
 
@@ -215,7 +216,7 @@ const jpegSize = (bytes: Uint8Array): { height: number; width: number } => {
 type Jpeg = { bytes: Uint8Array<ArrayBuffer>; file: string };
 
 const readJpeg = async (file: string): Promise<Jpeg> => ({
-  bytes: await Bun.file(file).bytes(),
+  bytes: new Uint8Array(await readFile(file)),
   file,
 });
 
@@ -432,7 +433,7 @@ if (every > 0) {
   for (const sending of sendings) {
     send(socket, [sending]);
     // oxlint-disable-next-line no-await-in-loop -- one at a time, as a person sends them
-    await Bun.sleep(every);
+    await sleep(every);
   }
 } else {
   send(socket, sendings);

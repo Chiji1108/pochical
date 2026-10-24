@@ -1,11 +1,11 @@
 [tools]
-bun = "1.4.3"
 buf = "1.74.0"
 java = "temurin-21.0.12+101.0.LTS"
 
 [settings]
-# Node's version is in .node-version, which Workers Builds reads too.
-idiomatic_version_file_enable_tools = ["node"]
+# Node's version is in .node-version and pnpm's in package.json's
+# packageManager, both of which Workers Builds reads too.
+idiomatic_version_file_enable_tools = ["node", "pnpm"]
 
 [tasks.gen]
 description = "Generate the code made from proto/ and design/, and the Workers' types"
@@ -18,18 +18,18 @@ run = "buf generate"
 
 [tasks."gen:design"]
 description = "Write design/'s tokens out as JSON, Swift and Kotlin"
-run = "bun design/scripts/gen.ts"
+run = "pnpm exec tsx design/scripts/gen.ts"
 
 [tasks."design:check"]
 description = "Fail if the code generated from design/ is out of date"
-run = "bun design/scripts/gen.ts --check"
+run = "pnpm exec tsx design/scripts/gen.ts --check"
 
 [tasks."gen:worker-types"]
-description = "Write each Worker's worker-configuration.d.ts (every workspace's cf-typegen) from its wrangler.jsonc, with the wrangler in bun.lock"
+description = "Write each Worker's worker-configuration.d.ts (every workspace's cf-typegen) from its wrangler.jsonc, with the wrangler in pnpm-lock.yaml"
 # Each cf-typegen deletes the file first. Otherwise wrangler keeps the
 # runtime types already in it whenever its workerd header line matches,
 # and a file changed below that line would pass worker-types:check.
-run = "bun run --filter '*' cf-typegen"
+run = "pnpm -r cf-typegen"
 
 [tasks."worker-types:check"]
 description = "Fail if a Worker's worker-configuration.d.ts is not what gen:worker-types writes"
@@ -55,7 +55,10 @@ run = "buf breaking --against '../.git#branch=main,subdir=proto'"
 
 [tasks."sync:check"]
 description = "Fail if the Changes the apps read changed without raising their sync schema, iOS's Sync.schema and Android's SYNC_SCHEMA (--write records it once raised)"
-run = ["bun test tools/sync-schema", "bun tools/sync-schema/check.ts"]
+run = [
+  "pnpm exec vitest run tools/sync-schema",
+  "pnpm exec tsx tools/sync-schema/check.ts",
+]
 
 [tasks.server]
 description = "Run the Workers dev server: [--port <port>, 8787 by default] [more wrangler dev flags]"
@@ -63,31 +66,31 @@ usage = '''
 flag "--port <port>" default="8787"
 arg "[wrangler]..." help="passed on to wrangler dev" var=#true
 '''
-run = 'bun run --cwd apps/server dev --port {{usage.port}} --var BETTER_AUTH_URL:http://localhost:{{usage.port}} {% for a in usage.wrangler %}{{ a | quote }} {% endfor %}'
+run = 'pnpm --dir apps/server dev --port {{usage.port}} --var BETTER_AUTH_URL:http://localhost:{{usage.port}} {% for a in usage.wrangler %}{{ a | quote }} {% endfor %}'
 
 [tasks.admin]
 description = "Run the admin site's dev server, beside mise run server"
-run = "bun run --cwd apps/admin dev"
+run = "pnpm --dir apps/admin dev"
 
 [tasks.design]
 description = "Run the design documents' and /demo's dev server at http://localhost:3200"
-run = "bun run --cwd apps/design dev"
+run = "pnpm --dir apps/design dev"
 
 [tasks.try]
 description = "Run the app to try's dev server at http://localhost:3202"
-run = "bun run --cwd apps/try dev"
+run = "pnpm --dir apps/try dev"
 
 [tasks."db:generate"]
 description = "Generate a D1 migration from apps/server/src/db/schema.ts (pass --name <what>)"
-run = "bun run --cwd apps/server db:generate"
+run = "pnpm --dir apps/server db:generate"
 
 [tasks."group-do:generate"]
 description = "Generate a Group DO migration from apps/server/src/group-do-schema.ts (pass --name <what>)"
-run = "bun run --cwd apps/server group-do:generate"
+run = "pnpm --dir apps/server group-do:generate"
 
 [tasks."user-do:generate"]
 description = "Generate a User DO migration from apps/server/src/user-do-schema.ts (pass --name <what>)"
-run = "bun run --cwd apps/server user-do:generate"
+run = "pnpm --dir apps/server user-do:generate"
 
 [tasks."db:check"]
 description = "Fail if a Drizzle schema (D1, Group DO, User DO) has changes its migrations lack, or its migrations disagree"
@@ -100,12 +103,12 @@ set -eu
 folders="migrations src/group-do-migrations src/user-do-migrations"
 before=$(git status --porcelain -- $folders)
 for config in drizzle.config.ts drizzle.group-do.config.ts drizzle.user-do.config.ts; do
-  out=$(bunx drizzle-kit generate --config "$config" < /dev/null 2>&1)
+  out=$(pnpm exec drizzle-kit generate --config "$config" < /dev/null 2>&1)
   case "$out" in
     *"No schema changes, nothing to migrate"*) ;;
     *) printf '%s\n' "$out"; echo "$config: the schema has changes no migration holds; run its generate task (AGENTS.md)."; exit 1 ;;
   esac
-  bunx drizzle-kit check --config "$config" < /dev/null
+  pnpm exec drizzle-kit check --config "$config" < /dev/null
 done
 if [ "$(git status --porcelain -- $folders)" != "$before" ]; then
   git status --porcelain -- $folders
@@ -116,11 +119,11 @@ fi
 
 [tasks."auth:schema"]
 description = "Rewrite apps/server/src/db/auth-schema.ts from better-auth's options; then run db:generate"
-run = "bun run --cwd apps/server auth:schema"
+run = "pnpm --dir apps/server auth:schema"
 
 [tasks."server:test"]
 description = "Run server tests in the Workers runtime"
-run = "bun run --cwd apps/server test"
+run = "pnpm --dir apps/server test"
 
 [tasks."ios:test"]
 description = "Run the iOS packages' tests on this Mac, spec/vectors among them"
@@ -178,17 +181,17 @@ run = "tools/shifts-rotation/run.sh"
 
 [tasks."server:typecheck"]
 description = "Typecheck the server"
-run = "bun run --cwd apps/server typecheck"
+run = "pnpm --dir apps/server typecheck"
 
 [tasks."design:layout"]
 description = "Measure the design documents' pages, or compare them with a saved run: save <name> | check <name> (needs mise run design)"
-run = "bun tools/layout-diff/index.ts --pages design"
+run = "pnpm exec tsx tools/layout-diff/index.ts --pages design"
 
 [tasks."design:demo-layout"]
 description = "Measure /demo's screens and page, or compare them with a saved run: save <name> | check <name> (needs mise run design)"
-run = "bun tools/layout-diff/index.ts --pages demo"
+run = "pnpm exec tsx tools/layout-diff/index.ts --pages demo"
 
 [tasks."api:try"]
 description = "Try the server's groups and invitations by hand: create [name] [emoji] | join | preview | remake | cleanup [--local]"
-run = "bun tools/api-try/index.ts"
+run = "pnpm exec tsx tools/api-try/index.ts"
 
