@@ -29,6 +29,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -65,6 +66,8 @@ import app.pochical.kit.PhotoShelf
 class GroupsActions(
   /** グループを作る. */
   val onNew: () -> Unit,
+  /** QRコードで参加. */
+  val onScan: () -> Unit,
   /** The group's own buttons in the bar, over its page; none for a group not shown. */
   val groupActions: @Composable (GroupRow) -> Unit = {},
 )
@@ -129,6 +132,10 @@ private fun NoGroups(actions: GroupsActions) {
       Icon(painterResource(R.drawable.ic_add), contentDescription = null)
       Text(stringResource(R.string.new_group), Modifier.padding(start = 8.dp))
     }
+    OutlinedButton(onClick = actions.onScan, Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
+      Icon(painterResource(R.drawable.ic_qr_code_scanner), contentDescription = null)
+      Text(stringResource(R.string.scan), Modifier.padding(start = 8.dp))
+    }
   }
 }
 
@@ -179,6 +186,9 @@ private fun GroupRail(groups: List<GroupRow>, openId: String, onOpen: (String) -
     Box(Modifier.size(28.dp, 2.dp).background(colors.outlineVariant, CircleShape))
     IconButton(onClick = actions.onNew, Modifier.background(colors.surfaceContainerHigh, CircleShape)) {
       Icon(painterResource(R.drawable.ic_add), stringResource(R.string.new_group), tint = colors.secondary)
+    }
+    IconButton(onClick = actions.onScan, Modifier.background(colors.surfaceContainerHigh, CircleShape)) {
+      Icon(painterResource(R.drawable.ic_qr_code_scanner), stringResource(R.string.scan), tint = colors.secondary)
     }
   }
 }

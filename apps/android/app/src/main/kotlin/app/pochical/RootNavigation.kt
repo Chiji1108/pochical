@@ -66,6 +66,12 @@ sealed interface RootPage : RootRoute, NavKey {
 
   /** このグループでのあなた, from its settings. */
   @Serializable data class GroupProfile(val groupId: String) : RootPage
+
+  /** QRコードで参加, from グループ. */
+  @Serializable data object Scan : RootPage
+
+  /** 参加の画面 for the invitation `code`, from its link or its QR code. */
+  @Serializable data class Join(val code: String) : RootPage
 }
 
 /**

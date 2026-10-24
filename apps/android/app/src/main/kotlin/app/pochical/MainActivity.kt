@@ -18,6 +18,8 @@ import androidx.lifecycle.repeatOnLifecycle
 import app.pochical.calendar.LocalOwnDays
 import app.pochical.calendar.OwnDays
 import app.pochical.groups.LocalGroupCalls
+import app.pochical.groups.LocalOpenedInvites
+import app.pochical.groups.OpenedInvites
 import app.pochical.groups.LocalValues
 import app.pochical.kit.PochicalKit
 import dev.zacsweers.metro.AppScope
@@ -40,12 +42,16 @@ class MainActivity(
   private var settings by mutableStateOf<DeviceSettings?>(null)
   private val appleSignIn = AppleSignIn(this, kit.appleSignIn)
   private var calendarRead by mutableStateOf(false)
+  private val invites = OpenedInvites()
 
   override fun onCreate(savedInstanceState: Bundle?) {
     // The splash stays until the first frame can be drawn in the person's テーマ, with their days.
     installSplashScreen().setKeepOnScreenCondition { settings == null || !calendarRead }
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
+    // Made again, the activity's navigation keeps the join screen the first intent opened.
+    if (savedInstanceState == null) invites.take(intent)
+    addOnNewIntentListener(invites::take)
     lifecycleScope.launch {
       // Not cancelled with the activity, so a sample is never left half put in; read after it, so
       // the first calendar drawn holds it.
@@ -72,6 +78,7 @@ class MainActivity(
         LocalAppleSignIn provides appleSignIn,
         LocalGroupCalls provides kit.groups,
         LocalValues provides kit.database.values(),
+        LocalOpenedInvites provides invites,
       ) {
         PochicalTheme(device) { AccountRoot() }
       }
