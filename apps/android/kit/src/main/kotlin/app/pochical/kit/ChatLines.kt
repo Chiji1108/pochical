@@ -259,10 +259,12 @@ fun unreadCount(lines: List<Pair<Long, LineWriter>>, read: Long): Int =
 
 /**
  * A poll's votes with [userId] coming on [day] ([on]) or taking it back: the member goes last among
- * who can come that day, and the days stay in the poll's [order], one nobody can come on left out
+ * who can come that day, a vote they have already changes nothing, and the days stay in the poll's [order], one nobody can come on left out
  * (spec/vectors/chat.json, votes).
  */
 fun voting(votes: List<ChatVotes>, day: String, userId: String, on: Boolean, order: List<String>): List<ChatVotes> {
+  // A vote the member has already, or one they do not have taken back, changes nothing.
+  if (votes.any { it.day == day && userId in it.userIdsList } == on) return votes
   val byDay = votes.associate { it.day to it.userIdsList }.toMutableMap()
   byDay[day] = byDay[day].orEmpty() - userId + listOfNotNull(userId.takeIf { on })
   return order.mapNotNull { d -> byDay[d]?.takeIf { it.isNotEmpty() }?.let { users -> chatVotes { this.day = d; userIds += users } } }
