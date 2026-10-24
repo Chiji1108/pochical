@@ -126,9 +126,16 @@ private val SCREEN_EDGE = 16.dp
  * day opened from it under its week, and ポチポチ入力 under the month
  * (spec/calendar.md, The month, A day's detail and ポチポチ入力).
  * `hidesTabBar` says when a day or the tray takes the tab bar's place.
+ * `opening` is a day a link asks to open, as a tap on it does (spec/widgets.md,
+ * Opening the app), taken with `onOpening`.
  */
 @Composable
-fun CalendarScreen(open: (RootPage) -> Unit, hidesTabBar: (Boolean) -> Unit) {
+fun CalendarScreen(
+  open: (RootPage) -> Unit,
+  hidesTabBar: (Boolean) -> Unit,
+  opening: LocalDate? = null,
+  onOpening: () -> Unit = {},
+) {
   val days = LocalOwnDays.current
   val calendar by days.calendar.collectAsStateWithLifecycle()
   val week = LocalDeviceSettings.current.device.week
@@ -239,6 +246,15 @@ fun CalendarScreen(open: (RootPage) -> Unit, hidesTabBar: (Boolean) -> Unit) {
     }
   }
   BackHandler(enabled = entering != null, onBack = ::finish)
+
+  // A day a link opens: on its month, opened as a tap opens it, or entered next while entering.
+  LaunchedEffect(opening) {
+    val day = opening ?: return@LaunchedEffect
+    onOpening()
+    if (day !in reachable) return@LaunchedEffect
+    if (entering == null) pager.scrollToPage(range.pageOf(YearMonth.from(day)))
+    selectDay(day)
+  }
 
   // A month swiped to while entering starts on its first blank day.
   LaunchedEffect(pager.settledPage, entering != null) {
