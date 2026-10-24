@@ -29,6 +29,13 @@ public struct GroupRow: Hashable, Sendable, Identifiable {
   }
 }
 
+/// The color a group's icon or letters start in (spec/sync-protocol.md,
+/// Groups): as a new pattern's (`nextColor`), counting only `groups`
+/// drawn in a color, as an emoji's or a photo's 0 is no color.
+public func nextGroupColor(_ groups: [GroupRow], slots: Int) -> Int {
+  nextColor(groups.compactMap(\.mark.paletteColor), slots: slots)
+}
+
 /// A group the person asks to make: its name, its mark and their name in
 /// it, under one request id the server makes it once for, so a retry after
 /// a lost answer gives back the same group (spec/sync-protocol.md, Groups).
@@ -75,6 +82,10 @@ public struct GroupMarkValue: Hashable, Sendable {
     self.color = color
     self.photoID = photoID
   }
+
+  /// The icon's or letters' color slot; none for an emoji or a photo,
+  /// which bring colors of their own.
+  public var paletteColor: Int? { icon.isEmpty && letter.isEmpty ? nil : color }
 
   init(_ wire: Pochical_V1_GroupMark) {
     self.init(

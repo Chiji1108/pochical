@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 
 @testable import PochicalKit
@@ -31,4 +32,18 @@ func anythingChangedIsANewRequest(_ changed: String, _ expected: NewGroupRequest
   let next = asking(expected.name, mark: expected.mark, as: expected.displayName, after: sent)
   #expect(next.id == "new", "\(changed)")
   #expect(next == expected)
+}
+
+private func group(_ mark: GroupMarkValue) -> GroupRow {
+  GroupRow(
+    id: UUID().uuidString, name: "", emoji: mark.emoji, joinedAtMs: 0, icon: mark.icon,
+    letter: mark.letter, color: mark.color, photoID: mark.photoID)
+}
+
+@Test func aGroupColorCountsOnlyGroupsDrawnInAColor() {
+  let groups = [
+    group(GroupMarkValue(emoji: "🏠")), group(GroupMarkValue(photoID: "photo")),
+    group(GroupMarkValue(icon: "house", color: 1)),
+  ]
+  #expect(nextGroupColor(groups, slots: 12) == 0)
 }

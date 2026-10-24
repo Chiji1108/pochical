@@ -212,6 +212,7 @@ private struct GroupEditPage: View {
   @Environment(\.groupCalls) private var groupCalls
   @Environment(\.dismiss) private var dismiss
   let group: GroupRow
+  @FetchAll private var groups: [GroupRow]
   @State private var name = ""
   @State private var mark = GroupMarkValue()
   @State private var saving = false
@@ -229,7 +230,10 @@ private struct GroupEditPage: View {
           LimitedTextField(placeholder: "例：家族", text: $name, limit: TextLimits.groupName)
         }
         PageLink {
-          GroupMarkPage(name: name, mark: $mark, shelf: .group(group.id))
+          GroupMarkPage(
+            name: name, mark: $mark,
+            freeColor: nextGroupColor(groups.filter { $0.id != group.id }, slots: colors.marks.count),
+            shelf: .group(group.id))
         } label: {
           LabeledContent("アイコン") {
             GroupMarkBadge(mark: mark, shelf: .group(group.id))

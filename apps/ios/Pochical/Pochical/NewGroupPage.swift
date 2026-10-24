@@ -39,7 +39,7 @@ struct NewGroupPage: View {
           LimitedTextField(placeholder: "例：家族", text: $name, limit: TextLimits.groupName)
         }
         PageLink {
-          GroupMarkPage(name: name, mark: $pickedMark[or: mark])
+          GroupMarkPage(name: name, mark: $pickedMark[or: mark], freeColor: freeColor)
         } label: {
           LabeledContent("アイコン") {
             GroupMarkBadge(mark: mark)
@@ -93,9 +93,12 @@ struct NewGroupPage: View {
   private var mark: GroupMarkValue {
     if let pickedMark { return pickedMark }
     if let sent, sent.name == trimmed(name) { return sent.mark }
-    return guessedMark(
-      for: name, color: nextColor(groups.map(\.color), slots: colors.marks.count))
+    return guessedMark(for: name, color: freeColor)
   }
+
+  /// The first color the user's groups do not use yet, for the guess and
+  /// for a mark picked from an emoji or a photo into an icon or letters.
+  private var freeColor: Int { nextGroupColor(groups, slots: colors.marks.count) }
 
   private func make() {
     let request = NewGroupRequest.asking(
