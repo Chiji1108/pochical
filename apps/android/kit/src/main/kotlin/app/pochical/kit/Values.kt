@@ -39,6 +39,9 @@ interface Values {
   /** The person's coworkers in their order; one the order does not name yet comes after, by name. */
   @Query("SELECT coworkers.* $COWORKERS_IN_ORDER") fun coworkers(): Flow<List<CoworkerRow>>
 
+  /** Each day's people that notes anyone: coworker ids separated by spaces. */
+  @Query("SELECT people FROM days WHERE people IS NOT NULL") fun dayPeople(): Flow<List<String>>
+
   /** The preferences the account holds, each its message's bytes by key. */
   @Query("SELECT * FROM preferences") fun preferences(): Flow<List<PreferenceRow>>
 

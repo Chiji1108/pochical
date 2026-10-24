@@ -109,6 +109,18 @@ class SyncedDays(private val database: AppDatabase, private val edits: OwnEdits,
     return coworker
   }
 
+  override fun renameCoworker(id: String, name: String) {
+    writes.trySend { edits.renameCoworker(id, name) }
+  }
+
+  override fun deleteCoworker(id: String) {
+    writes.trySend { edits.deleteCoworker(id) }
+  }
+
+  override fun orderCoworkers(ids: List<String>) {
+    writes.trySend { edits.orderCoworkers(ids) }
+  }
+
   private class Synced(private val own: KitCalendar, coworkers: List<CoworkerRow>) : OwnCalendar {
     override val patterns = own.patterns.map { it.pattern }
     override val coworkers = coworkers.map { Coworker(it.id, it.name) }

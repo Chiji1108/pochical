@@ -15,6 +15,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.pochical.kit.DeviceSettings
 import app.pochical.patterns.PatternsRow
+import app.pochical.people.CoworkersRow
 import app.pochical.repeat.RepeatRow
 
 /** 設定: each row's page pushed over the tabs. */
@@ -28,6 +29,7 @@ fun SettingsScreen(open: (RootPage) -> Unit) {
       item { SectionHeader(stringResource(R.string.settings_shifts)) }
       item { PatternsRow(open) }
       item { RepeatRow(open) }
+      item { CoworkersRow(open) }
       item { SectionHeader(stringResource(R.string.settings_display)) }
       item { StyleRow(open) }
       item {
