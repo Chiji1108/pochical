@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="chat_heading">チャット</string>
+  <string name="group_chat">全体チャット</string>
+  <string name="chat_members">%1$d人</string>
+  <string name="chat_connecting">接続中…</string>
+  <string name="chat_catching_up">更新中…</string>
+  <string name="chat_yesterday">昨日</string>
+  <string name="chat_unread_from">ここから新着</string>
+  <string name="chat_message">メッセージ</string>
+  <string name="chat_send">送信</string>
+  <string name="chat_to_latest">最新のメッセージへ</string>
+  <string name="chat_to_unread">ここから新着へ</string>
+  <string name="chat_unseen">%1$s、まだ見ていない新着%2$d件</string>
+  <string name="chat_sending">送信中</string>
+  <string name="chat_not_sent">送れませんでした</string>
+  <string name="chat_not_sent_menu">送れなかったメッセージ</string>
+  <string name="chat_send_again">もう一度送る</string>
+  <string name="chat_delete">削除</string>
+  <string name="chat_unsent_mine">メッセージの送信を取り消しました</string>
+  <string name="chat_unsent">%1$sがメッセージの送信を取り消しました</string>
+  <string name="chat_typing">%1$sが入力中</string>
+  <string name="chat_photos">📷 写真</string>
+  <string name="chat_photos_count">📷 写真%1$d枚</string>
+  <string name="chat_days">📅 %1$s</string>
+  <string name="chat_days_more">📅 %1$sほか</string>
+  <string name="chat_poll">📅 日にちの投票：%1$sほか</string>
+  <string name="chat_poll_decided">📅 %1$sに決定</string>
+  <string name="chat_none">メッセージはまだありません</string>
+  <string name="chat_me">自分</string>
+  <string name="chat_draft">下書き：</string>
+  <string name="chat_not_kept">保存できませんでした</string>
+  <string name="chat_not_kept_body">もう一度お試しください。続くときは、端末の空き容量を確かめてください。</string>
+  <string name="chat_notice_joined">%1$sがグループに参加しました</string>
+  <string name="chat_notice_left">%1$sがグループを抜けました</string>
+  <string name="chat_notice_removed">%1$sが%2$sをグループから外しました</string>
+  <string name="chat_notice_removed_by_pochical">%1$sがグループから外されました</string>
+  <string name="chat_notice_invite_remade">%1$sが招待リンクを作り直しました</string>
+  <string name="chat_notice_renamed">%1$sがグループ名を「%2$s」に変更しました</string>
+  <string name="chat_notice_mark">%1$sがグループのアイコンを変更しました</string>
+  <string name="chat_notice_renamed_and_mark">%1$sがグループ名を「%2$s」にして、アイコンを変更しました</string>
+  <string name="deleted_account">削除されたアカウント</string>
+</resources>
