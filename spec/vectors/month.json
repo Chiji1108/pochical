@@ -1,5 +1,5 @@
 {
-  "about": "The days a month's page shows (spec/calendar.md, The month). weeks: whole weeks covering `month` (\"YYYY-MM\"), each starting on `weekStart` (0 for Sunday through 6 for Saturday), the days of the months around it filling the first and last; `expected` gives the first day shown, the last, and how many weeks, four to six. The page keeps room for six whatever the count.",
+  "about": "The days a month's page shows (spec/calendar.md, The month). weeks: whole weeks covering `month` (\"YYYY-MM\"), each starting on `weekStart` (0 for Sunday through 6 for Saturday), the days of the months around it filling the first and last; `expected` gives the first day shown, the last, and how many weeks, four to six. The page keeps room for six whatever the count. summary: what 今月のお休み and 今月の内訳 count on a page from `first` through `last` (a month, or a シフトの期間's period): `shown` the days that show a shift by date, as the calendar shows them (the days around the page among them), and `patterns` the person's, in their order, archived ones too. `daysOff` counts the page's days whose pattern counts as off; `counts` gives each pattern with its days on the page, in the patterns' order; `unfilled` the page's days that show no shift (未入力).",
   "weeks": [
     {
       "name": "a month from a Thursday, weeks from Sunday",
@@ -42,6 +42,215 @@
       "month": "2028-02",
       "weekStart": 3,
       "expected": { "first": "2028-01-26", "last": "2028-02-29", "weeks": 5 }
+    }
+  ],
+  "summary": [
+    {
+      "name": "a month counts its own days, not those of the months around",
+      "first": "2026-10-01",
+      "last": "2026-10-31",
+      "patterns": [
+        {
+          "id": "day",
+          "countsAsOff": false
+        },
+        {
+          "id": "night",
+          "countsAsOff": false
+        },
+        {
+          "id": "off",
+          "countsAsOff": true
+        },
+        {
+          "id": "paid",
+          "countsAsOff": true,
+          "archived": true
+        }
+      ],
+      "shown": {
+        "2026-09-30": "off",
+        "2026-10-01": "day",
+        "2026-10-02": "night",
+        "2026-10-03": "off",
+        "2026-10-04": "off",
+        "2026-10-31": "day",
+        "2026-11-01": "off"
+      },
+      "expected": {
+        "daysOff": 2,
+        "counts": [
+          {
+            "id": "day",
+            "days": 2
+          },
+          {
+            "id": "night",
+            "days": 1
+          },
+          {
+            "id": "off",
+            "days": 2
+          },
+          {
+            "id": "paid",
+            "days": 0
+          }
+        ],
+        "unfilled": 26
+      }
+    },
+    {
+      "name": "every pattern that counts as off is a day off, an archived one too",
+      "first": "2026-11-01",
+      "last": "2026-11-30",
+      "patterns": [
+        {
+          "id": "day",
+          "countsAsOff": false
+        },
+        {
+          "id": "night",
+          "countsAsOff": false
+        },
+        {
+          "id": "off",
+          "countsAsOff": true
+        },
+        {
+          "id": "paid",
+          "countsAsOff": true,
+          "archived": true
+        }
+      ],
+      "shown": {
+        "2026-11-02": "paid",
+        "2026-11-03": "off",
+        "2026-11-04": "day"
+      },
+      "expected": {
+        "daysOff": 2,
+        "counts": [
+          {
+            "id": "day",
+            "days": 1
+          },
+          {
+            "id": "night",
+            "days": 0
+          },
+          {
+            "id": "off",
+            "days": 1
+          },
+          {
+            "id": "paid",
+            "days": 1
+          }
+        ],
+        "unfilled": 27
+      }
+    },
+    {
+      "name": "a period runs across the month's end",
+      "first": "2026-10-15",
+      "last": "2026-11-14",
+      "patterns": [
+        {
+          "id": "day",
+          "countsAsOff": false
+        },
+        {
+          "id": "night",
+          "countsAsOff": false
+        },
+        {
+          "id": "off",
+          "countsAsOff": true
+        },
+        {
+          "id": "paid",
+          "countsAsOff": true,
+          "archived": true
+        }
+      ],
+      "shown": {
+        "2026-10-14": "off",
+        "2026-10-15": "night",
+        "2026-10-31": "off",
+        "2026-11-01": "off",
+        "2026-11-14": "day",
+        "2026-11-15": "off"
+      },
+      "expected": {
+        "daysOff": 2,
+        "counts": [
+          {
+            "id": "day",
+            "days": 1
+          },
+          {
+            "id": "night",
+            "days": 1
+          },
+          {
+            "id": "off",
+            "days": 2
+          },
+          {
+            "id": "paid",
+            "days": 0
+          }
+        ],
+        "unfilled": 27
+      }
+    },
+    {
+      "name": "a month with nothing entered is all 未入力",
+      "first": "2027-02-01",
+      "last": "2027-02-28",
+      "patterns": [
+        {
+          "id": "day",
+          "countsAsOff": false
+        },
+        {
+          "id": "night",
+          "countsAsOff": false
+        },
+        {
+          "id": "off",
+          "countsAsOff": true
+        },
+        {
+          "id": "paid",
+          "countsAsOff": true,
+          "archived": true
+        }
+      ],
+      "shown": {},
+      "expected": {
+        "daysOff": 0,
+        "counts": [
+          {
+            "id": "day",
+            "days": 0
+          },
+          {
+            "id": "night",
+            "days": 0
+          },
+          {
+            "id": "off",
+            "days": 0
+          },
+          {
+            "id": "paid",
+            "days": 0
+          }
+        ],
+        "unfilled": 28
+      }
     }
   ]
 }

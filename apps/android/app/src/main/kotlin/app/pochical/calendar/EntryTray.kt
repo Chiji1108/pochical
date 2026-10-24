@@ -43,10 +43,10 @@ import androidx.compose.ui.unit.dp
 import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.ShiftMark
-import app.pochical.Week
 import app.pochical.design.Metrics
 import app.pochical.design.PATTERNS_PER_PAGE
 import app.pochical.design.Radius
+import app.pochical.kit.Week
 import java.time.LocalDate
 
 /**
@@ -199,17 +199,16 @@ private fun KeyGrid(patterns: List<Pattern>, columns: Int, rows: Int, tall: Bool
 fun TrayActionsRow(pages: PagerState, leading: @Composable () -> Unit, trailing: @Composable () -> Unit) {
   Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
     Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) { leading() }
-    if (pages.pageCount > 1) PageDots(pages)
+    if (pages.pageCount > 1) PageDots(pages, stringResource(R.string.entering_key_page, pages.currentPage + 1, pages.pageCount))
     Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) { trailing() }
   }
 }
 
-/** The pages of keys as dots, the one shown filled; read as which page of how many. */
+/** [pages] as dots, the one shown filled, read as [label] says. */
 @Composable
-private fun PageDots(pages: PagerState) {
+fun PageDots(pages: PagerState, label: String, modifier: Modifier = Modifier) {
   val colors = LocalThemeColors.current
-  val label = stringResource(R.string.entering_key_page, pages.currentPage + 1, pages.pageCount)
-  Row(Modifier.semantics(mergeDescendants = true) { contentDescription = label }, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+  Row(modifier.semantics(mergeDescendants = true) { contentDescription = label }, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
     repeat(pages.pageCount) { page ->
       Box(
         Modifier.size(7.dp)

@@ -31,8 +31,12 @@ val LocalDate.dayText: String
 val LocalDate.dayWeekdayText: String
   get() = "$dayText(${weekdayLetter(weekday)})"
 
+/** 11月, where the year goes without saying. */
+val YearMonth.monthText: String
+  get() = "${monthValue}月"
+
 /** 11月 in [thisMonth]'s year, 2027年1月 in another. */
-fun YearMonth.shortText(thisMonth: YearMonth): String = if (year == thisMonth.year) "${monthValue}月" else yearMonthText
+fun YearMonth.shortText(thisMonth: YearMonth): String = if (year == thisMonth.year) monthText else yearMonthText
 
 /** 2026年11月 */
 val YearMonth.yearMonthText: String

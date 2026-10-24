@@ -1,4 +1,4 @@
-package app.pochical
+package app.pochical.kit
 
 import androidx.datastore.core.DataStore
 import app.pochical.design.Theme

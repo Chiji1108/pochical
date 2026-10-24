@@ -1,7 +1,7 @@
 package app.pochical.groups
 
-import app.pochical.Look
-import app.pochical.MarkStyle
+import app.pochical.kit.Look
+import app.pochical.kit.MarkStyle
 import app.pochical.kit.GroupMember
 import app.pochical.kit.OwnCalendar
 import app.pochical.kit.OwnDay

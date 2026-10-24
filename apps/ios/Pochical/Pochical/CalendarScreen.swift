@@ -294,13 +294,13 @@ struct CalendarScreen: View {
     }
     .sheet(item: $breakingDown, id: \.self) { month in
       let page = period.page(month)
-      let days = pageDays(page, calendar)
+      let summary = calendar.summary(of: page)
       MonthBreakdownSheet(
         page: page, byPeriod: period.byPeriod,
-        counts: calendar.patterns.map { pattern in
-          (pattern, days.values.count { $0.shift == pattern.id })
+        counts: summary.counts.compactMap { count in
+          calendar.patternsByID[count.pattern].map { ($0, count.days) }
         },
-        unfilled: page.days.count - days.count)
+        unfilled: summary.unfilled)
     }
     .sheet(item: $picturing, id: \.self) { month in
       MonthPicturePage(
@@ -365,9 +365,7 @@ struct CalendarScreen: View {
 
   /// The days off on the page `month` names.
   private func daysOff(in month: Day, _ calendar: OwnCalendar) -> Int {
-    pageDays(period.page(month), calendar).values.count {
-      calendar.patternsByID[$0.shift]?.countsAsOff == true
-    }
+    calendar.summary(of: period.page(month)).daysOff
   }
 
   /// The page's days that show a shift.

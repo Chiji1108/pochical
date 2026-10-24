@@ -2,6 +2,7 @@ package app.pochical.calendar
 
 import androidx.compose.runtime.staticCompositionLocalOf
 import app.pochical.kit.PatternRefusal
+import app.pochical.kit.PageSummary
 import app.pochical.kit.RepeatOrder
 import kotlinx.serialization.Serializable
 import java.time.LocalDate
@@ -59,6 +60,9 @@ interface OwnCalendar {
 
   /** Every day from `from` through `through` that shows a shift. */
   fun shown(from: LocalDate, through: LocalDate): Map<LocalDate, DayEntry>
+
+  /** What 今月のお休み and 今月の内訳 count on the page from `first` through `last`. */
+  fun summary(first: LocalDate, last: LocalDate): PageSummary
 
   /** The day's memo, or none. */
   fun note(day: LocalDate): String?

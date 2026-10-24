@@ -52,6 +52,7 @@ import app.pochical.design.Metrics
 import app.pochical.design.PochicalTextStyles
 import app.pochical.design.Radius
 import app.pochical.kit.GroupMember
+import app.pochical.kit.OffLook
 import app.pochical.kit.PhotoShelf
 import java.time.LocalDate
 import java.time.YearMonth
@@ -119,8 +120,13 @@ fun GroupPersonView(
       if (month != thisMonth) OutlinedButton(onClick = { turnTo(thisMonth) }) { Text(stringResource(R.string.calendar_this_month)) }
     }
     WeekdayRow(settings.device.week, Modifier.padding(horizontal = 16.dp))
-    // Their marks in their own shape, the rest of the look the viewer's.
-    val theirs = remember(settings, person) { DeviceSettingsState(settings.device.copy(look = settings.device.look.drawing(person)), settings.change) }
+    // Their marks in their own shape, the rest of the look the viewer's; shift names and days off
+    // always shown, whatever the viewer's look, so no list of their patterns is needed.
+    val theirs =
+      remember(settings, person) {
+        val look = settings.device.look.drawing(person).withOptions { it.copy(names = true, off = OffLook.Highlight, offs = emptyMap()) }
+        DeviceSettingsState(settings.device.copy(look = look), settings.change)
+      }
     HorizontalPager(pages, Modifier.fillMaxWidth().height(DAY_FULL_HEIGHT * 6 + DAY_GAP * 5), verticalAlignment = Alignment.Top) { page ->
       val shown = thisMonth.plusMonths((page - PERSON_SPAN).toLong())
       val weeks = remember(shown, settings.device.week.start) { monthWeeks(shown, settings.device.week.start) }

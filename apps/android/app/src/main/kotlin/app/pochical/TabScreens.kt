@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import app.pochical.kit.DeviceSettings
 import app.pochical.patterns.PatternsRow
 import app.pochical.people.CoworkersRow
 import app.pochical.repeat.RepeatRow
@@ -30,6 +31,7 @@ fun SettingsScreen(open: (RootPage) -> Unit) {
       item { RepeatRow(open) }
       item { CoworkersRow(open) }
       item { SectionHeader(stringResource(R.string.settings_display)) }
+      item { StyleRow(open) }
       item {
         ListItem(
           headlineContent = { Text(stringResource(R.string.appearance)) },

@@ -34,6 +34,7 @@ import app.pochical.R
 import app.pochical.calendar.DAY_FULL_HEIGHT
 import app.pochical.calendar.DayCell
 import app.pochical.calendar.DayEntry
+import app.pochical.calendar.OffShown
 import app.pochical.calendar.DayLook
 import app.pochical.calendar.OwnCalendar
 import app.pochical.calendar.Pattern
@@ -213,6 +214,8 @@ private fun MonthOfOrder(
               isSelected = index == typing.cursor.toLong(),
               framesToday = false,
               faint = comesRound,
+              // The order is what is being looked at, so a day off left blank shows faint.
+              offShown = OffShown.Faint,
             ),
             height = cell,
             colorsHoliday = week.holiday,
