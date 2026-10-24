@@ -647,13 +647,19 @@ describe("an Android phone's notifications", () => {
     });
   });
 
+  // FCM's refusals as it words them: its FcmError's code, and for a field
+  // it found wrong a BadRequest naming it.
   it.each([
-    [404, "UNREGISTERED", "gone"],
-    [400, "INVALID_ARGUMENT", "gone"],
-    [500, "INTERNAL", "failed"],
+    [404, "UNREGISTERED", "", "gone"],
+    [403, "SENDER_ID_MISMATCH", "", "gone"],
+    [400, "INVALID_ARGUMENT", "message.token", "gone"],
+    // The message's own fault, not the token's.
+    [400, "INVALID_ARGUMENT", "message.data[0].value", "failed"],
+    [400, "INVALID_ARGUMENT", "", "failed"],
+    [500, "INTERNAL", "", "failed"],
   ] as const)(
-    "on %i %s, mark the token %s, dropping it only when it is no longer the app's",
-    async (status, errorCode, sent) => {
+    "on %i %s (%s), mark the token %s, dropping it only when it is no longer the app's",
+    async (status, errorCode, field, sent) => {
       const { groupId, guest, maker } = await pair();
       await registerFcm(guest);
       const { sends } = googleCalls(() =>
@@ -667,6 +673,14 @@ describe("an Android phone's notifications", () => {
                     "type.googleapis.com/google.firebase.fcm.v1.FcmError",
                   errorCode,
                 },
+                ...(field === ""
+                  ? []
+                  : [
+                      {
+                        "@type": "type.googleapis.com/google.rpc.BadRequest",
+                        fieldViolations: [{ description: "wrong", field }],
+                      },
+                    ]),
               ],
               status: errorCode,
             },
@@ -725,5 +739,74 @@ describe("an Android phone's notifications", () => {
       })
     );
     expect(statuses).toStrictEqual([400, 400, 400, 400]);
+  });
+});
+
+/** A group chat line's words, the second argument at `path` in the JSON. */
+const wordsIn = (json: string | undefined, ...path: string[]): string => {
+  let at: unknown = JSON.parse(json ?? "null");
+  for (const key of path) {
+    at =
+      typeof at === "object" && at !== null
+        ? Object.entries(at).find(([name]) => name === key)?.[1]
+        : undefined;
+  }
+  return Array.isArray(at) ? String(at[1]) : "";
+};
+
+const byteCount = (text: string): number =>
+  new TextEncoder().encode(text).length;
+
+// One character of 25 bytes.
+const FAMILY = "👨‍👩‍👧‍👦";
+
+/** How many whole FAMILY the words are, -1 when they are anything else. */
+const familiesIn = (words: string): number =>
+  words.replaceAll(FAMILY, "") === "" ? words.length / FAMILY.length : -1;
+
+describe("a notification's size", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("fits what APNs and FCM take, its words cut between characters", async () => {
+    const { groupId, guest, maker } = await pair();
+    const phone = await secondSession(guest, "apple-push-size");
+    await registerToken(TOKEN, guest);
+    await registerFcm(phone);
+    // What each service was sent: APNs' payload, FCM's data.
+    const sent: { apns?: string; fcm?: Record<string, string> } = {};
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const request = new Request(input, init);
+      if (request.url === "https://oauth2.googleapis.com/token") {
+        return Response.json({ access_token: "ya29.size", expires_in: 3599 });
+      }
+      if (request.url.startsWith("https://fcm.googleapis.com/")) {
+        sent.fcm = dataOf(await request.json());
+      } else {
+        sent.apns = await request.text();
+      }
+      return Response.json({});
+    });
+    // 200 characters, as many as a notification carries: 5000 bytes.
+    const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
+    say(mine.socket, "a", FAMILY.repeat(200));
+    await expect
+      .poll(() => sent.apns !== undefined && sent.fcm !== undefined)
+      .toBeTruthy();
+
+    const fcm = Object.entries(sent.fcm ?? {})
+      .flat()
+      .join("");
+    expect([byteCount(sent.apns ?? ""), byteCount(fcm)]).toStrictEqual([
+      expect.toSatisfy((size: number) => size <= 4096),
+      expect.toSatisfy((size: number) => size <= 4096),
+    ]);
+    // Cut no more than it must be, and between whole emoji.
+    const cuts = [
+      familiesIn(wordsIn(sent.apns, "aps", "alert", "loc-args")),
+      familiesIn(wordsIn(sent.fcm?.alert, "body", "args")),
+    ];
+    expect(cuts.every((count) => count > 100 && count < 200)).toBeTruthy();
   });
 });

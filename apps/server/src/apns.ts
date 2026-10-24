@@ -4,6 +4,7 @@
 // upgraded to by Cloudflare; `wrangler dev` cannot reach it, so a local
 // server sends nothing to iPhones.
 
+import { fitted } from "./alert-size";
 import { signJwt } from "./jwt";
 import type { Alert, Outcome, Push, Recipient, Withdrawal } from "./push";
 import type { Device } from "./push-tokens";
@@ -87,6 +88,12 @@ const payloadOf = (alert: Alert, { badge, recipientId }: Recipient): string =>
     ...(alert.line && { authorId: alert.line.authorId, seq: alert.line.seq }),
   });
 
+/** The APNs payload of `alert`, its words cut to the size APNs takes. */
+const fittedPayloadOf = (alert: Alert, recipient: Recipient): string => {
+  const payload = (each: Alert): string => payloadOf(each, recipient);
+  return payload(fitted(alert, payload));
+};
+
 /** The APNs payload of a withdrawal: woken in the background, nothing shown. */
 const withdrawalOf = (withdrawal: Withdrawal): string =>
   JSON.stringify({ aps: { "content-available": 1 }, withdraw: withdrawal });
@@ -144,7 +151,7 @@ export const attemptApns = async (
   const host = sandbox ? "api.sandbox.push.apple.com" : "api.push.apple.com";
   const response = await fetch(`https://${host}/3/device/${token}`, {
     body: alert
-      ? payloadOf(push.alert, push.recipient)
+      ? fittedPayloadOf(push.alert, push.recipient)
       : withdrawalOf(push.withdrawal),
     headers: {
       // A background push must go at the low priority, or APNs refuses it.

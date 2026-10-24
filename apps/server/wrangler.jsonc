@@ -69,8 +69,8 @@
   },
   // FCM_SERVICE_ACCOUNT is the JSON key of the Firebase project's service
   // account that sends to Android phones (src/fcm.ts), whole, as Google
-  // Cloud › IAM › Service Accounts › Keys gives it. Without it, nothing is
-  // sent to them.
+  // Cloud › IAM › Service Accounts › Keys gives it. Required, as each one
+  // here is: a deploy is refused until it is set (`wrangler secret put`).
   "secrets": {
     "required": [
       "APNS_KEY",

@@ -927,7 +927,7 @@ export class UserDO extends DurableObject<Env> {
 
   /**
    * Sends to each of the user's devices, those of their sessions now; a
-   * token APNs says is gone is dropped.
+   * token its push service says is gone is dropped.
    */
   private async toDevices(
     push: (device: Device, userId: string) => Promise<Sent>
