@@ -121,6 +121,11 @@
     align-items: center;
     font-size: 10px;
   }
+  .footer-top nav a {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+  }
   .footer-bottom {
     display: flex;
     gap: 20px;

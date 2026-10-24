@@ -1,6 +1,7 @@
 ---
 import { site } from "@pochical/prototype/lib/brand";
 
+import { sourceUrl } from "../lib/site";
 import Link from "./link.astro";
 import Page from "./page.astro";
 
@@ -99,7 +100,7 @@ const sections = isPrivacy ? privacySections : termsSections;
 >
   <div class="legal-content">
     <p class="updated">
-      最終更新日：{isPrivacy ? "2026年10月23日" : "2026年10月1日"}
+      最終更新日：{isPrivacy ? "2026年10月25日" : "2026年10月1日"}
     </p>
     {sections.map((section, index) => (
       <section>
@@ -110,6 +111,18 @@ const sections = isPrivacy ? privacySections : termsSections;
         <p>{section.text}</p>
       </section>
     ))}
+    {isPrivacy && (
+      <section>
+        <h2>ソースコードの公開</h2>
+        <p>
+          ポチカルのソースコードは
+          <a href={sourceUrl} rel="noopener noreferrer" target="_blank">
+            GitHub
+          </a>
+          で公開しています。データの扱いは、本ポリシーとあわせてコードでも確認できます。
+        </p>
+      </section>
+    )}
     <section>
       <h2>お問い合わせ窓口</h2>
       <p>
