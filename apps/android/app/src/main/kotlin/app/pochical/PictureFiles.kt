@@ -23,19 +23,25 @@ import kotlinx.coroutines.withContext
  * FileProvider; whether the sheet opened.
  */
 suspend fun sharePicture(context: Context, picture: Bitmap, stem: String, title: String): Boolean =
+  shareImage(context, stem, "png", "image/png", title) { picture.compress(Bitmap.CompressFormat.PNG, 100, it) }
+
+/** Shares a chat's photo, its [jpeg] as it came, through Android's share sheet; whether the sheet opened. */
+suspend fun sharePhoto(context: Context, jpeg: ByteArray): Boolean = shareImage(context, "photo", "jpg", "image/jpeg", null) { it.write(jpeg) }
+
+private suspend fun shareImage(context: Context, stem: String, extension: String, mimeType: String, title: String?, write: (java.io.OutputStream) -> Unit): Boolean =
   try {
     val file =
       withContext(Dispatchers.IO) {
         val shared = File(context.cacheDir, "shared").apply { mkdirs() }
         shared.listFiles { file -> file.name.startsWith("$stem-") }?.forEach(File::delete)
-        File(shared, "$stem-${UUID.randomUUID()}.png").also { file -> file.outputStream().use { picture.compress(Bitmap.CompressFormat.PNG, 100, it) } }
+        File(shared, "$stem-${UUID.randomUUID()}.$extension").also { file -> file.outputStream().use(write) }
       }
     val uri = FileProvider.getUriForFile(context, "${context.packageName}.photos", file)
     val send =
       Intent(Intent.ACTION_SEND)
-        .setType("image/png")
+        .setType(mimeType)
         .putExtra(Intent.EXTRA_STREAM, uri)
-        .putExtra(Intent.EXTRA_TITLE, title)
+        .apply { title?.let { putExtra(Intent.EXTRA_TITLE, it) } }
         .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     // The grant reaches the sheet, for its preview, and the app picked only through ClipData.
     send.clipData = ClipData.newRawUri(null, uri)

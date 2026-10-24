@@ -299,6 +299,10 @@ class Chats internal constructor(
     }
   }
 
+  /** A chat's photos on the device as they change, for those open large or listed to follow ([PhotoRun.follow]). */
+  fun photoLines(groupId: String, threadId: String): Flow<PhotoLines> =
+    observe("chatLines", "blocks", "groupCursors") { Timed(photoLines(groupId, threadId), null) }
+
   /** Keeps what is being written in a chat, or forgets it when it makes no draft (`keptDraft`). */
   suspend fun keepDraft(groupId: String, threadId: String, draft: KeptDraft) {
     database.write {

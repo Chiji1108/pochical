@@ -43,6 +43,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -88,7 +90,10 @@ import app.pochical.groups.rememberGroupDays
 import app.pochical.groups.rememberGroupMembers
 import app.pochical.groups.LocalValues
 import app.pochical.groups.rememberMeId
+import app.pochical.kit.ChatPhotoItem
 import app.pochical.kit.ChatSocket
+import app.pochical.kit.PhotoKey
+import app.pochical.kit.PhotoRun
 import app.pochical.kit.ChatState
 import app.pochical.kit.Chats
 import app.pochical.kit.GROUP_THREAD
@@ -157,7 +162,7 @@ val LocalChats = staticCompositionLocalOf<Chats> { error("No chats provided") }
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalCoroutinesApi::class)
 @Composable
-fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
+fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit, onPhotos: () -> Unit) {
   HoldSocket(groupId)
   val chats = LocalChats.current
   val account = LocalAccount.current
@@ -186,7 +191,7 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
       snapshotFlow { from to currentMe }.flatMapLatest { (from, me) -> chats.state(groupId, threadId, me, from) }
     }
       .collectAsState(null)
-  val chat = state ?: return ChatScaffold(groupId, threadId, members, groups, socket, onBack) {}
+  val chat = state ?: return ChatScaffold(groupId, threadId, members, groups, socket, onBack, onPhotos) {}
 
   // Others writing, shown for chatRules.typingShowMs unless said again; a blocked member's is not.
   val typers = rememberTypers(socket, threadId, me, blocked.map { it.userId }.toSet())
@@ -419,6 +424,8 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
     Unit
   }
   var unsending by remember { mutableStateOf<Unsending?>(null) }
+  // The chat's photos opened large over it.
+  var viewing by remember { mutableStateOf<OpenPhotos?>(null) }
   val actions = rememberLineActions(groupId, composer, nameOf, snackbar, onUnsend = { unsending = it }, onNotKept = { notKept = true }, onPin = pin, onDecide = { deciding = it })
   val handlers =
     MessageHandlers(
@@ -446,9 +453,14 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
       voters = { day, people -> listing = day to people },
       groupId = groupId,
       stopSending = { opId -> scope.launch { keeping({ notKept = true }) { chats.stopSending(opId) } } },
+      // Among the photos of the lines laid out, those the reader sees, the rest coming from the group.
+      openPhoto = { seq, index ->
+        val folded = if (threadId == GROUP_THREAD) blockedIds else emptySet()
+        viewing = OpenPhotos(PhotoRun.opened(chat.lines.flatMap { ChatPhotoItem.of(it, folded) }, PhotoKey(seq, index)))
+      },
     )
   Box {
-    ChatScaffold(groupId, threadId, members, groups, socket, onBack) {
+    ChatScaffold(groupId, threadId, members, groups, socket, onBack, onPhotos) {
       Column(Modifier.fillMaxSize().imePadding()) {
         Box(Modifier.weight(1f).fillMaxWidth()) {
           // What floats over the lines' top keeps its room there, so the first of them scrolls out from under it.
@@ -510,6 +522,7 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
       }
     }
     LineMenu(menu)
+    viewing?.let { open -> PhotoViewer(groupId, threadId, open, onClose = { viewing = null }) }
   }
   if (notKept) NotKeptDialog { notKept = false }
   picking?.let { seq ->
@@ -567,6 +580,8 @@ private fun ChatScaffold(
   groups: List<GroupRow>,
   socket: ChatSocket?,
   onBack: () -> Unit,
+  /** 写真 in its ⋯: the chat's photos alone. */
+  onPhotos: () -> Unit,
   content: @Composable () -> Unit,
 ) {
   val me = rememberMeId()
@@ -588,6 +603,23 @@ private fun ChatScaffold(
         },
         navigationIcon = {
           IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_back), stringResource(R.string.back)) }
+        },
+        actions = {
+          // ⋯, its menu Material's own from where it was opened (spec/chat.md, Photos: 写真).
+          var more by remember { mutableStateOf(false) }
+          Box {
+            IconButton(onClick = { more = true }) { Icon(painterResource(R.drawable.ic_more_vert), stringResource(R.string.chat_more)) }
+            DropdownMenu(more, onDismissRequest = { more = false }) {
+              DropdownMenuItem(
+                text = { Text(stringResource(R.string.chat_photos_title)) },
+                leadingIcon = { Icon(painterResource(R.drawable.ic_photo_library), contentDescription = null) },
+                onClick = {
+                  more = false
+                  onPhotos()
+                },
+              )
+            }
+          }
         },
       )
     },

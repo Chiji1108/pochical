@@ -23,6 +23,7 @@ import androidx.navigation3.ui.NavDisplay
 import app.pochical.calendar.CalendarScreen
 import app.pochical.calendar.ShiftChoicePage
 import app.pochical.chat.ChatPage
+import app.pochical.chat.ChatPhotosPage
 import app.pochical.groups.GroupButtons
 import app.pochical.groups.GroupEditPage
 import app.pochical.groups.GroupProfilePage
@@ -100,7 +101,12 @@ fun RootScreen(navigator: RootNavigator) {
         }
       is RootPage.GroupShifts ->
         NavEntry(route) { GroupShiftsPage(route.groupId, route.date?.let(LocalDate::parse), onBack = rememberPageNavigation(navigator)::back) }
-      is RootPage.Chat -> NavEntry(route) { ChatPage(route.groupId, route.threadId, onBack = rememberPageNavigation(navigator)::back) }
+      is RootPage.Chat ->
+        NavEntry(route) {
+          val navigation = rememberPageNavigation(navigator)
+          ChatPage(route.groupId, route.threadId, onBack = navigation::back, onPhotos = { navigation.open(RootPage.ChatPhotos(route.groupId, route.threadId)) })
+        }
+      is RootPage.ChatPhotos -> NavEntry(route) { ChatPhotosPage(route.groupId, route.threadId, onBack = rememberPageNavigation(navigator)::back) }
       is RootPage.GroupEdit ->NavEntry(route) { GroupEditPage(route.groupId, onBack = rememberPageNavigation(navigator)::back) }
       is RootPage.GroupProfile -> NavEntry(route) { GroupProfilePage(route.groupId, onBack = rememberPageNavigation(navigator)::back) }
       is RootPage.ShiftChoice ->

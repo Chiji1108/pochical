@@ -176,6 +176,8 @@ class MessageHandlers(
   val groupId: String,
   /** 送信をやめる: the member's line of photos [opId] stops going up, not sent. */
   val stopSending: (opId: String) -> Unit,
+  /** A line's photo, by its place in the line, opened large. */
+  val openPhoto: (seq: Long, index: Int) -> Unit,
 )
 
 /**
@@ -338,7 +340,7 @@ private fun PhotoBody(look: MessageLook, photos: LineContent.Photos, handlers: M
       handlers.groupId,
       waiting,
       onStop = waiting?.takeIf { live }?.let { { handlers.stopSending(it.opId) } },
-      onOpen = null,
+      onOpen = look.seq?.takeIf { live }?.let { seq -> { index -> handlers.openPhoto(seq, index) } },
     )
   }
   val quote = look.quote

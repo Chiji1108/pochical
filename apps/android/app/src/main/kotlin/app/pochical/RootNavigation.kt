@@ -83,6 +83,9 @@ sealed interface RootPage : RootRoute, NavKey {
   /** A chat of the group's, `threadId` its own (全体チャット) or a one-to-one chat, from its hub. */
   @Serializable data class Chat(val groupId: String, val threadId: String) : RootPage
 
+  /** 写真, the photos of a chat alone, from its ⋯. */
+  @Serializable data class ChatPhotos(val groupId: String, val threadId: String) : RootPage
+
   /** QRコードで参加, from グループ. */
   @Serializable data object Scan : RootPage
 
