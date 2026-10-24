@@ -731,7 +731,12 @@ export function ImagePreviewPage({
                         active={false}
                         date={date}
                         editing={false}
-                        entry={schedule[dateKey(date)]}
+                        // The days around hold nothing: the picture is of its own.
+                        entry={
+                          isInPeriod(date, days)
+                            ? schedule[dateKey(date)]
+                            : undefined
+                        }
                         key={dateKey(date)}
                         onPress={() => undefined}
                         outside={!isInPeriod(date, days)}

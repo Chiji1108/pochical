@@ -19,13 +19,15 @@ import kotlinx.coroutines.withContext
 
 /**
  * Shares [picture] through Android's share sheet titled [title], a file of its own each time in
- * the app's cache named from [stem], read through its FileProvider; whether the sheet opened.
+ * the app's cache named from [stem], the one shared before under it gone, read through its
+ * FileProvider; whether the sheet opened.
  */
 suspend fun sharePicture(context: Context, picture: Bitmap, stem: String, title: String): Boolean =
   try {
     val file =
       withContext(Dispatchers.IO) {
         val shared = File(context.cacheDir, "shared").apply { mkdirs() }
+        shared.listFiles { file -> file.name.startsWith("$stem-") }?.forEach(File::delete)
         File(shared, "$stem-${UUID.randomUUID()}.png").also { file -> file.outputStream().use { picture.compress(Bitmap.CompressFormat.PNG, 100, it) } }
       }
     val uri = FileProvider.getUriForFile(context, "${context.packageName}.photos", file)

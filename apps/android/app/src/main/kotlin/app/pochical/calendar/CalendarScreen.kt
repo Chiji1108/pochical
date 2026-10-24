@@ -294,7 +294,8 @@ fun CalendarScreen(open: (RootPage) -> Unit, hidesTabBar: (Boolean) -> Unit) {
       onThisMonth = { turnTo(YearMonth.from(today)) },
       onThisWeek = { openDay(today) },
       onDone = ::finish,
-      onSave = { open(RootPage.MonthPicture(range.monthAt(pager.settledPage).toString())) },
+      // The month the heading names, though the pages are still on their way to it.
+      onSave = { open(RootPage.MonthPicture(range.monthAt(pager.currentPage).toString())) },
     )
     WeekdayRow(week, Modifier.padding(horizontal = SCREEN_EDGE).padding(bottom = 12.dp))
     BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {

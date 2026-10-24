@@ -1,5 +1,6 @@
 package app.pochical
 
+import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -11,10 +12,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.requiredWidth
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -36,12 +38,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.asAndroidBitmap
-import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.colorResource
@@ -50,6 +52,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.pochical.calendar.DayCell
@@ -98,6 +101,20 @@ fun MonthPicturePage(month: YearMonth, onBack: () -> Unit) {
 
   SettingsPage(stringResource(R.string.picture), onBack) { padding ->
     Box(Modifier.padding(padding)) {
+      // The picture as it goes out, drawn apart from the page at one size on every phone, as iOS's
+      // 390 points at three times: recorded, never shown, so what is saved is the look as it is now
+      // however far the page has scrolled.
+      CompositionLocalProvider(LocalDensity provides Density(PICTURE_SCALE)) {
+        MonthPicture(
+          month,
+          calendar,
+          device,
+          dark,
+          Modifier.requiredWidth(PICTURE_WIDTH).wrapContentHeight(unbounded = true).clearAndSetSemantics {}.drawWithContent {
+            layer.record { this@drawWithContent.drawContent() }
+          },
+        )
+      }
       LazyColumn(Modifier.fillMaxWidth()) {
         item {
           Box(Modifier.padding(start = 16.dp, end = 16.dp, top = 22.dp)) {
@@ -109,10 +126,6 @@ fun MonthPicturePage(month: YearMonth, onBack: () -> Unit) {
               dark,
               Modifier.clip(shape)
                 .border(1.dp, LocalThemeColors.current.separator, shape)
-                .drawWithContent {
-                  layer.record { this@drawWithContent.drawContent() }
-                  drawLayer(layer)
-                }
                 .clearAndSetSemantics { contentDescription = resources.getString(R.string.picture_label, month.yearMonthText) },
             )
             SchemeSwitch(
@@ -164,14 +177,14 @@ fun MonthPicturePage(month: YearMonth, onBack: () -> Unit) {
         Modifier.align(Alignment.BottomCenter)
           .fillMaxWidth()
           .background(LocalThemeColors.current.backgroundBase)
-          .navigationBarsPadding()
           .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
       ) {
         OutlinedButton(
           onClick = {
             scope.launch {
-              if (!sharePicture(context, picture(layer), "month-$month", title)) say(R.string.picture_not_shared)
+              val shared = picture(layer)?.let { sharePicture(context, it, "month", title) } ?: false
+              if (!shared) say(R.string.picture_not_shared)
             }
           },
           modifier = Modifier.weight(1f).heightIn(min = Metrics.control),
@@ -183,7 +196,7 @@ fun MonthPicturePage(month: YearMonth, onBack: () -> Unit) {
         Button(
           onClick = {
             scope.launch {
-              if (savePicture(context, picture(layer), "pochical-$month.png")) {
+              if (picture(layer)?.let { savePicture(context, it, "pochical-$month.png") } == true) {
                 // Saved out of sight, in the phone's pictures: felt as well as said (spec/haptics.md).
                 haptics.performHapticFeedback(HapticFeedbackType.Confirm)
                 say(R.string.picture_saved)
@@ -204,8 +217,13 @@ fun MonthPicturePage(month: YearMonth, onBack: () -> Unit) {
   }
 }
 
-/** The picture as it is drawn now. */
-private suspend fun picture(layer: GraphicsLayer) = layer.toImageBitmap().asAndroidBitmap()
+/** The picture as it is drawn now; none before it was first drawn. */
+private suspend fun picture(layer: GraphicsLayer): Bitmap? =
+  if (layer.size.width == 0 || layer.size.height == 0) null else layer.toImageBitmap().asAndroidBitmap()
+
+/** The picture's width and scale, as iOS draws it: 390 points at three times, 1170 pixels across. */
+private val PICTURE_WIDTH = 390.dp
+private const val PICTURE_SCALE = 3f
 
 private fun changeOptions(settings: DeviceSettingsState, change: (MarkOptions) -> MarkOptions) =
   settings.change { it.copy(picture = it.picture.copy(options = change(it.picture.options))) }
