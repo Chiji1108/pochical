@@ -397,6 +397,8 @@ fun messageLook(
   me: String?,
   writers: Map<String, GroupMemberRow>,
   direct: Boolean,
+  /** The seqs of the chat's pinned lines. */
+  pins: Set<Long>,
   quoteOf: @Composable (Long) -> LineQuote,
   nameOf: (String) -> String,
 ): MessageLook? {
@@ -410,7 +412,7 @@ fun messageLook(
       val line = item.line
       if (line.content is LineContent.Notice || line.content == LineContent.Unsent || line.content == LineContent.Hidden) return null
       val own = line.authorId == me
-      val pinned = line.seq in LocalPins.current
+      val pinned = line.seq in pins
       val quote = line.replyTo?.let { quoteOf(it) }
       val replying = quote?.let { stringResource(R.string.chat_reply_to_said, it.writer.orEmpty(), it.words) }
       val words = lineWords(line.content, nameOf)

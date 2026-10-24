@@ -331,7 +331,8 @@ class ChatValuesTest {
     suspend fun pins() = database.read { chatState("g1", GROUP_THREAD, "me", from = 5, now = 0) }.pins.map { it.seq }
     // 1 is held for its pin, apart from the lines laid out.
     assertEquals(listOf(1L), pins())
-    chats.pin("g1", GROUP_THREAD, 6, on = true)
+    // Pinning says what it did, by the pins the device has as it writes.
+    assertEquals(PinStep(listOf(6L, 1L)), chats.pin("g1", GROUP_THREAD, 6, on = true))
     assertEquals(listOf(6L, 1L), pins())
     chats.pin("g1", GROUP_THREAD, 1, on = false)
     assertEquals(listOf(6L), pins())

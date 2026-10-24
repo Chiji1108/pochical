@@ -23,6 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,11 +55,13 @@ import app.pochical.kit.ChatLine
  * lines scrolling on under it: Material's surface where iOS draws glass.
  */
 @Composable
-fun PinBar(pins: List<ChatLine>, nameOf: (String) -> String, onJump: (Long) -> Unit, onUnpin: (Long) -> Unit, modifier: Modifier = Modifier) {
+fun PinBar(pins: List<ChatLine>, nameOf: (String) -> String, blocked: Set<String>, onJump: (Long) -> Unit, onUnpin: (Long) -> Unit, modifier: Modifier = Modifier) {
   val latest = pins.firstOrNull() ?: return
   val colors = LocalThemeColors.current
   val many = pins.size > 1
   var open by rememberSaveable { mutableStateOf(false) }
+  // Closed as the pins come down to one, so it never opens by itself as another comes.
+  LaunchedEffect(many) { if (!many) open = false }
   Surface(
     modifier.fillMaxWidth().padding(horizontal = Chat.pinMargin.dp).padding(top = Chat.pinMargin.dp),
     shape = RoundedCornerShape(Radius.xxl),
@@ -77,7 +80,7 @@ fun PinBar(pins: List<ChatLine>, nameOf: (String) -> String, onJump: (Long) -> U
                 fontWeight = FontWeight.SemiBold,
                 color = colors.accentDefault,
               )
-              PinWords(latest, nameOf)
+              PinWords(latest, nameOf, blocked)
             }
           }
         }
@@ -95,8 +98,11 @@ fun PinBar(pins: List<ChatLine>, nameOf: (String) -> String, onJump: (Long) -> U
           for (line in pins) {
             PinItem(line, Modifier.fillMaxWidth().padding(horizontal = 8.dp), onJump = { open = false; onJump(it) }, onUnpin) {
               Column {
-                Text(nameOf(line.authorId), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = colors.accentDefault)
-                PinWords(line, nameOf)
+                // A blocked member's line folded, as its quote is: neither who nor what.
+                if (line.authorId !in blocked) {
+                  Text(nameOf(line.authorId), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = colors.accentDefault)
+                }
+                PinWords(line, nameOf, blocked)
               }
             }
           }
@@ -112,10 +118,12 @@ fun PinBar(pins: List<ChatLine>, nameOf: (String) -> String, onJump: (Long) -> U
 private fun PinItem(line: ChatLine, modifier: Modifier, onJump: (Long) -> Unit, onUnpin: (Long) -> Unit, content: @Composable () -> Unit) {
   var menu by remember { mutableStateOf(false) }
   val hint = stringResource(R.string.chat_pin_hint)
+  val unpin = stringResource(R.string.chat_unpin)
   Box(modifier) {
     Box(
       Modifier.fillMaxWidth()
-        .combinedClickable(onClickLabel = hint, onLongClick = { menu = true }, onClick = { onJump(line.seq) })
+        // The long press named ピン留めを外す for a screen reader, which offers it as the item's action.
+        .combinedClickable(onClickLabel = hint, onLongClickLabel = unpin, onLongClick = { menu = true }, onClick = { onJump(line.seq) })
         .padding(8.dp)
     ) {
       content()
@@ -135,9 +143,9 @@ private fun PinItem(line: ChatLine, modifier: Modifier, onJump: (Long) -> Unit, 
 
 /** A pinned line's words on one line, its mentions as names. */
 @Composable
-private fun PinWords(line: ChatLine, nameOf: (String) -> String) {
+private fun PinWords(line: ChatLine, nameOf: (String) -> String, blocked: Set<String>) {
   Text(
-    lineWords(line.content, nameOf).replace('\n', ' '),
+    if (line.authorId in blocked) stringResource(R.string.chat_blocked_line) else lineWords(line.content, nameOf).replace('\n', ' '),
     style = MaterialTheme.typography.bodyMedium,
     color = LocalThemeColors.current.textPrimary,
     maxLines = 1,
