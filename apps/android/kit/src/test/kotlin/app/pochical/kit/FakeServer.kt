@@ -8,7 +8,11 @@ import app.pochical.v1.DayField
 import app.pochical.v1.ServerError
 import app.pochical.v1.ServerFrame
 import app.pochical.v1.SignInProvider
+import app.pochical.v1.DeleteAccountRequest
+import app.pochical.v1.deleteAccountResponse
 import app.pochical.v1.getMeResponse
+import app.pochical.v1.peekAccountResponse
+import app.pochical.v1.takeAccountResponse
 import app.pochical.v1.acked
 import app.pochical.v1.change
 import app.pochical.v1.changes
@@ -33,10 +37,12 @@ import okio.ByteString
 import okio.ByteString.Companion.toByteString
 
 /**
- * The server as far as the kit's sync sees it, on a local port: better-auth's anonymous sign-in and
- * one user's User DO, which keeps each value's latest change at a cursor of its own, catches a
+ * The server as far as the kit's sync sees it, on a local port: better-auth's anonymous sign-in, and
+ * each user's User DO, which keeps each value's latest change at a cursor of its own, catches a
  * socket up from its Hello, answers Ping with Pong, applies each edit only when its clock is newer
- * and sends what changed to every socket before the sender's Acked (spec/sync-protocol.md).
+ * and sends what changed to every socket of that user before the sender's Acked
+ * (spec/sync-protocol.md). Besides the anonymous user it signs in, a provider's account may be
+ * another user's ([inUse]), to switch to or take.
  */
 class FakeServer : AutoCloseable {
   private val server = MockWebServer()
@@ -44,8 +50,8 @@ class FakeServer : AutoCloseable {
     get() = server.url("/")
 
   /** The token the sign-in hands out; sockets with another get 401. */
-  var token = "token-1"
-  val userId = "user-1"
+  @Volatile var token = "token-1"
+  @Volatile var userId = "user-1"
 
   /** How many anonymous sign-ins it answered. */
   val signIns = AtomicInteger()
@@ -71,9 +77,38 @@ class FakeServer : AutoCloseable {
   /** The frames each socket sent, in order, one list a socket. */
   val sockets = CopyOnWriteArrayList<MutableList<ClientFrame>>()
 
-  private val values = LinkedHashMap<String, Change>()
-  private var cursor = 0L
-  private val open = CopyOnWriteArrayList<WebSocket>()
+  /** The user the provider's account is linked to, as from another phone, with its session; null for none. */
+  @Volatile var inUse: Pair<String, String>? = null
+
+  /** What `PeekAccount` says the account in use holds. */
+  @Volatile var held = Holdings()
+
+  /** What `/sign-in/social` and `PeekAccount` answer: 200, or 403 for an account suspended. */
+  @Volatile var socialStatus = 200
+
+  /** How long `DeleteAccount` takes to answer, in milliseconds. */
+  @Volatile var deleteDelayMs = 0L
+
+  /** What `DeleteAccount` answers, as Connect's code, null for done. */
+  @Volatile var deleteRefusal: String? = null
+
+  /** Each UserService and better-auth call past the sign-in and GetMe, as its path and Authorization header. */
+  val calls = CopyOnWriteArrayList<Pair<String, String?>>()
+
+  /** The users `DeleteAccount` deleted, and the Apple code each was asked with. */
+  val deleted = CopyOnWriteArrayList<Pair<String, DeleteAccountRequest>>()
+
+  private val values = HashMap<String, LinkedHashMap<String, Change>>()
+  private val cursors = HashMap<String, Long>()
+  private val open = HashMap<String, CopyOnWriteArrayList<WebSocket>>()
+
+  /** The user whose session [authorization] is, as `Bearer <token>`, or null. */
+  private fun userOf(authorization: String?): String? =
+    when (authorization) {
+      "Bearer $token" -> userId
+      inUse?.let { "Bearer ${it.first}" } -> inUse?.second
+      else -> null
+    }
 
   init {
     server.dispatcher =
@@ -88,22 +123,78 @@ class FakeServer : AutoCloseable {
                 .body(signInBody ?: """{"token":"$token","user":{"id":"$userId","isAnonymous":true}}""")
                 .build()
             "/pochical.v1.UserService/GetMe" ->
-              if (request.headers["Authorization"] != "Bearer $token") {
-                MockResponse.Builder().code(401).body("""{"code":"unauthenticated"}""").build()
-              } else {
-                MockResponse.Builder()
-                  .headersDelay(getMeDelayMs, TimeUnit.MILLISECONDS)
-                  .addHeader("Content-Type", "application/proto")
-                  .body(Buffer().write(getMeResponse { userId = this@FakeServer.userId; provider = this@FakeServer.provider }.toByteArray()))
-                  .build()
+              when (val user = userOf(request.headers["Authorization"])) {
+                null -> refused("unauthenticated")
+                else ->
+                  MockResponse.Builder()
+                    .headersDelay(getMeDelayMs, TimeUnit.MILLISECONDS)
+                    .addHeader("Content-Type", "application/proto")
+                    .body(Buffer().write(getMeResponse { userId = user; provider = this@FakeServer.provider }.toByteArray()))
+                    .build()
               }
+            "/api/auth/sign-in/social" -> {
+              calls += request.url.encodedPath to request.headers["Authorization"]
+              val account = inUse
+              when {
+                socialStatus == 403 -> MockResponse.Builder().code(403).body("""{"code":"USER_SUSPENDED"}""").build()
+                account == null -> MockResponse.Builder().code(401).body("{}").build()
+                else ->
+                  MockResponse.Builder()
+                    .addHeader("set-auth-token", account.first)
+                    .body("""{"token":"${account.first}","user":{"id":"${account.second}"}}""")
+                    .build()
+              }
+            }
+            "/pochical.v1.UserService/PeekAccount" -> {
+              calls += request.url.encodedPath to request.headers["Authorization"]
+              when {
+                userOf(request.headers["Authorization"]) == null -> refused("unauthenticated")
+                socialStatus == 403 -> refused("permission_denied")
+                else ->
+                  proto(
+                    peekAccountResponse {
+                      shiftDays = held.shiftDays
+                      repeating = held.repeating
+                      coworkers = held.coworkers
+                      groups = held.groups
+                    }
+                  )
+              }
+            }
+            "/pochical.v1.UserService/TakeAccount" -> {
+              calls += request.url.encodedPath to request.headers["Authorization"]
+              when {
+                userOf(request.headers["Authorization"]) == null -> refused("unauthenticated")
+                else -> {
+                  inUse = null
+                  proto(takeAccountResponse {})
+                }
+              }
+            }
+            "/pochical.v1.UserService/DeleteAccount" -> {
+              val user = userOf(request.headers["Authorization"])
+              val refusal = deleteRefusal
+              calls += request.url.encodedPath to request.headers["Authorization"]
+              Thread.sleep(deleteDelayMs)
+              when {
+                user == null -> refused("unauthenticated")
+                refusal != null -> refused(refusal)
+                else -> {
+                  deleted += user to DeleteAccountRequest.parseFrom(request.body!!.toByteArray())
+                  if (user == userId) nextAnonymous() else inUse = null
+                  proto(deleteAccountResponse {})
+                }
+              }
+            }
             "/api/auth/link-social" -> {
               links += request.headers["Authorization"] to request.body!!.utf8()
               MockResponse.Builder().code(linkStatus).body("{}").build()
             }
             "/v1/me/socket" ->
-              if (request.headers["Authorization"] != "Bearer $token") MockResponse.Builder().code(401).build()
-              else MockResponse.Builder().webSocketUpgrade(Socket()).build()
+              when (val user = userOf(request.headers["Authorization"])) {
+                null -> MockResponse.Builder().code(401).build()
+                else -> MockResponse.Builder().webSocketUpgrade(Socket(user)).build()
+              }
             else -> MockResponse.Builder().code(404).build()
           }
       }
@@ -111,15 +202,15 @@ class FakeServer : AutoCloseable {
   }
 
   /**
-   * Notes on [dates] from another device, each sent on a frame of its own to every socket open, as
-   * that device's edits would come one by one.
+   * Notes on [dates] from another device of [user], each sent on a frame of its own to every socket
+   * of theirs open, as that device's edits would come one by one.
    */
   @Synchronized
-  fun noteElsewhere(dates: List<String>) {
+  fun noteElsewhere(dates: List<String>, user: String = userId) {
     for (date in dates) {
-      cursor += 1
+      val cursor = next(user)
       val taken = change {
-        cursor = this@FakeServer.cursor
+        this.cursor = cursor
         day = dayValue {
           this.date = date
           field = DayField.DAY_FIELD_NOTE
@@ -127,15 +218,38 @@ class FakeServer : AutoCloseable {
           hlc = hlc { physicalMs = System.currentTimeMillis(); deviceId = "other" }
         }
       }
-      values[taken.valueKey!!] = taken
-      for (each in open) each.send(serverFrame { changes = changes { changes += taken } })
+      valuesOf(user)[taken.valueKey!!] = taken
+      for (each in openOf(user)) each.send(serverFrame { changes = changes { changes += taken } })
     }
   }
 
-  /** The value the DO holds for the day's field, as it would send it. */
-  @Synchronized fun day(date: String, field: Int): Change? = values["day/$date/$field"]
+  /** The value [user]'s DO holds for the day's field, as it would send it. */
+  @Synchronized fun day(date: String, field: Int, user: String = userId): Change? = valuesOf(user)["day/$date/$field"]
 
-  private inner class Socket : WebSocketListener() {
+  /** The anonymous user deleted: its session is no one's, and the next anonymous sign-in is someone new. */
+  private fun nextAnonymous() {
+    val next = signIns.get() + 1
+    token = "token-$next"
+    userId = "user-$next"
+  }
+
+  private fun valuesOf(user: String) = values.getOrPut(user) { LinkedHashMap() }
+
+  private fun openOf(user: String) = open.getOrPut(user) { CopyOnWriteArrayList() }
+
+  private fun next(user: String): Long = ((cursors[user] ?: 0L) + 1).also { cursors[user] = it }
+
+  private fun refused(code: String) =
+    MockResponse.Builder()
+      .code(if (code == "unauthenticated") 401 else if (code == "permission_denied") 403 else 400)
+      .addHeader("Content-Type", "application/json")
+      .body("""{"code":"$code"}""")
+      .build()
+
+  private fun proto(message: com.google.protobuf.MessageLite) =
+    MockResponse.Builder().addHeader("Content-Type", "application/proto").body(Buffer().write(message.toByteArray())).build()
+
+  private inner class Socket(private val user: String) : WebSocketListener() {
     private val frames = mutableListOf<ClientFrame>().also { sockets += it }
 
     override fun onMessage(webSocket: WebSocket, text: String) {
@@ -145,25 +259,26 @@ class FakeServer : AutoCloseable {
     override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
       val frame = ClientFrame.parseFrom(bytes.toByteArray())
       synchronized(frames) { frames += frame }
-      synchronized(this@FakeServer) { take(frame, webSocket) }
+      synchronized(this@FakeServer) { take(user, frame, webSocket) }
     }
 
     override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
-      open -= webSocket
+      synchronized(this@FakeServer) { openOf(user) -= webSocket }
     }
 
     override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-      open -= webSocket
+      synchronized(this@FakeServer) { openOf(user) -= webSocket }
     }
   }
 
-  private fun take(frame: ClientFrame, socket: WebSocket) {
+  private fun take(user: String, frame: ClientFrame, socket: WebSocket) {
+    val values = valuesOf(user)
     when (frame.kindCase) {
       ClientFrame.KindCase.HELLO -> {
-        socket.send(serverFrame { welcome = welcome { cursor = this@FakeServer.cursor; serverMs = System.currentTimeMillis() } })
+        socket.send(serverFrame { welcome = welcome { cursor = cursors[user] ?: 0L; serverMs = System.currentTimeMillis() } })
         val after = values.values.filter { it.cursor > frame.hello.cursor }.sortedBy { it.cursor }
         if (after.isNotEmpty()) socket.send(serverFrame { changes = changes { changes += after } })
-        open += socket
+        openOf(user) += socket
       }
       ClientFrame.KindCase.PING -> socket.send(serverFrame { pong = pong { nonce = frame.ping.nonce } })
       ClientFrame.KindCase.DAY_EDITS -> {
@@ -178,13 +293,13 @@ class FakeServer : AutoCloseable {
           val key = change { day = edit.value }.valueKey!!
           val stored = values[key]
           if (stored == null || Clock.of(stored.day.hlc) < Clock.of(edit.value.hlc)) {
-            cursor += 1
-            val taken = change { cursor = this@FakeServer.cursor; day = edit.value }
+            val cursor = next(user)
+            val taken = change { this.cursor = cursor; day = edit.value }
             values[key] = taken
             changed += taken
           }
         }
-        if (changed.isNotEmpty()) for (each in open) each.send(serverFrame { changes = changes { changes += changed } })
+        if (changed.isNotEmpty()) for (each in openOf(user)) each.send(serverFrame { changes = changes { changes += changed } })
         socket.send(serverFrame { acked = acked { opIds += edits.map { it.opId } } })
       }
       else -> {}

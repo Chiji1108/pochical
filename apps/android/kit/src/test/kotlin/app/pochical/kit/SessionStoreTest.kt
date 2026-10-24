@@ -25,6 +25,11 @@ internal class MemoryBytes : KeptBytes {
     if (!reachable || !writable) throw StoreUnreachable(IllegalStateException("Play services unavailable"))
     this.bytes = bytes
   }
+
+  override suspend fun forget() {
+    if (!reachable || !writable) throw StoreUnreachable(IllegalStateException("Play services unavailable"))
+    bytes = null
+  }
 }
 
 class SessionStoreTest {

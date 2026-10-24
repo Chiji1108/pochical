@@ -24,6 +24,12 @@ data class StoredSession(
   val ended: Boolean = false,
   /** Null while the user is anonymous. */
   val linked: LinkedAccount? = null,
+  /**
+   * The session of the anonymous user a switch to an account's data left behind, kept until the
+   * server deletes that user (spec/sync-protocol.md, Switching to an account in use): kept with the
+   * session switched to, in the one write that switches.
+   */
+  val leftBehind: String? = null,
 )
 
 /** The store cannot be reached now, as without Google Play services: nothing in it is lost. */
@@ -36,6 +42,9 @@ interface KeptBytes {
 
   /** Keeps [bytes] in place of those before, or [StoreUnreachable]. */
   suspend fun write(bytes: ByteArray)
+
+  /** Keeps nothing from now on, or [StoreUnreachable]. */
+  suspend fun forget()
 }
 
 /**
@@ -62,6 +71,9 @@ class SessionStore(private val kept: KeptBytes) {
   suspend fun write(session: StoredSession) {
     kept.write(json.encodeToString(StoredSession.serializer(), session).encodeToByteArray())
   }
+
+  /** Keeps no session from now on, as after the account is deleted; [StoreUnreachable]. */
+  suspend fun forget() = kept.forget()
 }
 
 /**
@@ -84,8 +96,10 @@ class BlockStoreBytes(context: Context, private val key: String = "app.pochical.
     Unit
   }
 
-  /** Forgets the bytes, as a test starting afresh does. */
-  suspend fun delete() = reaching { client.deleteBytes(DeleteBytesRequest.Builder().setKeys(listOf(key)).build()).await() }
+  override suspend fun forget() = reaching {
+    client.deleteBytes(DeleteBytesRequest.Builder().setKeys(listOf(key)).build()).await()
+    Unit
+  }
 
   private suspend fun <T> reaching(body: suspend () -> T): T =
     try {

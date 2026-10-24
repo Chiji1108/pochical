@@ -15,7 +15,7 @@ class BlockStoreTest {
 
   @Test
   fun aSessionKeptIsReadBackByAnotherStoreAndReplaced() = runBlocking {
-    val bytes = BlockStoreBytes(context, "e2e-block-store").apply { delete() }
+    val bytes = BlockStoreBytes(context, "e2e-block-store").apply { forget() }
     assertNull(SessionStore(bytes).read())
 
     val linked = StoredSession("token", "user", linked = LinkedAccount(LinkedAccount.Provider.Google, "a@example.com"))
@@ -23,7 +23,7 @@ class BlockStoreTest {
     SessionStore(bytes).write(linked)
     assertEquals(linked, SessionStore(BlockStoreBytes(context, "e2e-block-store")).read())
 
-    bytes.delete()
+    bytes.forget()
     assertNull(SessionStore(bytes).read())
   }
 }
