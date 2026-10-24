@@ -60,6 +60,14 @@ export function weekdayLetterOf(day: number, english = false) {
   return (english ? englishWeekdayLetters : weekdayNames)[day] ?? "";
 }
 
+// A weekday over a column that does not start the week, as the hub's run
+// from today: 木, or THU in English.
+export function weekdayHeadOf(day: number, english = false) {
+  return english
+    ? (englishWeekdayNames[day] ?? "").toUpperCase()
+    : (weekdayNames[day] ?? "");
+}
+
 const SUNDAY = 0;
 const SATURDAY = 6;
 export const weekLength = 7;
