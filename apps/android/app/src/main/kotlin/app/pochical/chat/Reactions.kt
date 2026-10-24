@@ -144,7 +144,7 @@ private fun ReactionPill(
         Row(horizontalArrangement = Arrangement.spacedBy((-4).dp)) {
           for (id in faces) {
             val writer = writers[id]
-            MemberAvatar(writer?.shownName().orEmpty(), writer?.photoId.orEmpty(), writer?.let { PhotoShelf.Group(it.groupId) }, FACE_SIZE)
+            MemberAvatar(writer?.shownName().orEmpty(), writer?.photoId.orEmpty(), writer?.let { PhotoShelf.place(it.groupId) }, FACE_SIZE)
           }
         }
         if (count > 3) Text("+${count - 2}", style = MaterialTheme.typography.labelMedium, color = colors.textSecondary)
@@ -191,7 +191,7 @@ fun ChoosersSheet(reaction: LineReaction, writers: Map<String, GroupMemberRow>, 
     reaction.emoji,
     reaction.userIds.map { id ->
       val writer = writers[id]
-      SheetMember(id, nameOf(id), writer?.photoId.orEmpty(), writer?.let { PhotoShelf.Group(it.groupId) })
+      SheetMember(id, nameOf(id), writer?.photoId.orEmpty(), writer?.let { PhotoShelf.place(it.groupId) })
     },
     onDismiss,
   )

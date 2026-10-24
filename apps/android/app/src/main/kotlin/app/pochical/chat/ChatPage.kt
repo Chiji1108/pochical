@@ -88,6 +88,7 @@ import androidx.compose.foundation.clickable
 import app.pochical.kit.GroupMarkValue
 import app.pochical.kit.directThread
 import app.pochical.kit.folds
+import app.pochical.kit.placeRules
 import app.pochical.R
 import app.pochical.design.Chat
 import app.pochical.design.SyncSocket
@@ -204,8 +205,11 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit, open: (RootP
   val other = me?.let { otherIn(threadId, it) }
   // A tap on the title opens what the chat is of: the other member's profile, or the group's settings.
   val person = other?.let { id -> members.firstOrNull { it.userId == id } }
+  // The chat with Pochical's people, a chat of two with no profile to open (spec/chat.md, The chat with Pochical's people).
+  val support = groupId == Chat.supportPlace
   val onTitle: (() -> Unit)? =
     when {
+      support -> null
       other == null -> { { open(RootPage.GroupSettings(groupId)) } }
       person != null && !person.deleted -> { { reportAndBlock.profileOf = ProfileOf.of(person) } }
       else -> null
@@ -512,7 +516,8 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit, open: (RootP
         val items = photos.mapIndexed { at, photo -> ChatPhotoItem(PhotoKey(0, at), photo, me.orEmpty(), line.madeAtMs) }
         viewing = OpenPhotos(PhotoRun.opened(items, PhotoKey(0, index)), follows = false)
       },
-      openProfile = { writer -> reportAndBlock.profileOf = ProfileOf.of(writer) },
+      // Pochical's people open no profile: only a place that takes reports has them.
+      openProfile = { writer: GroupMemberRow -> reportAndBlock.profileOf = ProfileOf.of(writer) }.takeIf { placeRules(groupId).reports },
       folded = folded,
       showFolded = { seq -> shownBlocked = shownBlocked + seq },
     )
@@ -528,11 +533,12 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit, open: (RootP
             chat,
             me,
             writers,
-            threadId != GROUP_THREAD,
+            threadId != GROUP_THREAD || support,
             handlers,
             { lineQuote(it, chat.line(it), nameOf, blockedIds) },
             over.top,
-            Modifier.alpha(if (placed) 1f else 0f),
+            head = if (support) { { SupportHead() } } else null,
+            modifier = Modifier.alpha(if (placed) 1f else 0f),
           )
           // Drawn while there are pins, keeping its room over the lines only then.
           if (chat.pins.isNotEmpty()) {
@@ -625,7 +631,7 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit, open: (RootP
     }
   }
   unsending?.let { asked ->
-    UnsendDialog(asked, onDismiss = { unsending = null }) {
+    UnsendDialog(asked, support, onDismiss = { unsending = null }) {
       unsending = null
       scope.launch {
         keeping({ notKept = true }) {
@@ -659,7 +665,9 @@ private fun ChatScaffold(
 ) {
   val me = rememberMeId()
   val other = me?.let { otherIn(threadId, it) }?.let { id -> members.firstOrNull { it.userId == id } }
-  val title = other?.shownName() ?: groups.firstOrNull { it.id == groupId }?.name.orEmpty()
+  val support = groupId == Chat.supportPlace
+  // The other member's name, the group's, or the app's for Pochical's people.
+  val title = other?.shownName() ?: if (support) stringResource(R.string.app_name) else groups.firstOrNull { it.id == groupId }?.name.orEmpty()
   val count = members.count { !it.left }
   val status = rememberSocketWords(socket)
   Scaffold(
@@ -669,7 +677,7 @@ private fun ChatScaffold(
           val opens = stringResource(if (other != null) R.string.profile else R.string.group_settings)
           Column(if (onTitle != null) Modifier.clickable(onClickLabel = opens, onClick = onTitle) else Modifier) {
             Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            val under = status ?: if (threadId == GROUP_THREAD) stringResource(R.string.chat_members, count) else null
+            val under = status ?: if (threadId == GROUP_THREAD && !support) stringResource(R.string.chat_members, count) else null
             if (under != null) {
               Text(under, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -741,6 +749,8 @@ private fun ChatLines(
   handlers: MessageHandlers,
   quoteOf: @Composable (Long) -> LineQuote,
   topRoom: Dp,
+  /** What heads the chat, over its first line once the lines reach it; none for most chats. */
+  head: (@Composable () -> Unit)?,
   modifier: Modifier = Modifier,
 ) {
   val pinned = remember(chat.pins) { chat.pins.mapTo(HashSet()) { it.seq } }
@@ -754,6 +764,7 @@ private fun ChatLines(
       val look = messageLook(item, me, writers, direct, pinned, quoteOf, handlers.nameOf)
       ChatItemRow(item, look, writers, me, handlers, Modifier.animateItem())
     }
+    if (head != null && chat.atStart) item(key = "head") { head() }
     if (!chat.atStart && chat.heldBefore == 0) {
       item(key = "earlier") {
         Box(Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }

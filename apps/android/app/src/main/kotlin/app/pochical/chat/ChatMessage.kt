@@ -274,7 +274,12 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
         // A tap on the face opens their profile (spec/chat.md, The chat's page).
         val profile = handlers.openProfile?.takeIf { writer != null && !writer.deleted }
         Box(Modifier.size(FACE).clip(CircleShape).then(if (profile != null && writer != null) Modifier.clickable { profile(writer) } else Modifier).clearAndSetSemantics {}) {
-          if (writer != null) MemberAvatar(writer.shownName(), writer.photoId, PhotoShelf.Group(writer.groupId), FACE)
+          when {
+            writer == null -> {}
+            // Pochical's people answer under the app's icon.
+            writer.userId == Chat.pochicalMember -> AppIcon(FACE)
+            else -> MemberAvatar(writer.shownName(), writer.photoId, PhotoShelf.place(writer.groupId), FACE)
+          }
         }
         Spacer(Modifier.width(TAIL))
       } else {
