@@ -115,9 +115,14 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
   var restingOn by rememberSaveable { mutableStateOf<String?>(null) }
   var restingOffset by rememberSaveable { mutableIntStateOf(0) }
 
-  val fromFlow = remember { snapshotFlow { from } }
+  // One flow for the page, so the lines stay shown as the reader becomes known (signing in) or the
+  // first line laid out changes, rather than going blank until read again.
+  val currentMe by rememberUpdatedState(me)
   val state by
-    remember(chats, groupId, threadId, me) { fromFlow.flatMapLatest { chats.state(groupId, threadId, me, it) } }.collectAsState(null)
+    remember(chats, groupId, threadId) {
+      snapshotFlow { from to currentMe }.flatMapLatest { (from, me) -> chats.state(groupId, threadId, me, from) }
+    }
+      .collectAsState(null)
   val chat = state ?: return ChatScaffold(groupId, threadId, members, groups, socket, onBack) {}
 
   // Others writing, shown for chatRules.typingShowMs unless said again; a blocked member's is not.
