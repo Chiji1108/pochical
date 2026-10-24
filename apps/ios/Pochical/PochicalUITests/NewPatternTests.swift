@@ -16,8 +16,10 @@ final class NewPatternTests: XCTestCase {
 
     tapRow("シフトパターン")
     XCTAssertTrue(app.navigationBars["シフトパターン"].waitForExistence(timeout: 5))
-    _ = try make("日勤")
-    let second = try make("夜勤")
+    // Named anew each run, so one left by an earlier run is not reopened.
+    let run = String(Int.random(in: 1000...9999))
+    _ = try make("日勤" + run)
+    let second = try make("夜勤" + run)
     XCTAssertEqual(second.reopened, second.shown, "the pattern is kept as it was shown")
   }
 
