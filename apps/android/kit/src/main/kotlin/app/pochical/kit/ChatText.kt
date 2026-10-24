@@ -55,3 +55,38 @@ fun mentions(text: String): List<String> = textParts(text).mapNotNull { it.menti
 /** The message as words alone, each mention as @ and the member's name: for コピー, the chat list, a quote. */
 fun plainText(text: String, nameOf: (String) -> String): String =
   textParts(text).joinToString("") { part -> part.mention?.let { "@${nameOf(it)}" } ?: part.text }
+
+/** The link a message's preview is for: its first. */
+fun firstLink(text: String): String? = textParts(text).firstNotNullOfOrNull { it.url }
+
+/** Whether new words keep the line's page: while their first link is the line's (spec/vectors/chat.json, edited). */
+fun keepsPreview(text: String, editedTo: String): Boolean = firstLink(text) == firstLink(editedTo)
+
+/** The link a page is asked for while writing: the words' first, unless it is one of Pochical's invitations. */
+fun previewLink(text: String): String? = firstLink(text)?.takeIf { inviteCode(it) == null }
+
+/** A member picked from the composer's list of names, or still picked in words put back in it. */
+data class PickedMember(val id: String, val name: String)
+
+/**
+ * A message as sent: each member [picked] while writing, whose @name is still in it followed by a
+ * space or the end, kept as their mention. Only that counts: Japanese runs on without spaces, so
+ * @あや in @あやか is not あや (spec/vectors/chat-text.json, withMentions).
+ */
+fun withMentions(text: String, picked: List<PickedMember>): String =
+  picked.fold(text) { sent, member ->
+    val written = "@${member.name}"
+    buildString {
+      var at = 0
+      while (true) {
+        val found = sent.indexOf(written, at)
+        if (found < 0) break
+        val after = found + written.length
+        val whole = after == sent.length || sent[after].isWhitespace()
+        append(sent, at, found)
+        append(if (whole) "<@${member.id}>" else written)
+        at = after
+      }
+      append(sent, at, sent.length)
+    }
+  }

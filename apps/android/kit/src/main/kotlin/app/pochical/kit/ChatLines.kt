@@ -312,7 +312,12 @@ data class ChatState(
   val marks: Map<String, Long> = emptyMap(),
   /** How far the member's own read waiting in the outbox goes, 0 with none. */
   val ownRead: Long = 0,
+  /** The lines replies answer that are not among [lines], by seq, as the device holds them. */
+  val quoted: Map<Long, ChatLine> = emptyMap(),
 ) {
+  /** The line [seq] as the screen shows it, laid out or quoted; null while the device does not hold it. */
+  fun line(seq: Long): ChatLine? = quoted[seq] ?: lines.firstOrNull { it.seq == seq }
+
   /** How far [me] has read: their mark, or on to their read still waiting. */
   fun lastRead(me: String): Long = maxOf(marks[me] ?: 0, ownRead)
 

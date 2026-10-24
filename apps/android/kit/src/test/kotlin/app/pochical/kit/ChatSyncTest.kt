@@ -291,6 +291,22 @@ class ChatValuesTest {
   }
 
   @Test
+  fun aReplyChangeAndUnsendShowAtOnceAndAQuotedLineIsHeldBesideTheLines() = runTest {
+    val chats = Chats(database, now = { 0 })
+    database.write { takeChanges(listOf(wordsLine(1, "u2", "ここ https://a.example"), wordsLine(2, "me", "うん")), "g1") }
+    chats.send("g1", GROUP_THREAD, "行く", replyTo = 1)
+    chats.change("g1", GROUP_THREAD, 2, "うん、行く")
+    val shown = database.read { chatState("g1", GROUP_THREAD, "me", from = 2, now = 0) }
+    assertEquals(1L, shown.waiting.single().replyTo)
+    assertEquals(LineContent.Words("うん、行く", edited = true), shown.lines.single().content)
+    // The line answered is not laid out (from 2), and is held beside the lines.
+    assertEquals(LineContent.Words("ここ https://a.example"), shown.quoted[1L]?.content)
+
+    chats.unsend("g1", GROUP_THREAD, 2)
+    assertEquals(LineContent.Unsent, database.read { chatState("g1", GROUP_THREAD, "me", from = 2, now = 0) }.lines.single().content)
+  }
+
+  @Test
   fun theListHasTheChatsWithALineALineOnItsWayOrADraft() = runTest {
     val chats = Chats(database)
     database.write { takeChanges(listOf(wordsLine(1, "u2", thread = directThread("me", "u2"))), "g1") }
