@@ -48,6 +48,23 @@ class GroupDaysTest {
   }
 
   @Test
+  fun aMembersLegendListsShiftsByStartThenThoseWithoutHoursThenDaysOff() {
+    fun timed(id: String, start: String) = pattern(id, off = false).copy(start = start, end = "23:00")
+    val patterns = listOf(pattern("休み", off = true), pattern("研修", off = false), timed("夜勤", "17:00"), timed("日勤", "09:00"))
+    val member = GroupMember("a", "a", "", "", true, OwnCalendar(patterns, emptyMap(), emptyList()))
+
+    assertEquals(listOf("日勤", "夜勤", "研修", "休み"), legendPatterns(member).map { it.name })
+  }
+
+  @Test
+  fun aGroupOfUpToFourIsNamedUpToSevenMarkedAndBiggerScrollsSideways() {
+    assertEquals(
+      listOf(DayRowsDensity.Names, DayRowsDensity.Names, DayRowsDensity.Marks, DayRowsDensity.Marks, DayRowsDensity.Scroll),
+      listOf(1, 4, 5, 7, 8).map(DayRowsDensity::of),
+    )
+  }
+
+  @Test
   fun eachMembersMarksAreDrawnInTheirOwnShapeWithTheViewersColors() {
     val viewer = Look(style = MarkStyle.Icon, fill = true, colored = false)
 

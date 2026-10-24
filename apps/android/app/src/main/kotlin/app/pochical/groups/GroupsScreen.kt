@@ -31,6 +31,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -61,6 +62,7 @@ import app.pochical.kit.AccountState
 import app.pochical.kit.GroupMemberRow
 import app.pochical.kit.GroupRow
 import app.pochical.kit.PhotoShelf
+import java.time.LocalDate
 
 /** What the グループ tab's buttons open. */
 class GroupsActions(
@@ -68,6 +70,8 @@ class GroupsActions(
   val onNew: () -> Unit,
   /** QRコードで参加. */
   val onScan: () -> Unit,
+  /** みんなのシフト of a group, on a day when one is given. */
+  val onShifts: (String, LocalDate?) -> Unit,
   /** The group's own buttons in the bar, over its page; none for a group not shown. */
   val groupActions: @Composable (GroupRow) -> Unit = {},
 )
@@ -213,9 +217,17 @@ private fun GroupHub(group: GroupRow, actions: GroupsActions) {
     }
   ) { padding ->
     LazyColumn(contentPadding = padding) {
-      item { SectionHeader(stringResource(R.string.group_shifts_heading)) }
+      item {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Box(Modifier.weight(1f)) { SectionHeader(stringResource(R.string.group_shifts_heading)) }
+          TextButton(onClick = { actions.onShifts(group.id, null) }, Modifier.padding(end = 8.dp)) {
+            Text(stringResource(R.string.group_shifts_month))
+            Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = null, Modifier.size(18.dp))
+          }
+        }
+      }
       if (members != null) {
-        item { MemberWeek(members, group.id, today, onOpen = null, Modifier.padding(horizontal = 16.dp)) }
+        item { MemberWeek(members, group.id, today, onOpen = { actions.onShifts(group.id, it) }, Modifier.padding(horizontal = 16.dp)) }
       }
       item { Spacer(Modifier.height(24.dp)) }
     }

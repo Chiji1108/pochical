@@ -6,6 +6,15 @@
   <string name="together_day">みんな休み</string>
   <string name="next_together">次のみんな休み</string>
   <string name="together_unsure">未入力の日あり</string>
+  <string name="together_unsure_short">未入力あり</string>
+  <string name="together_none">みんな休みなし</string>
+  <string name="together_of">%1$sのみんな休み</string>
+  <string name="days_count">%1$d日</string>
+  <string name="group_shifts">みんなのシフト</string>
+  <string name="layout_days">一覧</string>
+  <string name="layout_weeks">週ごと</string>
+  <string name="legend_open">シフトパターンを見る</string>
+  <string name="legend_none">シフトパターンはまだありません</string>
   <string name="today">今日</string>
   <string name="tomorrow">明日</string>
   <string name="days_later">%1$d日後</string>
