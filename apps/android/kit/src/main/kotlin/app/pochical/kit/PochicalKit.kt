@@ -20,18 +20,24 @@ class PochicalKit(context: Context) {
     val pochicalKit: PochicalKit
   }
 
+  private val server = BuildConfig.SERVER.toHttpUrl()
+  private val http = OkHttpClient()
+
   val database: AppDatabase = AppDatabase.open(context)
   val edits = OwnEdits(database)
   val account =
     SyncAccount(
       database = database,
       sessions = SessionStore(BlockStoreBytes(context)),
-      server = BuildConfig.SERVER.toHttpUrl(),
-      http = OkHttpClient(),
+      server = server,
+      http = http,
       scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
       network = DefaultNetworkWatch(context),
       sendInBackground = { SendOutboxWorker.enqueue(context) },
     )
+
+  /** Sign in with Apple through Apple's web page, which Android has in place of iOS's own. */
+  val appleSignIn = AppleWebSignIn(server, http)
 
   /**
    * Syncs while the app is in the foreground (spec/sync-protocol.md, Sockets): the sockets open as

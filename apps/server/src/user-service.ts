@@ -35,9 +35,15 @@ const PUSH_TOKEN = /^[0-9a-f]{32,200}$/u;
 
 export const registerUserService = (router: ConnectRouter): void => {
   router.service(UserService, {
-    deleteAccount: async ({ appleAuthorizationCode }, context) => {
+    deleteAccount: async (
+      { appleAuthorizationCode, appleCodeFromWeb },
+      context
+    ) => {
       const { id } = await requireUser(context);
-      await deleteAccount(env, id, appleAuthorizationCode);
+      await deleteAccount(env, id, {
+        code: appleAuthorizationCode,
+        fromWeb: appleCodeFromWeb,
+      });
       return create(DeleteAccountResponseSchema, {});
     },
     getMe: async (_request, context) => {

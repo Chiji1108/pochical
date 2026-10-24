@@ -95,6 +95,7 @@ dependencies {
   implementation(libs.credentials)
   implementation(libs.credentials.play.services.auth)
   implementation(libs.googleid)
+  implementation(libs.browser)
 
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)

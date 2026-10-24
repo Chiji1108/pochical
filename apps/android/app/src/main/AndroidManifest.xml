@@ -2,6 +2,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
   xmlns:tools="http://schemas.android.com/tools">
 
+  <!-- The browsers that open Custom Tabs, which AppleSignIn asks of Auth Tab. -->
+  <queries>
+    <intent>
+      <action android:name="android.support.customtabs.action.CustomTabsService" />
+    </intent>
+  </queries>
+
   <application
     android:name=".PochicalApplication"
     android:icon="@mipmap/ic_launcher"
@@ -11,16 +18,28 @@
     android:theme="@style/Theme.Pochical">
     <!-- Made by the app's Metro graph through MetroX's AppComponentFactory,
          which lint does not know of. Compose follows a change of light or
-         dark itself, 外観's own among them, without the activity made anew. -->
+         dark itself, 外観's own among them, without the activity made anew.
+         One of it in its task: Sign in with Apple's page, in a Custom Tab
+         where the browser has no Auth Tab, returns by the app's scheme
+         (AppleSignIn), which comes back to the activity that opened it,
+         closing the tab above it. -->
     <activity
       android:name=".MainActivity"
       android:configChanges="uiMode"
       android:exported="true"
+      android:launchMode="singleTask"
       android:theme="@style/Theme.Pochical.Starting"
       tools:ignore="Instantiatable">
       <intent-filter>
         <action android:name="android.intent.action.MAIN" />
         <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+      <!-- AppleWebSignIn.RETURN_SCHEME and RETURN_HOST. -->
+      <intent-filter>
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <data android:scheme="pochical" android:host="apple-sign-in" />
       </intent-filter>
     </activity>
   </application>

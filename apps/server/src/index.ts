@@ -2,6 +2,7 @@ import { createConnectRouter } from "@connectrpc/connect";
 import { createFetchHandler } from "@connectrpc/connect/protocol";
 
 import { eraseNotedSlackThreads } from "./account-deletion";
+import { appleHandoff, eraseExpiredHandoffs } from "./apple-handoff";
 import { registerChatService } from "./chat-service";
 import { registerGroupService } from "./group-service";
 import { registerInviteService } from "./invite-service";
@@ -208,10 +209,17 @@ const authRequest = async (
 
 export default {
   async fetch(request, env) {
-    const { pathname } = new URL(request.url);
+    const url = new URL(request.url);
+    const { pathname } = url;
 
     if (pathname.startsWith(AUTH_PATH)) {
       return await authRequest(request, env, pathname);
+    }
+
+    // Sign in with Apple's web page, for Android, and its handoff to the app.
+    const apple = await appleHandoff(request, env, url);
+    if (apple) {
+      return apple;
     }
 
     // Replies from Pochical's people's Slack, signed by Slack.
@@ -266,14 +274,16 @@ export default {
     );
   },
   // Daily (`triggers.crons` in wrangler.jsonc): the reports whose year
-  // after an account's deletion is up, and what Slack has not yet taken of
-  // erasing deleted accounts' chat threads.
+  // after an account's deletion is up, what Slack has not yet taken of
+  // erasing deleted accounts' chat threads, and Sign in with Apple's
+  // handoffs never redeemed.
   async scheduled(controller, env) {
     const now = new Date(controller.scheduledTime);
     // Each goes on should the other fail; a failure fails the run, logged.
     const runs = await Promise.allSettled([
       eraseDueReports(env, now),
       eraseNotedSlackThreads(env, now),
+      eraseExpiredHandoffs(env, now),
     ]);
     const failed = runs.flatMap((run): unknown[] =>
       run.status === "rejected" ? [run.reason] : []
