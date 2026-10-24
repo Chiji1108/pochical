@@ -125,18 +125,20 @@ class SyncTest {
   @Test
   fun anotherDevicesEditArrivesWhileOpenAndInANewDevicesCatchUp() = runBlocking {
     val phone = device()
-    val tablet = device()
     phone.account.foreground()
+    withTimeout(10_000) { phone.current() }
+    // The user's other devices, each given the phone's session as one restored from it would be.
+    val session = phone.sessions.read()!!
+    val tablet = device()
+    tablet.sessions.write(session)
     tablet.account.foreground()
-    withTimeout(10_000) {
-      phone.current()
-      tablet.current()
-    }
+    withTimeout(10_000) { tablet.current() }
 
     tablet.edits.setDay("2026-10-02", DayField.DAY_FIELD_NOTE, "健診")
     eventually { phone.note("2026-10-02") == "健診" }
 
     val newPhone = device()
+    newPhone.sessions.write(session)
     newPhone.account.foreground()
     eventually { newPhone.note("2026-10-02") == "健診" }
     val hellos = server.sockets.last().filter { it.kindCase == ClientFrame.KindCase.HELLO }

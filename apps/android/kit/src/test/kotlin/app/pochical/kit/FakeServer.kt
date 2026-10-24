@@ -107,8 +107,26 @@ class FakeServer : AutoCloseable {
     when (authorization) {
       "Bearer $token" -> userId
       inUse?.let { "Bearer ${it.first}" } -> inUse?.second
-      else -> null
+      else -> authorization?.removePrefix("Bearer ")?.let { earlier[it] }
     }
+
+  /** Anonymous users signed in before the last, by their sessions, until deleted. */
+  private val earlier = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+  /** Whether the last anonymous user's session went to a device. */
+  @Volatile private var handedOut = false
+
+  /** Each anonymous sign-in makes a new user, as better-auth's does; the one before stays. */
+  @Synchronized
+  private fun anotherAnonymous() {
+    val made = signIns.incrementAndGet()
+    if (handedOut) {
+      earlier[token] = userId
+      token = "token-$made"
+      userId = "user-$made"
+    }
+    handedOut = true
+  }
 
   init {
     server.dispatcher =
@@ -117,7 +135,7 @@ class FakeServer : AutoCloseable {
           when (request.url.encodedPath) {
             "/api/auth/sign-in/anonymous" ->
               MockResponse.Builder()
-                .also { signIns.incrementAndGet() }
+                .also { anotherAnonymous() }
                 .headersDelay(signInDelayMs, TimeUnit.MILLISECONDS)
                 .addHeader("set-auth-token", token)
                 .body(signInBody ?: """{"token":"$token","user":{"id":"$userId","isAnonymous":true}}""")
@@ -181,7 +199,11 @@ class FakeServer : AutoCloseable {
                 refusal != null -> refused(refusal)
                 else -> {
                   deleted += user to DeleteAccountRequest.parseFrom(request.body!!.toByteArray())
-                  if (user == userId) nextAnonymous() else inUse = null
+                  when {
+                    user == userId -> nextAnonymous()
+                    user == inUse?.second -> inUse = null
+                    else -> earlier.values.remove(user)
+                  }
                   proto(deleteAccountResponse {})
                 }
               }
@@ -231,6 +253,7 @@ class FakeServer : AutoCloseable {
     val next = signIns.get() + 1
     token = "token-$next"
     userId = "user-$next"
+    handedOut = false
   }
 
   private fun valuesOf(user: String) = values.getOrPut(user) { LinkedHashMap() }

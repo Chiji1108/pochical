@@ -3,6 +3,8 @@ package app.pochical.kit
 import app.pochical.v1.DayField
 import app.pochical.v1.SignInProvider
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -68,7 +70,8 @@ class AccountChangeTest {
     withTimeout(10_000) { phone.account.state.first { it == AccountState.SignedIn("user-b", account) } }
     eventually { phone.note("2026-11-01") == "ほかの端末から" }
     // The anonymous user it was is deleted, with no Apple code, and then forgotten.
-    eventually { phone.sessions.read() == StoredSession("token-b", "user-b", linked = account) }
+    eventually { phone.sessions.leftBehind().isEmpty() }
+    assertEquals(StoredSession("token-b", "user-b", linked = account), phone.sessions.read())
     assertEquals(listOf("user-1" to ""), server.deleted.map { it.first to it.second.appleAuthorizationCode })
     assertEquals(listOf("Bearer token-1"), called("/api/auth/sign-in/social").map { it.second })
   }
@@ -170,16 +173,21 @@ class AccountChangeTest {
     val phone = signedInDevice()
     accountInUse()
     server.deleteRefusal = "unavailable"
+    // Answered slowly, so the app comes back while the first try is still under way.
+    server.deleteDelayMs = 300
     phone.account.signIn(google)
     withTimeout(10_000) { phone.account.state.first { it == AccountState.SignedIn("user-b", account) } }
     eventually { called("/pochical.v1.UserService/DeleteAccount").isNotEmpty() }
-    assertEquals("token-1", phone.sessions.read()?.leftBehind)
+    assertEquals(listOf("token-1"), phone.sessions.leftBehind())
 
     server.deleteRefusal = null
-    phone.account.background()
-    phone.account.foreground()
-
-    eventually { phone.sessions.read()?.leftBehind == null }
+    // One try at a time: a return while one is under way starts none, so it takes the next return.
+    eventually {
+      phone.account.background()
+      phone.account.foreground()
+      delay(100)
+      phone.sessions.leftBehind().isEmpty()
+    }
     assertEquals(listOf("user-1"), server.deleted.map { it.first })
   }
 
@@ -188,7 +196,7 @@ class AccountChangeTest {
     val phone = signedInDevice()
     accountInUse()
     phone.account.signIn(google)
-    eventually { phone.sessions.read()?.leftBehind == null }
+    eventually { phone.sessions.leftBehind().isEmpty() }
 
     val again = SyncAccount(phone.database, phone.sessions, server.url, okhttp3.OkHttpClient(), phone.scope)
     again.foreground()
@@ -201,15 +209,82 @@ class AccountChangeTest {
     val phone = signedInDevice()
     phone.edits.setDay("2026-11-02", DayField.DAY_FIELD_PATTERN, "night")
     withTimeout(10_000) { phone.outboxEmptied() }
-    val states = async { phone.account.state.first { it is AccountState.Erasing } }
 
     assertTrue(phone.account.deleteAccount { error("Apple is asked only for an Apple account") })
 
-    assertEquals(AccountState.Erasing(), states.await())
     assertEquals(listOf("user-1" to ""), server.deleted.map { it.first to it.second.appleAuthorizationCode })
     withTimeout(10_000) { phone.account.state.first { it is AccountState.SignedIn && it.userId == "user-2" } }
+    // Counted once done, for the screens to start over, whether or not anyone saw it erasing.
+    assertEquals(1, phone.account.deleted.value)
     assertNull(phone.pattern("2026-11-02"))
     assertEquals(listOf("token-2", "user-2"), phone.sessions.read()?.let { listOf(it.token, it.userId) })
+  }
+
+  @Test
+  fun aChangeWhoseCallerStopsWaitingIsStillSettled() = runBlocking<Unit> {
+    val phone = signedInDevice()
+    server.deleteDelayMs = 500
+    val caller = launch { phone.account.deleteAccount { null } }
+    eventually { phone.account.state.value is AccountState.Changing }
+
+    caller.cancel()
+
+    withTimeout(10_000) { phone.account.state.first { it is AccountState.SignedIn && it.userId == "user-2" } }
+    assertEquals(listOf("user-1"), server.deleted.map { it.first })
+    assertEquals(1, phone.account.deleted.value)
+  }
+
+  @Test
+  fun anAppEndedWhileErasingGoesOnErasingAndNeverSignsInAsTheUserDeleted() = runBlocking<Unit> {
+    val phone = signedInDevice()
+    phone.edits.setDay("2026-11-02", DayField.DAY_FIELD_PATTERN, "night")
+    phone.kept.writable = false
+    assertTrue(phone.account.deleteAccount { null })
+    withTimeout(10_000) { phone.account.state.first { it == AccountState.Erasing(failed = true) } }
+    // Ended there: the store still keeps the deleted user's session.
+    phone.scope.coroutineContext[kotlinx.coroutines.Job]!!.cancelChildren()
+    assertEquals("user-1", phone.sessions.read()?.userId)
+    assertNull(phone.pattern("2026-11-02"))
+
+    phone.kept.writable = true
+    val again = SyncAccount(phone.database, phone.sessions, server.url, okhttp3.OkHttpClient(), phone.scope)
+    again.foreground()
+
+    withTimeout(10_000) { again.state.first { it is AccountState.SignedIn } }
+    assertEquals("user-2", (again.state.value as AccountState.SignedIn).userId)
+    assertEquals(1, again.deleted.value)
+  }
+
+  @Test
+  fun keepingTheDevicesDataOnASessionTheServerDoesNotKnowEndsIt() = runBlocking<Unit> {
+    val phone = signedInDevice()
+    phone.edits.setDay("2026-11-02", DayField.DAY_FIELD_PATTERN, "night")
+    accountInUse()
+    val choose = phone.account.signIn(google) as SignInResult.Choose
+    server.token = "gone"
+
+    assertThrows(NotSignedIn::class.java) { runBlocking { phone.account.keepDevice(choose.inUse) } }
+
+    assertEquals(AccountState.SessionEnded, phone.account.state.value)
+    assertEquals("night", phone.pattern("2026-11-02"))
+  }
+
+  @Test
+  fun aUserLeftBehindIsStillDeletedAfterTheAccountSwitchedToIsDeleted() = runBlocking<Unit> {
+    val phone = signedInDevice()
+    accountInUse()
+    server.deleteRefusal = "unavailable"
+    phone.account.signIn(google)
+    withTimeout(10_000) { phone.account.state.first { it == AccountState.SignedIn("user-b", account) } }
+    eventually { called("/pochical.v1.UserService/DeleteAccount").isNotEmpty() }
+
+    server.deleteRefusal = null
+    server.provider = SignInProvider.SIGN_IN_PROVIDER_GOOGLE
+    assertTrue(phone.account.deleteAccount { null })
+    withTimeout(10_000) { phone.account.state.first { it is AccountState.SignedIn && it.userId != "user-b" } }
+
+    eventually { phone.sessions.leftBehind().isEmpty() }
+    assertEquals(setOf("user-b", "user-1"), server.deleted.map { it.first }.toSet())
   }
 
   @Test

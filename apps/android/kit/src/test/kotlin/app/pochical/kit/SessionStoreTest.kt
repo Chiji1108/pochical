@@ -25,11 +25,6 @@ internal class MemoryBytes : KeptBytes {
     if (!reachable || !writable) throw StoreUnreachable(IllegalStateException("Play services unavailable"))
     this.bytes = bytes
   }
-
-  override suspend fun forget() {
-    if (!reachable || !writable) throw StoreUnreachable(IllegalStateException("Play services unavailable"))
-    bytes = null
-  }
 }
 
 class SessionStoreTest {
@@ -60,6 +55,19 @@ class SessionStoreTest {
 
     store.write(StoredSession("new", "user"))
     assertEquals(StoredSession("new", "user"), store.read())
+  }
+
+  @Test
+  fun theUsersSwitchesLeftBehindStayUntilEachIsDeletedWhateverTheSessionDoes() = runBlocking {
+    store.write(StoredSession("a", "user-a"))
+    store.switchTo(StoredSession("b", "user-b"), leaving = "a")
+    store.switchTo(StoredSession("c", "user-c"), leaving = "b")
+    store.forgetSession()
+    assertEquals(listOf(null, listOf("a", "b")), listOf(store.read(), SessionStore(kept).leftBehind()))
+
+    store.write(StoredSession("d", "user-d"))
+    store.deleted("a")
+    assertEquals(listOf(StoredSession("d", "user-d"), listOf("b")), listOf(store.read(), store.leftBehind()))
   }
 
   @Test

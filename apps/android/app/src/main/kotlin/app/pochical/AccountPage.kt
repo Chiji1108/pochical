@@ -287,11 +287,12 @@ private fun DeleteRow(state: AccountState) {
   val scope = rememberCoroutineScope()
   var confirming by remember { mutableStateOf(false) }
   var failure by remember { mutableStateOf<DeletionFailure.Reason?>(null) }
-  val busy = state is AccountState.Changing
+  // From the tap on, as the server and Apple are asked before the account begins changing.
+  var deleting by remember { mutableStateOf(false) }
   ListItem(
     headlineContent = { Text(stringResource(R.string.account_delete), color = MaterialTheme.colorScheme.error) },
-    trailingContent = if (busy) ({ CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp) }) else null,
-    modifier = Modifier.clickable(enabled = state is AccountState.SignedIn) { confirming = true },
+    trailingContent = if (deleting) ({ CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp) }) else null,
+    modifier = Modifier.clickable(enabled = state is AccountState.SignedIn && !deleting) { confirming = true },
   )
   if (confirming) {
     AlertDialog(
@@ -303,12 +304,16 @@ private fun DeleteRow(state: AccountState) {
         TextButton(
           onClick = {
             confirming = false
+            if (deleting) return@TextButton
+            deleting = true
             scope.launch {
               try {
                 account.deleteAccount(appleCode = apple::authorizationCode)
               } catch (e: DeletionFailure) {
                 // A session the server does not know is said in place of the app, not here.
                 if (e.reason != DeletionFailure.Reason.SessionEnded) failure = e.reason
+              } finally {
+                deleting = false
               }
             }
           },

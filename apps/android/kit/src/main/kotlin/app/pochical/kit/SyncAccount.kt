@@ -17,6 +17,7 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -107,6 +108,15 @@ class SyncAccount(
   private val mutableState = MutableStateFlow<AccountState>(AccountState.SigningIn)
   val state: StateFlow<AccountState> = mutableState.asStateFlow()
 
+  private val mutableDeleted = MutableStateFlow(0)
+
+  /**
+   * How many deletions of the account the device has finished erasing after, since it started: the
+   * screens start over and say アカウントを削除しました once for each, however briefly they saw it
+   * [AccountState.Erasing].
+   */
+  val deleted: StateFlow<Int> = mutableDeleted.asStateFlow()
+
   /** Signed in or changing, the stretch whose sockets are open; null otherwise. */
   private val stretch = MutableStateFlow<Stretch?>(null)
 
@@ -178,7 +188,11 @@ class SyncAccount(
   suspend fun signIn(account: ProviderToken): SignInResult {
     val credentials = signedIn() ?: throw NotSignedIn()
     if (link(credentials, account) == LinkResult.Linked) return SignInResult.Linked
-    val inUse = InUse(account, calls(credentials) { peekAccount(account) }, database.write { holdings() })
+    val inUse = coroutineScope {
+      val here = async { database.write { holdings() } }
+      val held = calls(credentials) { peekAccount(account) }
+      InUse(account, held, here.await())
+    }
     return when {
       inUse.device.isEmpty -> useAccount(inUse).let { SignInResult.Switched }
       inUse.account.isEmpty -> keepDevice(inUse).let { SignInResult.Linked }
@@ -194,32 +208,39 @@ class SyncAccount(
    */
   suspend fun useAccount(choice: InUse) {
     val credentials = signedIn() ?: throw NotSignedIn()
-    change(credentials, ended = ::NotSignedIn, refused = ::AccountChanged) { before ->
+    // better-auth signs in by the provider's token alone, so no answer of it says the session is unknown.
+    change(credentials, ended = ::NotSignedIn, refused = ::AccountChanged, unknown = { false }) { before ->
       Outcome.Switched(signInSocial(http, server, before.token, choice.token).copy(linked = choice.token.account))
     }
   }
 
   /**
    * この端末のデータを使う (`UserService.TakeAccount`): the account's user deleted, everything of it
-   * with it, and the provider's account linked to this user instead.
+   * with it, and the provider's account linked to this user instead. [AccountChanged] when the
+   * device is not signed in as it was asked; [NotSignedIn] once the server says it does not know the
+   * session.
    */
   suspend fun keepDevice(choice: InUse) {
     val credentials = signedIn() ?: throw NotSignedIn()
-    scope
-      .async {
-        calls(credentials) { takeAccount(choice.token) }
-        commands.send(Command.Linked(credentials.generation, choice.token.account, asOf = null))
-      }
-      .await()
+    change(
+      credentials,
+      ended = ::NotSignedIn,
+      refused = ::AccountChanged,
+      unknown = { it is ConnectException && it.code == Code.UNAUTHENTICATED },
+    ) { before ->
+      UserCalls(http, server, before.token).takeAccount(choice.token)
+      Outcome.Took(choice.token.account)
+    }
   }
 
   /**
    * アカウントを削除 (spec/sync-protocol.md, Deleting an account): a user the server says now is
    * linked to Apple has Apple asked once more for a fresh authorization code ([appleCode], null when
    * the person cancels), as Apple's tokens are revoked with it, and any other user nothing, as
-   * nothing of Google's is revoked. Once the server has deleted the account, the device forgets its
-   * session, erases what it held ([AccountState.Erasing]) and signs in as someone new. False when
-   * the person cancelled; [DeletionFailure] when nothing, or only part, was deleted.
+   * nothing of Google's is revoked. Once the server has deleted the account, the device erases what
+   * it held and forgets its session ([AccountState.Erasing]), counts it in [deleted], and signs in as
+   * someone new. False when the person cancelled; [DeletionFailure] when nothing, or only part, was
+   * deleted.
    */
   suspend fun deleteAccount(appleCode: suspend () -> String?): Boolean {
     val asking = signedIn() ?: throw DeletionFailure(whyNotSignedIn())
@@ -248,9 +269,16 @@ class SyncAccount(
       asking,
       ended = { DeletionFailure(DeletionFailure.Reason.SessionEnded) },
       refused = { DeletionFailure(whyNotSignedIn()) },
+      unknown = { it is DeletionFailure && it.reason == DeletionFailure.Reason.SessionEnded },
     ) { before ->
-      UserCalls(http, server, before.token).deleteAccount(code)
-      Outcome.Deleted
+      try {
+        UserCalls(http, server, before.token).deleteAccount(code)
+      } catch (e: DeletionFailure) {
+        throw e
+      } catch (e: Exception) {
+        throw DeletionFailure(DeletionFailure.Reason.ServerFailed, e)
+      }
+      Outcome.Deleted(before.userId)
     }
     return true
   }
@@ -309,37 +337,42 @@ class SyncAccount(
     }
 
   /**
-   * Changes who the device is, one change at a time, from the stretch [before] it was asked in:
-   * refused ([refused]) once the device is not signed in as it any more, so the user after it is
-   * never changed. Until the server has done its part ([onServer]) the device goes on as it was, and
-   * a 401 meanwhile is only noted. The answer settles it in the queue: done, the change goes on, as
-   * it is the likeliest reason for that 401; failed, the device is back as it was, or its session
-   * ended ([ended]) should the server not know it. Once asked, it runs to the end whether or not its
-   * caller waits.
+   * Changes who the device is, or whom it is linked to, one change at a time, from the stretch
+   * [before] it was asked in: refused ([refused]) once the device is not signed in as it any more,
+   * so the user after it is never changed. Until the server has done its part ([onServer]) the
+   * device goes on as it was, and a 401 meanwhile is only noted. The answer settles it in the queue:
+   * done, the change goes on, as it is the likeliest reason for that 401; failed, the device is back
+   * as it was, or its session ended ([ended]) should the server not know it ([unknown], or a 401
+   * heard meanwhile). The account owns it from the moment it is asked, so a caller that stops
+   * waiting never leaves a change begun and unsettled.
    */
   private suspend fun change(
     before: Credentials,
     ended: () -> Throwable,
     refused: () -> Throwable,
+    unknown: (Throwable) -> Boolean,
     onServer: suspend (Credentials) -> Outcome,
-  ) {
-    val began = CompletableDeferred<Boolean>()
-    commands.send(Command.Begin(before.generation, began))
-    if (!began.await()) throw refused()
+  ) =
     scope
       .async {
+        val began = CompletableDeferred<Boolean>()
+        commands.send(Command.Begin(before.generation, began))
+        if (!began.await()) throw refused()
         val outcome =
           try {
             onServer(before)
           } catch (e: Exception) {
-            Outcome.Failed(e, unknown = (e as? DeletionFailure)?.reason == DeletionFailure.Reason.SessionEnded, ended = ended())
+            Outcome.Failed(e, unknown = unknown(e), ended = ended())
           }
         val settled = CompletableDeferred<Unit>()
         commands.send(Command.Settle(before.generation, outcome, settled))
-        settled.await()
+        try {
+          settled.await()
+        } catch (_: AccountChanged) {
+          throw refused()
+        }
       }
       .await()
-  }
 
   /**
    * Asks the server which provider the user is linked to (`GetMe`), as a session restored or linked
@@ -440,14 +473,15 @@ class SyncAccount(
       is Command.EraseFailed -> {
         if (state.value is AccountState.Erasing) mutableState.value = AccountState.Erasing(failed = true)
       }
+      is Command.Erasing -> if (state.value == AccountState.SigningIn) beginErasing(command.userId)
       Command.Erased -> {
+        mutableDeleted.value += 1
         mutableState.value = AccountState.SigningIn
         if (foreground || sending > 0) startSigningIn()
       }
       is Command.LeftBehindGone -> {
         try {
-          val kept = sessions.read()
-          if (kept?.leftBehind == command.token) sessions.write(kept.copy(leftBehind = null))
+          sessions.deleted(command.token)
         } catch (e: StoreUnreachable) {
           // Deleted already: the next try hears the server no longer knows it, and forgets it then.
           Log.i(TAG, "The session left behind could not be forgotten: $e")
@@ -470,18 +504,29 @@ class SyncAccount(
             else -> command.account
           }
         if (after == before.linked) return
-        try {
-          val kept = sessions.read()
-          if (kept != null) sessions.write(kept.copy(linked = after)) else Log.i(TAG, "No session kept to note the account with")
-        } catch (e: StoreUnreachable) {
-          // The server holds the link, and GetMe says it again at the next refresh.
-          Log.i(TAG, "The linked account could not be kept: $e")
-        }
+        keepLinked(after)
         mutableState.value = AccountState.SignedIn(current.credentials.userId, after)
       }
       Command.NetworkLost -> current?.clients()?.forEach { it.networkLost() }
       Command.NetworkChanged -> current?.clients()?.forEach { it.networkChanged() }
     }
+  }
+
+  /** Keeps [account] with the session the device has. */
+  private suspend fun keepLinked(account: LinkedAccount?) {
+    try {
+      val kept = sessions.read()
+      if (kept != null) sessions.write(kept.copy(linked = account)) else Log.i(TAG, "No session kept to note the account with")
+    } catch (e: StoreUnreachable) {
+      // The server holds the link, and GetMe says it again at the next refresh.
+      Log.i(TAG, "The linked account could not be kept: $e")
+    }
+  }
+
+  /** After [userId]'s account was deleted: nothing of theirs shows, and the device erases it ([eraseDeleted]). */
+  private fun beginErasing(userId: String) {
+    mutableState.value = AccountState.Erasing()
+    scope.launch { eraseDeleted(userId) }
   }
 
   /** The server's answer to the change [command] began, for the stretch it was asked in alone. */
@@ -504,7 +549,7 @@ class SyncAccount(
         // One write switches: a relaunch from here on is the account's user, whose sign-in erases
         // what the user before held as it claims the database, and deletes the user left behind.
         try {
-          sessions.write(outcome.to.copy(leftBehind = current.credentials.token))
+          sessions.switchTo(outcome.to, leaving = current.credentials.token)
         } catch (e: StoreUnreachable) {
           mutableState.value = changing.before
           command.settled.completeExceptionally(e)
@@ -515,10 +560,16 @@ class SyncAccount(
         startSigningIn()
         command.settled.complete(Unit)
       }
-      Outcome.Deleted -> {
+      is Outcome.Took -> {
+        // A link made here wins over what the server said of the user before it.
+        links += 1
+        keepLinked(outcome.account)
+        mutableState.value = AccountState.SignedIn(current.credentials.userId, outcome.account)
+        command.settled.complete(Unit)
+      }
+      is Outcome.Deleted -> {
         endStretch(current)
-        mutableState.value = AccountState.Erasing()
-        scope.launch { eraseDeleted() }
+        beginErasing(outcome.userId)
         command.settled.complete(Unit)
       }
     }
@@ -547,16 +598,20 @@ class SyncAccount(
   }
 
   /**
-   * After a deletion: the session forgotten, then what the database holds erased, tried again after
-   * a wait that doubles until both are. Forgotten first, so an app ended between the two starts
-   * without a session, and the next user's sign-in erases what is left as it claims the database.
+   * After [userId]'s account was deleted: what the database holds of them erased, noting whose it
+   * was, then their session forgotten, tried again after a wait that doubles until both are. An app
+   * ended between the two finds the session it kept is of the user erased, and goes on erasing as
+   * it starts (`signIn`), never signing in as them again.
    */
-  private suspend fun eraseDeleted() {
+  private suspend fun eraseDeleted(userId: String) {
     var wait = ERASE_FIRST_WAIT_MS
     while (true) {
       try {
-        sessions.forget()
-        database.write { eraseUserData() }
+        database.write {
+          eraseUserData()
+          upsert(state().copy(erased = userId))
+        }
+        sessions.forgetSession()
         break
       } catch (e: CancellationException) {
         throw e
@@ -571,31 +626,33 @@ class SyncAccount(
   }
 
   /**
-   * Deletes the anonymous user a switch left behind (spec/sync-protocol.md, Switching to an account
-   * in use), one try at a time: forgotten once the server deletes it or no longer knows its session.
+   * Deletes the anonymous users switches left behind (spec/sync-protocol.md, Switching to an account
+   * in use), one try at a time: each forgotten once the server deletes it or no longer knows its
+   * session.
    */
   private suspend fun deleteLeftBehind(current: Stretch) {
     if (deletingLeftBehind?.isActive == true) return
     val left =
       try {
-        sessions.read()?.leftBehind
+        sessions.leftBehind()
       } catch (_: StoreUnreachable) {
-        null
-      } ?: return
-    if (left == current.credentials.token) {
-      commands.send(Command.LeftBehindGone(left))
-      return
-    }
-    deletingLeftBehind = scope.launch {
-      try {
-        UserCalls(http, server, left).deleteAccount(appleCode = "")
-      } catch (e: DeletionFailure) {
-        if (e.reason != DeletionFailure.Reason.SessionEnded) {
-          Log.i(TAG, "The user left behind was not deleted yet: $e")
-          return@launch
-        }
+        return
       }
-      commands.send(Command.LeftBehindGone(left))
+    if (left.isEmpty()) return
+    deletingLeftBehind = scope.launch {
+      for (token in left) {
+        if (token != current.credentials.token) {
+          try {
+            UserCalls(http, server, token).deleteAccount(appleCode = "")
+          } catch (e: DeletionFailure) {
+            if (e.reason != DeletionFailure.Reason.SessionEnded) {
+              Log.i(TAG, "A user left behind was not deleted yet: $e")
+              continue
+            }
+          }
+        }
+        commands.send(Command.LeftBehindGone(token))
+      }
     }
   }
 
@@ -635,6 +692,10 @@ class SyncAccount(
       }
     if (kept?.ended == true) {
       mutableState.value = AccountState.SessionEnded
+      return
+    }
+    if (kept != null && database.write { state().erased } == kept.userId) {
+      commands.send(Command.Erasing(kept.userId))
       return
     }
     if (kept != null) Log.i(TAG, "Signed in as kept, ${kept.userId}")
@@ -699,8 +760,11 @@ class SyncAccount(
     /** Signed in [to] the account's user, the user before left behind. */
     class Switched(val to: StoredSession) : Outcome
 
-    /** The account and everything of it deleted. */
-    data object Deleted : Outcome
+    /** The provider's [account] taken for this user, the user it was linked to deleted. */
+    class Took(val account: LinkedAccount) : Outcome
+
+    /** [userId]'s account and everything of it deleted. */
+    class Deleted(val userId: String) : Outcome
 
     /**
      * Nothing changed on the server: [cause], or [ended] should the session have ended, as when the
@@ -731,6 +795,9 @@ class SyncAccount(
 
     /** The server's answer to the change begun in the stretch [generation], [settled] once the device is done with it. */
     class Settle(val generation: Long, val outcome: Outcome, val settled: CompletableDeferred<Unit>) : Command
+
+    /** The session kept is of [userId], whose account was deleted and erasing cut off: erasing goes on. */
+    data class Erasing(val userId: String) : Command
 
     /** A try at erasing after a deletion failed; another follows. */
     data object EraseFailed : Command

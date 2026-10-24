@@ -16,10 +16,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -39,22 +39,22 @@ import app.pochical.kit.AccountState
 fun AccountRoot() {
   val account = LocalAccount.current
   val state by account.state.collectAsState()
-  var deleted by rememberSaveable { mutableStateOf(false) }
+  val deleted by account.deleted.collectAsState()
+  // The deletions said so far, so each is said once, an activity made again included.
+  var said by rememberSaveable { mutableIntStateOf(account.deleted.value) }
   when (val now = state) {
-    is AccountState.Erasing -> {
-      LaunchedEffect(Unit) { deleted = true }
-      ErasingScreen(now, retry = account::eraseAgain)
-    }
-    else -> {
-      RootScreen(rememberRootNavigator())
-      if (deleted) {
-        AlertDialog(
-          onDismissRequest = { deleted = false },
-          confirmButton = { TextButton(onClick = { deleted = false }) { Text(stringResource(R.string.ok)) } },
-          title = { Text(stringResource(R.string.account_deleted)) },
-        )
+    is AccountState.Erasing -> ErasingScreen(now, retry = account::eraseAgain)
+    else ->
+      key(deleted) {
+        RootScreen(rememberRootNavigator())
+        if (deleted > said) {
+          AlertDialog(
+            onDismissRequest = { said = deleted },
+            confirmButton = { TextButton(onClick = { said = deleted }) { Text(stringResource(R.string.ok)) } },
+            title = { Text(stringResource(R.string.account_deleted)) },
+          )
+        }
       }
-    }
   }
 }
 
