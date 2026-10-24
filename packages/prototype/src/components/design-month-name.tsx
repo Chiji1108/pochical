@@ -16,25 +16,11 @@ import { useReducedMotion } from "../lib/device-media";
 import { monthIndex, RollingName, useTurn } from "./design-rolling";
 import { srOnly } from "./design-ui";
 
-// The months as the heading writes them in English, lower case and cut
-// short like a diary's.
-const englishMonths = [
-  "jan.",
-  "feb.",
-  "mar.",
-  "apr.",
-  "may",
-  "jun.",
-  "jul.",
-  "aug.",
-  "sep.",
-  "oct.",
-  "nov.",
-  "dec.",
-] as const;
-
+// The month as the heading writes it in English, lower case and cut
+// short like a diary's: sep., may.
 export function englishMonthOf(month: Date) {
-  return englishMonths[month.getMonth()];
+  const name = fullMonths[month.getMonth()].toLowerCase();
+  return name.length > 3 ? `${name.slice(0, 3)}.` : name;
 }
 
 // Everywhere else the months are written as other apps write them: in

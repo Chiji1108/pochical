@@ -18,6 +18,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.pochical.LocalDeviceSettings
 import app.pochical.LocalThemeColors
 import app.pochical.design.PochicalTextStyles
 import java.time.YearMonth
@@ -49,21 +50,49 @@ fun MonthName(pages: Float, monthAt: (Int) -> YearMonth, reduceMotion: Boolean, 
     verticalArrangement = Arrangement.spacedBy(4.dp),
   ) {
     RollingText(month.year.toString(), coming.year.toString(), share, PochicalTextStyles.caption2.copy(color = colors.textTertiary))
-    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-      RollingText(
-        month.monthValue.toString(),
-        coming.monthValue.toString(),
-        share,
-        TextStyle(fontSize = 36.sp, fontWeight = FontWeight.SemiBold, color = colors.textPrimary),
-        Modifier.alignByBaseline(),
-      )
-      Text(
-        "月",
-        Modifier.alignByBaseline(),
-        fontSize = 14.sp,
-        fontWeight = FontWeight.Medium,
-        color = colors.textPrimary,
-      )
+    val large = TextStyle(fontSize = 36.sp, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
+    if (LocalDeviceSettings.current.device.heading.english) {
+      // A lettered calendar's month, lower case and cut short: sep.
+      RollingLetters(month.headingMonth, coming.headingMonth, share, large)
+    } else {
+      Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        RollingText(month.monthValue.toString(), coming.monthValue.toString(), share, large, Modifier.alignByBaseline())
+        Text(
+          "月",
+          Modifier.alignByBaseline(),
+          fontSize = 14.sp,
+          fontWeight = FontWeight.Medium,
+          color = colors.textPrimary,
+        )
+      }
+    }
+  }
+}
+
+/** How much later each letter of an English month starts, of the whole roll. */
+private const val LETTER_LAG = 0.08f
+
+/** The most letters an English heading month has, as sep., so short names keep the same pace. */
+private const val LONGEST_MONTH = 4
+
+/**
+ * An English month's name rolling a letter at a time, as iOS's RollingLetters and /design's
+ * RollingName with `letters`: each letter starts a little after the one before, all done as the
+ * page lands; `share` as [RollingText]'s. Laid out a letter at a time at rest too, so the name does
+ * not shift as it starts or stops rolling.
+ */
+@Composable
+private fun RollingLetters(text: String, coming: String, share: Float, style: TextStyle) {
+  // From the earlier page's name to the later one's, `turned` of the way, whichever is nearer now.
+  val (from, to, turned) = if (share >= 0) Triple(text, coming, share) else Triple(coming, text, 1 + share)
+  val places = maxOf(from.length, to.length)
+  val span = 1 - (maxOf(places, LONGEST_MONTH) - 1) * LETTER_LAG
+  Row {
+    for (index in 0 until places) {
+      val letterFrom = from.getOrNull(index)?.toString().orEmpty()
+      val letterTo = to.getOrNull(index)?.toString().orEmpty()
+      val letterTurned = if (from == to) 0f else ((turned - index * LETTER_LAG) / span).coerceIn(0f, 1f)
+      BlendingText(letterFrom, letterTo, { letterTurned }, rolls = true, style)
     }
   }
 }

@@ -11,6 +11,37 @@ private const val WEEKDAYS = "日月火水木金土"
 /** A weekday's one letter, 0 for Sunday through 6 for Saturday. */
 fun weekdayLetter(weekday: Int): String = WEEKDAYS[weekday].toString()
 
+// 月と曜日 in English (spec/calendar.md, How days are written; spec/vectors/day-names.json): the
+// headings and short labels name months and weekdays as lettered calendars do; sentences stay
+// Japanese, their dates with them.
+
+private val ENGLISH_WEEKDAY_LETTERS = listOf("S", "M", "T", "W", "T", "F", "S")
+private val ENGLISH_WEEKDAY_NAMES = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+private val ENGLISH_MONTHS =
+  listOf("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")
+
+/** A weekday over a column of days: 木, or T, where the column's place tells T from T. */
+fun weekdayLetter(weekday: Int, english: Boolean): String = if (english) ENGLISH_WEEKDAY_LETTERS[weekday] else weekdayLetter(weekday)
+
+/** A weekday beside a date: 木, or Thu. */
+fun weekdayName(weekday: Int, english: Boolean): String = if (english) ENGLISH_WEEKDAY_NAMES[weekday] else weekdayLetter(weekday)
+
+/** A weekday over a column that does not start the week, as the hub's run from today: 木, or THU. */
+fun weekdayHead(weekday: Int, english: Boolean): String = weekdayName(weekday, english).uppercase()
+
+/** A month alone: 11月, or November. */
+fun YearMonth.monthTitle(english: Boolean): String = if (english) ENGLISH_MONTHS[monthValue - 1] else monthText
+
+/** The calendar heading's month in English, lower case and cut short as a lettered calendar's: nov., may. */
+val YearMonth.headingMonth: String
+  get() = ENGLISH_MONTHS[monthValue - 1].lowercase().let { if (it.length > 3) "${it.take(3)}." else it }
+
+/** A month with its year: 2026年11月, or November 2026. */
+fun YearMonth.monthWithYear(english: Boolean): String = if (english) "${ENGLISH_MONTHS[monthValue - 1]} $year" else yearMonthText
+
+/** A month in small text: 11月, or Nov. */
+fun YearMonth.shortMonth(english: Boolean): String = if (english) ENGLISH_MONTHS[monthValue - 1].take(3) else monthText
+
 /** 11月1日, with the year before it for a day of another year than today's. */
 val LocalDate.monthDayText: String
   get() = "${if (year != LocalDate.now().year) "${year}年" else ""}${monthValue}月${dayOfMonth}日"
