@@ -102,6 +102,5 @@
   <string name="chat_poll_decide">日にちを決める</string>
   <string name="chat_poll_redecide">決め直す</string>
   <string name="chat_poll_settle">決める</string>
-  <string name="chat_poll_day_count">%1$s、%2$d人</string>
   <string name="chat_poll_decided_said">%1$sに決めました</string>
 </resources>

@@ -4,16 +4,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -22,16 +21,15 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -39,12 +37,14 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import app.pochical.ListSheet
 import app.pochical.LocalDeviceSettings
 import app.pochical.LocalThemeColors
 import app.pochical.R
@@ -76,33 +76,17 @@ data class PollLook(
 )
 
 /**
- * The poll as a line's part: 行ける on each day (or its taking back) until it is settled, who can
- * come on each, and 日にちを決める for whoever may settle it (spec/chat.md, Screen readers).
+ * The poll as a line's part: 日にちを決める for whoever may settle it. Its days, who can come on each
+ * and 行ける are gone through one by one in the card after its line (spec/chat.md, Screen readers),
+ * a poll holding more days than an element holds actions.
  */
 data class PollPart(val look: PollLook) : LinePart {
   @Composable
   override fun actions(line: PartLine): List<CustomAccessibilityAction> {
     val seq = line.seq ?: return emptyList()
-    val handlers = line.handlers
-    val poll = look.poll
-    val come = stringResource(R.string.chat_poll_come)
-    val notCome = stringResource(R.string.chat_poll_not_come)
-    val who = stringResource(R.string.chat_poll_who)
     val decide = stringResource(R.string.chat_poll_decide)
-    val days = poll.daysList.map(LocalDate::parse)
-    val open = poll.decided.isEmpty()
-    return (if (open) {
-      days.map { day ->
-        val mine = handlers.me in voters(poll, day.toString())
-        CustomAccessibilityAction((if (mine) notCome else come).format(day.fullText)) { handlers.vote(seq, day.toString(), !mine); true }
-      }
-    } else {
-      emptyList()
-    }) +
-      days.filter { voters(poll, it.toString()).isNotEmpty() }.map { day ->
-        CustomAccessibilityAction(who.format(day.fullText)) { handlers.voters(day, voters(poll, day.toString())); true }
-      } +
-      listOfNotNull(CustomAccessibilityAction(decide) { handlers.decide(seq); true }.takeIf { open && look.canDecide && !look.waiting })
+    val open = look.poll.decided.isEmpty()
+    return listOfNotNull(CustomAccessibilityAction(decide) { line.handlers.decide(seq); true }.takeIf { open && look.canDecide && !look.waiting })
   }
 }
 
@@ -129,7 +113,7 @@ fun PollCard(look: PollLook, handlers: MessageHandlers, seq: Long?, live: Boolea
       .border(1.dp, colors.borderDefault, shape)
       .litWhenGoneTo(handlers.lit?.takeIf { it.seq == seq && seq != null }, shape, handlers.reducedMotion)
   ) {
-    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.padding(12.dp).clearAndSetSemantics {}, verticalAlignment = Alignment.CenterVertically) {
       Icon(painterResource(R.drawable.ic_event_available), contentDescription = null, Modifier.size(20.dp), tint = colors.accentDefault)
       Column(Modifier.padding(start = 8.dp)) {
         Text(stringResource(R.string.chat_poll_title), style = MaterialTheme.typography.titleSmall)
@@ -161,8 +145,11 @@ private fun PollRow(day: LocalDate, poll: ChatPoll, decided: LocalDate?, togethe
   val people = voters(poll, day.toString())
   val mine = handlers.me in people
   val isDecided = day == decided
+  val whoCome = stringResource(R.string.chat_poll_who, day.fullText)
+  val names = people.joinToString("、") { handlers.nameOf(it) }
   Row(
     Modifier.fillMaxWidth()
+      .semantics(mergeDescendants = true) {}
       .background(if (isDecided) colors.accentContainer else androidx.compose.ui.graphics.Color.Transparent)
       .alpha(if (decided != null && !isDecided) FADED else 1f)
       .heightIn(min = 48.dp)
@@ -170,7 +157,7 @@ private fun PollRow(day: LocalDate, poll: ChatPoll, decided: LocalDate?, togethe
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.spacedBy(8.dp),
   ) {
-    Column(Modifier.width(64.dp)) {
+    Column(Modifier.width(64.dp).semantics(mergeDescendants = true) { contentDescription = day.fullText }) {
       Row(verticalAlignment = Alignment.Bottom) {
         val tone = weekdayColor(day.weekday, holiday = day.holidayName(country) != null, week, plain = colors.textPrimary)
         Text(day.slashText, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = tone)
@@ -180,7 +167,10 @@ private fun PollRow(day: LocalDate, poll: ChatPoll, decided: LocalDate?, togethe
     }
     // Who can come: three faces, or two and +N; a tap lists them all by name.
     Row(
-      Modifier.weight(1f).heightIn(min = 32.dp).clickable(enabled = live && people.isNotEmpty()) { handlers.voters(day, people) },
+      Modifier.weight(1f)
+        .heightIn(min = 32.dp)
+        .clickable(enabled = live && people.isNotEmpty(), onClickLabel = whoCome) { handlers.voters(day, people) }
+        .clearAndSetSemantics { if (people.isNotEmpty()) contentDescription = "$whoCome：$names" },
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.spacedBy((-4).dp),
     ) {
@@ -225,8 +215,9 @@ private fun PollRow(day: LocalDate, poll: ChatPoll, decided: LocalDate?, togethe
 fun DecideSheet(poll: ChatPoll, onDismiss: () -> Unit, onDecide: (LocalDate) -> Unit) {
   val decided = poll.decided.takeIf { it.isNotEmpty() }
   var picked by rememberSaveable { mutableStateOf(decided) }
-  ModalBottomSheet(onDismissRequest = onDismiss) {
-    Column(Modifier.navigationBarsPadding().padding(bottom = 16.dp)) {
+  // Through the sheets' one piece, so a poll's every day is in reach.
+  ListSheet(onDismiss) {
+    item {
       Row(Modifier.fillMaxWidth().padding(start = 24.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(
           stringResource(if (decided == null) R.string.chat_poll_decide else R.string.chat_poll_redecide),
@@ -237,23 +228,20 @@ fun DecideSheet(poll: ChatPoll, onDismiss: () -> Unit, onDecide: (LocalDate) -> 
           Text(stringResource(R.string.chat_poll_settle))
         }
       }
-      for (day in poll.daysList) {
-        val date = LocalDate.parse(day)
-        val count = voters(poll, day).size
-        val label = stringResource(R.string.chat_poll_day_count, date.fullText, count)
-        Row(
-          Modifier.fillMaxWidth()
-            .selectable(selected = picked == day, role = Role.RadioButton) { picked = day }
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .clearAndSetSemantics {
-              contentDescription = label
-            },
-          verticalAlignment = Alignment.CenterVertically,
-        ) {
-          RadioButton(selected = picked == day, onClick = null)
-          Text(date.fullText, Modifier.padding(start = 12.dp).weight(1f), style = MaterialTheme.typography.bodyLarge)
-          Text(stringResource(R.string.chat_poll_people, count), style = MaterialTheme.typography.bodyMedium, color = LocalThemeColors.current.textSecondary)
-        }
+    }
+    items(poll.daysList, key = { it }) { day ->
+      val date = LocalDate.parse(day)
+      val count = voters(poll, day).size
+      // One choice to a screen reader: its day, how many can come, and whether it is picked.
+      Row(
+        Modifier.fillMaxWidth()
+          .selectable(selected = picked == day, role = Role.RadioButton) { picked = day }
+          .padding(horizontal = 16.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        RadioButton(selected = picked == day, onClick = null)
+        Text(date.fullText, Modifier.padding(start = 12.dp).weight(1f), style = MaterialTheme.typography.bodyLarge)
+        Text(stringResource(R.string.chat_poll_people, count), style = MaterialTheme.typography.bodyMedium, color = LocalThemeColors.current.textSecondary)
       }
     }
   }

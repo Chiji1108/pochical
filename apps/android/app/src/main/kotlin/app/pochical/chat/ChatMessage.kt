@@ -49,6 +49,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -209,22 +210,22 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
   val items = handlers.items(look)
   // Its menu's items, 返信 first, then what each of its parts offers (spec/chat.md, Screen readers).
   val partLine = PartLine(look.seq, handlers, openMenu = { openMenu() })
-  val actions = items.map { item -> CustomAccessibilityAction(item.label) { item.run(); true } } + look.parts.flatMap { it.actions(partLine) }
+  val actions =
+    (items.map { item -> CustomAccessibilityAction(item.label) { item.run(); true } } + look.parts.flatMap { it.actions(partLine) })
+      // Android holds at most this many on one element; past them, the latest parts' go.
+      .take(MOST_ACTIONS)
   val menuLabel = stringResource(R.string.chat_menu)
   Box(
     modifier
       .zIndex(if (handlers.spray?.seq == look.seq && look.seq != null) 1f else 0f)
       .fillMaxWidth()
       .padding(top = (if (look.startsRun) Chat.runGap else Chat.lineGap).dp)
-      .clearAndSetSemantics {
-      contentDescription = look.said
-      customActions = actions
-      // Activating it opens its menu, as the long press does.
-      onClick(menuLabel) {
-        openMenu()
-        true
-      }
-    }
+      .then(
+        // A poll's days and 行ける are gone through one by one after its line (spec/chat.md, Screen
+        // readers); any other line is one element.
+        if (look.poll != null) Modifier.semantics { lineSemantics(look.said, actions, menuLabel) { openMenu() } }
+        else Modifier.clearAndSetSemantics { lineSemantics(look.said, actions, menuLabel) { openMenu() } }
+      )
   ) {
     // The reply arrow, in the room the line leaves as it is dragged.
     val pulled = (abs(drag.offset.value) / swipeWidth).coerceIn(0f, 1f)
@@ -248,7 +249,7 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
       horizontalArrangement = if (look.mine) Arrangement.End else Arrangement.Start,
     ) {
       if (!look.mine) {
-        Box(Modifier.size(FACE)) {
+        Box(Modifier.size(FACE).clearAndSetSemantics {}) {
           val writer = look.writer
           if (look.startsRun && writer != null) MemberAvatar(writer.shownName(), writer.photoId, PhotoShelf.Group(writer.groupId), FACE)
         }
@@ -261,14 +262,14 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
         if (!look.mine && look.startsRun && look.showsName && writer != null) {
           Text(
             writer.shownName(),
-            Modifier.padding(start = 4.dp, bottom = 2.dp),
+            Modifier.padding(start = 4.dp, bottom = 2.dp).clearAndSetSemantics {},
             style = MaterialTheme.typography.labelMedium,
             color = colors.textSecondary,
           )
         }
         Row(verticalAlignment = Alignment.Bottom) {
           val edited = (look.content as? LineContent.Words)?.edited == true
-          if (look.mine) TimeRoom(look.time, look.waiting, edited, look.pinned, items, Modifier.padding(end = 4.dp))
+          if (look.mine) TimeRoom(look.time, look.waiting, edited, look.pinned, items, Modifier.padding(end = 4.dp).clearAndSetSemantics {})
           Box(
             Modifier.weight(1f, fill = false)
               .onGloballyPositioned { at ->
@@ -280,7 +281,7 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
           ) {
             LineBody(look, handlers, onQuote = { look.quote?.let { handlers.jump(it.seq) } })
           }
-          if (!look.mine) TimeRoom(look.time, null, edited, look.pinned, items, Modifier.padding(start = 4.dp))
+          if (!look.mine) TimeRoom(look.time, null, edited, look.pinned, items, Modifier.padding(start = 4.dp).clearAndSetSemantics {})
         }
         if (look.waiting?.failed == true) {
           Text(stringResource(R.string.chat_not_sent), style = MaterialTheme.typography.labelSmall, color = colors.dangerDefault)
@@ -485,6 +486,24 @@ fun messageLook(
     else -> null
   }
 }
+
+/** A line as a screen reader has it: what it reads, its actions, and its menu opened by activating it, as the long press opens it. */
+private fun androidx.compose.ui.semantics.SemanticsPropertyReceiver.lineSemantics(
+  said: String,
+  actions: List<CustomAccessibilityAction>,
+  menuLabel: String,
+  openMenu: () -> Unit,
+) {
+  contentDescription = said
+  customActions = actions
+  onClick(menuLabel) {
+    openMenu()
+    true
+  }
+}
+
+/** The most custom actions Android takes on one element (its accessibility node's limit). */
+private const val MOST_ACTIONS = 32
 
 /** Where the bubble is in the window, whole: the list's clip would cut one scrolled partly out of sight. */
 private fun LayoutCoordinates.unclipped(): Rect = Rect(positionInWindow(), size.toSize())
