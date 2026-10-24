@@ -118,6 +118,28 @@ class RepeatPagesTest {
   }
 
   @Test
+  fun holidaysTurnedOnAsAPeriodIsSetAgainTakeAPatternStillOff() {
+    // Off, the period keeps 休み, which then stops counting as off; 有休 still does.
+    dayAndOffInAnOrder()
+    runBlocking {
+      test.edits.setHolidaysOff(true, start = LocalDate.parse("2026-01-01"))
+      test.edits.setHolidaysOff(false, start = LocalDate.parse("2026-01-01"))
+      test.edits.savePattern("paid", markedPattern("有休") { countsAsOff = true })
+      test.edits.savePattern("off", markedPattern("休み"))
+    }
+    test.awaitCalendar { calendar -> calendar.patterns.single { it.id == "off" }.countsAsOff.not() && calendar.patterns.size == 3 }
+    val fix = RepeatMode.Fix("2026-01-01")
+    show(listOf(RootPage.Repeat, RootPage.RepeatEditor(fix))) { RepeatEditor(fix, navigation) }
+    compose.onNodeWithText("完了").performClick()
+    compose.onNodeWithText("祝日は休みにする").performClick()
+    compose.onNodeWithText("入れ直す").performClick()
+    compose.waitForIdle()
+    compose.awaitRoutes(navigator, Tabs, RootPage.Repeat)
+    // The period page turns it on the same way (spec/vectors/repeat.json, holidayChoice).
+    assertEquals(listOf(true to "paid"), test.awaitCalendar { it.orders.single().holidaysOff }.orders.map { it.holidaysOff to it.holidayShift })
+  }
+
+  @Test
   fun stoppingPutsInAPeriodWithoutRepeating() {
     dayAndOffInAnOrder()
     show(listOf(RootPage.Repeat, RootPage.StopRepeat)) { StopRepeatPage(navigation) }

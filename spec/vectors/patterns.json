@@ -1,5 +1,5 @@
 {
-  "about": "Changing the list of patterns (spec/shift-patterns.md). deleted: deleting pattern `id` takes it from `patterns` and changes nothing that names it: other patterns keep it as their `nextDay`, and days and orders keep it, each read as naming a pattern that is gone (spec/sync-protocol.md, Deleted values). newJob: changing jobs; the new job's `incoming` patterns take over from the person's `own`, and an old one still on a day before the switch (`usedBefore`) stays after them, archived (`archived`, written only when true): kept for its days, offered nowhere a pattern is picked. A ready-made pattern sharing an id with one of the person's that differs (name, mark, time, off, next day) and is still used before the switch keeps the person's id; the new job's takes a fresh one, which `sequence` (the new order) and next days use. Fresh ids are \"new-1\", \"new-2\"… in the order of `incoming`. `expected` lists the patterns by id, in order, with their next day. guessLook: a new pattern's mark from its name (design/src/patterns.ts, lookHints): the first hint with a word anywhere in the name gives its emoji and icon, else ⭐️ and the letter icon; the letter is the name's first character, trimmed. A mark picked by hand is never guessed again. nextColor: a new pattern's color, the first palette slot no pattern uses, else the count of patterns modulo the palette's 12 slots. readyCopies: the ready-made patterns `ids` (design/src/patterns.ts, readyPatterns) as the person's copies, in that order: each keeps its next day only when that pattern is among `keeping` (`ids` when not given), so a 当番 picked without its 非番, or a 夜勤 without its 明け, fills nothing on the next day. `keeping` is what パターンを追加 counts: the person's patterns and those added with them. refused: what the orders put in the way of pattern `id`, saved as `archived`, on `today`. An order in use or to come (`orders`, by start) that has it in its sequence or as its holiday shift refuses deleting it, and archiving it while it is in use; one only in periods over refuses neither, and bringing one back into use is never refused (spec/shift-patterns.md, Patterns no longer used). saved: saving pattern `id` over the person's `patterns`, in their order: one already there keeps its place, and a new one goes at the end of the order, which the device then sends as the patterns' order (spec/shift-patterns.md). fits: whether the server takes `pattern` under its `id` (apps/server/src/pattern-values.ts), so a pattern the apps save stays once sent: a name of 1 to textLimits.shiftName characters, not only spaces; one emoji (spec/vectors/text.json, isEmoji); a letter of 1 to textLimits.shiftMark characters, not only spaces; an icon's name of 1 to syncLimits.idLength characters without spaces; a color of the palette's 12 slots; both times or neither, each HH:MM; and a next day that is another pattern's id, never its own.",
+  "about": "Changing the list of patterns (spec/shift-patterns.md). deleted: deleting pattern `id` takes it from `patterns` and changes nothing that names it: other patterns keep it as their `nextDay`, and days and orders keep it, each read as naming a pattern that is gone (spec/sync-protocol.md, Deleted values). newJob: changing jobs; the new job's `incoming` patterns take over from the person's `own`, and an old one still on a day before the switch (`usedBefore`) stays after them, archived (`archived`, written only when true): kept for its days, offered nowhere a pattern is picked. A ready-made pattern sharing an id with one of the person's that differs (name, mark, time, off, next day) and is still used before the switch keeps the person's id; the new job's takes a fresh one, which `sequence` (the new order) and next days use. Fresh ids are \"new-1\", \"new-2\"… in the order of `incoming`. `expected` lists the patterns by id, in order, with their next day. guessLook: a new pattern's mark from its name (design/src/patterns.ts, lookHints): the first hint with a word anywhere in the name gives its emoji and icon, else ⭐️ and the letter icon; the letter is the name's first character, trimmed. A mark picked by hand is never guessed again. nextColor: a new pattern's color, the first palette slot no pattern uses, else the count of patterns modulo the palette's 12 slots. readyCopies: the ready-made patterns `ids` (design/src/patterns.ts, readyPatterns) as the person's copies, in that order: each keeps its next day only when that pattern is among `keeping` (`ids` when not given), so a 当番 picked without its 非番, or a 夜勤 without its 明け, fills nothing on the next day. `keeping` is what パターンを追加 counts: the person's patterns and those added with them. refused: what the orders put in the way of pattern `id`, saved as `archived`, on `today`. An order in use or to come (`orders`, by start) that has it in its sequence or as its holiday shift refuses deleting it, and archiving it while it is in use; one only in periods over refuses neither, and bringing one back into use is never refused (spec/shift-patterns.md, Patterns no longer used). saved: saving pattern `id` over the person's `patterns`, in their order: one already there keeps its place, and a new one goes at the end of the order, which the device then sends as the patterns' order (spec/shift-patterns.md). fits: whether the server takes `pattern` under its `id` (apps/server/src/pattern-values.ts), so a pattern the apps save stays once sent: a name of 1 to textLimits.shiftName characters, not only spaces; one emoji (spec/vectors/text.json, isEmoji); a letter of 1 to textLimits.shiftMark characters, not only spaces; an icon's name of 1 to syncLimits.idLength characters without spaces; a color of the palette's 12 slots; both times or neither, each HH:MM; and a next day that is another pattern's id, never its own. iconSearch: the icon picker's search for a mark's icon, a pattern's or a group's (/design's IconPickerSheet; design/src/mark-icon-names.ts): the icons whose name or words hold every word of `query`, split at spaces, with width, case and katakana folded on both sides (NFKC, lower case, katakana as hiragana), listed kind by kind in the kinds' order; `expected` null for nothing typed, which shows every kind whole.",
   "deleted": [
     {
       "name": "it goes from the list, and patterns that name it keep it",
@@ -819,6 +819,58 @@
         "nextDay": "day"
       },
       "expected": false
+    }
+  ],
+  "iconSearch": [
+    {
+      "name": "a name",
+      "query": "猫",
+      "expected": ["cat"]
+    },
+    {
+      "name": "katakana",
+      "query": "ケア",
+      "expected": ["handHeart"]
+    },
+    {
+      "name": "hiragana finds the katakana",
+      "query": "けあ",
+      "expected": ["handHeart"]
+    },
+    {
+      "name": "half-width katakana",
+      "query": "ｹｱ",
+      "expected": ["handHeart"]
+    },
+    {
+      "name": "half-width with a voiced mark and a small kana",
+      "query": "ﾎﾞﾗﾝﾃｨｱ",
+      "expected": ["handHeart"]
+    },
+    {
+      "name": "a long vowel mark stays",
+      "query": "はーと",
+      "expected": ["heart", "handHeart"]
+    },
+    {
+      "name": "a name and its words alike, kind by kind",
+      "query": "夜",
+      "expected": ["cloudMoon", "moon", "moonStar"]
+    },
+    {
+      "name": "every word typed",
+      "query": "夜勤 夜",
+      "expected": ["moon"]
+    },
+    {
+      "name": "a word no icon has",
+      "query": "夜勤 ケア",
+      "expected": []
+    },
+    {
+      "name": "nothing typed",
+      "query": "  ",
+      "expected": null
     }
   ]
 }
