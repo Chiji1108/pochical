@@ -1,0 +1,75 @@
+{
+  "about": "Months and weekdays as the headings and short labels name them (spec/calendar.md, How days are written), with 月と曜日 in Japanese or, `english`, in English. For `day` (\"YYYY-MM-DD\"): weekdayLetter heads a column of days (木, T); weekdayName goes beside a date (木, Thu); weekdayHead heads a column that does not start the week (木, THU); monthTitle names a month alone (9月, September); monthWithYear with its year (2026年9月, September 2026); shortMonth in small text (9月, Sep); headingMonth is the calendar heading's English month, lower case and cut to three letters with a period unless it has no more (sep., may), and null in Japanese, where the heading writes the month's number before 月.",
+  "cases": [
+    {
+      "name": "a Thursday of September in English",
+      "day": "2026-09-24",
+      "english": true,
+      "expected": {
+        "weekdayLetter": "T",
+        "weekdayName": "Thu",
+        "weekdayHead": "THU",
+        "monthTitle": "September",
+        "monthWithYear": "September 2026",
+        "shortMonth": "Sep",
+        "headingMonth": "sep."
+      }
+    },
+    {
+      "name": "the same day in Japanese",
+      "day": "2026-09-24",
+      "english": false,
+      "expected": {
+        "weekdayLetter": "木",
+        "weekdayName": "木",
+        "weekdayHead": "木",
+        "monthTitle": "9月",
+        "monthWithYear": "2026年9月",
+        "shortMonth": "9月",
+        "headingMonth": null
+      }
+    },
+    {
+      "name": "a month of three letters keeps them all, with no period",
+      "day": "2026-05-01",
+      "english": true,
+      "expected": {
+        "weekdayLetter": "F",
+        "weekdayName": "Fri",
+        "weekdayHead": "FRI",
+        "monthTitle": "May",
+        "monthWithYear": "May 2026",
+        "shortMonth": "May",
+        "headingMonth": "may"
+      }
+    },
+    {
+      "name": "a Sunday of January",
+      "day": "2026-01-04",
+      "english": true,
+      "expected": {
+        "weekdayLetter": "S",
+        "weekdayName": "Sun",
+        "weekdayHead": "SUN",
+        "monthTitle": "January",
+        "monthWithYear": "January 2026",
+        "shortMonth": "Jan",
+        "headingMonth": "jan."
+      }
+    },
+    {
+      "name": "a Saturday of December in Japanese",
+      "day": "2027-12-25",
+      "english": false,
+      "expected": {
+        "weekdayLetter": "土",
+        "weekdayName": "土",
+        "weekdayHead": "土",
+        "monthTitle": "12月",
+        "monthWithYear": "2027年12月",
+        "shortMonth": "12月",
+        "headingMonth": null
+      }
+    }
+  ]
+}

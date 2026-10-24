@@ -2,22 +2,38 @@ import Testing
 
 @testable import PochicalKit
 
-@Test func englishNamesTheMonthsAndWeekdaysAsTheCalendarHeadsThem() {
-  let day = Day(year: 2026, month: 9, day: 24)
-  #expect(Day.weekdayLetter(day.weekday, english: true) == "T")
-  #expect(day.weekdayName(english: true) == "Thu")
-  #expect(day.weekdayHead(english: true) == "THU")
-  #expect(day.monthTitle(english: true) == "September")
-  #expect(day.monthWithYear(english: true) == "September 2026")
-  #expect(day.shortMonth(english: true) == "Sep")
-  #expect(day.headingMonth == "sep.")
-  #expect(Day(year: 2026, month: 5, day: 1).headingMonth == "may")
+struct DayNameVectors: Decodable, Sendable {
+  struct Case: VectorCase {
+    struct Names: Decodable, Sendable, Equatable {
+      let weekdayLetter: String
+      let weekdayName: String
+      let weekdayHead: String
+      let monthTitle: String
+      let monthWithYear: String
+      let shortMonth: String
+      let headingMonth: String?
+    }
+
+    let name: String
+    let day: String
+    let english: Bool
+    let expected: Names
+  }
+
+  let cases: [Case]
 }
 
-@Test func japaneseKeepsItsOwnForms() {
-  let day = Day(year: 2026, month: 9, day: 24)
-  #expect(Day.weekdayLetter(day.weekday, english: false) == "木")
-  #expect(day.weekdayHead(english: false) == "木")
-  #expect(day.monthWithYear(english: false) == "2026年9月")
-  #expect(day.shortMonth(english: false) == "9月")
+@Test(arguments: try vectors("day-names", as: DayNameVectors.self).cases)
+func namesMonthsAndWeekdaysAsTheHeadingsDo(_ vector: DayNameVectors.Case) throws {
+  let day = try #require(Day(vector.day))
+  let english = vector.english
+  #expect(
+    DayNameVectors.Case.Names(
+      weekdayLetter: Day.weekdayLetter(day.weekday, english: english),
+      weekdayName: day.weekdayName(english: english),
+      weekdayHead: day.weekdayHead(english: english),
+      monthTitle: day.monthTitle(english: english),
+      monthWithYear: day.monthWithYear(english: english),
+      shortMonth: day.shortMonth(english: english),
+      headingMonth: english ? day.headingMonth : nil) == vector.expected)
 }

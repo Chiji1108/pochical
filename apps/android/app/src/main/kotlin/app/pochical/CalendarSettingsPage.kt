@@ -2,10 +2,7 @@ package app.pochical
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -17,20 +14,14 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import app.pochical.calendar.LocalOwnDays
 import app.pochical.calendar.StylePreview
+import app.pochical.calendar.rememberPreviewScheme
 import app.pochical.calendar.rememberToday
 import app.pochical.calendar.shortMonth
 import app.pochical.calendar.weekdayLetter
@@ -61,23 +52,14 @@ fun CalendarSettingsRow(open: (RootPage) -> Unit) {
 fun CalendarSettingsPage(onBack: () -> Unit) {
   val settings = LocalDeviceSettings.current
   val device = settings.device
-  val calendar by LocalOwnDays.current.calendar.collectAsState()
   val today = rememberToday()
-  var picked by rememberSaveable { mutableStateOf<Boolean?>(null) }
-  val dark = picked ?: isDark(device, isSystemInDarkTheme())
+  val scheme = rememberPreviewScheme()
   val colors = LocalThemeColors.current
   fun changeWeek(change: (Week) -> Week) = settings.change { it.copy(week = change(it.week)) }
   SettingsPage(stringResource(R.string.calendar_settings), onBack) { padding ->
     LazyColumn(contentPadding = padding) {
       item {
-        StylePreview(
-          calendar.patterns.filterNot { it.archived },
-          today,
-          dark,
-          { picked = it },
-          Modifier.padding(horizontal = 16.dp),
-          withHeading = true,
-        )
+        StylePreview(scheme, today, Modifier.padding(horizontal = 16.dp), withHeading = true)
       }
       // The month's name and the weekdays' together: a heading reads in one language, so English names both.
       item {
@@ -149,8 +131,11 @@ private fun <T> Segments(
 /** A day that takes a color of its own: its name after a dot of that color, and a switch. */
 @Composable
 private fun ColoredDay(name: Int, color: Color, on: Boolean, onChange: (Boolean) -> Unit) {
-  Row(verticalAlignment = Alignment.CenterVertically) {
-    Box(Modifier.padding(start = 16.dp).size(10.dp).background(color, CircleShape))
-    Box(Modifier.weight(1f)) { SwitchRow(title = stringResource(name), note = null, on = on, onChange = onChange) }
-  }
+  SwitchRow(
+    title = stringResource(name),
+    note = null,
+    on = on,
+    onChange = onChange,
+    leading = { Box(Modifier.size(10.dp).background(color, CircleShape)) },
+  )
 }

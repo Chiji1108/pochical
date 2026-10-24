@@ -13,9 +13,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.BlendMode
@@ -30,9 +31,13 @@ import app.pochical.LocalDeviceSettings
 import app.pochical.design.Skies
 import app.pochical.design.Theme
 import app.pochical.isDark
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 
 /** The share of the calendar's height the sky spreads over, from its top. */
 private const val SKY_SHARE = 0.34f
+
+private val SKY_CHANGE = tween<Float>((Skies.CHANGE_SECONDS * 1000).toInt(), easing = LinearOutSlowInEasing)
 
 /**
  * Another sky than [id], at random: one anyone may get, or the テーマ's own; the テーマ's own the
@@ -44,12 +49,15 @@ fun nextSky(id: String?, theme: Theme): String {
   return (Skies.anyone + own).filter { it != id }.randomOrNull() ?: own
 }
 
+/** A sky drawn at [alpha], fading in as it comes and out as another takes its place. */
+private class SkyLayer(val lights: List<Color>, val alpha: Animatable<Float, *>)
+
 /**
- * おたのしみ's sky as the calendar draws it behind its heading (iOS's SurpriseSky, /design's
- * useSurprise): pale light from both top corners and the middle, gone by the first weeks, in the
- * sky the last tap on the month's name drifted to, nothing before the first. A new one settles in
- * under a second over the one before; it breathes slowly while it stays, still with reduced
- * motion.
+ * おたのしみ's sky behind the calendar's heading (iOS's SurpriseSky, /design's useSurprise): pale
+ * light from both top corners and the middle, gone by the first weeks, in the sky the last tap on
+ * the month's name drifted to, nothing before the first. A new one settles in under a second
+ * over those before, from wherever they had got to; it breathes slowly while it stays, still with
+ * reduced motion.
  */
 @Composable
 fun rememberSurpriseSky(reduceMotion: Boolean): DrawScope.() -> Unit {
@@ -57,36 +65,46 @@ fun rememberSurpriseSky(reduceMotion: Boolean): DrawScope.() -> Unit {
   val dark = isDark(device, isSystemInDarkTheme())
   val heading = device.heading
   val lights = heading.sky?.takeIf { heading.surprise }?.let { Skies.lights[it]?.colors(dark, device.theme.id) }
-  var shown by remember { mutableStateOf(lights) }
-  var before by remember { mutableStateOf<List<Color>?>(null) }
-  val change = remember { Animatable(1f) }
+  val layers = remember { mutableStateListOf<SkyLayer>() }
   LaunchedEffect(lights) {
-    if (lights == shown) return@LaunchedEffect
-    before = shown
-    shown = lights
-    change.snapTo(0f)
-    change.animateTo(1f, tween((Skies.CHANGE_SECONDS * 1000).toInt(), easing = LinearOutSlowInEasing))
-    before = null
+    if (layers.lastOrNull()?.lights == lights) return@LaunchedEffect
+    val coming = lights?.let { SkyLayer(it, Animatable(0f)) }
+    val going = layers.toList()
+    coming?.let(layers::add)
+    coroutineScope {
+      for (layer in going) launch { layer.alpha.animateTo(0f, SKY_CHANGE) }
+      coming?.let { launch { it.alpha.animateTo(1f, SKY_CHANGE) } }
+    }
+    layers.removeAll(going)
   }
+  // Breathing only while a sky shows, so the calendar asks for no frames without one.
   val breath: State<Float> =
-    if (reduceMotion) {
+    if (reduceMotion || layers.isEmpty()) {
       remember { mutableStateOf(0f) }
     } else {
       rememberInfiniteTransition(label = "sky")
-        .animateFloat(0f, 1f, infiniteRepeatable(tween((Skies.BREATH_SECONDS * 1000).toInt(), easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "breath")
+        .animateFloat(
+          0f,
+          1f,
+          infiniteRepeatable(tween((Skies.BREATH_SECONDS * 1000).toInt(), easing = FastOutSlowInEasing), RepeatMode.Reverse),
+          label = "breath",
+        )
     }
-  return {
-    before?.let { drawSky(it, 1 - change.value, breath.value) }
-    shown?.let { drawSky(it, change.value, breath.value) }
+  val breathing by rememberUpdatedState(breath)
+  return remember {
+    val paint = Paint()
+    val draw: DrawScope.() -> Unit = { for (layer in layers) drawSky(layer.lights, layer.alpha.value, breathing.value, paint) }
+    draw
   }
 }
 
-/** One sky at [alpha], [breath] of the way through its slow swell. */
-private fun DrawScope.drawSky(lights: List<Color>, alpha: Float, breath: Float) {
+/** One sky at [alpha], [breath] of the way through its slow swell, through [paint]'s layer. */
+private fun DrawScope.drawSky(lights: List<Color>, alpha: Float, breath: Float, paint: Paint) {
   val width = size.width
   val height = size.height * SKY_SHARE
   drawIntoCanvas { canvas ->
-    canvas.saveLayer(Rect(0f, 0f, width, height), Paint().apply { this.alpha = alpha })
+    paint.alpha = alpha
+    canvas.saveLayer(Rect(0f, 0f, width, height), paint)
     // A little larger than its place as it breathes, so it never shows an edge.
     translate(left = (breath * 2 - 1) * 0.02f * width) {
       scale(1 + 0.08f * breath, pivot = Offset(width / 2, 0f)) {
