@@ -21,7 +21,7 @@ import androidx.glance.layout.width
  * シンプル (/design's SimpleSmallView and SimpleMediumView; spec/widgets.md, Views): today alone,
  * large, and beside tomorrow in the 4×2.
  */
-class SimpleWidget : PochicalWidget() {
+class SimpleWidget : PochicalWidget(previews = setOf(SMALL, MEDIUM)) {
   @Composable
   override fun Content(drawn: Drawn) {
     val entry = drawn.entry

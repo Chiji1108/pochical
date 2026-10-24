@@ -38,7 +38,7 @@ import app.pochical.calendar.weekdayHead
  * これから (/design's UpcomingSmall and UpcomingMedium; spec/widgets.md, Views): today's mark over
  * the next three days in the 2×2, and five days from today a column each in the 4×2.
  */
-class UpcomingWidget : PochicalWidget(Choosing.People) {
+class UpcomingWidget : PochicalWidget(Choosing.People, setOf(SMALL, MEDIUM)) {
   @Composable
   override fun Content(drawn: Drawn) {
     val entry = drawn.entry

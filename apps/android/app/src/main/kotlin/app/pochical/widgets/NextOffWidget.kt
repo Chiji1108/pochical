@@ -32,7 +32,7 @@ import app.pochical.calendar.weekdayName
  * 次の休み (/design's NextOffSmall; spec/widgets.md, Views): how soon the next day off comes, in
  * the 2×2 alone.
  */
-class NextOffWidget : PochicalWidget(Choosing.PeopleAndGroups) {
+class NextOffWidget : PochicalWidget(Choosing.PeopleAndGroups, setOf(SMALL)) {
   @Composable
   override fun Content(drawn: Drawn) {
     val entry = drawn.entry

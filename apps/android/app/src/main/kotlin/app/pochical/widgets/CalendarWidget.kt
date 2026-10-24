@@ -32,7 +32,7 @@ import java.time.YearMonth
  * カレンダー (/design's TwoWeeksMedium and CalendarLarge; spec/widgets.md, Views): this week and
  * the next in the 4×2, and the month in the 4×4, drawn as the app's month draws its days.
  */
-class CalendarWidget : PochicalWidget() {
+class CalendarWidget : PochicalWidget(previews = setOf(MEDIUM, LARGE)) {
   @Composable
   override fun Content(drawn: Drawn) {
     when {
