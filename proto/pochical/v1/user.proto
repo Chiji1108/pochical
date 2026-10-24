@@ -99,9 +99,12 @@ message SetChatNotificationsRequest {
 message SetChatNotificationsResponse {}
 
 message SetProfileRequest {
-  string name = 1;
-  // One of the user's own photos, uploaded to /v1/me/photos/{id} first.
-  string photo_id = 2;
+  // The usual name, empty for none; unset keeps the one set before, so a
+  // device changing only the photo cannot undo another's new name.
+  optional string name = 1;
+  // One of the user's own photos, uploaded to /v1/me/photos/{id} first,
+  // empty for none; unset keeps the one set before.
+  optional string photo_id = 2;
 }
 
 message SetProfileResponse {}

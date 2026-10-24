@@ -44,4 +44,21 @@ class KeptNameTest {
     assertEquals(listOf("さくら", "サクラ"), server.displayNames.map { it.displayName })
     assertEquals("group-1", server.displayNames.last().groupId)
   }
+
+  @Test
+  fun aUsualNameOrPhotoKeptSendsOnlyWhatChanged() = runBlocking {
+    phone.account.foreground()
+    phone.account.state.first { it is AccountState.SignedIn }
+    calls.keepProfile(name = "さくら")
+    calls.keepProfile(photo = UsualPhoto.New(byteArrayOf(1, 2, 3)))
+    val last = calls.keepProfile(name = "サクラ")
+
+    withTimeout(5_000) { last.await() }
+    val photo = server.ownPhotos.single()
+    // Each sends what changed alone, the server keeping the rest as it has it.
+    assertEquals(
+      listOf(("さくら" to null), (null to photo), ("サクラ" to null)),
+      server.profiles.map { (if (it.hasName()) it.name else null) to (if (it.hasPhotoId()) it.photoId else null) },
+    )
+  }
 }

@@ -16,7 +16,7 @@
 // whose names contain it, --dark measures in dark mode, --width sets the
 // window's width (800), --workers how many screens load at once (4). Runs are kept in
 // tools/layout-diff/out. It drives the installed Google Chrome, or without
-// one Playwright's Chromium: bunx playwright-core install --only-shell chromium
+// one Playwright's Chromium: pnpm exec playwright-core install --only-shell chromium
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { parseArgs } from "node:util";

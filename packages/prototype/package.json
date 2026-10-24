@@ -1,6 +1,7 @@
 {
   "name": "@pochical/prototype",
   "private": true,
+  "license": "PolyForm-Strict-1.0.0",
   "type": "module",
   "exports": {
     "./assets/*": "./src/assets/*",
@@ -8,11 +9,11 @@
     "./lib/*": "./src/lib/*.ts"
   },
   "scripts": {
-    "icon:android": "bun scripts/android-app-icons.ts",
-    "icon:ios": "bun scripts/ios-app-icons.ts",
-    "icon:site": "bun scripts/site-icon.ts",
+    "icon:android": "tsx scripts/android-app-icons.ts",
+    "icon:ios": "tsx scripts/ios-app-icons.ts",
+    "icon:site": "tsx scripts/site-icon.ts",
     "typecheck": "tsc --noEmit",
-    "test": "bun test"
+    "test": "vitest run"
   },
   "dependencies": {
     "@ark-ui/react": "^5.39.3",
@@ -36,11 +37,13 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
-    "@types/bun": "^1.4.3",
+    "@types/node": "catalog:",
     "@types/react": "~19.3.0",
     "@types/react-dom": "^19.2.0",
     "sharp": "0.35.5",
+    "tsx": "catalog:",
     "typescript": "~7.0.2",
-    "vite": "^8.0.0"
+    "vite": "^8.0.0",
+    "vitest": "catalog:"
   }
 }

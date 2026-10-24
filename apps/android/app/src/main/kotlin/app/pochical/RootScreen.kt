@@ -38,6 +38,9 @@ import app.pochical.patterns.AddPatternPage
 import app.pochical.patterns.PatternEditor
 import app.pochical.patterns.PatternsPage
 import app.pochical.repeat.JobChangePage
+import app.pochical.people.CoworkerEditorPage
+import app.pochical.people.CoworkersPage
+import app.pochical.people.ProfilePage
 import app.pochical.repeat.RepeatEditor
 import app.pochical.repeat.RepeatPage
 import app.pochical.repeat.RepeatPeriodPage
@@ -111,6 +114,9 @@ fun RootScreen(navigator: RootNavigator) {
       is RootPage.RepeatEditor -> NavEntry(route) { RepeatEditor(route.mode, rememberPageNavigation(navigator)) }
       RootPage.StopRepeat -> NavEntry(route) { StopRepeatPage(rememberPageNavigation(navigator)) }
       RootPage.JobChange -> NavEntry(route) { JobChangePage(rememberPageNavigation(navigator)) }
+      RootPage.Coworkers -> NavEntry(route) { CoworkersPage(rememberPageNavigation(navigator)) }
+      RootPage.Profile -> NavEntry(route) { ProfilePage(rememberPageNavigation(navigator)) }
+      is RootPage.CoworkerEditor -> NavEntry(route) { CoworkerEditorPage(route.id, rememberPageNavigation(navigator)) }
     }
   }
 }

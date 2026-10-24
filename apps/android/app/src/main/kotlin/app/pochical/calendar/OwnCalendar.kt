@@ -143,6 +143,15 @@ interface OwnDays {
 
   /** Adds `name` at the end of 一緒に働く人. */
   fun addCoworker(name: String): Coworker
+
+  /** Gives someone of 一緒に働く人 a new name, on every day they are on too. */
+  fun renameCoworker(id: String, name: String)
+
+  /** Takes someone off 一緒に働く人, and so off the days that note them. */
+  fun deleteCoworker(id: String)
+
+  /** Puts 一緒に働く人 in this order, as a day's details list them. */
+  fun orderCoworkers(ids: List<String>)
 }
 
 /** The person's days for the screens under the app's root. */

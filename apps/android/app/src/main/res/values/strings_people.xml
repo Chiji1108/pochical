@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 設定 › 一緒に働く人 and プロフィール (spec/sync-protocol.md, Coworkers; Profile). -->
+<resources>
+  <string name="coworkers">一緒に働く人</string>
+  <string name="coworkers_count">%1$d人</string>
+  <string name="coworkers_add">人を追加</string>
+  <string name="coworkers_note">同じシフトに入る人などを、日付の詳細でその日にメモできます。ここで直した名前は、入れてある日にも反映されます。</string>
+  <string name="coworkers_sort_note">つまみを上下に動かして並べ替えます。日付の詳細でも、この順に並びます。</string>
+  <string name="coworkers_move">%1$sを移動</string>
+  <string name="coworker_days">%1$d日</string>
+  <string name="coworker_days_note">%1$d日の予定に入っています。名前を変えると、その日の表示も変わります。</string>
+  <string name="coworker_duplicate">同じ名前の人がもういます。</string>
+  <string name="coworker_name_empty">名前が空のままでは保存されません。</string>
+  <string name="coworker_delete">この人を削除</string>
+  <string name="coworker_delete_title">%1$sを削除しますか？</string>
+  <string name="coworker_delete_body">%1$d日の予定から%2$sが外れます。</string>
+  <string name="profile">プロフィール</string>
+  <string name="profile_unset">未設定</string>
+  <string name="profile_name">いつもの名前</string>
+  <string name="photo_not_saved">写真を保存できませんでした。通信できるときに、もう一度お試しください。</string>
+  <string name="profile_note">グループでは、この名前と写真で表示されます。グループごとに違う名前や写真にしたいときは、各グループの設定で変えられます。</string>
+</resources>

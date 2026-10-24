@@ -31,7 +31,7 @@ const sources = [
   },
   {
     alt: "ポチカルのロゴと「シフトを、ポチッと。」、カレンダーの画面",
-    note: "リンクを共有したときの画像、1200×630。/_render/share-image を bun run --cwd apps/design image:share で撮っています。",
+    note: "リンクを共有したときの画像、1200×630。/_render/share-image を pnpm --dir apps/design image:share で撮っています。",
     path: "packages/prototype/src/assets/share.png",
     src: shareImage,
     title: "共有したときの画像",

@@ -7,10 +7,13 @@ import SQLiteData
 // shows on every day they are on, and someone deleted is skipped there.
 
 extension OwnValues {
-  /// Gives someone a new name, on every day they are on too.
+  /// Gives someone a new name, on every day they are on too; nothing for
+  /// someone gone, whom a newer clock would bring back
+  /// (spec/sync-protocol.md, Deleted values).
   public static func renameCoworker(_ id: String, to name: String, now: Int64, in db: Database)
     throws
   {
+    guard try CoworkerRow.find(id).fetchOne(db) != nil else { return }
     var coworker = Pochical_V1_CoworkerValue()
     coworker.id = id
     coworker.name = name

@@ -233,8 +233,11 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
     id
   }
 
-  /** Gives someone a new name, on every day they are on too. */
-  suspend fun renameCoworker(id: String, name: String) = database.write { putCoworker(id, name) }
+  /**
+   * Gives someone a new name, on every day they are on too; nothing for someone gone, whose newer
+   * clock would bring them back (spec/sync-protocol.md, Deleted values).
+   */
+  suspend fun renameCoworker(id: String, name: String) = database.write { if (id in coworkerIds()) putCoworker(id, name) }
 
   /** Deletes someone: gone from the list, and skipped on the days that name them. */
   suspend fun deleteCoworker(id: String) = database.write {

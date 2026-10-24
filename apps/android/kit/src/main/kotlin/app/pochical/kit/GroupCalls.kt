@@ -52,14 +52,14 @@ class GroupCalls internal constructor(
   private val groups = GroupServiceClient(client)
   private val users = UserServiceClient(client)
 
-  /** The names kept, sent one at a time in the order they were kept. */
-  private val namesKept = Channel<KeptName>(Channel.UNLIMITED)
+  /** The names and profiles kept, sent one at a time in the order they were kept. */
+  private val kept = Channel<Kept>(Channel.UNLIMITED)
 
   init {
     scope.launch {
-      for (kept in namesKept) {
+      for (kept in kept) {
         try {
-          setDisplayName(kept.groupId, kept.name)
+          kept.send()
           kept.answer.complete(Unit)
         } catch (e: CancellationException) {
           throw e
@@ -76,13 +76,31 @@ class GroupCalls internal constructor(
    * and sent by the kit after those kept before it, whether the page still waits or not. The page
    * may await the answer while it is there.
    */
-  fun keepDisplayName(groupId: String, name: String): Deferred<Unit> {
-    val kept = KeptName(groupId, name)
-    namesKept.trySend(kept)
-    return kept.answer
+  fun keepDisplayName(groupId: String, name: String): Deferred<Unit> = keep { setDisplayName(groupId, name) }
+
+  /**
+   * Keeps the user's usual name, photo or both (spec/sync-protocol.md, Profile), as [keepDisplayName]
+   * keeps a group's name: taken at once and sent in turn by the kit, whether the page still waits or
+   * not. What is not given stays as the account has it, another device's change included; a new photo
+   * goes up to the user's own photos first.
+   */
+  fun keepProfile(name: String? = null, photo: UsualPhoto? = null): Deferred<Unit> = keep {
+    val photoId =
+      when (photo) {
+        null -> null
+        UsualPhoto.None -> ""
+        is UsualPhoto.New -> sendPhoto(photo.jpeg, PhotoShelf.Mine)
+      }
+    setProfile(name, photoId)
   }
 
-  private class KeptName(val groupId: String, val name: String) {
+  private fun keep(send: suspend () -> Unit): Deferred<Unit> {
+    val call = Kept(send)
+    kept.trySend(call)
+    return call.answer
+  }
+
+  private class Kept(val send: suspend () -> Unit) {
     val answer = CompletableDeferred<Unit>()
   }
 
@@ -210,13 +228,16 @@ class GroupCalls internal constructor(
     Unit
   }
 
-  /** Sets the user's usual name and photo (spec/sync-protocol.md, Profile), each empty for none. */
-  suspend fun setProfile(name: String, photoId: String) = call { headers ->
+  /**
+   * Sets the user's usual name and photo (spec/sync-protocol.md, Profile), each empty for none, and
+   * either left as the account has it when not given.
+   */
+  suspend fun setProfile(name: String?, photoId: String?) = call { headers ->
     users
       .setProfile(
         setProfileRequest {
-          this.name = name
-          this.photoId = photoId
+          name?.let { this.name = it }
+          photoId?.let { this.photoId = it }
         },
         headers,
       )

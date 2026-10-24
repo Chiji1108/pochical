@@ -8,7 +8,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -21,8 +20,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -34,6 +31,7 @@ import app.pochical.R
 import app.pochical.RootPage
 import app.pochical.SectionHeader
 import app.pochical.SettingsPage
+import app.pochical.rememberDragOrder
 import app.pochical.ShiftMark
 import app.pochical.calendar.LocalOwnDays
 import app.pochical.calendar.Pattern
@@ -41,7 +39,6 @@ import app.pochical.calendar.ShiftTime
 import app.pochical.calendar.hoursText
 import app.pochical.design.PATTERNS_PER_PAGE
 import sh.calvin.reorderable.ReorderableItem
-import sh.calvin.reorderable.rememberReorderableLazyListState
 
 /**
  * 設定 › シフトパターン (/design's PatternsPage; spec/shift-patterns.md): the patterns in use in
@@ -56,24 +53,9 @@ fun PatternsPage(navigation: PageNavigation) {
   val inUse = calendar.patterns.filterNot { it.archived }
   val archived = calendar.patterns.filter { it.archived }
   var sorting by rememberSaveable { mutableStateOf(false) }
-  // The order as a finger drags it, then as written until the calendar shows it. Patterns sync
-  // brings meanwhile take their places from the calendar: one new comes after, one archived goes.
-  var order by remember { mutableStateOf<List<String>?>(null) }
-  var dragging by remember { mutableStateOf(false) }
-  val rows = order?.let { ids -> inUse.sortedBy { ids.indexOf(it.id).takeIf { place -> place >= 0 } ?: Int.MAX_VALUE } } ?: inUse
-  LaunchedEffect(inUse) { if (!dragging && order == inUse.map { it.id }) order = null }
-  val haptics = LocalHapticFeedback.current
   val list = rememberLazyListState()
-  val reorder =
-    rememberReorderableLazyListState(list) { from, to ->
-      val ids = rows.map { it.id }.toMutableList()
-      val moving = ids.indexOf(from.key)
-      val target = ids.indexOf(to.key)
-      if (moving < 0 || target < 0) return@rememberReorderableLazyListState
-      ids.add(target, ids.removeAt(moving))
-      order = ids
-      haptics.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
-    }
+  val order = rememberDragOrder(inUse, { it.id }, list) { ids -> days.orderPatterns(ids + archived.map { it.id }) }
+  val rows = order.rows
   LaunchedEffect(inUse.size) { if (inUse.size < 2) sorting = false }
   SettingsPage(
     stringResource(R.string.patterns),
@@ -88,36 +70,13 @@ fun PatternsPage(navigation: PageNavigation) {
   ) { padding ->
     LazyColumn(state = list, contentPadding = padding) {
       itemsIndexed(rows, key = { _, pattern -> pattern.id }) { index, pattern ->
-        ReorderableItem(reorder, key = pattern.id, enabled = sorting) {
+        ReorderableItem(order.state, key = pattern.id, enabled = sorting) {
           PatternRow(
             pattern,
             // ポチポチ入力 shows them a page at a time: where each page starts, over its first pattern.
             keyPage = if (index > 0 && index % PATTERNS_PER_PAGE == 0) index / PATTERNS_PER_PAGE + 1 else null,
             onClick = if (sorting) null else ({ navigation.open(RootPage.PatternEditor(pattern.id)) }),
-            handle =
-              if (sorting) {
-                {
-                  IconButton(
-                    onClick = {},
-                    modifier =
-                      Modifier.draggableHandle(
-                        onDragStarted = {
-                          dragging = true
-                          haptics.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
-                        },
-                        onDragStopped = {
-                          dragging = false
-                          haptics.performHapticFeedback(HapticFeedbackType.GestureEnd)
-                          if (order != null) days.orderPatterns(rows.map { it.id } + archived.map { it.id })
-                        },
-                      ),
-                  ) {
-                    Icon(painterResource(R.drawable.ic_drag_handle), stringResource(R.string.patterns_move, pattern.name))
-                  }
-                }
-              } else {
-                null
-              },
+            handle = if (sorting) ({ order.Handle(this, stringResource(R.string.patterns_move, pattern.name)) }) else null,
           )
         }
       }

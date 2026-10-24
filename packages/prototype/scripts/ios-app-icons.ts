@@ -3,7 +3,7 @@
 // an app icon set, with its dark twin for a home screen set to dark icons,
 // and a small preview of each for 設定 > アプリアイコン to show; and the
 // drawing alone, as the first run's welcome shows it.
-// Run again after changing the drawing or the colors: bun run icon:ios
+// Run again after changing the drawing or the colors: pnpm run icon:ios
 import { mkdir, rm, writeFile } from "node:fs/promises";
 
 import sharp from "sharp";
@@ -14,8 +14,8 @@ import {
   iconColorOptions,
   lightDrawing,
   paintedPixels,
-} from "../src/components/design-app-icon";
-import type { IconColors } from "../src/components/design-app-icon";
+} from "../src/lib/app-icon-paint";
+import type { IconColors } from "../src/lib/app-icon-paint";
 import { colorsOf, height, lightness, paint, width } from "./app-icon";
 
 const ASSETS = new URL(

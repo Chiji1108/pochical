@@ -113,9 +113,11 @@ export const registerUserService = (router: ConnectRouter): void => {
     },
     setProfile: async ({ name, photoId }, context) => {
       const user = await requireUser(context);
-      const kept = name.trim();
+      const kept = name?.trim();
       const shown =
-        kept === "" ? "" : requireText(kept, textLimits.personName, "name");
+        kept === undefined || kept === ""
+          ? kept
+          : requireText(kept, textLimits.personName, "name");
       // The photo it replaces goes: each group drops its copy as it hears.
       if (!(await env.USERS.getByName(user.id).setProfile(shown, photoId))) {
         throw new ConnectError("No such photo of yours", Code.InvalidArgument);
