@@ -328,7 +328,7 @@ fun SwitchRow(
     leadingContent = leading,
     supportingContent = note?.let { { Text(it) } },
     trailingContent = {
-      // accentSwitch, the accent held under 墨's and 黒板's near-white, so the thumb stays clear of its track (POC-57).
+      // accentSwitch, the accent held under 墨's and 黒板's near-white, so the thumb stays clear of its track (#798).
       Switch(
         checked = on,
         onCheckedChange = null,
