@@ -10,7 +10,8 @@ import java.io.Closeable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -37,8 +38,10 @@ class TestDays : Closeable {
     withTimeout(5_000) { days.calendar.first(shows) }
   }
 
+  // The calendar's reads end before the database closes: one still running on another thread would
+  // throw past the test, into the next one's.
   override fun close() {
-    scope.cancel()
+    runBlocking { scope.coroutineContext.job.cancelAndJoin() }
     database.close()
   }
 }

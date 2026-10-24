@@ -195,7 +195,13 @@ fun IconPickerSheet(picked: String, onPick: (String) -> Unit, onDismiss: () -> U
 @Composable
 fun EmojiPickerSheet(onPick: (String) -> Unit, onDismiss: () -> Unit) {
   val picked by rememberUpdatedState(onPick)
-  ModalBottomSheet(onDismissRequest = onDismiss) {
+  // Whole from the start and never dragged, so a drag on the list scrolls it: the sheet's own drag
+  // takes every one from the picker's view inside it. The scrim and back close it.
+  ModalBottomSheet(
+    onDismissRequest = onDismiss,
+    sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    sheetGesturesEnabled = false,
+  ) {
     BoxWithConstraints {
       AndroidView(
         // Only one the server takes for a mark (spec/vectors/text.json, isEmoji).
@@ -213,8 +219,9 @@ fun EmojiPickerSheet(onPick: (String) -> Unit, onDismiss: () -> Unit) {
  */
 @Composable
 fun MarkLetterField(letter: String, limit: Int, modifier: Modifier = Modifier, onLetter: (String) -> Unit) {
-  // Set again as the letter changes from outside, as a name's guess does.
-  var field by rememberSaveable(letter, stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue(letter)) }
+  // Set again as the letter changes, from outside as a name's guess does or as typed, with the cursor
+  // after it, where typing goes on.
+  var field by rememberSaveable(letter, stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue(letter, TextRange(letter.length))) }
   // The letter as last committed, which an edit is measured against.
   var committed by rememberSaveable(letter) { mutableStateOf(letter) }
   OutlinedTextField(
