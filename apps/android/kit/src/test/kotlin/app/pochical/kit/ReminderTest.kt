@@ -80,6 +80,14 @@ class ReminderTest {
   fun remindable() = vectors.remindable.checkEach({ it.expected }) { case -> case.reminder.reminder.remindable(patterns).map { it.id } }
 
   @Test
+  fun aTimeItCannotReadSendsNothing() {
+    val day = LocalDate.parse("2026-11-02")
+    val pattern = patterns.first { it.id == "day" }
+    assertEquals(null, Reminder("r", kind = Reminder.Kind.DayBefore("夜")).firing(day, ShownDay("day"), pattern))
+    assertEquals(null, Reminder("r", kind = Reminder.Kind.BeforeStart(60)).firing(day, ShownDay("day", start = "7"), pattern))
+  }
+
+  @Test
   fun whatIsSentIsWhatComesAfterThroughTheEndSoonestFirst() {
     val zone = ZoneId.of("Asia/Tokyo")
     val calendar = calendar(mapOf("2026-11-02" to ReminderVectors.Day("day"), "2026-11-03" to ReminderVectors.Day("late")))

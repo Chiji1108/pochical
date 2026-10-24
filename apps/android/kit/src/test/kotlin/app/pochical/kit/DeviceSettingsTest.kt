@@ -61,6 +61,15 @@ class DeviceSettingsTest {
   }
 
   @Test
+  fun remindersThisAppCannotReadAreTheDefaultsAndTheRestIsKept() = runTest {
+    file.writeText("""{"appearance":"dark","reminders":[{"id":"r","kind":{"type":"atSunrise"}}]}""")
+
+    val kept = readAgain()
+    assertEquals(Reminder.defaults, kept.reminders)
+    assertEquals(Appearance.Dark, kept.appearance)
+  }
+
+  @Test
   fun aThemeThisAppDoesNotKnowIsPochicalAndKeptAsItCame() = runTest {
     file.writeText("""{"theme":"aurora","appearance":"light"}""")
 
