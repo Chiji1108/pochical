@@ -11,6 +11,14 @@ const appleKey = () =>
     publicKeyEncoding: { format: "pem", type: "spki" },
   }).privateKey;
 
+// A key of the kind a Google service account has, and its public half, for
+// tests to check what is signed with it.
+const googleKeys = generateKeyPairSync("rsa", {
+  modulusLength: 2048,
+  privateKeyEncoding: { format: "pem", type: "pkcs8" },
+  publicKeyEncoding: { format: "pem", type: "spki" },
+});
+
 export default defineConfig({
   plugins: [
     cloudflareTest(async () => ({
@@ -24,6 +32,16 @@ export default defineConfig({
           APPLE_SIGNIN_KEY_ID: "SIWATEST01",
           BETTER_AUTH_SECRET: "test-secret-0123456789abcdef0123456789abcdef",
           BETTER_AUTH_URL: "https://server.test",
+          // A Firebase project's service account, as its JSON key holds it.
+          FCM_SERVICE_ACCOUNT: JSON.stringify({
+            client_email: "fcm@pochical-test.iam.gserviceaccount.com",
+            private_key: googleKeys.privateKey,
+            private_key_id: "fcm-test-key",
+            project_id: "pochical-test",
+            token_uri: "https://oauth2.googleapis.com/token",
+            type: "service_account",
+          }),
+          FCM_TEST_PUBLIC_KEY: googleKeys.publicKey,
           // Pochical's people's Slack, as tests answer for it.
           SLACK_BOT_TOKEN: "xoxb-test",
           SLACK_CHANNEL_ID: "C-SUPPORT",

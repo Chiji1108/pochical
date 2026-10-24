@@ -30,7 +30,6 @@ import {
 import type { SQL } from "drizzle-orm";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 
-import type { Alert } from "./apns";
 import { photosOf } from "./chat-content";
 import type {
   KeptPhoto,
@@ -77,6 +76,7 @@ import {
 import { letGoUnsent, takeBack } from "./group-photos";
 import { isId } from "./ids";
 import { keptPreview, mayFetch, sentPreview } from "./link-preview";
+import type { Alert } from "./push";
 import { fitsText, isEmoji } from "./text-limits";
 import { fitsThumbHash, keptThumbHash, sentThumbHash } from "./thumb-hash";
 

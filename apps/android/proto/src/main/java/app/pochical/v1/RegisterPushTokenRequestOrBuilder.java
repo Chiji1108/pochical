@@ -12,7 +12,7 @@ public interface RegisterPushTokenRequestOrBuilder extends
 
   /**
    * <pre>
-   * The device's APNs token, as hex.
+   * The device's token: APNs' as hex, or FCM's registration token.
    * </pre>
    *
    * <code>string token = 1 [json_name = "token"];</code>
@@ -21,7 +21,7 @@ public interface RegisterPushTokenRequestOrBuilder extends
   java.lang.String getToken();
   /**
    * <pre>
-   * The device's APNs token, as hex.
+   * The device's token: APNs' as hex, or FCM's registration token.
    * </pre>
    *
    * <code>string token = 1 [json_name = "token"];</code>
@@ -32,11 +32,31 @@ public interface RegisterPushTokenRequestOrBuilder extends
 
   /**
    * <pre>
-   * From a development build: sent through APNs' sandbox.
+   * From an iOS development build: sent through APNs' sandbox. Never for
+   * FCM, which has none.
    * </pre>
    *
    * <code>bool sandbox = 2 [json_name = "sandbox"];</code>
    * @return The sandbox.
    */
   boolean getSandbox();
+
+  /**
+   * <pre>
+   * Whose token it is, which the server sends through.
+   * </pre>
+   *
+   * <code>.pochical.v1.PushPlatform platform = 3 [json_name = "platform"];</code>
+   * @return The enum numeric value on the wire for platform.
+   */
+  int getPlatformValue();
+  /**
+   * <pre>
+   * Whose token it is, which the server sends through.
+   * </pre>
+   *
+   * <code>.pochical.v1.PushPlatform platform = 3 [json_name = "platform"];</code>
+   * @return The platform.
+   */
+  app.pochical.v1.PushPlatform getPlatform();
 }

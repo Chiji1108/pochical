@@ -112,6 +112,7 @@ extension GroupCalls {
   public func registerPushToken(_ token: Data) async throws {
     var request = Pochical_V1_RegisterPushTokenRequest()
     request.token = token.map { String(format: "%02x", $0) }.joined()
+    request.platform = .apns
     #if DEBUG
       request.sandbox = true
     #endif

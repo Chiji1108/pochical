@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file pochical/v1/user.proto.
  */
 export const file_pochical_v1_user: GenFile = /*@__PURE__*/
-  fileDesc("ChZwb2NoaWNhbC92MS91c2VyLnByb3RvEgtwb2NoaWNhbC52MSJJChNTZXRDaGF0TXV0ZWRSZXF1ZXN0EhAKCGdyb3VwX2lkGAEgASgJEhEKCXRocmVhZF9pZBgCIAEoCRINCgVtdXRlZBgDIAEoCCIWChRTZXRDaGF0TXV0ZWRSZXNwb25zZSI6ChtTZXRDaGF0Tm90aWZpY2F0aW9uc1JlcXVlc3QSGwoTbWVudGlvbnNfd2hlbl9tdXRlZBgBIAEoCCIeChxTZXRDaGF0Tm90aWZpY2F0aW9uc1Jlc3BvbnNlIlMKEVNldFByb2ZpbGVSZXF1ZXN0EhEKBG5hbWUYASABKAlIAIgBARIVCghwaG90b19pZBgCIAEoCUgBiAEBQgcKBV9uYW1lQgsKCV9waG90b19pZCIUChJTZXRQcm9maWxlUmVzcG9uc2UiOQoSU2V0TWFya0xvb2tSZXF1ZXN0EiMKBGxvb2sYASABKAsyFS5wb2NoaWNhbC52MS5NYXJrTG9vayIVChNTZXRNYXJrTG9va1Jlc3BvbnNlIjoKGFJlZ2lzdGVyUHVzaFRva2VuUmVxdWVzdBINCgV0b2tlbhgBIAEoCRIPCgdzYW5kYm94GAIgASgIIhsKGVJlZ2lzdGVyUHVzaFRva2VuUmVzcG9uc2UiNQoRU2V0QmxvY2tlZFJlcXVlc3QSDwoHdXNlcl9pZBgBIAEoCRIPCgdibG9ja2VkGAIgASgIIhQKElNldEJsb2NrZWRSZXNwb25zZSIOCgxHZXRNZVJlcXVlc3QiYgoNR2V0TWVSZXNwb25zZRIPCgd1c2VyX2lkGAEgASgJEhEKCWFub255bW91cxgCIAEoCBItCghwcm92aWRlchgDIAEoDjIbLnBvY2hpY2FsLnYxLlNpZ25JblByb3ZpZGVyIl8KDVByb3ZpZGVyVG9rZW4SLQoIcHJvdmlkZXIYASABKA4yGy5wb2NoaWNhbC52MS5TaWduSW5Qcm92aWRlchIQCghpZF90b2tlbhgCIAEoCRINCgVub25jZRgDIAEoCSJVChREZWxldGVBY2NvdW50UmVxdWVzdBIgChhhcHBsZV9hdXRob3JpemF0aW9uX2NvZGUYASABKAkSGwoTYXBwbGVfY29kZV9mcm9tX3dlYhgCIAEoCCIXChVEZWxldGVBY2NvdW50UmVzcG9uc2UiZAoSUGVla0FjY291bnRSZXF1ZXN0EisKB2FjY291bnQYAyABKAsyGi5wb2NoaWNhbC52MS5Qcm92aWRlclRva2VuSgQIARACSgQIAhADUg5hcHBsZV9pZF90b2tlblIFbm9uY2UiXwoTUGVla0FjY291bnRSZXNwb25zZRISCgpzaGlmdF9kYXlzGAEgASgFEhEKCXJlcGVhdGluZxgCIAEoCBIRCgljb3dvcmtlcnMYAyABKAUSDgoGZ3JvdXBzGAQgASgFImQKElRha2VBY2NvdW50UmVxdWVzdBIrCgdhY2NvdW50GAMgASgLMhoucG9jaGljYWwudjEuUHJvdmlkZXJUb2tlbkoECAEQAkoECAIQA1IOYXBwbGVfaWRfdG9rZW5SBW5vbmNlIhUKE1Rha2VBY2NvdW50UmVzcG9uc2UqawoOU2lnbkluUHJvdmlkZXISIAocU0lHTl9JTl9QUk9WSURFUl9VTlNQRUNJRklFRBAAEhoKFlNJR05fSU5fUFJPVklERVJfQVBQTEUQARIbChdTSUdOX0lOX1BST1ZJREVSX0dPT0dMRRACMpEHCgtVc2VyU2VydmljZRJbCg1EZWxldGVBY2NvdW50EiEucG9jaGljYWwudjEuRGVsZXRlQWNjb3VudFJlcXVlc3QaIi5wb2NoaWNhbC52MS5EZWxldGVBY2NvdW50UmVzcG9uc2UiA5ACAhJVCgtQZWVrQWNjb3VudBIfLnBvY2hpY2FsLnYxLlBlZWtBY2NvdW50UmVxdWVzdBogLnBvY2hpY2FsLnYxLlBlZWtBY2NvdW50UmVzcG9uc2UiA5ACARJVCgtUYWtlQWNjb3VudBIfLnBvY2hpY2FsLnYxLlRha2VBY2NvdW50UmVxdWVzdBogLnBvY2hpY2FsLnYxLlRha2VBY2NvdW50UmVzcG9uc2UiA5ACAhJDCgVHZXRNZRIZLnBvY2hpY2FsLnYxLkdldE1lUmVxdWVzdBoaLnBvY2hpY2FsLnYxLkdldE1lUmVzcG9uc2UiA5ACARJSCgpTZXRCbG9ja2VkEh4ucG9jaGljYWwudjEuU2V0QmxvY2tlZFJlcXVlc3QaHy5wb2NoaWNhbC52MS5TZXRCbG9ja2VkUmVzcG9uc2UiA5ACAhJnChFSZWdpc3RlclB1c2hUb2tlbhIlLnBvY2hpY2FsLnYxLlJlZ2lzdGVyUHVzaFRva2VuUmVxdWVzdBomLnBvY2hpY2FsLnYxLlJlZ2lzdGVyUHVzaFRva2VuUmVzcG9uc2UiA5ACAhJYCgxTZXRDaGF0TXV0ZWQSIC5wb2NoaWNhbC52MS5TZXRDaGF0TXV0ZWRSZXF1ZXN0GiEucG9jaGljYWwudjEuU2V0Q2hhdE11dGVkUmVzcG9uc2UiA5ACAhJwChRTZXRDaGF0Tm90aWZpY2F0aW9ucxIoLnBvY2hpY2FsLnYxLlNldENoYXROb3RpZmljYXRpb25zUmVxdWVzdBopLnBvY2hpY2FsLnYxLlNldENoYXROb3RpZmljYXRpb25zUmVzcG9uc2UiA5ACAhJSCgpTZXRQcm9maWxlEh4ucG9jaGljYWwudjEuU2V0UHJvZmlsZVJlcXVlc3QaHy5wb2NoaWNhbC52MS5TZXRQcm9maWxlUmVzcG9uc2UiA5ACAhJVCgtTZXRNYXJrTG9vaxIfLnBvY2hpY2FsLnYxLlNldE1hcmtMb29rUmVxdWVzdBogLnBvY2hpY2FsLnYxLlNldE1hcmtMb29rUmVzcG9uc2UiA5ACAkJpCg9hcHAucG9jaGljYWwudjFCCVVzZXJQcm90b1ABogIDUFhYqgILUG9jaGljYWwuVjHKAgtQb2NoaWNhbFxWMeICF1BvY2hpY2FsXFYxXEdQQk1ldGFkYXRh6gIMUG9jaGljYWw6OlYxYgZwcm90bzM", [file_pochical_v1_marks]);
+  fileDesc("ChZwb2NoaWNhbC92MS91c2VyLnByb3RvEgtwb2NoaWNhbC52MSJJChNTZXRDaGF0TXV0ZWRSZXF1ZXN0EhAKCGdyb3VwX2lkGAEgASgJEhEKCXRocmVhZF9pZBgCIAEoCRINCgVtdXRlZBgDIAEoCCIWChRTZXRDaGF0TXV0ZWRSZXNwb25zZSI6ChtTZXRDaGF0Tm90aWZpY2F0aW9uc1JlcXVlc3QSGwoTbWVudGlvbnNfd2hlbl9tdXRlZBgBIAEoCCIeChxTZXRDaGF0Tm90aWZpY2F0aW9uc1Jlc3BvbnNlIlMKEVNldFByb2ZpbGVSZXF1ZXN0EhEKBG5hbWUYASABKAlIAIgBARIVCghwaG90b19pZBgCIAEoCUgBiAEBQgcKBV9uYW1lQgsKCV9waG90b19pZCIUChJTZXRQcm9maWxlUmVzcG9uc2UiOQoSU2V0TWFya0xvb2tSZXF1ZXN0EiMKBGxvb2sYASABKAsyFS5wb2NoaWNhbC52MS5NYXJrTG9vayIVChNTZXRNYXJrTG9va1Jlc3BvbnNlImcKGFJlZ2lzdGVyUHVzaFRva2VuUmVxdWVzdBINCgV0b2tlbhgBIAEoCRIPCgdzYW5kYm94GAIgASgIEisKCHBsYXRmb3JtGAMgASgOMhkucG9jaGljYWwudjEuUHVzaFBsYXRmb3JtIhsKGVJlZ2lzdGVyUHVzaFRva2VuUmVzcG9uc2UiNQoRU2V0QmxvY2tlZFJlcXVlc3QSDwoHdXNlcl9pZBgBIAEoCRIPCgdibG9ja2VkGAIgASgIIhQKElNldEJsb2NrZWRSZXNwb25zZSIOCgxHZXRNZVJlcXVlc3QiYgoNR2V0TWVSZXNwb25zZRIPCgd1c2VyX2lkGAEgASgJEhEKCWFub255bW91cxgCIAEoCBItCghwcm92aWRlchgDIAEoDjIbLnBvY2hpY2FsLnYxLlNpZ25JblByb3ZpZGVyIl8KDVByb3ZpZGVyVG9rZW4SLQoIcHJvdmlkZXIYASABKA4yGy5wb2NoaWNhbC52MS5TaWduSW5Qcm92aWRlchIQCghpZF90b2tlbhgCIAEoCRINCgVub25jZRgDIAEoCSJVChREZWxldGVBY2NvdW50UmVxdWVzdBIgChhhcHBsZV9hdXRob3JpemF0aW9uX2NvZGUYASABKAkSGwoTYXBwbGVfY29kZV9mcm9tX3dlYhgCIAEoCCIXChVEZWxldGVBY2NvdW50UmVzcG9uc2UiZAoSUGVla0FjY291bnRSZXF1ZXN0EisKB2FjY291bnQYAyABKAsyGi5wb2NoaWNhbC52MS5Qcm92aWRlclRva2VuSgQIARACSgQIAhADUg5hcHBsZV9pZF90b2tlblIFbm9uY2UiXwoTUGVla0FjY291bnRSZXNwb25zZRISCgpzaGlmdF9kYXlzGAEgASgFEhEKCXJlcGVhdGluZxgCIAEoCBIRCgljb3dvcmtlcnMYAyABKAUSDgoGZ3JvdXBzGAQgASgFImQKElRha2VBY2NvdW50UmVxdWVzdBIrCgdhY2NvdW50GAMgASgLMhoucG9jaGljYWwudjEuUHJvdmlkZXJUb2tlbkoECAEQAkoECAIQA1IOYXBwbGVfaWRfdG9rZW5SBW5vbmNlIhUKE1Rha2VBY2NvdW50UmVzcG9uc2UqXAoMUHVzaFBsYXRmb3JtEh0KGVBVU0hfUExBVEZPUk1fVU5TUEVDSUZJRUQQABIWChJQVVNIX1BMQVRGT1JNX0FQTlMQARIVChFQVVNIX1BMQVRGT1JNX0ZDTRACKmsKDlNpZ25JblByb3ZpZGVyEiAKHFNJR05fSU5fUFJPVklERVJfVU5TUEVDSUZJRUQQABIaChZTSUdOX0lOX1BST1ZJREVSX0FQUExFEAESGwoXU0lHTl9JTl9QUk9WSURFUl9HT09HTEUQAjKRBwoLVXNlclNlcnZpY2USWwoNRGVsZXRlQWNjb3VudBIhLnBvY2hpY2FsLnYxLkRlbGV0ZUFjY291bnRSZXF1ZXN0GiIucG9jaGljYWwudjEuRGVsZXRlQWNjb3VudFJlc3BvbnNlIgOQAgISVQoLUGVla0FjY291bnQSHy5wb2NoaWNhbC52MS5QZWVrQWNjb3VudFJlcXVlc3QaIC5wb2NoaWNhbC52MS5QZWVrQWNjb3VudFJlc3BvbnNlIgOQAgESVQoLVGFrZUFjY291bnQSHy5wb2NoaWNhbC52MS5UYWtlQWNjb3VudFJlcXVlc3QaIC5wb2NoaWNhbC52MS5UYWtlQWNjb3VudFJlc3BvbnNlIgOQAgISQwoFR2V0TWUSGS5wb2NoaWNhbC52MS5HZXRNZVJlcXVlc3QaGi5wb2NoaWNhbC52MS5HZXRNZVJlc3BvbnNlIgOQAgESUgoKU2V0QmxvY2tlZBIeLnBvY2hpY2FsLnYxLlNldEJsb2NrZWRSZXF1ZXN0Gh8ucG9jaGljYWwudjEuU2V0QmxvY2tlZFJlc3BvbnNlIgOQAgISZwoRUmVnaXN0ZXJQdXNoVG9rZW4SJS5wb2NoaWNhbC52MS5SZWdpc3RlclB1c2hUb2tlblJlcXVlc3QaJi5wb2NoaWNhbC52MS5SZWdpc3RlclB1c2hUb2tlblJlc3BvbnNlIgOQAgISWAoMU2V0Q2hhdE11dGVkEiAucG9jaGljYWwudjEuU2V0Q2hhdE11dGVkUmVxdWVzdBohLnBvY2hpY2FsLnYxLlNldENoYXRNdXRlZFJlc3BvbnNlIgOQAgIScAoUU2V0Q2hhdE5vdGlmaWNhdGlvbnMSKC5wb2NoaWNhbC52MS5TZXRDaGF0Tm90aWZpY2F0aW9uc1JlcXVlc3QaKS5wb2NoaWNhbC52MS5TZXRDaGF0Tm90aWZpY2F0aW9uc1Jlc3BvbnNlIgOQAgISUgoKU2V0UHJvZmlsZRIeLnBvY2hpY2FsLnYxLlNldFByb2ZpbGVSZXF1ZXN0Gh8ucG9jaGljYWwudjEuU2V0UHJvZmlsZVJlc3BvbnNlIgOQAgISVQoLU2V0TWFya0xvb2sSHy5wb2NoaWNhbC52MS5TZXRNYXJrTG9va1JlcXVlc3QaIC5wb2NoaWNhbC52MS5TZXRNYXJrTG9va1Jlc3BvbnNlIgOQAgJCaQoPYXBwLnBvY2hpY2FsLnYxQglVc2VyUHJvdG9QAaICA1BYWKoCC1BvY2hpY2FsLlYxygILUG9jaGljYWxcVjHiAhdQb2NoaWNhbFxWMVxHUEJNZXRhZGF0YeoCDFBvY2hpY2FsOjpWMWIGcHJvdG8z", [file_pochical_v1_marks]);
 
 /**
  * @generated from message pochical.v1.SetChatMutedRequest
@@ -162,18 +162,26 @@ export const SetMarkLookResponseSchema: GenMessage<SetMarkLookResponse> = /*@__P
  */
 export type RegisterPushTokenRequest = Message<"pochical.v1.RegisterPushTokenRequest"> & {
   /**
-   * The device's APNs token, as hex.
+   * The device's token: APNs' as hex, or FCM's registration token.
    *
    * @generated from field: string token = 1;
    */
   token: string;
 
   /**
-   * From a development build: sent through APNs' sandbox.
+   * From an iOS development build: sent through APNs' sandbox. Never for
+   * FCM, which has none.
    *
    * @generated from field: bool sandbox = 2;
    */
   sandbox: boolean;
+
+  /**
+   * Whose token it is, which the server sends through.
+   *
+   * @generated from field: pochical.v1.PushPlatform platform = 3;
+   */
+  platform: PushPlatform;
 };
 
 /**
@@ -438,6 +446,39 @@ export const TakeAccountResponseSchema: GenMessage<TakeAccountResponse> = /*@__P
   messageDesc(file_pochical_v1_user, 20);
 
 /**
+ * The push service a device's notifications go through (spec/sync-protocol.md,
+ * Push).
+ *
+ * @generated from enum pochical.v1.PushPlatform
+ */
+export enum PushPlatform {
+  /**
+   * @generated from enum value: PUSH_PLATFORM_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Apple's, for iOS.
+   *
+   * @generated from enum value: PUSH_PLATFORM_APNS = 1;
+   */
+  APNS = 1,
+
+  /**
+   * Firebase Cloud Messaging, for Android.
+   *
+   * @generated from enum value: PUSH_PLATFORM_FCM = 2;
+   */
+  FCM = 2,
+}
+
+/**
+ * Describes the enum pochical.v1.PushPlatform.
+ */
+export const PushPlatformSchema: GenEnum<PushPlatform> = /*@__PURE__*/
+  enumDesc(file_pochical_v1_user, 0);
+
+/**
  * Where a person signs in besides anonymously (spec/sync-protocol.md,
  * Signing in).
  *
@@ -464,7 +505,7 @@ export enum SignInProvider {
  * Describes the enum pochical.v1.SignInProvider.
  */
 export const SignInProviderSchema: GenEnum<SignInProvider> = /*@__PURE__*/
-  enumDesc(file_pochical_v1_user, 0);
+  enumDesc(file_pochical_v1_user, 1);
 
 /**
  * The signed-in user. Every call here needs the session token from
@@ -542,7 +583,8 @@ export const UserService: GenService<{
   },
   /**
    * Keeps a device's push token for the user's notifications (spec/chat.md,
-   * Notifications); sent each launch, as iOS may change it.
+   * Notifications); sent each launch, as iOS and FCM may change it.
+   * INVALID_ARGUMENT for a token not of its platform's shape.
    *
    * @generated from rpc pochical.v1.UserService.RegisterPushToken
    */

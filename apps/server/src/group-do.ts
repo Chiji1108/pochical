@@ -11,7 +11,6 @@ import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 
 import { Alarm } from "./alarm";
-import type { Alert } from "./apns";
 import { deleteGroupOrphans, groupReferences } from "./bucket-audit";
 import type { GroupReferences, Orphan, OwnerCleanup } from "./bucket-audit";
 import type { Notice } from "./chat-content";
@@ -101,6 +100,7 @@ import {
   photoKey,
   smallKey,
 } from "./photos";
+import type { Alert } from "./push";
 import { overLimit } from "./rate-limits";
 import { bucketRetryWait, countFailure, retryWait } from "./retry-wait";
 import { supportPlace } from "./support-lines";

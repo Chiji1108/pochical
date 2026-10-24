@@ -10,6 +10,7 @@ import {
   DeleteAccountResponseSchema,
   GetMeResponseSchema,
   PeekAccountResponseSchema,
+  PushPlatform,
   TakeAccountResponseSchema,
   RegisterPushTokenResponseSchema,
   SetBlockedResponseSchema,
@@ -23,6 +24,7 @@ import {
 import { GROUP_THREAD, otherIn } from "./group-chat";
 import { isId } from "./ids";
 import { registerPushToken } from "./push-tokens";
+import type { Device } from "./push-tokens";
 import { requireUser } from "./session";
 import { linkedProvider } from "./sign-in-providers";
 import { requireText } from "./text-limits";
@@ -31,7 +33,29 @@ import { requireText } from "./text-limits";
 const MARK_STYLES = new Set(["icon", "emoji", "badge"]);
 
 /** An APNs device token, as hex. */
-const PUSH_TOKEN = /^[0-9a-f]{32,200}$/u;
+const APNS_TOKEN = /^[0-9a-f]{32,200}$/u;
+
+/**
+ * An FCM registration token: URL-safe base64 and a colon, of no length FCM
+ * promises, so only bounded.
+ */
+const FCM_TOKEN = /^[\w:-]{32,1024}$/u;
+
+/** The device a token is of, or none for one not of its platform's shape. */
+const deviceOf = (
+  platform: PushPlatform,
+  token: string,
+  sandbox: boolean
+): Device | undefined => {
+  if (platform === PushPlatform.APNS && APNS_TOKEN.test(token)) {
+    return { platform: "apns", sandbox, token };
+  }
+  // FCM has no sandbox: a development build's token is as any other's.
+  if (platform === PushPlatform.FCM && !sandbox && FCM_TOKEN.test(token)) {
+    return { platform: "fcm", token };
+  }
+  return undefined;
+};
 
 export const registerUserService = (router: ConnectRouter): void => {
   router.service(UserService, {
@@ -63,12 +87,13 @@ export const registerUserService = (router: ConnectRouter): void => {
         await peekAccount(env, id, account)
       );
     },
-    registerPushToken: async ({ token, sandbox }, context) => {
+    registerPushToken: async ({ platform, token, sandbox }, context) => {
       const user = await requireUser(context);
-      if (!PUSH_TOKEN.test(token)) {
+      const device = deviceOf(platform, token, sandbox);
+      if (device === undefined) {
         throw new ConnectError("Not a push token", Code.InvalidArgument);
       }
-      await registerPushToken(env.DB, user.sessionId, { sandbox, token });
+      await registerPushToken(env.DB, user.sessionId, device);
       return create(RegisterPushTokenResponseSchema, {});
     },
     setBlocked: async ({ userId, blocked }, context) => {

@@ -8,7 +8,7 @@
 // Apple's web page, through which Android signs in), from the team
 // (APNS_TEAM_ID, the team's one id).
 
-import { signES256 } from "./es256";
+import { signJwt } from "./jwt";
 
 const APPLE = "https://appleid.apple.com";
 
@@ -78,7 +78,7 @@ export const revokeApple = async (
   const now = Math.floor(Date.now() / 1000);
   const app = {
     client_id: client.id,
-    client_secret: await signES256(key, keyId, {
+    client_secret: await signJwt("ES256", key, keyId, {
       aud: APPLE,
       exp: now + SECRET_SECONDS,
       iat: now,

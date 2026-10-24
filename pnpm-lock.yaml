@@ -378,6 +378,9 @@ importers:
       drizzle-orm:
         specifier: ^0.45.4
         version: 0.45.4(bun-types@1.4.3)(kysely@0.29.6)
+      jose:
+        specifier: ^6.2.12
+        version: 6.2.12
     devDependencies:
       '@bufbuild/protoc-gen-es':
         specifier: 2.16.0

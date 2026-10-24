@@ -20,6 +20,50 @@ fileprivate nonisolated struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobu
   typealias Version = _2
 }
 
+/// The push service a device's notifications go through (spec/sync-protocol.md,
+/// Push).
+public nonisolated enum Pochical_V1_PushPlatform: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
+  case unspecified // = 0
+
+  /// Apple's, for iOS.
+  case apns // = 1
+
+  /// Firebase Cloud Messaging, for Android.
+  case fcm // = 2
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .unspecified
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .unspecified
+    case 1: self = .apns
+    case 2: self = .fcm
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .unspecified: return 0
+    case .apns: return 1
+    case .fcm: return 2
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static let allCases: [Pochical_V1_PushPlatform] = [
+    .unspecified,
+    .apns,
+    .fcm,
+  ]
+
+}
+
 /// Where a person signs in besides anonymously (spec/sync-protocol.md,
 /// Signing in).
 public nonisolated enum Pochical_V1_SignInProvider: SwiftProtobuf.Enum, Swift.CaseIterable {
@@ -190,11 +234,15 @@ public nonisolated struct Pochical_V1_RegisterPushTokenRequest: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  /// The device's APNs token, as hex.
+  /// The device's token: APNs' as hex, or FCM's registration token.
   public var token: String = String()
 
-  /// From a development build: sent through APNs' sandbox.
+  /// From an iOS development build: sent through APNs' sandbox. Never for
+  /// FCM, which has none.
   public var sandbox: Bool = false
+
+  /// Whose token it is, which the server sends through.
+  public var platform: Pochical_V1_PushPlatform = .unspecified
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -389,6 +437,10 @@ public nonisolated struct Pochical_V1_TakeAccountResponse: Sendable {
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate nonisolated let _protobuf_package = "pochical.v1"
+
+nonisolated extension Pochical_V1_PushPlatform: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0PUSH_PLATFORM_UNSPECIFIED\0\u{1}PUSH_PLATFORM_APNS\0\u{1}PUSH_PLATFORM_FCM\0")
+}
 
 nonisolated extension Pochical_V1_SignInProvider: SwiftProtobuf._ProtoNameProviding {
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0SIGN_IN_PROVIDER_UNSPECIFIED\0\u{1}SIGN_IN_PROVIDER_APPLE\0\u{1}SIGN_IN_PROVIDER_GOOGLE\0")
@@ -615,7 +667,7 @@ nonisolated extension Pochical_V1_SetMarkLookResponse: SwiftProtobuf.Message, Sw
 
 nonisolated extension Pochical_V1_RegisterPushTokenRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".RegisterPushTokenRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}token\0\u{1}sandbox\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}token\0\u{1}sandbox\0\u{1}platform\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -625,6 +677,7 @@ nonisolated extension Pochical_V1_RegisterPushTokenRequest: SwiftProtobuf.Messag
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.token) }()
       case 2: try { try decoder.decodeSingularBoolField(value: &self.sandbox) }()
+      case 3: try { try decoder.decodeSingularEnumField(value: &self.platform) }()
       default: break
       }
     }
@@ -637,12 +690,16 @@ nonisolated extension Pochical_V1_RegisterPushTokenRequest: SwiftProtobuf.Messag
     if self.sandbox != false {
       try visitor.visitSingularBoolField(value: self.sandbox, fieldNumber: 2)
     }
+    if self.platform != .unspecified {
+      try visitor.visitSingularEnumField(value: self.platform, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pochical_V1_RegisterPushTokenRequest, rhs: Pochical_V1_RegisterPushTokenRequest) -> Bool {
     if lhs.token != rhs.token {return false}
     if lhs.sandbox != rhs.sandbox {return false}
+    if lhs.platform != rhs.platform {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

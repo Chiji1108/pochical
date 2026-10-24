@@ -265,7 +265,7 @@ describe("a line of photos", () => {
     const { groupId, guest, maker } = await pair();
     await call(
       "UserService/RegisterPushToken",
-      { sandbox: true, token: "a1".repeat(32) },
+      { platform: "PUSH_PLATFORM_APNS", sandbox: true, token: "a1".repeat(32) },
       guest
     );
     await upload(groupId, ["n1", "n2", "n3"], maker);
