@@ -20,6 +20,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import app.pochical.kit.Appearance
 
 /**
  * 外観: light or dark as the phone is, or one of them always, picked from

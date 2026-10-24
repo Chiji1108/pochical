@@ -43,10 +43,10 @@ import androidx.compose.ui.unit.dp
 import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.ShiftMark
-import app.pochical.Week
 import app.pochical.design.Metrics
 import app.pochical.design.PATTERNS_PER_PAGE
 import app.pochical.design.Radius
+import app.pochical.kit.Week
 import java.time.LocalDate
 
 /**

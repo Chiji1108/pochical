@@ -56,8 +56,8 @@ extension EnvironmentValues {
   }
 }
 
-/// A part's pop and spray, over it: Pow's. The part itself comes in by the
-/// pop's own scale (ReactionRow.transition).
+/// A part's pop and spray, over it: Pow's. The part itself comes in by its
+/// own transition (ReactionRow.transition).
 struct BurstView: View {
   @Environment(\.themeColors) private var colors
   let burst: Burst

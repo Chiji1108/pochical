@@ -21,11 +21,11 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipe
 import androidx.compose.ui.test.swipeLeft
-import app.pochical.DeviceSettings
 import app.pochical.DeviceSettingsState
 import app.pochical.LocalDeviceSettings
 import app.pochical.PochicalTheme
 import app.pochical.RootPage
+import app.pochical.kit.DeviceSettings
 import app.pochical.v1.pattern
 import java.time.LocalDate
 import java.time.YearMonth

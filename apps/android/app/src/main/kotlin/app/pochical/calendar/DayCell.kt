@@ -31,10 +31,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.pochical.LocalDeviceSettings
 import app.pochical.LocalThemeColors
-import app.pochical.MarkStyle
 import app.pochical.R
 import app.pochical.ShiftMark
 import app.pochical.design.Radius
+import app.pochical.kit.MarkStyle
 import app.pochical.mark
 import java.time.LocalDate
 

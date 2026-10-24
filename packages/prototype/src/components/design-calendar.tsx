@@ -39,7 +39,11 @@ import { DayCell } from "./design-day-cell";
 import { DayDetail } from "./design-day-detail";
 import { dayGrid, WeekdayRow } from "./design-day-grid";
 import { GapSheet } from "./design-gap-sheet";
-import { BreakdownSheet, useShownWith } from "./design-month-breakdown";
+import {
+  BreakdownSheet,
+  pageSummaryOf,
+  useShownWith,
+} from "./design-month-breakdown";
 import { useReminderOffer } from "./design-notifications";
 import { Pager } from "./design-pager";
 import { usePages } from "./design-pages";
@@ -157,10 +161,7 @@ export function DesignCalendar({
     [setMonth]
   );
   const daysOffIn = (days: Date[]) =>
-    days.filter((date) => {
-      const shift = schedule[dateKey(date)]?.shift;
-      return shift !== undefined && isDayOff(book[shift]);
-    }).length;
+    pageSummaryOf(days, schedule, allPatterns).daysOff;
   // Someone picked in 今月の内訳, whose days the calendar shows.
   const shown = useShownWith(coworkers, schedule);
   const summaryIn = (days: Date[]) =>
@@ -169,14 +170,13 @@ export function DesignCalendar({
   const summaryBy = (by: number) =>
     summaryIn(daysOfPeriod(pages.periodOf(monthAfter(month, by))));
   // The page's breakdown counts every pattern on its days, archived too.
-  const counts = allPatterns.map((pattern) => ({
-    count: pageDays.filter(
-      (date) => schedule[dateKey(date)]?.shift === pattern.id
-    ).length,
+  const pageSummary = pageSummaryOf(pageDays, schedule, allPatterns);
+  const counts = pageSummary.counts.map(({ days, pattern }) => ({
+    count: days,
     key: pattern.id,
     label: pattern.name,
   }));
-  const unfilled = pageDays.filter((date) => !schedule[dateKey(date)]).length;
+  const { unfilled } = pageSummary;
   // A month turned to by a tap or a pick rather than a swipe, whose name
   // the drag has not brought in.
   const turnTo = (target: Date) => {

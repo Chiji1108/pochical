@@ -25,6 +25,8 @@ import androidx.compose.ui.unit.dp
 import app.pochical.calendar.TimeChange
 import app.pochical.design.MarkColor
 import app.pochical.design.MarkIcons
+import app.pochical.kit.Look
+import app.pochical.kit.MarkStyle
 
 /** The side of the grid Phosphor draws the marks' icons on. */
 private const val ICON_GRID = 256f

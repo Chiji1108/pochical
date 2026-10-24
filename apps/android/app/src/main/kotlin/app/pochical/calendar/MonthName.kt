@@ -76,13 +76,22 @@ fun MonthName(pages: Float, monthAt: (Int) -> YearMonth, reduceMotion: Boolean, 
  * moves over as it rolls.
  */
 @Composable
-private fun RollingText(text: String, coming: String, share: Float, style: TextStyle, modifier: Modifier = Modifier) {
-  val moving = if (coming == text) 0f else share
-  val shown = abs(moving)
+private fun RollingText(text: String, coming: String, share: Float, style: TextStyle, modifier: Modifier = Modifier) =
+  BlendingText(text, coming, { share }, rolls = true, style, modifier)
+
+/**
+ * [text] giving way to [coming] in its own line, [share] of the way (-0.5 to 0.5; toward the next
+ * above 0), rolling up or down as [MonthName]'s do or, unless [rolls], crossfading in place. Its
+ * width goes from the one's to the other's. [share] is read as it is laid out and drawn, so a
+ * finger moving the pages changes neither text.
+ */
+@Composable
+fun BlendingText(text: String, coming: String, share: () -> Float, rolls: Boolean, style: TextStyle, modifier: Modifier = Modifier) {
+  fun moving() = if (coming == text) 0f else share()
   Layout(
     content = {
-      Text(text, Modifier.graphicsLayer { alpha = 1 - shown }, style = style, softWrap = false)
-      Text(coming, Modifier.graphicsLayer { alpha = shown }, style = style, softWrap = false)
+      Text(text, Modifier.graphicsLayer { alpha = 1 - abs(moving()) }, style = style, softWrap = false)
+      Text(coming, Modifier.graphicsLayer { alpha = abs(moving()) }, style = style, softWrap = false)
     },
     // Within its own line, while a wider name can still show whole.
     modifier =
@@ -93,10 +102,12 @@ private fun RollingText(text: String, coming: String, share: Float, style: TextS
   ) { measurables, constraints ->
     val loose = constraints.copy(minWidth = 0, maxWidth = Int.MAX_VALUE)
     val (first, second) = measurables.map { it.measure(loose) }
-    val width = (first.width + (second.width - first.width) * shown).roundToInt()
+    val moving = moving()
+    val width = (first.width + (second.width - first.width) * abs(moving)).roundToInt()
     layout(width, maxOf(first.height, second.height), mapOf(FirstBaseline to first[FirstBaseline])) {
-      first.placeRelative(0, (-moving * first.height).roundToInt())
-      if (moving != 0f) second.placeRelative(0, ((moving.sign - moving) * second.height).roundToInt())
+      val roll = if (rolls) 1 else 0
+      first.placeRelative(0, (-moving * first.height * roll).roundToInt())
+      if (moving != 0f) second.placeRelative(0, ((moving.sign - moving) * second.height * roll).roundToInt())
     }
   }
 }
