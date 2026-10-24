@@ -253,10 +253,12 @@ fun CalendarScreen(
     if (entering != null) {
       selectDay(day)
     } else if (day in reachable) {
-      pager.scrollToPage(range.pageOf(YearMonth.from(day)))
+      // The month is asked of the pages, which take it as they are next laid out: with a day open,
+      // its week shows in their place, and they are not laid out until it folds back.
+      pager.requestScrollToPage(range.pageOf(YearMonth.from(day)))
       openDay(day, from = YearMonth.from(day))
     }
-    // Taken once done: taken before, the key's change would cancel this midway.
+    // Taken once the day is picked, nothing above waiting on the pages.
     onOpening()
   }
 
