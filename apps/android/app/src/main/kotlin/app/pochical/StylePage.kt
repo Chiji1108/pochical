@@ -81,7 +81,7 @@ private enum class Shape(val title: Int) {
   }
 }
 
-private val OffLook.title: Int
+val OffLook.title: Int
   get() =
     when (this) {
       OffLook.Highlight -> R.string.off_look_highlight
@@ -237,7 +237,7 @@ private fun Sample(pattern: Pattern?, look: Look) {
  * and an icon, not a day.
  */
 @Composable
-private fun <T> Choices(
+fun <T> Choices(
   options: List<T>,
   picked: T,
   label: @Composable (T) -> String,
