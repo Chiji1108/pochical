@@ -3,6 +3,7 @@ plugins {
   alias(libs.plugins.kotlin.compose)
   alias(libs.plugins.kotlin.serialization)
   alias(libs.plugins.metro)
+  alias(libs.plugins.google.services)
 }
 
 // The version people see is the iOS app's: one MARKETING_VERSION for the
@@ -43,6 +44,7 @@ android {
     versionCode = providers.gradleProperty("pochicalVersionCode").orElse("1").get().toInt()
     versionName = marketingVersion.get()
     buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${googleWebClientId.get()}\"")
+    testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
   buildFeatures {
     buildConfig = true
@@ -77,6 +79,20 @@ android {
     unitTests.all { it.jvmArgs("--add-exports=java.base/jdk.internal.access=ALL-UNNAMED") }  }
 }
 
+// The Firebase project the app's notifications come through, from app/google-services.json, which
+// Firebase's console gives for app.pochical and holds no secret. A build without it, as on CI or
+// a computer without the file, makes an app with no Firebase project: it runs, and hears no
+// notifications (Push). A build signed with Play's upload key goes to testers, so it fails without
+// one rather than reach them deaf.
+googleServices {
+  missingGoogleServicesStrategy =
+    if (providers.gradleProperty("pochicalUploadStoreFile").isPresent) {
+      com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy.ERROR
+    } else {
+      com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy.WARN
+    }
+}
+
 dependencies {
   implementation(project(":design"))
   implementation(project(":kit"))
@@ -92,6 +108,7 @@ dependencies {
   implementation(libs.datastore)
   implementation(libs.splashscreen)
   implementation(libs.lifecycle.runtime.compose)
+  implementation(libs.lifecycle.process)
   implementation(libs.credentials)
   implementation(libs.credentials.play.services.auth)
   implementation(libs.googleid)
@@ -105,12 +122,17 @@ dependencies {
   implementation(libs.camerax.mlkit)
   implementation(libs.mlkit.barcode)
   implementation(libs.kotlinx.coroutines.play.services)
+  implementation(platform(libs.firebase.bom))
+  implementation(libs.firebase.messaging)
 
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)
   testImplementation(libs.robolectric)
   testImplementation(libs.compose.ui.test.junit4)
   debugImplementation(libs.compose.ui.test.manifest)
+
+  androidTestImplementation(libs.androidx.test.runner)
+  androidTestImplementation(libs.androidx.test.junit)
 }
 
 kotlin {

@@ -30,7 +30,8 @@ import app.pochical.groups.GroupShiftsPage
 import app.pochical.groups.GroupsActions
 import app.pochical.groups.InvitePage
 import app.pochical.groups.JoinScreen
-import app.pochical.groups.LocalOpenedInvites
+import app.pochical.design.Chat
+import app.pochical.notifications.ChatNotificationsPage
 import app.pochical.groups.ScanScreen
 import app.pochical.groups.GroupsScreen
 import app.pochical.groups.NewGroupPage
@@ -53,9 +54,17 @@ import java.time.LocalDate
  */
 @Composable
 fun RootScreen(navigator: RootNavigator) {
-  // An invitation opened from a link comes over whatever shows.
-  val invites = LocalOpenedInvites.current
-  LaunchedEffect(invites.pending) { invites.consume()?.let { navigator.openOnce(RootPage.Join(it)) } }
+  // An invitation opened from a link comes over whatever shows. A chat's notification opens its
+  // group's place in グループ until Android has the chat; the chat with Pochical's people, which it
+  // has not either, opens the app as it was.
+  val links = LocalOpenedLinks.current
+  LaunchedEffect(links.pending) {
+    when (val opened = links.consume()) {
+      is Opened.Invite -> navigator.openOnce(RootPage.Join(opened.code))
+      is Opened.Chat -> if (opened.groupId != Chat.supportPlace) navigator.showGroup(opened.groupId)
+      null -> Unit
+    }
+  }
   NavDisplay(
     backStack = navigator.routes,
     onBack = navigator::back,
@@ -68,6 +77,8 @@ fun RootScreen(navigator: RootNavigator) {
       RootPage.Appearance ->
         NavEntry(route) { AppearancePage(onBack = rememberPageNavigation(navigator)::back) }
       RootPage.Style -> NavEntry(route) { StylePage(onBack = rememberPageNavigation(navigator)::back) }
+      RootPage.ChatNotifications ->
+        NavEntry(route) { ChatNotificationsPage(onBack = rememberPageNavigation(navigator)::back) }
       RootPage.CalendarSettings -> NavEntry(route) { CalendarSettingsPage(onBack = rememberPageNavigation(navigator)::back) }
       is RootPage.MonthPicture ->
         NavEntry(route) { MonthPicturePage(java.time.YearMonth.parse(route.month), onBack = rememberPageNavigation(navigator)::back) }
