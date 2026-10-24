@@ -16,7 +16,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import androidx.navigation3.runtime.NavBackStack
-import app.pochical.DeviceSettings
 import app.pochical.DeviceSettingsState
 import app.pochical.LocalDeviceSettings
 import app.pochical.PageNavigation
@@ -28,6 +27,7 @@ import app.pochical.Tabs
 import app.pochical.awaitRoutes
 import app.pochical.calendar.LocalOwnDays
 import app.pochical.calendar.TestDays
+import app.pochical.kit.DeviceSettings
 import app.pochical.kit.ShownDay
 import app.pochical.v1.pattern
 import app.pochical.v1.repeatOrder

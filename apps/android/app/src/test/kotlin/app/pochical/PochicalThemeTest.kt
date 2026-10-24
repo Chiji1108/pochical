@@ -1,6 +1,8 @@
 package app.pochical
 
 import app.pochical.design.Theme
+import app.pochical.kit.Appearance
+import app.pochical.kit.DeviceSettings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

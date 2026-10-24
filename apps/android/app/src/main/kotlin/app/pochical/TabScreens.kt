@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import app.pochical.kit.DeviceSettings
 import app.pochical.patterns.PatternsRow
 import app.pochical.repeat.RepeatRow
 
