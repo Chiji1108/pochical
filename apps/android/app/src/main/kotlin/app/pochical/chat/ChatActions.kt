@@ -43,6 +43,8 @@ fun rememberLineActions(
   snackbar: SnackbarHostState,
   onUnsend: (Unsending) -> Unit,
   onNotKept: () -> Unit,
+  /** Pins the line, or takes its pin off. */
+  onPin: (seq: Long, on: Boolean) -> Unit,
 ): (MessageLook) -> List<LineMenuItem> {
   val chats = LocalChats.current
   val scope = rememberCoroutineScope()
@@ -79,6 +81,15 @@ fun rememberLineActions(
         seq != null -> {
           add(LineMenuItem(resources.getString(R.string.chat_reply), R.drawable.ic_reply) { composer.answer(seq) })
           if (words != null) add(copy(words))
+          // Anyone's line, for everyone in the chat (spec/chat.md, Pins).
+          if (rules.pins) {
+            val pinned = look.pinned
+            add(
+              LineMenuItem(resources.getString(if (pinned) R.string.chat_unpin else R.string.chat_pin), if (pinned) R.drawable.ic_keep_off else R.drawable.ic_push_pin) {
+                onPin(seq, !pinned)
+              }
+            )
+          }
           if (look.mine && words != null && rules.edit) {
             add(LineMenuItem(resources.getString(R.string.chat_edit), R.drawable.ic_edit) { composer.change(seq, words, nameOf) })
           }

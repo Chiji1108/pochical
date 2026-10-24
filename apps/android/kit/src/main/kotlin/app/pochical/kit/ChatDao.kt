@@ -17,6 +17,13 @@ internal interface ChatDao {
   @Query("SELECT * FROM chatLines WHERE groupId = :groupId AND threadId = :threadId AND seq >= :from AND seq <= :through ORDER BY seq")
   suspend fun lines(groupId: String, threadId: String, from: Long, through: Long): List<ChatLineRow>
 
+  /** The chat's pinned lines, the latest pinned first; a line taken back holds no pin. */
+  @Query(
+    "SELECT seq FROM chatLines WHERE groupId = :groupId AND threadId = :threadId AND pinnedOrder > 0 AND kind != 'unsent' " +
+      "ORDER BY pinnedOrder DESC"
+  )
+  suspend fun pinnedSeqs(groupId: String, threadId: String): List<Long>
+
   @Query("SELECT seq FROM chatLines WHERE groupId = :groupId AND threadId = :threadId AND opId = :opId")
   suspend fun seqOf(groupId: String, threadId: String, opId: String): Long?
 

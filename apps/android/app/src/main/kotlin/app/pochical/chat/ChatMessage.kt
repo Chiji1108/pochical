@@ -107,6 +107,8 @@ class MessageLook(
   val said: String,
   /** What it shows besides its words, each drawn from here and offering its actions from here (`LinePart`). */
   val parts: List<LinePart> = emptyList(),
+  /** Pinned for everyone: a small pin by its time. */
+  val pinned: Boolean = false,
 ) {
   val quote: LineQuote?
     get() = parts.firstNotNullOfOrNull { (it as? QuotePart)?.quote }
@@ -252,7 +254,7 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
         }
         Row(verticalAlignment = Alignment.Bottom) {
           val edited = (look.content as? LineContent.Words)?.edited == true
-          if (look.mine) TimeRoom(look.time, look.waiting, edited, items, Modifier.padding(end = 4.dp))
+          if (look.mine) TimeRoom(look.time, look.waiting, edited, look.pinned, items, Modifier.padding(end = 4.dp))
           Box(
             Modifier.weight(1f, fill = false)
               .onGloballyPositioned { at ->
@@ -264,7 +266,7 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
           ) {
             Bubble(look, handlers, onQuote = { look.quote?.let { handlers.jump(it.seq) } })
           }
-          if (!look.mine) TimeRoom(look.time, null, edited, items, Modifier.padding(start = 4.dp))
+          if (!look.mine) TimeRoom(look.time, null, edited, look.pinned, items, Modifier.padding(start = 4.dp))
         }
         if (look.waiting?.failed == true) {
           Text(stringResource(R.string.chat_not_sent), style = MaterialTheme.typography.labelSmall, color = colors.dangerDefault)
@@ -400,6 +402,7 @@ fun messageLook(
 ): MessageLook? {
   val mine = stringResource(R.string.chat_me)
   val edited = stringResource(R.string.chat_edited)
+  val pinnedWords = stringResource(R.string.chat_pinned_line)
   val sending = stringResource(R.string.chat_sending)
   val notSent = stringResource(R.string.chat_not_sent)
   return when (item) {
@@ -407,6 +410,7 @@ fun messageLook(
       val line = item.line
       if (line.content is LineContent.Notice || line.content == LineContent.Unsent || line.content == LineContent.Hidden) return null
       val own = line.authorId == me
+      val pinned = line.seq in LocalPins.current
       val quote = line.replyTo?.let { quoteOf(it) }
       val replying = quote?.let { stringResource(R.string.chat_reply_to_said, it.writer.orEmpty(), it.words) }
       val words = lineWords(line.content, nameOf)
@@ -417,6 +421,7 @@ fun messageLook(
             words,
             (line.content as? LineContent.Words)?.preview?.title,
             clock(line.sentAtMs),
+            pinnedWords.takeIf { pinned },
             edited.takeIf { (line.content as? LineContent.Words)?.edited == true },
             reactionWords(line.reactions, me),
           )
@@ -434,6 +439,7 @@ fun messageLook(
         swipe = if (own) ReplySwipe.Leftward else ReplySwipe.Rightward,
         said = said,
         parts = partsOf(line.content, quote, ReactionsPart(line.reactions, counted = direct)),
+        pinned = pinned,
       )
     }
     is ChatItem.Waiting -> {

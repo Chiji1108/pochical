@@ -4,6 +4,7 @@ import app.pochical.v1.ChatEdit
 import app.pochical.v1.LinkPreview
 import app.pochical.v1.ChatLine as WireLine
 import app.pochical.v1.chatChange
+import app.pochical.v1.chatPin
 import app.pochical.v1.chatReact
 import app.pochical.v1.chatRead
 import app.pochical.v1.chatRecall
@@ -132,6 +133,22 @@ class Chats internal constructor(
     }
   }
 
+  /**
+   * The line [seq] pinned for everyone in the chat ([on]), or its pin taken off; a pin past
+   * `chatRules.maxPins` takes the place of the oldest. Throws when the device cannot keep it.
+   */
+  suspend fun pin(groupId: String, threadId: String, seq: Long, on: Boolean) {
+    database.write {
+      chatEdit(groupId, now()) {
+        pin = chatPin {
+          this.threadId = threadId
+          this.seq = seq
+          this.on = on
+        }
+      }
+    }
+  }
+
   /** 送信取消: the member's line [seq] taken back for everyone, its reactions, reply and pin with it. */
   suspend fun unsend(groupId: String, threadId: String, seq: Long) {
     database.write {
@@ -231,6 +248,9 @@ private class WaitingEdits(rows: List<ChatOutboxRow>, threadId: String, state: S
   val lines = mutableListOf<WaitingLine>()
   val toLines = mutableMapOf<Long, MutableList<ChatEdit>>()
   val recalls = mutableListOf<ChatEdit>()
+
+  /** The member's pins on their way, and the unsending and recalls that take a pin with them, in the order made. */
+  val pinEdits = mutableListOf<ChatEdit>()
   var ownRead = 0L
     private set
 
@@ -252,9 +272,14 @@ private class WaitingEdits(rows: List<ChatOutboxRow>, threadId: String, state: S
             lines += WaitingLine(edit.opId, row.madeAtMs, LineContent.of(edit.send.content), edit.send.replyTo.takeIf { it != 0L }, failed)
           }
         ChatEdit.KindCase.READ -> if (edit.read.threadId == threadId) ownRead = maxOf(ownRead, edit.read.lastReadSeq)
-        ChatEdit.KindCase.UNSEND -> if (edit.unsend.threadId == threadId) toLines.getOrPut(edit.unsend.seq, ::mutableListOf) += edit
+        ChatEdit.KindCase.UNSEND ->
+          if (edit.unsend.threadId == threadId) {
+            toLines.getOrPut(edit.unsend.seq, ::mutableListOf) += edit
+            pinEdits += edit
+          }
         ChatEdit.KindCase.CHANGE -> if (edit.change.threadId == threadId) toLines.getOrPut(edit.change.seq, ::mutableListOf) += edit
         ChatEdit.KindCase.REACT -> if (edit.react.threadId == threadId) toLines.getOrPut(edit.react.seq, ::mutableListOf) += edit
+        ChatEdit.KindCase.PIN -> if (edit.pin.threadId == threadId) pinEdits += edit
         ChatEdit.KindCase.RECALL -> if (edit.recall.threadId == threadId) recalls += edit
         else -> {}
       }
@@ -349,7 +374,21 @@ internal suspend fun SyncDao.chatState(groupId: String, threadId: String, me: St
       .distinct()
       .mapNotNull { seq -> shownLine(groupId, threadId, seq, waiting)?.let { seq to it } }
       .toMap()
+  // The pins as the group keeps them, the latest first, then the member's own steps on their way.
+  var pinned = pinnedSeqs(groupId, threadId)
+  for (edit in waiting.pinEdits) {
+    pinned =
+      when (edit.kindCase) {
+        ChatEdit.KindCase.PIN -> if (edit.pin.on) pinning(pinned, edit.pin.seq).pins else unpinning(pinned, edit.pin.seq).pins
+        ChatEdit.KindCase.UNSEND -> unpinning(pinned, edit.unsend.seq).pins
+        else -> pinned
+      }
+  }
+  for (recall in waiting.recalls) seqOf(groupId, threadId, recall.recall.sendOpId)?.let { pinned = unpinning(pinned, it).pins }
+  val byLine = lines.associateBy { it.seq }
+  val pins = pinned.mapNotNull { seq -> byLine[seq] ?: shownLine(groupId, threadId, seq, waiting) }.filter { it.content != LineContent.Unsent }
   return ChatState(
+    pins = pins,
     quoted = quoted,
     lines = lines,
     waiting = shownWaiting,

@@ -10,7 +10,11 @@ import app.pochical.calendar.rememberReducedMotion
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import app.pochical.EmojiPickerSheet
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.ui.platform.LocalContext
 import app.pochical.kit.LineContent
+import app.pochical.kit.pinning
 import app.pochical.kit.LineReaction
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flowOf
@@ -99,6 +103,9 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 
+/** The seqs of the chat's pinned lines, for each line to show its pin by its time. */
+val LocalPins = compositionLocalOf<Set<Long>> { emptySet() }
+
 /** The chats as the screens read and write them. */
 val LocalChats = staticCompositionLocalOf<Chats> { error("No chats provided") }
 
@@ -139,7 +146,7 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
       snapshotFlow { from to currentMe }.flatMapLatest { (from, me) -> chats.state(groupId, threadId, me, from) }
     }
       .collectAsState(null)
-  val chat = state ?: return ChatScaffold(groupId, threadId, members, groups, socket, remember { SnackbarHostState() }, onBack) {}
+  val chat = state ?: return ChatScaffold(groupId, threadId, members, groups, socket, onBack) {}
 
   // Others writing, shown for chatRules.typingShowMs unless said again; a blocked member's is not.
   val typers = rememberTypers(socket, threadId, me, blocked.map { it.userId }.toSet())
@@ -347,8 +354,26 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
   }
 
   val openLink = rememberLinkOpener()
+  // Pinning says what happened, the oldest pin making room for a new one.
+  val resources = LocalContext.current.resources
+  val pin = { seq: Long, on: Boolean ->
+    val dropped = if (on) pinning(chat.pins.map { it.seq }, seq).dropped else null
+    scope.launch {
+      keeping({ notKept = true }) {
+        chats.pin(groupId, threadId, seq, on)
+        val said =
+          when {
+            dropped != null -> resources.getString(R.string.chat_pin_dropped, Chat.maxPins)
+            on -> resources.getString(R.string.chat_pinned_done)
+            else -> resources.getString(R.string.chat_unpinned_done)
+          }
+        snackbar.showSnackbar(said)
+      }
+    }
+    Unit
+  }
   var unsending by remember { mutableStateOf<Unsending?>(null) }
-  val actions = rememberLineActions(composer, nameOf, snackbar, onUnsend = { unsending = it }, onNotKept = { notKept = true })
+  val actions = rememberLineActions(composer, nameOf, snackbar, onUnsend = { unsending = it }, onNotKept = { notKept = true }, onPin = pin)
   val handlers =
     MessageHandlers(
       menu = menu,
@@ -368,10 +393,15 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
       openLink = openLink,
     )
   Box {
-    ChatScaffold(groupId, threadId, members, groups, socket, snackbar, onBack) {
+    ChatScaffold(groupId, threadId, members, groups, socket, onBack) {
       Column(Modifier.fillMaxSize().imePadding()) {
         Box(Modifier.weight(1f).fillMaxWidth()) {
-          ChatLines(items, list, chat, me, writers, threadId != GROUP_THREAD, handlers, { lineQuote(it, chat.line(it), nameOf, blockedIds) }, Modifier.alpha(if (placed) 1f else 0f))
+          CompositionLocalProvider(LocalPins provides chat.pins.mapTo(HashSet()) { it.seq }) {
+            ChatLines(items, list, chat, me, writers, threadId != GROUP_THREAD, handlers, { lineQuote(it, chat.line(it), nameOf, blockedIds) }, Modifier.alpha(if (placed) 1f else 0f))
+          }
+          PinBar(chat.pins, nameOf, onJump = { jumping = it }, onUnpin = { pin(it, false) }, Modifier.align(Alignment.TopCenter))
+          // What a pick says, over the lines' foot rather than the composer.
+          SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
           LatestButton(list, chat, me, items, Modifier.align(Alignment.BottomEnd)) { toUnread ->
             when {
               toUnread -> going = Going.ToUnread
@@ -442,7 +472,6 @@ private fun ChatScaffold(
   members: List<GroupMemberRow>,
   groups: List<GroupRow>,
   socket: ChatSocket?,
-  snackbar: SnackbarHostState,
   onBack: () -> Unit,
   content: @Composable () -> Unit,
 ) {
@@ -468,7 +497,6 @@ private fun ChatScaffold(
         },
       )
     },
-    snackbarHost = { SnackbarHost(snackbar) },
     // The composer takes the foot, rising with the keyboard (imePadding).
     contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
   ) { padding ->
