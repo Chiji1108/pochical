@@ -15,7 +15,7 @@ fun guessGroupMark(name: String, color: Int): GroupMarkValue {
 
 /** The icon's or letters' color slot; none for an emoji or a photo, which bring colors of their own. */
 val GroupMarkValue.paletteColor: Int?
-  get() = if (photoId.isEmpty() && (icon.isNotEmpty() || letter.isNotEmpty())) color else null
+  get() = if (icon.isEmpty() && letter.isEmpty()) null else color
 
 /**
  * The color a group's icon or letters start in, from the user's other groups' [marks]

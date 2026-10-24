@@ -22,11 +22,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import app.pochical.EmojiPickerSheet
 import app.pochical.Footnote
 import app.pochical.IconPickerSheet
@@ -100,7 +100,7 @@ fun LookSheet(draft: Pattern, others: List<Pattern>, onChange: (Pattern, LookPar
         }
         MarkStyle.Emoji -> {
           MarkChoiceGrid(withPicked(ReadyPatterns.markEmojis, draft.emoji), draft.emoji, { it }, { onChange(draft.copy(emoji = it), LookPart.Emoji) }) {
-            Text(it, fontSize = 26.sp)
+            Text(it, fontSize = with(LocalDensity.current) { 26.dp.toSp() })
           }
           TextButton(onClick = { choosingEmoji = true }) { Text(stringResource(R.string.mark_more_emoji)) }
         }

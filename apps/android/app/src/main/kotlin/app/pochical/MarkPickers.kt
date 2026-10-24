@@ -39,8 +39,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextRange
@@ -50,6 +52,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.emoji2.emojipicker.EmojiPickerView
 import app.pochical.design.MarkIconNames
 import app.pochical.design.Radius
+import app.pochical.kit.isEmoji
 import app.pochical.kit.markIconSections
 import app.pochical.kit.markLetter
 
@@ -109,10 +112,12 @@ private fun MarkChoice(picked: Boolean, label: String, onPick: () -> Unit, modif
       .heightIn(min = 44.dp)
       .clip(shape)
       .then(if (picked) Modifier.border(1.5.dp, MaterialTheme.colorScheme.secondary, shape) else Modifier)
-      .clickable(role = Role.RadioButton, onClick = onPick)
-      .semantics {
+      .clickable(onClick = onPick)
+      // The label alone, not the mark drawn inside it as well.
+      .clearAndSetSemantics {
         contentDescription = label
         selected = picked
+        role = Role.RadioButton
       },
     contentAlignment = Alignment.Center,
   ) {
@@ -193,7 +198,8 @@ fun EmojiPickerSheet(onPick: (String) -> Unit, onDismiss: () -> Unit) {
   ModalBottomSheet(onDismissRequest = onDismiss) {
     BoxWithConstraints {
       AndroidView(
-        factory = { context -> EmojiPickerView(context).apply { setOnEmojiPickedListener { picked(it.emoji) } } },
+        // Only one the server takes for a mark (spec/vectors/text.json, isEmoji).
+        factory = { context -> EmojiPickerView(context).apply { setOnEmojiPickedListener { if (isEmoji(it.emoji)) picked(it.emoji) } } },
         modifier = Modifier.fillMaxWidth().heightIn(max = maxHeight).padding(bottom = 16.dp),
       )
     }
@@ -207,9 +213,10 @@ fun EmojiPickerSheet(onPick: (String) -> Unit, onDismiss: () -> Unit) {
  */
 @Composable
 fun MarkLetterField(letter: String, limit: Int, modifier: Modifier = Modifier, onLetter: (String) -> Unit) {
-  var field by remember { mutableStateOf(TextFieldValue(letter)) }
+  // Set again as the letter changes from outside, as a name's guess does.
+  var field by rememberSaveable(letter, stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue(letter)) }
   // The letter as last committed, which an edit is measured against.
-  var committed by remember { mutableStateOf(letter) }
+  var committed by rememberSaveable(letter) { mutableStateOf(letter) }
   OutlinedTextField(
     field,
     { typed ->
