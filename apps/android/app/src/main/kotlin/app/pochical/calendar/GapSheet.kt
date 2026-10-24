@@ -27,7 +27,14 @@ import androidx.compose.ui.unit.dp
 import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.ShiftMark
+import app.pochical.LocalDeviceSettings
 import app.pochical.design.Metrics
+import app.pochical.kit.OffLook
+import app.pochical.patterns.SwitchRow
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import app.pochical.design.Radius
 import java.time.LocalDate
 import kotlinx.coroutines.launch
@@ -37,7 +44,9 @@ import kotlinx.coroutines.launch
  * ポチポチ入力; spec/shift-patterns.md, Blanks when entering ends): whether they are days off, made
  * so all at once with its one button. Asked, not explained, as a blank day is most often a day off
  * not entered. With more than one pattern that counts as off, chips pick which, [picked] shared
- * with the calendar behind, which draws the days faint as it would fill them.
+ * with the calendar behind, which draws the days faint as it would fill them. Unless the pattern
+ * picked showed blank as the sheet opened, カレンダーでは空白で見せる turns its 休みの見せ方 to 空白
+ * as the days are filled, for a person who keeps days off blank for the look.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -50,6 +59,13 @@ fun GapSheet(
   onDismiss: () -> Unit,
 ) {
   val colors = LocalThemeColors.current
+  val settings = LocalDeviceSettings.current
+  // The patterns the look showed blank as the sheet opened, which keep their look while the days are filled.
+  val blankAtOpen = rememberSaveable {
+    offPatterns.filter { settings.device.look.options.offLook(it.id) == OffLook.Blank }.map { it.id }
+  }
+  var blank by rememberSaveable { mutableStateOf(false) }
+  val offersBlank = picked.id !in blankAtOpen
   val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
   val scope = rememberCoroutineScope()
   ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet) {
@@ -87,9 +103,20 @@ fun GapSheet(
           }
         }
       }
+      if (offersBlank) {
+        SwitchRow(
+          title = stringResource(R.string.gaps_blank),
+          note = stringResource(R.string.gaps_blank_note),
+          on = blank,
+          onChange = { blank = it },
+        )
+      }
       Button(
         onClick = {
           onFill(picked)
+          if (blank && offersBlank) {
+            settings.change { it.copy(look = it.look.withOffLook(OffLook.Blank, picked.id, offPatterns.map(Pattern::id))) }
+          }
           scope.launch { sheet.hide() }.invokeOnCompletion { onDismiss() }
         },
         modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control).padding(bottom = 8.dp),
