@@ -360,8 +360,8 @@ describe("a member's shifts in their groups", () => {
     await alarmsSettled(user);
     changing = true;
     tries = 0;
-    await runAlarm(user);
     // The change is a round of its own, at once, not after the retry.
+    await expect(runAlarm(user)).resolves.toBeTruthy();
     expect(tries).toBe(2);
     // Nor that round's retry, to fail as the file's tests end.
     await runInDurableObject(user, async (_, state) => {

@@ -240,7 +240,7 @@ const noticeOf = (userId: string, by: Leaving): Notice => {
 
 export class GroupDO extends DurableObject<Env> {
   private readonly db: DrizzleSqliteDODatabase;
-  private readonly alarms: Alarm;
+  readonly alarms: Alarm;
   // The writes to R2 of photos noted and not stored yet: the sweep waits
   // on those running as it marks photos going before it deletes them, so
   // none lands after the delete. Each is added in the turn its note is

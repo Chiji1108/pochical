@@ -64,8 +64,7 @@ const alarmComes = async (groupId: string): Promise<void> => {
   await runInDurableObject(group, (_, state) => {
     state.storage.sql.exec("update membership_outbox set due_at = 0");
   });
-  await expect(alarmOf(group)).resolves.not.toBeNull();
-  await runAlarm(group);
+  await expect(runAlarm(group)).resolves.toBeTruthy();
 };
 
 /** How many tries to tell `userId` of the group have failed in a row. */

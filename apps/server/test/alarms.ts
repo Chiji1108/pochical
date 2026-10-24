@@ -1,8 +1,7 @@
 import { runInDurableObject } from "cloudflare:test";
-import type { DurableObject } from "cloudflare:workers";
 import { afterAll, afterEach, beforeAll, vi } from "vitest";
 
-import { Alarm } from "../src/alarm";
+import type { Alarm } from "../src/alarm";
 import { GroupDO } from "../src/group-do";
 import { UserDO } from "../src/user-do";
 
@@ -31,11 +30,14 @@ type Runs = {
   asked: number | null;
 };
 
-/** Each object's runs, by its state, so they go with it. */
-const runsByState = new WeakMap<DurableObjectState, Runs>();
+/** A Durable Object of ours: each sets its alarm through its Alarm. */
+type WithAlarm = { readonly alarms: Alarm };
 
-const runsOf = (state: DurableObjectState): Runs => {
-  let runs = runsByState.get(state);
+/** Each object's runs, by its Alarm, so they go with it. */
+const runsByAlarm = new WeakMap<Alarm, Runs>();
+
+const runsOf = (alarm: Alarm): Runs => {
+  let runs = runsByAlarm.get(alarm);
   if (runs === undefined) {
     runs = {
       asked: null,
@@ -45,7 +47,7 @@ const runsOf = (state: DurableObjectState): Runs => {
       next: Promise.withResolvers(),
       threw: undefined,
     };
-    runsByState.set(state, runs);
+    runsByAlarm.set(alarm, runs);
   }
   return runs;
 };
@@ -56,7 +58,7 @@ const wake = (runs: Runs): void => {
 };
 
 type AlarmHandler = (
-  this: DurableObject,
+  this: WithAlarm,
   run: AlarmInvocationInfo
 ) => Promise<void>;
 
@@ -79,23 +81,24 @@ export const ownRun = (at = Date.now()): AlarmInvocationInfo => {
  * A test's own call (ownRun) is left alone.
  */
 const watched = (handler: AlarmHandler): AlarmHandler =>
-  async function watchedAlarm(this: DurableObject, run) {
+  async function watchedAlarm(this: WithAlarm, run) {
     if (ownRuns.has(run)) {
       await Reflect.apply(handler, this, [run]);
       return;
     }
-    const runs = runsOf(this.ctx);
+    const { storage } = this.alarms;
+    const runs = runsOf(this.alarms);
     runs.going = true;
     wake(runs);
     try {
       if (runs.asked !== null) {
-        if ((await this.ctx.storage.getAlarm()) === runs.asked) {
-          await this.ctx.storage.deleteAlarm();
+        if ((await storage.getAlarm()) === runs.asked) {
+          await storage.deleteAlarm();
         }
         runs.asked = null;
       }
       await Reflect.apply(handler, this, [run]);
-      runs.left = await this.ctx.storage.getAlarm();
+      runs.left = await storage.getAlarm();
     } catch (error) {
       runs.threw = { ended: runs.ended + 1, error };
       throw error;
@@ -114,15 +117,6 @@ const until = async (runs: Runs, done: () => boolean): Promise<void> => {
   }
 };
 
-/** The object's own Alarm, which every alarm of it is set through. */
-const alarmOfInstance = (instance: object): Alarm => {
-  const alarm: unknown = Reflect.get(instance, "alarms");
-  if (!(alarm instanceof Alarm)) {
-    throw new TypeError("The object sets no alarm through an Alarm");
-  }
-  return alarm;
-};
-
 /**
  * Inside the object, waits until no run of its alarm is going or due:
  * each the runtime has taken up among them, begun or not. "now" runs the
@@ -130,23 +124,22 @@ const alarmOfInstance = (instance: object): Alarm => {
  * then; "as set" leaves one set for later, which hides a run taken up
  * before a call set it (Alarm.setBy, as GroupDO's photos are swept). A
  * run that ends throwing fails the wait, as the runtime would only run it
- * again.
+ * again. Whether an alarm was set as it was called.
  */
 export const settle = async (
-  instance: object,
-  state: DurableObjectState,
+  { alarms }: WithAlarm,
   when: "as set" | "now"
-): Promise<void> => {
-  const runs = runsOf(state);
+): Promise<boolean> => {
+  const runs = runsOf(alarms);
   await until(runs, () => !runs.going);
   // No run begins while storage answers, so none is missed from here.
   const since = runs.ended;
-  const set = await state.storage.getAlarm();
+  const set = await alarms.storage.getAlarm();
   if (when === "as set" && set !== null && set > vi.getRealSystemTime()) {
-    return;
+    return true;
   }
-  alarmOfInstance(instance).set(vi.getRealSystemTime());
-  runs.asked = await state.storage.getAlarm();
+  alarms.set(vi.getRealSystemTime());
+  runs.asked = await alarms.storage.getAlarm();
   do {
     const after = runs.ended;
     // oxlint-disable-next-line no-await-in-loop -- each run as it ends
@@ -155,19 +148,27 @@ export const settle = async (
       throw new Error("An alarm's run threw", { cause: runs.threw.error });
     }
   } while (runs.left !== null && runs.left <= vi.getRealSystemTime());
+  return set !== null;
 };
 
-/** The object's alarm run now, as the runtime runs it, and each due after it. */
-export const runAlarm = async (stub: DurableObjectStub): Promise<void> => {
-  await runInDurableObject(stub, async (instance, state) => {
-    await settle(instance, state, "now");
-  });
-};
+/**
+ * The object's alarm run now, as the runtime runs it, and each due after
+ * it: whether one was set (settle).
+ */
+export const runAlarm = async <T extends GroupDO | UserDO>(
+  stub: DurableObjectStub<T>
+): Promise<boolean> =>
+  await runInDurableObject(
+    stub,
+    async (instance: T) => await settle(instance, "now")
+  );
 
 /** Waits until no run of the object's alarm is going or due (settle). */
-export const alarmsSettled = async (stub: DurableObjectStub): Promise<void> => {
-  await runInDurableObject(stub, async (instance, state) => {
-    await settle(instance, state, "as set");
+export const alarmsSettled = async <T extends GroupDO | UserDO>(
+  stub: DurableObjectStub<T>
+): Promise<void> => {
+  await runInDurableObject(stub, async (instance: T) => {
+    await settle(instance, "as set");
   });
 };
 
@@ -181,7 +182,7 @@ export const alarmOf = async (
   );
 
 /** The objects the running test leaves with no run going or due. */
-const afterTest = new Map<string, () => DurableObjectStub>();
+const afterTest = new Map<string, () => DurableObjectStub<GroupDO>>();
 
 /**
  * Has the object settled after the running test: a run that outlived its
@@ -189,7 +190,7 @@ const afterTest = new Map<string, () => DurableObjectStub>();
  */
 export const settleAfterTest = (
   name: string,
-  stub: () => DurableObjectStub
+  stub: () => DurableObjectStub<GroupDO>
 ) => {
   afterTest.set(name, stub);
 };

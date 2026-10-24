@@ -3,7 +3,7 @@ import { env, exports } from "cloudflare:workers";
 import { describe, expect, it, vi } from "vitest";
 
 import { photoKey, sharePersonPhoto, smallKey } from "../src/photos";
-import { alarmOf, alarmsSettled, ownRun, runAlarm } from "./alarms";
+import { alarmsSettled, ownRun, runAlarm } from "./alarms";
 import { call, ORIGIN, signInAnonymously, userIdOf } from "./helpers";
 import {
   changesBesidesNotices,
@@ -292,8 +292,7 @@ describe("a group's photos", () => {
     await uploadedAgo(chatRules.unsentAfterMs - 60_000, "fresh");
 
     // The uploads set the alarm, so a group that goes quiet sweeps too.
-    await expect(alarmOf(group)).resolves.not.toBeNull();
-    await runAlarm(group);
+    await expect(runAlarm(group)).resolves.toBeTruthy();
     const kept = {
       fresh: await stored("fresh"),
       lost: await stored("lost"),
@@ -321,8 +320,7 @@ describe("a group's photos", () => {
 
     // The alarm comes back for the one still within its time.
     await uploadedAgo(chatRules.unsentAfterMs, "fresh");
-    await expect(alarmOf(group)).resolves.not.toBeNull();
-    await runAlarm(group);
+    await expect(runAlarm(group)).resolves.toBeTruthy();
     await expect(stored("fresh")).resolves.toBeFalsy();
   });
 
@@ -338,8 +336,7 @@ describe("a group's photos", () => {
       );
     });
     await photo("PUT", groupId, "second", maker, JPEG);
-    await expect(alarmOf(group)).resolves.not.toBeNull();
-    await runAlarm(group);
+    await expect(runAlarm(group)).resolves.toBeTruthy();
     await expect(
       env.PHOTOS.head(photoKey(groupId, "first"))
     ).resolves.not.toBeNull();
@@ -428,8 +425,11 @@ const photoMark = async (token: string, groupId: string): Promise<string> => {
   return photoId;
 };
 
-/** Every photo's upload made long past, and the alarm an upload set run. */
-const sweepAll = async (groupId: string): Promise<void> => {
+/**
+ * Every photo's upload made long past, and the alarm an upload set run:
+ * whether it ran.
+ */
+const sweepAll = async (groupId: string): Promise<boolean> => {
   const { runInDurableObject } = await import("cloudflare:test");
   const group = env.GROUPS.getByName(groupId);
   await runInDurableObject(group, (_, state) => {
@@ -438,8 +438,7 @@ const sweepAll = async (groupId: string): Promise<void> => {
       Date.now() - chatRules.unsentAfterMs
     );
   });
-  await expect(alarmOf(group)).resolves.not.toBeNull();
-  await runAlarm(group);
+  return await runAlarm(group);
 };
 
 describe("a group's photo once stored", () => {
@@ -482,7 +481,7 @@ describe("a group's photo once stored", () => {
     // and a photo no line came to carry, which goes.
     await photo("PUT", groupId, face, guest, OTHER_JPEG);
     await photo("PUT", groupId, "lost", maker, JPEG);
-    await sweepAll(groupId);
+    await expect(sweepAll(groupId)).resolves.toBeTruthy();
     const kept = {
       face: await storedBytes(groupId, face),
       lost: await storedBytes(groupId, "lost"),
@@ -564,7 +563,7 @@ describe("a group's photo once stored", () => {
     const stray = await ownPhoto(maker);
     await sharePersonPhoto(env, makerId, stray, groupId);
     await expect(storedBytes(groupId, stray)).resolves.toStrictEqual(JPEG);
-    await sweepAll(groupId);
+    await expect(sweepAll(groupId)).resolves.toBeTruthy();
     const kept = {
       face: await storedBytes(groupId, face),
       stray: await storedBytes(groupId, stray),
@@ -600,8 +599,7 @@ describe("a group's photo once stored", () => {
             .one().at
       )
     ).resolves.toBeGreaterThan(long);
-    await expect(alarmOf(group)).resolves.not.toBeNull();
-    await runAlarm(group);
+    await expect(runAlarm(group)).resolves.toBeTruthy();
     await expect(storedBytes(groupId, "again")).resolves.toStrictEqual(JPEG);
     // And its line still goes.
     const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
@@ -686,8 +684,7 @@ describe("a group's photo once stored", () => {
     // Not copied in again yet, and the alarm comes back for it.
     await expect(storedBytes(groupId, stray)).resolves.toBeNull();
     expect(retryAt).not.toBeNull();
-    await expect(alarmOf(group)).resolves.not.toBeNull();
-    await runAlarm(group);
+    await expect(runAlarm(group)).resolves.toBeTruthy();
     await expect(storedBytes(groupId, stray)).resolves.toStrictEqual(JPEG);
     await expect(
       runInDurableObject(group, (_, state) =>

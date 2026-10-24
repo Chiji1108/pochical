@@ -166,7 +166,7 @@ type SyncedLog = {
  */
 export class UserDO extends DurableObject<Env> {
   private readonly db: DrizzleSqliteDODatabase;
-  private readonly alarms: Alarm;
+  readonly alarms: Alarm;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);

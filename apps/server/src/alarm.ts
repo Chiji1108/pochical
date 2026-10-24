@@ -13,7 +13,7 @@ export class Alarm {
   /** When the latest run this object began was set for. */
   private lastRun: number | undefined;
 
-  private readonly storage: DurableObjectStorage;
+  readonly storage: DurableObjectStorage;
 
   constructor(storage: DurableObjectStorage) {
     this.storage = storage;
