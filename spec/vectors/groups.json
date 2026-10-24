@@ -1,0 +1,40 @@
+{
+  "about": "A group's marks (spec/sync-protocol.md, Groups). nextGroupColor: the color a group's icon or letters start in, from the `marks` of the user's other groups: as a new pattern's (patterns.json, nextColor), counting only the marks drawn in a color, an icon or letters; an emoji's or a photo's color is 0 on the wire and is no color.",
+  "nextGroupColor": [
+    { "name": "no groups", "marks": [], "expected": 0 },
+    {
+      "name": "an emoji and a photo use no color",
+      "marks": [{ "kind": "emoji" }, { "kind": "photo" }],
+      "expected": 0
+    },
+    {
+      "name": "the first color an icon or letters leave free",
+      "marks": [
+        { "kind": "emoji" },
+        { "color": 0, "kind": "letter" },
+        { "color": 1, "kind": "icon" }
+      ],
+      "expected": 2
+    },
+    {
+      "name": "every color used: the colored groups' count modulo the palette",
+      "marks": [
+        { "kind": "emoji" },
+        { "color": 0, "kind": "icon" },
+        { "color": 1, "kind": "icon" },
+        { "color": 2, "kind": "icon" },
+        { "color": 3, "kind": "icon" },
+        { "color": 4, "kind": "icon" },
+        { "color": 5, "kind": "icon" },
+        { "color": 6, "kind": "letter" },
+        { "color": 7, "kind": "letter" },
+        { "color": 8, "kind": "letter" },
+        { "color": 9, "kind": "letter" },
+        { "color": 10, "kind": "letter" },
+        { "color": 11, "kind": "letter" },
+        { "color": 0, "kind": "letter" }
+      ],
+      "expected": 1
+    }
+  ]
+}

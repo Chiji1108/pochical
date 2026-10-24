@@ -98,7 +98,7 @@ struct NewGroupPage: View {
 
   /// The first color the user's groups do not use yet, for the guess and
   /// for a mark picked from an emoji or a photo into an icon or letters.
-  private var freeColor: Int { nextGroupColor(groups, slots: colors.marks.count) }
+  private var freeColor: Int { nextGroupColor(groups.map(\.mark), slots: colors.marks.count) }
 
   private func make() {
     let request = NewGroupRequest.asking(

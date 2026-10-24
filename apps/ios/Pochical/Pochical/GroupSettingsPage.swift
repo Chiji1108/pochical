@@ -232,7 +232,8 @@ private struct GroupEditPage: View {
         PageLink {
           GroupMarkPage(
             name: name, mark: $mark,
-            freeColor: nextGroupColor(groups.filter { $0.id != group.id }, slots: colors.marks.count),
+            freeColor: nextGroupColor(
+              groups.filter { $0.id != group.id }.map(\.mark), slots: colors.marks.count),
             shelf: .group(group.id))
         } label: {
           LabeledContent("アイコン") {

@@ -29,11 +29,12 @@ public struct GroupRow: Hashable, Sendable, Identifiable {
   }
 }
 
-/// The color a group's icon or letters start in (spec/sync-protocol.md,
-/// Groups): as a new pattern's (`nextColor`), counting only `groups`
-/// drawn in a color, as an emoji's or a photo's 0 is no color.
-public func nextGroupColor(_ groups: [GroupRow], slots: Int) -> Int {
-  nextColor(groups.compactMap(\.mark.paletteColor), slots: slots)
+/// The color a group's icon or letters start in, from the user's other
+/// groups' `marks` (spec/vectors/groups.json, nextGroupColor): as a new
+/// pattern's (`nextColor`), counting only marks drawn in a color, as an
+/// emoji's or a photo's 0 is no color.
+public func nextGroupColor(_ marks: [GroupMarkValue], slots: Int) -> Int {
+  nextColor(marks.compactMap(\.paletteColor), slots: slots)
 }
 
 /// A group the person asks to make: its name, its mark and their name in
