@@ -54,6 +54,18 @@ sealed interface RootPage : RootRoute, NavKey {
 
   /** グループを作る, from グループ. */
   @Serializable data object NewGroup : RootPage
+
+  /** メンバーを招待, from a group's bar or its settings, and once it is made. */
+  @Serializable data class GroupInvite(val groupId: String) : RootPage
+
+  /** グループの設定, from a group's bar. */
+  @Serializable data class GroupSettings(val groupId: String) : RootPage
+
+  /** グループを編集, from its settings. */
+  @Serializable data class GroupEdit(val groupId: String) : RootPage
+
+  /** このグループでのあなた, from its settings. */
+  @Serializable data class GroupProfile(val groupId: String) : RootPage
 }
 
 /**
@@ -96,6 +108,11 @@ class RootNavigator(
     page?.let(pages::add)
     tab = RootTab.Groups
     openGroup = groupId
+  }
+
+  /** Takes away every page, back to the tabs, as leaving a group does from its pages. */
+  fun closePages() {
+    pages.clear()
   }
 
   /** Whether a back on the tabs, no page over them, goes to the first tab rather than leaving the app. */

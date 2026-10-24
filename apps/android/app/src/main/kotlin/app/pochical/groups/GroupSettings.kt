@@ -1,0 +1,433 @@
+package app.pochical.groups
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import app.pochical.Footnote
+import app.pochical.LimitedTextField
+import app.pochical.R
+import app.pochical.SectionHeader
+import app.pochical.characterCount
+import app.pochical.design.TextLimits
+import app.pochical.kit.GroupMarkValue
+import app.pochical.kit.GroupMemberRow
+import app.pochical.kit.GroupRow
+import app.pochical.kit.MarkPhotoGone
+import app.pochical.kit.PhotoShelf
+import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.launch
+
+/** A group's pages' bar: [title] and the way back. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PageBar(title: String, onBack: () -> Unit, actions: @Composable () -> Unit = {}) {
+  TopAppBar(
+    title = { Text(title) },
+    navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_back), stringResource(R.string.back)) } },
+    actions = { actions() },
+  )
+}
+
+/** The group [groupId] as the device holds it now, renamed meanwhile or not; null once it is gone. */
+@Composable
+private fun liveGroup(groupId: String): GroupRow? {
+  val values = LocalValues.current
+  val groups by remember(values) { values.groups() }.collectAsState(null)
+  return groups?.firstOrNull { it.id == groupId }
+}
+
+/** Everyone in the group, those who left too, as the group's socket last said. */
+@Composable
+private fun members(groupId: String): List<GroupMemberRow> {
+  val values = LocalValues.current
+  val members by remember(values, groupId) { values.members(groupId) }.collectAsState(emptyList())
+  return members
+}
+
+/**
+ * グループの設定 (/design's GroupSettingsPage): the group's name and mark, how the person appears in
+ * it, who is in it with a way to invite more, and leaving. Someone else's row opens their sheet,
+ * whose このグループから外す takes them out, asked first. Its chat's 通知 comes with the chat.
+ */
+@Composable
+fun GroupSettingsPage(
+  groupId: String,
+  onBack: () -> Unit,
+  onEdit: () -> Unit,
+  onProfile: () -> Unit,
+  onInvite: () -> Unit,
+  onLeft: () -> Unit,
+) {
+  HoldSocket(groupId)
+  val calls = LocalGroupCalls.current
+  val resources = LocalResources.current
+  val scope = rememberCoroutineScope()
+  val snackbar = remember { SnackbarHostState() }
+  val group = liveGroup(groupId) ?: return
+  val members = members(groupId).filter { !it.left }
+  val meId = rememberMeId()
+  val me = members.firstOrNull { it.userId == meId }
+  var confirmingLeave by remember { mutableStateOf(false) }
+  var leaving by remember { mutableStateOf(false) }
+  var failed by remember { mutableStateOf<String?>(null) }
+  var profileOf by remember { mutableStateOf<GroupMemberRow?>(null) }
+  var confirmingRemove by remember { mutableStateOf<GroupMemberRow?>(null) }
+
+  Scaffold(topBar = { PageBar(stringResource(R.string.group_settings), onBack) }, snackbarHost = { SnackbarHost(snackbar) }) { padding ->
+    LazyColumn(contentPadding = padding) {
+      item { SectionHeader(stringResource(R.string.group)) }
+      item {
+        ListItem(
+          headlineContent = { Text(group.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+          leadingContent = { GroupMarkBadge(group.mark, shelf = PhotoShelf.Group(groupId)) },
+          trailingContent = { Text(stringResource(R.string.edit)) },
+          modifier = Modifier.clickable(onClick = onEdit),
+        )
+      }
+      item { Footnote(stringResource(R.string.group_settings_note)) }
+      item { SectionHeader(stringResource(R.string.group_me)) }
+      item {
+        ListItem(
+          headlineContent = { Text(me?.displayName.orEmpty(), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+          leadingContent = { MemberAvatar(me?.displayName.orEmpty(), me?.photoId.orEmpty(), PhotoShelf.Group(groupId), 28.dp, me = true) },
+          trailingContent = {
+            Text(stringResource(if (me?.ownName == true || me?.ownPhoto == true) R.string.group_only else R.string.usual_same))
+          },
+          modifier = Modifier.clickable(enabled = me != null, onClick = onProfile),
+        )
+      }
+      item { SectionHeader(stringResource(R.string.group_members)) }
+      items(members, key = { it.userId }) { member ->
+        val mine = member.userId == meId
+        MemberRow(member, groupId, if (mine) Modifier else Modifier.clickable { profileOf = member }, me = mine)
+      }
+      item {
+        ListItem(
+          headlineContent = { Text(stringResource(R.string.invite), color = MaterialTheme.colorScheme.secondary) },
+          leadingContent = { Icon(painterResource(R.drawable.ic_person_add), contentDescription = null, tint = MaterialTheme.colorScheme.secondary) },
+          modifier = Modifier.clickable(onClick = onInvite),
+        )
+      }
+      item {
+        ListItem(
+          headlineContent = {
+            if (leaving) CircularProgressIndicator(Modifier.size(20.dp))
+            else Text(stringResource(R.string.group_leave), color = MaterialTheme.colorScheme.error)
+          },
+          modifier = Modifier.padding(top = 16.dp).clickable(enabled = !leaving) { confirmingLeave = true },
+        )
+      }
+    }
+  }
+
+  profileOf?.let { person ->
+    MemberSheet(person, groupId, onDismiss = { profileOf = null }) {
+      profileOf = null
+      confirmingRemove = person
+    }
+  }
+  confirmingRemove?.let { person ->
+    AlertDialog(
+      onDismissRequest = { confirmingRemove = null },
+      title = { Text(stringResource(R.string.member_remove_title, person.displayName)) },
+      text = { Text(stringResource(R.string.member_remove_body, person.displayName, group.name)) },
+      confirmButton = {
+        TextButton(
+          onClick = {
+            confirmingRemove = null
+            scope.launch {
+              try {
+                calls.remove(groupId, person.userId)
+                snackbar.showSnackbar(resources.getString(R.string.member_removed, person.displayName))
+              } catch (e: CancellationException) {
+                throw e
+              } catch (_: Exception) {
+                failed = resources.getString(R.string.member_not_removed, person.displayName)
+              }
+            }
+          }
+        ) {
+          Text(stringResource(R.string.member_remove_confirm), color = MaterialTheme.colorScheme.error)
+        }
+      },
+      dismissButton = { TextButton(onClick = { confirmingRemove = null }) { Text(stringResource(R.string.cancel)) } },
+    )
+  }
+  if (confirmingLeave) {
+    AlertDialog(
+      onDismissRequest = { confirmingLeave = false },
+      title = { Text(stringResource(R.string.group_leave_title)) },
+      text = { Text(stringResource(R.string.group_leave_body, group.name)) },
+      confirmButton = {
+        TextButton(
+          onClick = {
+            confirmingLeave = false
+            leaving = true
+            scope.launch {
+              try {
+                calls.leave(groupId)
+                onLeft()
+              } catch (e: CancellationException) {
+                throw e
+              } catch (_: Exception) {
+                failed = resources.getString(R.string.group_not_left)
+              }
+              leaving = false
+            }
+          }
+        ) {
+          Text(stringResource(R.string.group_leave_confirm), color = MaterialTheme.colorScheme.error)
+        }
+      },
+      dismissButton = { TextButton(onClick = { confirmingLeave = false }) { Text(stringResource(R.string.cancel)) } },
+    )
+  }
+  failed?.let { title ->
+    AlertDialog(
+      onDismissRequest = { failed = null },
+      title = { Text(title) },
+      text = { Text(stringResource(R.string.try_again_online)) },
+      confirmButton = { TextButton(onClick = { failed = null }) { Text(stringResource(R.string.ok)) } },
+    )
+  }
+}
+
+/** Someone else in the group (/design's member sheet): their face large, and このグループから外す. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MemberSheet(person: GroupMemberRow, groupId: String, onDismiss: () -> Unit, onRemove: () -> Unit) {
+  ModalBottomSheet(onDismissRequest = onDismiss) {
+    Column(Modifier.fillMaxWidth().padding(bottom = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+      MemberAvatar(person.displayName, person.photoId, PhotoShelf.Group(groupId), 88.dp)
+      Text(person.displayName, Modifier.padding(top = 12.dp, bottom = 16.dp), style = MaterialTheme.typography.titleLarge)
+      ListItem(
+        headlineContent = { Text(stringResource(R.string.member_remove), color = MaterialTheme.colorScheme.error) },
+        modifier = Modifier.clickable(onClick = onRemove),
+      )
+    }
+  }
+}
+
+/**
+ * グループを編集 (/design's GroupEditPage): its name and mark, which everyone in it sees, kept as a
+ * draft until 保存.
+ */
+@Composable
+fun GroupEditPage(groupId: String, onBack: () -> Unit) {
+  HoldSocket(groupId)
+  val calls = LocalGroupCalls.current
+  val scope = rememberCoroutineScope()
+  val group = liveGroup(groupId) ?: return
+  var name by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue(group.name)) }
+  var mark by rememberSaveable(stateSaver = MarkSaver) { mutableStateOf<GroupMarkValue?>(group.mark) }
+  var editingMark by rememberSaveable { mutableStateOf(false) }
+  var saving by remember { mutableStateOf(false) }
+  var failed by remember { mutableStateOf(false) }
+  var photoGone by remember { mutableStateOf(false) }
+  val shown = mark ?: group.mark
+  val trimmed = name.text.trim()
+  val canSave = trimmed.isNotEmpty() && characterCount(name.text) <= TextLimits.groupName && (trimmed != group.name || shown != group.mark)
+
+  fun save() {
+    saving = true
+    scope.launch {
+      try {
+        // A newly picked photo goes up first, for the group to take.
+        if (shown.photoId.isNotEmpty() && shown.photoId != group.mark.photoId) calls.sendMarkPhoto(shown.photoId)
+        calls.rename(groupId, trimmed, shown)
+        onBack()
+      } catch (e: CancellationException) {
+        throw e
+      } catch (_: MarkPhotoGone) {
+        mark = group.mark
+        photoGone = true
+      } catch (_: Exception) {
+        failed = true
+      }
+      saving = false
+    }
+  }
+
+  Scaffold(
+    topBar = {
+      PageBar(stringResource(R.string.group_edit), onBack) {
+        if (saving) CircularProgressIndicator(Modifier.padding(end = 16.dp).size(24.dp))
+        else TextButton(onClick = ::save, enabled = canSave) { Text(stringResource(R.string.save)) }
+      }
+    }
+  ) { padding ->
+    Column(Modifier.padding(padding)) {
+      LimitedTextField(
+        name,
+        { name = it },
+        TextLimits.groupName,
+        stringResource(R.string.group_name),
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        placeholder = stringResource(R.string.group_name_example),
+      )
+      ListItem(
+        headlineContent = { Text(stringResource(R.string.group_mark)) },
+        trailingContent = { GroupMarkBadge(shown, shelf = PhotoShelf.Group(groupId)) },
+        modifier = Modifier.clickable { editingMark = true },
+      )
+    }
+  }
+  if (editingMark) GroupMarkPage(trimmed, shown, onMark = { mark = it }, onClose = { editingMark = false }, shelf = PhotoShelf.Group(groupId))
+  if (failed) {
+    AlertDialog(
+      onDismissRequest = { failed = false },
+      title = { Text(stringResource(R.string.not_saved)) },
+      text = { Text(stringResource(R.string.try_again_online)) },
+      confirmButton = { TextButton(onClick = { failed = false }) { Text(stringResource(R.string.ok)) } },
+    )
+  }
+  if (photoGone) {
+    AlertDialog(
+      onDismissRequest = { photoGone = false },
+      title = { Text(stringResource(R.string.mark_photo_gone)) },
+      text = { Text(stringResource(R.string.mark_photo_gone_body)) },
+      confirmButton = { TextButton(onClick = { photoGone = false }) { Text(stringResource(R.string.ok)) } },
+    )
+  }
+}
+
+/**
+ * このグループでのあなた (/design's GroupProfilePage): how the person appears in the group, which its
+ * members see: a photo and a name of its own, or, left empty, their usual ones, which it then
+ * follows (spec/sync-protocol.md, Profile). The photo is kept as it is picked, the name as the field,
+ * the page or the app is left. Neither tells the group's chat.
+ */
+@Composable
+fun GroupProfilePage(groupId: String, onBack: () -> Unit) {
+  HoldSocket(groupId)
+  val calls = LocalGroupCalls.current
+  val values = LocalValues.current
+  val scope = rememberCoroutineScope()
+  val group = liveGroup(groupId) ?: return
+  val usualName = remember(values) { values.profile() }.collectAsState(null).value?.name.orEmpty()
+  val meId = rememberMeId()
+  // Drawn once the group's socket has said how the person appears in it.
+  val me = members(groupId).firstOrNull { it.userId == meId } ?: return
+  val kept = if (me.ownName) me.displayName else ""
+  var name by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue(kept)) }
+  // The name the group keeps of its own, empty for the usual one; what is typed is saved when it differs.
+  var saved by rememberSaveable { mutableStateOf(kept) }
+  var nameFailed by remember { mutableStateOf(false) }
+  var failed by remember { mutableStateOf(false) }
+
+  val keep by rememberUpdatedState {
+    val typed = name.text.trim()
+    val fits = characterCount(typed) <= TextLimits.personName && !(typed.isEmpty() && usualName.isEmpty())
+    if (typed != saved && fits) {
+      scope.launch {
+        try {
+          calls.setDisplayName(groupId, typed)
+          saved = typed
+          nameFailed = false
+        } catch (e: CancellationException) {
+          throw e
+        } catch (_: Exception) {
+          nameFailed = true
+        }
+      }
+    }
+  }
+  DisposableEffect(Unit) { onDispose { keep() } }
+  LifecycleEventEffect(Lifecycle.Event.ON_STOP) { keep() }
+
+  suspend fun change(making: suspend () -> Unit) {
+    try {
+      making()
+    } catch (e: CancellationException) {
+      throw e
+    } catch (_: Exception) {
+      failed = true
+    }
+  }
+
+  Scaffold(topBar = { PageBar(stringResource(R.string.group_me), onBack) }) { padding ->
+    Column(Modifier.padding(padding), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+      PhotoEditor(
+        label = stringResource(R.string.photo_edit),
+        shape = PhotoCropShape.Round,
+        onPhoto = { jpeg ->
+          change { calls.setGroupPhoto(groupId, usual = false, photoId = calls.sendPhoto(jpeg, PhotoShelf.Group(groupId))) }
+        },
+        modifier = Modifier.padding(top = 16.dp),
+        onUsual = if (me.ownPhoto) ({ change { calls.setGroupPhoto(groupId, usual = true) } }) else null,
+        onRemove = { change { calls.setGroupPhoto(groupId, usual = false) } },
+      ) {
+        MemberAvatar(me.displayName, me.photoId, PhotoShelf.Group(groupId), 88.dp, me = true)
+      }
+      LimitedTextField(
+        name,
+        { name = it },
+        TextLimits.personName,
+        stringResource(R.string.name),
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp).onFocusChanged { if (!it.isFocused) keep() },
+        placeholder = usualName.ifEmpty { stringResource(R.string.person_name_example) },
+      )
+      if (nameFailed) {
+        Text(
+          stringResource(R.string.name_not_saved),
+          Modifier.padding(horizontal = 16.dp),
+          color = MaterialTheme.colorScheme.error,
+          style = MaterialTheme.typography.bodyMedium,
+        )
+      } else {
+        Footnote(
+          if (usualName.isEmpty()) stringResource(R.string.group_me_note, group.name)
+          else stringResource(R.string.group_me_note_usual, group.name, usualName)
+        )
+      }
+    }
+  }
+  if (failed) {
+    AlertDialog(
+      onDismissRequest = { failed = false },
+      title = { Text(stringResource(R.string.not_saved)) },
+      text = { Text(stringResource(R.string.try_again_online)) },
+      confirmButton = { TextButton(onClick = { failed = false }) { Text(stringResource(R.string.ok)) } },
+    )
+  }
+}
