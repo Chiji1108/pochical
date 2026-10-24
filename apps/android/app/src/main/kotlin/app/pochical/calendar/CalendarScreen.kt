@@ -717,7 +717,7 @@ private fun dayHeight(fitting: Dp): Dp = ((fitting - DAY_GAP * 5) / 6).coerceIn(
 
 /** Today, moving on at midnight while the screen is open, as the system says the date changed. */
 @Composable
-private fun rememberToday(): LocalDate {
+internal fun rememberToday(): LocalDate {
   val context = LocalContext.current
   var today by remember { mutableStateOf(LocalDate.now()) }
   DisposableEffect(context) {

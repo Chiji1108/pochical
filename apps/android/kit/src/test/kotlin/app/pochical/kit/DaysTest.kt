@@ -10,7 +10,7 @@ import org.junit.Test
 
 /** A day's values as the vectors write them. */
 @Serializable
-private data class VectorDay(
+internal data class VectorDay(
   val shift: String? = null,
   val start: String? = null,
   val end: String? = null,
@@ -25,7 +25,7 @@ private data class VectorDay(
 }
 
 @Serializable
-private data class VectorOrder(
+internal data class VectorOrder(
   val sequence: List<String>,
   val start: String,
   val anchor: String? = null,
@@ -45,7 +45,7 @@ private data class VectorOrder(
 }
 
 @Serializable
-private data class RepeatVectors(val schedule: List<Schedule>, val shown: List<Shown>) {
+internal data class RepeatVectors(val schedule: List<Schedule>, val shown: List<Shown>) {
   @Serializable
   data class Schedule(
     override val name: String,
@@ -82,7 +82,7 @@ private data class OwnDaysVectors(val edited: List<Edited>) {
   ) : VectorCase
 }
 
-private fun <V> Map<String, V>.byDay(): Map<LocalDate, V> = mapKeys { LocalDate.parse(it.key) }
+internal fun <V> Map<String, V>.byDay(): Map<LocalDate, V> = mapKeys { LocalDate.parse(it.key) }
 
 class DaysTest {
   private val repeat = vectors<RepeatVectors>("repeat")
