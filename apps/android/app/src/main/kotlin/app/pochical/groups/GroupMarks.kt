@@ -113,21 +113,6 @@ fun GroupMarkBadge(mark: GroupMarkValue, modifier: Modifier = Modifier, size: Dp
   )
 }
 
-/** The side of the frame a mark stands on at the top of the page that changes it, or of the join screen. */
-val MarkFrameSize = 76.dp
-
-/** The frame a mark stands on at the top of the page that changes it, an emoji's too. */
-@Composable
-fun MarkFrame(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-  val shape = RoundedCornerShape(Radius.xxl)
-  Box(
-    modifier.size(MarkFrameSize).clip(shape).background(MaterialTheme.colorScheme.surfaceContainerHigh, shape),
-    contentAlignment = Alignment.Center,
-  ) {
-    content()
-  }
-}
-
 /**
  * A photo the screens show, a face or a mark, filling [modifier]'s bounds: from the device or else
  * [shelf] (none: the device's alone); its ground while it loads or when it cannot be read.

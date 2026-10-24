@@ -97,6 +97,7 @@ dependencies {
   implementation(libs.googleid)
   implementation(libs.browser)
   implementation(libs.emojipicker)
+  implementation(libs.reorderable)
 
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)

@@ -1,7 +1,6 @@
 package app.pochical.kit
 
 import app.pochical.design.ReadyPatterns
-import java.text.BreakIterator
 import java.util.UUID
 
 /**
@@ -10,7 +9,7 @@ import java.util.UUID
  * [color].
  */
 fun guessGroupMark(name: String, color: Int): GroupMarkValue {
-  val hint = ReadyPatterns.groupMarkHints.firstOrNull { hint -> hint.words.any { it in name } }
+  val hint = ReadyPatterns.groupMarkHints.hintedBy(name) { it.words }
   return if (hint != null) GroupMarkValue(emoji = hint.emoji) else GroupMarkValue(letter = initialLetter(name), color = color)
 }
 
@@ -18,18 +17,7 @@ fun guessGroupMark(name: String, color: Int): GroupMarkValue {
  * A name's first character as a reader sees it, trimmed, as a group's letters start; the fallback
  * letter for a name with none.
  */
-fun initialLetter(name: String): String {
-  val trimmed = name.trim()
-  val characters = BreakIterator.getCharacterInstance().apply { setText(trimmed) }
-  val end = characters.next()
-  return if (end == BreakIterator.DONE) ReadyPatterns.GROUP_MARK_FALLBACK_LETTER else trimmed.substring(0, end)
-}
-
-/**
- * A new color slot (spec/vectors/patterns.json, nextColor): the first of the palette's [slots] that
- * [used] does not hold, else how many are used, modulo the slots.
- */
-fun nextColor(used: List<Int>, slots: Int): Int = (0 until slots).firstOrNull { it !in used } ?: (used.size % slots)
+fun initialLetter(name: String): String = firstCharacter(name.trim()).ifEmpty { ReadyPatterns.GROUP_MARK_FALLBACK_LETTER }
 
 /**
  * A group the person asks to make: its name, mark and their name in it, under one request id the

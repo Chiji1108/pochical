@@ -31,11 +31,6 @@ private data class GroupsVectors(val guessMark: List<GuessMark>, val openedInvit
 @Serializable
 private data class ChatTextVectors(val inviteCode: List<GroupsVectors.Opened>)
 
-@Serializable
-private data class NextColorVectors(val nextColor: List<NextColor>) {
-  @Serializable data class NextColor(override val name: String, val used: List<Int>, val expected: Int) : VectorCase
-}
-
 class GroupsVectorsTest {
   private val groups = vectors<GroupsVectors>("groups")
 
@@ -49,10 +44,6 @@ class GroupsVectorsTest {
 
   @Test
   fun inviteCode() = vectors<ChatTextVectors>("chat-text").inviteCode.checkEach({ it.expected }) { inviteCode(it.url) }
-
-  @Test
-  fun nextColor() =
-    vectors<NextColorVectors>("patterns").nextColor.checkEach({ it.expected }) { nextColor(it.used, slots = 12) }
 
   @Test
   fun anInviteLinkOpensItsOwnCode() {

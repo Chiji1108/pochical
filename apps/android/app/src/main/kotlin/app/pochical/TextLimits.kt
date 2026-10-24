@@ -13,19 +13,14 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import app.pochical.design.TextFields
-import java.text.BreakIterator
+import app.pochical.kit.characterEnds
 
 /** How many characters `text` holds as a reader sees them, grapheme clusters (spec/text-limits.md). */
-fun characterCount(text: String): Int = graphemeEnds(text).count()
+fun characterCount(text: String): Int = characterEnds(text).count()
 
 /** The first `limit` characters of `text`, as a reader counts them (spec/vectors/text.json). */
 fun limitText(text: String, limit: Int): String =
-  graphemeEnds(text).elementAtOrNull(limit - 1)?.let { text.substring(0, it) } ?: text
-
-private fun graphemeEnds(text: String): Sequence<Int> {
-  val characters = BreakIterator.getCharacterInstance().apply { setText(text) }
-  return generateSequence { characters.next().takeIf { it != BreakIterator.DONE } }
-}
+  characterEnds(text).elementAtOrNull(limit - 1)?.let { text.substring(0, it) } ?: text
 
 /**
  * The field's text cut to `limit` characters once it is committed: while the

@@ -179,7 +179,7 @@ private fun HoursRow(entry: DayEntry, time: ShiftTime, onChange: (DayEntry) -> U
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TimeDialog(time: String, onPick: (String) -> Unit, onDismiss: () -> Unit) {
+internal fun TimeDialog(time: String, onPick: (String) -> Unit, onDismiss: () -> Unit) {
   val (hour, minute) = time.split(":").map(String::toInt)
   val state = rememberTimePickerState(initialHour = hour, initialMinute = minute, is24Hour = true)
   AlertDialog(

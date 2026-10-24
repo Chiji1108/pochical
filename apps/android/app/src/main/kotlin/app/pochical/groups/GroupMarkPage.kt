@@ -6,13 +6,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -31,24 +29,26 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import app.pochical.EmojiPickerSheet
 import app.pochical.Footnote
 import app.pochical.IconPickerSheet
+import app.pochical.MarkFrame
+import app.pochical.MarkFrameSize
+import app.pochical.MarkLetterField
 import app.pochical.MarkChoiceGrid
 import app.pochical.MarkColorGrid
 import app.pochical.R
 import app.pochical.SectionHeader
+import app.pochical.withPicked
 import app.pochical.design.MarkIconNames
 import app.pochical.design.ReadyPatterns
 import app.pochical.design.TextLimits
 import app.pochical.kit.GroupMarkValue
 import app.pochical.kit.PhotoShelf
 import app.pochical.kit.initialLetter
-import app.pochical.limited
 
 /** The kinds of mark the tabs pick from; a photo is picked above them. */
 private enum class MarkKind(val title: Int) {
@@ -66,10 +66,6 @@ private val GroupMarkValue.kind: MarkKind?
       letter.isNotEmpty() -> MarkKind.Letter
       else -> MarkKind.Emoji
     }
-
-/** The offered marks, with [chosen] first when it is not among them. */
-private fun withPicked(offered: List<String>, chosen: String) =
-  if (chosen.isEmpty() || chosen in offered) offered else listOf(chosen) + offered
 
 /**
  * アイコン (/design's GroupMarkPage), over the page that changes the group: a photo, taken or
@@ -149,7 +145,7 @@ fun GroupMarkPage(name: String, mark: GroupMarkValue, onMark: (GroupMarkValue) -
               TextButton(onClick = { choosingIcon = true }) { Text(stringResource(R.string.mark_more_icons)) }
             }
             MarkKind.Letter ->
-              LetterField(mark.letter.ifEmpty { firstLetter }) { onMark(GroupMarkValue(letter = it, color = mark.color)) }
+              MarkLetterField(mark.letter.ifEmpty { firstLetter }, TextLimits.groupMark) { onMark(GroupMarkValue(letter = it, color = mark.color)) }
           }
         }
         if (shown == MarkKind.Icon || shown == MarkKind.Letter) {
@@ -198,21 +194,4 @@ fun GroupMarkPage(name: String, mark: GroupMarkValue, onMark: (GroupMarkValue) -
       )
     }
   }
-}
-
-/** The mark's letters, at most textLimits.groupMark: each typed is the mark's; emptied, the letters before stay. */
-@Composable
-private fun LetterField(letter: String, onLetter: (String) -> Unit) {
-  var draft by remember { mutableStateOf(TextFieldValue(letter)) }
-  OutlinedTextField(
-    draft,
-    { typed ->
-      draft = typed.limited(TextLimits.groupMark)
-      if (draft.composition == null) draft.text.trim().takeIf { it.isNotEmpty() }?.let(onLetter)
-    },
-    Modifier.fillMaxWidth(),
-    label = { Text(stringResource(R.string.mark_kind_letter)) },
-    singleLine = true,
-    keyboardOptions = KeyboardOptions.Default,
-  )
 }

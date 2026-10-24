@@ -98,9 +98,7 @@ public struct GroupMarkValue: Hashable, Sendable {
 /// guessMark): the emoji of the first hint with a word anywhere in the
 /// name, else the name's initial letter in `color`.
 public func guessedMark(for name: String, color: Int) -> GroupMarkValue {
-  if let hint = ReadyPatterns.groupMarkHints.first(where: { hint in
-    hint.words.contains { name.contains($0) }
-  }) {
+  if let hint = firstHint(in: ReadyPatterns.groupMarkHints, for: name, words: { $0.words }) {
     return GroupMarkValue(emoji: hint.emoji)
   }
   return GroupMarkValue(letter: initialLetter(of: name), color: color)
@@ -109,8 +107,7 @@ public func guessedMark(for name: String, color: Int) -> GroupMarkValue {
 /// A name's first character, trimmed, as a group's letters start, else
 /// `groupMarkFallbackLetter` for a name with none.
 public func initialLetter(of name: String) -> String {
-  name.trimmingCharacters(in: .whitespacesAndNewlines).first.map(String.init)
-    ?? ReadyPatterns.groupMarkFallbackLetter
+  firstLetter(of: name) ?? ReadyPatterns.groupMarkFallbackLetter
 }
 
 extension DatabaseMigrator {

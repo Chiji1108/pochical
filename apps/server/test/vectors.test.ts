@@ -1,3 +1,4 @@
+import { create } from "@bufbuild/protobuf";
 import { syncLimits } from "@pochical/design/limits";
 import { characterCount } from "@pochical/design/text";
 import { runInDurableObject } from "cloudflare:test";
@@ -11,15 +12,17 @@ import chatText from "../../../spec/vectors/chat-text.json";
 import chat from "../../../spec/vectors/chat.json";
 import hlc from "../../../spec/vectors/hlc.json";
 import orderClears from "../../../spec/vectors/order-clears.json";
+import patterns from "../../../spec/vectors/patterns.json";
 import text from "../../../spec/vectors/text.json";
 import unread from "../../../spec/vectors/unread.json";
 import { inviteCodeOf, textParts } from "../src/chat-links";
 import { pinStep } from "../src/chat-pins";
-import { DayField } from "../src/gen/pochical/v1/sync_pb";
+import { DayField, PatternSchema } from "../src/gen/pochical/v1/sync_pb";
 import { directThread, plainText, unreadCount } from "../src/group-chat";
 import { chatLines, readMarks } from "../src/group-do-schema";
 import { compareClocks, isAhead } from "../src/hlc";
 import { givesWay, heldBackBy } from "../src/order-clears";
+import { fitsPattern } from "../src/pattern-values";
 import { fitsText, isEmoji } from "../src/text-limits";
 import { notifyingCount } from "../src/user-do-values";
 import { photosAmong } from "./helpers";
@@ -62,6 +65,14 @@ describe("spec/vectors/hlc.json", () => {
   it.each(hlc.ahead)("$name", ({ now, pastLimitMs, expected }) => {
     const ms = now + syncLimits.clockAheadMs + pastLimitMs;
     expect(isAhead({ counter: 0, device: "phone", ms }, now)).toBe(expected);
+  });
+});
+
+// The patterns the server takes, which the apps check before they save one.
+describe("spec/vectors/patterns.json", () => {
+  it.each(patterns.fits)("fits: $name", ({ pattern, expected }) => {
+    const { id, ...fields } = pattern;
+    expect(fitsPattern(id, create(PatternSchema, fields))).toBe(expected);
   });
 });
 
