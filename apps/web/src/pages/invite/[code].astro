@@ -5,6 +5,7 @@ import { ArrowUpRight, RefreshCw } from "lucide-react";
 import Link from "../../components/link.astro";
 import StoreLinks from "../../components/store-links.astro";
 import Site from "../../layouts/site.astro";
+import { openInApp } from "../../lib/app-links";
 import {
   fetchInvitePreview,
   inviteImageVersion,
@@ -61,7 +62,7 @@ const group =
         )}
         <a
           class="button"
-          href={`pochical://invite/${encodeURIComponent(code)}`}
+          href={openInApp(code, Astro.request.headers.get("User-Agent"))}
         >
           アプリで開く <ArrowUpRight aria-hidden="true" size={18} />
         </a>

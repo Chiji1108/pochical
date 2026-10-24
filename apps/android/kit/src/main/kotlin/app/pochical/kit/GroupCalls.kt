@@ -224,11 +224,22 @@ class GroupCalls internal constructor(
     Unit
   }
 
-  /** Keeps a photo picked for a group's mark on the device, to send only as the group is saved with it. */
-  suspend fun holdMarkPhoto(jpeg: ByteArray): String = photos.hold(jpeg)
+  /**
+   * Keeps a photo picked on a page on the device, under the id it is then sent as, to send only as
+   * the page is saved: a group's mark, or a face chosen before joining. The id outlives the activity
+   * made anew and the process's death, as the page's saved state does.
+   */
+  suspend fun holdPhoto(jpeg: ByteArray): String = photos.hold(jpeg)
 
-  /** Sends a held mark photo ([holdMarkPhoto]) as one of the user's own; [MarkPhotoGone] once let go. */
-  suspend fun sendMarkPhoto(photoId: String) = account.asSignedIn { photos.sendHeld(photoId, PhotoShelf.Mine, it) }
+  /**
+   * Sends a held photo ([holdPhoto]) to [shelf] under its id, as the page it was picked on is saved:
+   * a group's mark or the usual face to the user's own photos, a face for one group to its photos.
+   * [MarkPhotoGone] once the device has let it go.
+   */
+  suspend fun sendHeldPhoto(photoId: String, shelf: PhotoShelf) = account.asSignedIn { photos.sendHeld(photoId, shelf, it) }
+
+  /** Lets go of a held photo the person no longer means to send, as a join screen closed without joining. */
+  suspend fun releasePhoto(photoId: String) = photos.release(photoId)
 
   /** Sends [jpeg] to [shelf], the user's own photos or a group's: the id to name it by. */
   suspend fun sendPhoto(jpeg: ByteArray, shelf: PhotoShelf): String {

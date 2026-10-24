@@ -2,6 +2,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
   xmlns:tools="http://schemas.android.com/tools">
 
+  <!-- Reads a group's QR code (ScanScreen); the camera app takes photos for faces. -->
+  <uses-permission android:name="android.permission.CAMERA" />
+  <uses-feature android:name="android.hardware.camera" android:required="false" />
+
   <!-- The browsers that open Custom Tabs, which AppleSignIn asks of Auth Tab. -->
   <queries>
     <intent>
@@ -40,6 +44,23 @@
         <category android:name="android.intent.category.DEFAULT" />
         <category android:name="android.intent.category.BROWSABLE" />
         <data android:scheme="pochical" android:host="apple-sign-in" />
+      </intent-filter>
+      <!-- An invitation (OpenedInvites): the site's アプリで開く, as iOS's. -->
+      <intent-filter>
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <data android:scheme="pochical" android:host="invite" />
+      </intent-filter>
+      <!-- An invitation's own link, an App Link once Android has verified the site's
+           /.well-known/assetlinks.json names this app (apps/web). -->
+      <intent-filter android:autoVerify="true">
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <data android:scheme="https" />
+        <data android:host="pochical.app" />
+        <data android:pathPrefix="/invite/" />
       </intent-filter>
     </activity>
     <!-- The camera app writes a photo taken for a face or a mark here (PhotoEditor). -->

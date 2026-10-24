@@ -1,100 +1,230 @@
 {
-  "about": "Making groups, their marks, and opening their invitations (spec/sync-protocol.md, Groups). guessMark: the mark グループを作る offers from the name as it is typed, until one is picked: the emoji of the first of design's groupMarkHints with a word anywhere in the name, else the name's first character as a reader sees it, trimmed, in the `color` slot nextGroupColor gives, else groupMarkFallbackLetter for a name with none. `expected` names the mark's one kind, `emoji`, or `letter` with its `color`. openedInviteCode: the invitation code a link opening the app carries, the site's アプリで開く (pochical://invite/{code}, scheme and host in any case, a trailing / allowed) or one of Pochical's own invitation links as chat-text.json's inviteCode reads them; null for any other link, or a code not of inviteRules.codeLength characters of inviteRules.codeAlphabet (design/src/invite.ts). nextGroupColor: the color a group's icon or letters start in, from the `marks` of the user's other groups: as a new pattern's (patterns.json, nextColor), counting only the marks drawn in a color, an icon or letters; an emoji's or a photo's color is 0 on the wire and is no color.",
+  "about": "Making groups, their marks, and opening their invitations (spec/sync-protocol.md, Groups). guessMark: the mark グループを作る offers from the name as it is typed, until one is picked: the emoji of the first of design's groupMarkHints with a word anywhere in the name, else the name's first character as a reader sees it, trimmed, in the `color` slot nextGroupColor gives, else groupMarkFallbackLetter for a name with none. `expected` names the mark's one kind, `emoji`, or `letter` with its `color`. openedInviteCode: the invitation code a link opening the app carries, the site's アプリで開く (pochical://invite/{code}, scheme and host in any case, a trailing / allowed) or one of Pochical's own invitation links as chat-text.json's inviteCode reads them; null for any other link, or a code not of inviteRules.codeLength characters of inviteRules.codeAlphabet (design/src/invite.ts). nextGroupColor: the color a group's icon or letters start in, from the `marks` of the user's other groups: as a new pattern's (patterns.json, nextColor), counting only the marks drawn in a color, an icon or letters; an emoji's or a photo's color is 0 on the wire and is no color. memberLine: who is in a group as its join screen names them under their faces, in the order they joined: one by name; up to three by name with their count, so nobody wonders whether the list holds more; more, the first two by name and how many others.",
   "guessMark": [
     {
       "name": "a hint's word",
       "text": "家族",
       "color": 2,
-      "expected": { "emoji": "🏠" }
+      "expected": {
+        "emoji": "🏠"
+      }
     },
     {
       "name": "a word anywhere in the name",
       "text": "うちの家",
       "color": 0,
-      "expected": { "emoji": "🏠" }
+      "expected": {
+        "emoji": "🏠"
+      }
     },
     {
       "name": "the first hint wins",
       "text": "職場の旅行",
       "color": 0,
-      "expected": { "emoji": "💼" }
+      "expected": {
+        "emoji": "💼"
+      }
     },
     {
       "name": "no hint: the first letter in the free color",
       "text": "さくら会",
       "color": 3,
-      "expected": { "letter": "さ", "color": 3 }
+      "expected": {
+        "letter": "さ",
+        "color": 3
+      }
     },
     {
       "name": "the letter trimmed",
       "text": "  Blue team ",
       "color": 1,
-      "expected": { "letter": "B", "color": 1 }
+      "expected": {
+        "letter": "B",
+        "color": 1
+      }
     },
     {
       "name": "the first character as a reader sees it",
       "text": "👨‍👩‍👧の会",
       "color": 4,
-      "expected": { "letter": "👨‍👩‍👧", "color": 4 }
+      "expected": {
+        "letter": "👨‍👩‍👧",
+        "color": 4
+      }
     },
     {
       "name": "a name with no letter yet",
       "text": " ",
       "color": 5,
-      "expected": { "letter": "グ", "color": 5 }
+      "expected": {
+        "letter": "グ",
+        "color": 5
+      }
     }
   ],
   "nextGroupColor": [
-    { "name": "no groups", "marks": [], "expected": 0 },
+    {
+      "name": "no groups",
+      "marks": [],
+      "expected": 0
+    },
     {
       "name": "an emoji and a photo use no color",
-      "marks": [{ "kind": "emoji" }, { "kind": "photo" }],
+      "marks": [
+        {
+          "kind": "emoji"
+        },
+        {
+          "kind": "photo"
+        }
+      ],
       "expected": 0
     },
     {
       "name": "the first color an icon or letters leave free",
       "marks": [
-        { "kind": "emoji" },
-        { "color": 0, "kind": "letter" },
-        { "color": 1, "kind": "icon" }
+        {
+          "kind": "emoji"
+        },
+        {
+          "color": 0,
+          "kind": "letter"
+        },
+        {
+          "color": 1,
+          "kind": "icon"
+        }
       ],
       "expected": 2
     },
     {
       "name": "every color used: the colored groups' count modulo the palette",
       "marks": [
-        { "kind": "emoji" },
-        { "color": 0, "kind": "icon" },
-        { "color": 1, "kind": "icon" },
-        { "color": 2, "kind": "icon" },
-        { "color": 3, "kind": "icon" },
-        { "color": 4, "kind": "icon" },
-        { "color": 5, "kind": "icon" },
-        { "color": 6, "kind": "letter" },
-        { "color": 7, "kind": "letter" },
-        { "color": 8, "kind": "letter" },
-        { "color": 9, "kind": "letter" },
-        { "color": 10, "kind": "letter" },
-        { "color": 11, "kind": "letter" },
-        { "color": 0, "kind": "letter" }
+        {
+          "kind": "emoji"
+        },
+        {
+          "color": 0,
+          "kind": "icon"
+        },
+        {
+          "color": 1,
+          "kind": "icon"
+        },
+        {
+          "color": 2,
+          "kind": "icon"
+        },
+        {
+          "color": 3,
+          "kind": "icon"
+        },
+        {
+          "color": 4,
+          "kind": "icon"
+        },
+        {
+          "color": 5,
+          "kind": "icon"
+        },
+        {
+          "color": 6,
+          "kind": "letter"
+        },
+        {
+          "color": 7,
+          "kind": "letter"
+        },
+        {
+          "color": 8,
+          "kind": "letter"
+        },
+        {
+          "color": 9,
+          "kind": "letter"
+        },
+        {
+          "color": 10,
+          "kind": "letter"
+        },
+        {
+          "color": 11,
+          "kind": "letter"
+        },
+        {
+          "color": 0,
+          "kind": "letter"
+        }
       ],
       "expected": 1
     }
   ],
   "openedInviteCode": [
-    { "url": "pochical://invite/Toko2345", "expected": "Toko2345" },
-    { "url": "pochical://invite/Toko2345/", "expected": "Toko2345" },
-    { "url": "POCHICAL://INVITE/Toko2345", "expected": "Toko2345" },
-    { "url": "https://pochical.app/invite/Toko2345", "expected": "Toko2345" },
+    {
+      "url": "pochical://invite/Toko2345",
+      "expected": "Toko2345"
+    },
+    {
+      "url": "pochical://invite/Toko2345/",
+      "expected": "Toko2345"
+    },
+    {
+      "url": "POCHICAL://INVITE/Toko2345",
+      "expected": "Toko2345"
+    },
+    {
+      "url": "https://pochical.app/invite/Toko2345",
+      "expected": "Toko2345"
+    },
     {
       "url": "https://pochical.app/invite/Toko2345?from=line",
       "expected": "Toko2345"
     },
-    { "url": "pochical://invite/Toko0345", "expected": null },
-    { "url": "pochical://invite/Toko", "expected": null },
-    { "url": "pochical://invite/", "expected": null },
-    { "url": "pochical://group/Toko2345", "expected": null },
-    { "url": "pochical://day/2026-10-24", "expected": null },
-    { "url": "https://evil.example/invite/Toko2345", "expected": null }
+    {
+      "url": "pochical://invite/Toko0345",
+      "expected": null
+    },
+    {
+      "url": "pochical://invite/Toko",
+      "expected": null
+    },
+    {
+      "url": "pochical://invite/",
+      "expected": null
+    },
+    {
+      "url": "pochical://group/Toko2345",
+      "expected": null
+    },
+    {
+      "url": "pochical://day/2026-10-24",
+      "expected": null
+    },
+    {
+      "url": "https://evil.example/invite/Toko2345",
+      "expected": null
+    }
+  ],
+  "memberLine": [
+    {
+      "name": "one",
+      "names": ["あや"],
+      "expected": "あやが参加中"
+    },
+    {
+      "name": "two, with their count",
+      "names": ["あや", "ゆき"],
+      "expected": "あや、ゆきの2人が参加中"
+    },
+    {
+      "name": "three, with their count",
+      "names": ["あや", "ゆき", "みさき"],
+      "expected": "あや、ゆき、みさきの3人が参加中"
+    },
+    {
+      "name": "four: the first two and the others",
+      "names": ["あや", "ゆき", "みさき", "Bot"],
+      "expected": "あや、ゆきほか2人が参加中"
+    }
   ]
 }

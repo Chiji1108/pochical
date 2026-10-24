@@ -99,6 +99,12 @@ dependencies {
   implementation(libs.emojipicker)
   implementation(libs.reorderable)
   implementation(libs.zxing.core)
+  implementation(libs.camerax.camera2)
+  implementation(libs.camerax.lifecycle)
+  implementation(libs.camerax.view)
+  implementation(libs.camerax.mlkit)
+  implementation(libs.mlkit.barcode)
+  implementation(libs.kotlinx.coroutines.play.services)
 
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)

@@ -1,6 +1,8 @@
 package app.pochical.groups
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.net.Uri
@@ -31,6 +33,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import app.pochical.R
 import java.io.File
@@ -86,6 +89,19 @@ fun PhotoEditor(
       if (taken && file != null) crop(Uri.fromFile(file)) else file?.delete()
     }
 
+  fun takePhoto() {
+    val file = cameraFile(context)
+    taking = file.path
+    take.launch(FileProvider.getUriForFile(context, "${context.packageName}.photos", file))
+  }
+
+  // The app holds the camera permission for reading QR codes, and Android then lets the camera app
+  // take a photo for it only once it is granted.
+  var cameraRefused by remember { mutableStateOf(false) }
+  val cameraAllowed = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+    if (granted) takePhoto() else cameraRefused = true
+  }
+
   fun change(action: suspend () -> Unit) {
     scope.launch {
       working = true
@@ -110,9 +126,8 @@ fun PhotoEditor(
           leadingIcon = { Icon(painterResource(R.drawable.ic_photo_camera), contentDescription = null) },
           onClick = {
             menu = false
-            val file = cameraFile(context)
-            taking = file.path
-            take.launch(FileProvider.getUriForFile(context, "${context.packageName}.photos", file))
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) takePhoto()
+            else cameraAllowed.launch(Manifest.permission.CAMERA)
           },
         )
         DropdownMenuItem(
@@ -150,6 +165,13 @@ fun PhotoEditor(
       cropping = null
       if (jpeg != null) change { onPhoto(jpeg) }
     }
+  }
+  if (cameraRefused) {
+    AlertDialog(
+      onDismissRequest = { cameraRefused = false },
+      confirmButton = { TextButton(onClick = { cameraRefused = false }) { Text(stringResource(R.string.ok)) } },
+      title = { Text(stringResource(R.string.scan_camera_denied)) },
+    )
   }
   if (unreadable) {
     AlertDialog(

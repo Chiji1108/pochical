@@ -28,6 +28,9 @@ import app.pochical.groups.GroupProfilePage
 import app.pochical.groups.GroupSettingsPage
 import app.pochical.groups.GroupsActions
 import app.pochical.groups.InvitePage
+import app.pochical.groups.JoinScreen
+import app.pochical.groups.LocalOpenedInvites
+import app.pochical.groups.ScanScreen
 import app.pochical.groups.GroupsScreen
 import app.pochical.groups.NewGroupPage
 import app.pochical.patterns.AddPatternPage
@@ -46,6 +49,9 @@ import java.time.LocalDate
  */
 @Composable
 fun RootScreen(navigator: RootNavigator) {
+  // An invitation opened from a link comes over whatever shows.
+  val invites = LocalOpenedInvites.current
+  LaunchedEffect(invites.pending) { invites.consume()?.let { navigator.openOnce(RootPage.Join(it)) } }
   NavDisplay(
     backStack = navigator.routes,
     onBack = navigator::back,
@@ -60,6 +66,15 @@ fun RootScreen(navigator: RootNavigator) {
       RootPage.NewGroup ->
         NavEntry(route) {
           NewGroupPage(onBack = rememberPageNavigation(navigator)::back, onMade = { navigator.showGroup(it, RootPage.GroupInvite(it)) })
+        }
+      RootPage.Scan ->
+        NavEntry(route) {
+          val navigation = rememberPageNavigation(navigator)
+          ScanScreen(onClose = navigation::back, onInvite = { navigation.replace(RootPage.Join(it)) })
+        }
+      is RootPage.Join ->
+        NavEntry(route) {
+          JoinScreen(route.code, onClose = rememberPageNavigation(navigator)::back, onGroup = { navigator.showGroup(it) })
         }
       is RootPage.GroupInvite -> NavEntry(route) { InvitePage(route.groupId, onBack = rememberPageNavigation(navigator)::back) }
       is RootPage.GroupSettings ->
@@ -125,7 +140,7 @@ private fun TabsScreen(navigator: RootNavigator, navigation: PageNavigation) {
       when (navigation.tab) {
         RootTab.Calendar -> CalendarScreen(open = navigation::open, hidesTabBar = { barHidden = it })
         RootTab.Groups ->
-          GroupsScreen(navigator.openGroup, { navigator.openGroup = it }, GroupsActions(onNew = { navigation.open(RootPage.NewGroup) }) { group -> GroupButtons(group.id, navigation::open) })
+          GroupsScreen(navigator.openGroup, { navigator.openGroup = it }, GroupsActions(onNew = { navigation.open(RootPage.NewGroup) }, onScan = { navigation.open(RootPage.Scan) }) { group -> GroupButtons(group.id, navigation::open) })
         RootTab.Settings -> SettingsScreen(open = navigation::open)
       }
     }

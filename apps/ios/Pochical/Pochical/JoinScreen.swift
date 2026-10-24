@@ -363,19 +363,6 @@ private func trimmed(_ text: String) -> String {
   text.trimmingCharacters(in: .whitespacesAndNewlines)
 }
 
-/// Who is in a group, by name while that stays short (/design's
-/// memberLine): with every name there it gives the count too, so nobody
-/// wonders whether the list holds more.
-private func memberLine(_ names: [String]) -> String {
-  let named = 3
-  switch names.count {
-  case 1: return "\(names[0])が参加中"
-  case ...named: return "\(names.joined(separator: "、"))の\(names.count)人が参加中"
-  default:
-    return "\(names.prefix(named - 1).joined(separator: "、"))ほか\(names.count - (named - 1))人が参加中"
-  }
-}
-
 /// Faces side by side, overlapping, each ringed in the screen's color.
 private struct Faces: View {
   @Environment(\.themeColors) private var colors

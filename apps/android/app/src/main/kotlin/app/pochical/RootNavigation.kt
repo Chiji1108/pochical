@@ -68,6 +68,12 @@ sealed interface RootPage : RootRoute, NavKey {
   /** このグループでのあなた, from its settings. */
   @Serializable data class GroupProfile(val groupId: String) : RootPage
 
+  /** QRコードで参加, from グループ. */
+  @Serializable data object Scan : RootPage
+
+  /** 参加の画面 for the invitation `code`, from its link or its QR code. */
+  @Serializable data class Join(val code: String) : RootPage
+
   /** シフトパターン, from 設定. */
   @Serializable data object Patterns : RootPage
 
@@ -116,6 +122,17 @@ class RootNavigator(
 
   /** Opens `page` over those open. */
   fun open(page: RootPage) {
+    pages.add(page)
+  }
+
+  /** Opens `page` unless it is the one on top already, as a link opened twice is. */
+  fun openOnce(page: RootPage) {
+    if (pages.lastOrNull() != page) pages.add(page)
+  }
+
+  /** Puts `page` in place of the top page, as a code read opens its join screen in the scanner's place. */
+  fun replace(page: RootPage) {
+    if (pages.isNotEmpty()) pages.removeAt(pages.lastIndex)
     pages.add(page)
   }
 
@@ -168,6 +185,8 @@ class PageNavigation(private val navigator: RootNavigator, private val lifecycle
     get() = navigator.tab
 
   fun open(page: RootPage) = whenSettled { navigator.open(page) }
+
+  fun replace(page: RootPage) = whenSettled { navigator.replace(page) }
 
   fun select(tab: RootTab) = whenSettled { navigator.select(tab) }
 

@@ -35,9 +35,16 @@ struct GroupVectors: Decodable, Sendable {
     var name: String { url }
   }
 
+  struct MemberLineCase: VectorCase {
+    let name: String
+    let names: [String]
+    let expected: String
+  }
+
   let guessMark: [GuessCase]
   let nextGroupColor: [ColorCase]
   let openedInviteCode: [OpenedCase]
+  let memberLine: [MemberLineCase]
 }
 
 @Test(arguments: try vectors("groups", as: GroupVectors.self).guessMark)
@@ -69,4 +76,9 @@ func aGroupsColor(_ vector: GroupVectors.ColorCase) {
 func theCodeALinkOpeningTheAppCarries(_ vector: GroupVectors.OpenedCase) throws {
   let url = try #require(URL(string: vector.url))
   #expect(openedInviteCode(of: url) == vector.expected)
+}
+
+@Test(arguments: try vectors("groups", as: GroupVectors.self).memberLine)
+func whoIsInAGroupAsItsJoinScreenNamesThem(_ vector: GroupVectors.MemberLineCase) {
+  #expect(memberLine(vector.names) == vector.expected)
 }
