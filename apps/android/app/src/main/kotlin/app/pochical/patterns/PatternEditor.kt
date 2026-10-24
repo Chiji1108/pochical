@@ -56,6 +56,8 @@ import app.pochical.calendar.TimeDialog
 import app.pochical.design.MarkIconNames
 import app.pochical.design.TextLimits
 import app.pochical.kit.PatternRefusal
+import app.pochical.calendar.row
+import app.pochical.kit.fitsPattern
 import app.pochical.kit.guessLook
 import app.pochical.kit.nextColor
 import app.pochical.kit.refusesArchiving
@@ -126,13 +128,7 @@ fun PatternEditor(id: String, isNew: Boolean, navigation: PageNavigation) {
   // Locked only where turning it off is refused: one turned off before an order took it on may be turned back on.
   val archivingRefused = refusesArchiving(id, saved?.archived ?: false, calendar.orders)
   val shapedName = limitText(name.text, TextLimits.shiftName).trim()
-  // A letter left empty in 印と色 is the name's first, as a mark always has one.
-  val shaped =
-    draft.copy(
-      name = shapedName,
-      symbol = draft.symbol.ifBlank { guessLook(shapedName).symbol },
-      time = if (allDay) null else time,
-    )
+  val shaped = draft.copy(name = shapedName, time = if (allDay) null else time)
 
   fun rename(text: TextFieldValue) {
     name = text.limited(TextLimits.shiftName)
@@ -160,7 +156,8 @@ fun PatternEditor(id: String, isNew: Boolean, navigation: PageNavigation) {
     onBack = navigation::back,
     actions = {
       TextButton(
-        enabled = shaped.name.isNotEmpty(),
+        // Only what the server takes, so a pattern saved stays once sent.
+        enabled = fitsPattern(shaped.row),
         onClick = {
           scope.launch { kept(days.savePattern(shaped)) { if (isNew) navigation.back(2) else navigation.back() } }
         },

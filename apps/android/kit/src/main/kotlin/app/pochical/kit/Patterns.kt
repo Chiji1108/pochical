@@ -3,7 +3,9 @@ package app.pochical.kit
 import app.pochical.design.MarkIconNames
 import app.pochical.design.ReadyPattern
 import app.pochical.design.ReadyPatterns
-import java.text.BreakIterator
+import app.pochical.design.SyncLimits
+import app.pochical.design.TextLimits
+import app.pochical.design.Theme
 import java.text.Normalizer
 import java.time.LocalDate
 
@@ -16,6 +18,9 @@ import java.time.LocalDate
 enum class PatternRefusal {
   /** A repeating order in use or to come puts it on days: neither archived nor deleted until it changes. */
   Repeating,
+
+  /** It holds what the server would refuse (`fitsPattern`), so it would not stay. */
+  Unfit,
 }
 
 /** A mark in each look: the emoji, the icon's name, and the letter on a tile. */
@@ -35,13 +40,30 @@ fun guessLook(name: String): MarkLook {
   )
 }
 
-/** The first character as a reader sees it, an emoji with its joiners whole. */
-fun firstCharacter(text: String): String = characterEnds(text).firstOrNull()?.let { text.substring(0, it) }.orEmpty()
+/** The mark palette's slots, the same in every テーマ. */
+val MARK_SLOTS: Int = Theme.Pochical.colors(dark = false).marks.size
 
-/** Where each character of [text] ends, as a reader counts them: grapheme clusters (spec/text-limits.md). */
-fun characterEnds(text: String): Sequence<Int> {
-  val characters = BreakIterator.getCharacterInstance().apply { setText(text) }
-  return generateSequence { characters.next().takeIf { it != BreakIterator.DONE } }
+private val TIME = Regex("^(?:[01]\\d|2[0-3]):[0-5]\\d$")
+
+/** Whether the text can be an id or an icon's name: 1 to `SyncLimits.idLength`, no spaces. */
+fun isId(text: String): Boolean = text.isNotEmpty() && text.length <= SyncLimits.idLength && text.none(Char::isWhitespace)
+
+/**
+ * Whether [pattern] holds only what the server takes for one under its id, so it stays once sent
+ * (spec/vectors/patterns.json, fits): a name, an emoji, a letter and an icon in each look, a color of
+ * the palette, both times or neither as HH:MM, and a next day that is another pattern.
+ */
+fun fitsPattern(pattern: PatternRow): Boolean {
+  val timed = pattern.start != null || pattern.end != null
+  return fitsText(pattern.name, TextLimits.shiftName) &&
+    isEmoji(pattern.emoji) &&
+    fitsText(pattern.symbol, TextLimits.shiftMark) &&
+    isId(pattern.icon) &&
+    pattern.color in 0 until MARK_SLOTS &&
+    (!timed || (pattern.start != null && pattern.end != null)) &&
+    (pattern.start == null || TIME.matches(pattern.start)) &&
+    (pattern.end == null || TIME.matches(pattern.end)) &&
+    (pattern.nextDay == null || (isId(pattern.nextDay) && pattern.nextDay != pattern.id))
 }
 
 /**

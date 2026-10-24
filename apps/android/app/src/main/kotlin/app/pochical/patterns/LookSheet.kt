@@ -1,7 +1,5 @@
 package app.pochical.patterns
 
-import android.icu.lang.UCharacter
-import android.icu.lang.UProperty
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -54,6 +52,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -71,8 +70,9 @@ import app.pochical.design.Radius
 import app.pochical.design.ReadyPatterns
 import app.pochical.design.TextLimits
 import app.pochical.kit.firstCharacter
+import app.pochical.kit.isEmoji
+import app.pochical.kit.markLetter
 import app.pochical.kit.markIconSections
-import app.pochical.limited
 
 /** The pattern's mark on the frame a group's mark stands on, as its page heads with it. */
 @Composable
@@ -157,17 +157,27 @@ fun LookSheet(draft: Pattern, others: List<Pattern>, onChange: (Pattern, LookPar
           }
         }
         MarkStyle.Badge -> {
+          // As iOS's MarkLetterField: typing into a full letter replaces it, and a letter emptied
+          // keeps the one before, shown under the field, as a mark always has one.
           var letter by remember { mutableStateOf(TextFieldValue(draft.symbol)) }
+          // The letter as last committed, which an edit is measured against.
+          var committed by remember { mutableStateOf(draft.symbol) }
           OutlinedTextField(
             letter,
             { typed ->
-              letter = typed.limited(TextLimits.shiftMark)
-              // An empty letter is not one picked: the name's first stands in for it.
-              val symbol = letter.text.trim()
-              if (letter.composition == null) onChange(draft.copy(symbol = symbol), LookPart.Symbol.takeIf { symbol.isNotEmpty() })
+              if (typed.composition != null) {
+                letter = typed
+                return@OutlinedTextField
+              }
+              val text = markLetter(committed, typed.text, TextLimits.shiftMark)
+              committed = text
+              letter = TextFieldValue(text, TextRange(text.length))
+              val symbol = text.trim()
+              if (symbol.isNotEmpty()) onChange(draft.copy(symbol = symbol), LookPart.Symbol)
             },
             Modifier.fillMaxWidth(),
             label = { Text(stringResource(R.string.look_letter)) },
+            placeholder = { Text(draft.symbol) },
             singleLine = true,
           )
         }
@@ -313,17 +323,3 @@ private fun EmojiDialog(onPick: (String) -> Unit, onDismiss: () -> Unit) {
     dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
   )
 }
-
-/**
- * Whether a character is an emoji as a keyboard's emoji are: one drawn as an emoji by itself, or one
- * that may be and asks to be with VS16, as keycaps (1️⃣) do; text symbols like ★ or © are not.
- */
-internal fun isEmoji(character: String): Boolean {
-  if (character.isEmpty()) return false
-  val first = character.codePointAt(0)
-  return UCharacter.hasBinaryProperty(first, UProperty.EMOJI_PRESENTATION) ||
-    (EMOJI_STYLE in character && UCharacter.hasBinaryProperty(first, UProperty.EMOJI))
-}
-
-/** VS16, which asks for a character's emoji style. */
-private const val EMOJI_STYLE = '\uFE0F'

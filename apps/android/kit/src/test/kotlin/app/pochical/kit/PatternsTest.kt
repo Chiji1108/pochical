@@ -25,7 +25,26 @@ private data class PatternsVectors(
   val nextColor: List<NextColor>,
   val readyCopies: List<ReadyCopies>,
   val refused: List<Refused>,
+  val fits: List<Fits>,
 ) {
+  @Serializable
+  data class Wire(
+    val id: String,
+    val name: String,
+    val emoji: String,
+    val symbol: String,
+    val icon: String,
+    val color: Int,
+    val start: String? = null,
+    val end: String? = null,
+    val nextDay: String? = null,
+  ) {
+    val row
+      get() = PatternRow(id, name, emoji, symbol, icon, color, start, end, countsAsOff = false, nextDay = nextDay, archived = false)
+  }
+
+  @Serializable data class Fits(override val name: String, val pattern: Wire, val expected: Boolean) : VectorCase
+
   @Serializable
   data class Saved(override val name: String, val patterns: List<String>, val id: String, val expected: List<String>) : VectorCase
 
@@ -88,7 +107,7 @@ class PatternsTest {
         }
         takeOwn(change { patternOrder = patternOrder { ids += case.patterns } })
       }
-      OwnEdits(database).savePattern(case.id, pattern { name = "${case.id}!" })
+      OwnEdits(database).savePattern(case.id, markedPattern("${case.id}!"))
       val shown = database.values().patterns().first().map { it.id }
       // A new one's order goes to the server as an edit of its own, so every device lists them alike.
       val sent =
@@ -111,11 +130,8 @@ class PatternsTest {
     val listed = vectors.deleted.associate { case ->
       val database = testDatabase()
       val edits = OwnEdits(database)
-      for (pattern in case.patterns) {
-        edits.savePattern(pattern.id, pattern {
-          name = pattern.id
-          pattern.nextDay?.let { nextDay = it }
-        })
+      for (linked in case.patterns) {
+        edits.savePattern(linked.id, markedPattern(linked.id) { linked.nextDay?.let { nextDay = it } })
       }
       edits.deletePattern(case.id)
       val patterns = database.values().patterns().first().map { PatternsVectors.Linked(it.id, it.nextDay) }
@@ -145,26 +161,36 @@ class PatternsTest {
       PatternsVectors.Refusals(refusesArchiving(it.id, it.archived, orders, today), repeats(it.id, orders, today))
     }
 
+  @Test fun fits() = vectors.fits.checkEach({ it.expected }) { fitsPattern(it.pattern.row) }
+
+  @Test
+  fun aPatternTheServerWouldRefuseIsNotWritten() = runTest {
+    val database = testDatabase()
+    val edits = OwnEdits(database)
+    assertEquals(PatternRefusal.Unfit, edits.savePattern("day", pattern { name = "日勤" }))
+    assertEquals(emptyList<OutboxEdit>(), database.write { outbox() })
+    database.close()
+  }
+
   @Test
   fun anOrderInUseRefusesArchivingAndDeletingItsPatternAndWritesNothing() = runTest {
     val database = testDatabase()
     val edits = OwnEdits(database)
-    edits.savePattern("day", pattern { name = "日勤" })
+    edits.savePattern("day", markedPattern("日勤"))
     edits.setRepeatOrders(listOf(repeatOrder {
       start = "2026-01-01"
       sequence += "day"
       holidayCountry = "JP"
     }))
     val sent = database.write { outbox() }.size
-    assertEquals(PatternRefusal.Repeating, edits.savePattern("day", pattern {
-      name = "日勤"
+    assertEquals(PatternRefusal.Repeating, edits.savePattern("day", markedPattern("日勤") {
       archived = true
     }))
     assertEquals(PatternRefusal.Repeating, edits.deletePattern("day"))
     assertEquals(sent, database.write { outbox() }.size)
     assertEquals(listOf(false), database.values().patterns().first().map { it.archived })
     // Renamed, in use as it was, it is kept.
-    assertNull(edits.savePattern("day", pattern { name = "日中" }))
+    assertNull(edits.savePattern("day", markedPattern("日中")))
     assertEquals(listOf("日中"), database.values().patterns().first().map { it.name })
     database.close()
   }
@@ -173,8 +199,8 @@ class PatternsTest {
   fun deletingAsksAboutTheDaysThatShowIt() = runTest {
     val database = testDatabase()
     val edits = OwnEdits(database)
-    edits.savePattern("day", pattern { name = "日勤" })
-    edits.savePattern("off", pattern { name = "休み" })
+    edits.savePattern("day", markedPattern("日勤"))
+    edits.savePattern("off", markedPattern("休み"))
     edits.setRepeatOrders(listOf(repeatOrder {
       start = "2026-10-01"
       sequence += listOf("day", "off")
@@ -190,8 +216,8 @@ class PatternsTest {
   fun twoNewPatternsListInTheOrderTheyWereMade() = runTest {
     val database = testDatabase()
     val edits = OwnEdits(database)
-    edits.savePattern("zz-first", pattern { name = "日勤" })
-    edits.savePattern("aa-second", pattern { name = "夜勤" })
+    edits.savePattern("zz-first", markedPattern("日勤"))
+    edits.savePattern("aa-second", markedPattern("夜勤"))
     assertEquals(listOf("zz-first", "aa-second"), database.values().patterns().first().map { it.id })
     database.close()
   }

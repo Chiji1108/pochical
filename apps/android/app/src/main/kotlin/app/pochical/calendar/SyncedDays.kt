@@ -127,6 +127,10 @@ private val Pattern.wire
     archived = this@wire.archived
   }
 
+/** The pattern as :kit holds it. */
+internal val Pattern.row: PatternRow
+  get() = PatternRow(id, name, emoji, symbol, icon, color, time?.start, time?.end, countsAsOff, nextDay, archived)
+
 /** The pattern as the screens draw it. */
 internal val PatternRow.pattern: Pattern
   get() =

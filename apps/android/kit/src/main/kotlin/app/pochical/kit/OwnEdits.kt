@@ -93,12 +93,14 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
   }
 
   /**
-   * Keeps [pattern] as it is now; a new one goes at the end of the order. Archiving one a repeating
-   * order in use or to come still has is refused, and nothing is written.
+   * Keeps [pattern] as it is now; a new one goes at the end of the order. One the server would
+   * refuse, or archiving one a repeating order in use or to come still has, is refused, and nothing
+   * is written.
    */
   suspend fun savePattern(id: String, pattern: Pattern): PatternRefusal? = database.write {
     // Asked before the edit shows it.
     val saved = pattern(id)
+    if (!fitsPattern(pattern.row(id))) return@write PatternRefusal.Unfit
     if (pattern.archived && refusesArchiving(id, saved?.archived == true, repeatOrders().map { it.order })) {
       return@write PatternRefusal.Repeating
     }
