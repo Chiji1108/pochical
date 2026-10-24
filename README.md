@@ -30,3 +30,21 @@ apps/
 | `bun run check` / `bun run fix` | TypeScriptのコードチェック・整形 |
 
 Webの開発・公開設定は [WebのREADME](apps/web/README.md) を参照してください。
+
+## ライセンス
+
+ソースコードは [PolyForm Strict License 1.0.0](LICENSE) で公開しています。読むことや、個人の学習など非商用の目的で使うことはできますが、改変・再配布・商用利用は許可していません。
+
+「ポチカル」「Pochical」の名前、ロゴ、アプリアイコン、キャラクター（PeekingPoodleなど）はこのライセンスの対象外で、使用を許可していません。
+
+同梱しているサードパーティの素材とそのライセンスは [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) にあります。
+
+## コントリビューション
+
+外部からのプルリクエストは受け付けていません。脆弱性の報告は [SECURITY.md](SECURITY.md) を参照してください。
+
+## リンク
+
+- [pochical.app](https://pochical.app)：公式サイト
+- [try.pochical.app](https://try.pochical.app)：プロトタイプ
+- [design.pochical.app](https://design.pochical.app)：デザインドキュメント

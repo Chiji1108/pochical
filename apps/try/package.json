@@ -1,6 +1,7 @@
 {
   "name": "@pochical/try",
   "private": true,
+  "license": "PolyForm-Strict-1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite dev --configLoader runner",

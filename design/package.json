@@ -1,6 +1,7 @@
 {
   "name": "@pochical/design",
   "private": true,
+  "license": "PolyForm-Strict-1.0.0",
   "type": "module",
   "exports": {
     "./*": "./src/*.ts"
