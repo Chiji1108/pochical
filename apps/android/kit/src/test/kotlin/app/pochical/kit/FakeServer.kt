@@ -9,6 +9,8 @@ import app.pochical.v1.ServerError
 import app.pochical.v1.ServerFrame
 import app.pochical.v1.SignInProvider
 import app.pochical.v1.DeleteAccountRequest
+import app.pochical.v1.SetDisplayNameRequest
+import app.pochical.v1.setDisplayNameResponse
 import app.pochical.v1.deleteAccountResponse
 import app.pochical.v1.getMeResponse
 import app.pochical.v1.peekAccountResponse
@@ -103,6 +105,12 @@ class FakeServer : AutoCloseable {
 
   /** Each UserService and better-auth call past the sign-in and GetMe, as its path and Authorization header. */
   val calls = CopyOnWriteArrayList<Pair<String, String?>>()
+
+  /** Each `SetDisplayName` the server took, in the order it took them. */
+  val displayNames = CopyOnWriteArrayList<SetDisplayNameRequest>()
+
+  /** How long `SetDisplayName` takes to answer, in milliseconds. */
+  @Volatile var displayNameDelayMs = 0L
 
   /** The users `DeleteAccount` deleted, and the Apple code each was asked with. */
   val deleted = CopyOnWriteArrayList<Pair<String, DeleteAccountRequest>>()
@@ -215,6 +223,16 @@ class FakeServer : AutoCloseable {
                     else -> earlier.values.remove(user)
                   }
                   proto(deleteAccountResponse {})
+                }
+              }
+            }
+            "/pochical.v1.GroupService/SetDisplayName" -> {
+              Thread.sleep(displayNameDelayMs)
+              when (userOf(request.headers["Authorization"])) {
+                null -> refused("unauthenticated")
+                else -> {
+                  displayNames += SetDisplayNameRequest.parseFrom(request.body!!.toByteArray())
+                  proto(setDisplayNameResponse {})
                 }
               }
             }

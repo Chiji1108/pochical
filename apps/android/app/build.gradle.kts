@@ -98,6 +98,7 @@ dependencies {
   implementation(libs.browser)
   implementation(libs.emojipicker)
   implementation(libs.reorderable)
+  implementation(libs.zxing.core)
 
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)

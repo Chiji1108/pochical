@@ -32,7 +32,9 @@ googleid = "1.2.1"
 # Auth Tab, in which Sign in with Apple opens Apple's web page.
 browser = "1.10.0"
 # The system's emoji picker, for a group's mark beyond those offered first.
-emojipicker = "1.6.0"
+emojipicker = "1.7.0"
+# ZXing's encoder, for an invitation's QR code.
+zxing = "3.5.4"
 androidx-test-runner = "1.7.0"
 androidx-test-junit = "1.3.0"
 # Drag to reorder in lazy lists, which Compose does not offer (Apache 2.0).
@@ -73,6 +75,7 @@ credentials = { module = "androidx.credentials:credentials", version.ref = "cred
 credentials-play-services-auth = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "credentials" }
 browser = { module = "androidx.browser:browser", version.ref = "browser" }
 emojipicker = { module = "androidx.emoji2:emoji2-emojipicker", version.ref = "emojipicker" }
+zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
 googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
 lifecycle-process = { module = "androidx.lifecycle:lifecycle-process", version.ref = "lifecycle" }
 androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidx-test-runner" }

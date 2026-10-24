@@ -21,6 +21,12 @@ import com.connectrpc.extensions.GoogleJavaLiteProtobufStrategy
 import com.connectrpc.impl.ProtocolClient
 import com.connectrpc.okhttp.ConnectOkHttpClient
 import java.util.UUID
+import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
 import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 
@@ -36,6 +42,7 @@ class GroupCalls internal constructor(
   http: OkHttpClient,
   server: HttpUrl,
   private val photos: Photos,
+  private val scope: CoroutineScope,
 ) {
   private val client =
     ProtocolClient(
@@ -44,6 +51,40 @@ class GroupCalls internal constructor(
     )
   private val groups = GroupServiceClient(client)
   private val users = UserServiceClient(client)
+
+  /** The names kept, sent one at a time in the order they were kept. */
+  private val namesKept = Channel<KeptName>(Channel.UNLIMITED)
+
+  init {
+    scope.launch {
+      for (kept in namesKept) {
+        try {
+          setDisplayName(kept.groupId, kept.name)
+          kept.answer.complete(Unit)
+        } catch (e: CancellationException) {
+          throw e
+        } catch (e: Exception) {
+          kept.answer.completeExceptionally(e)
+        }
+      }
+    }
+  }
+
+  /**
+   * Keeps [name] as how the user appears in the group (as [setDisplayName]), as a field, its page or
+   * the app is left (spec/sync-protocol.md, Profile): taken at once, before the page that asked goes,
+   * and sent by the kit after those kept before it, whether the page still waits or not. The page
+   * may await the answer while it is there.
+   */
+  fun keepDisplayName(groupId: String, name: String): Deferred<Unit> {
+    val kept = KeptName(groupId, name)
+    namesKept.trySend(kept)
+    return kept.answer
+  }
+
+  private class KeptName(val groupId: String, val name: String) {
+    val answer = CompletableDeferred<Unit>()
+  }
 
   /** Makes the group [request] asks for, with the user in it: the new group's id. */
   suspend fun create(request: NewGroupRequest): String {

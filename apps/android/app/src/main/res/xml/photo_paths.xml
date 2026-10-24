@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Where the camera app writes a photo taken (PhotoEditor), in the app's cache. -->
+<!-- The app's cache files other apps are given: a photo the camera app takes, a picture shared. -->
 <paths>
   <cache-path name="camera" path="camera/" />
+  <!-- An invitation's QR code shared as a picture (InvitePage). -->
+  <cache-path name="shared" path="shared/" />
 </paths>

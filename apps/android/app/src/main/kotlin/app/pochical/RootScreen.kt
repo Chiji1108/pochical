@@ -22,7 +22,12 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import app.pochical.calendar.CalendarScreen
 import app.pochical.calendar.ShiftChoicePage
+import app.pochical.groups.GroupButtons
+import app.pochical.groups.GroupEditPage
+import app.pochical.groups.GroupProfilePage
+import app.pochical.groups.GroupSettingsPage
 import app.pochical.groups.GroupsActions
+import app.pochical.groups.InvitePage
 import app.pochical.groups.GroupsScreen
 import app.pochical.groups.NewGroupPage
 import app.pochical.patterns.AddPatternPage
@@ -53,7 +58,24 @@ fun RootScreen(navigator: RootNavigator) {
       RootPage.Appearance ->
         NavEntry(route) { AppearancePage(onBack = rememberPageNavigation(navigator)::back) }
       RootPage.NewGroup ->
-        NavEntry(route) { NewGroupPage(onBack = rememberPageNavigation(navigator)::back, onMade = { navigator.showGroup(it) }) }
+        NavEntry(route) {
+          NewGroupPage(onBack = rememberPageNavigation(navigator)::back, onMade = { navigator.showGroup(it, RootPage.GroupInvite(it)) })
+        }
+      is RootPage.GroupInvite -> NavEntry(route) { InvitePage(route.groupId, onBack = rememberPageNavigation(navigator)::back) }
+      is RootPage.GroupSettings ->
+        NavEntry(route) {
+          val navigation = rememberPageNavigation(navigator)
+          GroupSettingsPage(
+            route.groupId,
+            onBack = navigation::back,
+            onEdit = { navigation.open(RootPage.GroupEdit(route.groupId)) },
+            onProfile = { navigation.open(RootPage.GroupProfile(route.groupId)) },
+            onInvite = { navigation.open(RootPage.GroupInvite(route.groupId)) },
+            onLeft = navigator::closePages,
+          )
+        }
+      is RootPage.GroupEdit -> NavEntry(route) { GroupEditPage(route.groupId, onBack = rememberPageNavigation(navigator)::back) }
+      is RootPage.GroupProfile -> NavEntry(route) { GroupProfilePage(route.groupId, onBack = rememberPageNavigation(navigator)::back) }
       is RootPage.ShiftChoice ->
         NavEntry(route) {
           ShiftChoicePage(LocalDate.parse(route.date), onBack = rememberPageNavigation(navigator)::back)
@@ -103,7 +125,7 @@ private fun TabsScreen(navigator: RootNavigator, navigation: PageNavigation) {
       when (navigation.tab) {
         RootTab.Calendar -> CalendarScreen(open = navigation::open, hidesTabBar = { barHidden = it })
         RootTab.Groups ->
-          GroupsScreen(navigator.openGroup, { navigator.openGroup = it }, GroupsActions(onNew = { navigation.open(RootPage.NewGroup) }))
+          GroupsScreen(navigator.openGroup, { navigator.openGroup = it }, GroupsActions(onNew = { navigation.open(RootPage.NewGroup) }) { group -> GroupButtons(group.id, navigation::open) })
         RootTab.Settings -> SettingsScreen(open = navigation::open)
       }
     }

@@ -29,7 +29,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -53,6 +52,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.pochical.LocalAccount
 import app.pochical.R
+import app.pochical.RootPage
 import app.pochical.SectionHeader
 import app.pochical.design.Metrics
 import app.pochical.design.Radius
@@ -232,6 +232,17 @@ fun MemberRow(member: GroupMemberRow, groupId: String, modifier: Modifier = Modi
     leadingContent = { MemberAvatar(member.displayName, member.photoId, PhotoShelf.Group(groupId), 28.dp, me = me) },
     modifier = modifier,
   )
+}
+
+/** The open group's buttons in the bar over its page: メンバーを招待 and グループの設定. */
+@Composable
+fun GroupButtons(groupId: String, open: (RootPage) -> Unit) {
+  IconButton(onClick = { open(RootPage.GroupInvite(groupId)) }) {
+    Icon(painterResource(R.drawable.ic_person_add), stringResource(R.string.invite))
+  }
+  IconButton(onClick = { open(RootPage.GroupSettings(groupId)) }) {
+    Icon(painterResource(R.drawable.ic_tune), stringResource(R.string.group_settings))
+  }
 }
 
 /** The rail's width, which the page beside it starts after. */
