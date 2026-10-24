@@ -78,7 +78,9 @@ class SyncedDays(private val database: AppDatabase, private val edits: OwnEdits,
 
   override suspend fun daysShowing(id: String): Int = inTurn { database.daysShowing(id) }
 
-  override suspend fun putOrder(order: RepeatOrder, replacing: LocalDate?) = inTurn { edits.putOrder(order, replacing) }
+  override suspend fun putOrder(order: RepeatOrder) = inTurn { edits.putOrder(order) }
+
+  override suspend fun moveOrder(from: LocalDate, to: LocalDate): Boolean = inTurn { edits.moveOrder(from, to) }
 
   override suspend fun removeOrder(start: LocalDate) = inTurn { edits.removeOrder(start) }
 
@@ -118,6 +120,8 @@ class SyncedDays(private val database: AppDatabase, private val edits: OwnEdits,
 
     override val orders: List<RepeatOrder>
       get() = own.orders
+
+    override fun hasOwnShift(day: LocalDate): Boolean = own.hasOwnShift(day)
   }
 }
 

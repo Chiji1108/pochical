@@ -100,6 +100,22 @@ class OrdersTest {
   }
 
   @Test
+  fun aPeriodMovesOnlyBetweenTheStartsAroundIt() = runTest {
+    val database = testDatabase()
+    val edits = OwnEdits(database)
+    edits.savePattern("day", markedPattern("日勤"))
+    val starts = listOf("2026-01-01", "2026-06-01", "2026-10-01").map(LocalDate::parse)
+    for (start in starts) edits.putOrder(RepeatOrder(listOf("day"), start, holidayCountry = "JP"))
+    assertEquals(false, edits.moveOrder(starts[1], starts[2]))
+    assertEquals(false, edits.moveOrder(starts[1], LocalDate.parse("2025-12-31")))
+    assertEquals(true, edits.moveOrder(starts[1], LocalDate.parse("2026-07-01")))
+    val orders = database.values().ownCalendar().first().orders
+    assertEquals(listOf("2026-01-01", "2026-07-01", "2026-10-01"), orders.map { it.start.toString() })
+    assertEquals(starts[1], orders[1].anchor)
+    database.close()
+  }
+
+  @Test
   fun holidaysOffTakesThePersonsFirstDayOffInUse() = runTest {
     val database = testDatabase()
     val edits = OwnEdits(database)
@@ -116,7 +132,8 @@ class OrdersTest {
     edits.setHolidaysOff(true, start = start)
     assertEquals("off", database.values().ownCalendar().first().orders.single().holidayShift)
     edits.setHolidaysOff(false, start = start)
-    assertEquals(listOf(false to null), database.values().ownCalendar().first().orders.map { it.holidaysOff to it.holidayShift })
+    // Off, it keeps the pattern holidays took, for when it is turned on again.
+    assertEquals(listOf(false to "off"), database.values().ownCalendar().first().orders.map { it.holidaysOff to it.holidayShift })
     database.close()
   }
 

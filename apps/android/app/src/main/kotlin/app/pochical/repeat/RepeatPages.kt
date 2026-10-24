@@ -183,7 +183,9 @@ fun RepeatPeriodPage(startKey: String, navigation: PageNavigation) {
   val calendar by days.calendar.collectAsStateWithLifecycle()
   val orders = calendar.orders
   var start by rememberSaveable { mutableStateOf(startKey) }
-  val index = orders.indexOfFirst { it.start.toString() == start }
+  // While a move is written, the period shows under the start it had until the calendar shows the new one.
+  var moving by rememberSaveable { mutableStateOf<String?>(null) }
+  val index = orders.indexOfFirst { it.start.toString() == start }.takeIf { it >= 0 } ?: orders.indexOfFirst { it.start.toString() == moving }
   val scope = rememberCoroutineScope()
   var picking by rememberSaveable { mutableStateOf(false) }
   var removing by rememberSaveable { mutableStateOf(false) }
@@ -248,13 +250,17 @@ fun RepeatPeriodPage(startKey: String, navigation: PageNavigation) {
   }
   if (picking) {
     DayPickerDialog(order.start, onPick = { day ->
-      // A new start, kept between the periods around it; its first shift stays on the day it fell on.
-      val fits = (index == 0 || day > orders[index - 1].start) && (index + 1 >= orders.size || day < orders[index + 1].start)
-      when {
-        !fits -> overlaps = true
-        day != order.start -> scope.launch {
-          days.putOrder(order.copy(start = day, anchor = order.anchor ?: order.start), replacing = order.start)
-          start = day.toString()
+      // A new start between the periods around it; its first shift stays on the day it fell on.
+      if (day != order.start) {
+        val from = order.start
+        moving = from.toString()
+        start = day.toString()
+        scope.launch {
+          if (!days.moveOrder(from, day)) {
+            start = from.toString()
+            overlaps = true
+          }
+          moving = null
         }
       }
     }, onDismiss = { picking = false })
@@ -319,10 +325,13 @@ fun RepeatEditor(mode: RepeatMode, navigation: PageNavigation) {
   var holidayPick by rememberSaveable { mutableStateOf<String?>(null) }
   var confirming by rememberSaveable { mutableStateOf(false) }
   val start = fixing?.start ?: typing.anchor
-  val offShift = holidayShift(inUse.filter { it.countsAsOff }.map { it.id }, holidayPick ?: fixing?.holidayShift)
+  // The period's own holiday pattern stays until changed, even one that no longer counts as off.
+  val offShift = holidayPick ?: fixing?.holidayShift?.takeIf { fixing.holidaysOff } ?: holidayShift(inUse.filter { it.countsAsOff }.map { it.id })
   val holidays =
     offShift != null &&
       (holidaysOff ?: fixing?.holidaysOff ?: holidaysOffByDefault(typing.sequence, typing.anchor) { byId[it]?.countsAsOff == true })
+  // The order runs until the next period starts.
+  val until = orders.firstOrNull { it.start > start }?.start
   val country = remember { fixing?.holidayCountry ?: holidayCountry() }
   val scope = rememberCoroutineScope()
   val title =
@@ -351,6 +360,7 @@ fun RepeatEditor(mode: RepeatMode, navigation: PageNavigation) {
       patterns = inUse,
       modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
       before = calendar,
+      until = until,
       holidayShift = offShift.takeIf { holidays },
       holidayCountry = country,
     )

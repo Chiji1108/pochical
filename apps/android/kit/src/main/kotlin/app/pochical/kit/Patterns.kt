@@ -166,14 +166,7 @@ fun markIconSections(query: String): List<MarkIconNames.Section> {
  * first day either reaches through the last own day or the latest order's start, past which only
  * own days could show one the order in use does not repeat.
  */
-suspend fun AppDatabase.daysShowing(id: String): Int = write {
-  // In one transaction, so a change sync takes meanwhile counts whole or not at all.
-  val days = days("0000-01-01", "9999-12-31")
-  val orders = repeatOrders()
-  val edges = days.map { LocalDate.parse(it.date) } + orders.map { LocalDate.parse(it.start) }
-  val first = edges.minOrNull() ?: return@write 0
-  OwnCalendar.of(days, patterns(), orders).shown(first, edges.max()).values.count { it.shift == id }
-}
+suspend fun AppDatabase.daysShowing(id: String): Int = write { shownSoFar().count { it.shift == id } }
 
 private const val KATAKANA_TO_HIRAGANA = 0x60
 

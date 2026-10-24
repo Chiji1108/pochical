@@ -29,6 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.Footnote
 import app.pochical.LocalThemeColors
 import app.pochical.PageNavigation
@@ -42,6 +43,8 @@ import app.pochical.calendar.weekday
 import app.pochical.design.JobTemplate
 import app.pochical.design.Metrics
 import app.pochical.design.ReadyPatterns
+import app.pochical.kit.holidayShift
+import app.pochical.kit.holidaysOffByDefault
 import app.pochical.kit.readyCopies
 import app.pochical.patterns.ReadyPatternChips
 import app.pochical.patterns.chosenPatterns
@@ -82,6 +85,7 @@ private val readyById = readyCopies(ReadyPatterns.all.map { it.id }).associate {
 @Composable
 fun JobChangePage(navigation: PageNavigation) {
   val days = LocalOwnDays.current
+  val calendar by days.calendar.collectAsStateWithLifecycle()
   var start by rememberSaveable { mutableStateOf(nextMonthStart().toString()) }
   val first = LocalDate.parse(start)
   var steps by rememberSerializable { mutableStateOf(listOf<JobStep>(JobStep.Day)) }
@@ -127,12 +131,18 @@ fun JobChangePage(navigation: PageNavigation) {
       onBack = back,
       actions = { TextButton(onClick = { confirming = true }, enabled = typing.sequence.isNotEmpty()) { Text(stringResource(R.string.entering_done)) } },
     ) { padding ->
+      val keys = step.patterns.mapNotNull(readyById::get)
+      // Holidays as changeJob sets them: off when the order reads as office hours.
+      val offShift = holidayShift(keys.filter { it.countsAsOff }.map { it.id })
+      val holidaysOff = offShift != null && holidaysOffByDefault(typing.sequence, typing.anchor) { readyById[it]?.countsAsOff == true }
       RepeatCalendar(
         typing,
         { typing = it },
         cover = OrderCover.From(first),
-        patterns = step.patterns.mapNotNull(readyById::get),
+        patterns = keys,
         modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
+        before = calendar,
+        holidayShift = offShift.takeIf { holidaysOff },
         holidayCountry = holidayCountry(),
       )
     }

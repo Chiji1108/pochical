@@ -95,6 +95,10 @@ fun ordersAdding(orders: List<RepeatOrder>, order: RepeatOrder): List<RepeatOrde
 fun ordersPutting(orders: List<RepeatOrder>, order: RepeatOrder, replacing: LocalDate? = null): List<RepeatOrder> =
   (orders.filter { it.start != order.start && it.start != replacing } + order).sortedBy { it.start }
 
+/** Whether the period at [index] of [orders] may start on [day]: after the one before starts, before the next one does. */
+fun startFits(orders: List<RepeatOrder>, index: Int, day: LocalDate): Boolean =
+  (index == 0 || day > orders[index - 1].start) && (index + 1 >= orders.size || day < orders[index + 1].start)
+
 /** 繰り返し's periods without the one starting on [start], the one before running on (spec/vectors/repeat.json, removed). */
 fun ordersRemoving(orders: List<RepeatOrder>, start: LocalDate): List<RepeatOrder> = orders.filter { it.start != start }
 

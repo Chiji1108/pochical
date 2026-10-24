@@ -84,10 +84,13 @@ fun RepeatCalendar(
   patterns: List<Pattern>,
   modifier: Modifier = Modifier,
   before: OwnCalendar? = null,
+  until: LocalDate? = null,
   holidayShift: String? = null,
   holidayCountry: String,
 ) {
   val week = LocalDeviceSettings.current.device.week
+  // The marks of the patterns being typed, and of those the days before show.
+  val byId = remember(patterns, before) { before?.patterns.orEmpty().associateBy { it.id } + patterns.associateBy { it.id } }
   val haptics = LocalHapticFeedback.current
   val origin = remember { YearMonth.from(typing.anchor) }
   val pages = rememberPagerState(initialPage = MONTHS_AROUND) { MONTHS_AROUND * 2 + 1 }
@@ -137,7 +140,7 @@ fun RepeatCalendar(
     BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
       val cell = ((maxHeight - DAY_GAP * 5) / 6).coerceIn(Metrics.touch, DAY_FULL_HEIGHT)
       HorizontalPager(pages, Modifier.fillMaxSize(), verticalAlignment = Alignment.Top) { page ->
-        MonthOfOrder(monthAt(page), typing, cover, patterns, before, holidayShift, holidayCountry, cell) { type(typing.pressed(it)) }
+        MonthOfOrder(monthAt(page), typing, cover, byId, before, until, holidayShift, holidayCountry, cell) { type(typing.pressed(it)) }
       }
     }
     PatternKeys(patterns, keyPages) { type(typing.pick(it.id)) }
@@ -156,14 +159,19 @@ fun RepeatCalendar(
   }
 }
 
-/** A month of the order: its weeks, a row each, room kept for six. */
+/**
+ * A month of the order: its weeks, a row each, room kept for six. The order covers the days from its
+ * start until the next period's, [until]; there, and on the days the person entered, which stay over
+ * any order, the days show what they hold now.
+ */
 @Composable
 private fun MonthOfOrder(
   month: YearMonth,
   typing: OrderTyping,
   cover: OrderCover,
-  patterns: List<Pattern>,
+  patterns: Map<String, Pattern>,
   before: OwnCalendar?,
+  until: LocalDate?,
   holidayShift: String?,
   holidayCountry: String,
   cell: Dp,
@@ -177,9 +185,11 @@ private fun MonthOfOrder(
     OrderCover.Anchor -> typing.anchor
     is OrderCover.From -> cover.day
   }
-  val byId = patterns.associateBy { it.id } + before?.patterns.orEmpty().associateBy { it.id }.filterKeys { it !in patterns.map(Pattern::id) }
-  val planned = repeatSchedule(typing.sequence, typing.anchor, maxOf(start, first), last, holidayShift, holidayCountry)
-  val kept = before?.shown(first, last).orEmpty()
+  val planned =
+    remember(typing.sequence, typing.anchor, start, first, holidayShift) {
+      repeatSchedule(typing.sequence, typing.anchor, maxOf(start, first), last, holidayShift, holidayCountry)
+    }
+  val kept = remember(before, first) { before?.shown(first, last).orEmpty() }
   val today = LocalDate.now()
   Column(verticalArrangement = Arrangement.spacedBy(DAY_GAP)) {
     for (days in weeks) {
@@ -187,22 +197,22 @@ private fun MonthOfOrder(
         for (day in days) {
           val index = ChronoUnit.DAYS.between(typing.anchor, day)
           val typed = index in 0 until typing.sequence.size
-          val inOrder = day >= start
-          val shift = if (typed) typing.sequence[index.toInt()] else if (inOrder) planned[day] else kept[day]?.shift
-          val entry = if (typed || inOrder) shift?.let { DayEntry(it) } else kept[day]
-          val pattern = shift?.let(byId::get)
+          val inOrder = day >= start && (until == null || day < until)
+          val comesRound = inOrder && !typed && before?.hasOwnShift(day) != true
+          val shift = if (typed) typing.sequence[index.toInt()] else if (comesRound) planned[day] else kept[day]?.shift
+          val entry = if (typed || comesRound) shift?.let { DayEntry(it) } else kept[day]
           DayCell(
             DayLook(
               day = day,
               entry = entry,
-              pattern = pattern,
+              pattern = shift?.let(patterns::get),
               note = null,
               holiday = day.holidayName(holidayCountry),
               outside = YearMonth.from(day) != month || !inOrder,
               isToday = day == today,
               isSelected = index == typing.cursor.toLong(),
               framesToday = false,
-              faint = inOrder && !typed,
+              faint = comesRound,
             ),
             height = cell,
             colorsHoliday = week.holiday,
