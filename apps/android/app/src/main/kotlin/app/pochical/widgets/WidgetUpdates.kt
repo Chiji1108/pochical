@@ -77,15 +77,19 @@ suspend fun updateAllWidgets(context: Context) {
  * runs only then): published once for each version of the app in each, the last the system took
  * kept across runs.
  */
-suspend fun followForWidgetPreviews(context: Context, settings: SyncedSettings) =
+suspend fun followForWidgetPreviews(
+  context: Context,
+  settings: Flow<DeviceSettings>,
+  publish: suspend () -> Boolean = { publishWidgetPreviews(context) },
+) =
   withContext(Dispatchers.IO) {
     val published = context.getSharedPreferences("widget-previews", Context.MODE_PRIVATE)
-    settings.settings
+    settings
       .map { "${BuildConfig.VERSION_CODE} ${LocalDate.now()} ${listOf(it.themeId, it.look, it.week, it.heading.english)}" }
       .distinctUntilChanged()
       .filter { it != published.getString("drawn", null) }
       // Kept only once the system took every kind's, so one it refused is tried again.
-      .collect { drawn -> if (publishWidgetPreviews(context)) published.edit { putString("drawn", drawn) } }
+      .collect { drawn -> if (publish()) published.edit { putString("drawn", drawn) } }
   }
 
 /**

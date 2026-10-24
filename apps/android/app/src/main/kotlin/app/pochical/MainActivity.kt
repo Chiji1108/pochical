@@ -65,7 +65,7 @@ class MainActivity(
       repeatOnLifecycle(Lifecycle.State.STARTED) { deviceSettings.settings.collect { settings = it } }
     }
     // The widgets' previews in the picker follow the settings the screens change.
-    lifecycleScope.launch { followForWidgetPreviews(this@MainActivity, deviceSettings) }
+    lifecycleScope.launch { followForWidgetPreviews(this@MainActivity, deviceSettings.settings) }
     setContent {
       val device = settings ?: return@setContent
       if (!calendarRead) return@setContent
