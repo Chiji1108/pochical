@@ -25,17 +25,15 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.pochical.LocalDeviceSettings
-import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.calendar.DAY_FULL_HEIGHT
 import app.pochical.calendar.DayCell
 import app.pochical.calendar.DayEntry
-import app.pochical.calendar.OffShown
 import app.pochical.calendar.DayLook
+import app.pochical.calendar.OffShown
 import app.pochical.calendar.OwnCalendar
 import app.pochical.calendar.Pattern
 import app.pochical.calendar.PatternKeys
@@ -44,11 +42,9 @@ import app.pochical.calendar.TrayActionsRow
 import app.pochical.calendar.holidayName
 import app.pochical.calendar.monthWeeks
 import app.pochical.calendar.pageCount
-import app.pochical.calendar.weekdayColor
-import app.pochical.calendar.weekdayLetter
-import app.pochical.calendar.yearMonthText
+import app.pochical.calendar.WeekdayRow
+import app.pochical.calendar.monthWithYear
 import app.pochical.design.Metrics
-import app.pochical.design.PochicalTextStyles
 import app.pochical.design.Springs
 import app.pochical.kit.repeatSchedule
 import java.time.LocalDate
@@ -115,7 +111,11 @@ fun RepeatCalendar(
 
   Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
     Row(Modifier.fillMaxWidth().heightIn(min = Metrics.touch), verticalAlignment = Alignment.CenterVertically) {
-      Text(shown.yearMonthText, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+      Text(
+        shown.monthWithYear(LocalDeviceSettings.current.device.heading.english),
+        style = MaterialTheme.typography.titleLarge,
+        modifier = Modifier.weight(1f),
+      )
       if (shown != firstMonth) {
         val label = stringResource(R.string.repeat_first_day_label)
         OutlinedButton(
@@ -126,18 +126,7 @@ fun RepeatCalendar(
         }
       }
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(DAY_GAP)) {
-      repeat(7) { index ->
-        val weekday = (week.start + index) % 7
-        Text(
-          weekdayLetter(weekday),
-          Modifier.weight(1f),
-          style = PochicalTextStyles.caption2,
-          color = weekdayColor(weekday, holiday = false, week, plain = LocalThemeColors.current.textTertiary),
-          textAlign = TextAlign.Center,
-        )
-      }
-    }
+    WeekdayRow(week)
     BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
       val cell = ((maxHeight - DAY_GAP * 5) / 6).coerceIn(Metrics.touch, DAY_FULL_HEIGHT)
       HorizontalPager(pages, Modifier.fillMaxSize(), verticalAlignment = Alignment.Top) { page ->

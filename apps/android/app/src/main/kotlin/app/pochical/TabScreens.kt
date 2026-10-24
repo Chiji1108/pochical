@@ -41,6 +41,7 @@ fun SettingsScreen(open: (RootPage) -> Unit) {
           modifier = Modifier.clickable { open(RootPage.Appearance) },
         )
       }
+      item { CalendarSettingsRow(open) }
     }
   }
 }

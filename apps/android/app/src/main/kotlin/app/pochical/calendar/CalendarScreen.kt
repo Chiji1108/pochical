@@ -44,6 +44,7 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
@@ -64,6 +65,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
@@ -274,8 +276,11 @@ fun CalendarScreen(open: (RootPage) -> Unit, hidesTabBar: (Boolean) -> Unit) {
     }
   }
 
+  val sky = rememberSurpriseSky(reduceMotion)
   Column(
-    Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
+    Modifier.fillMaxSize()
+      .drawBehind(sky)
+      .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
   ) {
     Heading(
       pages = if (opened != null) range.pageOf(folded).toFloat() else pager.currentPage + pager.currentPageOffsetFraction,
@@ -289,8 +294,10 @@ fun CalendarScreen(open: (RootPage) -> Unit, hidesTabBar: (Boolean) -> Unit) {
       onThisMonth = { turnTo(YearMonth.from(today)) },
       onThisWeek = { openDay(today) },
       onDone = ::finish,
+      // The month the heading names, though the pages are still on their way to it.
+      onSave = { open(RootPage.MonthPicture(range.monthAt(pager.currentPage).toString())) },
     )
-    WeekdayRow(week, Modifier.padding(horizontal = SCREEN_EDGE))
+    WeekdayRow(week, Modifier.padding(horizontal = SCREEN_EDGE).padding(bottom = 12.dp))
     BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
       val cell = dayHeight(fitting = maxHeight - DAY_GAP)
       val monthHeight = cell * 6 + DAY_GAP * 5
@@ -483,20 +490,31 @@ private fun Heading(
   onThisMonth: () -> Unit,
   onThisWeek: () -> Unit,
   onDone: () -> Unit,
+  onSave: () -> Unit,
 ) {
   var picking by remember { mutableStateOf(false) }
   val colors = LocalThemeColors.current
+  val settings = LocalDeviceSettings.current
   Row(
     Modifier.fillMaxWidth().padding(start = SCREEN_EDGE + 8.dp, end = SCREEN_EDGE, top = 8.dp, bottom = 12.dp),
     verticalAlignment = Alignment.Bottom,
   ) {
     val pickLabel = stringResource(R.string.calendar_pick_month)
+    val skyLabel = stringResource(R.string.calendar_change_sky)
     MonthName(
       pages,
       range::monthAt,
       reduceMotion,
-      // Only the month on its own opens 月を選ぶ; entering and a day's week keep to the days around.
-      if (dayOpen || entering) Modifier else Modifier.clickable(onClickLabel = pickLabel, role = Role.Button) { picking = true },
+      // Only the month on its own opens 月を選ぶ, or with おたのしみ drifts the sky to another;
+      // entering and a day's week keep to the days around.
+      when {
+        dayOpen || entering -> Modifier
+        settings.device.heading.surprise ->
+          Modifier.clickable(onClickLabel = skyLabel, role = Role.Button) {
+            settings.change { it.copy(heading = it.heading.copy(sky = nextSky(it.heading.sky, it.theme))) }
+          }
+        else -> Modifier.clickable(onClickLabel = pickLabel, role = Role.Button) { picking = true }
+      },
     )
     Spacer(Modifier.weight(1f))
     val away = if (dayOpen) (if (thisWeekAway) 1f else 0f) else abs(pages - todayPage).coerceAtMost(1f)
@@ -513,6 +531,12 @@ private fun Heading(
         colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary),
       ) {
         Text(stringResource(if (dayOpen) R.string.calendar_this_week else R.string.calendar_this_month))
+      }
+    }
+    // The heading's corner holds saving whenever it is wanted; it is never offered by itself.
+    if (!entering && !dayOpen) {
+      IconButton(onClick = onSave) {
+        Icon(painterResource(R.drawable.ic_download), stringResource(R.string.picture), tint = colors.textPrimary)
       }
     }
   }
@@ -590,11 +614,12 @@ private fun List<Pattern>.daysOff(): List<Pattern> = filter { it.countsAsOff && 
 @Composable
 fun WeekdayRow(week: Week, modifier: Modifier = Modifier) {
   val colors = LocalThemeColors.current
-  Row(modifier.padding(bottom = 12.dp).clearAndSetSemantics {}, horizontalArrangement = Arrangement.spacedBy(DAY_GAP)) {
+  val english = LocalDeviceSettings.current.device.heading.english
+  Row(modifier.clearAndSetSemantics {}, horizontalArrangement = Arrangement.spacedBy(DAY_GAP)) {
     repeat(7) { index ->
       val weekday = (week.start + index) % 7
       Text(
-        weekdayLetter(weekday),
+        weekdayLetter(weekday, english),
         Modifier.weight(1f),
         style = PochicalTextStyles.caption2,
         color = weekdayColor(weekday, holiday = false, week, plain = colors.textTertiary),
