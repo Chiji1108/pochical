@@ -49,6 +49,7 @@ import app.pochical.design.TextLimits
 import app.pochical.kit.GroupMarkValue
 import app.pochical.kit.PhotoShelf
 import app.pochical.kit.initialLetter
+import app.pochical.kit.paletteColor
 
 /** The kinds of mark the tabs pick from; a photo is picked above them. */
 private enum class MarkKind(val title: Int) {
@@ -70,12 +71,19 @@ private val GroupMarkValue.kind: MarkKind?
 /**
  * アイコン (/design's GroupMarkPage), over the page that changes the group: a photo, taken or
  * picked, or a kind, then one of it, from rows of eight by kind or from everything (ほかの…を選ぶ),
- * and for an icon or letters their color. Each choice is the page's at once; × closes it. Material
+ * and for an icon or letters their color, starting in [freeColor] from an emoji or a photo. Each choice is the page's at once; × closes it. Material
  * keeps a sub-edit like this one in a full-screen dialog, as Android's own pickers do.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GroupMarkPage(name: String, mark: GroupMarkValue, onMark: (GroupMarkValue) -> Unit, onClose: () -> Unit, shelf: PhotoShelf? = null) {
+fun GroupMarkPage(
+  name: String,
+  mark: GroupMarkValue,
+  freeColor: Int,
+  onMark: (GroupMarkValue) -> Unit,
+  onClose: () -> Unit,
+  shelf: PhotoShelf? = null,
+) {
   val calls = LocalGroupCalls.current
   var kind by rememberSaveable { mutableStateOf<MarkKind?>(null) }
   var choosingIcon by remember { mutableStateOf(false) }
@@ -83,6 +91,8 @@ fun GroupMarkPage(name: String, mark: GroupMarkValue, onMark: (GroupMarkValue) -
   var photoFailed by remember { mutableStateOf(false) }
   val shown = kind ?: mark.kind
   val firstLetter = initialLetter(name)
+  // The icon's or letters' color, else the one they start in.
+  val color = mark.paletteColor ?: freeColor
   Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
     Scaffold(
       Modifier.fillMaxSize(),
@@ -138,20 +148,20 @@ fun GroupMarkPage(name: String, mark: GroupMarkValue, onMark: (GroupMarkValue) -
                 withPicked(ReadyPatterns.groupMarkIcons, mark.icon),
                 mark.icon,
                 { MarkIconNames.names[it] ?: it },
-                { onMark(GroupMarkValue(icon = it, color = mark.color)) },
+                { onMark(GroupMarkValue(icon = it, color = color)) },
               ) {
-                GroupMarkView(GroupMarkValue(icon = it, color = mark.color), 22.dp, bare = true)
+                GroupMarkView(GroupMarkValue(icon = it, color = color), 22.dp, bare = true)
               }
               TextButton(onClick = { choosingIcon = true }) { Text(stringResource(R.string.mark_more_icons)) }
             }
             MarkKind.Letter ->
-              MarkLetterField(mark.letter.ifEmpty { firstLetter }, TextLimits.groupMark) { onMark(GroupMarkValue(letter = it, color = mark.color)) }
+              MarkLetterField(mark.letter.ifEmpty { firstLetter }, TextLimits.groupMark) { onMark(GroupMarkValue(letter = it, color = color)) }
           }
         }
         if (shown == MarkKind.Icon || shown == MarkKind.Letter) {
           SectionHeader(stringResource(R.string.mark_color))
           MarkColorGrid(
-            mark.color,
+            color,
             { slot ->
               onMark(
                 if (shown == MarkKind.Icon) GroupMarkValue(icon = mark.icon.ifEmpty { ReadyPatterns.groupMarkIcons.first() }, color = slot)
@@ -168,12 +178,12 @@ fun GroupMarkPage(name: String, mark: GroupMarkValue, onMark: (GroupMarkValue) -
       IconPickerSheet(
         mark.icon,
         onPick = {
-          onMark(GroupMarkValue(icon = it, color = mark.color))
+          onMark(GroupMarkValue(icon = it, color = color))
           choosingIcon = false
         },
         onDismiss = { choosingIcon = false },
       ) {
-        GroupMarkView(GroupMarkValue(icon = it, color = mark.color), 24.dp, bare = true)
+        GroupMarkView(GroupMarkValue(icon = it, color = color), 24.dp, bare = true)
       }
     }
     if (choosingEmoji) {

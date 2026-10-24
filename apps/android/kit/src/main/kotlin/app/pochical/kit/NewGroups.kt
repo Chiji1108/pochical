@@ -13,6 +13,17 @@ fun guessGroupMark(name: String, color: Int): GroupMarkValue {
   return if (hint != null) GroupMarkValue(emoji = hint.emoji) else GroupMarkValue(letter = initialLetter(name), color = color)
 }
 
+/** The icon's or letters' color slot; none for an emoji or a photo, which bring colors of their own. */
+val GroupMarkValue.paletteColor: Int?
+  get() = if (photoId.isEmpty() && (icon.isNotEmpty() || letter.isNotEmpty())) color else null
+
+/**
+ * The color a group's icon or letters start in, from the user's other groups' [marks]
+ * (spec/vectors/groups.json, nextGroupColor): as a new pattern's ([nextColor]), counting only marks
+ * drawn in a color, as an emoji's or a photo's 0 is no color.
+ */
+fun nextGroupColor(marks: List<GroupMarkValue>, slots: Int): Int = nextColor(marks.mapNotNull { it.paletteColor }, slots)
+
 /**
  * A name's first character as a reader sees it, trimmed, as a group's letters start; the fallback
  * letter for a name with none.

@@ -39,7 +39,7 @@ import app.pochical.kit.GroupMarkValue
 import app.pochical.kit.MarkPhotoGone
 import app.pochical.kit.NewGroupRequest
 import app.pochical.kit.guessGroupMark
-import app.pochical.kit.nextColor
+import app.pochical.kit.nextGroupColor
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.launch
 
@@ -75,10 +75,13 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
   LaunchedEffect(usualName) { if (!myNameTouched) myName = TextFieldValue(usualName) }
 
   val groupName = name.text.trim()
+  // The first color the user's groups do not use yet, for the guess and for a mark picked from an
+  // emoji or a photo into an icon or letters.
+  val freeColor = nextGroupColor(groups.map { it.mark }, slots)
   val mark =
     picked
       ?: sent?.takeIf { it.name == groupName }?.mark
-      ?: guessGroupMark(name.text, nextColor(groups.map { it.mark.color }, slots))
+      ?: guessGroupMark(name.text, freeColor)
   val canMake =
     groupName.isNotEmpty() && myName.text.isNotBlank() && characterCount(name.text) <= TextLimits.groupName &&
       characterCount(myName.text) <= TextLimits.personName
@@ -161,7 +164,7 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
     }
   }
   if (editingMark) {
-    GroupMarkPage(groupName, mark, onMark = { picked = it }, onClose = { editingMark = false })
+    GroupMarkPage(groupName, mark, freeColor, onMark = { picked = it }, onClose = { editingMark = false })
   }
   if (failed) {
     AlertDialog(

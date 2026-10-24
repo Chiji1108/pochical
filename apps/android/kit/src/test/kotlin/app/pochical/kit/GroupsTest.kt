@@ -15,8 +15,18 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 @Serializable
-private data class GroupsVectors(val guessMark: List<GuessMark>, val openedInviteCode: List<Opened>) {
+private data class GroupsVectors(
+  val guessMark: List<GuessMark>,
+  val nextGroupColor: List<NextGroupColor>,
+  val openedInviteCode: List<Opened>,
+) {
   @Serializable data class Mark(val emoji: String = "", val letter: String = "", val color: Int = 0)
+
+  /** A mark as the vectors name it: its kind, and the color of an icon's or letters'. */
+  @Serializable data class KindMark(val kind: String, val color: Int = 0)
+
+  @Serializable
+  data class NextGroupColor(override val name: String, val marks: List<KindMark>, val expected: Int) : VectorCase
 
   @Serializable
   data class GuessMark(override val name: String, val text: String, val color: Int, val expected: Mark) : VectorCase
@@ -38,6 +48,21 @@ class GroupsVectorsTest {
   fun guessMark() =
     groups.guessMark.checkEach({ GroupMarkValue(emoji = it.expected.emoji, letter = it.expected.letter, color = it.expected.color) }) {
       guessGroupMark(it.text, it.color)
+    }
+
+  @Test
+  fun nextGroupColor() =
+    groups.nextGroupColor.checkEach({ it.expected }) { case ->
+      val marks =
+        case.marks.map { mark ->
+          when (mark.kind) {
+            "emoji" -> GroupMarkValue(emoji = "🏠")
+            "photo" -> GroupMarkValue(photoId = "photo")
+            "icon" -> GroupMarkValue(icon = "moon", color = mark.color)
+            else -> GroupMarkValue(letter = "A", color = mark.color)
+          }
+        }
+      nextGroupColor(marks, MARK_SLOTS)
     }
 
   @Test fun openedInviteCode() = groups.openedInviteCode.checkEach({ it.expected }) { openedInviteCode(it.url) }

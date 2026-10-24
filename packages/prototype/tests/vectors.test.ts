@@ -26,7 +26,10 @@ import together from "../../../spec/vectors/together.json";
 import unread from "../../../spec/vectors/unread.json";
 import widgets from "../../../spec/vectors/widgets.json";
 import { bytesOf } from "../src/components/design-chat-photos";
-import { guessGroupMark } from "../src/components/design-group-settings";
+import {
+  guessGroupMark,
+  nextGroupColor,
+} from "../src/components/design-group-settings";
 import { periodTitleOf } from "../src/components/design-month-name";
 import {
   defaultWeekSettings,
@@ -102,6 +105,7 @@ import {
 import type {
   Chat,
   DraftTarget,
+  GroupMark,
   Member,
   Message,
   MessageContent,
@@ -527,6 +531,33 @@ describe("spec/vectors/together.json", () => {
 });
 
 const isPreset = (id: string): id is PresetShift => id in presetPatterns;
+
+// A vector's mark: its kind, and its color when it is drawn in one.
+function groupMarkOf({
+  kind,
+  color = 0,
+}: {
+  kind: string;
+  color?: number;
+}): GroupMark {
+  if (kind === "icon") {
+    return { color, icon: "house", kind };
+  }
+  if (kind === "letter") {
+    return { color, kind, text: "家" };
+  }
+  return kind === "photo"
+    ? { kind, photo: "photo" }
+    : { emoji: "🏠", kind: "emoji" };
+}
+
+describe("spec/vectors/groups.json", () => {
+  for (const { name, marks, expected } of groupVectors.nextGroupColor) {
+    test(`nextGroupColor: ${name}`, () => {
+      expect(nextGroupColor(marks.map(groupMarkOf))).toBe(expected);
+    });
+  }
+});
 
 describe("spec/vectors/patterns.json", () => {
   const idsOf = (patterns: readonly Pattern[]) =>

@@ -18,6 +18,17 @@ struct GroupVectors: Decodable, Sendable {
     let expected: Mark
   }
 
+  struct ColorCase: VectorCase {
+    struct Mark: Decodable, Sendable {
+      let kind: String
+      let color: Int?
+    }
+
+    let name: String
+    let marks: [Mark]
+    let expected: Int
+  }
+
   struct OpenedCase: VectorCase {
     let url: String
     let expected: String?
@@ -25,6 +36,7 @@ struct GroupVectors: Decodable, Sendable {
   }
 
   let guessMark: [GuessCase]
+  let nextGroupColor: [ColorCase]
   let openedInviteCode: [OpenedCase]
 }
 
@@ -38,6 +50,19 @@ func aGroupsMarkGuessedFromTheName(_ vector: GroupVectors.GuessCase) throws {
         letter: try #require(vector.expected.letter), color: try #require(vector.expected.color))
     }
   #expect(guessedMark(for: vector.text, color: vector.color) == expected)
+}
+
+@Test(arguments: try vectors("groups", as: GroupVectors.self).nextGroupColor)
+func aGroupsColor(_ vector: GroupVectors.ColorCase) {
+  let marks = vector.marks.map { mark in
+    switch mark.kind {
+    case "icon": GroupMarkValue(icon: "house", color: mark.color ?? 0)
+    case "letter": GroupMarkValue(letter: "家", color: mark.color ?? 0)
+    case "photo": GroupMarkValue(photoID: "photo")
+    default: GroupMarkValue(emoji: "🏠")
+    }
+  }
+  #expect(nextGroupColor(marks, slots: 12) == vector.expected)
 }
 
 @Test(arguments: try vectors("groups", as: GroupVectors.self).openedInviteCode)
