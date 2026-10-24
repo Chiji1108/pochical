@@ -43,15 +43,38 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.emoji2.emojipicker.EmojiPickerView
 import app.pochical.design.MarkIconNames
 import app.pochical.design.Radius
 import app.pochical.kit.markIconSections
+import app.pochical.kit.markLetter
 
 // What a mark is picked from, a pattern's or a group's (/design's MarkChoiceGrid, MarkColorGrid,
-// IconPickerSheet): rows of eight, the one picked edged in the accent.
+// IconPickerSheet), and the frame and the letter field around them: rows of eight, the one picked
+// edged in the accent.
+
+/** The side of the frame a mark stands on at the top of the page that changes it, or of the join screen. */
+val MarkFrameSize = 76.dp
+
+/** The frame a mark stands on at the top of the page that changes it, a group's or a pattern's, an emoji's too. */
+@Composable
+fun MarkFrame(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+  val shape = RoundedCornerShape(Radius.xxl)
+  Box(
+    modifier.size(MarkFrameSize).clip(shape).background(MaterialTheme.colorScheme.surfaceContainerHigh, shape),
+    contentAlignment = Alignment.Center,
+  ) {
+    content()
+  }
+}
+
+/** The marks offered first, with [chosen] leading them while it is a mark picked from elsewhere. */
+fun withPicked(offered: List<String>, chosen: String): List<String> =
+  if (chosen.isEmpty() || chosen in offered) offered else listOf(chosen) + offered
 
 /** How many choices a row of marks holds. */
 private const val PER_ROW = 8
@@ -175,4 +198,33 @@ fun EmojiPickerSheet(onPick: (String) -> Unit, onDismiss: () -> Unit) {
       )
     }
   }
+}
+
+/**
+ * A mark's letter, a shift's or a group's (spec/text-limits.md), as iOS's MarkLetterField: typing or
+ * converting into a full letter replaces it, the mark changes only once a conversion is confirmed,
+ * and a letter emptied keeps [letter], shown as its placeholder.
+ */
+@Composable
+fun MarkLetterField(letter: String, limit: Int, modifier: Modifier = Modifier, onLetter: (String) -> Unit) {
+  var field by remember { mutableStateOf(TextFieldValue(letter)) }
+  // The letter as last committed, which an edit is measured against.
+  var committed by remember { mutableStateOf(letter) }
+  OutlinedTextField(
+    field,
+    { typed ->
+      if (typed.composition != null) {
+        field = typed
+        return@OutlinedTextField
+      }
+      val text = markLetter(committed, typed.text, limit)
+      committed = text
+      field = TextFieldValue(text, TextRange(text.length))
+      text.trim().takeIf { it.isNotEmpty() }?.let(onLetter)
+    },
+    modifier.fillMaxWidth(),
+    label = { Text(stringResource(R.string.mark_kind_letter)) },
+    placeholder = { Text(letter) },
+    singleLine = true,
+  )
 }

@@ -26,7 +26,7 @@ internal interface SyncDao {
 
   @Query("DELETE FROM patterns WHERE id = :id") suspend fun deletePattern(id: String)
 
-  @Query("SELECT EXISTS(SELECT 1 FROM patterns WHERE id = :id)") suspend fun hasPattern(id: String): Boolean
+  @Query("SELECT * FROM patterns WHERE id = :id") suspend fun pattern(id: String): PatternRow?
 
   @Insert suspend fun insertPatternOrder(rows: List<PatternOrderRow>)
 

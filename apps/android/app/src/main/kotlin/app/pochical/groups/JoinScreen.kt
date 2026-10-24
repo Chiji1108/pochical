@@ -65,6 +65,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import app.pochical.Footnote
 import app.pochical.LimitedTextField
+import app.pochical.MarkFrame
+import app.pochical.MarkFrameSize
 import app.pochical.R
 import app.pochical.SectionHeader
 import app.pochical.characterCount

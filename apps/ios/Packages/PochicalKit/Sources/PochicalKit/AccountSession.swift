@@ -562,37 +562,41 @@ import SQLiteData
     }
   }
 
-  /// もう一度つなぐ: the session the server did not know, tried again, as
-  /// a server set right since knows it again.
-  public func tryAgain() {
-    afterEnding { [self] kept in
-      let session = StoredSession(token: kept.token, userID: kept.userID)
-      do {
-        try keychain.keep(session)
-      } catch {
-        // Tried all the same: a relaunch says it ended again first.
-        Logger.account.error("Keeping the session tried again failed: \(error)")
-      }
-      enter(session)
+  /// もう一度つなぐ: the session the server did not know, asked about
+  /// again (`GetMe`), as a server set right since knows it again: signed in
+  /// as it once the server answers, if the person has not chosen meanwhile;
+  /// still ended when it does not, unknown or out of reach, so the app is
+  /// never shown for a session that ends again at once.
+  public func tryAgain() async {
+    await ending?.value
+    guard case .ended(let kept) = state else { return }
+    do {
+      _ = try await server.me(kept.token)
+    } catch {
+      Logger.account.error("The ended session was not known again: \(error)")
+      return
     }
+    guard case .ended(let still) = state, still == kept else { return }
+    let session = StoredSession(token: kept.token, userID: kept.userID)
+    do {
+      try keychain.keep(session)
+    } catch {
+      // Tried all the same: a relaunch says it ended again first.
+      Logger.account.error("Keeping the session tried again failed: \(error)")
+    }
+    enter(session)
   }
 
   /// はじめから使う: the person's own choice to let the session go, and
   /// what the device holds with it, erasing as after signing out, then
   /// signing in afresh as a new install does.
   public func startAfresh() {
-    afterEnding { [self] _ in beginErasing(.signedOut) }
-  }
-
-  /// `then` with the session the server did not know, once the places'
-  /// sockets of its stretch have closed, if the person has not chosen
-  /// meanwhile.
-  private func afterEnding(_ then: @escaping @MainActor (StoredSession) -> Void) {
-    let ending = self.ending
     Task {
+      // Once the places' sockets of its stretch have closed, if the person
+      // has not chosen meanwhile.
       await ending?.value
-      guard case .ended(let kept) = state else { return }
-      then(kept)
+      guard case .ended = state else { return }
+      beginErasing(.signedOut)
     }
   }
 

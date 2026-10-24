@@ -67,6 +67,32 @@ public func holidayShift(of patterns: [Pattern], picked: PatternID? = nil) -> Pa
   return (offs.first { $0.id == picked } ?? offs.first)?.id
 }
 
+/// 祝日は休みにする as a period has it: whether it is asked, whether it may
+/// be turned on, and the pattern holidays take.
+public struct HolidaySetting: Hashable, Sendable {
+  public var shown: Bool
+  public var canTurnOn: Bool
+  public var shift: PatternID?
+}
+
+/// 祝日は休みにする on a period's page and as an order is saved
+/// (spec/shift-patterns.md, Holidays; spec/vectors/repeat.json,
+/// holidayChoice), `on` as the period has it, with `kept` the pattern it
+/// keeps for holidays and `picked` one picked among `patterns`, those in
+/// use. It is asked while on, so it can always be turned off, or while
+/// one counts as off, which alone lets it be turned on. Holidays take the
+/// one picked, else, while on, the one kept even if it no longer counts
+/// as off, else `holidayShift`'s.
+public func holidaySetting(
+  of patterns: [Pattern], on: Bool, kept: PatternID?, picked: PatternID? = nil
+) -> HolidaySetting {
+  let offs = patterns.filter(\.countsAsOff)
+  let pick = offs.first { $0.id == picked }?.id
+  return HolidaySetting(
+    shown: on || !offs.isEmpty, canTurnOn: !offs.isEmpty,
+    shift: pick ?? (on ? kept : nil) ?? holidayShift(of: patterns, picked: kept))
+}
+
 /// The patterns once `id` is deleted (spec/shift-patterns.md, Deleting a
 /// pattern): it goes from the list and nothing that names it changes, as
 /// days, orders and next days read it as a pattern that is gone.
@@ -126,13 +152,24 @@ extension Pattern {
 /// emoji and icon, else a star and the letter icon; the letter is the
 /// name's first character, trimmed.
 public func guessLook(_ name: String) -> (emoji: String, icon: String, symbol: String) {
-  let hint = ReadyPatterns.lookHints.first { hint in
-    hint.words.contains { name.contains($0) }
-  }
-  let letter = name.trimmingCharacters(in: .whitespacesAndNewlines).first.map(String.init) ?? ""
+  let hint = firstHint(in: ReadyPatterns.lookHints, for: name, words: { $0.words })
   return (
-    hint?.emoji ?? ReadyPatterns.fallbackEmoji, hint?.icon ?? ReadyPatterns.fallbackIcon, letter
+    hint?.emoji ?? ReadyPatterns.fallbackEmoji, hint?.icon ?? ReadyPatterns.fallbackIcon,
+    firstLetter(of: name) ?? ""
   )
+}
+
+/// The first of `hints` with one of its words anywhere in `name`, as a new
+/// pattern's look (patterns.json, guessLook) and a new group's mark
+/// (groups.json, guessMark) are guessed.
+func firstHint<Hint>(in hints: [Hint], for name: String, words: (Hint) -> [String]) -> Hint? {
+  hints.first { hint in words(hint).contains { name.contains($0) } }
+}
+
+/// A name's first character, trimmed, as a mark's letter starts; none for a
+/// name with none.
+func firstLetter(of name: String) -> String? {
+  name.trimmingCharacters(in: .whitespacesAndNewlines).first.map(String.init)
 }
 
 /// A new pattern's color slot (spec/vectors/patterns.json, nextColor): the

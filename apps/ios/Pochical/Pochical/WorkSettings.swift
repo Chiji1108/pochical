@@ -244,10 +244,11 @@ private struct RepeatPeriodPage: View {
         if repeats {
           HolidayChoice(
             patterns: values.patterns.inUse,
+            setting: holidaySetting(
+              of: values.patterns.inUse, on: order.holidaysOff, kept: order.holidayShift),
             on: Binding(get: { order.holidaysOff }, set: { setHolidaysOff($0) }),
             shift: Binding(
-              // The one it takes, even one that no longer counts as off.
-              get: { order.holidayShift ?? holidayShift(of: values.patterns.inUse) },
+              get: { order.holidayShift },
               set: { setHolidaysOff(true, picking: $0) }))
         }
         Section {
@@ -379,24 +380,27 @@ struct KeysPreview: View {
 }
 
 /// 祝日は休みにする (/design's HolidayChoice), asked as an order is saved
-/// and kept with its period: on, holidays take a pattern that counts as
-/// off, picked among them as chips when there are more than one, as
-/// 完了's blanks pick theirs. With none, there is nothing for holidays to
-/// take, so it is not asked (spec/shift-patterns.md, Holidays).
+/// and kept with its period, as `setting` has it: asked while on, so it
+/// can always be turned off, or while a pattern counts as off, which alone
+/// lets it be turned on; on, holidays take one picked among those as
+/// chips when there are more than one, as 完了's blanks pick theirs
+/// (spec/shift-patterns.md, Holidays).
 struct HolidayChoice: View {
   let patterns: [Pattern]
+  let setting: HolidaySetting
   @Binding var on: Bool
   /// The pattern holidays take while on.
   @Binding var shift: PatternID?
 
   var body: some View {
     let offs = patterns.filter(\.countsAsOff)
-    if !offs.isEmpty {
+    if setting.shown {
       Section {
         Toggle(isOn: $on) {
           Text("祝日は休みにする")
           Text("祝日は、並びの代わりに休みにします")
         }
+        .disabled(!on && !setting.canTurnOn)
       }
       .settingsRows()
       if on, offs.count > 1 {
@@ -489,12 +493,15 @@ private struct RepeatEditor: View {
     let steps = sequence ?? initialSequence
     let picked = day ?? current.map { $0.anchor ?? $0.start } ?? nextMonthStart
     let start = current?.start ?? picked
-    let offShift = holidayShift(
-      of: values.patterns.inUse, picked: holidayPick ?? current?.holidayShift)
-    let holidays =
-      offShift != nil
-      && (holidaysOff ?? current?.holidaysOff
-        ?? holidaysOffByDefault(steps, start: picked, patterns: byID))
+    let turnedOn =
+      holidaysOff ?? current?.holidaysOff
+      ?? (holidayShift(of: values.patterns.inUse) != nil
+        && holidaysOffByDefault(steps, start: picked, patterns: byID))
+    // The period's own holiday pattern stays until another is picked.
+    let setting = holidaySetting(
+      of: values.patterns.inUse, on: turnedOn, kept: current?.holidayShift, picked: holidayPick)
+    let offShift = setting.shift
+    let holidays = turnedOn && offShift != nil
     let shown = OwnCalendar(
       days: days, patterns: patternRows, patternOrder: patternOrder, orders: orderRows)
     RepeatCalendar(
@@ -529,7 +536,7 @@ private struct RepeatEditor: View {
             .settingsOnPage()
           }
           HolidayChoice(
-            patterns: values.patterns.inUse,
+            patterns: values.patterns.inUse, setting: setting,
             on: Binding(get: { holidays }, set: { holidaysOff = $0 }),
             shift: Binding(get: { offShift }, set: { holidayPick = $0 }))
           Section {
@@ -575,7 +582,9 @@ private struct RepeatEditor: View {
   ) {
     let order = RepeatOrder(
       sequence: steps, start: start, anchor: anchor, holidaysOff: holidays,
-      holidayShift: holidays ? shift : nil,
+      // Off, it keeps the pattern holidays took, as turning it off on the
+      // period's page does.
+      holidayShift: shift,
       holidayCountry: fixing?.holidayCountry ?? HolidayCountry.current)
     if write({ try OwnValues.put(order, now: nowMs(), in: $0) }) { dismiss() }
   }

@@ -23,8 +23,8 @@ class SetDaysTest {
 
   /** The person's patterns and an order of 日勤 every day from October. */
   private suspend fun everyDayADayShift() {
-    edits.savePattern("day", app.pochical.v1.pattern { name = "日勤" })
-    edits.savePattern("night", app.pochical.v1.pattern { name = "夜勤" })
+    edits.savePattern("day", markedPattern("日勤"))
+    edits.savePattern("night", markedPattern("夜勤"))
     edits.setRepeatOrders(
       listOf(
         app.pochical.v1.repeatOrder {

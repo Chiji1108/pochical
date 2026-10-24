@@ -133,6 +133,9 @@ struct GroupMarkPage: View {
   @Environment(\.groupCalls) private var groupCalls
   let name: String
   @Binding var mark: GroupMarkValue
+  /// The color an icon or letters start in when the mark has none, an
+  /// emoji or a photo: the first one the user's other groups do not use.
+  let freeColor: Int
   /// Where the group's photo mark is read from (GroupMarkView).
   var shelf: PhotoShelf?
   /// The tab shown; none for a photo until one is chosen.
@@ -178,10 +181,10 @@ struct GroupMarkPage: View {
           Button("ほかの絵文字を選ぶ", systemImage: "plus") { choosingEmoji = true }
         case .icon:
           MarkChoiceGrid(withPicked(ReadyPatterns.groupMarkIcons, mark.icon), chosen: mark.icon) { icon in
-            GroupMarkView(mark: GroupMarkValue(icon: icon, color: mark.color), size: 22, bare: true)
+            GroupMarkView(mark: GroupMarkValue(icon: icon, color: color), size: 22, bare: true)
               .accessibilityLabel(MarkIconNames.names[icon] ?? icon)
           } pick: { icon in
-            mark = GroupMarkValue(icon: icon, color: mark.color)
+            mark = GroupMarkValue(icon: icon, color: color)
           }
           Button("ほかのアイコンを選ぶ", systemImage: "plus") { choosingIcon = true }
         case .letter:
@@ -189,7 +192,7 @@ struct GroupMarkPage: View {
             MarkLetterField(
               letter: mark.letter.isEmpty ? firstLetter : mark.letter, limit: TextLimits.groupMark
             ) { letters in
-              mark = GroupMarkValue(letter: letters, color: mark.color)
+              mark = GroupMarkValue(letter: letters, color: color)
             }
           }
         }
@@ -199,7 +202,7 @@ struct GroupMarkPage: View {
       // Emoji and photos bring colors of their own.
       if shown == .icon || shown == .letter {
         Section("色") {
-          MarkColorGrid(chosen: mark.color) { slot in
+          MarkColorGrid(chosen: color) { slot in
             if shown == .icon {
               mark = GroupMarkValue(icon: mark.icon.isEmpty ? ReadyPatterns.groupMarkIcons[0] : mark.icon, color: slot)
             } else {
@@ -220,9 +223,9 @@ struct GroupMarkPage: View {
     .navigationBarTitleDisplayMode(.inline)
     .sheet(isPresented: $choosingIcon) {
       IconPickerSheet(picked: mark.icon) { icon in
-        GroupMarkView(mark: GroupMarkValue(icon: icon, color: mark.color), size: 24, bare: true)
+        GroupMarkView(mark: GroupMarkValue(icon: icon, color: color), size: 24, bare: true)
       } onPick: { icon in
-        mark = GroupMarkValue(icon: icon, color: mark.color)
+        mark = GroupMarkValue(icon: icon, color: color)
       }
     }
     .alert("写真を使えませんでした", isPresented: $photoFailed) {
@@ -256,6 +259,9 @@ struct GroupMarkPage: View {
     if !mark.letter.isEmpty { return .letter }
     return .emoji
   }
+
+  /// The icon's or letters' color, else the one they start in.
+  private var color: Int { mark.paletteColor ?? freeColor }
 
   /// The name's first letter, as letters start.
   private var firstLetter: String { initialLetter(of: name) }

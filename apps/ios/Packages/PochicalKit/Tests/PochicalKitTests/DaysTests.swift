@@ -136,7 +136,23 @@ struct RepeatVectors: Decodable, Sendable {
     let expected: [VectorOrder]
   }
 
+  struct HolidayChoice: VectorCase {
+    struct Choice: Decodable, Equatable {
+      let shown: Bool
+      let canTurnOn: Bool
+      let shift: String?
+    }
+
+    let name: String
+    let patterns: [VectorPattern]
+    let on: Bool
+    let kept: String?
+    let picked: String?
+    let expected: Choice
+  }
+
   let holidayShift: [HolidayShift]
+  let holidayChoice: [HolidayChoice]
   let added: [Added]
   let put: [Put]
   let removed: [Removed]
@@ -178,6 +194,16 @@ func holidaysOffByDefault(_ vector: RepeatVectors.HolidaysOffByDefault) {
 func holidayShift(_ vector: RepeatVectors.HolidayShift) {
   #expect(
     holidayShift(of: vector.patterns.map(\.pattern), picked: vector.picked) == vector.expected)
+}
+
+@Test(arguments: try vectors("repeat", as: RepeatVectors.self).holidayChoice)
+func holidayChoice(_ vector: RepeatVectors.HolidayChoice) {
+  let setting = holidaySetting(
+    of: vector.patterns.map(\.pattern), on: vector.on, kept: vector.kept, picked: vector.picked)
+  #expect(
+    RepeatVectors.HolidayChoice.Choice(
+      shown: setting.shown, canTurnOn: setting.canTurnOn, shift: setting.shift)
+      == vector.expected)
 }
 
 @Test(arguments: try vectors("repeat", as: RepeatVectors.self).added)

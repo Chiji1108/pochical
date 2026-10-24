@@ -1,5 +1,5 @@
 {
-  "about": "A repeating order of shifts (spec/shift-patterns.md, Repeating orders). schedule: each day from `from` to `to` takes the order's shift counted in whole days from `anchor`, which falls on the order's first shift; days before the anchor count backwards. With `holidayShift`, the national holidays of `holidays` (a country code, design/scripts/holidays.ts) take that pattern instead. shown: the days as they show from a person's orders and own days. A day follows the latest order that starts on or before it; an order with an empty sequence ends repeating; a pattern not in `patterns` leaves its days empty, whether the order or the day's own shift names it. A day's own `shift` wins over its order, and \"\" (dayRules.noShift, design/src/days.ts) is a day cleared on purpose; an own day without one follows its order. holidaysOffByDefault: 祝日は休みにする starts on when the order is a week (seven shifts) with a pattern that counts as off on a Saturday or Sunday; `daysOff` are the patterns that count as off. holidayShift: what holidays become: `picked`, while it is one of the patterns that count as off, else the first that does, in the person's order. added: a new job's order added to `orders` (or one dated back) starts on its day; orders that started on or after it give way to it entirely, and those before stay. put: 繰り返し's periods, which never overlap: an order put in on its day goes among the others in order of start, taking the place of one that started that day, and of the one starting on `replacing` when that period's start was moved; the others stay. removed: the period starting on `start` taken out, the one before running on to the next.",
+  "about": "A repeating order of shifts (spec/shift-patterns.md, Repeating orders). schedule: each day from `from` to `to` takes the order's shift counted in whole days from `anchor`, which falls on the order's first shift; days before the anchor count backwards. With `holidayShift`, the national holidays of `holidays` (a country code, design/scripts/holidays.ts) take that pattern instead. shown: the days as they show from a person's orders and own days. A day follows the latest order that starts on or before it; an order with an empty sequence ends repeating; a pattern not in `patterns` leaves its days empty, whether the order or the day's own shift names it. A day's own `shift` wins over its order, and \"\" (dayRules.noShift, design/src/days.ts) is a day cleared on purpose; an own day without one follows its order. holidaysOffByDefault: 祝日は休みにする starts on when the order is a week (seven shifts) with a pattern that counts as off on a Saturday or Sunday; `daysOff` are the patterns that count as off. holidayShift: what holidays become: `picked`, while it is one of the patterns that count as off, else the first that does, in the person's order. added: a new job's order added to `orders` (or one dated back) starts on its day; orders that started on or after it give way to it entirely, and those before stay. put: 繰り返し's periods, which never overlap: an order put in on its day goes among the others in order of start, taking the place of one that started that day, and of the one starting on `replacing` when that period's start was moved; the others stay. removed: the period starting on `start` taken out, the one before running on to the next. holidayChoice: 祝日は休みにする on a period's page and as an order is saved (spec/shift-patterns.md, Holidays): `on` as the period has it, `kept` the pattern it keeps for holidays, `picked` one the person picks among `patterns` that count as off. It is `shown` while on or while some pattern counts as off, so it can always be turned off, and `canTurnOn` only with one that does. Holidays take `shift`: the pattern picked, else, while on, the one kept even if it no longer counts as off, else the one kept while it counts as off, else the first that does, else none.",
   "schedule": [
     {
       "name": "a three-day order from its anchor",
@@ -677,6 +677,187 @@
           "start": "2026-01-01"
         }
       ]
+    }
+  ],
+  "holidayChoice": [
+    {
+      "name": "off, with days off to pick: asked, and the first takes holidays",
+      "patterns": [
+        {
+          "id": "day",
+          "countsAsOff": false
+        },
+        {
+          "id": "paid",
+          "countsAsOff": true
+        },
+        {
+          "id": "off",
+          "countsAsOff": true
+        }
+      ],
+      "on": false,
+      "expected": {
+        "shown": true,
+        "canTurnOn": true,
+        "shift": "paid"
+      }
+    },
+    {
+      "name": "on, holidays take the pattern the period keeps",
+      "patterns": [
+        {
+          "id": "day",
+          "countsAsOff": false
+        },
+        {
+          "id": "paid",
+          "countsAsOff": true
+        },
+        {
+          "id": "off",
+          "countsAsOff": true
+        }
+      ],
+      "on": true,
+      "kept": "off",
+      "expected": {
+        "shown": true,
+        "canTurnOn": true,
+        "shift": "off"
+      }
+    },
+    {
+      "name": "on, the pattern it keeps no longer counts as off: it stays until the setting changes",
+      "patterns": [
+        {
+          "id": "day",
+          "countsAsOff": false
+        },
+        {
+          "id": "paid",
+          "countsAsOff": true
+        },
+        {
+          "id": "off",
+          "countsAsOff": false
+        }
+      ],
+      "on": true,
+      "kept": "off",
+      "expected": {
+        "shown": true,
+        "canTurnOn": true,
+        "shift": "off"
+      }
+    },
+    {
+      "name": "on, with no pattern left that counts as off: still asked, to be turned off, and not on again",
+      "patterns": [
+        {
+          "id": "day",
+          "countsAsOff": false
+        },
+        {
+          "id": "off",
+          "countsAsOff": false
+        }
+      ],
+      "on": true,
+      "kept": "off",
+      "expected": {
+        "shown": true,
+        "canTurnOn": false,
+        "shift": "off"
+      }
+    },
+    {
+      "name": "off, with none that counts as off: not asked",
+      "patterns": [
+        {
+          "id": "day",
+          "countsAsOff": false
+        }
+      ],
+      "on": false,
+      "expected": {
+        "shown": false,
+        "canTurnOn": false,
+        "shift": null
+      }
+    },
+    {
+      "name": "a pick among those that count as off",
+      "patterns": [
+        {
+          "id": "day",
+          "countsAsOff": false
+        },
+        {
+          "id": "paid",
+          "countsAsOff": true
+        },
+        {
+          "id": "off",
+          "countsAsOff": true
+        }
+      ],
+      "on": true,
+      "kept": "off",
+      "picked": "paid",
+      "expected": {
+        "shown": true,
+        "canTurnOn": true,
+        "shift": "paid"
+      }
+    },
+    {
+      "name": "off, turned on again: the pattern it kept, while it counts as off",
+      "patterns": [
+        {
+          "id": "day",
+          "countsAsOff": false
+        },
+        {
+          "id": "paid",
+          "countsAsOff": true
+        },
+        {
+          "id": "off",
+          "countsAsOff": true
+        }
+      ],
+      "on": false,
+      "kept": "off",
+      "expected": {
+        "shown": true,
+        "canTurnOn": true,
+        "shift": "off"
+      }
+    },
+    {
+      "name": "off, the pattern it kept no longer counts as off: the first that does",
+      "patterns": [
+        {
+          "id": "day",
+          "countsAsOff": false
+        },
+        {
+          "id": "paid",
+          "countsAsOff": true
+        },
+        {
+          "id": "off",
+          "countsAsOff": false
+        }
+      ],
+      "on": false,
+      "kept": "off",
+      "expected": {
+        "shown": true,
+        "canTurnOn": true,
+        "shift": "paid"
+      }
     }
   ]
 }

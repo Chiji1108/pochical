@@ -33,6 +33,14 @@ import app.pochical.groups.LocalOpenedInvites
 import app.pochical.groups.ScanScreen
 import app.pochical.groups.GroupsScreen
 import app.pochical.groups.NewGroupPage
+import app.pochical.patterns.AddPatternPage
+import app.pochical.patterns.PatternEditor
+import app.pochical.patterns.PatternsPage
+import app.pochical.repeat.JobChangePage
+import app.pochical.repeat.RepeatEditor
+import app.pochical.repeat.RepeatPage
+import app.pochical.repeat.RepeatPeriodPage
+import app.pochical.repeat.StopRepeatPage
 import java.time.LocalDate
 
 /**
@@ -87,6 +95,15 @@ fun RootScreen(navigator: RootNavigator) {
         NavEntry(route) {
           ShiftChoicePage(LocalDate.parse(route.date), onBack = rememberPageNavigation(navigator)::back)
         }
+      RootPage.Patterns -> NavEntry(route) { PatternsPage(rememberPageNavigation(navigator)) }
+      RootPage.AddPattern -> NavEntry(route) { AddPatternPage(rememberPageNavigation(navigator)) }
+      is RootPage.PatternEditor ->
+        NavEntry(route) { PatternEditor(route.id, route.isNew, rememberPageNavigation(navigator)) }
+      RootPage.Repeat -> NavEntry(route) { RepeatPage(rememberPageNavigation(navigator)) }
+      is RootPage.RepeatPeriod -> NavEntry(route) { RepeatPeriodPage(route.start, rememberPageNavigation(navigator)) }
+      is RootPage.RepeatEditor -> NavEntry(route) { RepeatEditor(route.mode, rememberPageNavigation(navigator)) }
+      RootPage.StopRepeat -> NavEntry(route) { StopRepeatPage(rememberPageNavigation(navigator)) }
+      RootPage.JobChange -> NavEntry(route) { JobChangePage(rememberPageNavigation(navigator)) }
     }
   }
 }
@@ -96,7 +113,7 @@ fun RootScreen(navigator: RootNavigator) {
 private fun TabsScreen(navigator: RootNavigator, navigation: PageNavigation) {
   val tabStates = rememberSaveableStateHolder()
   BackHandler(enabled = navigator.backGoesToFirstTab, onBack = navigator::back)
-  // The tab bar gives way to a day's week, as iOS's and /design's do.
+  // The tab bar gives way to a day's week and to ポチポチ入力's tray, as iOS's and /design's do.
   var barHidden by rememberSaveable { mutableStateOf(false) }
   val suite =
     rememberNavigationSuiteScaffoldState(
@@ -121,7 +138,7 @@ private fun TabsScreen(navigator: RootNavigator, navigation: PageNavigation) {
   ) {
     tabStates.SaveableStateProvider(navigation.tab) {
       when (navigation.tab) {
-        RootTab.Calendar -> CalendarScreen(open = navigation::open, onDayOpen = { barHidden = it })
+        RootTab.Calendar -> CalendarScreen(open = navigation::open, hidesTabBar = { barHidden = it })
         RootTab.Groups ->
           GroupsScreen(navigator.openGroup, { navigator.openGroup = it }, GroupsActions(onNew = { navigation.open(RootPage.NewGroup) }, onScan = { navigation.open(RootPage.Scan) }) { group -> GroupButtons(group.id, navigation::open) })
         RootTab.Settings -> SettingsScreen(open = navigation::open)

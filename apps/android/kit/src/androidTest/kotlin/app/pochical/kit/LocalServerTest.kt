@@ -5,6 +5,8 @@ import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.pochical.v1.DayField
+import app.pochical.v1.pattern
+import java.time.LocalDate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -79,6 +81,97 @@ class LocalServerTest {
     tablet.edits.setDay(date, DayField.DAY_FIELD_NOTE, "タブレットから")
     withTimeout(20_000) { while (phone.note(date) != "タブレットから") delay(50) }
     Log.i(TAG, "Phone took the tablet's edit while open")
+  }
+
+  @Test
+  fun aShiftEnteredWithItsNextDayReachesTheUsersOtherDevice() = runBlocking<Unit> {
+    val night = LocalDate.parse("2026-11-02")
+    val after = night.plusDays(1)
+    val phone = Device("entering")
+    phone.account.foreground()
+    withTimeout(20_000) { phone.account.userSocket.first { it == SocketState.Current } }
+    phone.edits.savePattern("night", pattern {
+      name = "夜勤"
+      emoji = "🌙"
+      symbol = "夜"
+      icon = "moon"
+      nextDay = "after"
+    })
+    phone.edits.savePattern("after", pattern {
+      name = "明け"
+      emoji = "🌅"
+      symbol = "明"
+      icon = "sunHorizon"
+    })
+    phone.edits.enter("night", night)
+    withTimeout(20_000) { phone.database.sync().lastWaiting().first { it == null } }
+    Log.i(TAG, "Phone entered 夜勤 on $night, its 明け with it, acknowledged")
+
+    val tablet = Device("entering-tablet")
+    tablet.sessions.write(phone.sessions.read()!!)
+    tablet.account.foreground()
+    val shown =
+      withTimeout(20_000) {
+        tablet.database.values().ownCalendar().first { it.shown(night, after).size == 2 }.shown(night, after)
+      }
+    assertEquals(mapOf(night to ShownDay("night"), after to ShownDay("after")), shown)
+    Log.i(TAG, "Tablet shows 夜勤 and 明け")
+  }
+
+  @Test
+  fun patternsReorderedAndArchivedReachTheUsersOtherDevice() = runBlocking<Unit> {
+    val phone = Device("patterns")
+    phone.account.foreground()
+    withTimeout(20_000) { phone.account.userSocket.first { it == SocketState.Current } }
+    for (ready in readyCopies(listOf("day", "night", "after", "off"))) {
+      phone.edits.savePattern(ready.id, pattern {
+        name = ready.name
+        emoji = ready.emoji
+        symbol = ready.symbol
+        icon = ready.icon
+        color = ready.color
+        ready.nextDay?.let { nextDay = it }
+      })
+    }
+    phone.edits.orderPatterns(listOf("off", "day", "night", "after"))
+    phone.edits.savePattern("after", pattern {
+      name = "明け"
+      emoji = "🌅"
+      symbol = "明"
+      icon = "sunHorizon"
+      archived = true
+    })
+    withTimeout(20_000) { phone.database.sync().lastWaiting().first { it == null } }
+    Log.i(TAG, "Phone reordered its patterns and archived 明け, acknowledged")
+
+    val tablet = Device("patterns-tablet")
+    tablet.sessions.write(phone.sessions.read()!!)
+    tablet.account.foreground()
+    val patterns = withTimeout(20_000) { tablet.database.values().patterns().first { it.size == 4 } }
+    assertEquals(listOf("off" to false, "day" to false, "night" to false, "after" to true), patterns.map { it.id to it.archived })
+    Log.i(TAG, "Tablet lists them in the phone's order, 明け archived")
+  }
+
+  @Test
+  fun aRepeatingOrderFillsTheOtherDevicesDays() = runBlocking<Unit> {
+    val phone = Device("orders")
+    phone.account.foreground()
+    withTimeout(20_000) { phone.account.userSocket.first { it == SocketState.Current } }
+    val ids = listOf("duty", "offDuty", "off")
+    val start = LocalDate.parse("2026-11-01")
+    phone.edits.changeJob(readyCopies(ids), ids, start, start, "JP")
+    phone.edits.setHolidaysOff(true, start = start)
+    withTimeout(20_000) { phone.database.sync().lastWaiting().first { it == null } }
+    Log.i(TAG, "Phone changed jobs to 当番・非番・休み from $start, holidays off, acknowledged")
+
+    val tablet = Device("orders-tablet")
+    tablet.sessions.write(phone.sessions.read()!!)
+    tablet.account.foreground()
+    val calendar = withTimeout(20_000) { tablet.database.values().ownCalendar().first { it.orders.isNotEmpty() && it.patterns.size == 3 } }
+    val shown = calendar.shown(start, start.plusDays(3))
+    assertEquals(listOf("duty", "offDuty", "off", "duty"), (0L..3L).map { shown.getValue(start.plusDays(it)).shift })
+    assertEquals(listOf(true to "off"), calendar.orders.map { it.holidaysOff to it.holidayShift })
+    Log.i(TAG, "Tablet shows the order's days")
   }
 
   @Test

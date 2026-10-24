@@ -30,6 +30,14 @@ public struct GroupRow: Hashable, Sendable, Identifiable {
   }
 }
 
+/// The color a group's icon or letters start in, from the user's other
+/// groups' `marks` (spec/vectors/groups.json, nextGroupColor): as a new
+/// pattern's (`nextColor`), counting only marks drawn in a color, as an
+/// emoji's or a photo's 0 is no color.
+public func nextGroupColor(_ marks: [GroupMarkValue], slots: Int) -> Int {
+  nextColor(marks.compactMap(\.paletteColor), slots: slots)
+}
+
 /// A group the person asks to make: its name, its mark and their name in
 /// it, under one request id the server makes it once for, so a retry after
 /// a lost answer gives back the same group (spec/sync-protocol.md, Groups).
@@ -77,6 +85,10 @@ public struct GroupMarkValue: Hashable, Sendable {
     self.photoID = photoID
   }
 
+  /// The icon's or letters' color slot; none for an emoji or a photo,
+  /// which bring colors of their own.
+  public var paletteColor: Int? { icon.isEmpty && letter.isEmpty ? nil : color }
+
   init(_ wire: Pochical_V1_GroupMark) {
     self.init(
       emoji: wire.emoji, icon: wire.icon, letter: wire.letter, color: Int(wire.color),
@@ -98,9 +110,7 @@ public struct GroupMarkValue: Hashable, Sendable {
 /// guessMark): the emoji of the first hint with a word anywhere in the
 /// name, else the name's initial letter in `color`.
 public func guessedMark(for name: String, color: Int) -> GroupMarkValue {
-  if let hint = ReadyPatterns.groupMarkHints.first(where: { hint in
-    hint.words.contains { name.contains($0) }
-  }) {
+  if let hint = firstHint(in: ReadyPatterns.groupMarkHints, for: name, words: { $0.words }) {
     return GroupMarkValue(emoji: hint.emoji)
   }
   return GroupMarkValue(letter: initialLetter(of: name), color: color)
@@ -109,8 +119,7 @@ public func guessedMark(for name: String, color: Int) -> GroupMarkValue {
 /// A name's first character, trimmed, as a group's letters start, else
 /// `groupMarkFallbackLetter` for a name with none.
 public func initialLetter(of name: String) -> String {
-  name.trimmingCharacters(in: .whitespacesAndNewlines).first.map(String.init)
-    ?? ReadyPatterns.groupMarkFallbackLetter
+  firstLetter(of: name) ?? ReadyPatterns.groupMarkFallbackLetter
 }
 
 extension DatabaseMigrator {

@@ -299,11 +299,30 @@ class SyncAccount(
   }
 
   /**
-   * もう一度つなぐ, while the session is ended: the same session tried again, as a server set right
-   * since knows it again. Still unknown, it ends again as it is refused.
+   * もう一度つなぐ, while the session is ended: the server asked about the same session again
+   * (`GetMe`), as a server set right since knows it again, and signed in as it once the server
+   * answers, if the person has not chosen meanwhile. Unknown or out of reach, it stays ended, so the
+   * app is never shown for a session that ends again at once.
    */
-  fun tryAgain() {
-    commands.trySend(Command.TryAgain)
+  suspend fun tryAgain() {
+    if (state.value != AccountState.SessionEnded) return
+    val kept =
+      try {
+        sessions.read()
+      } catch (e: StoreUnreachable) {
+        // The token is in the store alone, so nothing is tried until the person asks again.
+        Log.i(TAG, "The ended session could not be read: $e")
+        return
+      } ?: return
+    try {
+      UserCalls(http, server, kept.token).linkedProvider()
+    } catch (e: ConnectException) {
+      Log.i(TAG, "The ended session was not known again: $e")
+      return
+    }
+    val taken = CompletableDeferred<Unit>()
+    commands.send(Command.TryAgain(kept.token, taken))
+    taken.await()
   }
 
   /**
@@ -536,19 +555,22 @@ class SyncAccount(
         mutableState.value = AccountState.SigningIn
         if (foreground || sending > 0) startSigningIn()
       }
-      Command.TryAgain -> {
-        if (state.value != AccountState.SessionEnded) return
+      is Command.TryAgain -> {
         try {
-          // A 401 is never answered with a new user: with no session to try, it stays ended.
-          val kept = sessions.read() ?: return
-          sessions.write(kept.copy(ended = false))
-        } catch (e: StoreUnreachable) {
-          // The token is in the store alone, so nothing is tried until the person asks again.
-          Log.i(TAG, "The ended session could not be tried again: $e")
-          return
+          if (state.value != AccountState.SessionEnded) return
+          try {
+            // Only the session the server knew: one let go of or replaced meanwhile stays as it is.
+            val kept = sessions.read()?.takeIf { it.token == command.token } ?: return
+            sessions.write(kept.copy(ended = false))
+          } catch (e: StoreUnreachable) {
+            Log.i(TAG, "The ended session could not be tried again: $e")
+            return
+          }
+          mutableState.value = AccountState.SigningIn
+          if (foreground || sending > 0) startSigningIn()
+        } finally {
+          command.taken.complete(Unit)
         }
-        mutableState.value = AccountState.SigningIn
-        if (foreground || sending > 0) startSigningIn()
       }
       Command.StartAfresh -> {
         if (state.value != AccountState.SessionEnded) return
@@ -582,7 +604,9 @@ class SyncAccount(
         current.scope.launch { askLinked(current.credentials, asOf) }
       }
       is Command.Linked -> {
-        val before = state.value as? AccountState.SignedIn ?: return
+        val now = state.value
+        // Heard while a change is asked, it is the user's as they are kept should the change fail.
+        val before = (now as? AccountState.Changing)?.before ?: now as? AccountState.SignedIn ?: return
         if (current?.credentials?.generation != command.generation) return
         // A link made here wins over what the server said of the user before it.
         if (command.asOf == null) links += 1 else if (command.asOf != links) return
@@ -594,7 +618,8 @@ class SyncAccount(
           }
         if (after == before.linked) return
         keepLinked(after)
-        mutableState.value = AccountState.SignedIn(current.credentials.userId, after)
+        val linked = AccountState.SignedIn(current.credentials.userId, after)
+        mutableState.value = if (now is AccountState.Changing) now.copy(before = linked) else linked
       }
       Command.NetworkLost -> current?.clients()?.forEach { it.networkLost() }
       Command.NetworkChanged -> current?.clients()?.forEach { it.networkChanged() }
@@ -896,8 +921,8 @@ class SyncAccount(
     /** Everything of the user let go of ([why]) is gone from the device. */
     data class Erased(val why: AccountState.Erasing.Why) : Command
 
-    /** もう一度つなぐ. */
-    data object TryAgain : Command
+    /** もう一度つなぐ, the server having answered for the session [token]; [taken] once handled. */
+    class TryAgain(val token: String, val taken: CompletableDeferred<Unit>) : Command
 
     /** はじめから使う. */
     data object StartAfresh : Command

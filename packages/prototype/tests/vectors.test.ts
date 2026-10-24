@@ -27,7 +27,10 @@ import unread from "../../../spec/vectors/unread.json";
 import widgets from "../../../spec/vectors/widgets.json";
 import { bytesOf } from "../src/components/design-chat-photos";
 import { memberLine } from "../src/components/design-group-join";
-import { guessGroupMark } from "../src/components/design-group-settings";
+import {
+  guessGroupMark,
+  nextGroupColor,
+} from "../src/components/design-group-settings";
 import { periodTitleOf } from "../src/components/design-month-name";
 import {
   defaultWeekSettings,
@@ -73,6 +76,7 @@ import {
   editedOwnDays,
   gapDaysIn,
   giveDaysToOrder,
+  holidayChoiceOf,
   holidayShiftOf,
   patternsWithout,
   plannedShifts,
@@ -102,6 +106,7 @@ import {
 import type {
   Chat,
   DraftTarget,
+  GroupMark,
   Member,
   Message,
   MessageContent,
@@ -205,6 +210,25 @@ describe("spec/vectors/repeat.json", () => {
       expect(holidayShiftOf(patterns.map(patternOf), picked) ?? null).toBe(
         expected
       );
+    });
+  }
+  for (const {
+    name,
+    patterns,
+    on,
+    expected,
+    ...rest
+  } of repeat.holidayChoice) {
+    const kept = "kept" in rest ? rest.kept : undefined;
+    const picked = "picked" in rest ? rest.picked : undefined;
+    test(name, () => {
+      const { shift, ...choice } = holidayChoiceOf(
+        patterns.map(patternOf),
+        on,
+        kept,
+        picked
+      );
+      expect({ ...choice, shift: shift ?? null }).toStrictEqual(expected);
     });
   }
   const ruleOf = (order: { sequence: string[]; start: string }) => ({
@@ -508,6 +532,33 @@ describe("spec/vectors/together.json", () => {
 });
 
 const isPreset = (id: string): id is PresetShift => id in presetPatterns;
+
+// A vector's mark: its kind, and its color when it is drawn in one.
+function groupMarkOf({
+  kind,
+  color = 0,
+}: {
+  kind: string;
+  color?: number;
+}): GroupMark {
+  if (kind === "icon") {
+    return { color, icon: "house", kind };
+  }
+  if (kind === "letter") {
+    return { color, kind, text: "家" };
+  }
+  return kind === "photo"
+    ? { kind, photo: "photo" }
+    : { emoji: "🏠", kind: "emoji" };
+}
+
+describe("spec/vectors/groups.json", () => {
+  for (const { name, marks, expected } of groupVectors.nextGroupColor) {
+    test(`nextGroupColor: ${name}`, () => {
+      expect(nextGroupColor(marks.map(groupMarkOf))).toBe(expected);
+    });
+  }
+});
 
 describe("spec/vectors/patterns.json", () => {
   const idsOf = (patterns: readonly Pattern[]) =>

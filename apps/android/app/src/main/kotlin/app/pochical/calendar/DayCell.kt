@@ -45,6 +45,9 @@ private val CELL_PADDING = 4.dp
 private val DATE_SIZE = 11.dp
 private val DATE_LINE = 14.dp
 
+/** How faint a day 完了's question would fill, or an order comes round on, shows its mark. */
+private const val PREVIEW_ALPHA = 0.4f
+
 
 /** What a day of a page is drawn with, as it shows. */
 data class DayLook(
@@ -57,8 +60,14 @@ data class DayLook(
   /** A day of the month before or after, faded whole. */
   val outside: Boolean,
   val isToday: Boolean,
-  /** The day opened, framed in the accent. */
+  /** The day opened, or the day being entered, framed in the accent. */
   val isSelected: Boolean = false,
+  /** Today framed inside its day; not while entering, where the day being entered is framed. */
+  val framesToday: Boolean = true,
+  /** A blank day drawn faint with the pattern 完了's question would fill it with, still read as 未入力. */
+  val preview: Pattern? = null,
+  /** Its shift drawn faint, as an order being typed comes round past the days typed. */
+  val faint: Boolean = false,
 )
 
 /**
@@ -79,7 +88,7 @@ fun DayCell(
   val pattern = look.pattern
   // A day off on a tint of its color, as 休みの見せ方 starts for icons
   // (強調); emoji and letters start with the mark alone (印だけ).
-  val tile = pattern?.takeIf { it.countsAsOff && style.style == MarkStyle.Icon }?.let {
+  val tile = pattern?.takeIf { it.countsAsOff && style.style == MarkStyle.Icon && !look.faint }?.let {
     colors.mark(if (style.colored) it.color else 0)
   }
   val shape = RoundedCornerShape(Radius.md)
@@ -104,7 +113,7 @@ fun DayCell(
       .then(
         when {
           look.isSelected -> Modifier.border(2.dp, colors.accentDefault, shape)
-          look.isToday -> Modifier.border(1.5.dp, colors.accentFocus, shape)
+          look.isToday && look.framesToday -> Modifier.border(1.5.dp, colors.accentFocus, shape)
           else -> Modifier
         }
       )
@@ -147,16 +156,17 @@ fun DayCell(
         modifier = Modifier.padding(horizontal = 3.dp),
       )
     }
-    if (pattern != null) {
-      Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+    val mark = pattern ?: look.preview
+    if (mark != null) {
+      Box(Modifier.weight(1f).alpha(if (pattern == null || look.faint) PREVIEW_ALPHA else 1f), contentAlignment = Alignment.Center) {
         ShiftMark(
-          pattern.icon,
-          pattern.emoji,
-          pattern.symbol,
-          pattern.color,
+          mark.icon,
+          mark.emoji,
+          mark.symbol,
+          mark.color,
           // As large as iOS's where the day has room, smaller on a short screen's shorter days.
           size = minOf(if (style.style == MarkStyle.Badge) 26.dp else 24.dp, height - CELL_PADDING * 2 - DATE_LINE - 2.dp),
-          change = look.entry?.let { timeChange(it.start, it.end, pattern.time) },
+          change = look.entry?.let { timeChange(it.start, it.end, mark.time) },
         )
       }
     } else {

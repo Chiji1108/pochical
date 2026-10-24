@@ -3,12 +3,18 @@ package app.pochical.calendar
 import app.pochical.kit.AppDatabase
 import app.pochical.kit.CoworkerRow
 import app.pochical.kit.OwnEdits
+import app.pochical.kit.PatternRefusal
 import app.pochical.kit.PatternRow
+import app.pochical.kit.RepeatOrder
+import app.pochical.kit.daysShowing
+import app.pochical.kit.readyCopies
 import app.pochical.kit.ShownDay
 import app.pochical.kit.newId
 import app.pochical.kit.ownCalendar
 import app.pochical.v1.DayField
+import app.pochical.v1.pattern
 import java.time.LocalDate
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.SharingStarted
@@ -24,12 +30,14 @@ import app.pochical.kit.OwnCalendar as KitCalendar
  * edit changes it, and edited through its outbox, which sends them to the server and the person's
  * other devices.
  */
-class SyncedDays(database: AppDatabase, private val edits: OwnEdits, scope: CoroutineScope) : OwnDays {
+class SyncedDays(private val database: AppDatabase, private val edits: OwnEdits, scope: CoroutineScope) : OwnDays {
+  private val values = database.values()
+
   private val unread = Synced(KitCalendar.empty, emptyList())
 
   // Read first when first asked for, so what the launch puts in before then is in that first read.
   override val calendar: StateFlow<OwnCalendar> =
-    combine(database.values().ownCalendar(), database.values().coworkers(), ::Synced)
+    combine(values.ownCalendar(), values.coworkers(), ::Synced)
       .stateIn(scope, SharingStarted.Lazily, unread)
 
   override suspend fun awaitRead() {
@@ -47,6 +55,46 @@ class SyncedDays(database: AppDatabase, private val edits: OwnEdits, scope: Coro
     // No memo in the entry keeps the day's.
     val shown = entry?.let { ShownDay(it.shift, it.start, it.end, people = it.people) }
     writes.trySend { edits.setDays(mapOf(day to shown)) }
+  }
+
+  override fun enter(day: LocalDate, shift: String?) {
+    writes.trySend { edits.enter(shift, day) }
+  }
+
+  override fun fill(days: List<LocalDate>, shift: String) {
+    writes.trySend { edits.fill(days, shift) }
+  }
+
+  override suspend fun shownOnceWritten(from: LocalDate, through: LocalDate): Set<LocalDate> =
+    inTurn { values.ownCalendar().first().shown(from, through).keys }
+
+  override suspend fun savePattern(pattern: Pattern): PatternRefusal? = inTurn { edits.savePattern(pattern.id, pattern.wire) }
+
+  override suspend fun deletePattern(id: String): PatternRefusal? = inTurn { edits.deletePattern(id) }
+
+  override fun orderPatterns(ids: List<String>) {
+    writes.trySend { edits.orderPatterns(ids) }
+  }
+
+  override suspend fun daysShowing(id: String): Int = inTurn { database.daysShowing(id) }
+
+  override suspend fun putOrder(order: RepeatOrder) = inTurn { edits.putOrder(order) }
+
+  override suspend fun moveOrder(from: LocalDate, to: LocalDate): Boolean = inTurn { edits.moveOrder(from, to) }
+
+  override suspend fun removeOrder(start: LocalDate) = inTurn { edits.removeOrder(start) }
+
+  override suspend fun setHolidaysOff(on: Boolean, picked: String?, start: LocalDate) = inTurn { edits.setHolidaysOff(on, picked, start) }
+
+  override suspend fun changeJob(ids: List<String>, sequence: List<String>, start: LocalDate, anchor: LocalDate) = inTurn {
+    edits.changeJob(readyCopies(ids), sequence, start, anchor, holidayCountry())
+  }
+
+  /** What [work] gives once every write before it is done, in the writes' turn. */
+  private suspend fun <T> inTurn(work: suspend () -> T): T {
+    val done = CompletableDeferred<T>()
+    writes.send { done.complete(work()) }
+    return done.await()
   }
 
   override fun setNote(day: LocalDate, note: String) {
@@ -67,10 +115,39 @@ class SyncedDays(database: AppDatabase, private val edits: OwnEdits, scope: Coro
       own.shown(from, through).mapValues { (_, day) -> DayEntry(day.shift, day.start, day.end, day.people.orEmpty()) }
 
     override fun note(day: LocalDate): String? = own.note(day)
+
+    override fun nextDay(shift: String): String? = own.nextDay(shift)
+
+    override val orders: List<RepeatOrder>
+      get() = own.orders
+
+    override fun hasOwnShift(day: LocalDate): Boolean = own.hasOwnShift(day)
   }
 }
 
-private val PatternRow.pattern
+/** The pattern as the wire carries it. */
+private val Pattern.wire
+  get() = pattern {
+    name = this@wire.name
+    emoji = this@wire.emoji
+    symbol = this@wire.symbol
+    icon = this@wire.icon
+    color = this@wire.color
+    this@wire.time?.let { time ->
+      start = time.start
+      end = time.end
+    }
+    countsAsOff = this@wire.countsAsOff
+    this@wire.nextDay?.let { nextDay = it }
+    archived = this@wire.archived
+  }
+
+/** The pattern as :kit holds it. */
+internal val Pattern.row: PatternRow
+  get() = PatternRow(id, name, emoji, symbol, icon, color, time?.start, time?.end, countsAsOff, nextDay, archived)
+
+/** The pattern as the screens draw it. */
+internal val PatternRow.pattern: Pattern
   get() =
     Pattern(
       id = id,
