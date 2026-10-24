@@ -1,10 +1,9 @@
 package app.pochical.groups
 
-import android.graphics.BitmapFactory
 import android.content.res.Resources
+import android.graphics.BitmapFactory
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
-import java.io.IOException
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -17,7 +16,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -30,7 +28,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -65,6 +62,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import app.pochical.Footnote
 import app.pochical.LimitedTextField
+import app.pochical.ListSheet
 import app.pochical.MarkFrame
 import app.pochical.MarkFrameSize
 import app.pochical.R
@@ -76,6 +74,7 @@ import app.pochical.design.TextLimits
 import app.pochical.kit.InviteDetails
 import app.pochical.kit.InviteFailure
 import app.pochical.kit.PhotoShelf
+import java.io.IOException
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.launch
 
@@ -366,20 +365,13 @@ private fun inviteMessage(reason: InviteFailure.Reason): String =
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MembersSheet(details: InviteDetails, code: String, onDismiss: () -> Unit) {
-  ModalBottomSheet(onDismissRequest = onDismiss) {
-    Text(
-      stringResource(R.string.join_members_title, details.members.size),
-      Modifier.padding(horizontal = 16.dp).semantics { heading() },
-      style = MaterialTheme.typography.titleLarge,
-    )
-    Text(details.name, Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-    LazyColumn(Modifier.padding(bottom = 16.dp)) {
-      itemsIndexed(details.members) { _, member ->
-        ListItem(
-          headlineContent = { Text(member.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-          leadingContent = { MemberAvatar(member.name, member.photoId, PhotoShelf.Invitation(code), 28.dp) },
-        )
-      }
+  ListSheet(onDismiss, stringResource(R.string.join_members_title, details.members.size)) {
+    item { Text(details.name, Modifier.padding(horizontal = 24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant) }
+    itemsIndexed(details.members) { _, member ->
+      ListItem(
+        headlineContent = { Text(member.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        leadingContent = { MemberAvatar(member.name, member.photoId, PhotoShelf.Invitation(code), 28.dp) },
+      )
     }
   }
 }
