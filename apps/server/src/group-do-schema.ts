@@ -298,13 +298,11 @@ export const chatRecalls = sqliteTable(
 //   copy nothing came to name goes as an unsent one does.
 // - deleting: the sweep is deleting it from R2, its row going after: an
 //   unsent one past its time, or one let go at once (its send recalled,
-//   or shown and named no more). Meanwhile its uploader's upload of it is
-//   answered to try again (503) and a send of it does not fit. A sweep cut
-//   short leaves its rows so, and the next finishes them.
-// - reviving: a copy noted again while deleting: the sweep deletes it from
-//   R2 still (a copy made meanwhile may have found it stored and stored
-//   nothing), copies it in anew, then shows it. A sweep cut short leaves
-//   it so, for the next.
+//   or shown and named no more). The sweep runs with nothing else let in;
+//   after one storage refused, its uploader's upload of it is answered to
+//   try again (503) and a send of it does not fit. A sweep cut
+//   short leaves its rows so, and the next finishes them; a copy noted
+//   again meanwhile is shown again, and copied in anew.
 export const photoStates = [
   "unsent",
   "sent",
@@ -312,7 +310,6 @@ export const photoStates = [
   "takenBack",
   "shown",
   "deleting",
-  "reviving",
 ] as const;
 
 export const groupPhotos = sqliteTable("group_photos", {

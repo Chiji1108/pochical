@@ -79,7 +79,6 @@ import {
   noteSharedPhoto,
   oldestStalePhoto,
   photosTakingBack,
-  revivingPhotos,
   settleSwept,
   settleTakenBack,
   showOwnPhoto,
@@ -1119,65 +1118,54 @@ export class GroupDO extends DurableObject<Env> {
    * protocol.md, Chat): those let go (a line taken back, a face or mark
    * no longer shown, a recalled send's), and, chatRules.unsentAfterMs
    * after they were last noted, uploads not sent and copies of someone's
-   * photo the group never came to name. Marked as going first, as other
-   * requests come in while storage deletes them: an upload of one waits,
-   * and a copy noted again meanwhile is copied in anew after. The writes
-   * of photos already running are waited on, so none lands after the
-   * delete. Then forgotten, or noted as taken back; a sweep cut short is
-   * finished by the next, which comes after `retryWait` should storage
-   * fail. When the next are due, if any.
+   * photo the group never came to name. Nothing else reaches the group
+   * meanwhile, as in deleteOrphanPhotos: an upload or a copy of one of
+   * them would find it still stored, store nothing, and lose it as
+   * storage deletes it. The writes of photos already running are waited
+   * on first, so none lands after the delete. Marked as going, so a sweep
+   * cut short is finished by the next, which comes after `retryWait`
+   * should storage fail. When the next are due, if any.
    */
   private async sweepPhotos(): Promise<number | undefined> {
     const groupId = this.ctx.id.name;
     if (groupId === undefined) {
       return undefined;
     }
-    const going = markStalePhotos(
-      this.db,
-      new Date(Date.now() - chatRules.unsentAfterMs)
-    );
-    const takingBack = photosTakingBack(this.db);
-    const deleted = new Set([
-      ...going,
-      ...takingBack,
-      ...revivingPhotos(this.db).map(({ id }) => id),
-    ]);
-    if (deleted.size > 0) {
-      // Those reviving now that storage has none, noted again before the
-      // delete or as it ran.
-      let revived: { id: string; userId: string }[] = [];
-      try {
-        await Promise.allSettled(this.storing);
-        await deleteGroupPhotos(this.env, groupId, [...deleted]);
+    // Writes already on their way land first: their ends could not come in
+    // while the group is held.
+    while (this.storing.size > 0) {
+      // oxlint-disable-next-line no-await-in-loop -- one may start meanwhile
+      await Promise.allSettled(this.storing);
+    }
+    return await this.ctx.blockConcurrencyWhile(async () => {
+      const going = markStalePhotos(
+        this.db,
+        new Date(Date.now() - chatRules.unsentAfterMs)
+      );
+      const takingBack = photosTakingBack(this.db);
+      if (going.length > 0 || takingBack.length > 0) {
+        try {
+          await deleteGroupPhotos(this.env, groupId, [...going, ...takingBack]);
+        } catch (error) {
+          console.error(`Sweeping group ${groupId}'s photos failed`, error);
+          return (
+            Date.now() +
+            bucketRetryWait(countFailure(this.ctx.storage.kv, SWEEP_FAILURES))
+          );
+        }
         // An erase deletes them all, and the notes with them.
         if (this.erasing) {
           return undefined;
         }
-        revived = revivingPhotos(this.db).filter(({ id }) => deleted.has(id));
-        await Promise.all(
-          revived.map(async ({ id, userId }) => {
-            await this.stores(copyPersonPhoto(this.env, userId, id, groupId));
-          })
-        );
-      } catch (error) {
-        console.error(`Sweeping group ${groupId}'s photos failed`, error);
-        return (
-          Date.now() +
-          bucketRetryWait(countFailure(this.ctx.storage.kv, SWEEP_FAILURES))
-        );
+        this.ctx.storage.kv.delete(SWEEP_FAILURES);
+        settleSwept(this.db, going);
+        settleTakenBack(this.db, takingBack);
       }
-      this.ctx.storage.kv.delete(SWEEP_FAILURES);
-      settleSwept(
-        this.db,
-        going,
-        revived.map(({ id }) => id)
-      );
-      settleTakenBack(this.db, takingBack);
-    }
-    const oldest = oldestStalePhoto(this.db);
-    return oldest === undefined
-      ? undefined
-      : oldest.getTime() + chatRules.unsentAfterMs;
+      const oldest = oldestStalePhoto(this.db);
+      return oldest === undefined
+        ? undefined
+        : oldest.getTime() + chatRules.unsentAfterMs;
+    });
   }
 
   /**

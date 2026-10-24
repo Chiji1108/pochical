@@ -37,18 +37,26 @@ export const deleteBatchesOf = <T>(items: T[]): T[][] =>
     items.slice(at * DELETE_BATCH, (at + 1) * DELETE_BATCH)
   );
 
-/** A group's photos deleted, each with its small version, in R2's batches. */
+/**
+ * A group's photos deleted, each with its small version, in R2's batches:
+ * failing only once every batch has settled, so no delete is still on its
+ * way when its caller moves on.
+ */
 export const deleteGroupPhotos = async (
   env: Env,
   groupId: string,
   photoIds: string[]
 ): Promise<void> => {
   const keys = photoIds.flatMap((id) => withSmall(photoKey(groupId, id)));
-  await Promise.all(
+  const batches = await Promise.allSettled(
     deleteBatchesOf(keys).map(async (batch) => {
       await env.PHOTOS.delete(batch);
     })
   );
+  const failed = batches.find((batch) => batch.status === "rejected");
+  if (failed !== undefined) {
+    throw failed.reason;
+  }
 };
 
 /**

@@ -154,13 +154,12 @@ const linePreviewImages = (db: DrizzleSqliteDODatabase): string[] =>
 
 /**
  * What a photo's note says of it while nothing names it: the sweep owns
- * one unsent, shown, deleting, reviving or being taken back
+ * one unsent, shown, deleting or being taken back
  * (GroupDO.sweepPhotos),
  * and nothing owns one sent or taken back.
  */
 const HOLD_OF_STATE: Record<(typeof photoStates)[number], GroupPhotoHold> = {
   deleting: "referenced",
-  reviving: "referenced",
   sent: "sentUnnamed",
   shown: "referenced",
   takenBack: "takenBack",
