@@ -517,9 +517,20 @@ private final class FakeAccountServer: AccountServer {
   #expect(again.userID == "A")
   again.cameToFront()
 
-  // もう一度つなぐ tries it again, and it ends again: the one socket since
-  // is its, so coming to the front tried nothing.
-  again.tryAgain()
+  // もう一度つなぐ asks the server first: not knowing the session, it
+  // stays ended, and no socket goes as it.
+  made.server.refusing.withLock { _ = $0.insert("me") }
+  await again.tryAgain()
+  #expect(again.phase == .ended)
+  #expect(made.server.asked.withLock { $0.me } == 1)
+  #expect(try made.keychain.kept() == StoredSession(token: "a", userID: "A", ended: true))
+
+  // Knowing it again, the device is signed in as it: the one socket since
+  // is its, so coming to the front tried nothing (this one is refused, and
+  // it ends again).
+  made.server.refusing.withLock { _ = $0.remove("me") }
+  await again.tryAgain()
+  #expect(again.userID == "A")
   #expect(await eventually { made.sockets.asked > seen })
   #expect(await eventually { again.phase == .ended })
   #expect(made.sockets.asked == seen + 1)

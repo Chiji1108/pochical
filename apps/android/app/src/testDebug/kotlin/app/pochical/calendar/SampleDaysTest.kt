@@ -53,7 +53,7 @@ class SampleDaysTest {
     val calendar =
       TestDays().use { test ->
         runBlocking {
-          test.edits.savePattern("mine", pattern { name = "出勤" })
+          test.edits.savePattern("mine", markedPattern("出勤"))
           putSampleDays(test.database, test.edits, today)
           // Written last, so the calendar showing it shows whatever the sample put in.
           test.edits.setDay(marker.toString(), DayField.DAY_FIELD_NOTE, "end")

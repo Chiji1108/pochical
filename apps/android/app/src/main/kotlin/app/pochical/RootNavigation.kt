@@ -16,6 +16,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.serialization.NavBackStackSerializer
+import app.pochical.repeat.RepeatMode
 import kotlinx.serialization.Serializable
 
 // The app's one navigation, as iOS's RootNavigation: every page is pushed
@@ -66,6 +67,30 @@ sealed interface RootPage : RootRoute, NavKey {
 
   /** このグループでのあなた, from its settings. */
   @Serializable data class GroupProfile(val groupId: String) : RootPage
+
+  /** シフトパターン, from 設定. */
+  @Serializable data object Patterns : RootPage
+
+  /** パターンを追加, from シフトパターン. */
+  @Serializable data object AddPattern : RootPage
+
+  /** パターンを編集 for the pattern `id`, or with `isNew` a pattern made from scratch under that id. */
+  @Serializable data class PatternEditor(val id: String, val isNew: Boolean = false) : RootPage
+
+  /** 繰り返し, from 設定. */
+  @Serializable data object Repeat : RootPage
+
+  /** The period of 繰り返し starting on `start` ("YYYY-MM-DD"). */
+  @Serializable data class RepeatPeriod(val start: String) : RootPage
+
+  /** An order typed on the calendar, set as `mode` says. */
+  @Serializable data class RepeatEditor(val mode: RepeatMode) : RootPage
+
+  /** 繰り返しをやめる, from 繰り返し. */
+  @Serializable data object StopRepeat : RootPage
+
+  /** 新しい仕事にする, from シフトパターン. */
+  @Serializable data object JobChange : RootPage
 }
 
 /**
@@ -126,6 +151,11 @@ class RootNavigator(
   fun back() {
     if (pages.isNotEmpty()) pages.removeAt(pages.lastIndex) else tab = RootTab.entries.first()
   }
+
+  /** Takes away the top `count` pages at once, as a page made from the one under it goes back past both. */
+  fun back(count: Int) {
+    repeat(minOf(count, pages.size)) { pages.removeAt(pages.lastIndex) }
+  }
 }
 
 /**
@@ -142,6 +172,8 @@ class PageNavigation(private val navigator: RootNavigator, private val lifecycle
   fun select(tab: RootTab) = whenSettled { navigator.select(tab) }
 
   fun back() = whenSettled { navigator.back() }
+
+  fun back(count: Int) = whenSettled { navigator.back(count) }
 
   private fun whenSettled(action: () -> Unit) {
     if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) action()

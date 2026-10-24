@@ -6,13 +6,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -30,24 +28,27 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import app.pochical.EmojiPickerSheet
 import app.pochical.Footnote
 import app.pochical.IconPickerSheet
+import app.pochical.MarkFrame
+import app.pochical.MarkFrameSize
+import app.pochical.MarkLetterField
 import app.pochical.MarkChoiceGrid
 import app.pochical.MarkColorGrid
 import app.pochical.R
 import app.pochical.SectionHeader
+import app.pochical.withPicked
 import app.pochical.design.MarkIconNames
 import app.pochical.design.ReadyPatterns
 import app.pochical.design.TextLimits
 import app.pochical.kit.GroupMarkValue
 import app.pochical.kit.PhotoShelf
 import app.pochical.kit.initialLetter
-import app.pochical.limited
+import app.pochical.kit.paletteColor
 
 /** The kinds of mark the tabs pick from; a photo is picked above them. */
 private enum class MarkKind(val title: Int) {
@@ -66,19 +67,22 @@ private val GroupMarkValue.kind: MarkKind?
       else -> MarkKind.Emoji
     }
 
-/** The offered marks, with [chosen] first when it is not among them. */
-private fun withPicked(offered: List<String>, chosen: String) =
-  if (chosen.isEmpty() || chosen in offered) offered else listOf(chosen) + offered
-
 /**
  * アイコン (/design's GroupMarkPage), over the page that changes the group: a photo, taken or
  * picked, or a kind, then one of it, from rows of eight by kind or from everything (ほかの…を選ぶ),
- * and for an icon or letters their color. Each choice is the page's at once; × closes it. Material
+ * and for an icon or letters their color, starting in [freeColor] from an emoji or a photo. Each choice is the page's at once; × closes it. Material
  * keeps a sub-edit like this one in a full-screen dialog, as Android's own pickers do.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GroupMarkPage(name: String, mark: GroupMarkValue, onMark: (GroupMarkValue) -> Unit, onClose: () -> Unit, shelf: PhotoShelf? = null) {
+fun GroupMarkPage(
+  name: String,
+  mark: GroupMarkValue,
+  freeColor: Int,
+  onMark: (GroupMarkValue) -> Unit,
+  onClose: () -> Unit,
+  shelf: PhotoShelf? = null,
+) {
   val calls = LocalGroupCalls.current
   var kind by rememberSaveable { mutableStateOf<MarkKind?>(null) }
   var choosingIcon by remember { mutableStateOf(false) }
@@ -86,6 +90,8 @@ fun GroupMarkPage(name: String, mark: GroupMarkValue, onMark: (GroupMarkValue) -
   var photoFailed by remember { mutableStateOf(false) }
   val shown = kind ?: mark.kind
   val firstLetter = initialLetter(name)
+  // The icon's or letters' color, else the one they start in.
+  val color = mark.paletteColor ?: freeColor
   Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
     Scaffold(
       Modifier.fillMaxSize(),
@@ -141,20 +147,20 @@ fun GroupMarkPage(name: String, mark: GroupMarkValue, onMark: (GroupMarkValue) -
                 withPicked(ReadyPatterns.groupMarkIcons, mark.icon),
                 mark.icon,
                 { MarkIconNames.names[it] ?: it },
-                { onMark(GroupMarkValue(icon = it, color = mark.color)) },
+                { onMark(GroupMarkValue(icon = it, color = color)) },
               ) {
-                GroupMarkView(GroupMarkValue(icon = it, color = mark.color), 22.dp, bare = true)
+                GroupMarkView(GroupMarkValue(icon = it, color = color), 22.dp, bare = true)
               }
               TextButton(onClick = { choosingIcon = true }) { Text(stringResource(R.string.mark_more_icons)) }
             }
             MarkKind.Letter ->
-              LetterField(mark.letter.ifEmpty { firstLetter }) { onMark(GroupMarkValue(letter = it, color = mark.color)) }
+              MarkLetterField(mark.letter.ifEmpty { firstLetter }, TextLimits.groupMark) { onMark(GroupMarkValue(letter = it, color = color)) }
           }
         }
         if (shown == MarkKind.Icon || shown == MarkKind.Letter) {
           SectionHeader(stringResource(R.string.mark_color))
           MarkColorGrid(
-            mark.color,
+            color,
             { slot ->
               onMark(
                 if (shown == MarkKind.Icon) GroupMarkValue(icon = mark.icon.ifEmpty { ReadyPatterns.groupMarkIcons.first() }, color = slot)
@@ -171,12 +177,12 @@ fun GroupMarkPage(name: String, mark: GroupMarkValue, onMark: (GroupMarkValue) -
       IconPickerSheet(
         mark.icon,
         onPick = {
-          onMark(GroupMarkValue(icon = it, color = mark.color))
+          onMark(GroupMarkValue(icon = it, color = color))
           choosingIcon = false
         },
         onDismiss = { choosingIcon = false },
       ) {
-        GroupMarkView(GroupMarkValue(icon = it, color = mark.color), 24.dp, bare = true)
+        GroupMarkView(GroupMarkValue(icon = it, color = color), 24.dp, bare = true)
       }
     }
     if (choosingEmoji) {
@@ -197,21 +203,4 @@ fun GroupMarkPage(name: String, mark: GroupMarkValue, onMark: (GroupMarkValue) -
       )
     }
   }
-}
-
-/** The mark's letters, at most textLimits.groupMark: each typed is the mark's; emptied, the letters before stay. */
-@Composable
-private fun LetterField(letter: String, onLetter: (String) -> Unit) {
-  var draft by remember { mutableStateOf(TextFieldValue(letter)) }
-  OutlinedTextField(
-    draft,
-    { typed ->
-      draft = typed.limited(TextLimits.groupMark)
-      if (draft.composition == null) draft.text.trim().takeIf { it.isNotEmpty() }?.let(onLetter)
-    },
-    Modifier.fillMaxWidth(),
-    label = { Text(stringResource(R.string.mark_kind_letter)) },
-    singleLine = true,
-    keyboardOptions = KeyboardOptions.Default,
-  )
 }

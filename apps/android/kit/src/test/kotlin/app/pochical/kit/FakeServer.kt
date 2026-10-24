@@ -64,8 +64,11 @@ class FakeServer : AutoCloseable {
   /** What the anonymous sign-in answers in its body, null for the user as better-auth gives it. */
   @Volatile var signInBody: String? = null
 
-  /** How long `GetMe` takes to answer, in milliseconds. */
+  /** How long `GetMe` takes to answer, in milliseconds, read as each call comes in. */
   @Volatile var getMeDelayMs = 0L
+
+  /** How many `GetMe` calls have come in. */
+  @Volatile var getMes = 0
 
   /** The provider `GetMe` says the user is linked to. */
   @Volatile var provider = SignInProvider.SIGN_IN_PROVIDER_UNSPECIFIED
@@ -81,6 +84,9 @@ class FakeServer : AutoCloseable {
 
   /** How many of the user's sockets it refused with 401, their session unknown. */
   val refusedSockets = AtomicInteger()
+
+  /** How many `GetMe`s it refused with 401, their session unknown. */
+  val refusedGetMes = AtomicInteger()
 
   /** The user the provider's account is linked to, as from another phone, with its session; null for none. */
   @Volatile var inUse: Pair<String, String>? = null
@@ -153,9 +159,10 @@ class FakeServer : AutoCloseable {
                 .build()
             "/pochical.v1.UserService/GetMe" ->
               when (val user = userOf(request.headers["Authorization"])) {
-                null -> refused("unauthenticated")
+                null -> refused("unauthenticated").also { refusedGetMes.incrementAndGet() }
                 else ->
                   MockResponse.Builder()
+                    .also { getMes += 1 }
                     .headersDelay(getMeDelayMs, TimeUnit.MILLISECONDS)
                     .addHeader("Content-Type", "application/proto")
                     .body(Buffer().write(getMeResponse { userId = user; provider = this@FakeServer.provider }.toByteArray()))

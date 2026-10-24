@@ -73,6 +73,7 @@ const smallMarkFrame = css({
 // else is in it.
 export function GroupSettingsPage({
   group,
+  freeColor,
   profile,
   onChange,
   onEdit,
@@ -83,6 +84,8 @@ export function GroupSettingsPage({
   onLeave,
 }: {
   group: Group;
+  // The first color the user's other groups do not use, for its mark.
+  freeColor: number;
   profile: Profile;
   onMuted: (muted: boolean) => void;
   onMember?: (member: Member) => void;
@@ -100,6 +103,7 @@ export function GroupSettingsPage({
     return (
       <GroupEditPage
         group={group}
+        freeColor={freeColor}
         onCancel={() => {
           setView("settings");
         }}
@@ -242,10 +246,12 @@ export type GroupEdit = { name: string; mark: GroupMark };
 // one.
 function GroupEditPage({
   group,
+  freeColor,
   onCancel,
   onSave,
 }: {
   group: GroupEdit;
+  freeColor: number;
   onCancel: () => void;
   onSave: (edit: GroupEdit) => void;
 }) {
@@ -263,6 +269,7 @@ function GroupEditPage({
         back="グループを編集"
         mark={mark}
         name={name}
+        freeColor={freeColor}
         onBack={() => {
           setEditingMark(false);
         }}
@@ -471,8 +478,18 @@ export function guessGroupMark(name: string, color: number): GroupMark {
     : { color, kind: "letter", text: letterOfName(name) };
 }
 
-export function colorOfMark(mark: GroupMark) {
-  return mark.kind === "icon" || mark.kind === "letter" ? mark.color : 0;
+// The icon's or letters' color; none for an emoji or a photo, which bring
+// colors of their own.
+function colorOfMark(mark: GroupMark) {
+  return mark.kind === "icon" || mark.kind === "letter"
+    ? mark.color
+    : undefined;
+}
+
+// The color a group's icon or letters start in: as a new pattern's,
+// counting only the groups drawn in a color.
+export function nextGroupColor(marks: GroupMark[]) {
+  return nextColor(marks.flatMap((mark) => colorOfMark(mark) ?? []));
 }
 
 // The marks offered first, a row of eight for each kind as a pattern's
@@ -495,12 +512,16 @@ function GroupMarkPage({
   back,
   name,
   mark,
+  freeColor,
   onBack,
   onChange,
 }: {
   back: string;
   name: string;
   mark: GroupMark;
+  // The color an icon or letters start in when the mark has none, an
+  // emoji or a photo: the first one the other groups do not use.
+  freeColor: number;
   onBack: () => void;
   onChange: (mark: GroupMark) => void;
 }) {
@@ -510,7 +531,7 @@ function GroupMarkPage({
   );
   const [pickingEmoji, setPickingEmoji] = useState(false);
   const [pickingIcon, setPickingIcon] = useState(false);
-  const color = colorOfMark(mark);
+  const color = colorOfMark(mark) ?? freeColor;
   const letter = mark.kind === "letter" ? mark.text : letterOfName(name);
   return (
     <>
@@ -695,12 +716,13 @@ function MarkColors({
 }
 
 export function NewGroupPage({
-  usedColors,
+  freeColor,
   profile,
   onBack,
   onCreate,
 }: {
-  usedColors: number[];
+  // The first color the groups do not use.
+  freeColor: number;
   profile: Profile;
   onBack: () => void;
   onCreate: (group: { name: string; mark: GroupMark; myName: string }) => void;
@@ -712,7 +734,7 @@ export function NewGroupPage({
   // Once picked, the mark stays when the name changes afterwards; until
   // then it follows the name, in the first color the groups do not use.
   const [picked, setPicked] = useState<GroupMark>();
-  const mark = picked ?? guessGroupMark(name, nextColor(usedColors));
+  const mark = picked ?? guessGroupMark(name, freeColor);
   const [editingMark, setEditingMark] = useState(false);
   const canCreate = name.trim() !== "" && myName.trim() !== "";
   if (editingMark) {
@@ -721,6 +743,7 @@ export function NewGroupPage({
         back="グループを作る"
         mark={mark}
         name={name}
+        freeColor={freeColor}
         onBack={() => {
           setEditingMark(false);
         }}

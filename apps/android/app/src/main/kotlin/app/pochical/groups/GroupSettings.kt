@@ -43,6 +43,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import app.pochical.Footnote
 import app.pochical.LimitedTextField
+import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.SectionHeader
 import app.pochical.characterCount
@@ -52,6 +53,7 @@ import app.pochical.kit.GroupMemberRow
 import app.pochical.kit.GroupRow
 import app.pochical.kit.MarkPhotoGone
 import app.pochical.kit.PhotoShelf
+import app.pochical.kit.nextGroupColor
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.launch
 
@@ -227,6 +229,11 @@ private fun EditForm(group: GroupRow, onBack: () -> Unit) {
   val resources = LocalResources.current
   val scope = rememberCoroutineScope()
   val groupId = group.id
+  val values = LocalValues.current
+  val groups by remember(values) { values.groups() }.collectAsState(emptyList())
+  // The color an emoji or a photo turned into an icon or letters starts in: the first the user's
+  // other groups do not use, this one not counting.
+  val freeColor = nextGroupColor(groups.filter { it.id != groupId }.map { it.mark }, LocalThemeColors.current.marks.size)
   var name by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue(group.name)) }
   var mark by rememberSaveable(stateSaver = MarkSaver) { mutableStateOf<GroupMarkValue?>(group.mark) }
   var editingMark by rememberSaveable { mutableStateOf(false) }
@@ -281,7 +288,7 @@ private fun EditForm(group: GroupRow, onBack: () -> Unit) {
       )
     }
   }
-  if (editingMark) GroupMarkPage(trimmed, shown, onMark = { mark = it }, onClose = { editingMark = false }, shelf = PhotoShelf.Group(groupId))
+  if (editingMark) GroupMarkPage(trimmed, shown, freeColor, onMark = { mark = it }, onClose = { editingMark = false }, shelf = PhotoShelf.Group(groupId))
   if (failed) FailedDialog(resources.getString(R.string.not_saved)) { failed = false }
   if (photoGone) {
     AlertDialog(

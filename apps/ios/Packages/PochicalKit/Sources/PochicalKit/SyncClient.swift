@@ -95,7 +95,7 @@ public actor SyncClient {
   private var socket: URLSessionWebSocketTask?
   /// Tries since a socket last caught up: not since its Welcome, so one
   /// that breaks right after it, again and again, still waits longer.
-  private var tries = 0
+  private var tries = ReconnectTries()
   private var connected = false
   /// Between tries, waiting before the next.
   private var waitingToRetry = false
@@ -224,7 +224,7 @@ public actor SyncClient {
     running?.cancel()
     socket?.cancel(with: .goingAway, reason: nil)
     socket = nil
-    tries = 0
+    tries.atOnce()
     waitingToRetry = false
     running = Task { await run(as: credentials) }
     if watchingNetwork == nil {
@@ -363,21 +363,20 @@ public actor SyncClient {
   }
 
   private func run(as credentials: Credentials) async {
+    // The first try goes at once.
+    var waitMost: Int?
     while !Task.isCancelled {
       // Closed before the wait, so the network coming back meanwhile tries
       // again at once rather than after it.
       connected = false
       caughtUp = false
       status = .connecting
-      if tries > 0 {
-        let most = reconnectWaitMost(
-          tries: tries, firstMs: SyncSocket.reconnectFirstMs, mostMs: SyncSocket.reconnectMostMs)
+      if let waitMost {
         waitingToRetry = true
-        try? await Task.sleep(for: .milliseconds(Int.random(in: 0...most)))
+        try? await Task.sleep(for: .milliseconds(Int.random(in: 0...waitMost)))
         if Task.isCancelled { return }
         waitingToRetry = false
       }
-      tries += 1
       do {
         try await connect(as: credentials)
       } catch let stop as Stop {
@@ -397,12 +396,18 @@ public actor SyncClient {
         return
       } catch is ClockAhead {
         // Reconnected at once; the outbox's clocks are put right then.
-        tries = 0
+        tries.atOnce()
+        waitMost = nil
         clockWasAhead = true
       } catch is CancellationError {
         return
       } catch {
         Logger.sync.info("Socket closed: \(error)")
+        // A run replaced meanwhile counts nothing against the one after it.
+        guard !Task.isCancelled else { return }
+        waitMost = reconnectWaitMost(
+          tries: tries.dropped(), firstMs: SyncSocket.reconnectFirstMs,
+          mostMs: SyncSocket.reconnectMostMs)
       }
     }
   }
@@ -554,7 +559,7 @@ public actor SyncClient {
       }
     case .pong(let pong):
       if pong.nonce == catchUpNonce {
-        tries = 0
+        tries.caughtUp()
         caughtUp = true
         status = .current
         for waiter in catchUpWaiters.values {

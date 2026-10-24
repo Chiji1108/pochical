@@ -8,7 +8,7 @@ import {
   defaultHolidaysOff,
   formatDay,
   formatSlash,
-  holidayShiftOf,
+  holidayChoiceOf,
 } from "../lib/design-days";
 import type { RepeatRule, Schedule } from "../lib/design-days";
 import { useDevice } from "../lib/design-device";
@@ -207,6 +207,7 @@ export function RepeatPeriodPage({
   onRemove: () => void;
 }) {
   const toast = useContext(ToastContext);
+  const patterns = useUser((state) => state.patterns);
   const [removing, setRemoving] = useState(false);
   const index = rules.indexOf(rule);
   const before = rules[index - 1];
@@ -270,7 +271,13 @@ export function RepeatPeriodPage({
             onPut({ ...rule, holidayShift });
           }}
           onHolidaysOff={(holidaysOff) => {
-            onPut({ ...rule, holidaysOff });
+            // Turned on again, it takes the pattern it kept while that counts as off.
+            const { shift } = holidayChoiceOf(
+              patternsInUse(patterns),
+              rule.holidaysOff ?? false,
+              rule.holidayShift
+            );
+            onPut({ ...rule, holidayShift: shift, holidaysOff });
           }}
         />
       )}
@@ -306,8 +313,8 @@ const orderConfirm = {
 
 // 祝日は休みにする, asked as an order is saved and kept with its period:
 // on, holidays take a pattern that counts as off, picked among them when
-// there are more than one, as 完了's blanks pick theirs. With none, there
-// is nothing for holidays to take, so it is not asked.
+// there are more than one, as 完了's blanks pick theirs. With none, it is
+// asked only while on, so it can always be turned off (holidayChoiceOf).
 function HolidayChoice({
   holidaysOff,
   holidayShift,
@@ -321,10 +328,8 @@ function HolidayChoice({
 }) {
   const patterns = patternsInUse(useUser((state) => state.patterns));
   const offs = patterns.filter(isDayOff);
-  // The one holidays take, even one that no longer counts as off; else
-  // the first that does.
-  const taken = holidayShift ?? holidayShiftOf(patterns);
-  if (offs.length === 0) {
+  const choice = holidayChoiceOf(patterns, holidaysOff, holidayShift);
+  if (!choice.shown) {
     return null;
   }
   return (
@@ -333,6 +338,7 @@ function HolidayChoice({
         <SwitchRow
           checked={holidaysOff}
           detail="祝日は、並びの代わりに休みにします"
+          disabled={!(holidaysOff || choice.canTurnOn)}
           label="祝日は休みにする"
           onChange={onHolidaysOff}
         />
@@ -345,7 +351,7 @@ function HolidayChoice({
               onClick={() => {
                 onHolidayShift(pattern.id);
               }}
-              selected={pattern.id === taken}
+              selected={pattern.id === choice.shift}
             >
               <ShiftMark shift={pattern.id} size={16} />
               {pattern.name}
@@ -424,13 +430,17 @@ export function RepeatEditorPage({
   const [holidaysChoice, setHolidaysChoice] = useState(
     fixing ? current.holidaysOff : undefined
   );
-  const [holidayPick, setHolidayPick] = useState(
-    fixing ? current.holidayShift : undefined
-  );
+  const [holidayPick, setHolidayPick] = useState<Shift>();
   const holidaysOff =
     holidaysChoice ?? defaultHolidaysOff(sequence, anchor, book);
+  // The period's own holiday pattern stays until another is picked.
   const holidayShift = holidaysOff
-    ? holidayShiftOf(patterns, holidayPick)
+    ? holidayChoiceOf(
+        patterns,
+        holidaysOff,
+        fixing ? current.holidayShift : undefined,
+        holidayPick
+      ).shift
     : undefined;
   const rule: RepeatRule = {
     anchor,

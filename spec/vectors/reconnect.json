@@ -1,5 +1,5 @@
 {
-  "about": "How long a device may wait before a try to reconnect (spec/sync-protocol.md, Reconnecting): tries counts the tries since a socket last caught up (the Pong to the Ping after Welcome, Keepalive), this one included; the most is firstMs doubled for each try before it, up to mostMs (socketRules.reconnectFirstMs and reconnectMostMs in design/src/socket.ts), and the device waits a time drawn at random from 0 up to that most. defaultNetwork: what the sockets hear as the OS tells which network is the device's default (Keepalive). It starts from the default as the watch begins (null for none), and each step is the default the OS tells of next (null for none): the one already the default is not heard, none is lost, and any other is changed (another taking over, or one after none), whereupon an open socket closes and every socket tries at once.",
+  "about": "How long a device may wait before a try to reconnect (spec/sync-protocol.md, Reconnecting): tries counts the tries since a socket last caught up (the Pong to the Ping after Welcome, Keepalive), this one included; the most is firstMs doubled for each try before it, up to mostMs (socketRules.reconnectFirstMs and reconnectMostMs in design/src/socket.ts), and the device waits a time drawn at random from 0 up to that most. tries: what each try since a socket was asked to be open waits for, as the socket meets each event in turn: start (asked to be open: the app came to the front, the place was opened), networkChanged (another network became the default), clockAhead (the server refused the edits' clocks as far ahead, HLC), welcomed, caughtUp (the Pong to the Ping after Welcome) and dropped (closed, failed or its keepalive unanswered); start, networkChanged and clockAhead each make a try at once (null) and dropped one after a wait, given as the tries it is drawn for. defaultNetwork: what the sockets hear as the OS tells which network is the device's default (Keepalive). It starts from the default as the watch begins (null for none), and each step is the default the OS tells of next (null for none): the one already the default is not heard, none is lost, and any other is changed (another taking over, or one after none), whereupon an open socket closes and every socket tries at once.",
   "waitMost": [
     {
       "name": "the first try",
@@ -28,6 +28,51 @@
       "firstMs": 1000,
       "mostMs": 60000,
       "expected": 60000
+    }
+  ],
+  "tries": [
+    {
+      "name": "the first try as the socket is asked to be open goes at once",
+      "events": ["start"],
+      "expected": [null]
+    },
+    {
+      "name": "each failed try waits longer",
+      "events": ["start", "dropped", "dropped", "dropped"],
+      "expected": [null, 2, 3, 4]
+    },
+    {
+      "name": "the Welcome does not start the count again",
+      "events": ["start", "welcomed", "dropped", "welcomed", "dropped"],
+      "expected": [null, 2, 3]
+    },
+    {
+      "name": "the first try after catching up waits",
+      "events": ["start", "welcomed", "caughtUp", "dropped"],
+      "expected": [null, 1]
+    },
+    {
+      "name": "and the count grows again from there",
+      "events": [
+        "start",
+        "dropped",
+        "dropped",
+        "welcomed",
+        "caughtUp",
+        "dropped",
+        "dropped"
+      ],
+      "expected": [null, 2, 3, 1, 2]
+    },
+    {
+      "name": "another default network tries at once, the count started again",
+      "events": ["start", "dropped", "dropped", "networkChanged", "dropped"],
+      "expected": [null, 2, 3, null, 2]
+    },
+    {
+      "name": "clocks ahead reconnect at once, the count started again",
+      "events": ["start", "welcomed", "caughtUp", "clockAhead", "dropped"],
+      "expected": [null, null, 2]
     }
   ],
   "defaultNetwork": [
