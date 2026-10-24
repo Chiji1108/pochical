@@ -497,9 +497,11 @@ private struct RepeatEditor: View {
       holidaysOff ?? current?.holidaysOff
       ?? (holidayShift(of: values.patterns.inUse) != nil
         && holidaysOffByDefault(steps, start: picked, patterns: byID))
-    // The period's own holiday pattern stays until another is picked.
+    // The period's own holiday pattern stays until another is picked, read
+    // as the period has it, as on its page, whatever the sheet's switch says.
     let setting = holidaySetting(
-      of: values.patterns.inUse, on: turnedOn, kept: current?.holidayShift, picked: holidayPick)
+      of: values.patterns.inUse, on: current?.holidaysOff ?? false, kept: current?.holidayShift,
+      picked: holidayPick)
     let offShift = setting.shift
     let holidays = turnedOn && offShift != nil
     let shown = OwnCalendar(
