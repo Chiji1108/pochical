@@ -13,6 +13,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import app.pochical.EmojiPickerSheet
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import app.pochical.kit.LineContent
@@ -426,6 +427,7 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit, onPhotos: ()
   var unsending by remember { mutableStateOf<Unsending?>(null) }
   // The chat's photos opened large over it.
   var viewing by remember { mutableStateOf<OpenPhotos?>(null) }
+  val focus = LocalFocusManager.current
   val actions = rememberLineActions(groupId, composer, nameOf, snackbar, onUnsend = { unsending = it }, onNotKept = { notKept = true }, onPin = pin, onDecide = { deciding = it })
   val handlers =
     MessageHandlers(
@@ -455,10 +457,13 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit, onPhotos: ()
       stopSending = { opId -> scope.launch { keeping({ notKept = true }) { chats.stopSending(opId) } } },
       // Among the photos of the lines laid out, those the reader sees, the rest coming from the group.
       openPhoto = { seq, index ->
+        // The keyboard down, as the photo takes the screen.
+        focus.clearFocus()
         val folded = if (threadId == GROUP_THREAD) blockedIds else emptySet()
         viewing = OpenPhotos(PhotoRun.opened(chat.lines.flatMap { ChatPhotoItem.of(it, folded) }, PhotoKey(seq, index)))
       },
       openOwnPhoto = { line, index ->
+        focus.clearFocus()
         val photos = (line.content as? LineContent.Photos)?.photos.orEmpty()
         val items = photos.mapIndexed { at, photo -> ChatPhotoItem(PhotoKey(0, at), photo, me.orEmpty(), line.madeAtMs) }
         viewing = OpenPhotos(PhotoRun.opened(items, PhotoKey(0, index)), follows = false)
@@ -529,7 +534,7 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit, onPhotos: ()
     LineMenu(menu)
     viewing?.let { open ->
       FollowPhotos(groupId, threadId, open)
-      PhotoViewer(groupId, threadId, open, onClose = { viewing = null })
+      PhotoViewer(groupId, threadId, open, nameOf, onClose = { viewing = null })
     }
   }
   if (notKept) NotKeptDialog { notKept = false }

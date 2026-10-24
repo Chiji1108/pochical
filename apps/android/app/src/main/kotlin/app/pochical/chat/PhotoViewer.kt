@@ -44,7 +44,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.pochical.LocalAccount
@@ -119,7 +121,7 @@ internal val ChatPhotoItem.layoutKey: String
  * the photo shown, for a list to keep its square in sight.
  */
 @Composable
-fun PhotoViewer(groupId: String, threadId: String, open: OpenPhotos, onClose: () -> Unit, onShown: (PhotoKey) -> Unit = {}) {
+fun PhotoViewer(groupId: String, threadId: String, open: OpenPhotos, nameOf: (String) -> String, onClose: () -> Unit, onShown: (PhotoKey) -> Unit = {}) {
   val calls = LocalGroupCalls.current
   val files = LocalPhotoFiles.current
   val context = LocalContext.current
@@ -163,7 +165,16 @@ fun PhotoViewer(groupId: String, threadId: String, open: OpenPhotos, onClose: ()
   Box(Modifier.fillMaxSize().background(colors.mediaBackground.copy(alpha = 1f - pulled))) {
     HorizontalPager(pager, Modifier.fillMaxSize(), key = { photos.getOrNull(it)?.layoutKey ?: it }, beyondViewportPageCount = 1) { page ->
       val photo = photos.getOrNull(page) ?: return@HorizontalPager
-      LargePhoto(photo, groupId, onTap = { controls = !controls }, onPulled = { if (page == pager.currentPage) pulled = it }, onDismissed = { close() })
+      // Read as whose it is, its shape and when it was sent, and its place among the chat's.
+      val place = remember(version) { open.run.place }?.takeIf { page == pager.currentPage && it.second > 1 }
+      val said =
+        listOfNotNull(
+            stringResource(R.string.chat_photo_whose, nameOf(photo.authorId), photoWords(photo.photo)),
+            "${monthDay(photo.sentAtMs)} ${clock(photo.sentAtMs)}",
+            place?.let { stringResource(R.string.chat_photo_place_said, it.first, it.second) },
+          )
+          .joinToString("、")
+      LargePhoto(photo, groupId, said, onTap = { controls = !controls }, onPulled = { if (page == pager.currentPage) pulled = it }, onDismissed = { close() })
     }
     AnimatedVisibility(controls && pulled == 0f, enter = fadeIn(), exit = fadeOut()) {
       Box(Modifier.fillMaxSize()) {
@@ -252,7 +263,7 @@ fun FollowPhotos(groupId: String, threadId: String, open: OpenPhotos) {
  */
 @Composable
 @OptIn(ExperimentalTelephotoApi::class)
-private fun LargePhoto(item: ChatPhotoItem, groupId: String, onTap: () -> Unit, onPulled: (Float) -> Unit, onDismissed: () -> Unit) {
+private fun LargePhoto(item: ChatPhotoItem, groupId: String, said: String, onTap: () -> Unit, onPulled: (Float) -> Unit, onDismissed: () -> Unit) {
   val zoom = rememberZoomableState(ZoomSpec(maxZoomFactor = MOST_ZOOM))
   val image = rememberZoomableImageState(zoom)
   val flick = rememberFlickToDismissState(rotateOnDrag = false)
@@ -265,7 +276,22 @@ private fun LargePhoto(item: ChatPhotoItem, groupId: String, onTap: () -> Unit, 
     snapshotFlow { flick.gestureState }.filter { it is FlickToDismissState.GestureState.Dismissed }.collect { dismissed() }
   }
   val zoomed = (zoom.zoomFraction ?: 0f) > 0.01f
-  FlickToDismiss(flick, Modifier.fillMaxSize(), enabled = !zoomed) {
+  val scope = rememberCoroutineScope()
+  val zoomIn = stringResource(R.string.chat_photo_zoom_in)
+  val zoomOut = stringResource(R.string.chat_photo_zoom_out)
+  FlickToDismiss(
+    flick,
+    Modifier.fillMaxSize().semantics(mergeDescendants = true) {
+      contentDescription = said
+      // Zoomed in on its middle a step at a time, as far as it goes, and back.
+      customActions =
+        listOf(
+          CustomAccessibilityAction(zoomIn) { scope.launch { zoom.zoomBy(DOUBLE_TAP_ZOOM) }; true },
+          CustomAccessibilityAction(zoomOut) { scope.launch { zoom.resetZoom() }; true },
+        )
+    },
+    enabled = !zoomed,
+  ) {
     if (!image.isImageDisplayed) {
       val blur = remember(item.photo.id) { blurOf(item.photo)?.asImageBitmap() }
       Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

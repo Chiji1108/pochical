@@ -136,6 +136,7 @@ fun ChatPhotosPage(groupId: String, threadId: String, onBack: () -> Unit) {
         groupId,
         threadId,
         open,
+        nameOf = { names[it] ?: deleted },
         onClose = { viewing = null },
         // Its square kept in sight as the photo opened large is swiped, as Photos' grid follows.
         onShown = { key ->
@@ -151,7 +152,7 @@ fun ChatPhotosPage(groupId: String, threadId: String, onBack: () -> Unit) {
 }
 
 /** A day as the photos' list reads it (10月5日). */
-private fun monthDay(ms: Long): String = DateTimeFormatter.ofPattern("M月d日").format(Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault()))
+internal fun monthDay(ms: Long): String = DateTimeFormatter.ofPattern("M月d日").format(Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault()))
 
 /** Four across, a hairline apart. */
 private const val ACROSS = 4
