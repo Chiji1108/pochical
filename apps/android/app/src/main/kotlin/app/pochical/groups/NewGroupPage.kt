@@ -109,21 +109,13 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
 
   Scaffold(
     topBar = {
-      TopAppBar(
-        title = { Text(stringResource(R.string.new_group)) },
-        navigationIcon = {
-          IconButton(onClick = onBack) {
-            Icon(painterResource(R.drawable.ic_back), contentDescription = stringResource(R.string.back))
-          }
-        },
-        actions = {
-          if (making) {
-            CircularProgressIndicator(Modifier.padding(end = 16.dp).size(24.dp))
-          } else {
-            TextButton(onClick = ::make, enabled = canMake) { Text(stringResource(R.string.new_group_make)) }
-          }
-        },
-      )
+      PageBar(stringResource(R.string.new_group), onBack) {
+        if (making) {
+          CircularProgressIndicator(Modifier.padding(end = 16.dp).size(24.dp))
+        } else {
+          TextButton(onClick = ::make, enabled = canMake) { Text(stringResource(R.string.new_group_make)) }
+        }
+      }
     }
   ) { padding ->
     LazyColumn(contentPadding = padding) {

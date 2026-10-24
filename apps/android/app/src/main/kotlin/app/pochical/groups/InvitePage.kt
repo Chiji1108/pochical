@@ -30,7 +30,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -38,12 +37,11 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -72,6 +70,7 @@ import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import java.io.File
+import java.util.UUID
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -85,11 +84,9 @@ import kotlinx.coroutines.withContext
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun InvitePage(groupId: String, onBack: () -> Unit) {
-  HoldSocket(groupId)
+  // A group just made opens here before it has reached the device: its code is read all the same.
+  val name = pageGroup(groupId, onBack)?.name.orEmpty()
   val calls = LocalGroupCalls.current
-  val values = LocalValues.current
-  val group by remember(values) { values.groups() }.collectAsState(emptyList())
-  val name = group.firstOrNull { it.id == groupId }?.name.orEmpty()
   val context = LocalContext.current
   val resources = LocalResources.current
   val clipboard = LocalClipboard.current
@@ -102,21 +99,25 @@ fun InvitePage(groupId: String, onBack: () -> Unit) {
   var confirmingRemake by remember { mutableStateOf(false) }
   var remakeFailed by remember { mutableStateOf(false) }
   var qrMenu by remember { mutableStateOf(false) }
-  val qr = remember(link) { link?.let(::qrCode) }
+  // Remaking, the link shown is stopping: it is not offered until the new one comes.
+  var remaking by remember { mutableStateOf(false) }
+  val qr by produceState<Bitmap?>(null, link) { value = link?.let { withContext(Dispatchers.Default) { qrCode(it) } } }
 
-  suspend fun load(remaking: Boolean) {
+  suspend fun load(remake: Boolean) {
     failed = false
     copied = false
+    remaking = remake
     try {
-      link = inviteLink(if (remaking) calls.remakeInviteCode(groupId) else calls.inviteCode(groupId))
+      link = inviteLink(if (remake) calls.remakeInviteCode(groupId) else calls.inviteCode(groupId))
     } catch (e: CancellationException) {
       throw e
     } catch (_: Exception) {
       failed = link == null
-      remakeFailed = remaking
+      remakeFailed = remake
     }
+    remaking = false
   }
-  LaunchedEffect(groupId) { load(remaking = false) }
+  LaunchedEffect(groupId) { load(remake = false) }
 
   fun say(words: Int) {
     haptics.performHapticFeedback(HapticFeedbackType.Confirm)
@@ -124,14 +125,7 @@ fun InvitePage(groupId: String, onBack: () -> Unit) {
   }
 
   Scaffold(
-    topBar = {
-      TopAppBar(
-        title = { Text(stringResource(R.string.invite)) },
-        navigationIcon = {
-          IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_back), stringResource(R.string.back)) }
-        },
-      )
-    },
+    topBar = { PageBar(stringResource(R.string.invite), onBack) },
     snackbarHost = { SnackbarHost(snackbar) },
   ) { padding ->
     Column(
@@ -148,10 +142,11 @@ fun InvitePage(groupId: String, onBack: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
       ) {
         Box(Modifier.size(200.dp), contentAlignment = Alignment.Center) {
+          val shownQr = qr.takeUnless { remaking }
           when {
-            qr != null -> {
+            shownQr != null -> {
               Image(
-                qr.asImageBitmap(),
+                shownQr.asImageBitmap(),
                 contentDescription = null,
                 Modifier.size(200.dp)
                   .semantics { contentDescription = resources.getString(R.string.invite_qr) }
@@ -164,7 +159,7 @@ fun InvitePage(groupId: String, onBack: () -> Unit) {
                   leadingIcon = { Icon(painterResource(R.drawable.ic_share), contentDescription = null) },
                   onClick = {
                     qrMenu = false
-                    scope.launch { shareQr(context, qr, name) }
+                    scope.launch { if (!shareQr(context, shownQr, name)) say(R.string.not_shared) }
                   },
                 )
                 DropdownMenuItem(
@@ -172,12 +167,16 @@ fun InvitePage(groupId: String, onBack: () -> Unit) {
                   leadingIcon = { Icon(painterResource(R.drawable.ic_download), contentDescription = null) },
                   onClick = {
                     qrMenu = false
-                    scope.launch { say(if (saveQr(context, qr)) R.string.saved_to_photos else R.string.not_saved) }
+                    scope.launch { say(if (saveQr(context, shownQr)) R.string.saved_to_photos else R.string.not_saved) }
                   },
                 )
               }
             }
-            failed -> Text(stringResource(R.string.invite_offline), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            failed ->
+              TextButton(onClick = { scope.launch { load(remake = false) } }) {
+                Icon(painterResource(R.drawable.ic_refresh), contentDescription = null)
+                Text(stringResource(R.string.check_again), Modifier.padding(start = 8.dp))
+              }
             else -> CircularProgressIndicator()
           }
         }
@@ -187,7 +186,7 @@ fun InvitePage(groupId: String, onBack: () -> Unit) {
           color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
       }
-      link?.let { shown ->
+      link?.takeUnless { remaking }?.let { shown ->
         Button(onClick = { sendLink(context, shown) }, Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
           Icon(painterResource(R.drawable.ic_share), contentDescription = null)
           Text(stringResource(R.string.invite_send), Modifier.padding(start = 8.dp))
@@ -213,7 +212,7 @@ fun InvitePage(groupId: String, onBack: () -> Unit) {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
       )
       if (link != null) {
-        TextButton(onClick = { confirmingRemake = true }) { Text(stringResource(R.string.invite_remake)) }
+        TextButton(onClick = { confirmingRemake = true }, enabled = !remaking) { Text(stringResource(R.string.invite_remake)) }
       }
     }
   }
@@ -226,7 +225,7 @@ fun InvitePage(groupId: String, onBack: () -> Unit) {
         TextButton(
           onClick = {
             confirmingRemake = false
-            scope.launch { load(remaking = true) }
+            scope.launch { load(remake = true) }
           }
         ) {
           Text(stringResource(R.string.invite_remake_confirm), color = MaterialTheme.colorScheme.error)
@@ -251,26 +250,45 @@ private fun sendLink(context: Context, link: String) {
   context.startActivity(Intent.createChooser(send, null))
 }
 
-/** Shares the QR code as a picture, through the app's own files. */
-private suspend fun shareQr(context: Context, qr: Bitmap, groupName: String) {
-  val file =
-    withContext(Dispatchers.IO) {
-      File(context.cacheDir, "shared").apply { mkdirs() }.let { File(it, "invite.png") }.also { file ->
-        file.outputStream().use { qr.compress(Bitmap.CompressFormat.PNG, 100, it) }
+/**
+ * Shares the QR code as a picture through Android's share sheet, a file of its own each time in the
+ * app's cache, read through its FileProvider; whether the sheet opened.
+ */
+private suspend fun shareQr(context: Context, qr: Bitmap, groupName: String): Boolean =
+  try {
+    val file =
+      withContext(Dispatchers.IO) {
+        val shared = File(context.cacheDir, "shared").apply { mkdirs() }
+        File(shared, "invite-${UUID.randomUUID()}.png").also { file -> file.outputStream().use { qr.compress(Bitmap.CompressFormat.PNG, 100, it) } }
       }
-    }
-  val uri = FileProvider.getUriForFile(context, "${context.packageName}.photos", file)
-  val send =
-    Intent(Intent.ACTION_SEND)
-      .setType("image/png")
-      .putExtra(Intent.EXTRA_STREAM, uri)
-      .putExtra(Intent.EXTRA_TITLE, context.getString(R.string.invite_to, groupName))
-      .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-  context.startActivity(Intent.createChooser(send, null))
-}
+    val uri = FileProvider.getUriForFile(context, "${context.packageName}.photos", file)
+    val send =
+      Intent(Intent.ACTION_SEND)
+        .setType("image/png")
+        .putExtra(Intent.EXTRA_STREAM, uri)
+        .putExtra(Intent.EXTRA_TITLE, context.getString(R.string.invite_to, groupName))
+        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    // The grant reaches the sheet, for its preview, and the app picked only through ClipData.
+    send.clipData = ClipData.newRawUri(null, uri)
+    context.startActivity(Intent.createChooser(send, null))
+    true
+  } catch (e: CancellationException) {
+    throw e
+  } catch (_: Exception) {
+    false
+  }
 
 /** Saves the QR code to the phone's pictures (MediaStore, no permission needed); whether it was. */
 private suspend fun saveQr(context: Context, qr: Bitmap): Boolean =
+  try {
+    writeQr(context, qr)
+  } catch (e: CancellationException) {
+    throw e
+  } catch (_: Exception) {
+    false
+  }
+
+private suspend fun writeQr(context: Context, qr: Bitmap): Boolean =
   withContext(Dispatchers.IO) {
     val resolver = context.contentResolver
     val details =

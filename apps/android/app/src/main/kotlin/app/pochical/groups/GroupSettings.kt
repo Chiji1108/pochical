@@ -12,7 +12,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -21,7 +20,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -57,33 +55,6 @@ import app.pochical.kit.PhotoShelf
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.launch
 
-/** A group's pages' bar: [title] and the way back. */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun PageBar(title: String, onBack: () -> Unit, actions: @Composable () -> Unit = {}) {
-  TopAppBar(
-    title = { Text(title) },
-    navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_back), stringResource(R.string.back)) } },
-    actions = { actions() },
-  )
-}
-
-/** The group [groupId] as the device holds it now, renamed meanwhile or not; null once it is gone. */
-@Composable
-private fun liveGroup(groupId: String): GroupRow? {
-  val values = LocalValues.current
-  val groups by remember(values) { values.groups() }.collectAsState(null)
-  return groups?.firstOrNull { it.id == groupId }
-}
-
-/** Everyone in the group, those who left too, as the group's socket last said. */
-@Composable
-private fun members(groupId: String): List<GroupMemberRow> {
-  val values = LocalValues.current
-  val members by remember(values, groupId) { values.members(groupId) }.collectAsState(emptyList())
-  return members
-}
-
 /**
  * グループの設定 (/design's GroupSettingsPage): the group's name and mark, how the person appears in
  * it, who is in it with a way to invite more, and leaving. Someone else's row opens their sheet,
@@ -98,12 +69,10 @@ fun GroupSettingsPage(
   onInvite: () -> Unit,
   onLeft: () -> Unit,
 ) {
-  HoldSocket(groupId)
   val calls = LocalGroupCalls.current
   val resources = LocalResources.current
   val scope = rememberCoroutineScope()
   val snackbar = remember { SnackbarHostState() }
-  val group = liveGroup(groupId) ?: return
   val members = members(groupId).filter { !it.left }
   val meId = rememberMeId()
   val me = members.firstOrNull { it.userId == meId }
@@ -113,7 +82,8 @@ fun GroupSettingsPage(
   var profileOf by remember { mutableStateOf<GroupMemberRow?>(null) }
   var confirmingRemove by remember { mutableStateOf<GroupMemberRow?>(null) }
 
-  Scaffold(topBar = { PageBar(stringResource(R.string.group_settings), onBack) }, snackbarHost = { SnackbarHost(snackbar) }) { padding ->
+  GroupPage(groupId, stringResource(R.string.group_settings), onBack) { group ->
+    Scaffold(topBar = { PageBar(stringResource(R.string.group_settings), onBack) }, snackbarHost = { SnackbarHost(snackbar) }) { padding ->
     LazyColumn(contentPadding = padding) {
       item { SectionHeader(stringResource(R.string.group)) }
       item {
@@ -158,77 +128,71 @@ fun GroupSettingsPage(
         )
       }
     }
-  }
-
-  profileOf?.let { person ->
-    MemberSheet(person, groupId, onDismiss = { profileOf = null }) {
-      profileOf = null
-      confirmingRemove = person
     }
-  }
-  confirmingRemove?.let { person ->
-    AlertDialog(
-      onDismissRequest = { confirmingRemove = null },
-      title = { Text(stringResource(R.string.member_remove_title, person.displayName)) },
-      text = { Text(stringResource(R.string.member_remove_body, person.displayName, group.name)) },
-      confirmButton = {
-        TextButton(
-          onClick = {
-            confirmingRemove = null
-            scope.launch {
-              try {
-                calls.remove(groupId, person.userId)
-                snackbar.showSnackbar(resources.getString(R.string.member_removed, person.displayName))
-              } catch (e: CancellationException) {
-                throw e
-              } catch (_: Exception) {
-                failed = resources.getString(R.string.member_not_removed, person.displayName)
+
+    profileOf?.let { person ->
+      MemberSheet(person, groupId, onDismiss = { profileOf = null }) {
+        profileOf = null
+        confirmingRemove = person
+      }
+    }
+    confirmingRemove?.let { person ->
+      AlertDialog(
+        onDismissRequest = { confirmingRemove = null },
+        title = { Text(stringResource(R.string.member_remove_title, person.displayName)) },
+        text = { Text(stringResource(R.string.member_remove_body, person.displayName, group.name)) },
+        confirmButton = {
+          TextButton(
+            onClick = {
+              confirmingRemove = null
+              scope.launch {
+                try {
+                  calls.remove(groupId, person.userId)
+                  snackbar.showSnackbar(resources.getString(R.string.member_removed, person.displayName))
+                } catch (e: CancellationException) {
+                  throw e
+                } catch (_: Exception) {
+                  failed = resources.getString(R.string.member_not_removed, person.displayName)
+                }
               }
             }
+          ) {
+            Text(stringResource(R.string.member_remove_confirm), color = MaterialTheme.colorScheme.error)
           }
-        ) {
-          Text(stringResource(R.string.member_remove_confirm), color = MaterialTheme.colorScheme.error)
-        }
-      },
-      dismissButton = { TextButton(onClick = { confirmingRemove = null }) { Text(stringResource(R.string.cancel)) } },
-    )
-  }
-  if (confirmingLeave) {
-    AlertDialog(
-      onDismissRequest = { confirmingLeave = false },
-      title = { Text(stringResource(R.string.group_leave_title)) },
-      text = { Text(stringResource(R.string.group_leave_body, group.name)) },
-      confirmButton = {
-        TextButton(
-          onClick = {
-            confirmingLeave = false
-            leaving = true
-            scope.launch {
-              try {
-                calls.leave(groupId)
-                onLeft()
-              } catch (e: CancellationException) {
-                throw e
-              } catch (_: Exception) {
-                failed = resources.getString(R.string.group_not_left)
+        },
+        dismissButton = { TextButton(onClick = { confirmingRemove = null }) { Text(stringResource(R.string.cancel)) } },
+      )
+    }
+    if (confirmingLeave) {
+      AlertDialog(
+        onDismissRequest = { confirmingLeave = false },
+        title = { Text(stringResource(R.string.group_leave_title)) },
+        text = { Text(stringResource(R.string.group_leave_body, group.name)) },
+        confirmButton = {
+          TextButton(
+            onClick = {
+              confirmingLeave = false
+              leaving = true
+              scope.launch {
+                try {
+                  calls.leave(groupId)
+                  onLeft()
+                } catch (e: CancellationException) {
+                  throw e
+                } catch (_: Exception) {
+                  failed = resources.getString(R.string.group_not_left)
+                }
+                leaving = false
               }
-              leaving = false
             }
+          ) {
+            Text(stringResource(R.string.group_leave_confirm), color = MaterialTheme.colorScheme.error)
           }
-        ) {
-          Text(stringResource(R.string.group_leave_confirm), color = MaterialTheme.colorScheme.error)
-        }
-      },
-      dismissButton = { TextButton(onClick = { confirmingLeave = false }) { Text(stringResource(R.string.cancel)) } },
-    )
-  }
-  failed?.let { title ->
-    AlertDialog(
-      onDismissRequest = { failed = null },
-      title = { Text(title) },
-      text = { Text(stringResource(R.string.try_again_online)) },
-      confirmButton = { TextButton(onClick = { failed = null }) { Text(stringResource(R.string.ok)) } },
-    )
+        },
+        dismissButton = { TextButton(onClick = { confirmingLeave = false }) { Text(stringResource(R.string.cancel)) } },
+      )
+    }
+    failed?.let { FailedDialog(it) { failed = null } }
   }
 }
 
@@ -254,10 +218,15 @@ private fun MemberSheet(person: GroupMemberRow, groupId: String, onDismiss: () -
  */
 @Composable
 fun GroupEditPage(groupId: String, onBack: () -> Unit) {
-  HoldSocket(groupId)
+  GroupPage(groupId, stringResource(R.string.group_edit), onBack) { group -> EditForm(group, onBack) }
+}
+
+@Composable
+private fun EditForm(group: GroupRow, onBack: () -> Unit) {
   val calls = LocalGroupCalls.current
+  val resources = LocalResources.current
   val scope = rememberCoroutineScope()
-  val group = liveGroup(groupId) ?: return
+  val groupId = group.id
   var name by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue(group.name)) }
   var mark by rememberSaveable(stateSaver = MarkSaver) { mutableStateOf<GroupMarkValue?>(group.mark) }
   var editingMark by rememberSaveable { mutableStateOf(false) }
@@ -313,14 +282,7 @@ fun GroupEditPage(groupId: String, onBack: () -> Unit) {
     }
   }
   if (editingMark) GroupMarkPage(trimmed, shown, onMark = { mark = it }, onClose = { editingMark = false }, shelf = PhotoShelf.Group(groupId))
-  if (failed) {
-    AlertDialog(
-      onDismissRequest = { failed = false },
-      title = { Text(stringResource(R.string.not_saved)) },
-      text = { Text(stringResource(R.string.try_again_online)) },
-      confirmButton = { TextButton(onClick = { failed = false }) { Text(stringResource(R.string.ok)) } },
-    )
-  }
+  if (failed) FailedDialog(resources.getString(R.string.not_saved)) { failed = false }
   if (photoGone) {
     AlertDialog(
       onDismissRequest = { photoGone = false },
@@ -335,40 +297,59 @@ fun GroupEditPage(groupId: String, onBack: () -> Unit) {
  * このグループでのあなた (/design's GroupProfilePage): how the person appears in the group, which its
  * members see: a photo and a name of its own, or, left empty, their usual ones, which it then
  * follows (spec/sync-protocol.md, Profile). The photo is kept as it is picked, the name as the field,
- * the page or the app is left. Neither tells the group's chat.
+ * the page or the app is left, to its end whether the page is still there or not. Neither tells the
+ * group's chat.
  */
 @Composable
 fun GroupProfilePage(groupId: String, onBack: () -> Unit) {
-  HoldSocket(groupId)
+  val resources = LocalResources.current
+  var failed by remember { mutableStateOf(false) }
+  GroupPage(groupId, stringResource(R.string.group_me), onBack) { group ->
+    val meId = rememberMeId()
+    val me = members(groupId).firstOrNull { it.userId == meId }
+    Scaffold(topBar = { PageBar(stringResource(R.string.group_me), onBack) }) { padding ->
+      if (me == null) {
+        CircularProgressIndicator(Modifier.padding(padding).padding(24.dp))
+      } else {
+        ProfileForm(group.name, me, Modifier.padding(padding)) { failed = true }
+      }
+    }
+  }
+  if (failed) FailedDialog(resources.getString(R.string.not_saved)) { failed = false }
+}
+
+@Composable
+private fun ProfileForm(groupName: String, me: GroupMemberRow, modifier: Modifier, onFailed: () -> Unit) {
   val calls = LocalGroupCalls.current
   val values = LocalValues.current
   val scope = rememberCoroutineScope()
-  val group = liveGroup(groupId) ?: return
+  val groupId = me.groupId
   val usualName = remember(values) { values.profile() }.collectAsState(null).value?.name.orEmpty()
-  val meId = rememberMeId()
-  // Drawn once the group's socket has said how the person appears in it.
-  val me = members(groupId).firstOrNull { it.userId == meId } ?: return
   val kept = if (me.ownName) me.displayName else ""
   var name by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue(kept)) }
-  // The name the group keeps of its own, empty for the usual one; what is typed is saved when it differs.
-  var saved by rememberSaveable { mutableStateOf(kept) }
+  // The name last kept, empty for the usual one: what is typed is kept once it differs.
+  var sent by rememberSaveable { mutableStateOf(kept) }
   var nameFailed by remember { mutableStateOf(false) }
-  var failed by remember { mutableStateOf(false) }
 
   val keep by rememberUpdatedState {
     val typed = name.text.trim()
     val fits = characterCount(typed) <= TextLimits.personName && !(typed.isEmpty() && usualName.isEmpty())
-    if (typed != saved && fits) {
+    if (typed != sent && fits) {
+      val before = sent
+      sent = typed
+      // Taken by the kit at once, the page leaving or not; its answer is told while the page is here.
+      val send = calls.keepDisplayName(groupId, typed)
       scope.launch {
-        try {
-          calls.setDisplayName(groupId, typed)
-          saved = typed
-          nameFailed = false
-        } catch (e: CancellationException) {
-          throw e
-        } catch (_: Exception) {
-          nameFailed = true
-        }
+        nameFailed =
+          try {
+            send.await()
+            false
+          } catch (e: CancellationException) {
+            throw e
+          } catch (_: Exception) {
+            sent = before
+            true
+          }
       }
     }
   }
@@ -381,53 +362,43 @@ fun GroupProfilePage(groupId: String, onBack: () -> Unit) {
     } catch (e: CancellationException) {
       throw e
     } catch (_: Exception) {
-      failed = true
+      onFailed()
     }
   }
 
-  Scaffold(topBar = { PageBar(stringResource(R.string.group_me), onBack) }) { padding ->
-    Column(Modifier.padding(padding), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-      PhotoEditor(
-        label = stringResource(R.string.photo_edit),
-        shape = PhotoCropShape.Round,
-        onPhoto = { jpeg ->
-          change { calls.setGroupPhoto(groupId, usual = false, photoId = calls.sendPhoto(jpeg, PhotoShelf.Group(groupId))) }
-        },
-        modifier = Modifier.padding(top = 16.dp),
-        onUsual = if (me.ownPhoto) ({ change { calls.setGroupPhoto(groupId, usual = true) } }) else null,
-        onRemove = { change { calls.setGroupPhoto(groupId, usual = false) } },
-      ) {
-        MemberAvatar(me.displayName, me.photoId, PhotoShelf.Group(groupId), 88.dp, me = true)
-      }
-      LimitedTextField(
-        name,
-        { name = it },
-        TextLimits.personName,
-        stringResource(R.string.name),
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp).onFocusChanged { if (!it.isFocused) keep() },
-        placeholder = usualName.ifEmpty { stringResource(R.string.person_name_example) },
-      )
-      if (nameFailed) {
-        Text(
-          stringResource(R.string.name_not_saved),
-          Modifier.padding(horizontal = 16.dp),
-          color = MaterialTheme.colorScheme.error,
-          style = MaterialTheme.typography.bodyMedium,
-        )
-      } else {
-        Footnote(
-          if (usualName.isEmpty()) stringResource(R.string.group_me_note, group.name)
-          else stringResource(R.string.group_me_note_usual, group.name, usualName)
-        )
-      }
+  Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    PhotoEditor(
+      label = stringResource(R.string.photo_edit),
+      shape = PhotoCropShape.Round,
+      onPhoto = { jpeg ->
+        change { calls.setGroupPhoto(groupId, usual = false, photoId = calls.sendPhoto(jpeg, PhotoShelf.Group(groupId))) }
+      },
+      modifier = Modifier.padding(top = 16.dp),
+      onUsual = if (me.ownPhoto) ({ change { calls.setGroupPhoto(groupId, usual = true) } }) else null,
+      onRemove = { change { calls.setGroupPhoto(groupId, usual = false) } },
+    ) {
+      MemberAvatar(me.displayName, me.photoId, PhotoShelf.Group(groupId), 88.dp, me = true)
     }
-  }
-  if (failed) {
-    AlertDialog(
-      onDismissRequest = { failed = false },
-      title = { Text(stringResource(R.string.not_saved)) },
-      text = { Text(stringResource(R.string.try_again_online)) },
-      confirmButton = { TextButton(onClick = { failed = false }) { Text(stringResource(R.string.ok)) } },
+    LimitedTextField(
+      name,
+      { name = it },
+      TextLimits.personName,
+      stringResource(R.string.name),
+      Modifier.fillMaxWidth().padding(horizontal = 16.dp).onFocusChanged { if (!it.isFocused) keep() },
+      placeholder = usualName.ifEmpty { stringResource(R.string.person_name_example) },
     )
+    if (nameFailed) {
+      Text(
+        stringResource(R.string.name_not_saved),
+        Modifier.padding(horizontal = 16.dp),
+        color = MaterialTheme.colorScheme.error,
+        style = MaterialTheme.typography.bodyMedium,
+      )
+    } else {
+      Footnote(
+        if (usualName.isEmpty()) stringResource(R.string.group_me_note, groupName)
+        else stringResource(R.string.group_me_note_usual, groupName, usualName)
+      )
+    }
   }
 }

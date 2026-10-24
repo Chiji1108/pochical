@@ -150,6 +150,8 @@
   <string name="save_to_photos">写真に保存</string>
   <string name="saved_to_photos">写真に保存しました</string>
   <string name="not_saved">保存できませんでした</string>
+  <string name="not_shared">共有できませんでした</string>
+  <string name="check_again">もう一度確認する</string>
   <string name="save">保存</string>
   <string name="edit">編集</string>
   <string name="group">グループ</string>
