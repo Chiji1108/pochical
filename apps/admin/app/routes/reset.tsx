@@ -24,7 +24,7 @@ import type { Route } from "./+types/reset";
 
 // Everything erased before release (全消去): what the server holds, read
 // as the page loads and again after each run, so what a run left; and the
-// word typed to confirm it. To be removed before release (POC-155).
+// word typed to confirm it. To be removed before release (#801).
 export const loader = async () => await env.SERVER.resetPreview();
 
 /** What is typed to confirm: nothing is erased by a press alone. */
