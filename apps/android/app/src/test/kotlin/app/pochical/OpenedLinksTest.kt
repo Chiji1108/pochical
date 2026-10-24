@@ -2,6 +2,8 @@ package app.pochical
 
 import android.content.Intent
 import android.net.Uri
+import app.pochical.kit.AppLink
+import app.pochical.kit.appLink
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -43,6 +45,9 @@ class OpenedLinksTest {
     assertEquals(AppLink.Day(day), appLink("pochical://day/2026-09-24"))
     assertEquals(AppLink.Group("g1"), appLink("pochical://group/g1"))
     assertEquals(AppLink.Group("g1", day), appLink("pochical://group/g1/day/2026-09-24"))
+    // A day it cannot read opens the group's top, as on iOS.
+    assertEquals(AppLink.Group("g1"), appLink("pochical://group/g1/week/2026-09-24"))
+    assertEquals(AppLink.Group("g1"), appLink("pochical://group/g1/day/2026-13-01"))
   }
 
   @Test
@@ -52,7 +57,6 @@ class OpenedLinksTest {
         "pochical://day/",
         "pochical://day/2026-13-01",
         "pochical://group/",
-        "pochical://group/g1/week/2026-09-24",
         "https://example.com/day/2026-09-24",
       )
     for (url in urls) assertNull(url, appLink(url))

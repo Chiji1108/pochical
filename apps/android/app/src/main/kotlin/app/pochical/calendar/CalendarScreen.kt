@@ -199,9 +199,9 @@ fun CalendarScreen(
 
   // Only a day the pages show opens, so no week is asked for past them.
   val reachable = range.days(week.start)
-  fun openDay(day: LocalDate) {
+  fun openDay(day: LocalDate, from: YearMonth = folded) {
     if (day !in reachable) return
-    foldedKey = monthShowing(day, folded).toString()
+    foldedKey = monthShowing(day, from).toString()
     openedKey = day.toString()
     scope.launch { if (reduceMotion) fold.snapTo(1f) else fold.animateTo(1f, Springs.standard()) }
   }
@@ -250,10 +250,14 @@ fun CalendarScreen(
   // A day a link opens: on its month, opened as a tap opens it, or entered next while entering.
   LaunchedEffect(opening) {
     val day = opening ?: return@LaunchedEffect
+    if (entering != null) {
+      selectDay(day)
+    } else if (day in reachable) {
+      pager.scrollToPage(range.pageOf(YearMonth.from(day)))
+      openDay(day, from = YearMonth.from(day))
+    }
+    // Taken once done: taken before, the key's change would cancel this midway.
     onOpening()
-    if (day !in reachable) return@LaunchedEffect
-    if (entering == null) pager.scrollToPage(range.pageOf(YearMonth.from(day)))
-    selectDay(day)
   }
 
   // A month swiped to while entering starts on its first blank day.
