@@ -206,30 +206,15 @@ fun Composer(
   // edit keeps its line's first link, whose page stays (spec/chat.md, Previews).
   val calls = LocalGroupCalls.current
   val link = previewLink(writing.sent)?.takeIf { editedWords == null || !keepsPreview(editedWords, writing.sent) }
-  val pages = remember { mutableStateMapOf<String, LinkPreview>() }
-  // The links the server answered for, and the one asked for now: a link left while asked is asked
-  // again should it come back.
-  var answered by remember { mutableStateOf(emptySet<String>()) }
-  var asking by remember { mutableStateOf<String?>(null) }
+  val pages = remember { LinkPages() }
   LaunchedEffect(link) {
-    if (link == null || link in answered) return@LaunchedEffect
+    if (link == null || pages.answered(link)) return@LaunchedEffect
     delay(Chat.linkPreviewSettleMs.toLong())
-    asking = link
-    try {
-      calls.linkPreview(link)?.let { pages[link] = it }
-      answered = answered + link
-    } catch (e: CancellationException) {
-      throw e
-    } catch (_: Exception) {
-      // None shown, and the server reads the page itself once it has the line.
-      answered = answered + link
-    } finally {
-      if (asking == link) asking = null
-    }
+    pages.ask(link, calls::linkPreview)
   }
-  val page = link?.takeIf { it != writing.previewRemoved }?.let { pages[it] }
+  val page = link?.takeIf { it != writing.previewRemoved }?.let(pages::page)
   // Shown while asked (読み込み中…), and once a page came; kept as it goes, so it leaves whole.
-  val showsPage = link != null && link != writing.previewRemoved && (asking == link || page != null)
+  val showsPage = link != null && link != writing.previewRemoved && (pages.asking == link || page != null)
   var pageShown by remember { mutableStateOf<Pair<String, LinkPreview?>?>(null) }
   if (showsPage && link != null) pageShown = link to page
   Surface(modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surfaceContainer) {
@@ -275,7 +260,7 @@ fun Composer(
                 // The page as it came for the words' first link, or none taken off with ×.
                 val sentLink = previewLink(words)
                 val removed = sentLink != null && sentLink == going.previewRemoved
-                val sentPage = sentLink?.takeIf { !removed }?.let { pages[it] }
+                val sentPage = sentLink?.takeIf { !removed }?.let(pages::page)
                 if (seq != null) chats.change(groupId, threadId, seq, words, sentPage)
                 else chats.send(groupId, threadId, words, going.replyTo, sentPage, withoutPreview = removed)
               } catch (e: CancellationException) {
@@ -317,6 +302,41 @@ private fun ComposerBar(title: String, words: String?, stop: String, onStop: () 
     }
     IconButton(onClick = onStop, Modifier.semantics { contentDescription = stop }) {
       Icon(painterResource(R.drawable.ic_close), contentDescription = null, Modifier.size(20.dp))
+    }
+  }
+}
+
+/**
+ * The pages of the links written, as the server answered for them (a page, or none), and the link
+ * asked for now. Only an answer is kept: a request cut short (the link changed meanwhile) leaves
+ * nothing behind, and is asked again should the link come back.
+ */
+@Stable
+class LinkPages {
+  private val answers = mutableStateMapOf<String, LinkPreview?>()
+
+  /** The link being asked for now, its page shown as 読み込み中… meanwhile. */
+  var asking by mutableStateOf<String?>(null)
+    private set
+
+  fun answered(link: String): Boolean = link in answers
+
+  fun page(link: String): LinkPreview? = answers[link]
+
+  /** Asks [fetch] for [link]'s page; a failure is an answer of none, as the server reads the page itself once it has the line. */
+  suspend fun ask(link: String, fetch: suspend (String) -> LinkPreview?) {
+    asking = link
+    try {
+      answers[link] =
+        try {
+          fetch(link)
+        } catch (e: CancellationException) {
+          throw e
+        } catch (_: Exception) {
+          null
+        }
+    } finally {
+      if (asking == link) asking = null
     }
   }
 }

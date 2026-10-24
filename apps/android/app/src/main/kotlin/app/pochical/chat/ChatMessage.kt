@@ -65,8 +65,8 @@ import app.pochical.kit.LineContent
 import app.pochical.kit.LineReaction
 import app.pochical.kit.PhotoShelf
 import app.pochical.kit.WaitingLine
-import app.pochical.kit.site
 import app.pochical.kit.textParts
+import app.pochical.v1.LinkPreview
 import kotlin.math.abs
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -99,18 +99,33 @@ class MessageLook(
   val time: String?,
   /** One of the member's lines on its way, its clock or ! by it. */
   val waiting: WaitingLine?,
-  val quote: LineQuote?,
   /** The line's seq, null for one on its way. */
   val seq: Long?,
   /** How a drag across answers it; null when it is not answered. */
   val swipe: ReplySwipe?,
   /** What a screen reader reads of it. */
   val said: String,
-  /** Its reactions, each emoji with who chose it; none for a line on its way, which takes none yet. */
-  val reactions: List<LineReaction> = emptyList(),
+  /** What it shows besides its words, each drawn from here and offering its actions from here (`LinePart`). */
+  val parts: List<LinePart> = emptyList(),
+) {
+  val quote: LineQuote?
+    get() = parts.firstNotNullOfOrNull { (it as? QuotePart)?.quote }
+
+  private val reacted: ReactionsPart?
+    get() = parts.firstNotNullOfOrNull { it as? ReactionsPart }
+
+  /** Its reactions; none for a line on its way, which takes none yet. */
+  val reactions: List<LineReaction>
+    get() = reacted?.reactions.orEmpty()
+
   /** A chat of two: who chose a reaction needs no face. */
-  val counted: Boolean = false,
-)
+  val counted: Boolean
+    get() = reacted?.counted == true
+
+  /** Its first link's page. */
+  val page: LinkPreview?
+    get() = parts.firstNotNullOfOrNull { (it as? PagePart)?.preview }
+}
 
 /** A line gone to, lit once there: [time] tells one going to the same line again. */
 data class Lit(val seq: Long, val time: Long)
@@ -176,27 +191,9 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
       onReply = { look.seq?.let(handlers.reply) },
     )
   val items = handlers.items(look)
-  // Its menu's items, each reaction on it put on or taken off, and 返信元を表示, as its actions.
-  val reactionLabel = stringResource(R.string.chat_reaction)
-  val openLinkLabel = stringResource(R.string.chat_open_link)
-  val reactOn = stringResource(R.string.chat_reaction_on)
-  val choosersLabel = stringResource(R.string.chat_reaction_choosers)
-  val reactOff = stringResource(R.string.chat_reaction_off)
-  val actions =
-    items.map { item -> CustomAccessibilityAction(item.label) { item.run(); true } } +
-      look.reactions.mapNotNull { reaction ->
-        val seq = look.seq ?: return@mapNotNull null
-        val own = handlers.me in reaction.userIds
-        CustomAccessibilityAction((if (own) reactOff else reactOn).format(reaction.emoji)) { handlers.react(seq, reaction.emoji, !own); true }
-      } +
-      // Who chose each, which the pill's long press lists, out of a screen reader's reach.
-      look.reactions.map { reaction -> CustomAccessibilityAction(choosersLabel.format(reaction.emoji)) { handlers.choosers(reaction); true } } +
-      linkActions(look.content, openLinkLabel, handlers.openLink) +
-      listOfNotNull(
-        // リアクション: the reactions and menu over the chat, for the screen reader to go into.
-        look.seq?.let { CustomAccessibilityAction(reactionLabel) { openMenu(); true } },
-        look.quote?.let { quote -> CustomAccessibilityAction(stringResource(R.string.chat_show_quoted)) { handlers.jump(quote.seq); true } },
-      )
+  // Its menu's items, 返信 first, then what each of its parts offers (spec/chat.md, Screen readers).
+  val partLine = PartLine(look.seq, handlers, openMenu = { openMenu() })
+  val actions = items.map { item -> CustomAccessibilityAction(item.label) { item.run(); true } } + look.parts.flatMap { it.actions(partLine) }
   val menuLabel = stringResource(R.string.chat_menu)
   Box(
     modifier
@@ -304,7 +301,7 @@ fun Bubble(look: MessageLook, handlers: MessageHandlers, onQuote: () -> Unit) {
   val colors = LocalThemeColors.current
   val shape = remember(look.mine, look.startsRun) { BubbleShape(look.mine, tail = look.startsRun) }
   val ink = if (look.mine) colors.accentOnFill else colors.textPrimary
-  val preview = (look.content as? LineContent.Words)?.preview
+  val preview = look.page
   val light = remember { Animatable(0f) }
   val shine = remember { Animatable(0f) }
   val lit = handlers.lit?.takeIf { it.seq == look.seq }
@@ -433,12 +430,10 @@ fun messageLook(
         showsName = !direct,
         time = clock(line.sentAtMs).takeIf { item.showsTime },
         waiting = null,
-        quote = quote,
         seq = line.seq,
         swipe = if (own) ReplySwipe.Leftward else ReplySwipe.Rightward,
         said = said,
-        reactions = line.reactions,
-        counted = direct,
+        parts = partsOf(line.content, quote, ReactionsPart(line.reactions, counted = direct)),
       )
     }
     is ChatItem.Waiting -> {
@@ -447,7 +442,7 @@ fun messageLook(
       val replying = quote?.let { stringResource(R.string.chat_reply_to_said, it.writer.orEmpty(), it.words) }
       val page = (line.content as? LineContent.Words)?.preview?.title
       val said = listOfNotNull(mine, replying, lineWords(line.content, nameOf), page, if (line.failed) notSent else sending).joinToString("、")
-      MessageLook(item.key, true, line.content, item.startsRun, null, false, null, line, quote, null, null, said)
+      MessageLook(item.key, true, line.content, item.startsRun, null, false, null, line, null, null, said, partsOf(line.content, quote, reactions = null))
     }
     else -> null
   }
@@ -456,10 +451,19 @@ fun messageLook(
 /** Where the bubble is in the window, whole: the list's clip would cut one scrolled partly out of sight. */
 private fun LayoutCoordinates.unclipped(): Rect = Rect(positionInWindow(), size.toSize())
 
-/** リンクを開く for each link of a line's words, with its site, one for each even to one site (spec/chat.md, Screen readers). */
-private fun linkActions(content: LineContent, label: String, open: (String) -> Unit): List<CustomAccessibilityAction> {
-  val words = content as? LineContent.Words ?: return emptyList()
-  return textParts(words.text).mapNotNull { it.url }.map { url -> CustomAccessibilityAction(label.format(site(url))) { open(url); true } }
+/**
+ * What a line shows besides its words, in the order a screen reader offers their actions: its
+ * reactions (none on a line on its way), the line it answers, the links of its words and its page.
+ */
+private fun partsOf(content: LineContent, quote: LineQuote?, reactions: ReactionsPart?): List<LinePart> {
+  val words = content as? LineContent.Words
+  val links = words?.let { textParts(it.text).mapNotNull { part -> part.url } }.orEmpty()
+  return listOfNotNull(
+    reactions,
+    quote?.let(::QuotePart),
+    LinksPart(links).takeIf { links.isNotEmpty() },
+    words?.preview?.let { PagePart(it, inWords = it.url in links) },
+  )
 }
 
 /** How wide a line with a link's page is (spec/chat.md, Albums: as wide as an album). */
