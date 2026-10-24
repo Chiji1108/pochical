@@ -38,7 +38,7 @@ class BubbleShape(private val mine: Boolean, private val tail: Boolean, private 
         val notchY = r - sqrt(r * r - (0.75f * r) * (0.75f * r))
         arcTo(Rect(w - 2 * r, 0f, w, 2 * r), -90f, ARC_TO_NOTCH, forceMoveTo = false)
         // The horn rises to its tip, level with the top edge, and curves back in, concave, to the side.
-        cubicTo(w - 0.25f * r + 0.2f * r, notchY - 0.25f * r, w + 0.25f * r, 0.04f * r, w + 0.6f * r, 0f)
+        cubicTo(w - 0.25f * r + 0.2f * r, notchY - 0.25f * r, w + 0.25f * r, 0.04f * r, w + TAIL_REACH * r, 0f)
         cubicTo(w + 0.3f * r, 0.12f * r, w, 0.55f * r, w, minOf(1.5f * r, h - r))
         lineTo(w, h - r)
         arcTo(Rect(w - 2 * r, h - 2 * r, w, h), 0f, 90f, forceMoveTo = false)
@@ -53,8 +53,11 @@ class BubbleShape(private val mine: Boolean, private val tail: Boolean, private 
     return Outline.Generic(path)
   }
 
-  private companion object {
+  companion object {
+    /** How far the tail's tip reaches past the bubble's frame, in its corners' radius. */
+    const val TAIL_REACH = 0.6f
+
     /** The arc from the top of the corner to x = W − 0.25r, in degrees: asin(0.75). */
-    val ARC_TO_NOTCH = Math.toDegrees(asin(0.75)).toFloat()
+    private val ARC_TO_NOTCH = Math.toDegrees(asin(0.75)).toFloat()
   }
 }

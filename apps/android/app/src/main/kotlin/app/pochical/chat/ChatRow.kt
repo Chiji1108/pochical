@@ -55,12 +55,13 @@ fun GroupChatRow(groupId: String, me: String, onOpen: () -> Unit) {
           }
         summary.waiting?.failed == true -> Text(stringResource(R.string.chat_not_sent), color = colors.dangerDefault, maxLines = 1)
         else -> {
-          val words = summary.waiting?.let { lineWords(it.content) } ?: summary.last?.let { line ->
+          val mine = stringResource(R.string.chat_me)
+          val words = summary.waiting?.let { "$mine：${lineWords(it.content)}" } ?: summary.last?.let { line ->
             when (val content = line.content) {
               is LineContent.Notice -> noticeWords(content.notice, names[line.authorId].orEmpty(), names[content.notice.subjectId].orEmpty())
               LineContent.Unsent -> stringResource(R.string.chat_unsent, names[line.authorId].orEmpty())
               else -> {
-                val who = if (line.authorId == me) stringResource(R.string.chat_me) else names[line.authorId].orEmpty()
+                val who = if (line.authorId == me) mine else names[line.authorId].orEmpty()
                 "$who：${lineWords(content)}"
               }
             }

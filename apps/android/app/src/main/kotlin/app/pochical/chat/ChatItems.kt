@@ -43,6 +43,12 @@ sealed interface ChatItem {
       get() = lineKey(line.opId, line.seq)
   }
 
+  /** Who is writing, under the latest line (spec/chat.md, Unread lines and typing). */
+  data class Typing(val userIds: List<String>) : ChatItem {
+    override val key
+      get() = "typing"
+  }
+
   /** One of the member's lines on its way, by the same key as the group's line it becomes. */
   data class Waiting(val line: WaitingLine, val startsRun: Boolean) : ChatItem {
     override val key

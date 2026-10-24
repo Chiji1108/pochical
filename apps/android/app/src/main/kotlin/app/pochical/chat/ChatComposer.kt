@@ -74,7 +74,8 @@ fun Composer(
   }
   val leaving by rememberUpdatedState(text)
   val leftNotKept by rememberUpdatedState(onNotKept)
-  LifecycleEventEffect(Lifecycle.Event.ON_STOP) { chats.keepDraftLeaving(groupId, threadId, KeptDraft(leaving), leftNotKept) }
+  // Only once the draft was read: before, an empty composer would take its place.
+  LifecycleEventEffect(Lifecycle.Event.ON_STOP) { if (tookDraft) chats.keepDraftLeaving(groupId, threadId, KeptDraft(leaving), leftNotKept) }
   DisposableEffect(groupId, threadId) {
     onDispose { if (tookDraft) chats.keepDraftLeaving(groupId, threadId, KeptDraft(leaving), leftNotKept) }
   }
@@ -113,20 +114,21 @@ fun Composer(
       )
       FilledIconButton(
         onClick = {
+          // Gone from the composer as it is sent, so a second tap sends nothing and the chat left
+          // meanwhile keeps no draft of words sent.
           val words = text
+          text = ""
           scope.launch {
             try {
               chats.send(groupId, threadId, words)
             } catch (e: CancellationException) {
               throw e
             } catch (_: Exception) {
-              // Not kept: the composer keeps the words, to send again.
+              // Not kept: the words come back, to send again.
+              if (text.isEmpty()) text = words
               onNotKept()
               return@launch
             }
-            if (text == words) text = ""
-            typing(false)
-            typingSaidAt = 0L
             onSent()
           }
         },

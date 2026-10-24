@@ -26,6 +26,7 @@ class ChatItemsTest {
       when (it) {
         is ChatItem.DayTitle -> "day ${it.day}"
         ChatItem.Unread -> "unread"
+        is ChatItem.Typing -> "typing"
         is ChatItem.Line -> "${it.line.seq}${if (it.startsRun) " run" else ""}${if (it.showsTime) " time" else ""}"
         is ChatItem.Waiting -> "waiting ${it.line.opId}${if (it.startsRun) " run" else ""}"
       }

@@ -75,6 +75,7 @@ import app.pochical.kit.firstComing
 import app.pochical.kit.firstUnread
 import app.pochical.kit.otherIn
 import app.pochical.kit.pageAfter
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -119,7 +120,15 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
     remember(chats, groupId, threadId, me) { fromFlow.flatMapLatest { chats.state(groupId, threadId, me, it) } }.collectAsState(null)
   val chat = state ?: return ChatScaffold(groupId, threadId, members, groups, socket, onBack) {}
 
-  val items = remember(chat, me, unreadFrom) { chatItems(chat, me, unreadFrom).asReversed() }
+  // Others writing, shown for chatRules.typingShowMs unless said again; a blocked member's is not.
+  val typers = rememberTypers(socket, threadId, me, blocked.map { it.userId }.toSet())
+  // From the foot up, as the list lays them out, who is writing at the very foot: an item's index
+  // here is its index in the list.
+  val items =
+    remember(chat, me, unreadFrom, typers) {
+      val lines = chatItems(chat, me, unreadFrom).asReversed()
+      if (typers.isEmpty()) lines else listOf(ChatItem.Typing(typers)) + lines
+    }
   val list = rememberLazyListState()
   // Shown once placed where it opens, so the way there is not seen.
   var placed by remember { mutableStateOf(false) }
@@ -130,7 +139,8 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
   val writers = remember(members) { members.associateBy { it.userId } }
   // Where the lines are to go once laid out as they are now: ここから新着 at the top, or the foot.
   var going by remember { mutableStateOf<Going?>(null) }
-  GoTo(going, items, list, enabled = placed) { there ->
+  // To the foot only once the latest lines are laid out, when the window stopped short of them.
+  GoTo(going, items, list, enabled = placed && (going != Going.ToFoot || chat.atEnd)) { there ->
     following = there
     going = null
   }
@@ -170,7 +180,7 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
   }
   // Following: a new line at the foot comes in with the lines sliding up to it; others' unread lines
   // coming at once, more than the screen shows, stop under ここから新着 instead (firstComing).
-  val latestKey = items.firstOrNull()?.key
+  val latestKey = items.firstOrNull { it !is ChatItem.Typing }?.key
   var latestBefore by remember { mutableStateOf(chat.lines.lastOrNull()?.seq) }
   LaunchedEffect(latestKey) {
     val held = latestBefore
@@ -197,7 +207,7 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
     if (placed && touched && nearTop && chat.heldBefore > 0) from = maxOf(first.seq - Chat.pageSize, chat.heldFrom ?: 1)
   }
   val current = socket?.state?.collectAsState()?.value == SocketState.Current
-  LaunchedEffect(socket, current, chat.heldFrom, chat.heldBefore < Chat.pageSize) {
+  LaunchedEffect(opened, socket, current, chat.heldFrom, chat.heldBefore < Chat.pageSize) {
     val held = chat.heldFrom ?: return@LaunchedEffect
     if (opened && current && chat.heldBefore < Chat.pageSize && held > 1) socket?.requestPage(threadId, held)
   }
@@ -218,12 +228,14 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
       .collectLatest { seen ->
         val latest = seen?.mapNotNull { key -> shownItems.lineSeq(key) }?.maxOrNull() ?: return@collectLatest
         delay(READ_SETTLE_MS)
-        runCatching { chats.read(groupId, threadId, me, latest) }
+        // Not the person's edit: one not kept is tried again as a line next comes into sight.
+        try {
+          chats.read(groupId, threadId, me, latest)
+        } catch (e: CancellationException) {
+          throw e
+        } catch (_: Exception) {}
       }
   }
-
-  // Others writing, shown for chatRules.typingShowMs unless said again; a blocked member's is not.
-  val typers = rememberTypers(socket, threadId, me, blocked.map { it.userId }.toSet())
 
   // Someone writing shows under the latest line, kept in sight while following.
   LaunchedEffect(typers.isNotEmpty()) { if (placed && following && typers.isNotEmpty()) list.animateScrollToItem(0) }
@@ -232,7 +244,7 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
   ChatScaffold(groupId, threadId, members, groups, socket, onBack) {
     Column(Modifier.fillMaxSize().imePadding()) {
       Box(Modifier.weight(1f).fillMaxWidth()) {
-        ChatLines(items, list, chat, me, writers, threadId, typers, Modifier.alpha(if (placed) 1f else 0f))
+        ChatLines(items, list, chat, me, writers, threadId, { notKept = true }, Modifier.alpha(if (placed) 1f else 0f))
         LatestButton(list, chat, me, items, Modifier.align(Alignment.BottomEnd)) { toUnread ->
           when {
             toUnread -> going = Going.ToUnread
@@ -335,7 +347,7 @@ private fun ChatLines(
   me: String?,
   writers: Map<String, GroupMemberRow>,
   threadId: String,
-  typers: List<String>,
+  onNotKept: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
   LazyColumn(
@@ -344,9 +356,8 @@ private fun ChatLines(
     reverseLayout = true,
     contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
   ) {
-    if (typers.isNotEmpty()) item(key = "typing") { TypingRow(typers.mapNotNull { writers[it] }) }
     items(items, key = { it.key }, contentType = { it::class }) { item ->
-      ChatItemRow(item, me, writers, threadId != GROUP_THREAD, Modifier.animateItem())
+      ChatItemRow(item, me, writers, threadId != GROUP_THREAD, onNotKept, Modifier.animateItem())
     }
     if (!chat.atStart && chat.heldBefore == 0) {
       item(key = "earlier") {
