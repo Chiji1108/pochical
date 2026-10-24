@@ -103,7 +103,7 @@ export type Firing = {
 // When a reminder goes off for a day, if it does: for a shift it does not
 // skip, 前日 on every day with one, days off included, and 開始前 only
 // for a shift with a time.
-function firingFor(
+export function firingFor(
   reminder: Reminder,
   date: Date,
   entry: DayEntry,

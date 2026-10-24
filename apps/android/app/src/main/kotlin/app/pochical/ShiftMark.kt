@@ -13,8 +13,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.vector.PathParser
@@ -22,11 +22,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import app.pochical.calendar.TimeChange
 import app.pochical.design.MarkColor
 import app.pochical.design.MarkIcons
 import app.pochical.kit.Look
 import app.pochical.kit.MarkStyle
+import app.pochical.kit.TimeChange
 
 /** The side of the grid Phosphor draws the marks' icons on. */
 private const val ICON_GRID = 256f

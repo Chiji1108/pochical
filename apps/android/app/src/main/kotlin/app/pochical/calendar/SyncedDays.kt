@@ -2,17 +2,19 @@ package app.pochical.calendar
 
 import app.pochical.kit.AppDatabase
 import app.pochical.kit.CoworkerRow
+import app.pochical.kit.OwnCalendar as KitCalendar
 import app.pochical.kit.OwnEdits
 import app.pochical.kit.PageSummary
 import app.pochical.kit.PatternRefusal
 import app.pochical.kit.PatternRow
 import app.pochical.kit.RepeatOrder
-import app.pochical.kit.daysShowing
-import app.pochical.kit.readyCopies
 import app.pochical.kit.ShownDay
+import app.pochical.kit.daysShowing
 import app.pochical.kit.newId
 import app.pochical.kit.ownCalendar
+import app.pochical.kit.readyCopies
 import app.pochical.kit.summary
+import app.pochical.kit.time
 import app.pochical.v1.DayField
 import app.pochical.v1.pattern
 import java.time.LocalDate
@@ -25,7 +27,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import app.pochical.kit.OwnCalendar as KitCalendar
 
 /**
  * The person's days as the device keeps them (:kit): read from its database whenever sync or an
@@ -172,7 +173,7 @@ internal val PatternRow.pattern: Pattern
       emoji = emoji,
       symbol = symbol,
       color = color,
-      time = start?.let { start -> end?.let { ShiftTime(start, it) } },
+      time = time,
       countsAsOff = countsAsOff,
       nextDay = nextDay,
       archived = archived,

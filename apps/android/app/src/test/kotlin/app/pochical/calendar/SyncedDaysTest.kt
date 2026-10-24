@@ -1,5 +1,6 @@
 package app.pochical.calendar
 
+import app.pochical.kit.ShiftTime
 import app.pochical.v1.pattern
 import app.pochical.v1.repeatOrder
 import java.time.LocalDate

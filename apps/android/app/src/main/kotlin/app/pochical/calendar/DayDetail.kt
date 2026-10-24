@@ -56,6 +56,9 @@ import app.pochical.R
 import app.pochical.ShiftMark
 import app.pochical.design.COWORKERS_MAX
 import app.pochical.design.TextLimits
+import app.pochical.kit.ShiftTime
+import app.pochical.kit.hoursText
+import app.pochical.kit.timeChange
 import app.pochical.limitText
 import app.pochical.limited
 import java.time.LocalDate

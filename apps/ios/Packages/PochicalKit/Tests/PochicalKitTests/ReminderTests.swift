@@ -2,48 +2,104 @@ import Foundation
 import PochicalKit
 import Testing
 
-private let day = Pattern(
-  id: "day", name: "日勤", emoji: "", symbol: "", icon: "", color: 0,
-  time: ShiftTime(start: "08:30", end: "17:30"))
-private let night = Pattern(
-  id: "night", name: "夜勤", emoji: "", symbol: "", icon: "", color: 0,
-  time: ShiftTime(start: "00:30", end: "09:00"))
-private let off = Pattern(
-  id: "off", name: "休み", emoji: "", symbol: "", icon: "", color: 0, countsAsOff: true)
-private let patterns = Dictionary(uniqueKeysWithValues: [day, night, off].map { ($0.id, $0) })
-private let nov2 = Day("2026-11-02")!
+// spec/vectors/reminders.json, read as the file writes it and turned into
+// the package's types.
 
-@Test func theEveningBeforeEveryShiftItDoesNotSkip() {
-  let reminder = Reminder(id: "r", skip: ["off"], kind: .dayBefore(time: "21:00"))
-  let firings = reminder.firings(
-    days: [nov2: DayEntry(shift: "day"), nov2.adding(days: 1): DayEntry(shift: "off")],
-    patterns: patterns, from: nov2, through: nov2.adding(days: 1))
-  #expect(firings.count == 1)
-  #expect(firings[0].day == Day("2026-11-01")!)
-  #expect(firings[0].minute == 21 * 60)
-  #expect(firings[0].title == "明日は日勤")
-  #expect(firings[0].body == "8:30 – 17:30")
-  #expect(reminder.name == "前日 21:00")
+struct ReminderVectors: Decodable, Sendable {
+  struct VectorReminder: Decodable, Sendable {
+    let kind: String
+    let time: String?
+    let minutes: Int?
+    let skip: [PatternID]
+
+    var reminder: Reminder {
+      Reminder(
+        id: "r", skip: skip,
+        kind: kind == "dayBefore" ? .dayBefore(time: time ?? "") : .beforeStart(minutes: minutes ?? 0))
+    }
+  }
+
+  struct VectorReminderPattern: Decodable, Sendable {
+    let id: String
+    let name: String
+    let time: [String]?
+
+    var pattern: Pattern {
+      Pattern(
+        id: id, name: name, emoji: "", symbol: "", icon: "", color: 0,
+        time: time.map { ShiftTime(start: $0[0], end: $0[1]) }, countsAsOff: time == nil)
+    }
+  }
+
+  struct Day: Decodable, Sendable {
+    let shift: String
+    let start: String?
+    let end: String?
+  }
+
+  struct Firing: Decodable, Sendable, Equatable {
+    let shiftDay: String
+    let day: String
+    let time: String
+    let title: String
+    let body: String?
+  }
+
+  struct Firings: VectorCase {
+    let name: String
+    let reminder: VectorReminder
+    let days: [String: Day]
+    let from: String
+    let through: String
+    let expected: [Firing]
+  }
+
+  struct Named: VectorCase {
+    let name: String
+    let reminder: VectorReminder
+    let expected: String
+  }
+
+  struct Remindable: VectorCase {
+    let name: String
+    let reminder: VectorReminder
+    let expected: [String]
+  }
+
+  let patterns: [VectorReminderPattern]
+  let firings: [Firings]
+  let names: [Named]
+  let remindable: [Remindable]
 }
 
-@Test func beforeAShiftThatHasATime() {
-  let reminder = Reminder(id: "r", kind: .beforeStart(minutes: 90))
-  let firing = reminder.firing(
-    on: nov2, entry: DayEntry(shift: "day", start: "07:00", end: "20:00"), pattern: day)
-  #expect(firing?.day == nov2)
-  #expect(firing?.minute == 5 * 60 + 30)
-  // The day's own hours are said, its moves too.
-  #expect(firing?.title == "あと1時間30分で日勤（早出・残業）")
-  #expect(firing?.body == "7:00 – 20:00")
-  #expect(reminder.firing(on: nov2, entry: DayEntry(shift: "off"), pattern: off) == nil)
-  #expect(reminder.name == "開始の1時間30分前")
+@Test(arguments: try vectors("reminders", as: ReminderVectors.self).firings)
+func reminderFirings(_ vector: ReminderVectors.Firings) throws {
+  let patterns = try vectors("reminders", as: ReminderVectors.self).patterns.map(\.pattern)
+  let days = Dictionary(
+    uniqueKeysWithValues: vector.days.map { key, day in
+      (Day(key)!, DayEntry(shift: day.shift, start: day.start, end: day.end))
+    })
+  let firings = vector.reminder.reminder.firings(
+    days: days, patterns: Dictionary(uniqueKeysWithValues: patterns.map { ($0.id, $0) }),
+    from: Day(vector.from)!, through: Day(vector.through)!)
+  #expect(
+    firings.map {
+      ReminderVectors.Firing(
+        shiftDay: $0.shiftDay.key, day: $0.day.key,
+        time: String(format: "%02d:%02d", $0.minute / 60, $0.minute % 60), title: $0.title,
+        body: $0.body)
+    } == vector.expected)
 }
 
-@Test func beforeAShiftJustAfterMidnightComesTheDayBefore() {
-  let reminder = Reminder(id: "r", kind: .beforeStart(minutes: 60))
-  let firing = reminder.firing(on: nov2, entry: DayEntry(shift: "night"), pattern: night)
-  #expect(firing?.day == Day("2026-11-01")!)
-  #expect(firing?.minute == 23 * 60 + 30)
+@Test(arguments: try vectors("reminders", as: ReminderVectors.self).names)
+func reminderName(_ vector: ReminderVectors.Named) {
+  #expect(vector.reminder.reminder.name == vector.expected)
+}
+
+@Test(arguments: try vectors("reminders", as: ReminderVectors.self).remindable)
+func reminderRemindable(_ vector: ReminderVectors.Remindable) throws {
+  let patterns = try vectors("reminders", as: ReminderVectors.self).patterns.map(\.pattern)
+  #expect(vector.reminder.reminder.remindable(patterns).map(\.id) == vector.expected)
 }
 
 @Test func remindersKeptBeforeThereWereAnyStartWithTheEveningBefore() throws {

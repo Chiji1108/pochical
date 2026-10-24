@@ -48,6 +48,19 @@ class DeviceSettingsTest {
   }
 
   @Test
+  fun remindersStartWithTheEveningBeforeAndAreKeptOfEachKind() = runTest {
+    assertEquals(Reminder.defaults, readAgain().reminders)
+    val reminders =
+      listOf(
+        Reminder("reminder-0", on = false, kind = Reminder.Kind.DayBefore("20:30")),
+        Reminder("reminder-1", skip = listOf("off"), kind = Reminder.Kind.BeforeStart(90)),
+      )
+    withStore { store -> store.updateData { it.copy(reminders = reminders) } }
+
+    assertEquals(reminders, readAgain().reminders)
+  }
+
+  @Test
   fun aThemeThisAppDoesNotKnowIsPochicalAndKeptAsItCame() = runTest {
     file.writeText("""{"theme":"aurora","appearance":"light"}""")
 

@@ -31,13 +31,13 @@ import app.pochical.R
 import app.pochical.RootPage
 import app.pochical.SectionHeader
 import app.pochical.SettingsPage
-import app.pochical.rememberDragOrder
 import app.pochical.ShiftMark
 import app.pochical.calendar.LocalOwnDays
 import app.pochical.calendar.Pattern
-import app.pochical.calendar.ShiftTime
-import app.pochical.calendar.hoursText
 import app.pochical.design.PATTERNS_PER_PAGE
+import app.pochical.kit.ShiftTime
+import app.pochical.kit.hoursText
+import app.pochical.rememberDragOrder
 import sh.calvin.reorderable.ReorderableItem
 
 /**
