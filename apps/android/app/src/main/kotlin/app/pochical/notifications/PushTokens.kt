@@ -49,6 +49,10 @@ class PushTokens(
     }
   }
 
+  /** Whether FCM has given a token yet. */
+  val hasToken: Boolean
+    get() = token.value != null
+
   /** The token FCM gives, as the app starts or anew. */
   fun took(token: String) {
     this.token.value = token

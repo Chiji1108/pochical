@@ -27,6 +27,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -89,11 +92,15 @@ fun PermissionCard() {
   val settings = LocalDeviceSettings.current
   val activity = LocalActivity.current
   val context = LocalContext.current
-  val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { push.readPermission() }
-  val mayAsk =
-    Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-      (!settings.device.askedNotifications ||
-        activity?.shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS) == true)
+  // Whether the question was refused before it was put this time: refused again, it is refused for
+  // good, as Android then puts it no more. Refused once, or dismissed unanswered, it is put again.
+  var refusedBefore by rememberSaveable { mutableStateOf(false) }
+  val ask =
+    rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+      if (!granted && refusedBefore) settings.change { it.copy(notificationsRefused = true) }
+      push.readPermission()
+    }
+  val mayAsk = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !settings.device.notificationsRefused
   Card(
     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
     modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -122,7 +129,8 @@ fun PermissionCard() {
         Button(
           onClick = {
             if (mayAsk) {
-              settings.change { it.copy(askedNotifications = true) }
+              refusedBefore =
+                activity?.shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS) == true
               ask.launch(Manifest.permission.POST_NOTIFICATIONS)
             } else {
               context.startActivity(systemSettings(context.packageName))

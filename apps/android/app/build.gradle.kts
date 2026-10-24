@@ -82,9 +82,15 @@ android {
 // The Firebase project the app's notifications come through, from app/google-services.json, which
 // Firebase's console gives for app.pochical and holds no secret. A build without it, as on CI or
 // a computer without the file, makes an app with no Firebase project: it runs, and hears no
-// notifications (Push).
+// notifications (Push). A build signed with Play's upload key goes to testers, so it fails without
+// one rather than reach them deaf.
 googleServices {
-  missingGoogleServicesStrategy = com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy.WARN
+  missingGoogleServicesStrategy =
+    if (providers.gradleProperty("pochicalUploadStoreFile").isPresent) {
+      com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy.ERROR
+    } else {
+      com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy.WARN
+    }
 }
 
 dependencies {

@@ -19,7 +19,7 @@ data class PushedAlert(
   /** The chat it opens, and stacks with: a group's, or the chat with Pochical's people. */
   val groupId: String,
   val threadId: String,
-  /** The line, for its writer and for taking it back once read; none for Pochical's people's answer. */
+  /** The line, for its writer and for taking it back once read; an answer from Pochical's people's too. */
   val line: Line? = null,
   /** The user's unread lines as what notifies, in every group. */
   val badge: Int = 0,

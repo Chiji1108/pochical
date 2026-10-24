@@ -54,8 +54,8 @@ class MainActivity(
     super.onCreate(savedInstanceState)
     // Made again, the activity's navigation keeps the join screen the first intent opened.
     // From Recents, Android hands the intent the task began with again: no link was opened now.
-    if (savedInstanceState == null && intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY == 0) links.take(intent)
-    addOnNewIntentListener(links::take)
+    if (savedInstanceState == null && intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY == 0) take(intent)
+    addOnNewIntentListener(::take)
     lifecycleScope.launch {
       // Not cancelled with the activity, so a sample is never left half put in; read after it, so
       // the first calendar drawn holds it.
@@ -83,5 +83,12 @@ class MainActivity(
         PochicalTheme(device) { AccountRoot() }
       }
     }
+  }
+
+  /** Where [intent] opens the app at, for the screens; a chat's notification tapped goes, as it is read. */
+  private fun take(intent: Intent) {
+    val opened = openedOf(intent) ?: return
+    if (opened is Opened.Chat) push.notifier.opened(opened.groupId, opened.threadId)
+    links.take(intent)
   }
 }

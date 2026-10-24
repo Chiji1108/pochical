@@ -11,12 +11,11 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -33,7 +32,8 @@ class Push(private val application: Application, kit: PochicalKit, private val s
     val push: Push
   }
 
-  private val users = kit.account.state.map { (it as? AccountState.SignedIn)?.userId }
+  private val states = kit.account.state
+  private val users = states.map { (it as? AccountState.SignedIn)?.userId }
   private val tokens = PushTokens(scope, users, kit.groups::registerPushToken)
   private val mutableAllowed = MutableStateFlow(false)
 
@@ -47,23 +47,25 @@ class Push(private val application: Application, kit: PochicalKit, private val s
   fun start() {
     Channels.create(application)
     readPermission()
-    if (FirebaseApp.getApps(application).isNotEmpty()) {
-      scope.launch {
-        try {
-          tokens.took(FirebaseMessaging.getInstance().token.await())
-        } catch (e: CancellationException) {
-          throw e
-        } catch (e: Exception) {
-          Log.i(TAG, "FCM gave no token, which it gives later through onNewToken: $e")
-        }
-      }
-    } else {
-      Log.i(TAG, "No Firebase project in this build: no notifications from the server")
-    }
-    // The device going on as another user (spec/sync-protocol.md, Sockets): the notifications of
-    // the user before go with their data.
+    if (hasFirebase) askToken() else Log.i(TAG, "No Firebase project in this build: no notifications from the server")
+    // The device letting go of a user (spec/sync-protocol.md, Sockets): the notifications of the
+    // user before go with their data.
+    scope.launch { lettingGo(states).collect { notifier.forgetAll() } }
+  }
+
+  private val hasFirebase
+    get() = FirebaseApp.getApps(application).isNotEmpty()
+
+  /** Asks FCM for the device's token; one not given is asked for again as the app comes to the front. */
+  private fun askToken() {
     scope.launch {
-      users.filterNotNull().distinctUntilChanged().drop(1).collect { NotificationManagerCompat.from(application).cancelAll() }
+      try {
+        tokens.took(FirebaseMessaging.getInstance().token.await())
+      } catch (e: CancellationException) {
+        throw e
+      } catch (e: Exception) {
+        Log.i(TAG, "FCM gave no token, asked again in the foreground: $e")
+      }
     }
   }
 
@@ -89,10 +91,33 @@ class Push(private val application: Application, kit: PochicalKit, private val s
   /** The app came to the front. */
   fun foreground() {
     readPermission()
+    if (hasFirebase && !tokens.hasToken) askToken()
     tokens.foreground()
   }
 
   private companion object {
     const val TAG = "Push"
+  }
+}
+
+/**
+ * Each time the device lets go of the user it was signed in as: as it starts erasing what it held
+ * of them (signing out, deleting the account, はじめから使う, offline too), or goes on as another
+ * user straight away. A change still waiting on the server ([AccountState.Changing]) is not one.
+ */
+fun lettingGo(states: Flow<AccountState>): Flow<Unit> = flow {
+  var user: String? = null
+  states.collect { state ->
+    when (state) {
+      is AccountState.Erasing -> {
+        user = null
+        emit(Unit)
+      }
+      is AccountState.SignedIn -> {
+        if (user != null && user != state.userId) emit(Unit)
+        user = state.userId
+      }
+      else -> Unit
+    }
   }
 }

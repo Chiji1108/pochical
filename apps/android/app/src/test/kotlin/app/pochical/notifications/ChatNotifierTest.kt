@@ -136,6 +136,53 @@ class ChatNotifierTest {
     assertEquals(emptyList<Any>(), shown())
   }
 
+  @Test
+  fun anAnswerFromPochicalsPeopleGoesOnceEveryAnswerIsRead() = runTest {
+    notifier.show(support(5, "ありがとうございます"))
+    notifier.show(support(6, "直しました"))
+    notifier.withdraw(ChatWithdrawal("support", "support:$ME", readTo = 5))
+    // The latest, which it shows, is still unread.
+    assertEquals("直しました", shown().single().notification.extras.getCharSequence(NotificationCompat.EXTRA_TEXT))
+    notifier.withdraw(ChatWithdrawal("support", "support:$ME", readTo = 6))
+    assertEquals(emptyList<Any>(), shown())
+  }
+
+  @Test
+  fun aChatOpenedFromItsNotificationLetsItGo() = runTest {
+    notifier.show(groupLine(2, "今週どう？"))
+    notifier.opened(GROUP, "group")
+    assertEquals(emptyList<Any>(), shown())
+    notifier.show(groupLine(3, "土曜とか"))
+    assertEquals(listOf("土曜とか"), messagesOf().messages.map { it.text.toString() })
+  }
+
+  @Test
+  fun aNotificationDismissedStartsAnewWithTheNextLine() = runTest {
+    notifier.show(groupLine(2, "今週どう？"))
+    // As the person swipes it away: the system takes it, and tells the app.
+    manager.cancelAll()
+    notifier.dismissed(ChatNotifier.tagOf(GROUP, "group"))
+    notifier.show(groupLine(3, "土曜とか"))
+    assertEquals(listOf("土曜とか"), messagesOf().messages.map { it.text.toString() })
+  }
+
+  @Test
+  fun lettingGoOfTheUserTakesEveryNotificationAway() = runTest {
+    notifier.show(groupLine(2, "今週どう？"))
+    notifier.forgetAll()
+    assertEquals(emptyList<Any>(), shown())
+  }
+
+  private fun support(seq: Long, words: String) =
+    PushedAlert(
+      title = Localized("SUPPORT_TITLE", emptyList()),
+      body = Localized("CHAT_TEXT", listOf(words)),
+      groupId = "support",
+      threadId = "support:$ME",
+      line = PushedAlert.Line("pochical", seq),
+      recipientId = ME,
+    )
+
   private fun groupLine(seq: Long, words: String, kind: String = "TEXT", groupId: String = GROUP, recipient: String = ME) =
     PushedAlert(
       title = Localized("CHAT_TITLE", listOf("いとこ会")),

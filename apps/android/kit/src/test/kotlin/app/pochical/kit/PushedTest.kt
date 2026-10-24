@@ -54,14 +54,14 @@ class PushedTest {
   }
 
   @Test
-  fun anAnswerFromPochicalsPeopleHasNoLine() {
+  fun anAnswerFromPochicalsPeopleHasItsLine() {
     val data =
       mapOf(
         "alert" to
           """{"title":{"key":"SUPPORT_TITLE","args":[]},"body":{"key":"CHAT_TEXT","args":["どうぞ"]},""" +
-            """"groupId":"support","threadId":"support:u2","badge":0,"recipientId":"u2"}"""
+            """"groupId":"support","threadId":"support:u2","line":{"authorId":"pochical","seq":5},"badge":0,"recipientId":"u2"}"""
       )
-    assertNull((pushedOf(data) as Pushed.Alert).alert.line)
+    assertEquals(PushedAlert.Line("pochical", 5), (pushedOf(data) as Pushed.Alert).alert.line)
   }
 
   @Test

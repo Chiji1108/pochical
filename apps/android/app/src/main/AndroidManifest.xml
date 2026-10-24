@@ -73,6 +73,10 @@
         <action android:name="com.google.firebase.MESSAGING_EVENT" />
       </intent-filter>
     </service>
+    <!-- A chat's notification dismissed, which the app forgets (ChatNotifier). -->
+    <receiver
+      android:name=".notifications.NotificationDismissed"
+      android:exported="false" />
     <!-- The camera app writes a photo taken for a face or a mark here (PhotoEditor). -->
     <provider
       android:name="androidx.core.content.FileProvider"

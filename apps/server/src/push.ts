@@ -20,8 +20,8 @@ export type Alert = {
   groupId: string;
   threadId: string;
   // The line: who wrote it, for their face, and where it is, for the
-  // device to take the notification back once it is read. None for an
-  // answer from Pochical's people.
+  // device to take the notification back once it is read; an answer from
+  // Pochical's people's too.
   line?: { authorId: string; seq: number };
 };
 
