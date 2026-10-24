@@ -130,17 +130,9 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
   val writers = remember(members) { members.associateBy { it.userId } }
   // Where the lines are to go once laid out as they are now: ここから新着 at the top, or the foot.
   var going by remember { mutableStateOf<Going?>(null) }
-  LaunchedEffect(going, items) {
-    val to = going ?: return@LaunchedEffect
-    if (!placed) return@LaunchedEffect
+  GoTo(going, items, list, enabled = placed) { there ->
+    following = there
     going = null
-    when (to) {
-      Going.ToUnread -> following = list.showAtTop(items.indexOfFirst { it == ChatItem.Unread })
-      Going.ToFoot -> {
-        following = true
-        list.animateScrollToItem(0)
-      }
-    }
   }
 
   // Opening: the first lines laid out stay laid out, ここから新着 over the first unread line.
@@ -397,8 +389,30 @@ private fun LatestButton(
   }
 }
 
+/**
+ * Takes the lines where [going] asks once they are laid out as [items], telling [onThere] whether
+ * they follow the latest then. The request is cleared by [onThere] only once there: cleared
+ * before, its key's change would cancel the scroll on its way.
+ */
+@Composable
+internal fun GoTo(going: Going?, items: List<ChatItem>, list: LazyListState, enabled: Boolean, onThere: (following: Boolean) -> Unit) {
+  LaunchedEffect(going, items, enabled) {
+    val to = going ?: return@LaunchedEffect
+    if (!enabled) return@LaunchedEffect
+    val following =
+      when (to) {
+        Going.ToUnread -> list.showAtTop(items.indexOfFirst { it == ChatItem.Unread })
+        Going.ToFoot -> {
+          list.animateScrollToItem(0)
+          true
+        }
+      }
+    onThere(following)
+  }
+}
+
 /** Where the lines are asked to go once laid out. */
-private enum class Going {
+internal enum class Going {
   /** ここから新着 at the top, or the foot when the lines under it fit. */
   ToUnread,
 

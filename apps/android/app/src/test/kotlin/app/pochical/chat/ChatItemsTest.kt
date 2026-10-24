@@ -46,6 +46,24 @@ class ChatItemsTest {
   }
 
   @Test
+  fun aLineStillBeingSentFromBeforeMidnightTitlesItsDayAgainUnderTheNextDays() {
+    val yesterday = at(0) - 60_000L
+    val state =
+      ChatState(
+        lines = listOf(line(1, "u2", yesterday - 60_000L), line(2, "u2", at(1))),
+        waiting = listOf(WaitingLine("w", yesterday, LineContent.Words("まだ"))),
+        atStart = true,
+      )
+    val items = chatItems(state, me = "me", unreadFrom = null, zone = zone)
+    assertEquals(
+      listOf("day 2026-10-24", "1 run time", "day 2026-10-25", "2 run time", "day 2026-10-24", "waiting w run"),
+      shape(items),
+    )
+    // Each item keeps a key of its own, as the list asks of them.
+    assertEquals(items.size, items.map { it.key }.toSet().size)
+  }
+
+  @Test
   fun unreadStandsOverItsLineAndStartsARun() {
     val state = ChatState(lines = listOf(line(1, "u2", at(1)), line(2, "u2", at(1))), waiting = emptyList(), atStart = true)
     assertEquals(

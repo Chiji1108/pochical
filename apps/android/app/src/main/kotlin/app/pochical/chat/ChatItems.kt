@@ -19,10 +19,13 @@ import java.time.temporal.ChronoUnit
 sealed interface ChatItem {
   val key: String
 
-  /** The title over a day's first line. */
-  data class DayTitle(val day: LocalDate) : ChatItem {
+  /**
+   * The title over a day's first line, by the key of the line it heads ([heads]): a day can head
+   * the lines twice, as a line still being sent comes after every other, the next day's too.
+   */
+  data class DayTitle(val day: LocalDate, val heads: String) : ChatItem {
     override val key
-      get() = "day-$day"
+      get() = "day-$heads"
   }
 
   /** ここから新着, over the first unread line as the chat opened. */
@@ -77,7 +80,7 @@ fun chatItems(state: ChatState, me: String?, unreadFrom: Long?, zone: ZoneId = Z
     val day = dayOf(at, zone)
     var starts = writer != lastWriter
     if (day != lastDay) {
-      items += ChatItem.DayTitle(day)
+      items += ChatItem.DayTitle(day, item.key)
       lastDay = day
       starts = true
     }
