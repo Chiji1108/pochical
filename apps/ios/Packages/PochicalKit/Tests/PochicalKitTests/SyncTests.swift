@@ -13,6 +13,12 @@ struct ReconnectVectors: Decodable, Sendable {
     let expected: Int
   }
 
+  struct TriesCase: VectorCase {
+    let name: String
+    let events: [String]
+    let expected: [Int?]
+  }
+
   struct DefaultNetworkCase: VectorCase {
     let name: String
     let from: String?
@@ -21,6 +27,7 @@ struct ReconnectVectors: Decodable, Sendable {
   }
 
   let waitMost: [WaitMost]
+  let tries: [TriesCase]
   let defaultNetwork: [DefaultNetworkCase]
 }
 
@@ -35,6 +42,24 @@ func defaultNetwork(_ vector: ReconnectVectors.DefaultNetworkCase) {
 func waitMost(_ vector: ReconnectVectors.WaitMost) {
   let most = reconnectWaitMost(tries: vector.tries, firstMs: vector.firstMs, mostMs: vector.mostMs)
   #expect(most == vector.expected)
+}
+
+@Test(arguments: try vectors("reconnect", as: ReconnectVectors.self).tries)
+func reconnectTries(_ vector: ReconnectVectors.TriesCase) {
+  var tries = ReconnectTries()
+  var waits: [Int?] = []
+  for event in vector.events {
+    switch event {
+    case "start", "networkChanged", "clockAhead":
+      tries.atOnce()
+      waits.append(nil)
+    case "dropped": waits.append(tries.dropped())
+    case "caughtUp": tries.caughtUp()
+    case "welcomed": break
+    default: Issue.record("unknown event \(event)")
+    }
+  }
+  #expect(waits == vector.expected)
 }
 
 /// A change to one day field at `cursor`, with a clock.

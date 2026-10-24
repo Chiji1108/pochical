@@ -325,6 +325,22 @@ class AccountChangeTest {
   }
 
   @Test
+  fun aLinkTheServerSaysWhileADeletionIsAskedStaysOnceItIsRefused() = runBlocking<Unit> {
+    server.provider = SignInProvider.SIGN_IN_PROVIDER_APPLE
+    // The sign-in's own GetMe answers only once the deletion has begun.
+    server.getMeDelayMs = 1_000
+    val phone = signedInDevice()
+    eventually { server.getMes == 1 }
+    server.getMeDelayMs = 0
+    server.deleteDelayMs = 2_000
+    server.deleteRefusal = "failed_precondition"
+
+    assertThrows(DeletionFailure::class.java) { runBlocking { phone.account.deleteAccount { "of another Apple ID" } } }
+
+    assertEquals(AccountState.SignedIn("user-1", LinkedAccount(LinkedAccount.Provider.Apple, null)), phone.account.state.value)
+  }
+
+  @Test
   fun aDeletionTheServerDoesNotKnowTheSessionOfEndsIt() = runBlocking<Unit> {
     val phone = signedInDevice()
     server.token = "another"

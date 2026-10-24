@@ -32,7 +32,7 @@ import { hub } from "./design-group-parts";
 import {
   GroupSettingsPage,
   NewGroupPage,
-  colorOfMark,
+  nextGroupColor,
   profileIn,
 } from "./design-group-settings";
 import type { GroupEdit } from "./design-group-settings";
@@ -223,8 +223,8 @@ export function DesignGroup({
         setGroupId(id);
         setPage({ name: "invite" });
       }}
+      freeColor={nextGroupColor(groups.map((item) => item.mark))}
       profile={profile}
-      usedColors={groups.map((item) => colorOfMark(item.mark))}
     />
   );
 
@@ -519,6 +519,11 @@ export function DesignGroup({
           {page.name === "settings" && (
             <GroupSettingsPage
               group={group}
+              freeColor={nextGroupColor(
+                groups
+                  .filter((item) => item.id !== group.id)
+                  .map((item) => item.mark)
+              )}
               onLeave={() => {
                 const rest = groups.filter((item) => item.id !== group.id);
                 setGroups(rest);
