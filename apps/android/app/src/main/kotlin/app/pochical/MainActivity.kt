@@ -17,6 +17,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import app.pochical.calendar.LocalOwnDays
 import app.pochical.calendar.OwnDays
+import app.pochical.groups.LocalGroupCalls
+import app.pochical.groups.LocalValues
 import app.pochical.kit.PochicalKit
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoMap
@@ -68,6 +70,8 @@ class MainActivity(
         LocalOwnDays provides ownDays,
         LocalAccount provides kit.account,
         LocalAppleSignIn provides appleSignIn,
+        LocalGroupCalls provides kit.groups,
+        LocalValues provides kit.database.values(),
       ) {
         PochicalTheme(device) { AccountRoot() }
       }

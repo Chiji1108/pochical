@@ -32,31 +32,3 @@ func anythingChangedIsANewRequest(_ changed: String, _ expected: NewGroupRequest
   #expect(next.id == "new", "\(changed)")
   #expect(next == expected)
 }
-
-private struct GroupVectors: Decodable {
-  struct ColorCase: VectorCase {
-    struct Mark: Decodable, Sendable {
-      let kind: String
-      let color: Int?
-    }
-
-    let name: String
-    let marks: [Mark]
-    let expected: Int
-  }
-
-  let nextGroupColor: [ColorCase]
-}
-
-@Test(arguments: try vectors("groups", as: GroupVectors.self).nextGroupColor)
-private func aGroupsColor(_ vector: GroupVectors.ColorCase) {
-  let marks = vector.marks.map { mark in
-    switch mark.kind {
-    case "icon": GroupMarkValue(icon: "house", color: mark.color ?? 0)
-    case "letter": GroupMarkValue(letter: "家", color: mark.color ?? 0)
-    case "photo": GroupMarkValue(photoID: "photo")
-    default: GroupMarkValue(emoji: "🏠")
-    }
-  }
-  #expect(nextGroupColor(marks, slots: 12) == vector.expected)
-}

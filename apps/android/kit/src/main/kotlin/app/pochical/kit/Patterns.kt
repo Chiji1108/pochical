@@ -1,12 +1,10 @@
 package app.pochical.kit
 
-import app.pochical.design.MarkIconNames
 import app.pochical.design.ReadyPattern
 import app.pochical.design.ReadyPatterns
 import app.pochical.design.SyncLimits
 import app.pochical.design.TextLimits
 import app.pochical.design.Theme
-import java.text.Normalizer
 import java.time.LocalDate
 
 
@@ -32,7 +30,7 @@ data class MarkLook(val emoji: String, val icon: String, val symbol: String)
  * the name's first character as a reader sees it, trimmed.
  */
 fun guessLook(name: String): MarkLook {
-  val hint = ReadyPatterns.lookHints.firstOrNull { hint -> hint.words.any { it in name } }
+  val hint = ReadyPatterns.lookHints.hintedBy(name) { it.words }
   return MarkLook(
     hint?.emoji ?: ReadyPatterns.FALLBACK_EMOJI,
     hint?.icon ?: ReadyPatterns.FALLBACK_ICON,
@@ -65,12 +63,6 @@ fun fitsPattern(pattern: PatternRow): Boolean {
     (pattern.end == null || TIME.matches(pattern.end)) &&
     (pattern.nextDay == null || (isId(pattern.nextDay) && pattern.nextDay != pattern.id))
 }
-
-/**
- * A new pattern's color slot (spec/vectors/patterns.json, nextColor): the first of the palette's
- * [slots] no pattern uses, else the count of patterns modulo the slots.
- */
-fun nextColor(used: List<Int>, slots: Int): Int = (0 until slots).firstOrNull { it !in used } ?: (used.size % slots)
 
 /** A ready-made pattern as the person's copy: its next day kept only when that pattern is among [keeping]. */
 fun ReadyPattern.personsCopy(keeping: Set<String>): PatternRow =
@@ -145,32 +137,8 @@ fun refusesArchiving(id: String, archived: Boolean, orders: List<RepeatOrder>, t
   !archived && repeats(id, orders, today)
 
 /**
- * The icon picker's search: the kinds with only the icons whose name or words hold every word
- * typed, width, case and katakana folded, so ケア, けあ and ｹｱ find the same.
- */
-fun markIconSections(query: String): List<MarkIconNames.Section> {
-  val words = folded(query).split(Regex("\\s+")).filter { it.isNotEmpty() }
-  if (words.isEmpty()) return MarkIconNames.sections
-  return MarkIconNames.sections.mapNotNull { section ->
-    val icons =
-      section.icons.filter { icon ->
-        val text = folded("${MarkIconNames.names[icon].orEmpty()} ${MarkIconNames.words[icon].orEmpty()}")
-        words.all { it in text }
-      }
-    if (icons.isEmpty()) null else MarkIconNames.Section(section.title, icons)
-  }
-}
-
-/**
  * How many days show the pattern, of their own or from an order, as deleting it asks: from the
  * first day either reaches through the last own day or the latest order's start, past which only
  * own days could show one the order in use does not repeat.
  */
 suspend fun AppDatabase.daysShowing(id: String): Int = write { shownSoFar().count { it.shift == id } }
-
-private const val KATAKANA_TO_HIRAGANA = 0x60
-
-private fun folded(text: String): String =
-  Normalizer.normalize(text, Normalizer.Form.NFKC).lowercase().map { char ->
-    if (char in 'ァ'..'ヶ') char - KATAKANA_TO_HIRAGANA else char
-  }.joinToString("")

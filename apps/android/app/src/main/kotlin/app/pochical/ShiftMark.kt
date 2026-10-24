@@ -69,7 +69,7 @@ fun ShiftMark(
       Box(
         drawn
           .sizeIn(minWidth = size, minHeight = size)
-          .background(mark.tint, RoundedCornerShape(size * 0.28f)),
+          .background(mark.tint, markShape(size)),
         contentAlignment = Alignment.Center,
       ) {
         Text(symbol, color = mark.color, fontSize = fontSize * 0.56f, fontWeight = FontWeight.Bold)
@@ -85,6 +85,9 @@ fun ShiftMark(
   }
 }
 
+/** A mark's tile, a pattern's letters or a group's, as /design rounds it: 28% of its side. */
+fun markShape(size: Dp) = RoundedCornerShape(size * 0.28f)
+
 private fun triangle(a: Offset, b: Offset, c: Offset) =
   Path().apply {
     moveTo(a.x, a.y)
@@ -97,8 +100,9 @@ private fun triangle(a: Offset, b: Offset, c: Offset) =
 fun markLayers(id: String, filled: Boolean): List<MarkIcons.Layer>? =
   MarkIcons.glyphs[id]?.let { MarkIcons.drawings[it]?.get(if (filled) "duotone" else "regular") }
 
+/** A mark icon's [layers] in [mark]'s color, [size] across: a pattern's or a group's. */
 @Composable
-private fun IconLayers(layers: List<MarkIcons.Layer>, mark: MarkColor, size: Dp, modifier: Modifier) {
+internal fun IconLayers(layers: List<MarkIcons.Layer>, mark: MarkColor, size: Dp, modifier: Modifier) {
   val paths = remember(layers) { layers.map { PathParser().parsePathString(it.pathData).toPath() } }
   Canvas(modifier.size(size)) {
     scale(this.size.width / ICON_GRID, pivot = Offset.Zero) {

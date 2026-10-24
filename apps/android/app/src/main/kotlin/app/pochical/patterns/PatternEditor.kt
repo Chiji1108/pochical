@@ -16,7 +16,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -63,7 +62,7 @@ import app.pochical.kit.nextColor
 import app.pochical.kit.refusesArchiving
 import app.pochical.kit.repeats
 import app.pochical.limitText
-import app.pochical.limited
+import app.pochical.LimitedTextField
 import app.pochical.mark
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
@@ -131,7 +130,7 @@ fun PatternEditor(id: String, isNew: Boolean, navigation: PageNavigation) {
   val shaped = draft.copy(name = shapedName, time = if (allDay) null else time)
 
   fun rename(text: TextFieldValue) {
-    name = text.limited(TextLimits.shiftName)
+    name = text
     val look = guessLook(name.text)
     draft =
       draft.copy(
@@ -185,13 +184,13 @@ fun PatternEditor(id: String, isNew: Boolean, navigation: PageNavigation) {
         }
       }
       item {
-        OutlinedTextField(
+        LimitedTextField(
           name,
           ::rename,
+          TextLimits.shiftName,
+          stringResource(R.string.name),
           Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-          label = { Text(stringResource(R.string.name)) },
-          placeholder = { Text(stringResource(R.string.pattern_name_example)) },
-          singleLine = true,
+          placeholder = stringResource(R.string.pattern_name_example),
         )
       }
       item { SwitchRow(stringResource(R.string.pattern_no_time), null, allDay) { allDay = it } }

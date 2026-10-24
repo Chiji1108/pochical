@@ -96,30 +96,6 @@ struct GroupMarkBadge: View {
   }
 }
 
-/// Words in a name that suggest an emoji (/design's groupHints).
-private let groupHints: [(emoji: String, words: [String])] = [
-  ("🏠", ["家族", "家", "夫婦"]),
-  ("🎓", ["学校", "同期", "クラス", "ゼミ"]),
-  ("💼", ["職場", "会社", "仕事", "病棟"]),
-  ("✈️", ["旅行", "旅"]),
-  ("🍙", ["ごはん", "飲み", "ランチ"]),
-  ("👭", ["友達", "友だち", "仲間"]),
-]
-
-/// From the name alone (/design's guessGroupMark): a fitting emoji, or
-/// else its first letter in `color`.
-func guessedMark(for name: String, color: Int) -> GroupMarkValue {
-  if let hint = groupHints.first(where: { hint in hint.words.contains { name.contains($0) } }) {
-    return GroupMarkValue(emoji: hint.emoji)
-  }
-  return GroupMarkValue(letter: initialLetter(of: name), color: color)
-}
-
-/// A name's first letter, as a group's letters start.
-private func initialLetter(of name: String) -> String {
-  name.trimmingCharacters(in: .whitespacesAndNewlines).first.map(String.init) ?? "グ"
-}
-
 /// Said when a photo picked for a mark was let go of by the device before
 /// the group was saved with it (`MarkPhotoGone`).
 let markPhotoGoneTitle = "写真をもう一度選んでください"

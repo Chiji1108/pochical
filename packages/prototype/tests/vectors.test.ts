@@ -9,7 +9,7 @@ import { rgbaToThumbHash, thumbHashToRGBA } from "thumbhash";
 import chatText from "../../../spec/vectors/chat-text.json";
 import chatMessages from "../../../spec/vectors/chat.json";
 import entering from "../../../spec/vectors/entering.json";
-import groupMarks from "../../../spec/vectors/groups.json";
+import groupVectors from "../../../spec/vectors/groups.json";
 import hlc from "../../../spec/vectors/hlc.json";
 import localEdits from "../../../spec/vectors/local-edits.json";
 import monthWeeks from "../../../spec/vectors/month.json";
@@ -26,7 +26,10 @@ import together from "../../../spec/vectors/together.json";
 import unread from "../../../spec/vectors/unread.json";
 import widgets from "../../../spec/vectors/widgets.json";
 import { bytesOf } from "../src/components/design-chat-photos";
-import { nextGroupColor } from "../src/components/design-group-settings";
+import {
+  guessGroupMark,
+  nextGroupColor,
+} from "../src/components/design-group-settings";
 import { periodTitleOf } from "../src/components/design-month-name";
 import {
   defaultWeekSettings,
@@ -549,7 +552,7 @@ function groupMarkOf({
 }
 
 describe("spec/vectors/groups.json", () => {
-  for (const { name, marks, expected } of groupMarks.nextGroupColor) {
+  for (const { name, marks, expected } of groupVectors.nextGroupColor) {
     test(`nextGroupColor: ${name}`, () => {
       expect(nextGroupColor(marks.map(groupMarkOf))).toBe(expected);
     });
@@ -630,6 +633,23 @@ describe("spec/vectors/patterns.json", () => {
         keeping === undefined ? undefined : new Set(keeping)
       );
       expect(idsOf(copies)).toEqual(expected);
+    });
+  }
+});
+
+describe("spec/vectors/groups.json", () => {
+  for (const {
+    name,
+    text: written,
+    color,
+    expected,
+  } of groupVectors.guessMark) {
+    test(`guessMark: ${name}`, () => {
+      expect(guessGroupMark(written, color)).toEqual(
+        "emoji" in expected
+          ? { emoji: expected.emoji, kind: "emoji" }
+          : { color: expected.color, kind: "letter", text: expected.letter }
+      );
     });
   }
 });

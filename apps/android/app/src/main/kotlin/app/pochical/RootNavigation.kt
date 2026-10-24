@@ -53,6 +53,8 @@ sealed interface RootPage : RootRoute, NavKey {
   /** シフト for the day `date` ("YYYY-MM-DD"), from its detail. */
   @Serializable data class ShiftChoice(val date: String) : RootPage
 
+  /** グループを作る, from グループ. */
+  @Serializable data object NewGroup : RootPage
   /** シフトパターン, from 設定. */
   @Serializable data object Patterns : RootPage
 
@@ -84,9 +86,16 @@ sealed interface RootPage : RootRoute, NavKey {
  * the root, so no page can go under them and a back cannot take them away.
  */
 @Stable
-class RootNavigator(private val pages: NavBackStack<RootPage>, tab: MutableState<RootTab>) {
+class RootNavigator(
+  private val pages: NavBackStack<RootPage>,
+  tab: MutableState<RootTab>,
+  openGroup: MutableState<String?> = mutableStateOf(null),
+) {
   var tab by tab
     private set
+
+  /** The group open in グループ, picked there; the first while none is, or once the one picked is gone. */
+  var openGroup by openGroup
 
   /** The tabs, then the pages over them, as the navigation shows them. */
   val routes: List<RootRoute>
@@ -100,6 +109,17 @@ class RootNavigator(private val pages: NavBackStack<RootPage>, tab: MutableState
   /** Goes to `tab`, as a tap on it does; the pages, none while the tab bar shows, stay. */
   fun select(tab: RootTab) {
     this.tab = tab
+  }
+
+  /**
+   * Shows the group [groupId] in グループ, as one made or joined is, with [page] over the tabs in
+   * place of the pages open, or none.
+   */
+  fun showGroup(groupId: String, page: RootPage? = null) {
+    pages.clear()
+    page?.let(pages::add)
+    tab = RootTab.Groups
+    openGroup = groupId
   }
 
   /** Whether a back on the tabs, no page over them, goes to the first tab rather than leaving the app. */
@@ -157,5 +177,6 @@ fun rememberRootNavigator(): RootNavigator {
       NavBackStack<RootPage>()
     }
   val tab = rememberSaveable { mutableStateOf(RootTab.entries.first()) }
-  return remember(pages, tab) { RootNavigator(pages, tab) }
+  val openGroup = rememberSaveable { mutableStateOf<String?>(null) }
+  return remember(pages, tab, openGroup) { RootNavigator(pages, tab, openGroup) }
 }

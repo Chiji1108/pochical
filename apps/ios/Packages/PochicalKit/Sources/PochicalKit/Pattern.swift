@@ -152,13 +152,24 @@ extension Pattern {
 /// emoji and icon, else a star and the letter icon; the letter is the
 /// name's first character, trimmed.
 public func guessLook(_ name: String) -> (emoji: String, icon: String, symbol: String) {
-  let hint = ReadyPatterns.lookHints.first { hint in
-    hint.words.contains { name.contains($0) }
-  }
-  let letter = name.trimmingCharacters(in: .whitespacesAndNewlines).first.map(String.init) ?? ""
+  let hint = firstHint(in: ReadyPatterns.lookHints, for: name, words: { $0.words })
   return (
-    hint?.emoji ?? ReadyPatterns.fallbackEmoji, hint?.icon ?? ReadyPatterns.fallbackIcon, letter
+    hint?.emoji ?? ReadyPatterns.fallbackEmoji, hint?.icon ?? ReadyPatterns.fallbackIcon,
+    firstLetter(of: name) ?? ""
   )
+}
+
+/// The first of `hints` with one of its words anywhere in `name`, as a new
+/// pattern's look (patterns.json, guessLook) and a new group's mark
+/// (groups.json, guessMark) are guessed.
+func firstHint<Hint>(in hints: [Hint], for name: String, words: (Hint) -> [String]) -> Hint? {
+  hints.first { hint in words(hint).contains { name.contains($0) } }
+}
+
+/// A name's first character, trimmed, as a mark's letter starts; none for a
+/// name with none.
+func firstLetter(of name: String) -> String? {
+  name.trimmingCharacters(in: .whitespacesAndNewlines).first.map(String.init)
 }
 
 /// A new pattern's color slot (spec/vectors/patterns.json, nextColor): the

@@ -1,5 +1,6 @@
 import Connect
 import Foundation
+import PochicalDesign
 import PochicalProto
 import SQLiteData
 
@@ -103,6 +104,22 @@ public struct GroupMarkValue: Hashable, Sendable {
     mark.photoID = photoID
     return mark
   }
+}
+
+/// A new group's mark from its name as it is typed (spec/vectors/groups.json,
+/// guessMark): the emoji of the first hint with a word anywhere in the
+/// name, else the name's initial letter in `color`.
+public func guessedMark(for name: String, color: Int) -> GroupMarkValue {
+  if let hint = firstHint(in: ReadyPatterns.groupMarkHints, for: name, words: { $0.words }) {
+    return GroupMarkValue(emoji: hint.emoji)
+  }
+  return GroupMarkValue(letter: initialLetter(of: name), color: color)
+}
+
+/// A name's first character, trimmed, as a group's letters start, else
+/// `groupMarkFallbackLetter` for a name with none.
+public func initialLetter(of name: String) -> String {
+  firstLetter(of: name) ?? ReadyPatterns.groupMarkFallbackLetter
 }
 
 extension DatabaseMigrator {

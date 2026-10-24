@@ -96,6 +96,7 @@ dependencies {
   implementation(libs.credentials.play.services.auth)
   implementation(libs.googleid)
   implementation(libs.browser)
+  implementation(libs.emojipicker)
   implementation(libs.reorderable)
 
   testImplementation(libs.junit)
