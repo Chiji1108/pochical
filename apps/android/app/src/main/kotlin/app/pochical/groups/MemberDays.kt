@@ -22,14 +22,17 @@ import java.time.LocalDate
 // What a group's screens draw of each member's days, as iOS's GroupMember and MemberCalendar are read
 // there: a day's pattern and moved hours, in the member's own shape.
 
-/** A member's day as the group's screens draw it: its pattern, and how its hours moved. */
-data class MemberShift(val pattern: Pattern, val change: TimeChange?)
+/**
+ * A member's day as the group's screens draw it: its pattern, its own hours where they differ from the
+ * pattern's, and how they moved.
+ */
+data class MemberShift(val pattern: Pattern, val change: TimeChange?, val start: String? = null, val end: String? = null)
 
 /** Each day from [from] through [through] that shows a shift for the member. */
 fun GroupMember.shifts(from: LocalDate, through: LocalDate): Map<LocalDate, MemberShift> =
   calendar.shown(from, through).mapNotNull { (day, shown) ->
     val pattern = calendar.pattern(shown.shift)?.pattern ?: return@mapNotNull null
-    day to MemberShift(pattern, timeChange(shown.start, shown.end, pattern.time))
+    day to MemberShift(pattern, timeChange(shown.start, shown.end, pattern.time), shown.start, shown.end)
   }.toMap()
 
 /** Everyone's shifts over some days, member by member, and the days among them everyone is off. */

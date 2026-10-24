@@ -68,6 +68,9 @@ sealed interface RootPage : RootRoute, NavKey {
   /** このグループでのあなた, from its settings. */
   @Serializable data class GroupProfile(val groupId: String) : RootPage
 
+  /** みんなのシフト, from the group's hub: on `date` ("YYYY-MM-DD") with its sheet up when given. */
+  @Serializable data class GroupShifts(val groupId: String, val date: String? = null) : RootPage
+
   /** QRコードで参加, from グループ. */
   @Serializable data object Scan : RootPage
 

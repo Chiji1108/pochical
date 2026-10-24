@@ -508,7 +508,7 @@ private fun Heading(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MonthPicker(
+internal fun MonthPicker(
   month: YearMonth,
   months: ClosedRange<YearMonth>,
   onPick: (YearMonth) -> Unit,

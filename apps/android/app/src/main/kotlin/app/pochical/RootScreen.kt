@@ -26,6 +26,7 @@ import app.pochical.groups.GroupButtons
 import app.pochical.groups.GroupEditPage
 import app.pochical.groups.GroupProfilePage
 import app.pochical.groups.GroupSettingsPage
+import app.pochical.groups.GroupShiftsPage
 import app.pochical.groups.GroupsActions
 import app.pochical.groups.InvitePage
 import app.pochical.groups.JoinScreen
@@ -89,7 +90,9 @@ fun RootScreen(navigator: RootNavigator) {
             onLeft = navigator::closePages,
           )
         }
-      is RootPage.GroupEdit -> NavEntry(route) { GroupEditPage(route.groupId, onBack = rememberPageNavigation(navigator)::back) }
+      is RootPage.GroupShifts ->
+        NavEntry(route) { GroupShiftsPage(route.groupId, route.date?.let(LocalDate::parse), onBack = rememberPageNavigation(navigator)::back) }
+      is RootPage.GroupEdit ->NavEntry(route) { GroupEditPage(route.groupId, onBack = rememberPageNavigation(navigator)::back) }
       is RootPage.GroupProfile -> NavEntry(route) { GroupProfilePage(route.groupId, onBack = rememberPageNavigation(navigator)::back) }
       is RootPage.ShiftChoice ->
         NavEntry(route) {
@@ -140,7 +143,7 @@ private fun TabsScreen(navigator: RootNavigator, navigation: PageNavigation) {
       when (navigation.tab) {
         RootTab.Calendar -> CalendarScreen(open = navigation::open, hidesTabBar = { barHidden = it })
         RootTab.Groups ->
-          GroupsScreen(navigator.openGroup, { navigator.openGroup = it }, GroupsActions(onNew = { navigation.open(RootPage.NewGroup) }, onScan = { navigation.open(RootPage.Scan) }) { group -> GroupButtons(group.id, navigation::open) })
+          GroupsScreen(navigator.openGroup, { navigator.openGroup = it }, GroupsActions(onNew = { navigation.open(RootPage.NewGroup) }, onScan = { navigation.open(RootPage.Scan) }, onShifts = { id, day -> navigation.open(RootPage.GroupShifts(id, day?.toString())) }) { group -> GroupButtons(group.id, navigation::open) })
         RootTab.Settings -> SettingsScreen(open = navigation::open)
       }
     }
