@@ -124,6 +124,14 @@ internal interface SyncDao {
 
   @Query("DELETE FROM groups") suspend fun deleteGroups()
 
+  @Query("SELECT COUNT(*) FROM groups") suspend fun groupCount(): Int
+
+  @Query("SELECT COUNT(*) FROM days WHERE pattern IS NOT NULL AND pattern != ''") suspend fun shiftDayCount(): Int
+
+  @Query("SELECT EXISTS(SELECT 1 FROM repeatOrders)") suspend fun repeats(): Boolean
+
+  @Query("SELECT COUNT(*) FROM coworkers") suspend fun coworkerCount(): Int
+
   @Upsert suspend fun upsert(member: GroupMemberRow)
 
   @Query("SELECT * FROM memberDays WHERE groupId = :groupId AND userId = :userId AND date = :date")

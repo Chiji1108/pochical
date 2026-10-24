@@ -61,6 +61,9 @@ internal suspend fun SyncDao.eraseUserData() {
   upsert(state().copy(cursor = 0, owner = ""))
 }
 
+/** What the device holds of the user that the person entered, counted as the server counts an account's. */
+internal suspend fun SyncDao.holdings() = Holdings(shiftDayCount(), repeats(), coworkerCount(), groupCount())
+
 /** Welcome: the device's time is corrected by the server's from now on (HLC). */
 internal suspend fun SyncDao.welcome(sentMs: Long, receivedMs: Long, serverMs: Long) {
   upsert(state().copy(offsetMs = clockOffset(sentMs, receivedMs, serverMs)))

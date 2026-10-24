@@ -107,6 +107,11 @@ data class SyncState(
   val cursor: Long = 0,
   /** The user whose data the database holds, empty while it is no one's (`claim`). */
   val owner: String = "",
+  /**
+   * The user whose account was deleted and whose data was erased here: a session of theirs still
+   * kept, the app having ended before forgetting it, is never signed in as again.
+   */
+  val erased: String = "",
   /** The sync schema the values were taken under (`SYNC_SCHEMA`). */
   val schema: Int = SYNC_SCHEMA,
 ) {

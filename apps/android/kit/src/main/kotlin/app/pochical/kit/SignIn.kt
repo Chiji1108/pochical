@@ -36,18 +36,64 @@ suspend fun signInAnonymously(http: OkHttpClient, server: HttpUrl): StoredSessio
         .url(server.resolve("/api/auth/sign-in/anonymous")!!)
         .post("{}".toRequestBody("application/json".toMediaType()))
         .build()
-    http.newCall(request).execute().use { response ->
-      val token = response.header("set-auth-token")
-      if (!response.isSuccessful || token.isNullOrEmpty()) throw SignInRefused(response.code)
-      val answer =
-        try {
-          answers.decodeFromString(SignInAnswer.serializer(), response.body.string())
-        } catch (_: SerializationException) {
-          throw SignInRefused(response.code)
-        }
-      StoredSession(token, answer.user.id)
-    }
+    signedIn(http, request)
   }
+
+/**
+ * Signs in to the user the provider's account is linked to (better-auth's `/sign-in/social`, with
+ * its ID token), on the session [token] the device has now: the switch to the account's data
+ * (spec/sync-protocol.md, Switching to an account in use). [AccountSuspended] for a user Pochical's
+ * people suspended; [SignInRefused] otherwise.
+ */
+suspend fun signInSocial(http: OkHttpClient, server: HttpUrl, token: String, account: ProviderToken): StoredSession =
+  withContext(Dispatchers.IO) {
+    val request =
+      Request.Builder()
+        .url(server.resolve("/api/auth/sign-in/social")!!)
+        .header("Authorization", "Bearer $token")
+        .post(account.socialBody().toRequestBody("application/json".toMediaType()))
+        .build()
+    signedIn(http, request)
+  }
+
+@Serializable private data class Refusal(val code: String? = null)
+
+/** The session a sign-in answered with: its token in `set-auth-token`, its user's id in the body. */
+private fun signedIn(http: OkHttpClient, request: Request): StoredSession =
+  http.newCall(request).execute().use { response ->
+    val token = response.header("set-auth-token")
+    val body = response.body.string()
+    if (response.code == 403 && refusalCode(body) == SUSPENDED) throw AccountSuspended()
+    if (!response.isSuccessful || token.isNullOrEmpty()) throw SignInRefused(response.code)
+    val answer =
+      try {
+        answers.decodeFromString(SignInAnswer.serializer(), body)
+      } catch (_: SerializationException) {
+        throw SignInRefused(response.code)
+      }
+    StoredSession(token, answer.user.id)
+  }
+
+private fun refusalCode(body: String): String? =
+  try {
+    answers.decodeFromString(Refusal.serializer(), body).code
+  } catch (_: SerializationException) {
+    null
+  }
+
+/** better-auth's code for a suspended user's sign-in (the server's `USER_SUSPENDED`). */
+private const val SUSPENDED = "USER_SUSPENDED"
+
+/** As better-auth's `/link-social` and `/sign-in/social` take it. */
+private fun ProviderToken.socialBody(): String =
+  buildJsonObject {
+      put("provider", provider.serialName)
+      putJsonObject("idToken") {
+        put("token", idToken)
+        put("nonce", nonce)
+      }
+    }
+    .toString()
 
 /** Linking was refused for another reason than the account being in use. */
 class LinkRefused(val status: Int) : IOException("Linking answered $status")
@@ -57,22 +103,13 @@ class LinkRefused(val status: Int) : IOException("Linking answered $status")
  * keeping the user and all of theirs. Its cookie is neither sent nor kept: with one and no Origin,
  * better-auth takes the call for a browser's from another site.
  */
-suspend fun linkSocial(http: OkHttpClient, server: HttpUrl, token: String, account: ProviderToken): LinkResult =
+internal suspend fun linkSocial(http: OkHttpClient, server: HttpUrl, token: String, account: ProviderToken): LinkResult =
   withContext(Dispatchers.IO) {
-    val body =
-      buildJsonObject {
-          put("provider", account.provider.serialName)
-          putJsonObject("idToken") {
-            put("token", account.idToken)
-            put("nonce", account.nonce)
-          }
-        }
-        .toString()
     val request =
       Request.Builder()
         .url(server.resolve("/api/auth/link-social")!!)
         .header("Authorization", "Bearer $token")
-        .post(body.toRequestBody("application/json".toMediaType()))
+        .post(account.socialBody().toRequestBody("application/json".toMediaType()))
         .build()
     http.newCall(request).execute().use { response ->
       when (response.code) {

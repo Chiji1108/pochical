@@ -58,6 +58,19 @@ class SessionStoreTest {
   }
 
   @Test
+  fun theUsersSwitchesLeftBehindStayUntilEachIsDeletedWhateverTheSessionDoes() = runBlocking {
+    store.write(StoredSession("a", "user-a"))
+    store.switchTo(StoredSession("b", "user-b"), leaving = "a")
+    store.switchTo(StoredSession("c", "user-c"), leaving = "b")
+    store.forgetSession()
+    assertEquals(listOf(null, listOf("a", "b")), listOf(store.read(), SessionStore(kept).leftBehind()))
+
+    store.write(StoredSession("d", "user-d"))
+    store.deleted("a")
+    assertEquals(listOf(StoredSession("d", "user-d"), listOf("b")), listOf(store.read(), store.leftBehind()))
+  }
+
+  @Test
   fun aStoreOutOfReachForgetsNothing() = runBlocking {
     store.write(StoredSession("token", "user"))
     val before = kept.bytes

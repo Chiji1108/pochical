@@ -38,7 +38,7 @@ class LocalServerTest {
 
   private inner class Device(name: String) {
     val database = AppDatabase.open(context, inMemory = true)
-    val sessions = SessionStore(BlockStoreBytes(context, "e2e-$name").apply { runBlocking { delete() } })
+    val sessions = SessionStore(BlockStoreBytes(context, "e2e-$name").apply { runBlocking { forget() } })
     val edits = OwnEdits(database)
     val account = SyncAccount(database, sessions, server, http, scope)
 

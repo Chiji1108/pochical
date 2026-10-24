@@ -33,7 +33,7 @@ import org.robolectric.RuntimeEnvironment
 private const val NOTE = 4
 
 /** One of the user's devices: its own database, kept session and account. */
-private class Device(
+internal class Device(
   server: FakeServer,
   now: () -> Long = System::currentTimeMillis,
   network: NetworkWatch? = null,
@@ -64,7 +64,7 @@ private class Device(
 }
 
 /** The OS's default network, as the test tells of it. */
-private class FakeNetwork : NetworkWatch {
+internal class FakeNetwork : NetworkWatch {
   lateinit var lost: () -> Unit
   lateinit var changed: () -> Unit
 
@@ -82,7 +82,7 @@ private object LongestWait : Random() {
 }
 
 /** Waits for [condition], polling, for a few seconds at most. */
-private suspend fun eventually(condition: suspend () -> Boolean) =
+internal suspend fun eventually(condition: suspend () -> Boolean) =
   withTimeout(10_000) {
     while (!condition()) delay(20)
   }
@@ -125,18 +125,20 @@ class SyncTest {
   @Test
   fun anotherDevicesEditArrivesWhileOpenAndInANewDevicesCatchUp() = runBlocking {
     val phone = device()
-    val tablet = device()
     phone.account.foreground()
+    withTimeout(10_000) { phone.current() }
+    // The user's other devices, each given the phone's session as one restored from it would be.
+    val session = phone.sessions.read()!!
+    val tablet = device()
+    tablet.sessions.write(session)
     tablet.account.foreground()
-    withTimeout(10_000) {
-      phone.current()
-      tablet.current()
-    }
+    withTimeout(10_000) { tablet.current() }
 
     tablet.edits.setDay("2026-10-02", DayField.DAY_FIELD_NOTE, "健診")
     eventually { phone.note("2026-10-02") == "健診" }
 
     val newPhone = device()
+    newPhone.sessions.write(session)
     newPhone.account.foreground()
     eventually { newPhone.note("2026-10-02") == "健診" }
     val hellos = server.sockets.last().filter { it.kindCase == ClientFrame.KindCase.HELLO }
@@ -232,9 +234,9 @@ class SyncTest {
     withTimeout(10_000) { phone.current() }
     val token = "header.claims.signature"
 
-    val result = phone.account.link(ProviderToken(LinkedAccount.Provider.Google, token, "nonce-1", "a@example.com"))
+    val result = phone.account.signIn(ProviderToken(LinkedAccount.Provider.Google, token, "nonce-1", "a@example.com"))
 
-    assertEquals(LinkResult.Linked, result)
+    assertEquals(SignInResult.Linked, result)
     val (authorization, body) = server.links.single()
     assertEquals("Bearer ${server.token}", authorization)
     assertEquals("""{"provider":"google","idToken":{"token":"$token","nonce":"nonce-1"}}""", body)
@@ -255,27 +257,13 @@ class SyncTest {
     phone.account.foreground()
     withTimeout(10_000) { phone.current() }
 
-    phone.account.link(ProviderToken(LinkedAccount.Provider.Google, "t", "n", "a@example.com"))
+    phone.account.signIn(ProviderToken(LinkedAccount.Provider.Google, "t", "n", "a@example.com"))
     val account = LinkedAccount(LinkedAccount.Provider.Google, "a@example.com")
     withTimeout(10_000) { phone.account.state.first { it == AccountState.SignedIn(server.userId, account) } }
     delay(1_500)
 
     assertEquals(AccountState.SignedIn(server.userId, account), phone.account.state.value)
     assertEquals(account, phone.sessions.read()?.linked)
-  }
-
-  @Test
-  fun anAccountInUseChangesNothing() = runBlocking {
-    val phone = device()
-    phone.account.foreground()
-    withTimeout(10_000) { phone.current() }
-    server.linkStatus = 409
-
-    val result = phone.account.link(ProviderToken(LinkedAccount.Provider.Google, "header.claims.signature", "nonce-1", null))
-
-    assertEquals(LinkResult.InUse, result)
-    assertEquals(AccountState.SignedIn(server.userId, linked = null), phone.account.state.value)
-    assertEquals(StoredSession(server.token, server.userId), phone.sessions.read())
   }
 
   @Test
@@ -314,7 +302,7 @@ class SyncTest {
     server.linkStatus = 401
 
     assertThrows(NotSignedIn::class.java) {
-      runBlocking { phone.account.link(ProviderToken(LinkedAccount.Provider.Google, "t", "n", null)) }
+      runBlocking { phone.account.signIn(ProviderToken(LinkedAccount.Provider.Google, "t", "n", null)) }
     }
     withTimeout(10_000) { phone.account.state.first { it == AccountState.SessionEnded } }
     assertEquals(true, phone.sessions.read()?.ended)
@@ -341,7 +329,7 @@ class SyncTest {
     val phone = device()
     phone.account.foreground()
     withTimeout(10_000) { phone.current() }
-    phone.account.link(ProviderToken(LinkedAccount.Provider.Google, "t", "n", "a@example.com"))
+    phone.account.signIn(ProviderToken(LinkedAccount.Provider.Google, "t", "n", "a@example.com"))
     val account = LinkedAccount(LinkedAccount.Provider.Google, "a@example.com")
     withTimeout(10_000) { phone.account.state.first { it == AccountState.SignedIn(server.userId, account) } }
 
@@ -363,7 +351,7 @@ class SyncTest {
     server.provider = SignInProvider.SIGN_IN_PROVIDER_GOOGLE
 
     assertThrows(LinkRefused::class.java) {
-      runBlocking { phone.account.link(ProviderToken(LinkedAccount.Provider.Google, "t", "n", "a@example.com")) }
+      runBlocking { phone.account.signIn(ProviderToken(LinkedAccount.Provider.Google, "t", "n", "a@example.com")) }
     }
     val google = LinkedAccount(LinkedAccount.Provider.Google, email = null)
     withTimeout(10_000) { phone.account.state.first { it == AccountState.SignedIn(server.userId, google) } }

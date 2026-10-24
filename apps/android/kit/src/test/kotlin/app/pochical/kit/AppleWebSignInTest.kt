@@ -71,7 +71,8 @@ class AppleWebSignInTest {
   fun redeemsTheCodeWithTheVerifierItAskedWith() = runTest {
     val attempt = signIn.start()
     val challenge = attempt.url.getQueryParameter("challenge")!!
-    val token = attempt.finish(returned("code" to "one-time", "state" to challenge))!!
+    val answer = attempt.finish(returned("code" to "one-time", "state" to challenge))!!
+    val token = answer.token
     val body = Json.parseToJsonElement(redeemed.single()).jsonObject
     val verifier = body["verifier"]!!.jsonPrimitive.content
     val verifierChallenge =
@@ -85,6 +86,7 @@ class AppleWebSignInTest {
         attempt.url.getQueryParameter("nonce"),
         LinkedAccount(LinkedAccount.Provider.Apple, "x7k2@privaterelay.appleid.com"),
         idToken,
+        "c",
       ),
       listOf(
         attempt.url.path,
@@ -93,6 +95,7 @@ class AppleWebSignInTest {
         nonceHash,
         token.account,
         token.idToken,
+        answer.authorizationCode,
       ),
     )
   }

@@ -23,7 +23,14 @@ import okhttp3.RequestBody.Companion.toRequestBody
 /** Apple's page gave no account: the server or Apple failed, or the return was not this sign-in's. */
 class AppleSignInFailed(message: String) : IOException(message)
 
-@Serializable private data class Redeemed(val idToken: String)
+@Serializable private data class Redeemed(val idToken: String, val authorizationCode: String)
+
+/**
+ * What Apple's page answered: the person's account, and the authorization code Apple gave the
+ * Services ID with it, which deleting the account sends for Apple's tokens to be revoked
+ * (spec/sync-protocol.md, Deleting an account).
+ */
+class AppleAnswer(val token: ProviderToken, val authorizationCode: String)
 
 private val answers = Json { ignoreUnknownKeys = true }
 
@@ -55,11 +62,11 @@ class AppleWebSignIn(private val server: HttpUrl, private val http: OkHttpClient
       )
 
     /**
-     * The person's Apple account from [returned], the URI the browser came back to: null when they
+     * Apple's answer from [returned], the URI the browser came back to: null when they
      * cancelled, [AppleSignInFailed] when it is not this attempt's or Apple's page or the server
      * failed. A code is redeemed once, so this is called once.
      */
-    suspend fun finish(returned: Uri): ProviderToken? {
+    suspend fun finish(returned: Uri): AppleAnswer? {
       if (returned.scheme != RETURN_SCHEME || returned.host != RETURN_HOST || returned.getQueryParameter("state") != challenge) {
         throw AppleSignInFailed("Not this sign-in's return")
       }
@@ -69,11 +76,12 @@ class AppleWebSignIn(private val server: HttpUrl, private val http: OkHttpClient
         else -> throw AppleSignInFailed("Apple's page failed")
       }
       val code = returned.getQueryParameter("code") ?: throw AppleSignInFailed("No code came back")
-      val idToken = redeem(code)
-      return ProviderToken(LinkedAccount.Provider.Apple, idToken, nonce, emailOf(idToken))
+      val redeemed = redeem(code)
+      val token = ProviderToken(LinkedAccount.Provider.Apple, redeemed.idToken, nonce, emailOf(redeemed.idToken))
+      return AppleAnswer(token, redeemed.authorizationCode)
     }
 
-    private suspend fun redeem(code: String): String =
+    private suspend fun redeem(code: String): Redeemed =
       withContext(Dispatchers.IO) {
         val body =
           buildJsonObject {
@@ -89,9 +97,9 @@ class AppleWebSignIn(private val server: HttpUrl, private val http: OkHttpClient
         http.newCall(request).execute().use { response ->
           if (!response.isSuccessful) throw AppleSignInFailed("Redeeming answered ${response.code}")
           try {
-            answers.decodeFromString(Redeemed.serializer(), response.body.string()).idToken
+            answers.decodeFromString(Redeemed.serializer(), response.body.string())
           } catch (_: SerializationException) {
-            throw AppleSignInFailed("Redeeming answered no ID token")
+            throw AppleSignInFailed("Redeeming answered no ID token and code")
           }
         }
       }

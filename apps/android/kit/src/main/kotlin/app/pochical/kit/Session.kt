@@ -26,6 +26,15 @@ data class StoredSession(
   val linked: LinkedAccount? = null,
 )
 
+/**
+ * What the store keeps, as one value: the device's session, null after its account was deleted
+ * until it signs in anew; and the sessions of the anonymous users switches to an account's data left
+ * behind, each kept until the server deletes that user (spec/sync-protocol.md, Switching to an
+ * account in use), whatever the device's session does meanwhile.
+ */
+@Serializable
+private data class Kept(val session: StoredSession? = null, val leftBehind: List<String> = emptyList())
+
 /** The store cannot be reached now, as without Google Play services: nothing in it is lost. */
 class StoreUnreachable(cause: Throwable) : Exception(cause)
 
@@ -47,20 +56,40 @@ class SessionStore(private val kept: KeptBytes) {
   private val json = Json { ignoreUnknownKeys = false }
 
   /** The kept session, or null when there is none the app can read; [StoreUnreachable]. */
-  suspend fun read(): StoredSession? {
-    val bytes = kept.read() ?: return null
+  suspend fun read(): StoredSession? = keptNow().session
+
+  /** Keeps [session] in place of any before it; [StoreUnreachable]. */
+  suspend fun write(session: StoredSession) = change { it.copy(session = session) }
+
+  /** The sessions of the users switches left behind, not deleted yet; [StoreUnreachable]. */
+  suspend fun leftBehind(): List<String> = keptNow().leftBehind
+
+  /**
+   * Keeps [session], switched to, in place of the one before, whose token [leaving] is kept to
+   * delete its user, in one write; [StoreUnreachable].
+   */
+  suspend fun switchTo(session: StoredSession, leaving: String) =
+    change { Kept(session, it.leftBehind + leaving) }
+
+  /** The user of the session [token] left behind is deleted: it is kept no more; [StoreUnreachable]. */
+  suspend fun deleted(token: String) = change { it.copy(leftBehind = it.leftBehind - token) }
+
+  /** Keeps no session from now on, as after the account is deleted, the ones left behind kept; [StoreUnreachable]. */
+  suspend fun forgetSession() = change { it.copy(session = null) }
+
+  private suspend fun keptNow(): Kept {
+    val bytes = kept.read() ?: return Kept()
     return try {
-      json.decodeFromString(StoredSession.serializer(), bytes.decodeToString())
+      json.decodeFromString(Kept.serializer(), bytes.decodeToString())
     } catch (_: SerializationException) {
-      null
+      Kept()
     } catch (_: IllegalArgumentException) {
-      null
+      Kept()
     }
   }
 
-  /** Keeps [session] in place of any before it; [StoreUnreachable]. */
-  suspend fun write(session: StoredSession) {
-    kept.write(json.encodeToString(StoredSession.serializer(), session).encodeToByteArray())
+  private suspend fun change(change: (Kept) -> Kept) {
+    kept.write(json.encodeToString(Kept.serializer(), change(keptNow())).encodeToByteArray())
   }
 }
 
@@ -85,7 +114,10 @@ class BlockStoreBytes(context: Context, private val key: String = "app.pochical.
   }
 
   /** Forgets the bytes, as a test starting afresh does. */
-  suspend fun delete() = reaching { client.deleteBytes(DeleteBytesRequest.Builder().setKeys(listOf(key)).build()).await() }
+  suspend fun forget() = reaching {
+    client.deleteBytes(DeleteBytesRequest.Builder().setKeys(listOf(key)).build()).await()
+    Unit
+  }
 
   private suspend fun <T> reaching(body: suspend () -> T): T =
     try {
