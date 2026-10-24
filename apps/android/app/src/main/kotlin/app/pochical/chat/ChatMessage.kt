@@ -53,6 +53,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.design.Chat
@@ -60,6 +61,7 @@ import app.pochical.design.Radius
 import app.pochical.groups.MemberAvatar
 import app.pochical.kit.GroupMemberRow
 import app.pochical.kit.LineContent
+import app.pochical.kit.LineReaction
 import app.pochical.kit.PhotoShelf
 import app.pochical.kit.WaitingLine
 import app.pochical.kit.textParts
@@ -102,6 +104,10 @@ class MessageLook(
   val swipe: ReplySwipe?,
   /** What a screen reader reads of it. */
   val said: String,
+  /** Its reactions, each emoji with who chose it; none for a line on its way, which takes none yet. */
+  val reactions: List<LineReaction> = emptyList(),
+  /** A chat of two: who chose a reaction needs no face. */
+  val counted: Boolean = false,
 )
 
 /** A line gone to, lit once there: [time] tells one going to the same line again. */
@@ -119,6 +125,16 @@ class MessageHandlers(
   val reducedMotion: Boolean,
   /** The line lit as it is gone to, each time it is. */
   val lit: Lit?,
+  val me: String?,
+  val writers: Map<String, GroupMemberRow>,
+  /** The member's reaction on a line put on or taken back. */
+  val react: (seq: Long, emoji: String, on: Boolean) -> Unit,
+  /** + in the reactions' bar: any other emoji, from the system's picker. */
+  val moreReactions: (seq: Long) -> Unit,
+  /** A long press on a pill: everyone who chose it. */
+  val choosers: (LineReaction) -> Unit,
+  /** The member's own reaction just put on, spraying from its pill. */
+  val spray: Spray?,
 )
 
 /**
@@ -139,7 +155,13 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
   val openMenu = {
     coordinates?.let { at ->
       val items = handlers.items(look)
-      menu.open(MenuLine(look.key, look.mine, look.waiting != null, items) { Bubble(look, handlers, onQuote = {}) }, at.unclipped())
+      val seq = look.seq
+      val bar =
+        seq?.let {
+          val chosen = look.reactions.filter { handlers.me in it.userIds }.map { it.emoji }.toSet()
+          ReactionBar(chosen, onReact = { emoji -> handlers.react(seq, emoji, emoji !in chosen) }, onMore = { handlers.moreReactions(seq) })
+        }
+      menu.open(MenuLine(look.key, look.mine, look.waiting != null, items, bar) { Bubble(look, handlers, onQuote = {}) }, at.unclipped())
     }
   }
   val gestures =
@@ -150,12 +172,24 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
       onReply = { look.seq?.let(handlers.reply) },
     )
   val items = handlers.items(look)
+  // Its menu's items, each reaction on it put on or taken off, and 返信元を表示, as its actions.
+  val reactOn = stringResource(R.string.chat_reaction_on)
+  val reactOff = stringResource(R.string.chat_reaction_off)
   val actions =
     items.map { item -> CustomAccessibilityAction(item.label) { item.run(); true } } +
+      look.reactions.mapNotNull { reaction ->
+        val seq = look.seq ?: return@mapNotNull null
+        val own = handlers.me in reaction.userIds
+        CustomAccessibilityAction((if (own) reactOff else reactOn).format(reaction.emoji)) { handlers.react(seq, reaction.emoji, !own); true }
+      } +
       listOfNotNull(look.quote?.let { quote -> CustomAccessibilityAction(stringResource(R.string.chat_show_quoted)) { handlers.jump(quote.seq); true } })
   val menuLabel = stringResource(R.string.chat_menu)
   Box(
-    modifier.fillMaxWidth().padding(top = (if (look.startsRun) Chat.runGap else Chat.lineGap).dp).clearAndSetSemantics {
+    modifier
+      .zIndex(if (handlers.spray?.seq == look.seq && look.seq != null) 1f else 0f)
+      .fillMaxWidth()
+      .padding(top = (if (look.startsRun) Chat.runGap else Chat.lineGap).dp)
+      .clearAndSetSemantics {
       contentDescription = look.said
       customActions = actions
       // Activating it opens its menu, as the long press does.
@@ -223,6 +257,20 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
         }
         if (look.waiting?.failed == true) {
           Text(stringResource(R.string.chat_not_sent), style = MaterialTheme.typography.labelSmall, color = colors.dangerDefault)
+        }
+        val seq = look.seq
+        if (seq != null && look.reactions.isNotEmpty()) {
+          ReactionRow(
+            look.reactions,
+            handlers.me,
+            handlers.writers,
+            look.counted,
+            spray = handlers.spray?.takeIf { it.seq == seq },
+            reducedMotion = handlers.reducedMotion,
+            mine = look.mine,
+            onToggle = { emoji, on -> handlers.react(seq, emoji, on) },
+            onChoosers = handlers.choosers,
+          )
         }
       }
       if (look.mine) Spacer(Modifier.width(TAIL)) else Spacer(Modifier.width(AWAY))
@@ -343,6 +391,7 @@ fun messageLook(
             words,
             clock(line.sentAtMs),
             edited.takeIf { (line.content as? LineContent.Words)?.edited == true },
+            reactionWords(line.reactions, me),
           )
           .joinToString("、")
       MessageLook(
@@ -358,6 +407,8 @@ fun messageLook(
         seq = line.seq,
         swipe = if (own) ReplySwipe.Leftward else ReplySwipe.Rightward,
         said = said,
+        reactions = line.reactions,
+        counted = direct,
       )
     }
     is ChatItem.Waiting -> {

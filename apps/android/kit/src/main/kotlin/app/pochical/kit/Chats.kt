@@ -3,6 +3,7 @@ package app.pochical.kit
 import app.pochical.v1.ChatEdit
 import app.pochical.v1.ChatLine as WireLine
 import app.pochical.v1.chatChange
+import app.pochical.v1.chatReact
 import app.pochical.v1.chatRead
 import app.pochical.v1.chatRecall
 import app.pochical.v1.chatSend
@@ -100,6 +101,23 @@ class Chats internal constructor(
         }
       }
       deleteChatDraft(groupId, threadId)
+    }
+  }
+
+  /**
+   * The member's reaction [emoji] on the line [seq], put on or taken back ([on]), shown at once. Throws
+   * when the device cannot keep it.
+   */
+  suspend fun react(groupId: String, threadId: String, seq: Long, emoji: String, on: Boolean) {
+    database.write {
+      chatEdit(groupId, now()) {
+        react = chatReact {
+          this.threadId = threadId
+          this.seq = seq
+          this.emoji = emoji
+          this.on = on
+        }
+      }
     }
   }
 
@@ -205,6 +223,9 @@ private class WaitingEdits(rows: List<ChatOutboxRow>, threadId: String, state: S
   var ownRead = 0L
     private set
 
+  /** Whose the edits are: the user the device is signed in as. */
+  val owner = state.owner
+
   var failsAt: Long? = null
     private set
 
@@ -222,6 +243,7 @@ private class WaitingEdits(rows: List<ChatOutboxRow>, threadId: String, state: S
         ChatEdit.KindCase.READ -> if (edit.read.threadId == threadId) ownRead = maxOf(ownRead, edit.read.lastReadSeq)
         ChatEdit.KindCase.UNSEND -> if (edit.unsend.threadId == threadId) toLines.getOrPut(edit.unsend.seq, ::mutableListOf) += edit
         ChatEdit.KindCase.CHANGE -> if (edit.change.threadId == threadId) toLines.getOrPut(edit.change.seq, ::mutableListOf) += edit
+        ChatEdit.KindCase.REACT -> if (edit.react.threadId == threadId) toLines.getOrPut(edit.react.seq, ::mutableListOf) += edit
         ChatEdit.KindCase.RECALL -> if (edit.recall.threadId == threadId) recalls += edit
         else -> {}
       }
@@ -240,7 +262,7 @@ private suspend fun SyncDao.waitingEdits(groupId: String, threadId: String, now:
 
 /** The line [seq] as the screen shows it, the member's waiting edits to it in place; null when not held. */
 private suspend fun SyncDao.shownLine(groupId: String, threadId: String, seq: Long, waiting: WaitingEdits): ChatLine? =
-  line(groupId, threadId, seq)?.let { showing(waiting.toLines[seq].orEmpty(), ChatLine.of(WireLine.parseFrom(it.line))) }
+  line(groupId, threadId, seq)?.let { showing(waiting.toLines[seq].orEmpty(), ChatLine.of(WireLine.parseFrom(it.line)), waiting.owner) }
 
 /** How far [me] has read the chat: their mark, or on to their read still waiting. */
 private fun lastRead(marks: List<ReadMarkRow>, me: String, waiting: WaitingEdits): Long =
@@ -291,7 +313,7 @@ internal suspend fun SyncDao.chatState(groupId: String, threadId: String, me: St
   var lines = emptyList<ChatLine>()
   if (runFrom != null && runThrough != null) {
     laidFrom = minOf(maxOf(runFrom, start), runThrough)
-    lines = lines(groupId, threadId, laidFrom, runThrough).map { showing(waiting.toLines[it.seq].orEmpty(), ChatLine.of(WireLine.parseFrom(it.line))) }
+    lines = lines(groupId, threadId, laidFrom, runThrough).map { showing(waiting.toLines[it.seq].orEmpty(), ChatLine.of(WireLine.parseFrom(it.line)), waiting.owner) }
   }
   val atEnd = runThrough == null || latest == null || runThrough >= latest
   // Past both the lines laid out and the mark: others' lines held, and every line not held yet.
@@ -331,8 +353,8 @@ internal suspend fun SyncDao.chatState(groupId: String, threadId: String, me: St
   )
 }
 
-/** [line] as the screen shows it, with the member's waiting [edits] to it in place, in the order made. */
-private fun showing(edits: List<ChatEdit>, line: ChatLine): ChatLine =
+/** [line] as the screen shows it, with the member's ([me]) waiting [edits] to it in place, in the order made. */
+private fun showing(edits: List<ChatEdit>, line: ChatLine, me: String): ChatLine =
   edits.fold(line) { shown, edit ->
     when (edit.kindCase) {
       ChatEdit.KindCase.CHANGE -> {
@@ -343,6 +365,7 @@ private fun showing(edits: List<ChatEdit>, line: ChatLine): ChatLine =
       }
       ChatEdit.KindCase.UNSEND,
       ChatEdit.KindCase.RECALL -> shown.copy(content = LineContent.Unsent, reactions = emptyList(), replyTo = null, pinnedOrder = 0)
+      ChatEdit.KindCase.REACT -> shown.copy(reactions = shown.reactions.toggling(edit.react.emoji, me, edit.react.on))
       else -> shown
     }
   }
