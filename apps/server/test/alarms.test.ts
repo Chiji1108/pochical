@@ -3,7 +3,7 @@ import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 
 import { UserDO } from "../src/user-do";
-import { alarmsSettled, runAlarm } from "./alarms";
+import { alarmOf, alarmsSettled, runAlarm } from "./alarms";
 import { call } from "./helpers";
 import { pair } from "./sync-helpers";
 
@@ -23,16 +23,16 @@ describe("a Durable Object's alarm in a test", () => {
     // Held before the watched alarm, as the pool holds it.
     UserDO.prototype.alarm = async function alarm(
       this: UserDO,
-      ...info: [AlarmInvocationInfo?]
+      run: AlarmInvocationInfo
     ): Promise<void> {
-      if (!holding || info[0] === undefined) {
-        await Reflect.apply(watched, this, info);
+      if (!holding) {
+        await Reflect.apply(watched, this, [run]);
         return;
       }
       holding = false;
       taken.resolve(undefined);
       await begin.promise;
-      await Reflect.apply(watched, this, info);
+      await Reflect.apply(watched, this, [run]);
       seen.push("run ended");
     };
     try {
@@ -40,12 +40,7 @@ describe("a Durable Object's alarm in a test", () => {
       await runInDurableObject(user, async () => {
         await taken.promise;
       });
-      await expect(
-        runInDurableObject(
-          user,
-          async (_, state) => await state.storage.getAlarm()
-        )
-      ).resolves.toBeNull();
+      await expect(alarmOf(user)).resolves.toBeNull();
       const ran = runAlarm(user).then(() => {
         seen.push("returned");
       });

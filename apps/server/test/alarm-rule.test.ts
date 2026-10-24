@@ -45,7 +45,7 @@ describe("a Durable Object's alarm", () => {
   it("is set for now when the time asked is past", async () => {
     const before = Date.now();
     const { stored } = await storedAfter((alarm) => {
-      alarm.set(0);
+      alarm.set(before - 60_000);
     });
     expect(stored).toBeGreaterThanOrEqual(before);
     expect(stored).toBeLessThanOrEqual(Date.now());

@@ -221,12 +221,12 @@ const untoldIn = (state: DurableObjectState): number =>
  * failure, brought to now.
  */
 export const relayed = async (userId: string): Promise<void> => {
-  await runInDurableObject(placeOf(userId), async (_, state) => {
-    await settle(state, "as set");
+  await runInDurableObject(placeOf(userId), async (instance, state) => {
+    await settle(instance, state, "as set");
     // oxlint-disable-next-line no-await-in-loop -- read after each try
     while (untoldIn(state) > 0 && (await state.storage.getAlarm()) !== null) {
       // oxlint-disable-next-line no-await-in-loop -- each try after the last
-      await settle(state, "now");
+      await settle(instance, state, "now");
     }
     expect(untoldIn(state)).toBe(0);
   });

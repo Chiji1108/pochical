@@ -51,15 +51,17 @@ export class Alarm {
   }
 
   /**
-   * The alarm set for `at`, or now if that is past, as the runtime sets
-   * it; a millisecond later when that is the time of the latest run.
-   * Written in the call, in order with the object's other writes, and
-   * kept before any reply leaves (the output gate, which a failed write
-   * breaks, failing the call), so a caller has nothing to wait for.
+   * The alarm set for `at`, which the runtime sets for now if that is
+   * past; a millisecond after the latest run's time when `at` is not past
+   * it. The runtime runs no alarm before its time, so now is never before
+   * that run's, and whatever the runtime sets is not that time. Written in
+   * the call, in order with the object's other writes, and kept before any
+   * reply leaves (the output gate, which a failed write breaks, failing
+   * the call), so a caller has nothing to wait for.
    */
   set(at: number): void {
-    const time = Math.max(at, Date.now());
-    void this.storage.setAlarm(time === this.lastRun ? time + 1 : time);
+    const after = this.lastRun === undefined ? at : this.lastRun + 1;
+    void this.storage.setAlarm(Math.max(at, after));
   }
 
   /**

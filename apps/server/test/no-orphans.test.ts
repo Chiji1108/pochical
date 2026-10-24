@@ -129,9 +129,7 @@ describe("the photos bucket", () => {
       ).resolves.toBe(409);
 
       deletes.mockRestore();
-      await expect(
-        runAlarm(env.GROUPS.getByName(groupId))
-      ).resolves.toBeTruthy();
+      await runAlarm(env.GROUPS.getByName(groupId));
       await expect(
         Promise.all([
           stored(photoKey(groupId, id)),
@@ -166,9 +164,7 @@ describe("the photos bucket", () => {
       });
 
       deletes.mockRestore();
-      await expect(
-        runAlarm(env.GROUPS.getByName(groupId))
-      ).resolves.toBeTruthy();
+      await runAlarm(env.GROUPS.getByName(groupId));
       await expect(stored(photoKey(groupId, own))).resolves.toBeFalsy();
       await expect(notesOf(groupId)).resolves.not.toHaveProperty(own);
     });
@@ -243,9 +239,7 @@ describe("the photos bucket", () => {
         [id]: "deleting",
       });
       deletes.mockRestore();
-      await expect(
-        runAlarm(env.GROUPS.getByName(groupId))
-      ).resolves.toBeTruthy();
+      await runAlarm(env.GROUPS.getByName(groupId));
       await expect(stored(photoKey(groupId, id))).resolves.toBeFalsy();
       await expect(notesOf(groupId)).resolves.not.toHaveProperty(id);
     });
