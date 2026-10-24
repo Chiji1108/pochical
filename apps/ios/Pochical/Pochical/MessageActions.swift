@@ -147,9 +147,6 @@ struct MenuMetrics {
   /// out at the transformed size, its words breaking anew.
   private let barPart = UIView()
   private let menuPart = UIView()
-  /// Where the effects on the line it lifts play (ChatEffectsLayer): over
-  /// the dimming and the lifted bubble, under the bar and the menu.
-  let effects = UIView()
   private let bubble: UIHostingController<AnyView>
   private let bar: UIHostingController<AnyView>?
   private let menu: UIHostingController<AnyView>
@@ -197,10 +194,6 @@ struct MenuMetrics {
     scaled.addSubview(bubble.view)
     lift.addSubview(scaled)
     addSubview(lift)
-    effects.isUserInteractionEnabled = false
-    effects.accessibilityElementsHidden = true
-    effects.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-    addSubview(effects)
     if let bar {
       hold(bar, in: barPart)
       addSubview(barPart)
@@ -359,8 +352,7 @@ struct MenuMetrics {
   }
 
   /// Goes, quick at first and settling, taking nothing from the start,
-  /// then tells `onClosed` with its parts gone, staying while what plays
-  /// on its effects plays out; acts meanwhile, as the system's menu does.
+  /// then tells `onClosed`; acts meanwhile, as the system's menu does.
   /// `fade` takes the bubble away too, its line gone from the chat.
   func close(fade: Bool = false, then action: (() -> Void)? = nil) {
     if case .closing = phase { return }
@@ -371,17 +363,8 @@ struct MenuMetrics {
     isUserInteractionEnabled = false
     accessibilityViewIsModal = false
     accessibilityElementsHidden = true
-    animate(Chat.menuCloseSpring, animations: apply) { [weak self] in
-      guard let self else { return }
-      takePartsAway()
-      onClosed()
-    }
+    animate(Chat.menuCloseSpring, animations: apply) { [weak self] in self?.onClosed() }
     action?()
-  }
-
-  /// Takes away all but its effects, closing or not.
-  func takePartsAway() {
-    for part in [scrim, lift, barPart, menuPart] { part.removeFromSuperview() }
   }
 
   private func animate(

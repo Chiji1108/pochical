@@ -10,7 +10,7 @@ let reactionChoices = ["👍", "❤️", "😂", "👀", "🙏", "🎉"]
 /// A line's reactions under its bubble, wrapping to more rows as needed.
 /// One coming while the line is on the screen pops in, the accent's, and
 /// the reader's own choice sprays its emoji, as Telegram's and iMessage's
-/// tapbacks land, both over the whole chat (ChatEffects); one going shrinks
+/// tapbacks land, both past the line (LineEffects); one going shrinks
 /// away. Others' coming only pop, and with motion reduced each fades in and
 /// out where it is. Those there as the line is drawn are simply there.
 struct ReactionRow: View {
@@ -32,9 +32,8 @@ struct ReactionRow: View {
 
   /// How a pill comes and goes, and the line's first with the row, which
   /// is then as large as the pill: in by the pop's own scale, its ring and
-  /// burst played round it over the chat (ChatEffects), where the line's
-  /// cell would cut them. Only the outermost of views coming in together
-  /// takes its transition.
+  /// burst played over it (BurstView). Only the outermost of views coming
+  /// in together takes its transition.
   static func transition(_ reduceMotion: Bool) -> AnyTransition {
     reduceMotion
       ? .opacity
@@ -79,15 +78,16 @@ private struct ReactionPill: View {
   let lineID: String
   let marks: LineMarks?
   let onToggle: () -> Void
-  /// Its line was on the screen as it came, as it was first made: it pops.
+  /// Its line was on the screen as it came, as it was first made: it pops,
+  /// once.
   @State private var cameLater: Bool
   /// This pill's own, apart from one of the same emoji coming as it goes.
   @State private var token = UUID()
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  /// The chat's effects; none where the line is only measured.
-  @Environment(\.chatEffects) private var effects
-  /// Where it is in its line's cell, once laid out.
-  @State private var frame: CGRect?
+  /// Its cell's effects; none where the line is only measured.
+  @Environment(\.lineEffects) private var effects
+  /// What plays over it.
+  @State private var burst = Burst()
   /// Its height and faces, growing with the reader's text size as its
   /// emoji and count do.
   @ScaledMetric(relativeTo: .subheadline) private var height: CGFloat = 24
@@ -109,42 +109,43 @@ private struct ReactionPill: View {
     _cameLater = State(initialValue: shown)
   }
 
-  private var part: EffectPart {
-    EffectPart(item: ChatItemID.line(lineID), name: token.uuidString)
-  }
-
   var body: some View {
     pill
-      // Its own size and where its middle is, as laid out: the pop's scale
-      // as it comes in changes neither.
-      .onGeometryChange(for: CGRect.self) { proxy in
-        let seen = proxy.frame(in: .named(LineSpace.name))
-        return CGRect(
-          x: seen.midX - proxy.size.width / 2, y: seen.midY - proxy.size.height / 2,
-          width: proxy.size.width, height: proxy.size.height)
-      } action: { now in
-        let first = frame == nil
-        frame = now
-        if first { comeIn(at: now) } else { effects?.move(part, to: now) }
+      .overlay {
+        if effects != nil {
+          BurstView(burst: burst).allowsHitTesting(false).accessibilityHidden(true)
+        }
       }
+      .onAppear(perform: comeIn)
       .onChange(of: marks?.chosen.contains([lineID, reaction.emoji]) ?? false) { _, now in
-        if now, let frame { spray(at: frame) }
+        if now { spray() }
       }
-      .onDisappear { effects?.end(part) }
+      .onDisappear { effects?.end(token) }
   }
 
-  /// Laid out the first time: pops if its line was there before it, and
+  /// Drawn the first time: pops if its line was there before it, and
   /// sprays for the reader's choice of it just made.
-  private func comeIn(at frame: CGRect) {
-    if cameLater, !reduceMotion { effects?.play(.pop, on: part, at: frame) }
-    spray(at: frame)
+  private func comeIn() {
+    if cameLater, !reduceMotion { play { $0.pop() } }
+    cameLater = false
+    spray()
   }
 
   /// Sprays for the reader's choice of it just made, once.
-  private func spray(at frame: CGRect) {
-    guard let effects, marks?.shows(reaction.emoji, on: lineID) == true, !reduceMotion
-    else { return }
-    effects.play(.spray(reaction.emoji), on: part, at: frame)
+  private func spray() {
+    if marks?.shows(reaction.emoji, on: lineID) == true, !reduceMotion {
+      play { $0.spray(reaction.emoji) }
+    }
+  }
+
+  /// Plays what `start` starts over it, its cell drawn whole until all it
+  /// plays has played out.
+  private func play(_ start: (Burst) -> Void) {
+    guard let effects else { return }
+    let token = token
+    burst.onPlayedOut = { effects.end(token) }
+    effects.begin(token)
+    start(burst)
   }
 
   @ViewBuilder private var pill: some View {
