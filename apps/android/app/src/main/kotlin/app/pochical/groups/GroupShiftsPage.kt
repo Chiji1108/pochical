@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -62,7 +61,6 @@ import app.pochical.calendar.weekStartingOn
 import app.pochical.calendar.yearMonthText
 import app.pochical.design.PochicalTextStyles
 import app.pochical.design.Radius
-import app.pochical.kit.GroupMember
 import app.pochical.kit.GroupRow
 import java.time.LocalDate
 import java.time.YearMonth
@@ -71,10 +69,14 @@ import kotlinx.coroutines.launch
 /** How many months either side of this one the list holds, as /design's (monthSpan). */
 private const val MONTH_SPAN = 24L
 
-/** How everyone's shifts are laid out (/design's Layout): a row a day (一覧), a block a week (週ごと). */
+/**
+ * How everyone's shifts are laid out (/design's Layout): a row a day (一覧), a block a week (週ごと), or
+ * one member's month at a time (1人ずつ).
+ */
 enum class ShiftsLayout(@param:StringRes val title: Int) {
   Days(R.string.layout_days),
   Weeks(R.string.layout_weeks),
+  Person(R.string.layout_person),
 }
 
 /** A place in the list of months, which the list goes to and names its month by. */
@@ -122,6 +124,8 @@ private fun places(layout: ShiftsLayout, thisMonth: YearMonth, weekStart: Int): 
             .filter { YearMonth.from(it.plusDays(6)) == month || (offset == MONTH_SPAN && it <= month.atEndOfMonth()) }
             .map { start -> Place.Week((0L until 7L).map(start::plusDays)) }
             .toList()
+        // 1人ずつ pages through months rather than listing them.
+        ShiftsLayout.Person -> emptyList()
       }
   }
 
@@ -220,12 +224,28 @@ private fun ShiftsPage(group: GroupRow, opening: LocalDate?, onBack: () -> Unit)
     val todayIndex = places.indexOfFirst { it.holds(today) }
     val todayInSight by remember(places, todayIndex) { derivedStateOf { list.layoutInfo.visibleItemsInfo.any { it.index == todayIndex } } }
     val bottom = with(LocalDensity.current) { if (picked != null) sheetHeight.toDp() else 0.dp }
+    if (layout == ShiftsLayout.Person) {
+      GroupPersonView(
+        members,
+        group.id,
+        meId,
+        today,
+        country,
+        picked,
+        onPick = { pickedDay = if (it == picked) null else it.toString() },
+        onTogether = { togetherOf = it.toString() },
+        daysOf = ::daysOf,
+        modifier = Modifier.padding(padding).padding(bottom = bottom),
+      )
+      return@BottomSheetScaffold
+    }
     Column(Modifier.padding(padding).fillMaxSize()) {
       MonthRow(monthInSight, todayInSight, onChoose = { choosingMonth = true }, onToday = { go(today) })
       when (layout) {
         ShiftsLayout.Days ->
           GroupDayHeader(tableMembers, group.id, meId, sideways, onFace = { legendOf = it.userId }, Modifier.padding(horizontal = 16.dp))
         ShiftsLayout.Weeks -> GroupWeekdays(Modifier.padding(horizontal = 20.dp).padding(bottom = 6.dp))
+        ShiftsLayout.Person -> Unit
       }
       LazyColumn(Modifier.weight(1f), state = list, contentPadding = PaddingValues(bottom = 24.dp + bottom)) {
         items(places, key = { it.key }, contentType = { it::class }) { place ->
@@ -274,7 +294,8 @@ private fun ShiftsPage(group: GroupRow, opening: LocalDate?, onBack: () -> Unit)
     TogetherSheet(togetherTitle(month, thisMonth), days, country, onPick = { day ->
       togetherOf = null
       pickedDay = day.toString()
-      go(day)
+      // 1人ずつ shows the month already; the list goes to the day.
+      if (layout != ShiftsLayout.Person) go(day)
     }) { togetherOf = null }
   }
   if (choosingMonth) {
@@ -289,7 +310,7 @@ private fun ShiftsPage(group: GroupRow, opening: LocalDate?, onBack: () -> Unit)
 
 /** What a month's みんな休み is called: this month's as 今月, another by its name. */
 @Composable
-private fun togetherTitle(month: YearMonth, thisMonth: YearMonth): String =
+fun togetherTitle(month: YearMonth, thisMonth: YearMonth): String =
   stringResource(R.string.together_of, if (month == thisMonth) stringResource(R.string.calendar_this_month) else month.shortText(thisMonth))
 
 /** The month in sight, pinned over the list, which opens 月を選ぶ, and 今日 while today is out of sight (/design's MonthRow). */
