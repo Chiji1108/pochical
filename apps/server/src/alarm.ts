@@ -7,7 +7,7 @@
  * (cloudflare/workerd#7915). getAlarm() reads null meanwhile, so the
  * run's time is kept here as each run begins, and an alarm asked for it
  * is set a millisecond after it, which the scheduler takes as any other.
- * Remove this once workerd schedules such a set (POC-266).
+ * Remove this once workerd schedules such a set (#848).
  */
 export class Alarm {
   /** When the latest run this object began was set for. */

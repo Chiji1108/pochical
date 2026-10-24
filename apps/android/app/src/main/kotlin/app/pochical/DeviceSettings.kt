@@ -55,7 +55,7 @@ enum class Appearance {
  * The marks' look (/design's スタイル), kept with the account as iOS's Look
  * is: the shape, an icon's fill, and whether each shift keeps its own color
  * (色分け) or all take the テーマ's (ワントーン). How days off show in each
- * shape comes with the style page (POC-208).
+ * shape comes with the style page (#824).
  */
 @Serializable
 data class Look(
