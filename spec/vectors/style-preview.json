@@ -1,5 +1,5 @@
 {
-  "about": "The style pages' preview (spec/calendar.md, The month: スタイル shows this week and the next, カレンダー this week): a made-up run of the person's own `patterns`, in their order, the same whatever they have entered. sequence: each working pattern (one that counts as off, or one another names as its `nextDay`, is not one) followed by its nextDay when that is among the patterns, and by the first pattern that counts as off after every second working pattern and after one with a nextDay; the run ends on that day off, which is added at the end when it does not already, and there is none of it without a pattern that counts as off. days: the run repeated over `days` days from the first, one pattern a day, nothing without a run. samples: the marks the テーマ and シフトの色 choices show, the run's patterns each once in the order they first come, the first four.",
+  "about": "The style pages' preview (spec/calendar.md, The month: スタイル shows this week and the next, カレンダー this week): a made-up run of the person's own `patterns`, in their order, the same whatever they have entered. sequence: each working pattern (one that counts as off, or one another names as its `nextDay`, is not one) followed by its nextDay when that is among the patterns, and by the first pattern that counts as off and no pattern names as its nextDay (else the first that counts as off) after every second working pattern and after one with a nextDay; the run ends on that day off, which is added at the end when it does not already, and there is none of it without a pattern that counts as off. days: the run repeated over `days` days from the first, one pattern a day, nothing without a run. samples: the marks the テーマ and シフトの色 choices show, the run's patterns each once in the order they first come, the first four.",
   "sequence": [
     {
       "name": "each shift with what follows it, and days off between",
@@ -21,6 +21,16 @@
         { "id": "early" }
       ],
       "expected": ["day", "early", "paid"]
+    },
+    {
+      "name": "a day off another follows with is not the day off between",
+      "patterns": [
+        { "id": "day" },
+        { "id": "night", "nextDay": "after" },
+        { "id": "after", "countsAsOff": true },
+        { "id": "off", "countsAsOff": true }
+      ],
+      "expected": ["day", "night", "after", "off"]
     },
     {
       "name": "a next day that is gone is not run",

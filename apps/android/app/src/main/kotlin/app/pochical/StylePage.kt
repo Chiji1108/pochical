@@ -32,6 +32,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -190,12 +193,13 @@ fun StyleRow(open: (RootPage) -> Unit) {
   val calendar by LocalOwnDays.current.calendar.collectAsState()
   val patterns = calendar.patterns.filterNot { it.archived }
   val work = patterns.firstOrNull { !it.countsAsOff } ?: patterns.firstOrNull()
+  val spoken = "${stringResource(Shape.of(device.look).title)}、${device.theme.displayName}"
   ListItem(
     headlineContent = { Text(stringResource(R.string.style)) },
     supportingContent = {
       Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         if (work != null) Box(Modifier.clearAndSetSemantics {}) { PatternMark(work, 18, device.look) }
-        Text(device.theme.displayName)
+        Text(device.theme.displayName, Modifier.semantics { contentDescription = spoken })
       }
     },
     modifier = Modifier.clickable { open(RootPage.Style) },
@@ -256,6 +260,7 @@ private fun <T> Choices(
           .heightIn(min = if (tall) 108.dp else 72.dp)
           .border(if (isPicked) 2.dp else 1.dp, if (isPicked) colors.accentDefault else colors.borderDefault, shape)
           .background(if (isPicked) colors.accentContainer else colors.backgroundCard, shape)
+          .clip(shape)
           .selectable(selected = isPicked, role = Role.RadioButton) { onPick(option) }
           .padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -298,7 +303,7 @@ private fun ThemeCard(theme: Theme, picked: Boolean, samples: List<Pattern>, dar
   val colors = LocalThemeColors.current
   val own = theme.colors(dark || theme.isAlwaysDark)
   Column(
-    modifier.selectable(selected = picked, role = Role.RadioButton, onClick = onPick).padding(2.dp),
+    modifier.clip(RoundedCornerShape(Radius.lg)).selectable(selected = picked, role = Role.RadioButton, onClick = onPick).padding(2.dp),
     horizontalAlignment = Alignment.CenterHorizontally,
     verticalArrangement = Arrangement.spacedBy(6.dp),
   ) {

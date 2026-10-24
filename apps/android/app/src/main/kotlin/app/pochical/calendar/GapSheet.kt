@@ -113,10 +113,11 @@ fun GapSheet(
       }
       Button(
         onClick = {
-          onFill(picked)
+          // The look first, so the days never show highlighted on their way to blank.
           if (blank && offersBlank) {
             settings.change { it.copy(look = it.look.withOffLook(OffLook.Blank, picked.id, offPatterns.map(Pattern::id))) }
           }
+          onFill(picked)
           scope.launch { sheet.hide() }.invokeOnCompletion { onDismiss() }
         },
         modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control).padding(bottom = 8.dp),

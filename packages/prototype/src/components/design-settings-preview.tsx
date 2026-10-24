@@ -27,6 +27,7 @@ import type { Schedule } from "../lib/design-days";
 import {
   isDayOff,
   OwnPatternsContext,
+  patternsInUse,
   presetPatterns,
 } from "../lib/design-patterns";
 import type { Pattern, Shift } from "../lib/design-patterns";
@@ -66,14 +67,18 @@ export function stylePreviewOf(
   from: Date = designToday
 ): StylePreviewData {
   const dates = [...weekDates(from), ...weekDates(addDays(from, weekLength))];
+  const sequence = sampleSequence(patternsInUse(patterns));
   return {
     dates,
-    schedule: repeatSchedule(
-      sampleSequence(patterns),
-      dates[0],
-      dates[0],
-      dates.at(-1) ?? dates[0]
-    ),
+    schedule:
+      sequence.length === 0
+        ? {}
+        : repeatSchedule(
+            sequence,
+            dates[0],
+            dates[0],
+            dates.at(-1) ?? dates[0]
+          ),
   };
 }
 
@@ -81,12 +86,16 @@ export function stylePreviewOf(
 const WEEK_SAMPLE = 4;
 
 // Each working pattern with what follows it, like 明け after 夜勤, and the
-// first day off after every second one and after those followed, ending on
-// that day off (spec/vectors/style-preview.json).
+// first day off no pattern follows with after every second one and after
+// those followed, ending on that day off (spec/vectors/style-preview.json).
 export function sampleSequence(patterns: readonly Pattern[]): Shift[] {
   const ids = new Set(patterns.map((pattern) => pattern.id));
   const followers = new Set(patterns.map((pattern) => pattern.nextDay));
-  const off = holidayShiftOf(patterns);
+  // A day off another follows with, like 明け set to count as off, comes
+  // with it already.
+  const off =
+    patterns.find((pattern) => isDayOff(pattern) && !followers.has(pattern.id))
+      ?.id ?? holidayShiftOf(patterns);
   const working = patterns.filter(
     (pattern) => !(isDayOff(pattern) || followers.has(pattern.id))
   );
@@ -124,7 +133,7 @@ export function useOwnSamples() {
     patterns.find((pattern) => isDayOff(pattern)) ?? presetPatterns.off;
   return {
     off: off.id,
-    week: styleSamplesOf(patterns),
+    week: styleSamplesOf(patternsInUse(patterns)),
     work,
   };
 }

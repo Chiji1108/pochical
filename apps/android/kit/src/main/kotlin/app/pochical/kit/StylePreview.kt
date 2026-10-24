@@ -7,13 +7,14 @@ import java.time.LocalDate
 // have entered, so a change of style shows in the same places every time.
 
 /**
- * Each working pattern with what follows it, like 明け after 夜勤, and the first day off after every
- * second one and after those followed, ending on that day off.
+ * Each working pattern with what follows it, like 明け after 夜勤, and the first day off no pattern
+ * follows with after every second one and after those followed, ending on that day off.
  */
 fun sampleSequence(patterns: List<PatternRow>): List<String> {
   val ids = patterns.mapTo(HashSet()) { it.id }
   val followers = patterns.mapNotNullTo(HashSet()) { it.nextDay }
-  val off = patterns.firstOrNull { it.countsAsOff }?.id
+  // A day off another follows with, like 明け set to count as off, comes with it already.
+  val off = (patterns.firstOrNull { it.countsAsOff && it.id !in followers } ?: patterns.firstOrNull { it.countsAsOff })?.id
   val working = patterns.filter { !it.countsAsOff && it.id !in followers }
   val sequence = mutableListOf<String>()
   working.forEachIndexed { index, pattern ->

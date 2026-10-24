@@ -46,10 +46,9 @@ fun styleSamples(patterns: List<Pattern>): List<Pattern> {
 }
 
 /**
- * The preview at the top of スタイル and カレンダー (/design's StylePreview): this week and the next
- * as a made-up run of the person's own [patterns], drawn in the settings being chosen, on a card
- * in the テーマ's colors, light or dark as [dark] says, with ☀︎ / ☾ on its edge. Under the month's
- * heading, as カレンダー shows it, one week is enough.
+ * The preview at the top of スタイル (/design's StylePreview): this week and the next as a made-up
+ * run of the person's own [patterns] in use, drawn in the settings being chosen, on a card in the
+ * テーマ's colors, light or dark as [dark] says, with ☀︎ / ☾ on its edge.
  */
 @Composable
 fun StylePreview(
@@ -58,16 +57,15 @@ fun StylePreview(
   dark: Boolean,
   onDarkChange: (Boolean) -> Unit,
   modifier: Modifier = Modifier,
-  heading: (@Composable () -> Unit)? = null,
 ) {
   val device = LocalDeviceSettings.current.device
   val theme = device.theme
   val week = device.week
   val first = today.weekStartingOn(week.start)
-  val days = (0 until if (heading != null) 7 else 14).map { first.plusDays(it.toLong()) }
-  val shown = stylePreviewDays(days, patterns.filterNot { it.archived }.map { it.row })
+  val days = (0 until 14).map { first.plusDays(it.toLong()) }
+  val shown = stylePreviewDays(days, patterns.map { it.row })
   val byId = patterns.associateBy { it.id }
-  val label = stringResource(if (heading != null) R.string.preview_this_week else R.string.preview_week)
+  val label = stringResource(R.string.preview_week)
   // Room for the switch over the card's top edge.
   Box(modifier.padding(top = 14.dp)) {
     CompositionLocalProvider(LocalThemeColors provides theme.colors(dark || theme.isAlwaysDark)) {
@@ -80,7 +78,6 @@ fun StylePreview(
           .clearAndSetSemantics { contentDescription = label },
         verticalArrangement = Arrangement.spacedBy(4.dp),
       ) {
-        heading?.invoke()
         WeekdayRow(week)
         for (row in days.chunked(7)) {
           Row(horizontalArrangement = Arrangement.spacedBy(Metrics.spacingStep)) {

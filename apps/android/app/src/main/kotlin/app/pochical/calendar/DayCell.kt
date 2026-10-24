@@ -196,7 +196,7 @@ fun DayCell(
           mark.symbol,
           mark.color,
           // As large as iOS's where the day has room, smaller on a short screen's shorter days.
-          size = minOf(full, height - CELL_PADDING * 2 - DATE_LINE - 2.dp - if (names) NAME_LINE else 0.dp),
+          size = minOf(full, height - CELL_PADDING * 2 - DATE_LINE - 2.dp - if (names) NAME_LINE + 2.dp else 0.dp),
           change = look.entry?.let { timeChange(it.start, it.end, mark.time) },
           look = style,
         )
