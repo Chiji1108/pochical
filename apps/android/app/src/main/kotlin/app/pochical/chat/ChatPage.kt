@@ -83,6 +83,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.pochical.LocalAccount
+import app.pochical.RootPage
+import androidx.compose.foundation.clickable
+import app.pochical.kit.GroupMarkValue
+import app.pochical.kit.directThread
+import app.pochical.kit.folds
 import app.pochical.R
 import app.pochical.design.Chat
 import app.pochical.design.SyncSocket
@@ -91,6 +96,7 @@ import app.pochical.groups.rememberGroupDays
 import app.pochical.groups.rememberGroupMembers
 import app.pochical.groups.LocalValues
 import app.pochical.groups.rememberMeId
+import app.pochical.kit.ChatLine
 import app.pochical.kit.ChatPhotoItem
 import app.pochical.kit.ChatSocket
 import app.pochical.kit.PhotoKey
@@ -163,8 +169,9 @@ val LocalChats = staticCompositionLocalOf<Chats> { error("No chats provided") }
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalCoroutinesApi::class)
 @Composable
-fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit, onPhotos: () -> Unit) {
+fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit, open: (RootPage) -> Unit) {
   HoldSocket(groupId)
+  val onPhotos = { open(RootPage.ChatPhotos(groupId, threadId)) }
   val chats = LocalChats.current
   val account = LocalAccount.current
   val values = LocalValues.current
@@ -192,15 +199,33 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit, onPhotos: ()
       snapshotFlow { from to currentMe }.flatMapLatest { (from, me) -> chats.state(groupId, threadId, me, from) }
     }
       .collectAsState(null)
-  val chat = state ?: return ChatScaffold(groupId, threadId, members, groups, socket, onBack, onPhotos) {}
+  // A member's profile, a report and blocking, over the chat.
+  val reportAndBlock = remember { ReportAndBlockState() }
+  val other = me?.let { otherIn(threadId, it) }
+  // A tap on the title opens what the chat is of: the other member's profile, or the group's settings.
+  val onTitle = {
+    val person = other?.let { id -> members.firstOrNull { it.userId == id } }
+    when {
+      other == null -> open(RootPage.GroupSettings(groupId))
+      person != null && !person.deleted -> reportAndBlock.profileOf = ProfileOf(person.userId, person.displayName, person.photoId)
+    }
+  }
+  val chat = state ?: return ChatScaffold(groupId, threadId, members, groups, socket, onBack, onPhotos, onTitle) {}
 
+  val blockedIds = remember(blocked) { blocked.map { it.userId }.toSet() }
+  // Blocked members' lines folded in the place's own chat, but those shown this once, by seq.
+  var shownBlocked by rememberSaveable { mutableStateOf(emptyList<Long>()) }
+  val folded =
+    remember(blockedIds, shownBlocked, threadId) {
+      { line: ChatLine -> line.seq !in shownBlocked && folds(line.content.kind, ownChat = threadId == GROUP_THREAD, writerBlocked = line.authorId in blockedIds) }
+    }
   // Others writing, shown for chatRules.typingShowMs unless said again; a blocked member's is not.
-  val typers = rememberTypers(socket, threadId, me, blocked.map { it.userId }.toSet())
+  val typers = rememberTypers(socket, threadId, me, blockedIds)
   // From the foot up, as the list lays them out, who is writing at the very foot: an item's index
   // here is its index in the list.
   val items =
-    remember(chat, me, unreadFrom, typers) {
-      val lines = chatItems(chat, me, unreadFrom).asReversed()
+    remember(chat, me, unreadFrom, typers, folded) {
+      val lines = chatItems(chat, me, unreadFrom, folded = folded).asReversed()
       if (typers.isEmpty()) lines else listOf(ChatItem.Typing(typers)) + lines
     }
   val list = rememberLazyListState()
@@ -322,7 +347,6 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit, onPhotos: ()
   val scope = rememberCoroutineScope()
   val deleted = stringResource(R.string.deleted_account)
   val nameOf = remember(writers, deleted) { { id: String -> writers[id]?.shownName(deleted) ?: deleted } }
-  val blockedIds = remember(blocked) { blocked.map { it.userId }.toSet() }
 
   // A line gone to (a quote, later a pin): laid out from it when the device holds it, else earlier
   // lines asked for a page at a time until they reach it; then put in the middle of the screen and
@@ -428,7 +452,19 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit, onPhotos: ()
   // The chat's photos opened large over it.
   var viewing by remember { mutableStateOf<OpenPhotos?>(null) }
   val focus = LocalFocusManager.current
-  val actions = rememberLineActions(groupId, composer, nameOf, snackbar, onUnsend = { unsending = it }, onNotKept = { notKept = true }, onPin = pin, onDecide = { deciding = it })
+  val actions =
+    rememberLineActions(
+      groupId,
+      threadId,
+      composer,
+      nameOf,
+      snackbar,
+      onUnsend = { unsending = it },
+      onNotKept = { notKept = true },
+      onPin = pin,
+      onDecide = { deciding = it },
+      onReport = { reportAndBlock.reporting = it },
+    )
   val handlers =
     MessageHandlers(
       menu = menu,
@@ -468,9 +504,12 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit, onPhotos: ()
         val items = photos.mapIndexed { at, photo -> ChatPhotoItem(PhotoKey(0, at), photo, me.orEmpty(), line.madeAtMs) }
         viewing = OpenPhotos(PhotoRun.opened(items, PhotoKey(0, index)), follows = false)
       },
+      openProfile = { writer -> reportAndBlock.profileOf = ProfileOf(writer.userId, writer.displayName, writer.photoId) },
+      folded = folded,
+      showFolded = { seq -> shownBlocked = shownBlocked + seq },
     )
   Box {
-    ChatScaffold(groupId, threadId, members, groups, socket, onBack, onPhotos) {
+    ChatScaffold(groupId, threadId, members, groups, socket, onBack, onPhotos, onTitle) {
       Column(Modifier.fillMaxSize().imePadding()) {
         Box(Modifier.weight(1f).fillMaxWidth()) {
           // What floats over the lines' top keeps its room there, so the first of them scrolls out from under it.
@@ -538,6 +577,16 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit, onPhotos: ()
     }
   }
   if (notKept) NotKeptDialog { notKept = false }
+  val group = groups.firstOrNull { it.id == groupId }
+  ReportAndBlock(
+    reportAndBlock,
+    groupId,
+    group?.name.orEmpty(),
+    group?.mark ?: GroupMarkValue(),
+    snackbar,
+    // メッセージを送る opens the one-to-one chat with them, but in that chat itself.
+    messaging = { person -> me?.takeIf { person.id != other }?.let { me -> { open(RootPage.Chat(groupId, directThread(me, person.id))) } } },
+  )
   picking?.let { seq ->
     EmojiPickerSheet(
       onPick = { emoji ->
@@ -595,6 +644,8 @@ private fun ChatScaffold(
   onBack: () -> Unit,
   /** 写真 in its ⋯: the chat's photos alone. */
   onPhotos: () -> Unit,
+  /** A tap on the title: what the chat is of. */
+  onTitle: () -> Unit,
   content: @Composable () -> Unit,
 ) {
   val me = rememberMeId()
@@ -606,7 +657,8 @@ private fun ChatScaffold(
     topBar = {
       TopAppBar(
         title = {
-          Column {
+          val opens = stringResource(if (other != null) R.string.profile else R.string.group_settings)
+          Column(Modifier.clickable(onClickLabel = opens, onClick = onTitle)) {
             Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis)
             val under = status ?: if (threadId == GROUP_THREAD) stringResource(R.string.chat_members, count) else null
             if (under != null) {

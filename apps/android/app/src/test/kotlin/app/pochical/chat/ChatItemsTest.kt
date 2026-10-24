@@ -84,4 +84,14 @@ class ChatItemsTest {
       )
     assertEquals(listOf("day 2026-10-25", "1 run time", "2 run time", "4 run time"), shape(chatItems(state, "me", null, zone)))
   }
+
+  @Test
+  fun aFoldedLineSitsApartSoTheWritersNextLineShownStartsARun() {
+    val state = ChatState(lines = listOf(line(1, "u2", at(1)), line(2, "u2", at(1)), line(3, "u2", at(1))), waiting = emptyList(), atStart = true)
+    // The first folded, as a blocked writer's is until shown: the next starts its run with face and name.
+    assertEquals(
+      listOf("day 2026-10-25", "1 run time", "2 run", "3 time"),
+      shape(chatItems(state, "me", null, zone, folded = { it.seq == 1L })),
+    )
+  }
 }

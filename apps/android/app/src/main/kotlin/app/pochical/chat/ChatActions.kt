@@ -16,10 +16,11 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import app.pochical.LocalThemeColors
 import app.pochical.R
-import app.pochical.design.ChatPlaceRules
 import app.pochical.groups.LocalGroupCalls
 import app.pochical.kit.LineContent
+import app.pochical.kit.placeRules
 import app.pochical.kit.plainText
+import app.pochical.kit.reportable
 import kotlinx.coroutines.launch
 
 // What a line's menu offers (spec/chat.md, Opening a message's menu; Replies; Editing and
@@ -34,12 +35,15 @@ sealed interface Unsending {
 
 /**
  * The items of a message's menu, in the spec's order: 返信 first, コピー for words, 編集 for one's
- * own words, and 送信取消 last, apart and in the danger color. A line on its way has コピー and
- * 送信取消; one not sent もう一度送る and 削除, which is not asked, as nobody has it.
+ * own words, and 送信取消 last, apart and in the danger color, or 通報 there for someone else's where
+ * the place takes reports. A line on its way has コピー and 送信取消; one not sent もう一度送る and
+ * 削除, which is not asked, as nobody has it. What a place's chats lack is not offered
+ * (spec/chat.md, Where a chat is kept).
  */
 @Composable
 fun rememberLineActions(
   groupId: String,
+  threadId: String,
   composer: ComposerState,
   nameOf: (String) -> String,
   snackbar: SnackbarHostState,
@@ -49,6 +53,8 @@ fun rememberLineActions(
   onPin: (seq: Long, on: Boolean) -> Unit,
   /** 決め直す: the sheet a poll is settled with, on its day. */
   onDecide: (seq: Long) -> Unit,
+  /** 通報: the sheet that asks why, for someone else's line. */
+  onReport: (ReportTarget) -> Unit,
 ): (MessageLook) -> List<LineMenuItem> {
   val chats = LocalChats.current
   val scope = rememberCoroutineScope()
@@ -58,7 +64,7 @@ fun rememberLineActions(
   val resources = context.resources
   val calls = LocalGroupCalls.current
   val files = LocalPhotoFiles.current
-  val rules = ChatPlaceRules.group
+  val rules = placeRules(groupId)
   fun copy(words: String) =
     LineMenuItem(resources.getString(R.string.chat_copy), R.drawable.ic_content_copy) {
       scope.launch {
@@ -109,8 +115,15 @@ fun rememberLineActions(
           if (look.mine && words != null && rules.edit) {
             add(LineMenuItem(resources.getString(R.string.chat_edit), R.drawable.ic_edit) { composer.change(seq, words, nameOf) })
           }
+          val writer = look.writer
           if (look.mine) {
             add(LineMenuItem(resources.getString(R.string.chat_unsend), R.drawable.ic_undo, destructive = true, startsGroup = true) { onUnsend(Unsending.Sent(seq)) })
+          } else if (writer != null && reportable(look.content.kind, mine = false, rules)) {
+            add(
+              LineMenuItem(resources.getString(R.string.report), R.drawable.ic_flag, destructive = true, startsGroup = true) {
+                onReport(ReportTarget.Line(threadId, seq, writer.userId, writer.shownName(resources.getString(R.string.deleted_account))))
+              }
+            )
           }
         }
       }

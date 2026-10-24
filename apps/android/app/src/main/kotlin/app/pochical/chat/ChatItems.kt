@@ -65,9 +65,10 @@ fun dayOf(ms: Long, zone: ZoneId): LocalDate = Instant.ofEpochMilli(ms).atZone(z
 /**
  * What the chat [state] shows for [me], oldest first: a line still being sent last, one not sent
  * where it was written (`chatOrder`), the day's title before each day's first line, and ここから新着
- * over [unreadFrom]. A line never delivered to the reader shows nothing, so it is left out.
+ * over [unreadFrom]. A line never delivered to the reader shows nothing, so it is left out; one
+ * [folded] to ブロック中のメンバーのメッセージ stands apart from the runs, as a notice does.
  */
-fun chatItems(state: ChatState, me: String?, unreadFrom: Long?, zone: ZoneId = ZoneId.systemDefault()): List<ChatItem> {
+fun chatItems(state: ChatState, me: String?, unreadFrom: Long?, zone: ZoneId = ZoneId.systemDefault(), folded: (ChatLine) -> Boolean = { false }): List<ChatItem> {
   val lines =
     chatOrder<ChatItem>(
       sent = state.lines.filter { it.content != LineContent.Hidden }.map { TimedLine(ChatItem.Line(it, false), it.sentAtMs) },
@@ -79,7 +80,7 @@ fun chatItems(state: ChatState, me: String?, unreadFrom: Long?, zone: ZoneId = Z
   for (item in lines) {
     val (at, writer, replies) =
       when (item) {
-        is ChatItem.Line -> Triple(item.line.sentAtMs, item.line.authorId.takeIf { isMessage(item.line) }, item.line.replyTo != null)
+        is ChatItem.Line -> Triple(item.line.sentAtMs, item.line.authorId.takeIf { isMessage(item.line) && !folded(item.line) }, item.line.replyTo != null)
         is ChatItem.Waiting -> Triple(item.line.madeAtMs, me, item.line.replyTo != null)
         else -> continue
       }

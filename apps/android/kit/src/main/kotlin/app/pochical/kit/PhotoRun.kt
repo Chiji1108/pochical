@@ -236,8 +236,8 @@ class PhotoRun private constructor(held: List<ChatPhotoItem>, shown: PhotoKey?, 
   }
 
   companion object {
-    /** Whether the reader sees a line's photos among the chat's, by its kind: photos, not in the place's own chat when they have blocked its writer, whose lines fold away there. */
-    fun seen(kind: LineKind, ownChat: Boolean, writerBlocked: Boolean): Boolean = kind == LineKind.Photos && !(ownChat && writerBlocked)
+    /** Whether the reader sees a line's photos among the chat's, by its kind: photos, not folded away as a blocked writer's are in the place's own chat (`folds`). */
+    fun seen(kind: LineKind, ownChat: Boolean, writerBlocked: Boolean): Boolean = kind == LineKind.Photos && !folds(kind, ownChat, writerBlocked)
 
     /** Opened on [tapped], among the photos [held] of the lines laid out. */
     fun opened(held: List<ChatPhotoItem>, tapped: PhotoKey, ahead: Int = app.pochical.design.Chat.photoPageAhead): PhotoRun {

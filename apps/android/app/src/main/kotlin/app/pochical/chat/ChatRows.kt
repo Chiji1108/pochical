@@ -84,7 +84,11 @@ fun ChatItemRow(item: ChatItem, look: MessageLook?, writers: Map<String, GroupMe
         is LineContent.Notice -> AppLine(noticeWords(content.notice, by, handlers.nameOf(content.notice.subjectId)), modifier)
         LineContent.Unsent ->
           AppLine(if (line.authorId == me) stringResource(R.string.chat_unsent_mine) else stringResource(R.string.chat_unsent, by), modifier)
-        else -> if (look != null) Message(look, handlers, modifier)
+        else ->
+          when {
+            handlers.folded(line) -> FoldedLine({ handlers.showFolded(line.seq) }, modifier)
+            look != null -> Message(look, handlers, modifier)
+          }
       }
     }
     is ChatItem.Waiting -> if (look != null) Message(look, handlers, modifier)

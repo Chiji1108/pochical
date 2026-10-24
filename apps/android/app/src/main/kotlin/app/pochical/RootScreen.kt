@@ -97,6 +97,7 @@ fun RootScreen(navigator: RootNavigator) {
             onProfile = { navigation.open(RootPage.GroupProfile(route.groupId)) },
             onInvite = { navigation.open(RootPage.GroupInvite(route.groupId)) },
             onLeft = navigator::closePages,
+            onMessage = { thread -> navigation.open(RootPage.Chat(route.groupId, thread)) },
           )
         }
       is RootPage.GroupShifts ->
@@ -104,7 +105,7 @@ fun RootScreen(navigator: RootNavigator) {
       is RootPage.Chat ->
         NavEntry(route) {
           val navigation = rememberPageNavigation(navigator)
-          ChatPage(route.groupId, route.threadId, onBack = navigation::back, onPhotos = { navigation.open(RootPage.ChatPhotos(route.groupId, route.threadId)) })
+          ChatPage(route.groupId, route.threadId, onBack = navigation::back, open = navigation::open)
         }
       is RootPage.ChatPhotos -> NavEntry(route) { ChatPhotosPage(route.groupId, route.threadId, onBack = rememberPageNavigation(navigator)::back) }
       is RootPage.GroupEdit ->NavEntry(route) { GroupEditPage(route.groupId, onBack = rememberPageNavigation(navigator)::back) }

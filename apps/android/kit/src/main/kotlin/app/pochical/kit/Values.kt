@@ -67,4 +67,8 @@ interface Values {
 
   /** Whom the user has blocked (spec/chat.md, Reporting and blocking). */
   @Query("SELECT * FROM blocks") fun blocks(): Flow<List<BlockRow>>
+
+  /** Those the user has blocked as each group they were in with them knows them, for their names and faces. */
+  @Query("SELECT * FROM groupMembers WHERE userId IN (SELECT userId FROM blocks) ORDER BY joinedAtMs")
+  fun blockedMembers(): Flow<List<GroupMemberRow>>
 }
