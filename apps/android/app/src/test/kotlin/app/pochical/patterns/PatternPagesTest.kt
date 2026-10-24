@@ -23,9 +23,9 @@ import app.pochical.PageNavigation
 import app.pochical.PochicalTheme
 import app.pochical.RootNavigator
 import app.pochical.RootPage
-import app.pochical.RootRoute
 import app.pochical.RootTab
 import app.pochical.Tabs
+import app.pochical.awaitRoutes
 import app.pochical.calendar.LocalOwnDays
 import app.pochical.calendar.TestDays
 import app.pochical.kit.ShownDay
@@ -54,9 +54,6 @@ class PatternPagesTest {
   private val navigation = PageNavigation(navigator, owner.lifecycle)
 
   @After fun close() = test.close()
-
-  /** The pages once a save that goes back has, after its write, gone back. */
-  private fun awaitRoutes(vararg routes: RootRoute) = compose.waitUntil { navigator.routes == routes.toList() }
 
   /** 日勤 in an order from January, 遅番 in none, and 遅番 on two days of October. */
   private fun dayInAnOrderAndLateOnTwoDays() = runBlocking {
@@ -103,7 +100,7 @@ class PatternPagesTest {
     compose.waitForIdle()
     val calendar = test.awaitCalendar { it.patterns.size == 2 }
     assertEquals(listOf("duty" to "offDuty", "offDuty" to null), calendar.patterns.map { it.id to it.nextDay })
-    awaitRoutes(Tabs, RootPage.Patterns)
+    compose.awaitRoutes(navigator, Tabs, RootPage.Patterns)
   }
 
   @Test
@@ -125,7 +122,7 @@ class PatternPagesTest {
     compose.onNodeWithText("保存").performClick()
     compose.waitForIdle()
     assertEquals(true, test.awaitCalendar { it.patterns.find { p -> p.id == "late" }?.archived == true }.patterns.last().archived)
-    awaitRoutes(Tabs, RootPage.Patterns)
+    compose.awaitRoutes(navigator, Tabs, RootPage.Patterns)
   }
 
   @Test
@@ -150,6 +147,6 @@ class PatternPagesTest {
     compose.waitForIdle()
     val made = test.awaitCalendar { it.patterns.isNotEmpty() }.patterns.single()
     assertEquals(listOf("夜勤", "🌙", "moon", "夜"), listOf(made.name, made.emoji, made.icon, made.symbol))
-    awaitRoutes(Tabs, RootPage.Patterns)
+    compose.awaitRoutes(navigator, Tabs, RootPage.Patterns)
   }
 }
