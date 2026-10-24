@@ -70,7 +70,7 @@ suspend fun updateAllWidgets(context: Context) {
  * to someone.
  */
 private val WIDGET_TABLES =
-  arrayOf("days", "patterns", "patternOrder", "repeatOrders", "syncState", "groups", "groupMembers", "memberDays", "memberPatterns", "memberOrders")
+  arrayOf("days", "patterns", "patternOrder", "repeatOrders", "groups", "groupMembers", "memberDays", "memberPatterns", "memberOrders")
 
 /**
  * Draws the widgets again whenever, while the app runs, sync or an edit changes the tables they

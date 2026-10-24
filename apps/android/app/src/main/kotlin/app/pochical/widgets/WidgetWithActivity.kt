@@ -68,12 +68,17 @@ class WidgetWithActivity(private val settings: SyncedSettings, private val kit: 
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
     val widgetId = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
-    // Left with back, the widget stays as it was, or is placed as nobody's.
-    setResult(Activity.RESULT_CANCELED, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId))
     if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return finish()
-    val provider = AppWidgetManager.getInstance(this).getAppWidgetInfo(widgetId)?.provider?.className
-    val offs = provider == NextOffWidgetReceiver::class.java.name
-    val widget = if (offs) NextOffWidget() else UpcomingWidget()
+    // Left with back, the widget stays as it was, or is placed as nobody's: Android 10 and 11 ask
+    // this as a widget is placed, which configuration_optional leaves to the person from 12 on.
+    setResult(Activity.RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId))
+    val widget =
+      when (AppWidgetManager.getInstance(this).getAppWidgetInfo(widgetId)?.provider?.className) {
+        NextOffWidgetReceiver::class.java.name -> NextOffWidget()
+        UpcomingWidgetReceiver::class.java.name -> UpcomingWidget()
+        else -> return finish()
+      }
+    val offs = widget is NextOffWidget
     val glanceId = GlanceAppWidgetManager(this).getGlanceIdBy(widgetId)
     lifecycleScope.launch {
       val device = settings.settings.first()
@@ -88,7 +93,6 @@ class WidgetWithActivity(private val settings: SyncedSettings, private val kit: 
                 state.toMutablePreferences().apply { if (picked == null) remove(WidgetChoice.KEY) else set(WidgetChoice.KEY, picked.id) }
               }
               widget.update(this@WidgetWithActivity, glanceId)
-              setResult(Activity.RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId))
               finish()
             }
           }

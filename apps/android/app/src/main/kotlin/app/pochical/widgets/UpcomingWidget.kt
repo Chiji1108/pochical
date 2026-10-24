@@ -25,6 +25,8 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import app.pochical.calendar.weekday
+import androidx.compose.ui.graphics.Color
+import androidx.glance.unit.ColorProvider
 import app.pochical.groups.drawing
 import app.pochical.kit.Look
 import app.pochical.kit.dayName
@@ -143,13 +145,15 @@ private fun RowScope.ColumnDay(day: WidgetDay, drawn: Drawn, first: Boolean, siz
  * stroke under the date.
  */
 @Composable
-private fun ColumnHead(day: WidgetDay, drawn: Drawn, first: Boolean, onTile: Boolean, compact: Boolean = false) {
+private fun ColumnHead(day: WidgetDay, drawn: Drawn, first: Boolean, onTile: Boolean, compact: Boolean = false, hidden: Boolean = false) {
   val colors = drawn.colors
+  // Hidden, it keeps a head's room by the faces, so they sit by their rows.
+  val clear = ColorProvider(Color.Transparent)
   Column(GlanceModifier.padding(top = 4.dp, bottom = 2.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-    Words(weekdayHead(day.date.weekday, drawn.english), colors.weekday(day.tone), 11.sp)
-    NoteStroke(day.noted, drawn.strokeColor(day, onTile)) {
+    Words(weekdayHead(day.date.weekday, drawn.english), if (hidden) clear else colors.weekday(day.tone), 11.sp)
+    NoteStroke(day.noted && !hidden, drawn.strokeColor(day, onTile)) {
       Row(verticalAlignment = Alignment.Bottom) {
-        val color = if (day.holiday) colors.holiday else colors.words
+        val color = if (hidden) clear else if (day.holiday) colors.holiday else colors.words
         if (first) {
           Words(drawn.words.columnMonth(day.date), color, 10.sp)
         }
@@ -194,7 +198,7 @@ private fun PairColumns(drawn: Drawn, pair: WidgetPair, count: Int) {
   Row(GlanceModifier.fillMaxSize().opening(drawn.link(drawn.entry.date))) {
     Column(GlanceModifier.defaultWeight().fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally) {
       // As tall as a column's head, so the faces sit by their rows.
-      Spacer(GlanceModifier.height(38.dp))
+      ColumnHead(days.first().first, drawn, first = true, onTile = false, compact = true, hidden = true)
       Box(GlanceModifier.defaultWeight(), contentAlignment = Alignment.Center) { WidgetFace(pair.me.name, 24.dp, me = true) }
       Box(GlanceModifier.defaultWeight(), contentAlignment = Alignment.Center) { WidgetFace(pair.with.name, 24.dp) }
     }

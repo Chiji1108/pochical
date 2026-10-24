@@ -32,6 +32,7 @@ import app.pochical.calendar.TimeChange
 import app.pochical.kit.GroupMarkValue
 import app.pochical.kit.Look
 import app.pochical.kit.MarkStyle
+import app.pochical.kit.initialLetter
 import app.pochical.markLayers
 
 // A pattern's mark as a widget draws it, as the app's ShiftMark draws it: its icon, its emoji, or
@@ -133,19 +134,19 @@ fun WidgetShiftMark(pattern: Pattern, size: Dp, change: TimeChange?, look: Look,
 }
 
 /**
- * A group's mark, [size] across, as the group's screens draw it: its emoji, its icon, or its
- * letters on a tile of its color's tint. A photo stands as the group's first letter until widgets
- * show photos.
+ * A group's mark, [size] across, as the group's screens draw it (GroupMarkView): its icon, else its
+ * letters on a tile of its color's tint, else its emoji. A photo stands as the group's initial
+ * until widgets show photos.
  */
 @Composable
 fun WidgetGroupMark(mark: GroupMarkValue, name: String, size: Dp, colors: WidgetColors) {
   val style =
     when {
-      mark.emoji.isNotEmpty() -> MarkStyle.Emoji
-      mark.icon.isNotEmpty() -> MarkStyle.Icon
+      mark.photoId.isEmpty() && markLayers(mark.icon, filled = true) != null -> MarkStyle.Icon
+      mark.photoId.isEmpty() && mark.letter.isEmpty() && mark.emoji.isNotEmpty() -> MarkStyle.Emoji
       else -> MarkStyle.Badge
     }
-  val letter = mark.letter.ifEmpty { name.trim().take(1) }
+  val letter = mark.letter.takeIf { mark.photoId.isEmpty() }?.ifEmpty { null } ?: initialLetter(name)
   WidgetMarkOf(mark.icon, mark.emoji, letter, mark.color, size, null, Look(style = style, fill = true), colors)
 }
 

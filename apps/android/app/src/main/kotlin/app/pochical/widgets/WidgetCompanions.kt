@@ -22,6 +22,7 @@ import java.time.LocalDate
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 
@@ -64,7 +65,14 @@ sealed interface WidgetChoice {
 fun Values.companion(choice: WidgetChoice, today: LocalDate): Flow<WidgetCompanion?> =
   groups().flatMapLatest { groups ->
     val group = groups.find { it.id == choice.groupId } ?: return@flatMapLatest flowOf(null)
-    combine(groupMembers(group.id, today.minusDays(1), today.plusDays(Widgets.offLookaheadDays.toLong())), owner()) { members, me ->
+    combine(
+      groupMembers(group.id, today.minusDays(1), today.plusDays(Widgets.offLookaheadDays.toLong())),
+      members(group.id),
+      owner().distinctUntilChanged(),
+    ) { all, rows, me ->
+      // An account deleted is gone from the group, as one that left is.
+      val deleted = rows.filter { it.deleted }.mapTo(HashSet()) { it.userId }
+      val members = all.filterNot { it.userId in deleted }
       val mine = members.find { it.userId == me }
       val meShown = WidgetWith(WidgetWith.Kind.Person, mine?.name.orEmpty(), group.id, mine?.photoId.orEmpty())
       when (choice) {
@@ -89,7 +97,7 @@ data class ChoiceMember(val userId: String, val name: String, val photoId: Strin
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 fun Values.choiceGroups(): Flow<List<ChoiceGroup>> =
-  combine(groups(), owner(), ::Pair).flatMapLatest { (groups, me) ->
+  combine(groups(), owner().distinctUntilChanged(), ::Pair).flatMapLatest { (groups, me) ->
     if (groups.isEmpty()) return@flatMapLatest flowOf(emptyList())
     combine(groups.map { group -> members(group.id) }) { members ->
       groups.mapIndexed { index, group ->
