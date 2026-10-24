@@ -98,6 +98,9 @@ sealed interface RootPage : RootRoute, NavKey {
   /** 繰り返しをやめる, from 繰り返し. */
   @Serializable data object StopRepeat : RootPage
 
+  /** プロフィール, from 設定. */
+  @Serializable data object Profile : RootPage
+
   /** 一緒に働く人, from 設定. */
   @Serializable data object Coworkers : RootPage
 

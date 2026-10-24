@@ -1,6 +1,9 @@
 package app.pochical.kit
 
 import java.io.File
+import app.pochical.v1.change
+import app.pochical.v1.profile
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -23,6 +26,7 @@ class KeptNameTest {
       server.url,
       Photos(OkHttpClient(), server.url, File(RuntimeEnvironment.getApplication().cacheDir, "held")),
       phone.scope,
+      phone.database.values(),
     )
 
   @After
@@ -43,5 +47,33 @@ class KeptNameTest {
     withTimeout(5_000) { last.await() }
     assertEquals(listOf("さくら", "サクラ"), server.displayNames.map { it.displayName })
     assertEquals("group-1", server.displayNames.last().groupId)
+  }
+
+  @Test
+  fun aUsualNameAndPhotoKeptOneAfterTheOtherKeepEachOther() = runBlocking {
+    phone.account.foreground()
+    phone.account.state.first { it is AccountState.SignedIn }
+    calls.keepProfile(name = "さくら")
+    calls.keepProfile(photo = UsualPhoto.New(byteArrayOf(1, 2, 3)))
+    val last = calls.keepProfile(name = "サクラ")
+
+    withTimeout(5_000) { last.await() }
+    val photo = server.ownPhotos.single()
+    assertEquals(listOf("さくら" to "", "さくら" to photo, "サクラ" to photo), server.profiles.map { it.name to it.photoId })
+  }
+
+  @Test
+  fun aNameFromAnotherDeviceAfterTheWordCameBackIsKeptWithANewPhoto() = runBlocking {
+    phone.account.foreground()
+    phone.account.state.first { it is AccountState.SignedIn }
+    withTimeout(5_000) { calls.keepProfile(name = "さくら").await() }
+    // The account's word on it, then another device's new name, come back on the socket.
+    phone.database.write { takeMembership(change { profile = profile { name = "さくら" } }) }
+    phone.database.write { takeMembership(change { profile = profile { name = "はな" } }) }
+    phone.database.values().profile().first { it?.name == "はな" }
+    delay(200)
+
+    withTimeout(5_000) { calls.keepProfile(photo = UsualPhoto.New(byteArrayOf(1))).await() }
+    assertEquals("はな" to server.ownPhotos.single(), server.profiles.last().let { it.name to it.photoId })
   }
 }

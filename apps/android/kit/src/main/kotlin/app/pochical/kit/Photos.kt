@@ -34,6 +34,14 @@ sealed interface PhotoShelf {
   }
 }
 
+/** The usual photo as the person changes it: a new one, or none. */
+sealed interface UsualPhoto {
+  /** A JPEG cut and shrunk as a face is. */
+  class New(val jpeg: ByteArray) : UsualPhoto
+
+  data object None : UsualPhoto
+}
+
 /** The server does not know the session a call went as (a 401). */
 class SessionRefused : Exception()
 

@@ -26,6 +26,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
@@ -43,6 +44,7 @@ class GroupCalls internal constructor(
   server: HttpUrl,
   private val photos: Photos,
   private val scope: CoroutineScope,
+  private val values: Values,
 ) {
   private val client =
     ProtocolClient(
@@ -52,14 +54,33 @@ class GroupCalls internal constructor(
   private val groups = GroupServiceClient(client)
   private val users = UserServiceClient(client)
 
-  /** The names kept, sent one at a time in the order they were kept. */
-  private val namesKept = Channel<KeptName>(Channel.UNLIMITED)
+  /** The names and profiles kept, sent one at a time in the order they were kept. */
+  private val kept = Channel<Kept>(Channel.UNLIMITED)
+
+  /**
+   * The usual name and photo this kit last set, until the account's word after it comes back on the
+   * socket: meanwhile what a change to one of them keeps of the other. The server tells it in order,
+   * so any word other than the one the device held as it set them is that or later, another
+   * device's change among it, and from then on the device's own copy is the word.
+   */
+  @Volatile private var profileSent: SentProfile? = null
+
+  private class SentProfile(val userId: String, val profile: ProfileRow, val heldBefore: ProfileRow?)
+
+  /** The device's copy of the usual name and photo, as last read. */
+  @Volatile private var heldProfile: ProfileRow? = null
 
   init {
     scope.launch {
-      for (kept in namesKept) {
+      values.profile().collect { now ->
+        heldProfile = now
+        synchronized(this@GroupCalls) { if (profileSent?.let { now != it.heldBefore } == true) profileSent = null }
+      }
+    }
+    scope.launch {
+      for (kept in kept) {
         try {
-          setDisplayName(kept.groupId, kept.name)
+          kept.send()
           kept.answer.complete(Unit)
         } catch (e: CancellationException) {
           throw e
@@ -76,13 +97,37 @@ class GroupCalls internal constructor(
    * and sent by the kit after those kept before it, whether the page still waits or not. The page
    * may await the answer while it is there.
    */
-  fun keepDisplayName(groupId: String, name: String): Deferred<Unit> {
-    val kept = KeptName(groupId, name)
-    namesKept.trySend(kept)
-    return kept.answer
+  fun keepDisplayName(groupId: String, name: String): Deferred<Unit> = keep { setDisplayName(groupId, name) }
+
+  /**
+   * Keeps the user's usual name, photo or both (spec/sync-protocol.md, Profile), as [keepDisplayName]
+   * keeps a group's name: taken at once and sent in turn by the kit, whether the page still waits or
+   * not. What is not given stays as last set; a new photo goes up to the user's own photos first.
+   */
+  fun keepProfile(name: String? = null, photo: UsualPhoto? = null): Deferred<Unit> = keep {
+    account.asSignedIn { credentials ->
+      val held = values.profile().first()
+      val before = profileSent?.takeIf { it.userId == credentials.userId }?.profile ?: held ?: ProfileRow(name = "", photoId = "")
+      val photoId =
+        when (photo) {
+          null -> before.photoId
+          UsualPhoto.None -> ""
+          is UsualPhoto.New -> sendPhoto(photo.jpeg, PhotoShelf.Mine)
+        }
+      val after = ProfileRow(name = name ?: before.name, photoId = photoId)
+      setProfile(after.name, after.photoId)
+      // The word may have come back already, while the call was answered.
+      synchronized(this@GroupCalls) { profileSent = SentProfile(credentials.userId, after, held).takeIf { heldProfile == held } }
+    }
   }
 
-  private class KeptName(val groupId: String, val name: String) {
+  private fun keep(send: suspend () -> Unit): Deferred<Unit> {
+    val call = Kept(send)
+    kept.trySend(call)
+    return call.answer
+  }
+
+  private class Kept(val send: suspend () -> Unit) {
     val answer = CompletableDeferred<Unit>()
   }
 
