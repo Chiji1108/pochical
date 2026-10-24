@@ -4,10 +4,10 @@ import android.Manifest
 import android.app.Activity
 import android.app.AlarmManager
 import android.app.Application
+import android.app.NotificationManager
 import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.ContentProvider
-import android.app.NotificationManager
 import app.pochical.kit.OwnCalendar
 import app.pochical.kit.OwnDay
 import app.pochical.kit.PatternRow
@@ -102,6 +102,32 @@ class ReminderAlarmsTest {
     now = at(2026, 11, 1, 21, 40)
     wake(alarms, firedAt = at(2026, 11, 1, 21, 0))
     assertEquals(listOf("明日は日勤"), shown)
+    assertEquals(at(2026, 11, 2, 21, 0), nextAlarm)
+  }
+
+  @Test
+  fun anAlarmBroughtAgainShowsNothingAgain() = runTest {
+    shadowOf(application).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
+    val alarms = alarms()
+    wake(alarms)
+    now = at(2026, 11, 1, 21, 0)
+    wake(alarms, firedAt = at(2026, 11, 1, 21, 0))
+    assertEquals(listOf("明日は日勤"), shown)
+    application.getSystemService(NotificationManager::class.java).cancelAll()
+
+    wake(alarms, firedAt = at(2026, 11, 1, 21, 0))
+    assertEquals(emptyList<String>(), shown)
+    assertEquals(at(2026, 11, 2, 21, 0), nextAlarm)
+  }
+
+  @Test
+  fun broughtMoreThanAnHourLateItIsNotShown() = runTest {
+    shadowOf(application).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
+    val alarms = alarms()
+    wake(alarms)
+    now = at(2026, 11, 1, 22, 30)
+    wake(alarms, firedAt = at(2026, 11, 1, 21, 0))
+    assertEquals(emptyList<String>(), shown)
     assertEquals(at(2026, 11, 2, 21, 0), nextAlarm)
   }
 

@@ -90,10 +90,11 @@ class ReminderAlarms(
     scope.launch {
       try {
         if (firedAt == null) readExact()
-        val scheduled = current()
         turn.withLock {
+          val scheduled = current()
           if (firedAt != null) fired(firedAt, scheduled)
-          set(scheduled)
+          // Woken by anything but the alarm, the system may hold it no more.
+          set(scheduled, cleared = firedAt == null)
         }
       } finally {
         done()
@@ -101,31 +102,42 @@ class ReminderAlarms(
     }
   }
 
-  /** The system woke the app for the reminders at [at]: what is due since, if it may be shown. */
+  /**
+   * The system brought the alarm of [at]: what is due since, if it may be shown, up to an hour late.
+   * One it brings again, as when it was set anew while already on its way, is the alarm spent.
+   */
   private fun fired(at: Long, scheduled: Scheduled) {
-    // Shown or not, the alarm is spent.
+    if (at != kept.getLong(KEY_SET_FOR, 0)) return
     kept.edit { remove(KEY_SET_FOR) }
     if (!scheduled.allowed) return
     val now = clock()
-    val since = Instant.ofEpochMilli(at - 1).atZone(now.zone)
-    scheduled.reminders.sending(scheduled.calendar, since, now).forEach { show(it, now.zone) }
+    val since = maxOf(at - 1, now.toInstant().toEpochMilli() - LATE_MOST_MILLIS)
+    scheduled.reminders.sending(scheduled.calendar, Instant.ofEpochMilli(since).atZone(now.zone), now).forEach { show(it, now.zone) }
   }
 
   private suspend fun current() = Scheduled(calendar.first(), reminders.first(), allowed.value)
 
-  private suspend fun schedule(scheduled: Scheduled) = turn.withLock { set(scheduled) }
+  private suspend fun schedule(scheduled: Scheduled) = turn.withLock { set(scheduled, cleared = false) }
 
   /**
    * Asks the system to wake the app at the next reminder; for none while the app may not notify. One
-   * already set and due, which the system has not brought yet, stays, so setting the next never
-   * takes it away: without exact alarms it may come up to an hour late.
+   * already set and due, which the system has not brought yet (without exact alarms it may come up
+   * to an hour late), is left with the system, so setting the next never takes it away; set again
+   * only once the system's alarms may be [cleared], as the device started or the app was updated.
    */
-  private fun set(scheduled: Scheduled) {
+  private fun set(scheduled: Scheduled, cleared: Boolean) {
     val now = clock()
     val zone = now.zone
-    val after = Instant.ofEpochMilli(searchFrom(kept.getLong(KEY_SET_FOR, 0), now.toInstant().toEpochMilli())).atZone(zone)
+    val setFor = kept.getLong(KEY_SET_FOR, 0)
+    val from = searchFrom(setFor, now.toInstant().toEpochMilli())
+    if (scheduled.allowed && from < setFor && !cleared) return
+    val after = Instant.ofEpochMilli(from).atZone(zone)
+    // The nearest days first: most reminders go off within them, and these run on every change.
     val next =
-      if (scheduled.allowed) scheduled.reminders.sending(scheduled.calendar, after, now.plusDays(LOOK_AHEAD_DAYS)).firstOrNull() else null
+      if (!scheduled.allowed) null
+      else
+        scheduled.reminders.sending(scheduled.calendar, after, now.plusDays(NEAR_DAYS)).firstOrNull()
+          ?: scheduled.reminders.sending(scheduled.calendar, after, now.plusDays(LOOK_AHEAD_DAYS)).firstOrNull()
     if (next == null) {
       kept.edit { remove(KEY_SET_FOR) }
       return alarms.cancel(waking())
@@ -179,6 +191,9 @@ class ReminderAlarms(
 
     /** How far ahead the next one is looked for, a year: with none in it, a change to the days asks again. */
     const val LOOK_AHEAD_DAYS = 366L
+
+    /** The days looked at first, two weeks, as iOS puts in the system's queue. */
+    const val NEAR_DAYS = 14L
   }
 }
 
