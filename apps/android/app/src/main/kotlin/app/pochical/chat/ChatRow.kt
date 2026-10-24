@@ -7,24 +7,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.add
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Badge
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -276,37 +268,14 @@ private fun listedTime(ms: Long, today: LocalDate): String {
 }
 
 /** 個人チャットを始める: the members there is no one-to-one chat with yet, the chat being the group's. */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun StartChatSheet(members: List<GroupMemberRow>, groupId: String, groupName: String, onDismiss: () -> Unit, onPick: (GroupMemberRow) -> Unit) {
-  val colors = LocalThemeColors.current
-  ModalBottomSheet(onDismissRequest = onDismiss) {
-    // A list that scrolls within the sheet, as a group holds up to GROUP_MAX_MEMBERS people.
-    LazyColumn(contentPadding = WindowInsets.navigationBars.add(WindowInsets(bottom = 16.dp)).asPaddingValues()) {
-      item {
-        Text(
-          stringResource(R.string.chat_start),
-          Modifier.padding(horizontal = 24.dp, vertical = 8.dp).semantics { heading() },
-          style = MaterialTheme.typography.titleLarge,
-        )
-      }
-      items(members, key = { it.userId }) { member ->
-        ListItem(
-          headlineContent = { Text(member.shownName(), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-          leadingContent = { MemberAvatar(member.shownName(), member.photoId, PhotoShelf.Group(groupId), 40.dp) },
-          colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-          modifier = Modifier.fillMaxWidth().clickable { onPick(member) },
-        )
-      }
-      item {
-        // The chat is the group's, with the names and faces it shows.
-        Text(
-          stringResource(R.string.chat_start_note, groupName),
-          Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-          style = MaterialTheme.typography.bodySmall,
-          color = colors.textSecondary,
-        )
-      }
-    }
-  }
+  MemberSheet(
+    stringResource(R.string.chat_start),
+    members.map { SheetMember(it.userId, it.shownName(), it.photoId, PhotoShelf.Group(groupId)) },
+    onDismiss,
+    // The chat is the group's, with the names and faces it shows.
+    note = stringResource(R.string.chat_start_note, groupName),
+    onPick = { picked -> members.firstOrNull { it.userId == picked.id }?.let(onPick) },
+  )
 }
