@@ -27,8 +27,8 @@ data class StoredSession(
 )
 
 /**
- * What the store keeps, as one value: the device's session, null after its account was deleted
- * until it signs in anew; and the sessions of the anonymous users switches to an account's data left
+ * What the store keeps, as one value: the device's session, null after the device let go of its
+ * user (its account deleted, or はじめから使う) until it signs in anew; and the sessions of the anonymous users switches to an account's data left
  * behind, each kept until the server deletes that user (spec/sync-protocol.md, Switching to an
  * account in use), whatever the device's session does meanwhile.
  */

@@ -19,6 +19,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -88,6 +89,13 @@ class SyncClient internal constructor(
    */
   private val network = Channel<SocketEvent>(Channel.CONFLATED)
 
+  /**
+   * How many times it was closed. A socket ends on a close even when it is started again before
+   * the socket's loop sees [state] closed, which a state flow, keeping only its latest value, may
+   * never show it.
+   */
+  private val closes = MutableStateFlow(0L)
+
   /** When the server last answered the keepalive. */
   @Volatile private var lastReplyMs = 0L
 
@@ -103,7 +111,10 @@ class SyncClient internal constructor(
   /** Asked to be open: tries at once, the count started again; an open socket stays. */
   fun start() = on(SocketEvent.Start)
 
-  fun close() = on(SocketEvent.Close)
+  fun close() {
+    on(SocketEvent.Close)
+    closes.update { it + 1 }
+  }
 
   /** The network went: the socket closes at once and tries again as [SocketState] says. */
   fun networkLost() {
@@ -152,6 +163,7 @@ class SyncClient internal constructor(
 
   /** What one socket brings, until it ends; the event that ended it, null when the app closed it. */
   private suspend fun connect(): SocketEvent? = coroutineScope {
+    val closedBefore = closes.value
     val cursor =
       try {
         read { if (peer is Peer.Group) cursorOf(peer.id) else state().cursor }
@@ -168,7 +180,7 @@ class SyncClient internal constructor(
     socket.send(clientFrame { hello = hello { protocolVersion = PROTOCOL_VERSION; this.cursor = cursor } })
     lastReplyMs = sentMs
     val closing = launch {
-      mutableState.first { it == SocketState.Closed }
+      combine(mutableState, closes) { state, closed -> state == SocketState.Closed || closed != closedBefore }.first { it }
       messages.send(SocketMessage.Closing)
     }
     val keepalive = launch { keepAlive(socket) }

@@ -31,9 +31,10 @@ import app.pochical.design.Metrics
 import app.pochical.kit.AccountState
 
 /**
- * The app as the account is: its screens, or, while the device erases what it held after the
- * account was deleted, the erasing in place of all of them, so nothing of the user shows. The
- * screens after are a new install's, from the first tab, saying アカウントを削除しました once.
+ * The app as the account is: its screens; or, while the device erases what it held, the erasing in
+ * place of all of them, so nothing of the user shows; or, while the server does not know the
+ * session, ログアウトされています. The screens after either are a new stretch's, from the first tab,
+ * saying アカウントを削除しました once after a deletion.
  */
 @Composable
 fun AccountRoot() {
@@ -44,6 +45,7 @@ fun AccountRoot() {
   var said by rememberSaveable { mutableIntStateOf(account.deleted.value) }
   when (val now = state) {
     is AccountState.Erasing -> ErasingScreen(now, retry = account::eraseAgain)
+    AccountState.SessionEnded -> SessionEndedScreen(tryAgain = account::tryAgain, startAfresh = account::startAfresh)
     else ->
       key(deleted) {
         RootScreen(rememberRootNavigator())
@@ -59,10 +61,10 @@ fun AccountRoot() {
 }
 
 /**
- * In place of the app while the device is still erasing after アカウントを削除
- * (spec/sync-protocol.md, Deleting an account): the account is deleted on the server already, so it
- * says so, and that this device's data is still being cleared. It tries again by itself; 再試行
- * tries at once.
+ * In place of the app while the device is still erasing after アカウントを削除 or はじめから使う
+ * (spec/sync-protocol.md, Deleting an account; Reconnecting): the account is deleted or the session
+ * let go of already, so it says so, and that this device's data is still being cleared. It tries
+ * again by itself; 再試行 tries at once.
  */
 @Composable
 private fun ErasingScreen(erasing: AccountState.Erasing, retry: () -> Unit) {
@@ -74,7 +76,12 @@ private fun ErasingScreen(erasing: AccountState.Erasing, retry: () -> Unit) {
     Spacer(Modifier.weight(1f))
     if (!erasing.failed) CircularProgressIndicator()
     Text(
-      stringResource(R.string.account_deleted),
+      stringResource(
+        when (erasing.why) {
+          AccountState.Erasing.Why.SignedOut -> R.string.signed_out
+          AccountState.Erasing.Why.Deleted -> R.string.account_deleted
+        }
+      ),
       style = MaterialTheme.typography.titleLarge,
       color = MaterialTheme.colorScheme.onSurface,
       textAlign = TextAlign.Center,

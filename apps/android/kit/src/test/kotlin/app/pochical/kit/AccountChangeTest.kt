@@ -240,7 +240,7 @@ class AccountChangeTest {
     phone.edits.setDay("2026-11-02", DayField.DAY_FIELD_PATTERN, "night")
     phone.kept.writable = false
     assertTrue(phone.account.deleteAccount { null })
-    withTimeout(10_000) { phone.account.state.first { it == AccountState.Erasing(failed = true) } }
+    withTimeout(10_000) { phone.account.state.first { it == AccountState.Erasing(AccountState.Erasing.Why.Deleted, failed = true) } }
     // Ended there: the store still keeps the deleted user's session.
     phone.scope.coroutineContext[kotlinx.coroutines.Job]!!.cancelChildren()
     assertEquals("user-1", phone.sessions.read()?.userId)
@@ -376,7 +376,7 @@ class AccountChangeTest {
 
     assertTrue(phone.account.deleteAccount { null })
 
-    withTimeout(10_000) { phone.account.state.first { it == AccountState.Erasing(failed = true) } }
+    withTimeout(10_000) { phone.account.state.first { it == AccountState.Erasing(AccountState.Erasing.Why.Deleted, failed = true) } }
     phone.kept.writable = true
     phone.account.eraseAgain()
     withTimeout(10_000) { phone.account.state.first { it is AccountState.SignedIn } }

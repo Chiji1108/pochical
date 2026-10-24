@@ -35,12 +35,13 @@ internal suspend fun SyncDao.state(): SyncState =
 
 /**
  * Takes the database for [userId]'s: one that is no one's becomes theirs, with what was entered
- * before signing in. True when it is theirs now; false when it is another user's, which a socket as
- * [userId] neither sends from nor takes into (spec/sync-protocol.md, Sockets).
+ * before signing in, and an erasing it noted is over. True when it is theirs now; false when it is
+ * another user's, which a socket as [userId] neither sends from nor takes into
+ * (spec/sync-protocol.md, Sockets).
  */
 internal suspend fun SyncDao.claim(userId: String): Boolean {
   val state = state()
-  if (state.owner.isEmpty()) upsert(state.copy(owner = userId))
+  if (state.owner.isEmpty()) upsert(state.copy(owner = userId, erased = ""))
   return state.owner.isEmpty() || state.owner == userId
 }
 

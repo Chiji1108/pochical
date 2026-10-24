@@ -203,8 +203,8 @@ private fun SignInSection(state: AccountState) {
     stringResource(
       when (state) {
         is AccountState.SignedIn, is AccountState.Changing -> R.string.account_sign_in_note
-        AccountState.SigningIn, is AccountState.Erasing -> R.string.account_sign_in_offline
-        AccountState.SessionEnded -> R.string.account_sign_in_session_ended
+        // Neither erasing nor an ended session shows this page (AccountRoot).
+        AccountState.SigningIn, is AccountState.Erasing, AccountState.SessionEnded -> R.string.account_sign_in_offline
       }
     )
   )

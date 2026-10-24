@@ -55,15 +55,24 @@ sealed interface AccountState {
   data class Changing(val before: SignedIn, internal val heardUnknown: Boolean = false) : AccountState
 
   /**
-   * The account is deleted on the server: the device forgets its session and erases what it held,
-   * showing none of it, [failed] once a try failed, tried again until done; then it signs in as a
-   * new anonymous user.
+   * The device lets go of its user ([why]): it erases what it held and forgets its session, showing
+   * none of it, [failed] once a try failed, tried again until done; then it signs in as a new
+   * anonymous user, as a new install does.
    */
-  data class Erasing(val failed: Boolean = false) : AccountState
+  data class Erasing(val why: Why, val failed: Boolean = false) : AccountState {
+    enum class Why {
+      /** The person let the session go: はじめから使う, after the server ended it. */
+      SignedOut,
+
+      /** The account is deleted on the server. */
+      Deleted,
+    }
+  }
 
   /**
    * The server does not know the session (ログアウトされています): nothing syncs, nothing is
-   * cleared, until the person chooses (spec/sync-protocol.md, Reconnecting).
+   * cleared, until the person chooses, [SyncAccount.tryAgain] or [SyncAccount.startAfresh]
+   * (spec/sync-protocol.md, Reconnecting).
    */
   data object SessionEnded : AccountState
 }
@@ -283,9 +292,26 @@ class SyncAccount(
     return true
   }
 
-  /** 再試行: erasing after a deletion is tried again now rather than after the wait. */
+  /** 再試行: erasing is tried again now rather than after the wait. */
   fun eraseAgain() {
     eraseNow.trySend(Unit)
+  }
+
+  /**
+   * もう一度つなぐ, while the session is ended: the same session tried again, as a server set right
+   * since knows it again. Still unknown, it ends again as it is refused.
+   */
+  fun tryAgain() {
+    commands.trySend(Command.TryAgain)
+  }
+
+  /**
+   * はじめから使う, while the session is ended, asked first by the screens: what the device holds
+   * erased and its session forgotten ([AccountState.Erasing.Why.SignedOut]), then a new anonymous
+   * user, as a new install's.
+   */
+  fun startAfresh() {
+    commands.trySend(Command.StartAfresh)
   }
 
   /** The credentials of the stretch signed in now, null when the device is not signed in or is changing. */
@@ -471,13 +497,45 @@ class SyncAccount(
       }
       is Command.Settle -> settle(current, command)
       is Command.EraseFailed -> {
-        if (state.value is AccountState.Erasing) mutableState.value = AccountState.Erasing(failed = true)
+        (state.value as? AccountState.Erasing)?.let { mutableState.value = it.copy(failed = true) }
       }
-      is Command.Erasing -> if (state.value == AccountState.SigningIn) beginErasing(command.userId)
-      Command.Erased -> {
-        mutableDeleted.value += 1
+      is Command.Erasing -> if (state.value == AccountState.SigningIn) beginErasing(command.userId, command.why)
+      is Command.Erased -> {
+        if (command.why == AccountState.Erasing.Why.Deleted) mutableDeleted.value += 1
         mutableState.value = AccountState.SigningIn
         if (foreground || sending > 0) startSigningIn()
+      }
+      Command.TryAgain -> {
+        if (state.value != AccountState.SessionEnded) return
+        try {
+          // A 401 is never answered with a new user: with no session to try, it stays ended.
+          val kept = sessions.read() ?: return
+          sessions.write(kept.copy(ended = false))
+        } catch (e: StoreUnreachable) {
+          // The token is in the store alone, so nothing is tried until the person asks again.
+          Log.i(TAG, "The ended session could not be tried again: $e")
+          return
+        }
+        mutableState.value = AccountState.SigningIn
+        if (foreground || sending > 0) startSigningIn()
+      }
+      Command.StartAfresh -> {
+        if (state.value != AccountState.SessionEnded) return
+        val kept =
+          try {
+            // Kept as ended before anything is erased, so an app ended meanwhile goes on erasing as
+            // letting the session go, not as a deletion.
+            sessions.read()?.also { if (!it.ended) sessions.write(it.copy(ended = true)) }
+          } catch (e: StoreUnreachable) {
+            Log.i(TAG, "The ended session could not be let go of: $e")
+            return
+          }
+        if (kept != null) {
+          beginErasing(kept.userId, AccountState.Erasing.Why.SignedOut)
+        } else {
+          mutableState.value = AccountState.SigningIn
+          if (foreground || sending > 0) startSigningIn()
+        }
       }
       is Command.LeftBehindGone -> {
         try {
@@ -523,10 +581,10 @@ class SyncAccount(
     }
   }
 
-  /** After [userId]'s account was deleted: nothing of theirs shows, and the device erases it ([eraseDeleted]). */
-  private fun beginErasing(userId: String) {
-    mutableState.value = AccountState.Erasing()
-    scope.launch { eraseDeleted(userId) }
+  /** Letting go of [userId] ([why]): nothing of theirs shows, and the device erases it ([erase]). */
+  private fun beginErasing(userId: String, why: AccountState.Erasing.Why) {
+    mutableState.value = AccountState.Erasing(why)
+    scope.launch { erase(userId, why) }
   }
 
   /** The server's answer to the change [command] began, for the stretch it was asked in alone. */
@@ -569,7 +627,7 @@ class SyncAccount(
       }
       is Outcome.Deleted -> {
         endStretch(current)
-        beginErasing(outcome.userId)
+        beginErasing(outcome.userId, AccountState.Erasing.Why.Deleted)
         command.settled.complete(Unit)
       }
     }
@@ -598,12 +656,12 @@ class SyncAccount(
   }
 
   /**
-   * After [userId]'s account was deleted: what the database holds of them erased, noting whose it
-   * was, then their session forgotten, tried again after a wait that doubles until both are. An app
-   * ended between the two finds the session it kept is of the user erased, and goes on erasing as
-   * it starts (`signIn`), never signing in as them again.
+   * Letting go of [userId]: what the database holds of them erased, noting whose it was, then their
+   * session forgotten, tried again after a wait that doubles until both are. An app ended between
+   * the two finds the session it kept is of the user erased, and goes on erasing as it starts
+   * (`signIn`), never signing in as them again.
    */
-  private suspend fun eraseDeleted(userId: String) {
+  private suspend fun erase(userId: String, why: AccountState.Erasing.Why) {
     var wait = ERASE_FIRST_WAIT_MS
     while (true) {
       try {
@@ -622,7 +680,7 @@ class SyncAccount(
         wait = minOf(wait * 2, ERASE_LONGEST_WAIT_MS)
       }
     }
-    commands.send(Command.Erased)
+    commands.send(Command.Erased(why))
   }
 
   /**
@@ -690,12 +748,14 @@ class SyncAccount(
         Log.i(TAG, "The kept session cannot be reached, tried again in the foreground: $e")
         return
       }
-    if (kept?.ended == true) {
-      mutableState.value = AccountState.SessionEnded
+    if (kept != null && database.write { state().erased } == kept.userId) {
+      // Only a session let go of is kept as ended while it is erased; a deleted account's is not.
+      val why = if (kept.ended) AccountState.Erasing.Why.SignedOut else AccountState.Erasing.Why.Deleted
+      commands.send(Command.Erasing(kept.userId, why))
       return
     }
-    if (kept != null && database.write { state().erased } == kept.userId) {
-      commands.send(Command.Erasing(kept.userId))
+    if (kept?.ended == true) {
+      mutableState.value = AccountState.SessionEnded
       return
     }
     if (kept != null) Log.i(TAG, "Signed in as kept, ${kept.userId}")
@@ -796,14 +856,20 @@ class SyncAccount(
     /** The server's answer to the change begun in the stretch [generation], [settled] once the device is done with it. */
     class Settle(val generation: Long, val outcome: Outcome, val settled: CompletableDeferred<Unit>) : Command
 
-    /** The session kept is of [userId], whose account was deleted and erasing cut off: erasing goes on. */
-    data class Erasing(val userId: String) : Command
+    /** The session kept is of [userId], whose erasing ([why]) was cut off: erasing goes on. */
+    data class Erasing(val userId: String, val why: AccountState.Erasing.Why) : Command
 
-    /** A try at erasing after a deletion failed; another follows. */
+    /** A try at erasing failed; another follows. */
     data object EraseFailed : Command
 
-    /** Everything of the deleted account is gone from the device. */
-    data object Erased : Command
+    /** Everything of the user let go of ([why]) is gone from the device. */
+    data class Erased(val why: AccountState.Erasing.Why) : Command
+
+    /** もう一度つなぐ. */
+    data object TryAgain : Command
+
+    /** はじめから使う. */
+    data object StartAfresh : Command
 
     /** The server deleted the user a switch left behind, or does not know its session [token]. */
     data class LeftBehindGone(val token: String) : Command
