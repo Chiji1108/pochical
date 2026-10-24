@@ -26,8 +26,8 @@ import app.pochical.LocalDeviceSettings
 import app.pochical.PochicalTheme
 import app.pochical.RootPage
 import app.pochical.kit.DeviceSettings
-import app.pochical.notifications.LocalNotificationPermission
-import app.pochical.notifications.NotificationPermission
+import app.pochical.notifications.LocalNotificationAsking
+import app.pochical.notifications.NotificationAsking
 import app.pochical.v1.pattern
 import java.time.LocalDate
 import java.time.YearMonth
@@ -40,7 +40,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
@@ -63,7 +62,7 @@ class CalendarScreenTest {
       CompositionLocalProvider(
         LocalDeviceSettings provides DeviceSettingsState(settings) {},
         LocalOwnDays provides days,
-        LocalNotificationPermission provides NotificationPermission(RuntimeEnvironment.getApplication()),
+        LocalNotificationAsking provides NotificationAsking(mayAsk = false) {},
       ) {
         PochicalTheme(settings) { CalendarScreen(open = { opened += it }, hidesTabBar = { tabBarHidden = it }) }
       }

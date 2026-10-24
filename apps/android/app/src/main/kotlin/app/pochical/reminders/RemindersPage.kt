@@ -62,7 +62,7 @@ import app.pochical.kit.ShownDay
 import app.pochical.notifications.AskingCard
 import app.pochical.notifications.LocalNotificationPermission
 import app.pochical.notifications.PermissionCard
-import app.pochical.notifications.rememberNotificationAsking
+import app.pochical.notifications.LocalNotificationAsking
 import java.time.LocalDate
 import java.time.ZonedDateTime
 
@@ -100,7 +100,7 @@ fun RemindersPage(navigation: PageNavigation) {
   val settings = LocalDeviceSettings.current
   val reminders = settings.device.reminders
   val calendar by LocalOwnDays.current.calendar.collectAsStateWithLifecycle()
-  val asking = rememberNotificationAsking()
+  val asking = LocalNotificationAsking.current
   SettingsPage(title = stringResource(R.string.reminders), onBack = navigation::back) { padding ->
     LazyColumn(contentPadding = padding) {
       item { PermissionCard() }
@@ -192,7 +192,7 @@ fun ReminderEditorPage(id: String?, navigation: PageNavigation) {
   val reminders = settings.device.reminders
   val reminder = reminders.find { it.id == id }
   val calendar by LocalOwnDays.current.calendar.collectAsStateWithLifecycle()
-  val asking = rememberNotificationAsking()
+  val asking = LocalNotificationAsking.current
   var dayBefore by rememberSaveable { mutableStateOf(reminder?.kind !is Reminder.Kind.BeforeStart) }
   var time by rememberSaveable { mutableStateOf((reminder?.kind as? Reminder.Kind.DayBefore)?.time ?: Reminder.DEFAULT_TIME) }
   var minutes by rememberSaveable {

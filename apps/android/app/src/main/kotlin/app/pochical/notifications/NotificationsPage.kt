@@ -27,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -86,7 +87,7 @@ fun PermissionCard() {
   val allowed by LocalNotificationPermission.current.allowed.collectAsStateWithLifecycle()
   if (allowed) return
   val context = LocalContext.current
-  val asking = rememberNotificationAsking()
+  val asking = LocalNotificationAsking.current
   val mayAsk = asking.mayAsk
   AskingCard(
     icon = if (mayAsk) R.drawable.ic_notifications else R.drawable.ic_notifications_off,
@@ -129,9 +130,14 @@ class NotificationAsking(val mayAsk: Boolean, private val put: () -> Unit) {
   }
 }
 
+/** The question whether the app may notify, for the screens: [rememberNotificationAsking]'s, at the root. */
+val LocalNotificationAsking = compositionLocalOf<NotificationAsking> { error("No notification question above this screen") }
+
 /**
  * The question whether the app may notify, put while Android 13 can put it: not before Android 13,
- * where notifications need no asking, while the app may notify, or once turned down for good.
+ * where notifications need no asking, while the app may notify, or once turned down for good. Held
+ * at the root of the screens and handed down ([LocalNotificationAsking]), so its answer is heard
+ * whatever page put it, one that closed as it was put too (saving a reminder).
  */
 @Composable
 fun rememberNotificationAsking(): NotificationAsking {

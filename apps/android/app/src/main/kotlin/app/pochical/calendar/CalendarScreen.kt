@@ -92,7 +92,7 @@ import app.pochical.kit.Week
 import app.pochical.kit.firstBlankDay
 import app.pochical.kit.gapDays
 import app.pochical.kit.selectedAfterEntering
-import app.pochical.notifications.rememberNotificationAsking
+import app.pochical.notifications.LocalNotificationAsking
 import app.pochical.reminders.ReminderOfferDialog
 import app.pochical.reminders.reminderOfferTime
 import java.time.Instant
@@ -192,7 +192,7 @@ fun CalendarScreen(open: (RootPage) -> Unit, hidesTabBar: (Boolean) -> Unit) {
   // The reminders offered, once, the first time shifts are entered or an order was set up: what
   // they are for, then Android's question only if wanted (spec/calendar.md, Reminders).
   val settings by rememberUpdatedState(LocalDeviceSettings.current)
-  val asking by rememberUpdatedState(rememberNotificationAsking())
+  val asking by rememberUpdatedState(LocalNotificationAsking.current)
   var offeringReminders by rememberSaveable { mutableStateOf<String?>(null) }
   // A shift was entered since ポチポチ入力 opened, so its closing may offer the reminders.
   var entered by rememberSaveable { mutableStateOf(false) }

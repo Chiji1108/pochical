@@ -22,7 +22,9 @@ import app.pochical.groups.LocalValues
 import app.pochical.kit.DeviceSettings
 import app.pochical.kit.PochicalKit
 import app.pochical.kit.SyncedSettings
+import app.pochical.notifications.LocalNotificationAsking
 import app.pochical.notifications.LocalNotificationPermission
+import app.pochical.notifications.rememberNotificationAsking
 import app.pochical.notifications.NotificationPermission
 import app.pochical.notifications.Push
 import app.pochical.reminders.LocalReminderAlarms
@@ -86,7 +88,10 @@ class MainActivity(
         LocalNotificationPermission provides notificationPermission,
         LocalReminderAlarms provides reminderAlarms,
       ) {
-        PochicalTheme(device) { AccountRoot() }
+        // Asked from here, under every page, so an answer reaches the app after its page closed.
+        CompositionLocalProvider(LocalNotificationAsking provides rememberNotificationAsking()) {
+          PochicalTheme(device) { AccountRoot() }
+        }
       }
     }
   }
