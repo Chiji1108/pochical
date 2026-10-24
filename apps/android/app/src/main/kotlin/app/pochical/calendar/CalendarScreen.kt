@@ -174,9 +174,13 @@ fun CalendarScreen(open: (RootPage) -> Unit, hidesTabBar: (Boolean) -> Unit) {
   var gapPick by rememberSaveable { mutableStateOf<String?>(null) }
   val offPatterns = calendar.patterns.daysOff()
   val gapFill = offPatterns.find { it.id == gapPick } ?: offPatterns.firstOrNull()
-  // 今月の内訳's month while it is open; each month's days off, counted once for the days as they are.
+  // 今月の内訳's month while it is open, and the days off of the months a swipe can bring in,
+  // counted as the days or the month change rather than as a finger moves the pages.
   var breakingDown by rememberSaveable { mutableStateOf<String?>(null) }
-  val offCounts = remember(calendar) { mutableMapOf<YearMonth, Int>() }
+  val offCounts =
+    remember(calendar, pager.settledPage) {
+      (-2..2).map { range.monthAt(pager.settledPage + it) }.associateWith { calendar.daysOffCount(it) }
+    }
   val hidesBar by rememberUpdatedState(hidesTabBar)
   val showsDay = opened != null && !closing
   LaunchedEffect(showsDay || entering != null) { hidesBar(showsDay || entering != null) }
@@ -380,12 +384,13 @@ fun CalendarScreen(open: (RootPage) -> Unit, hidesTabBar: (Boolean) -> Unit) {
         if (!on || day == null) {
           Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             MonthSummary(
-              pages = pager.currentPage + pager.currentPageOffsetFraction,
+              pages = { pager.currentPage + pager.currentPageOffsetFraction },
               monthAt = range::monthAt,
               thisMonth = YearMonth.from(today),
               reduceMotion = reduceMotion,
-              daysOff = { month -> offCounts.getOrPut(month) { calendar.daysOff(month) } },
-              onOpen = { breakingDown = it.toString() },
+              daysOff = { month -> offCounts[month] ?: calendar.daysOffCount(month) },
+              // The row fading out as entering starts opens nothing.
+              onOpen = { if (enteringKey == null) breakingDown = it.toString() },
             )
             Button(
               onClick = {

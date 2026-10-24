@@ -44,7 +44,7 @@ class MonthSummaryTest {
 
   @Test
   fun theMonthsDaysOffCountEveryPatternThatCountsAsOffAndNoDayAround() {
-    assertEquals(3, calendar(days).daysOff(october))
+    assertEquals(3, calendar(days).daysOffCount(october))
   }
 
   @Test

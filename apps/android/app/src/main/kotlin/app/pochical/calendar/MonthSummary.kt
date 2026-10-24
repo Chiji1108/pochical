@@ -2,12 +2,9 @@ package app.pochical.calendar
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -22,9 +19,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -32,9 +31,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.onClick
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -45,18 +43,17 @@ import app.pochical.ShiftMark
 import app.pochical.design.PochicalTextStyles
 import app.pochical.design.Radius
 import java.time.YearMonth
-import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.math.sign
 
 // 今月のお休み under the calendar and 今月の内訳 it opens (spec/calendar.md, The month;
 // /design's MonthSummary and BreakdownSheet; iOS's MonthSummary.swift).
 
-/** A month's days by what they show: each pattern in the person's order with its days, then those with none. */
+/** A month's days by what they show: each pattern in the person's order with its days, and how many show no shift (未入力). */
 data class MonthBreakdown(val month: YearMonth, val counts: List<Pair<Pattern, Int>>, val unfilled: Int)
 
-/** The month's days whose pattern counts as off. */
-fun OwnCalendar.daysOff(month: YearMonth): Int {
+/** How many of the month's days show a pattern that counts as off, archived ones too. */
+fun OwnCalendar.daysOffCount(month: YearMonth): Int {
   val off = patterns.filter { it.countsAsOff }.map { it.id }.toSet()
   return shown(month.atDay(1), month.atEndOfMonth()).values.count { it.shift in off }
 }
@@ -79,7 +76,7 @@ fun OwnCalendar.breakdown(month: YearMonth): MonthBreakdown {
  */
 @Composable
 fun MonthSummary(
-  pages: Float,
+  pages: () -> Float,
   monthAt: (Int) -> YearMonth,
   thisMonth: YearMonth,
   reduceMotion: Boolean,
@@ -88,57 +85,41 @@ fun MonthSummary(
   modifier: Modifier = Modifier,
 ) {
   val colors = LocalThemeColors.current
-  val page = pages.roundToInt()
-  val share = if (reduceMotion) 0f else pages - page
+  // Only the months are read as the pages move; how far between them is read as it is drawn.
+  val page by remember { derivedStateOf { pages().roundToInt() } }
+  val toward by remember(reduceMotion) { derivedStateOf { if (reduceMotion) 0 else (pages() - page).sign.toInt() } }
+  val share = { if (reduceMotion) 0f else pages() - page }
   val month = monthAt(page)
-  val coming = if (share == 0f) month else monthAt(page + share.sign.toInt())
+  val coming = monthAt(page + toward)
   val thisMonthName = stringResource(R.string.calendar_this_month)
   fun name(of: YearMonth) = if (of == thisMonth) thisMonthName else of.monthText
   val spoken = stringResource(R.string.summary_days_off_spoken, name(month), daysOff(month))
-  val openLabel = stringResource(R.string.summary_open)
+  val label = PochicalTextStyles.footnote.copy(color = colors.textSecondary)
+  val count =
+    PochicalTextStyles.footnote.copy(
+      fontSize = 25.sp,
+      fontWeight = FontWeight.SemiBold,
+      color = colors.accentDefault,
+      fontFeatureSettings = "tnum",
+    )
   Row(
     modifier
       .fillMaxWidth()
       .clip(RoundedCornerShape(Radius.xxl))
       .background(colors.fillQuaternary)
-      .clickable { onOpen(month) }
-      .clearAndSetSemantics {
-        contentDescription = spoken
-        role = Role.Button
-        onClick(openLabel) {
-          onOpen(month)
-          true
-        }
-      }
+      .clickable(onClickLabel = stringResource(R.string.summary_open), role = Role.Button) { onOpen(month) }
+      .clearAndSetSemantics { contentDescription = spoken }
       .padding(horizontal = 16.dp, vertical = 12.dp),
     verticalAlignment = Alignment.CenterVertically,
   ) {
-    Row(verticalAlignment = Alignment.Bottom) {
-      FadingText(name(month), name(coming), abs(share), PochicalTextStyles.footnote.copy(color = colors.textSecondary))
-      Text(stringResource(R.string.summary_days_off), style = PochicalTextStyles.footnote, color = colors.textSecondary)
-    }
+    BlendingText(name(month), name(coming), share, rolls = false, label, Modifier.alignByBaseline())
+    Text(stringResource(R.string.summary_days_off), Modifier.alignByBaseline(), style = label)
     Spacer(Modifier.weight(1f))
-    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-      FadingText(
-        daysOff(month).toString(),
-        daysOff(coming).toString(),
-        abs(share),
-        PochicalTextStyles.footnote.copy(fontSize = 25.sp, fontWeight = FontWeight.SemiBold, color = colors.accentDefault),
-        Modifier.alignByBaseline(),
-      )
-      Text(stringResource(R.string.summary_days), Modifier.alignByBaseline(), style = PochicalTextStyles.footnote, color = colors.accentDefault)
-    }
+    BlendingText(daysOff(month).toString(), daysOff(coming).toString(), share, rolls = false, count, Modifier.alignByBaseline())
+    Spacer(Modifier.width(2.dp))
+    Text(stringResource(R.string.summary_days), Modifier.alignByBaseline(), style = label.copy(color = colors.accentDefault))
     Spacer(Modifier.width(12.dp))
     Icon(painterResource(R.drawable.ic_chevron_right), null, Modifier.size(16.dp), tint = colors.textQuaternary)
-  }
-}
-
-/** [text] giving way to [coming] as [share] goes from 0 to 1, in the same place. */
-@Composable
-private fun FadingText(text: String, coming: String, share: Float, style: TextStyle, modifier: Modifier = Modifier) {
-  Box(modifier) {
-    Text(text, Modifier.alpha(1 - share), style = style)
-    if (coming != text && share > 0f) Text(coming, Modifier.alpha(share), style = style)
   }
 }
 
@@ -151,12 +132,12 @@ private fun FadingText(text: String, coming: String, share: Float, style: TextSt
 fun MonthBreakdownSheet(breakdown: MonthBreakdown, onDismiss: () -> Unit) {
   val colors = LocalThemeColors.current
   ModalBottomSheet(onDismissRequest = onDismiss) {
-    LazyColumn(Modifier.navigationBarsPadding()) {
+    LazyColumn {
       item {
         Text(
           stringResource(R.string.breakdown_title),
           style = MaterialTheme.typography.titleLarge,
-          modifier = Modifier.padding(horizontal = 24.dp),
+          modifier = Modifier.padding(horizontal = 24.dp).semantics { heading() },
         )
         Text(
           breakdown.month.yearMonthText,
