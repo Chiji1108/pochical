@@ -10,8 +10,10 @@ import sharp from "sharp";
 
 import {
   DRAWING_SHARE,
+  lightDrawing,
   paintedPixels,
 } from "../src/components/design-app-icon";
+import type { IconColors } from "../src/components/design-app-icon";
 import { colorsOf, cutIcon, height, lightness, paint, width } from "./app-icon";
 
 const MAIN = new URL("../../../apps/android/app/src/main/", import.meta.url)
@@ -26,6 +28,8 @@ const SHOWN_DP = 72;
 const LAYER_SHARE = (DRAWING_SHARE * SHOWN_DP) / LAYER_DP;
 const DENSITIES = { hdpi: 1.5, mdpi: 1, xhdpi: 2, xxhdpi: 3, xxxhdpi: 4 };
 const PLAY_SIZE = 512;
+// 次の休み's 92dp dog peeking from the widget's corner, at xxxhdpi.
+const PEEKING_SIZE = 368;
 const GENERATED =
   "<!-- Written by packages/prototype/scripts/android-app-icons.ts (bun run icon:android). -->";
 
@@ -108,3 +112,27 @@ ${GENERATED}
       .toBuffer()
   ),
 ]);
+
+// The dog 次の休み's widget peeks from its corner with on a day off, as
+// ios-app-icons.ts writes iOS's: white in dark lines in light, the default
+// icon's dark look in dark, each without its ground. Glance shows the one
+// the launcher's light or dark picks.
+const peeking: [string, IconColors][] = [
+  ["drawable-nodpi", lightDrawing],
+  ["drawable-night-nodpi", colorsOf("moss-dark")],
+];
+await Promise.all(
+  peeking.map(async ([folder, colors]) => {
+    await mkdir(`${RES}${folder}/`, { recursive: true });
+    const pixels = paintedPixels(lightness, width, height, colors, true);
+    await writeFile(
+      `${RES}${folder}/widget_poodle.png`,
+      await sharp(Buffer.from(pixels.buffer), {
+        raw: { channels: RGBA, height, width },
+      })
+        .resize(PEEKING_SIZE, PEEKING_SIZE, { kernel: "lanczos3" })
+        .png({ compressionLevel: 9 })
+        .toBuffer()
+    );
+  })
+);
