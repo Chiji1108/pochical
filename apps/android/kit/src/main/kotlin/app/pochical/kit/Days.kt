@@ -7,6 +7,10 @@ import java.time.LocalDate
 // The person's days over their repeating orders, as iOS's DayEntry.swift: only what differs from
 // the orders is kept as their own (spec/shift-patterns.md, Repeating orders).
 
+/** Each day from [first] through [last], none when [last] is before [first]. */
+fun daysFrom(first: LocalDate, last: LocalDate): Sequence<LocalDate> =
+  generateSequence(first) { it.plusDays(1) }.takeWhile { it <= last }
+
 /** A day as it shows: its shift, and what else it has. */
 data class ShownDay(
   val shift: String,

@@ -8,7 +8,9 @@ import android.database.ContentObserver
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.PredictiveBackHandler
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
@@ -25,18 +27,23 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
@@ -57,9 +64,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -77,6 +87,9 @@ import app.pochical.Week
 import app.pochical.design.Metrics
 import app.pochical.design.PochicalTextStyles
 import app.pochical.design.Springs
+import app.pochical.kit.firstBlankDay
+import app.pochical.kit.gapDays
+import app.pochical.kit.selectedAfterEntering
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
@@ -107,19 +120,20 @@ private val LEAST_DAY_HEIGHT = Metrics.touch
 private val SCREEN_EDGE = 16.dp
 
 /**
- * カレンダー: the person's month, a page a month, turned by swiping, and a
- * day opened from it under its week (spec/calendar.md, The month and A
- * day's detail). `onDayOpen` says when a day opens and closes, for the tab
- * bar to give way to it.
+ * カレンダー: the person's month, a page a month, turned by swiping, a
+ * day opened from it under its week, and ポチポチ入力 under the month
+ * (spec/calendar.md, The month, A day's detail and ポチポチ入力).
+ * `hidesTabBar` says when a day or the tray takes the tab bar's place.
  */
 @Composable
-fun CalendarScreen(open: (RootPage) -> Unit, onDayOpen: (Boolean) -> Unit) {
+fun CalendarScreen(open: (RootPage) -> Unit, hidesTabBar: (Boolean) -> Unit) {
   val days = LocalOwnDays.current
   val calendar by days.calendar.collectAsStateWithLifecycle()
   val week = LocalDeviceSettings.current.device.week
   val today = rememberToday()
   val country = remember { holidayCountry() }
   val reduceMotion = rememberReducedMotion()
+  val resources = LocalResources.current
   // The pages count from the month the screen opened on, so they stay put
   // when today moves into another month.
   val openedMonth = rememberSaveable { YearMonth.from(today).toString() }
@@ -150,9 +164,19 @@ fun CalendarScreen(open: (RootPage) -> Unit, onDayOpen: (Boolean) -> Unit) {
   var pulled by remember { mutableFloatStateOf(0f) }
   val folding = (fold.value - pulled).coerceIn(0f, 1f)
   var closing by remember { mutableStateOf(false) }
-  val dayOpen by rememberUpdatedState(onDayOpen)
+  // The day ポチポチ入力 enters next, while entering, and what its last key did, for a screen reader.
+  var enteringKey by rememberSaveable { mutableStateOf<String?>(null) }
+  val entering = enteringKey?.let(LocalDate::parse)
+  var said by remember { mutableStateOf<String?>(null) }
+  // The blank days 完了 asks about, and the pattern picked to fill them.
+  var gapKeys by rememberSaveable { mutableStateOf("") }
+  val gaps = remember(gapKeys) { gapKeys.split(",").filter { it.isNotEmpty() }.map(LocalDate::parse) }
+  var gapPick by rememberSaveable { mutableStateOf<String?>(null) }
+  val offPatterns = calendar.patterns.daysOff()
+  val gapFill = offPatterns.find { it.id == gapPick } ?: offPatterns.firstOrNull()
+  val hidesBar by rememberUpdatedState(hidesTabBar)
   val showsDay = opened != null && !closing
-  LaunchedEffect(showsDay) { dayOpen(showsDay) }
+  LaunchedEffect(showsDay || entering != null) { hidesBar(showsDay || entering != null) }
 
   fun monthShowing(day: LocalDate, month: YearMonth): YearMonth =
     if (monthWeeks(month, week.start).any { day in it }) month else YearMonth.from(day)
@@ -164,6 +188,56 @@ fun CalendarScreen(open: (RootPage) -> Unit, onDayOpen: (Boolean) -> Unit) {
     foldedKey = monthShowing(day, folded).toString()
     openedKey = day.toString()
     scope.launch { if (reduceMotion) fold.snapTo(1f) else fold.animateTo(1f, Springs.standard()) }
+  }
+
+  /** Entering starts on the month's first blank day, the 1st when none is blank. */
+  fun firstBlank(month: YearMonth): LocalDate {
+    val shown = calendar.shown(month.atDay(1), month.atEndOfMonth())
+    return firstBlankDay(month.atDay(1), month.atEndOfMonth(), shown::containsKey)
+  }
+
+  // A day tapped while entering is entered next, turning to its month when it is one around.
+  fun selectDay(day: LocalDate) {
+    if (enteringKey == null) return openDay(day)
+    if (day !in reachable) return
+    enteringKey = day.toString()
+    said = null
+    if (YearMonth.from(day) != range.monthAt(pager.currentPage)) turnTo(YearMonth.from(day))
+  }
+
+  /** Says what a key did on [day] and where entering goes on, as /design's live region does. */
+  fun say(done: String, day: LocalDate, next: LocalDate) {
+    val after =
+      if (next == day) {
+        resources.getString(R.string.entering_month_end)
+      } else {
+        resources.getString(R.string.entering_selecting, if (next.month == day.month) next.dayText else next.monthDayText)
+      }
+    said = resources.getString(R.string.entering_said, day.monthDayText, done, after)
+  }
+
+  // 完了, or a back: entering ends, then the month's blank days before its last entered one are
+  // asked about, when a pattern that counts as off could fill them.
+  fun finish() {
+    val day = enteringKey?.let(LocalDate::parse) ?: return
+    enteringKey = null
+    said = null
+    if (calendar.patterns.daysOff().isEmpty()) return
+    val month = YearMonth.from(day)
+    scope.launch {
+      val shown = days.shownOnceWritten(month.atDay(1), month.atEndOfMonth())
+      gapKeys = gapDays(month.atDay(1), month.atEndOfMonth(), shown::contains).joinToString(",")
+    }
+  }
+  BackHandler(enabled = entering != null, onBack = ::finish)
+
+  // A month swiped to while entering starts on its first blank day.
+  LaunchedEffect(pager.settledPage, entering != null) {
+    val month = range.monthAt(pager.settledPage)
+    if (entering != null && YearMonth.from(entering) != month) {
+      enteringKey = firstBlank(month).toString()
+      said = null
+    }
   }
 
   suspend fun unfold() {
@@ -202,20 +276,34 @@ fun CalendarScreen(open: (RootPage) -> Unit, onDayOpen: (Boolean) -> Unit) {
       todayPage = range.pageOf(YearMonth.from(today)),
       reduceMotion = reduceMotion,
       dayOpen = opened != null,
+      entering = entering != null,
       thisWeekAway = opened != null && opened.weekStartingOn(week.start) != today.weekStartingOn(week.start),
       onPick = { turnTo(it) },
       onThisMonth = { turnTo(YearMonth.from(today)) },
       onThisWeek = { openDay(today) },
+      onDone = ::finish,
     )
     WeekdayRow(week, Modifier.padding(horizontal = SCREEN_EDGE))
     BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
       val cell = dayHeight(fitting = maxHeight - DAY_GAP)
       val monthHeight = cell * 6 + DAY_GAP * 5
       Column {
-        val select by rememberUpdatedState(::openDay)
+        val select by rememberUpdatedState(::selectDay)
+        // While 完了 asks, the blank days show faint as the pattern picked would fill them.
+        val preview = if (gapFill != null) gaps.associateWith { gapFill } else emptyMap()
         val pageDays =
-          remember(calendar, week, today, country, cell, opened) {
-            PageDays(calendar, week, today, country, cell, selected = opened, onSelect = { select(it) })
+          remember(calendar, week, today, country, cell, opened, entering, preview) {
+            PageDays(
+              calendar,
+              week,
+              today,
+              country,
+              cell,
+              selected = entering ?: opened,
+              isEntering = entering != null,
+              preview = preview,
+              onSelect = { select(it) },
+            )
           }
         // Pulling the week down unfolds the month, following the finger: let
         // go past a third of the way, or flicked down, it unfolds, else it
@@ -281,13 +369,85 @@ fun CalendarScreen(open: (RootPage) -> Unit, onDayOpen: (Boolean) -> Unit) {
         }
       }
     }
+    if (opened == null) {
+      // ポチポチ入力 and its tray trade places in a fade; the tray fading out keeps its last day.
+      val trayDay = remember { mutableStateOf<LocalDate?>(null) }.apply { if (entering != null) value = entering }.value
+      Crossfade(entering != null, Modifier.padding(horizontal = SCREEN_EDGE).padding(top = 12.dp, bottom = 12.dp), label = "entering") { on ->
+        val day = trayDay
+        if (!on || day == null) {
+          Button(
+            onClick = {
+              // The month the pages settle on, as a swipe while entering starts there too.
+              val month = range.monthAt(pager.settledPage)
+              said = null
+              enteringKey = firstBlank(month).toString()
+            },
+            modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control),
+          ) {
+            Icon(painterResource(R.drawable.ic_edit), null, Modifier.size(20.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(stringResource(R.string.entering), style = PochicalTextStyles.headline)
+          }
+        } else {
+          val last = YearMonth.from(day).atEndOfMonth()
+          EntryTray(
+            day = day,
+            week = week,
+            country = country,
+            patterns = calendar.patterns.filterNot { it.archived },
+            canClear = calendar.shown(day, day).containsKey(day),
+            canSkip = day != last,
+            said = said,
+            onEnter = { shift ->
+              // A key of the tray fading out after 完了 enters nothing.
+              if (enteringKey != day.toString()) return@EntryTray
+              days.enter(day, shift)
+              val next = selectedAfterEntering(shift, day, last, calendar::nextDay)
+              enteringKey = next.toString()
+              val pattern = shift?.let { id -> calendar.patterns.find { it.id == id } }
+              val following = shift?.let(calendar::nextDay)?.let { id -> calendar.patterns.find { it.id == id } }
+              say(
+                when {
+                  pattern == null -> resources.getString(R.string.entering_cleared)
+                  following != null -> resources.getString(R.string.entering_entered_next, pattern.name, following.name)
+                  else -> resources.getString(R.string.entering_entered, pattern.name)
+                },
+                day,
+                next,
+              )
+            },
+            onSkip = {
+              if (enteringKey != day.toString()) return@EntryTray
+              val next = minOf(day.plusDays(1), last)
+              enteringKey = next.toString()
+              say(resources.getString(R.string.entering_skipped), day, next)
+            },
+            modifier = Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)),
+          )
+        }
+      }
+    }
+  }
+  if (gaps.isNotEmpty() && gapFill != null) {
+    GapSheet(
+      days = gaps,
+      offPatterns = offPatterns,
+      picked = gapFill,
+      onPick = { gapPick = it.id },
+      onFill = { days.fill(gaps, it.id) },
+      onDismiss = {
+        gapKeys = ""
+        gapPick = null
+      },
+    )
   }
 }
 
 /**
  * The month's name, which opens 月を選ぶ, and 今月, which fades in as the
  * pages leave this month and out as they come back. With a day open, the
- * name stays put and 今週 shows while another week is open.
+ * name stays put and 今週 shows while another week is open; while entering,
+ * 完了 alone, filled with the accent, ends it.
  */
 @Composable
 private fun Heading(
@@ -296,10 +456,12 @@ private fun Heading(
   todayPage: Int,
   reduceMotion: Boolean,
   dayOpen: Boolean,
+  entering: Boolean,
   thisWeekAway: Boolean,
   onPick: (YearMonth) -> Unit,
   onThisMonth: () -> Unit,
   onThisWeek: () -> Unit,
+  onDone: () -> Unit,
 ) {
   var picking by remember { mutableStateOf(false) }
   val colors = LocalThemeColors.current
@@ -312,12 +474,18 @@ private fun Heading(
       pages,
       range::monthAt,
       reduceMotion,
-      // Only the month on its own opens 月を選ぶ; a day's week keeps to the days around.
-      if (dayOpen) Modifier else Modifier.clickable(onClickLabel = pickLabel, role = Role.Button) { picking = true },
+      // Only the month on its own opens 月を選ぶ; entering and a day's week keep to the days around.
+      if (dayOpen || entering) Modifier else Modifier.clickable(onClickLabel = pickLabel, role = Role.Button) { picking = true },
     )
     Spacer(Modifier.weight(1f))
     val away = if (dayOpen) (if (thisWeekAway) 1f else 0f) else abs(pages - todayPage).coerceAtMost(1f)
-    if (away > 0f) {
+    if (entering) {
+      Button(onClick = onDone) {
+        Icon(painterResource(R.drawable.ic_check), null, Modifier.size(18.dp))
+        Spacer(Modifier.width(6.dp))
+        Text(stringResource(R.string.entering_done))
+      }
+    } else if (away > 0f) {
       OutlinedButton(
         onClick = if (dayOpen) onThisWeek else onThisMonth,
         modifier = Modifier.alpha(away),
@@ -380,6 +548,23 @@ private fun MonthPicker(
   }
 }
 
+/**
+ * A weekday's color as the person's カレンダー settings have it: Sundays and holidays in Sunday's
+ * red, Saturdays in their blue, each unless turned off, else [plain].
+ */
+@Composable
+fun weekdayColor(weekday: Int, holiday: Boolean, week: Week, plain: Color): Color {
+  val colors = LocalThemeColors.current
+  return when {
+    (holiday && week.holiday) || (weekday == 0 && week.sunday) -> colors.calendarHoliday
+    weekday == 6 && week.saturday -> colors.calendarSaturday
+    else -> plain
+  }
+}
+
+/** The patterns that count as off and are in use: what 完了's blank days are filled with. */
+private fun List<Pattern>.daysOff(): List<Pattern> = filter { it.countsAsOff && !it.archived }
+
 /** The weekday names over the pages, from the week's start, Sundays and Saturdays in their colors unless turned off. */
 @Composable
 private fun WeekdayRow(week: Week, modifier: Modifier = Modifier) {
@@ -391,12 +576,7 @@ private fun WeekdayRow(week: Week, modifier: Modifier = Modifier) {
         weekdayLetter(weekday),
         Modifier.weight(1f),
         style = PochicalTextStyles.caption2,
-        color =
-          when {
-            weekday == 0 && week.sunday -> colors.calendarHoliday
-            weekday == 6 && week.saturday -> colors.calendarSaturday
-            else -> colors.textTertiary
-          },
+        color = weekdayColor(weekday, holiday = false, week, plain = colors.textTertiary),
         textAlign = TextAlign.Center,
       )
     }
@@ -410,8 +590,12 @@ private class PageDays(
   val today: LocalDate,
   val country: String,
   val cell: Dp,
-  /** The day opened, framed. */
+  /** The day opened, or the day being entered, framed. */
   val selected: LocalDate?,
+  /** ポチポチ入力 is on: today's frame gives way to the day being entered. */
+  val isEntering: Boolean,
+  /** Blank days drawn faint with the pattern 完了's question would fill them with. */
+  val preview: Map<LocalDate, Pattern>,
   val onSelect: (LocalDate) -> Unit,
 ) {
   private val patterns = calendar.patterns.associateBy { it.id }
@@ -438,6 +622,8 @@ private class PageDays(
             outside = fadingOutside != null && YearMonth.from(day) != fadingOutside,
             isToday = day == today,
             isSelected = day == selected,
+            framesToday = !isEntering,
+            preview = preview[day].takeIf { entry == null },
           ),
           height = cell,
           colorsHoliday = week.holiday,
