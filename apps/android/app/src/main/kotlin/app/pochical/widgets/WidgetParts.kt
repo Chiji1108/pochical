@@ -161,9 +161,13 @@ fun GlanceModifier.spoken(day: WidgetDay, words: WidgetWords): GlanceModifier = 
  * Every kind of widget: the person's own days, read from the kit's database when the widget is
  * drawn and again as they change while Glance keeps its session, in the size the launcher gives it
  * (Glance's LocalSize), the next midnight asked for. [chooses] is who a widget may be set to
- * (spec/widgets.md, 次の休み with someone or a group), kept in its Glance state.
+ * (spec/widgets.md, 次の休み with someone or a group), kept in its Glance state; [previews] the
+ * sizes the picker's preview is drawn at.
  */
-abstract class PochicalWidget(private val chooses: Choosing = Choosing.Nobody) : GlanceAppWidget() {
+abstract class PochicalWidget(
+  private val chooses: Choosing = Choosing.Nobody,
+  previews: Set<DpSize>,
+) : GlanceAppWidget() {
   override val sizeMode: SizeMode = SizeMode.Exact
 
   override val stateDefinition = PreferencesGlanceStateDefinition
@@ -202,7 +206,7 @@ abstract class PochicalWidget(private val chooses: Choosing = Choosing.Nobody) :
   }
 
   /** The picker's generated preview (Android 15 on): the sample week, in the person's settings. */
-  override val previewSizeMode = SizeMode.Responsive(PREVIEW_SIZES)
+  override val previewSizeMode = SizeMode.Responsive(previews)
 
   override suspend fun providePreview(context: Context, widgetCategory: Int) {
     val settings = (context.applicationContext as PochicalApplication).widgetSources.settings.first()
@@ -234,8 +238,10 @@ abstract class PochicalWidget(private val chooses: Choosing = Choosing.Nobody) :
   private data class Companion(val choice: WidgetChoice?, val companion: WidgetCompanion?)
 }
 
-/** The sizes a preview is drawn at: a phone's 2×2, 4×2 and 4×4 (/design's android families). */
-private val PREVIEW_SIZES = setOf(DpSize(179.dp, 202.dp), DpSize(373.dp, 202.dp), DpSize(373.dp, 415.dp))
+/** A phone's 2×2, 4×2 and 4×4, the sizes a kind's preview is drawn at among those it offers (/design's android families). */
+val SMALL = DpSize(179.dp, 202.dp)
+val MEDIUM = DpSize(373.dp, 202.dp)
+val LARGE = DpSize(373.dp, 415.dp)
 
 /** The room Material keeps between a widget's edge and what is in it. */
 val WIDGET_MARGIN = 16.dp

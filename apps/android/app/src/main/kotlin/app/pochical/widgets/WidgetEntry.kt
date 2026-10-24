@@ -250,7 +250,6 @@ fun OwnCalendar.widgetEntry(
       val entry = shown[date]
       WidgetDay.of(date, entry, entry?.let { pattern(it.shift)?.pattern }, note(date) != null, week, holiday(date))
     }
-  val todayDay = day(today)
   // Whose days count with the person's, from today as far as 次の休み looks.
   val shifts = companion?.people.orEmpty().map { it to it.shifts(today, reached) }
   val people =
@@ -258,17 +257,22 @@ fun OwnCalendar.widgetEntry(
       val offs = theirs.mapValues { it.value.pattern.countsAsOff }
       WidgetPerson(member.name) { offs[it] }
     }
-  val upcoming = List(7) { day(today.plusDays(it.toLong())) }
+  val entry = entryOf(today, week, people, ::day).copy(nothingEntered = !hasEnteredDays, with = companion?.with)
+  return entry.copy(pair = companion?.let { pair(it, shifts.firstOrNull(), entry.upcoming, week, holiday) })
+}
+
+/** The entry for [today] of the days [day] gives, the week from [week]'s start, with [people] those 次の休み counts with. */
+private fun entryOf(today: LocalDate, week: Week, people: List<WidgetPerson>, day: (LocalDate) -> WidgetDay): WidgetEntry {
+  val weekStart = today.weekStartingOn(week.start)
+  val todayDay = day(today)
   return WidgetEntry(
     date = today,
-    nothingEntered = !hasEnteredDays,
+    nothingEntered = false,
     today = todayDay,
     offs = widgetOffs(todayDay, people) { day(today.plusDays(it.toLong())) },
-    upcoming = upcoming,
+    upcoming = List(7) { day(today.plusDays(it.toLong())) },
     twoWeeks = List(14) { day(weekStart.plusDays(it.toLong())) },
-    month = weeks.map { it.map(::day) },
-    with = companion?.with,
-    pair = companion?.let { pair(it, shifts.firstOrNull(), upcoming, week, holiday) },
+    month = monthWeeks(YearMonth.from(today), week.start).map { it.map(day) },
   )
 }
 
@@ -299,20 +303,10 @@ private fun pair(
  */
 fun sampleWidgetEntry(today: LocalDate, week: Week): WidgetEntry {
   val ids = listOf("day", "day", "night", "after", "off", "off", "day")
-  val patterns = readyCopies(ids.distinct()).associate { it.id to it.pattern }
-  val weekStart = today.weekStartingOn(week.start)
-  fun day(date: LocalDate): WidgetDay {
+  // As iOS's sample: the ready-made patterns, their next days left aside.
+  val patterns = readyCopies(ids.distinct(), keeping = emptySet()).associate { it.id to it.pattern }
+  return entryOf(today, week, emptyList()) { date ->
     val id = ids[Math.floorMod(date.toEpochDay() - today.toEpochDay(), ids.size)]
-    return WidgetDay.of(date, ShownDay(id), patterns[id], noted = false, week = week, holiday = false)
+    WidgetDay.of(date, ShownDay(id), patterns[id], noted = false, week = week, holiday = false)
   }
-  val todayDay = day(today)
-  return WidgetEntry(
-    date = today,
-    nothingEntered = false,
-    today = todayDay,
-    offs = widgetOffs(todayDay, emptyList()) { day(today.plusDays(it.toLong())) },
-    upcoming = List(7) { day(today.plusDays(it.toLong())) },
-    twoWeeks = List(14) { day(weekStart.plusDays(it.toLong())) },
-    month = monthWeeks(YearMonth.from(today), week.start).map { it.map(::day) },
-  )
 }

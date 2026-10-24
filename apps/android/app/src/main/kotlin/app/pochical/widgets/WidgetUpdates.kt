@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 // When the widgets are drawn again (spec/widgets.md, When an entry is made), as iOS's
 // WidgetReloads and its timeline. A widget drawn by Glance follows its data itself while its
@@ -72,31 +73,31 @@ suspend fun updateAllWidgets(context: Context) {
 
 /**
  * Keeps the picker's previews drawn in the settings that draw the widgets (the theme, the marks, the
- * week), while the app's screens are open, where they change: published once for each version of
- * the app in each, the last kept across runs.
+ * week) and on today's date, while the app's screens are open, where the settings change (sync too
+ * runs only then): published once for each version of the app in each, the last the system took
+ * kept across runs.
  */
-suspend fun followForWidgetPreviews(context: Context, settings: SyncedSettings) {
-  val published = context.getSharedPreferences("widget-previews", Context.MODE_PRIVATE)
-  settings.settings
-    .map { "${BuildConfig.VERSION_CODE} ${BuildConfig.VERSION_NAME} ${listOf(it.themeId, it.look, it.week, it.heading.english).toString().hashCode()}" }
-    .distinctUntilChanged()
-    .filter { it != published.getString("drawn", null) }
-    .collect { drawn ->
-      publishWidgetPreviews(context)
-      published.edit { putString("drawn", drawn) }
-    }
-}
+suspend fun followForWidgetPreviews(context: Context, settings: SyncedSettings) =
+  withContext(Dispatchers.IO) {
+    val published = context.getSharedPreferences("widget-previews", Context.MODE_PRIVATE)
+    settings.settings
+      .map { "${BuildConfig.VERSION_CODE} ${LocalDate.now()} ${listOf(it.themeId, it.look, it.week, it.heading.english)}" }
+      .distinctUntilChanged()
+      .filter { it != published.getString("drawn", null) }
+      // Kept only once the system took every kind's, so one it refused is tried again.
+      .collect { drawn -> if (publishWidgetPreviews(context)) published.edit { putString("drawn", drawn) } }
+  }
 
 /**
  * Gives the picker each kind's generated preview, the sample week in the person's settings (Android
- * 15 on). The system takes a few an hour and keeps the last it took.
+ * 15 on); whether the system took them all, as it takes a few an hour.
  */
-suspend fun publishWidgetPreviews(context: Context) {
-  if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) return
+suspend fun publishWidgetPreviews(context: Context): Boolean {
+  if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) return true
   val manager = GlanceAppWidgetManager(context)
-  for (receiver in listOf(SimpleWidgetReceiver::class, UpcomingWidgetReceiver::class, CalendarWidgetReceiver::class, NextOffWidgetReceiver::class)) {
-    manager.setWidgetPreviews(receiver)
-  }
+  return listOf(SimpleWidgetReceiver::class, UpcomingWidgetReceiver::class, CalendarWidgetReceiver::class, NextOffWidgetReceiver::class)
+    .map { manager.setWidgetPreviews(it) }
+    .all { it == GlanceAppWidgetManager.SET_WIDGET_PREVIEWS_RESULT_SUCCESS }
 }
 
 /**
