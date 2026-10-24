@@ -1,6 +1,9 @@
 package app.pochical.kit
 
+import app.pochical.v1.ChatServiceClient
 import app.pochical.v1.GroupServiceClient
+import app.pochical.v1.LinkPreview
+import app.pochical.v1.getLinkPreviewRequest
 import app.pochical.v1.UserServiceClient
 import app.pochical.v1.createGroupRequest
 import app.pochical.v1.getInviteLinkRequest
@@ -51,6 +54,7 @@ class GroupCalls internal constructor(
     )
   private val groups = GroupServiceClient(client)
   private val users = UserServiceClient(client)
+  private val chats = ChatServiceClient(client)
 
   /** The names and profiles kept, sent one at a time in the order they were kept. */
   private val kept = Channel<Kept>(Channel.UNLIMITED)
@@ -122,6 +126,14 @@ class GroupCalls internal constructor(
     }
     releaseMark(request.mark)
     return groupId
+  }
+
+  /**
+   * The page of [url], as the server reads it for a message being written (spec/chat.md, Previews);
+   * null when it finds none.
+   */
+  suspend fun linkPreview(url: String): LinkPreview? = call { headers ->
+    chats.getLinkPreview(getLinkPreviewRequest { this.url = url }, headers).answer().takeIf { it.hasPreview() }?.preview
   }
 
   /** The group's live invitation code. */

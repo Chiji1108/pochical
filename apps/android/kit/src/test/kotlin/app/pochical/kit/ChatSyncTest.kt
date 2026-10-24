@@ -4,6 +4,8 @@ import app.pochical.design.Chat
 import app.pochical.v1.ChatEdit
 import app.pochical.v1.block
 import app.pochical.v1.change
+import app.pochical.v1.copy
+import app.pochical.v1.linkPreview
 import app.pochical.v1.chatMute
 import app.pochical.v1.chatSend
 import app.pochical.v1.chatSendContent
@@ -304,6 +306,21 @@ class ChatValuesTest {
 
     chats.unsend("g1", GROUP_THREAD, 2)
     assertEquals(LineContent.Unsent, database.read { chatState("g1", GROUP_THREAD, "me", from = 2, now = 0) }.lines.single().content)
+  }
+
+  @Test
+  fun anEditKeepsItsPageWhileItsFirstLinkStaysAndElseTakesTheNewOnes() = runTest {
+    val chats = Chats(database, now = { 0 })
+    val page = linkPreview { url = "https://a.example"; title = "A" }
+    val next = linkPreview { url = "https://b.example"; title = "B" }
+    val line = wordsLine(1, "me", "ここ https://a.example").copy { content = content.copy { words = words.copy { preview = page } } }
+    database.write { takeChanges(listOf(line), "g1") }
+    suspend fun shown() = database.read { chatState("g1", GROUP_THREAD, "me", null, now = 0) }.lines.single().content as LineContent.Words
+
+    chats.change("g1", GROUP_THREAD, 1, "ここどう？ https://a.example", next)
+    assertEquals(page, shown().preview)
+    chats.change("g1", GROUP_THREAD, 1, "やっぱり https://b.example", next)
+    assertEquals(next, shown().preview)
   }
 
   @Test

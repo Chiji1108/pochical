@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -135,6 +136,8 @@ class MessageHandlers(
   val choosers: (LineReaction) -> Unit,
   /** The member's own reaction just put on, spraying from its pill. */
   val spray: Spray?,
+  /** A link opened in the system's browser sheet. */
+  val openLink: (String) -> Unit,
 )
 
 /**
@@ -298,6 +301,7 @@ fun Bubble(look: MessageLook, handlers: MessageHandlers, onQuote: () -> Unit) {
   val colors = LocalThemeColors.current
   val shape = remember(look.mine, look.startsRun) { BubbleShape(look.mine, tail = look.startsRun) }
   val ink = if (look.mine) colors.accentOnFill else colors.textPrimary
+  val preview = (look.content as? LineContent.Words)?.preview
   val light = remember { Animatable(0f) }
   val shine = remember { Animatable(0f) }
   val lit = handlers.lit?.takeIf { it.seq == look.seq }
@@ -337,9 +341,12 @@ fun Bubble(look: MessageLook, handlers: MessageHandlers, onQuote: () -> Unit) {
           )
         }
       }
-      .padding(vertical = 8.dp)
-      // As wide as the widest of the quote and the words, the quote's rule across it.
-      .width(IntrinsicSize.Max)
+      // A page's picture is cut to the bubble's outline.
+      .then(if (preview != null) Modifier.clip(shape) else Modifier)
+      .padding(top = 8.dp, bottom = if (preview != null) 0.dp else 8.dp)
+      // As wide as the widest of the quote and the words, the quote's rule across it; a line with a
+      // link's page as wide as the page is drawn.
+      .then(if (preview != null) Modifier.width(PREVIEW_WIDTH) else Modifier.width(IntrinsicSize.Max))
   ) {
     look.quote?.let { BubbleQuote(it, ink, inset = 12.dp, onOpen = onQuote) }
     Text(
@@ -348,6 +355,10 @@ fun Bubble(look: MessageLook, handlers: MessageHandlers, onQuote: () -> Unit) {
       style = MaterialTheme.typography.bodyLarge,
       color = ink,
     )
+    if (preview != null) {
+      Spacer(Modifier.height(8.dp))
+      PreviewCard(preview, ink) { handlers.openLink(preview.url) }
+    }
   }
 }
 
@@ -399,6 +410,7 @@ fun messageLook(
             replying,
             words,
             clock(line.sentAtMs),
+            (line.content as? LineContent.Words)?.preview?.title,
             edited.takeIf { (line.content as? LineContent.Words)?.edited == true },
             reactionWords(line.reactions, me),
           )
@@ -433,6 +445,9 @@ fun messageLook(
 
 /** Where the bubble is in the window, whole: the list's clip would cut one scrolled partly out of sight. */
 private fun LayoutCoordinates.unclipped(): Rect = Rect(positionInWindow(), size.toSize())
+
+/** How wide a line with a link's page is (spec/chat.md, Albums: as wide as an album). */
+private val PREVIEW_WIDTH = 240.dp
 
 /** How dim a line on its way is, as it would be on the chat's ground. */
 private const val WAITING_ALPHA = 0.6f

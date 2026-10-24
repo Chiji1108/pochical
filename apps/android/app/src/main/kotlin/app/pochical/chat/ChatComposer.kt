@@ -22,6 +22,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,7 +54,12 @@ import app.pochical.design.TextLimits
 import app.pochical.kit.KeptDraft
 import app.pochical.kit.PickedMember
 import app.pochical.kit.Writing
+import app.pochical.groups.LocalGroupCalls
 import app.pochical.kit.fitsText
+import app.pochical.kit.keepsPreview
+import app.pochical.kit.previewLink
+import app.pochical.kit.site
+import app.pochical.v1.LinkPreview
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -130,6 +136,8 @@ fun Composer(
   nameOf: (String) -> String,
   /** The members' names are read, for a draft's mentions to be named. */
   namesKnown: Boolean,
+  /** The words of the line being changed, as sent; null while answering or writing anew. */
+  editedWords: String?,
   onTyping: (Boolean) -> Unit,
   onSent: () -> Unit,
   onNotKept: () -> Unit,
@@ -190,6 +198,31 @@ fun Composer(
 
   val editing = writing.editing
   val sendable = fitsText(writing.sent, TextLimits.chatMessage)
+
+  // The page of the first link written, asked for once the link has stayed the same for
+  // chatRules.linkPreviewSettleMs, and shown over the composer until × takes it off; none while an
+  // edit keeps its line's first link, whose page stays (spec/chat.md, Previews).
+  val calls = LocalGroupCalls.current
+  val link = previewLink(writing.sent)?.takeIf { editedWords == null || !keepsPreview(editedWords, writing.sent) }
+  val pages = remember { mutableStateMapOf<String, LinkPreview>() }
+  var asked by remember { mutableStateOf(emptySet<String>()) }
+  var answered by remember { mutableStateOf(emptySet<String>()) }
+  LaunchedEffect(link) {
+    if (link == null || link in asked) return@LaunchedEffect
+    delay(Chat.linkPreviewSettleMs.toLong())
+    asked = asked + link
+    try {
+      calls.linkPreview(link)?.let { pages[link] = it }
+    } catch (e: CancellationException) {
+      throw e
+    } catch (_: Exception) {
+      // None shown, and the server reads the page itself once it has the line.
+    }
+    answered = answered + link
+  }
+  val page = link?.takeIf { it != writing.previewRemoved }?.let { pages[it] }
+  // Shown while asked and not answered (読み込み中…), and once a page came.
+  val showsPage = link != null && link != writing.previewRemoved && link in asked && (link !in answered || page != null)
   Surface(modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surfaceContainer) {
     Column(Modifier.navigationBarsPadding()) {
       val editingWords = stringResource(R.string.chat_editing)
@@ -204,6 +237,9 @@ fun Composer(
       if (bar != null) shown = bar
       AnimatedVisibility(bar != null) {
         shown?.let { ComposerBar(it.title, it.words, stringResource(it.stop)) { state.writing = state.writing.stop() } }
+      }
+      AnimatedVisibility(showsPage) {
+        if (link != null) ComposerPreview(site(link), page) { state.writing = state.writing.copy(previewRemoved = link) }
       }
       Row(Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.Bottom) {
         OutlinedTextField(
@@ -223,8 +259,13 @@ fun Composer(
             scope.launch {
               try {
                 val seq = going.editing
-                if (seq != null) chats.change(groupId, threadId, seq, going.sent)
-                else chats.send(groupId, threadId, going.sent, going.replyTo)
+                val words = going.sent
+                // The page as it came for the words' first link, or none taken off with ×.
+                val sentLink = previewLink(words)
+                val removed = sentLink != null && sentLink == going.previewRemoved
+                val sentPage = sentLink?.takeIf { !removed }?.let { pages[it] }
+                if (seq != null) chats.change(groupId, threadId, seq, words, sentPage)
+                else chats.send(groupId, threadId, words, going.replyTo, sentPage, withoutPreview = removed)
               } catch (e: CancellationException) {
                 throw e
               } catch (_: Exception) {

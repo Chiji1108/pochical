@@ -12,7 +12,14 @@ private data class ChatTextVectors(
   val plainText: List<Plain>,
   val inviteCode: List<InviteCode>,
   val withMentions: List<WithMentions>,
+  val site: List<Site>,
 ) {
+  @Serializable
+  data class Site(val url: String, val expected: String) : VectorCase {
+    override val name
+      get() = url
+  }
+
   @Serializable data class Picked(val id: String, val name: String)
 
   @Serializable
@@ -55,6 +62,8 @@ class ChatTextTest {
   @Test
   fun withMentions() =
     text.withMentions.checkEach({ it.expected }) { case -> withMentions(case.text, case.picked.map { PickedMember(it.id, it.name) }) }
+
+  @Test fun site() = text.site.checkEach({ it.expected }) { site(it.url) }
 
   @Test fun inviteCode() = text.inviteCode.checkEach({ it.expected }) { inviteCode(it.url) }
 }

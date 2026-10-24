@@ -53,6 +53,7 @@ class MessageSemanticsTest {
         moreReactions = {},
         choosers = { listed = it },
         spray = null,
+        openLink = {},
       )
     compose.setContent { Message(look, handlers) }
     val line = compose.onNode(SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription, listOf(look.said)))
