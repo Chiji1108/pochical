@@ -403,6 +403,8 @@ public actor SyncClient {
         return
       } catch {
         Logger.sync.info("Socket closed: \(error)")
+        // A run replaced meanwhile counts nothing against the one after it.
+        guard !Task.isCancelled else { return }
         waitMost = reconnectWaitMost(
           tries: tries.dropped(), firstMs: SyncSocket.reconnectFirstMs,
           mostMs: SyncSocket.reconnectMostMs)

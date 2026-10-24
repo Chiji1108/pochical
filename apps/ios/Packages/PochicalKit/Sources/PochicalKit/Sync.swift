@@ -277,8 +277,8 @@ public func reconnectWaitMost(tries: Int, firstMs: Int, mostMs: Int) -> Int {
 /// The tries a socket makes since it last caught up, the one under way or
 /// waited for included, which the wait before each grows by
 /// (spec/sync-protocol.md, Reconnecting; spec/vectors/reconnect.json, tries).
-struct ReconnectTries: Equatable, Sendable {
-  private(set) var count = 0
+struct ReconnectTries: Sendable {
+  private var count = 0
 
   /// A try at once, the count started again: the socket was asked to be
   /// open, another network became the default, or its clocks were ahead.
