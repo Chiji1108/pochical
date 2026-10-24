@@ -2,7 +2,12 @@ import { chatRules } from "@pochical/design/chat";
 import { env, exports } from "cloudflare:workers";
 import { describe, expect, it, vi } from "vitest";
 
-import { photoKey, sharePersonPhoto, smallKey } from "../src/photos";
+import {
+  deleteGroupPhotos,
+  photoKey,
+  sharePersonPhoto,
+  smallKey,
+} from "../src/photos";
 import { alarmsSettled, ownRun, runAlarm } from "./alarms";
 import { call, ORIGIN, signInAnonymously, userIdOf } from "./helpers";
 import {
@@ -730,5 +735,29 @@ describe("a group's photo once stored", () => {
     await expect(storedBytes(groupId, "lost")).resolves.toStrictEqual(
       OTHER_JPEG
     );
+  });
+});
+
+describe("a group's photos deleted", () => {
+  it("fail only once every batch has settled", async () => {
+    const go = Promise.withResolvers<undefined>();
+    const remove = vi
+      .spyOn(env.PHOTOS, "delete")
+      .mockRejectedValueOnce(new Error("R2 out of reach"))
+      .mockImplementationOnce(async () => {
+        await go.promise;
+      });
+    // Two batches: R2 deletes a thousand keys a call, two for each photo.
+    const ids = Array.from({ length: 501 }, (_, at) => `photo-${at}`);
+    let settled = false;
+    const deleting = deleteGroupPhotos(env, "group", ids).finally(() => {
+      settled = true;
+    });
+    // Everything the first batch's failure sets off has run.
+    await scheduler.wait(0);
+    expect(settled).toBeFalsy();
+    go.resolve(undefined);
+    await expect(deleting).rejects.toThrow("R2 out of reach");
+    remove.mockRestore();
   });
 });
