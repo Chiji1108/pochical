@@ -31,7 +31,7 @@ public object RegisterPushTokenRequestKt {
 
     /**
      * ```
-     * The device's APNs token, as hex.
+     * The device's token: APNs' as hex, or FCM's registration token.
      * ```
      *
      * `string token = 1 [json_name = "token"];`
@@ -45,7 +45,7 @@ public object RegisterPushTokenRequestKt {
       }
     /**
      * ```
-     * The device's APNs token, as hex.
+     * The device's token: APNs' as hex, or FCM's registration token.
      * ```
      *
      * `string token = 1 [json_name = "token"];`
@@ -56,7 +56,8 @@ public object RegisterPushTokenRequestKt {
 
     /**
      * ```
-     * From a development build: sent through APNs' sandbox.
+     * From an iOS development build: sent through APNs' sandbox. Never for
+     * FCM, which has none.
      * ```
      *
      * `bool sandbox = 2 [json_name = "sandbox"];`
@@ -70,13 +71,46 @@ public object RegisterPushTokenRequestKt {
       }
     /**
      * ```
-     * From a development build: sent through APNs' sandbox.
+     * From an iOS development build: sent through APNs' sandbox. Never for
+     * FCM, which has none.
      * ```
      *
      * `bool sandbox = 2 [json_name = "sandbox"];`
      */
     public fun clearSandbox() {
       _builder.clearSandbox()
+    }
+
+    /**
+     * ```
+     * Whose token it is, which the server sends through.
+     * ```
+     *
+     * `.pochical.v1.PushPlatform platform = 3 [json_name = "platform"];`
+     */
+    public var platform: app.pochical.v1.PushPlatform
+      @kotlin.jvm.JvmName("getPlatform")
+        get() = _builder.platform
+      @kotlin.jvm.JvmName("setPlatform")
+        set(value) {
+        _builder.platform = value
+      }
+    public var platformValue: kotlin.Int
+      @kotlin.jvm.JvmName("getPlatformValue")
+        get() = _builder.platformValue
+      @kotlin.jvm.JvmName("setPlatformValue")
+        set(value) {
+        _builder.platformValue = value
+      }
+    /**
+     * ```
+     * Whose token it is, which the server sends through.
+     * ```
+     *
+     * `.pochical.v1.PushPlatform platform = 3 [json_name = "platform"];`
+     */
+    public fun clearPlatform() {
+      _builder.clearPlatform()
     }
   }
 }

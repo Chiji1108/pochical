@@ -641,7 +641,7 @@ describe("an answer from Pochical's people", () => {
     const { thread, token, userId } = await startedChat();
     await call(
       "UserService/RegisterPushToken",
-      { sandbox: true, token: "b2".repeat(32) },
+      { platform: "PUSH_PLATFORM_APNS", sandbox: true, token: "b2".repeat(32) },
       token
     );
     const alerts = () =>

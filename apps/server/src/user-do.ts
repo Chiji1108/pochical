@@ -19,8 +19,6 @@ import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 
 import { Alarm } from "./alarm";
-import { sendAlert, sendWithdrawal } from "./apns";
-import type { Alert, Sent } from "./apns";
 import { deleteOrphans } from "./bucket-audit";
 import type { Orphan, OwnerCleanup } from "./bucket-audit";
 import { hasKey, SHARED_DAY_FIELDS } from "./day-values";
@@ -49,6 +47,8 @@ import {
   sharePersonPhoto,
   uploadedPhotoKey,
 } from "./photos";
+import { sendAlert, sendWithdrawal } from "./push";
+import type { Alert, Sent } from "./push";
 import { devicesOf, dropPushToken } from "./push-tokens";
 import type { Device } from "./push-tokens";
 import { bucketRetryWait, countFailure, retryWait } from "./retry-wait";

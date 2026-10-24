@@ -136,11 +136,13 @@ export const supportSlack = sqliteTable(
 // one session's, and one user's, at a time: registered under another
 // session, it moves there. A session's tokens go with its row as it ends
 // or its user is deleted, in the same database, so no call that failed
-// can leave one behind.
+// can leave one behind. An iPhone's goes through APNs, an Android
+// phone's through FCM.
 export const pushTokens = sqliteTable(
   "push_tokens",
   {
-    // From a development build: through APNs' sandbox.
+    platform: text({ enum: ["apns", "fcm"] }).notNull(),
+    // From an iOS development build: through APNs' sandbox. Never for FCM.
     sandbox: integer({ mode: "boolean" }).notNull(),
     sessionId: text("session_id")
       .notNull()
