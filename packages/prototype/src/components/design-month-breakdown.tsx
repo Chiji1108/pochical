@@ -9,13 +9,38 @@ import {
   formatYearMonth,
 } from "../lib/design-days";
 import type { Period, Schedule } from "../lib/design-days";
-import type { Shift } from "../lib/design-patterns";
+import { isDayOff } from "../lib/design-patterns";
+import type { Pattern, Shift } from "../lib/design-patterns";
 import type { Coworker } from "../lib/design-user-store";
 import { monthWithYearOf } from "./design-month-name";
 import { Sheet, SheetHeading, sheetBody } from "./design-sheet";
 import { srOnly } from "./design-ui";
 import { useWeek } from "./design-week";
 import { ShiftMark } from "./shift-mark";
+
+// What 今月のお休み and 今月の内訳 count on a page (spec/calendar.md, The
+// month; spec/vectors/month.json, summary): its days off, each pattern's
+// days in the patterns' order, archived ones too, and the days that show
+// no shift (未入力).
+export function pageSummaryOf(
+  pageDays: readonly Date[],
+  schedule: Schedule,
+  patterns: readonly Pattern[]
+) {
+  const shifts = pageDays.map((date) => schedule[dateKey(date)]?.shift);
+  const off = new Set(
+    patterns.filter((pattern) => isDayOff(pattern)).map(({ id }) => id)
+  );
+  return {
+    counts: patterns.map((pattern) => ({
+      days: shifts.filter((shift) => shift === pattern.id).length,
+      pattern,
+    })),
+    daysOff: shifts.filter((shift) => shift !== undefined && off.has(shift))
+      .length,
+    unfilled: shifts.filter((shift) => shift === undefined).length,
+  };
+}
 
 // Someone from 一緒に働く人 whose days the calendar shows, picked in
 // 今月の内訳: the other days fade, and the summary under the month counts

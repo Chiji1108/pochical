@@ -31,6 +31,7 @@ import {
   guessGroupMark,
   nextGroupColor,
 } from "../src/components/design-group-settings";
+import { pageSummaryOf } from "../src/components/design-month-breakdown";
 import { periodTitleOf } from "../src/components/design-month-name";
 import {
   defaultWeekSettings,
@@ -95,6 +96,7 @@ import {
   formatPeriodWithYear,
   monthAfter,
   periodHolding,
+  daysOfPeriod,
   periodOf,
 } from "../src/lib/design-days";
 import type { OwnDays, Period, Schedule } from "../src/lib/design-days";
@@ -268,6 +270,30 @@ describe("spec/vectors/month.json", () => {
         last: days.at(-1),
         weeks: days.length / 7,
       }).toEqual(expected);
+    });
+  }
+  for (const vector of monthWeeks.summary) {
+    test(vector.name, () => {
+      const patterns = vector.patterns.map((pattern) => ({
+        ...patternOf({}),
+        ...pattern,
+      }));
+      const schedule = Object.fromEntries(
+        Object.entries(vector.shown).map(([key, shift]) => [key, { shift }])
+      );
+      const pageDays = daysOfPeriod({
+        first: dayOf(vector.first),
+        last: dayOf(vector.last),
+      });
+      const summary = pageSummaryOf(pageDays, schedule, patterns);
+      expect({
+        counts: summary.counts.map(({ days, pattern }) => ({
+          days,
+          id: pattern.id,
+        })),
+        daysOff: summary.daysOff,
+        unfilled: summary.unfilled,
+      }).toEqual(vector.expected);
     });
   }
 });

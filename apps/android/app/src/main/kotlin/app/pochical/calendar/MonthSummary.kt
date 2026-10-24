@@ -53,19 +53,13 @@ import kotlin.math.sign
 data class MonthBreakdown(val month: YearMonth, val counts: List<Pair<Pattern, Int>>, val unfilled: Int)
 
 /** How many of the month's days show a pattern that counts as off, archived ones too. */
-fun OwnCalendar.daysOffCount(month: YearMonth): Int {
-  val off = patterns.filter { it.countsAsOff }.map { it.id }.toSet()
-  return shown(month.atDay(1), month.atEndOfMonth()).values.count { it.shift in off }
-}
+fun OwnCalendar.daysOffCount(month: YearMonth): Int = summary(month.atDay(1), month.atEndOfMonth()).daysOff
 
 /** 今月の内訳 of [month]. */
 fun OwnCalendar.breakdown(month: YearMonth): MonthBreakdown {
-  val shown = shown(month.atDay(1), month.atEndOfMonth()).values
-  return MonthBreakdown(
-    month,
-    patterns.map { pattern -> pattern to shown.count { it.shift == pattern.id } },
-    month.lengthOfMonth() - shown.size,
-  )
+  val summary = summary(month.atDay(1), month.atEndOfMonth())
+  val byId = patterns.associateBy { it.id }
+  return MonthBreakdown(month, summary.counts.mapNotNull { (id, days) -> byId[id]?.let { it to days } }, summary.unfilled)
 }
 
 /**

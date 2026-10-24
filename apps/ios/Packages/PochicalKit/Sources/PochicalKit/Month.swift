@@ -50,6 +50,40 @@ public struct OwnCalendar: Sendable {
   }
 }
 
+/// What 今月のお休み and 今月の内訳 count on a page (spec/calendar.md, The
+/// month; spec/vectors/month.json, summary): its days off, each pattern's
+/// days in the patterns' order, archived ones too, and the days that show
+/// no shift (未入力).
+public struct PageSummary: Equatable, Sendable {
+  public let daysOff: Int
+  public let counts: [(pattern: PatternID, days: Int)]
+  public let unfilled: Int
+
+  /// The page's counts, `shown` each day's shift by date.
+  public init(page: Period, shown: [Day: PatternID], patterns: [Pattern]) {
+    let onPage = shown.filter { page.contains($0.key) }.values
+    let off = Set(patterns.filter(\.countsAsOff).map(\.id))
+    daysOff = onPage.count { off.contains($0) }
+    counts = patterns.map { pattern in (pattern.id, onPage.count { $0 == pattern.id }) }
+    unfilled = page.days.count - onPage.count
+  }
+
+  public static func == (lhs: PageSummary, rhs: PageSummary) -> Bool {
+    lhs.daysOff == rhs.daysOff && lhs.unfilled == rhs.unfilled
+      && lhs.counts.map(\.pattern) == rhs.counts.map(\.pattern)
+      && lhs.counts.map(\.days) == rhs.counts.map(\.days)
+  }
+}
+
+extension OwnCalendar {
+  /// What the page counts.
+  public func summary(of page: Period) -> PageSummary {
+    PageSummary(
+      page: page, shown: shown(from: page.first, through: page.last).mapValues(\.shift),
+      patterns: patterns)
+  }
+}
+
 /// Where ポチポチ入力 starts on a page: its first day without a shift in
 /// `days`, else its first day (spec/calendar.md).
 public func firstBlankDay(in page: Period, days: [Day: DayEntry]) -> Day {
