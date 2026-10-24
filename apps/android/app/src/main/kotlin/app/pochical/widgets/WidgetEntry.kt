@@ -9,6 +9,7 @@ import app.pochical.calendar.timeChange
 import app.pochical.calendar.weekStartingOn
 import app.pochical.calendar.weekday
 import app.pochical.design.Widgets
+import app.pochical.groups.MemberShift
 import app.pochical.groups.shifts
 import app.pochical.kit.GroupMarkValue
 import app.pochical.kit.GroupMember
@@ -75,22 +76,17 @@ data class WidgetDay(
   }
 }
 
-/** A time range as [hoursText] writes it, cut at its dash. */
-private fun ends(time: String): Pair<String, String> =
-  time.split(" – ").let { it.first() to it.getOrElse(1) { "" } }
-
 /**
  * A day's changed hours in words, from its time and how it moved: 早出 7:00〜, 残業 〜20:00, or the
  * hours alone where both moved or for other changes, so they keep to one line; the mark's corners
  * say 早出 and 残業.
  */
 fun widgetChange(time: String, moved: TimeChange?): String? {
-  moved ?: return null
-  val (start, end) = ends(time)
+  val hours = changedHours(time, moved ?: return null)
   return when {
-    moved.early && !moved.late -> "早出 $start〜"
-    moved.late && !moved.early -> "残業 〜$end"
-    else -> "$start〜$end"
+    moved.early && !moved.late -> "早出 $hours"
+    moved.late && !moved.early -> "残業 $hours"
+    else -> hours
   }
 }
 
@@ -98,12 +94,15 @@ fun widgetChange(time: String, moved: TimeChange?): String? {
 fun WidgetDay.columnHours(): String? {
   val time = time ?: return null
   change ?: return null
-  val (start, end) = ends(time)
-  val early = timeChange?.early ?: false
-  val late = timeChange?.late ?: false
+  return changedHours(time, timeChange ?: return null)
+}
+
+/** The hours that moved, from a time range as [hoursText] writes it: the start for 早出 alone, the end for 残業 alone, else both. */
+private fun changedHours(time: String, moved: TimeChange): String {
+  val (start, end) = time.split(" – ").let { it.first() to it.getOrElse(1) { "" } }
   return when {
-    early && !late -> "$start〜"
-    late && !early -> "〜$end"
+    moved.early && !moved.late -> "$start〜"
+    moved.late && !moved.early -> "〜$end"
     else -> "$start〜$end"
   }
 }
@@ -195,8 +194,9 @@ data class WidgetPair(
   val me: WidgetWith,
   /** One for each of the entry's upcoming days. */
   val days: List<WidgetPairDay>,
-  /** Who they are, for their marks' shape, as the group's tables draw them. */
-  val them: GroupMember,
+  /** The shape they draw their marks in, as the group's tables draw them (Look.drawing). */
+  val theirMarkStyle: String,
+  val theirMarkFill: Boolean,
 )
 
 data class WidgetPairDay(
@@ -242,15 +242,19 @@ fun OwnCalendar.widgetEntry(
   val reached = today.plusDays(Widgets.offLookaheadDays.toLong())
   val first = minOf(weekStart, weeks.first().first())
   val shown = shown(first, maxOf(reached, weeks.last().last(), weekStart.plusDays(13)))
-  fun day(date: LocalDate): WidgetDay {
-    val entry = shown[date]
-    return WidgetDay.of(date, entry, entry?.let { pattern(it.shift)?.pattern }, note(date) != null, week, holiday(date))
-  }
+  // Each day worked out once, though the views' days overlap.
+  val days = HashMap<LocalDate, WidgetDay>()
+  fun day(date: LocalDate): WidgetDay =
+    days.getOrPut(date) {
+      val entry = shown[date]
+      WidgetDay.of(date, entry, entry?.let { pattern(it.shift)?.pattern }, note(date) != null, week, holiday(date))
+    }
   val todayDay = day(today)
-  // Whose days count with the person's, each off or not on a day, null where not entered.
+  // Whose days count with the person's, from today as far as 次の休み looks.
+  val shifts = companion?.people.orEmpty().map { it to it.shifts(today, reached) }
   val people =
-    companion?.people.orEmpty().map { member ->
-      val offs = member.shifts(today, reached).mapValues { it.value.pattern.countsAsOff }
+    shifts.map { (member, theirs) ->
+      val offs = theirs.mapValues { it.value.pattern.countsAsOff }
       WidgetPerson(member.name) { offs[it] }
     }
   val upcoming = List(7) { day(today.plusDays(it.toLong())) }
@@ -263,15 +267,20 @@ fun OwnCalendar.widgetEntry(
     twoWeeks = List(14) { day(weekStart.plusDays(it.toLong())) },
     month = weeks.map { it.map(::day) },
     with = companion?.with,
-    pair = companion?.let { pair(it, upcoming, week, holiday) },
+    pair = companion?.let { pair(it, shifts.firstOrNull(), upcoming, week, holiday) },
   )
 }
 
-/** これから beside the one picked: their days under the person's, a day both are off together. */
-private fun pair(companion: WidgetCompanion, upcoming: List<WidgetDay>, week: Week, holiday: (LocalDate) -> Boolean): WidgetPair? {
+/** これから beside the one picked, [them] with their shifts: their days under the person's, a day both are off together. */
+private fun pair(
+  companion: WidgetCompanion,
+  them: Pair<GroupMember, Map<LocalDate, MemberShift>>?,
+  upcoming: List<WidgetDay>,
+  week: Week,
+  holiday: (LocalDate) -> Boolean,
+): WidgetPair? {
   if (companion.with.kind != WidgetWith.Kind.Person) return null
-  val them = companion.people.firstOrNull() ?: return null
-  val shifts = them.shifts(upcoming.first().date, upcoming.last().date)
+  val (member, shifts) = them ?: return null
   val days =
     upcoming.map { mine ->
       val theirs =
@@ -280,5 +289,5 @@ private fun pair(companion: WidgetCompanion, upcoming: List<WidgetDay>, week: We
         }
       WidgetPairDay(theirs, together = mine.off && theirs?.off == true)
     }
-  return WidgetPair(companion.with, companion.me, days, them)
+  return WidgetPair(companion.with, companion.me, days, member.markStyle, member.markFill)
 }
