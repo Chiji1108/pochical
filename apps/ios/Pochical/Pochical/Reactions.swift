@@ -1,6 +1,5 @@
 import PochicalDesign
 import PochicalKit
-import Pow
 import SwiftUI
 import UIKit
 
@@ -31,14 +30,16 @@ struct ReactionRow: View {
   let onReact: (String) -> Void
 
   /// How a pill comes and goes, and the line's first with the row, which
-  /// is then as large as the pill: in by the pop's own scale, its ring and
-  /// burst played over it (BurstView). Only the outermost of views coming
-  /// in together takes its transition.
+  /// is then as large as the pill: growing in from the moment it comes,
+  /// its ring and burst played over it as it does (BurstView). Not Pow's
+  /// pop transition, which holds what it brings in at no size for its
+  /// first 0.48 seconds, the ring and burst over it with it. Only the
+  /// outermost of views coming in together takes its transition.
   static func transition(_ reduceMotion: Bool) -> AnyTransition {
     reduceMotion
       ? .opacity
       : .asymmetric(
-        insertion: .movingParts.pop(Color.clear),
+        insertion: .scale,
         removal: .scale(scale: 0.5).combined(with: .opacity))
   }
 
