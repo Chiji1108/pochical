@@ -11,6 +11,7 @@ import kotlin.random.Random
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.job
@@ -84,10 +85,16 @@ private object LongestWait : Random() {
   override fun nextLong(until: Long) = until - 1
 }
 
-/** Waits for [condition], polling, for a few seconds at most. */
+/**
+ * Waits for [condition], polling, for a few seconds at most, in real time: what it waits on runs on
+ * other threads, and under runTest's virtual clock its delays and timeout would pass at once, giving
+ * up before those threads have run (as on a cold start, or a busy CI runner).
+ */
 internal suspend fun eventually(condition: suspend () -> Boolean) =
-  withTimeout(10_000) {
-    while (!condition()) delay(20)
+  withContext(Dispatchers.Default) {
+    withTimeout(10_000) {
+      while (!condition()) delay(20)
+    }
   }
 
 @RunWith(RobolectricTestRunner::class)
