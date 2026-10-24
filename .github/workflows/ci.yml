@@ -197,18 +197,16 @@ jobs:
       - uses: actions/checkout@v7
       - run: sudo xcode-select --switch "/Applications/Xcode_$(cat .xcode-version).app"
       # The packages' checkouts and the builds made from them, the macros'
-      # swift-syntax above all. Only main saves them, once per commit it
-      # builds, so a pull request starts from main's latest; one cache is
-      # read again only while the Xcode and the resolved packages it was
-      # built with stay the same.
+      # swift-syntax above all, for each Xcode and set of resolved packages.
+      # The app's own sources build anew each time, as a checkout gives them
+      # new dates. Only main saves, so a pull request reads main's.
       - id: cache
         uses: actions/cache/restore@v6
         with:
           path: |
             ${{ runner.temp }}/ios
             apps/ios/Packages/*/.build
-          key: ios-${{ hashFiles('.xcode-version', 'apps/ios/**/Package.resolved') }}-${{ github.sha }}
-          restore-keys: ios-${{ hashFiles('.xcode-version', 'apps/ios/**/Package.resolved') }}-
+          key: ios-${{ hashFiles('.xcode-version', 'apps/ios/**/Package.resolved') }}
       - uses: jdx/mise-action@v5
         with:
           install: false
@@ -217,7 +215,7 @@ jobs:
       - run: >-
           xcodebuild build -project apps/ios/Pochical/Pochical.xcodeproj -scheme Pochical -destination generic/platform=iOS -derivedDataPath ${{ runner.temp }}/ios/DerivedData -clonedSourcePackagesDirPath ${{ runner.temp }}/ios/SourcePackages -skipMacroValidation -skipPackagePluginValidation CODE_SIGNING_ALLOWED=NO
       - run: mise run ios:test
-      - if: github.event_name == 'push'
+      - if: github.event_name == 'push' && steps.cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6
         with:
           path: |
