@@ -19,7 +19,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 // The chat's cases every platform checks (spec/vectors/chat.json) that the chat's lines, its
-// scrolling, its composer, its reactions and its pins use; albumRows comes with photos (#827),
+// scrolling, its composer, its reactions, its pins and its albums use;
 // withdrawn with notifications (#884).
 
 @Serializable
@@ -39,6 +39,7 @@ private data class ChatVectors(
   val reactions: List<Reactions>,
   val pins: List<Pins>,
   val votes: List<Votes>,
+  val albumRows: List<AlbumRows>,
 ) {
   @Serializable
   data class Writer(override val name: String, val author: String, val me: String, val kind: String, val expected: String) : VectorCase
@@ -76,6 +77,8 @@ private data class ChatVectors(
   ) : VectorCase
 
   @Serializable data class PageAfter(override val name: String, val through: Long, val expected: Long) : VectorCase
+
+  @Serializable data class AlbumRows(override val name: String, val count: Int, val expected: List<Int>) : VectorCase
 
   @Serializable data class Timed(val id: String, val at: Long, val failed: Boolean = false)
 
@@ -154,6 +157,8 @@ class ChatVectorsTest {
   fun firstUnread() = chat.firstUnread.checkEach({ it.expected }) { firstUnread(it.lines.map(::writer), it.unread) }
 
   @Test fun directThread() = chat.directThread.checkEach({ it.expected }) { directThread(it.a, it.b) }
+
+  @Test fun albumRows() = chat.albumRows.checkEach({ it.expected }) { albumRows(it.count) }
 
   @Test fun openingFrom() = chat.openingFrom.checkEach({ it.expected }) { openingFrom(it.latest, it.read) }
 

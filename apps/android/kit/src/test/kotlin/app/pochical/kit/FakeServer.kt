@@ -129,6 +129,12 @@ class FakeServer : AutoCloseable {
   /** The ids of the photos put in a user's own photos, in the order they came. */
   val ownPhotos = CopyOnWriteArrayList<String>()
 
+  /** The ids of the photos put in groups' photos, in the order they came, a small version's ending in ?small. */
+  val groupPhotos = CopyOnWriteArrayList<String>()
+
+  /** What a group's photo put answers: 204 keeps it. */
+  @Volatile var photoStatus = 204
+
   /** How long `SetDisplayName` takes to answer, in milliseconds. */
   @Volatile var displayNameDelayMs = 0L
 
@@ -293,6 +299,10 @@ class FakeServer : AutoCloseable {
               } else if (request.method == "PUT" && request.url.encodedPath.startsWith("/v1/me/photos/")) {
                 ownPhotos += request.url.encodedPath.removePrefix("/v1/me/photos/")
                 MockResponse.Builder().code(204).build()
+              } else if (request.method == "PUT" && request.url.encodedPath.matches(Regex("/v1/groups/[^/]+/photos/[^/]+"))) {
+                val small = request.url.queryParameter("size") == "small"
+                groupPhotos += request.url.pathSegments[4] + if (small) "?small" else ""
+                MockResponse.Builder().code(photoStatus).build()
               } else {
                 MockResponse.Builder().code(404).build()
               }
@@ -418,7 +428,10 @@ class FakeServer : AutoCloseable {
                 authorId = user
                 sentAtMs = System.currentTimeMillis()
                 opId = edit.opId
-                content = chatContent { words = chatWords { text = send.content.words.text } }
+                content =
+                  chatContent {
+                    if (send.content.hasPhotos()) photos = send.content.photos else words = chatWords { text = send.content.words.text }
+                  }
               }
               broadcast(groupId, keep(groupId, line))
             }
@@ -433,6 +446,10 @@ class FakeServer : AutoCloseable {
             }
             ChatEdit.KindCase.RECALL -> {
               val line = lines(groupId, edit.recall.threadId).firstOrNull { it.opId == edit.recall.sendOpId } ?: continue
+              broadcast(groupId, keep(groupId, line.toBuilder().setContent(chatContent { unsent = chatTakenBack {} }).build()))
+            }
+            ChatEdit.KindCase.UNSEND -> {
+              val line = lines(groupId, edit.unsend.threadId).firstOrNull { it.seq == edit.unsend.seq && it.authorId == user } ?: continue
               broadcast(groupId, keep(groupId, line.toBuilder().setContent(chatContent { unsent = chatTakenBack {} }).build()))
             }
             else -> {}

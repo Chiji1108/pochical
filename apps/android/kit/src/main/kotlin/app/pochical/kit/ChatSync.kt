@@ -4,6 +4,7 @@ import app.pochical.design.Chat
 import app.pochical.design.SyncLimits
 import app.pochical.v1.Change
 import app.pochical.v1.Change.KindCase
+import app.pochical.v1.ChatContent
 import app.pochical.v1.ChatEdit
 import app.pochical.v1.ChatPage
 import app.pochical.v1.ClientFrame
@@ -145,6 +146,41 @@ internal suspend fun SyncDao.goOut(edits: List<ChatEdit>, now: Long): List<ChatE
   wentOut(going.toList())
   return edits.filter { it.opId in going }
 }
+
+/** The line [opId]'s photos to upload at the device's [now] (`PhotosUp.toUpload`), in its order. */
+internal suspend fun SyncDao.photosToUpload(opId: String, now: Long): List<String> {
+  val row = chatEdit(opId) ?: return emptyList()
+  val edit = row.chatEdit
+  if (edit.kindCase != ChatEdit.KindCase.SEND) return emptyList()
+  return row.up.toUpload(edit.send.content.photos.photosList.map { it.id }, state().corrected(now))
+}
+
+/** The line [opId]'s photo [photoId] went up, its upload begun at the device's time [began]. */
+internal suspend fun SyncDao.photoUp(opId: String, photoId: String, began: Long) {
+  val row = chatEdit(opId) ?: return
+  val up = row.up.adding(photoId, state().corrected(began))
+  photosUp(opId, up.ids.joinToString(","), up.atMs)
+}
+
+/** The line [opId] still goes at the device's [now]: in the outbox, and neither stopped nor waited too long. */
+internal suspend fun SyncDao.stillGoing(opId: String, now: Long): Boolean {
+  val row = chatEdit(opId) ?: return false
+  return !row.notSent(row.chatEdit, state().corrected(now))
+}
+
+/**
+ * The photos of the lines [changes] take back or hide, as the device held them before: let go of
+ * from the device as the group takes the line back (spec/chat.md, Photos). Read in the transaction
+ * the changes are taken in, before them.
+ */
+internal suspend fun SyncDao.photosLetGo(changes: List<Change>, groupId: String): List<String> =
+  changes
+    .filter { it.kindCase == KindCase.CHAT_LINE && it.chatLine.content.kindCase != ChatContent.KindCase.PHOTOS }
+    .flatMap { change ->
+      val held = line(groupId, change.chatLine.threadId, change.chatLine.seq) ?: return@flatMap emptyList()
+      if (held.kind != LineKind.Photos.key) return@flatMap emptyList()
+      WireLine.parseFrom(held.line).content.photos.photosList.map { it.id }
+    }
 
 /**
  * The edits an Acked names stop waiting, but for the sends the group [refused]: those stay as lines

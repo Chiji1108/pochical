@@ -12,11 +12,13 @@ import app.pochical.v1.chatRead
 import app.pochical.v1.chatRecall
 import app.pochical.v1.chatSend
 import app.pochical.v1.chatSendContent
+import app.pochical.v1.chatAlbum
 import app.pochical.v1.chatSendWords
 import app.pochical.v1.chatUnsend
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -30,6 +32,8 @@ import kotlinx.coroutines.flow.Flow
  */
 class Chats internal constructor(
   private val database: AppDatabase,
+  /** The member's photos kept to send, and how far each has gone up. */
+  private val photos: LinePhotos,
   private val now: () -> Long = System::currentTimeMillis,
   /** Where what outlives the screen that asked runs: a draft kept as its chat is left. */
   private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
@@ -94,6 +98,39 @@ class Chats internal constructor(
       }
       deleteChatDraft(groupId, threadId)
     }
+  }
+
+  /**
+   * Sends [photos], shrunk, as one line of the chat (spec/chat.md, Albums), kept on the device to
+   * upload before the group's socket sends it, and shown at once as the member's line on its way.
+   * Throws when the device cannot keep them (保存できませんでした), keeping nothing of them.
+   */
+  suspend fun sendPhotos(groupId: String, threadId: String, photos: List<ShrunkPhoto>, replyTo: Long? = null) {
+    val lined = photos.map { newId() to it }
+    try {
+      for ((id, photo) in lined) this.photos.files.keep(groupId, id, photo.jpeg)
+      database.write {
+        chatEdit(groupId, now()) {
+          send = chatSend {
+            this.threadId = threadId
+            content = chatSendContent { this.photos = chatAlbum { this.photos += lined.map { (id, photo) -> photo.line(id) } } }
+            replyTo?.let { this.replyTo = it }
+          }
+        }
+      }
+    } catch (e: Exception) {
+      withContext(NonCancellable) { this@Chats.photos.files.forget(groupId, lined.map { it.first }) }
+      throw e
+    }
+  }
+
+  /**
+   * 送信をやめる: the member's line of photos [opId] stops going up, and is not sent, its ! offering
+   * もう一度送る and 削除 (spec/chat.md, Photos); nothing once its photos are up and it is being sent.
+   */
+  suspend fun stopSending(opId: String) {
+    if (!photos.uploads.stop(opId)) return
+    database.write { failChatEdits(listOf(opId)) }
   }
 
   /**
@@ -213,29 +250,53 @@ class Chats internal constructor(
    * group cannot have: nothing is left to take back.
    */
   suspend fun takeBack(opId: String) {
-    database.write {
-      val row = chatEdit(opId) ?: return@write
-      deleteChatEdits(listOf(opId))
-      val edit = row.chatEdit
-      if (!row.wentOut || edit.kindCase != ChatEdit.KindCase.SEND) return@write
-      chatEdit(row.groupId, now()) {
-        recall = chatRecall {
-          threadId = edit.send.threadId
-          sendOpId = opId
-          // Its photos, uploaded, go with the line, or at once if it never came.
-          photoIds += edit.send.content.photos.photosList.map { it.id }
+    val taken =
+      database.write {
+        val row = chatEdit(opId) ?: return@write null
+        deleteChatEdits(listOf(opId))
+        val edit = row.chatEdit
+        if (row.wentOut && edit.kindCase == ChatEdit.KindCase.SEND) {
+          chatEdit(row.groupId, now()) {
+            recall = chatRecall {
+              threadId = edit.send.threadId
+              sendOpId = opId
+              // Its photos, uploaded, go with the line, or at once if it never came.
+              photoIds += edit.send.content.photos.photosList.map { it.id }
+            }
+          }
         }
-      }
-    }
+        row.groupId to edit.send.content.photos.photosList.map { it.id }
+      } ?: return
+    // The photos kept for it go too, and one of them going up stops.
+    val (groupId, photoIds) = taken
+    photos.uploads.forget(opId, photoIds)
+    photos.files.forget(groupId, photoIds)
   }
 
-  /** もう一度送る: a line not sent goes again as the newest waiting edit, made now, after what was sent. */
+  /**
+   * もう一度送る: a line not sent goes again as the newest waiting edit, made now, after what was
+   * sent; its photos not up go again from waiting their turn, × stopping it.
+   */
   suspend fun sendAgain(opId: String) {
-    database.write {
-      val row = chatEdit(opId) ?: return@write
-      deleteChatEdits(listOf(opId))
-      insert(ChatOutboxRow(groupId = row.groupId, opId = opId, edit = row.edit, madeAtMs = state().corrected(now()), wentOut = row.wentOut))
-    }
+    val edit =
+      database.write {
+        val row = chatEdit(opId) ?: return@write null
+        deleteChatEdits(listOf(opId))
+        // Its photos up stay up, as long as the group keeps them (`PhotosUp`).
+        insert(
+          ChatOutboxRow(
+            groupId = row.groupId,
+            opId = opId,
+            edit = row.edit,
+            madeAtMs = state().corrected(now()),
+            wentOut = row.wentOut,
+            upIds = row.upIds,
+            upAtMs = row.upAtMs,
+          )
+        )
+        row.chatEdit
+      } ?: return
+    photos.uploads.forget(opId, edit.send.content.photos.photosList.map { it.id })
   }
 
   /** Keeps what is being written in a chat, or forgets it when it makes no draft (`keptDraft`). */

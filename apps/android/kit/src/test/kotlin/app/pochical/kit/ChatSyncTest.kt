@@ -37,7 +37,7 @@ private suspend fun AppDatabase.listGroup(groupId: String = "g1") =
 
 /** The chat on [device] as [me] opens it, from [from], once [until] holds. */
 private suspend fun Device.chat(me: String, from: Long? = null, until: (ChatState) -> Boolean = { true }): ChatState =
-  withTimeout(10_000) { Chats(database).state("g1", GROUP_THREAD, me, from).first(until) }
+  withTimeout(10_000) { Chats(database, testLinePhotos()).state("g1", GROUP_THREAD, me, from).first(until) }
 
 /** The chat's lines and the member's edits as sync takes them in and the group's socket sends them. */
 @RunWith(RobolectricTestRunner::class)
@@ -65,7 +65,7 @@ class ChatSyncTest {
   fun aLineSentShowsWaitingAtOnceThenAsTheGroups() = runBlocking {
     val phone = signedIn()
     val me = server.userId
-    Chats(phone.database).send("g1", GROUP_THREAD, "おはよう")
+    phone.chats.send("g1", GROUP_THREAD, "おはよう")
     val waiting = phone.chat(me).waiting.single()
     assertEquals(LineContent.Words("おはよう"), waiting.content)
     assertFalse(waiting.failed)
@@ -81,7 +81,7 @@ class ChatSyncTest {
   fun aLineSentJustBeforeLeavingGoesInTheBackground() = runBlocking {
     val phone = signedIn()
     val hold = phone.account.hold("g1")
-    Chats(phone.database).send("g1", GROUP_THREAD, "またね")
+    phone.chats.send("g1", GROUP_THREAD, "またね")
     hold.release()
     phone.account.background()
     eventually { server.lines("g1").size == 1 }
@@ -93,7 +93,7 @@ class ChatSyncTest {
     val phone = signedIn()
     val me = server.userId
     server.refuseSends = true
-    val chats = Chats(phone.database)
+    val chats = phone.chats
     chats.send("g1", GROUP_THREAD, "届かない")
     val failed = phone.chat(me) { it.waiting.singleOrNull()?.failed == true }.waiting.single()
     assertTrue(server.lines("g1").isEmpty())
@@ -102,6 +102,69 @@ class ChatSyncTest {
     chats.sendAgain(failed.opId)
     val sent = phone.chat(me) { it.waiting.isEmpty() && it.lines.isNotEmpty() }
     assertEquals(failed.opId, sent.lines.single().opId)
+  }
+
+  @Test
+  fun aLineOfPhotosGoesOnceTheyAreUpAndKeepsThemToShow() = runBlocking {
+    val phone = signedIn()
+    val me = server.userId
+    val photos = listOf(ShrunkPhoto(byteArrayOf(1, 2, 3), 4, 3, byteArrayOf(9)), ShrunkPhoto(byteArrayOf(4, 5), 3, 4, byteArrayOf(8)))
+    phone.chats.sendPhotos("g1", GROUP_THREAD, photos)
+    val waiting = phone.chat(me).waiting.single().content as LineContent.Photos
+    val ids = waiting.photos.map { it.id }
+    assertEquals(listOf(4 to 3, 3 to 4), waiting.photos.map { it.width to it.height })
+
+    val sent = phone.chat(me) { it.waiting.isEmpty() && it.lines.isNotEmpty() }
+    assertEquals(ids, (sent.lines.single().content as LineContent.Photos).photos.map { it.id })
+    // Each went up before the line, in its order; no small version of what is no larger than one.
+    assertEquals(ids, server.groupPhotos.toList())
+    for (id in ids) {
+      assertEquals(null, phone.linePhotos.files.pending("g1", id).takeIf { it.exists() })
+      assertTrue(phone.linePhotos.files.held("g1", id) != null)
+    }
+  }
+
+  @Test
+  fun aPhotoTheServerRefusesLeavesItsLineNotSentAndTheLinesAfterItGo() = runBlocking {
+    val phone = signedIn()
+    val me = server.userId
+    server.photoStatus = 413
+    phone.chats.sendPhotos("g1", GROUP_THREAD, listOf(ShrunkPhoto(byteArrayOf(1), 1, 1, byteArrayOf())))
+    phone.chats.send("g1", GROUP_THREAD, "写真のあと")
+    val after = phone.chat(me) { it.lines.isNotEmpty() && it.waiting.singleOrNull()?.failed == true }
+    assertEquals(LineContent.Words("写真のあと"), after.lines.single().content)
+    assertTrue(after.waiting.single().content is LineContent.Photos)
+
+    // 削除 takes the photo kept for it too.
+    val photo = (after.waiting.single().content as LineContent.Photos).photos.single().id
+    phone.chats.takeBack(after.waiting.single().opId)
+    assertEquals(null, phone.linePhotos.files.held("g1", photo))
+  }
+
+  @Test
+  fun aLineOfPhotosTakenBackLetsGoOfItsPhotos() = runBlocking {
+    val phone = signedIn()
+    val me = server.userId
+    phone.chats.sendPhotos("g1", GROUP_THREAD, listOf(ShrunkPhoto(byteArrayOf(1), 1, 1, byteArrayOf())))
+    val line = phone.chat(me) { it.lines.isNotEmpty() }.lines.single()
+    val photo = (line.content as LineContent.Photos).photos.single().id
+    val forgotten = async { phone.linePhotos.files.forgotten.first() }
+    phone.chats.unsend("g1", GROUP_THREAD, line.seq)
+    phone.chat(me) { it.lines.single().content == LineContent.Unsent }
+    assertEquals(ForgottenPhoto(PhotoShelf.Group("g1"), photo), withTimeout(10_000) { forgotten.await() })
+    assertEquals(null, phone.linePhotos.files.held("g1", photo))
+  }
+
+  @Test
+  fun aLineStoppedWhileItsPhotosGoUpIsNotSentAndOnceSentCannotBeStopped() {
+    val uploads = PhotoUploads()
+    assertTrue(uploads.stop("a"))
+    assertFalse(uploads.send("a"))
+    assertTrue(uploads.send("b"))
+    assertFalse(uploads.stop("b"))
+    // Sent again, it goes again.
+    uploads.forget("a", emptyList())
+    assertTrue(uploads.send("a"))
   }
 
   @Test
@@ -160,7 +223,7 @@ class ChatSyncTest {
     val me = server.userId
     phone.account.hold("g1")
     phone.chat(me) { it.lines.size == 3 }
-    val chats = Chats(phone.database)
+    val chats = phone.chats
     chats.read("g1", GROUP_THREAD, me, 2)
     chats.read("g1", GROUP_THREAD, me, 1)
     assertEquals(2L, phone.chat(me).lastRead(me))
@@ -200,7 +263,7 @@ class ChatValuesTest {
   @Test
   fun aLineJudgedByTheClockIsJudgedAgainAsAWelcomeCorrectsIt() = runTest {
     send("時計", now = 1_000)
-    val chats = Chats(database, now = { 1_000 })
+    val chats = Chats(database, testLinePhotos(), now = { 1_000 })
     val states = mutableListOf<Boolean>()
     val watching = launch(kotlinx.coroutines.Dispatchers.Default) {
       chats.state("g1", GROUP_THREAD, "me", null).collect { synchronized(states) { states += it.waiting.single().failed } }
@@ -217,7 +280,7 @@ class ChatValuesTest {
 
   @Test
   fun aLineTakenBackAfterItWentOutIsRecalledAndOneThatNeverWentIsNot() = runTest {
-    val chats = Chats(database, now = { 1_000 })
+    val chats = Chats(database, testLinePhotos(), now = { 1_000 })
     val never = send("まだ", now = 1_000)
     chats.takeBack(never)
     assertTrue(database.read { chatOutbox("g1") }.isEmpty())
@@ -251,7 +314,7 @@ class ChatValuesTest {
 
   @Test
   fun aDraftIsKeptUntilSent() = runTest {
-    val chats = Chats(database)
+    val chats = Chats(database, testLinePhotos())
     chats.keepDraft("g1", GROUP_THREAD, KeptDraft("行けそう"))
     assertEquals(KeptDraft("行けそう"), chats.draft("g1", GROUP_THREAD))
     chats.keepDraft("g1", GROUP_THREAD, KeptDraft(" "))
@@ -289,14 +352,14 @@ class ChatValuesTest {
         )
       )
     }
-    assertEquals(3, Chats(database).summary("g1", GROUP_THREAD, "me").first().unread)
+    assertEquals(3, Chats(database, testLinePhotos()).summary("g1", GROUP_THREAD, "me").first().unread)
     database.write { reset() }
-    assertEquals(0, Chats(database).summary("g1", GROUP_THREAD, "me").first().unread)
+    assertEquals(0, Chats(database, testLinePhotos()).summary("g1", GROUP_THREAD, "me").first().unread)
   }
 
   @Test
   fun aReplyChangeAndUnsendShowAtOnceAndAQuotedLineIsHeldBesideTheLines() = runTest {
-    val chats = Chats(database, now = { 0 })
+    val chats = Chats(database, testLinePhotos(), now = { 0 })
     database.write { takeChanges(listOf(wordsLine(1, "u2", "ここ https://a.example"), wordsLine(2, "me", "うん")), "g1") }
     chats.send("g1", GROUP_THREAD, "行く", replyTo = 1)
     chats.change("g1", GROUP_THREAD, 2, "うん、行く")
@@ -312,7 +375,7 @@ class ChatValuesTest {
 
   @Test
   fun anEditKeepsItsPageWhileItsFirstLinkStaysAndElseTakesTheNewOnes() = runTest {
-    val chats = Chats(database, now = { 0 })
+    val chats = Chats(database, testLinePhotos(), now = { 0 })
     val page = linkPreview { url = "https://a.example"; title = "A" }
     val next = linkPreview { url = "https://b.example"; title = "B" }
     val line = wordsLine(1, "me", "ここ https://a.example").copy { content = content.copy { words = words.copy { preview = page } } }
@@ -327,7 +390,7 @@ class ChatValuesTest {
 
   @Test
   fun aChatsPinsHoldLinesFarBackAndTheMembersShowAtOnce() = runTest {
-    val chats = Chats(database, now = { 0 })
+    val chats = Chats(database, testLinePhotos(), now = { 0 })
     val old = wordsLine(1, "u2", "ずっと前").copy { pinnedOrder = 9 }
     database.write { takeChanges(listOf(old, wordsLine(5, "u2", "e"), wordsLine(6, "me", "f")), "g1") }
     suspend fun pins() = database.read { chatState("g1", GROUP_THREAD, "me", from = 5, now = 0) }.pins.map { it.seq }
@@ -346,7 +409,7 @@ class ChatValuesTest {
   @Test
   fun aVoteShowsWhileThePollIsOpenAndSettlingPinsIt() = runTest {
     database.write { upsert(state().copy(owner = "me")) }
-    val chats = Chats(database, now = { 0 })
+    val chats = Chats(database, testLinePhotos(), now = { 0 })
     val poll = wordsLine(1, "u2").copy { content = chatContent { this.poll = chatPoll { days += listOf("2026-11-01", "2026-11-03") } } }
     database.write { takeChanges(listOf(poll), "g1") }
     suspend fun shown() = database.read { chatState("g1", GROUP_THREAD, "me", null, now = 0) }
@@ -365,7 +428,7 @@ class ChatValuesTest {
   @Test
   fun theMembersReactionShowsAtOnceAsTheirs() = runTest {
     database.write { upsert(state().copy(owner = "me")) }
-    val chats = Chats(database, now = { 0 })
+    val chats = Chats(database, testLinePhotos(), now = { 0 })
     database.write { takeChanges(listOf(wordsLine(1, "u2")), "g1") }
     chats.react("g1", GROUP_THREAD, 1, "❤️", on = true)
     assertEquals(listOf(LineReaction("❤️", listOf("me"))), database.read { chatState("g1", GROUP_THREAD, "me", null, now = 0) }.lines.single().reactions)
@@ -375,7 +438,7 @@ class ChatValuesTest {
 
   @Test
   fun theListHasTheChatsWithALineALineOnItsWayOrADraft() = runTest {
-    val chats = Chats(database)
+    val chats = Chats(database, testLinePhotos())
     database.write { takeChanges(listOf(wordsLine(1, "u2", thread = directThread("me", "u2"))), "g1") }
     chats.keepDraft("g1", directThread("me", "u3"), KeptDraft("あとで"))
     database.write {
@@ -391,7 +454,7 @@ class ChatValuesTest {
 
   @Test
   fun aChatMarksAnUnreadMentionAndBeingTurnedOff() = runTest {
-    val chats = Chats(database, now = { 0 })
+    val chats = Chats(database, testLinePhotos(), now = { 0 })
     database.write {
       take(listOf(change { unreadCount = unreadCount { groupId = "g1"; threadId = GROUP_THREAD; count = 2; mentions = 1 } }))
       takeChanges(listOf(wordsLine(1, "u2", "<@me> 見て"), wordsLine(2, "u2", "ね")), "g1")

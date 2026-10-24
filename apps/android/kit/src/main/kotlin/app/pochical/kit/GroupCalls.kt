@@ -284,6 +284,12 @@ class GroupCalls internal constructor(
   /** The photo [photoId] of [shelf], from the device or else the server. */
   suspend fun photo(photoId: String, shelf: PhotoShelf): ByteArray = account.asSignedIn { photos.photo(photoId, shelf, it) }
 
+  /**
+   * One of a chat's photos from the server, or its small version ([small]), for the app's image
+   * cache, which keeps it: as the lines and quotes show it, or opened large and saved.
+   */
+  suspend fun chatPhoto(photoId: String, shelf: PhotoShelf, small: Boolean): ByteArray = account.asSignedIn { photos.fetch(photoId, shelf, it, small) }
+
   /** A photo mark the group has taken a copy of is let go of on the device, which held it until now. */
   private suspend fun releaseMark(mark: GroupMarkValue) {
     if (mark.photoId.isNotEmpty()) photos.release(mark.photoId)

@@ -55,7 +55,15 @@ class ChatOutboxRow(
   val failed: Boolean = false,
   /** It has gone out on a socket, so the group may have taken it though no answer came. */
   val wentOut: Boolean = false,
-)
+  /** A line of photos: the ids of those up, a comma between each (`PhotosUp`). */
+  val upIds: String = "",
+  /** When the upload of the latest of them began, by the server's time. */
+  val upAtMs: Long = 0,
+) {
+  /** Which of its photos are up. */
+  internal val up: PhotosUp
+    get() = PhotosUp(upIds.split(",").filter { it.isNotEmpty() }.toSet(), upAtMs)
+}
 
 /**
  * How many lines of a chat the user has not read, as the group counted them, from the user's own
