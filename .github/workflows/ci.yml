@@ -25,6 +25,7 @@ jobs:
       typescript: ${{ steps.filter.outputs.typescript }}
       proto: ${{ steps.filter.outputs.proto }}
       android: ${{ steps.filter.outputs.android }}
+      ios: ${{ steps.filter.outputs.ios }}
     steps:
       - uses: actions/checkout@v7
       - uses: dorny/paths-filter@v4
@@ -69,6 +70,14 @@ jobs:
             android:
               - "apps/android/**"
               - "spec/vectors/**"
+              - "mise.toml"
+              - ".github/workflows/ci.yml"
+            # design/ and proto/ reach the app through the code generated
+            # into apps/ios; PochicalKit's tests read spec/vectors.
+            ios:
+              - "apps/ios/**"
+              - "spec/vectors/**"
+              - ".xcode-version"
               - "mise.toml"
               - ".github/workflows/ci.yml"
 
@@ -172,3 +181,45 @@ jobs:
       - run: mise run android:release
       - run: mise run android:test
       - run: mise run android:db:check
+
+  # apps/ios: the app with its extensions, built for devices with the
+  # scheme's Debug configuration, unsigned; and the packages' tests,
+  # spec/vectors among them. xcode-27 is the free standard runner of the
+  # macOS that Xcode 27 needs, and .xcode-version picks the Xcode on it.
+  ios:
+    needs: changes
+    if: needs.changes.outputs.ios == 'true'
+    runs-on: xcode-27
+    timeout-minutes: 30
+    env:
+      # ios:test needs none of mise.toml's tools.
+      MISE_TASK_RUN_AUTO_INSTALL: "false"
+    steps:
+      - uses: actions/checkout@v7
+      - run: sudo xcode-select --switch "/Applications/Xcode_$(cat .xcode-version).app"
+      # The packages' checkouts and the builds made from them, the macros'
+      # swift-syntax above all, for each Xcode and set of resolved packages.
+      # The app's own sources build anew each time, as a checkout gives them
+      # new dates. Only main saves, so a pull request reads main's.
+      - id: cache
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            ${{ runner.temp }}/ios
+            apps/ios/Packages/*/.build
+          key: ios-${{ hashFiles('.xcode-version', 'apps/ios/**/Package.resolved') }}
+      - uses: jdx/mise-action@v5
+        with:
+          install: false
+      # -skipMacroValidation and -skipPackagePluginValidation: no one is
+      # here to trust the packages' macros and plugins, as Xcode asks once.
+      - run: >-
+          xcodebuild build -project apps/ios/Pochical/Pochical.xcodeproj -scheme Pochical -destination generic/platform=iOS -derivedDataPath ${{ runner.temp }}/ios/DerivedData -clonedSourcePackagesDirPath ${{ runner.temp }}/ios/SourcePackages -skipMacroValidation -skipPackagePluginValidation CODE_SIGNING_ALLOWED=NO
+      - run: mise run ios:test
+      - if: github.event_name == 'push' && steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            ${{ runner.temp }}/ios
+            apps/ios/Packages/*/.build
+          key: ${{ steps.cache.outputs.cache-primary-key }}
