@@ -11,6 +11,8 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -44,5 +46,16 @@ class MarkPickersTest {
     compose.onNode(hasSetTextAction()).assert(hasText("さ"))
     letter = "家"
     compose.onNode(hasSetTextAction()).assert(hasText("家"))
+  }
+
+  @Test
+  fun lettersTypedOneAfterAnotherStayInTheirOrder() {
+    var letter by mutableStateOf("さ")
+    compose.setContent {
+      PochicalTheme(DeviceSettings()) { MarkLetterField(letter, limit = 2) { letter = it } }
+    }
+    compose.onNode(hasSetTextAction()).performTextReplacement("家")
+    compose.onNode(hasSetTextAction()).performTextInput("族")
+    assertEquals("家族", letter)
   }
 }

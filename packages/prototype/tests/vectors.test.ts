@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
+import { iconSections } from "@pochical/design/mark-icon-names";
+import type { IconSection } from "@pochical/design/mark-icon-names";
 import { characterCount } from "@pochical/design/text";
 import { widgetRules } from "@pochical/design/widgets";
 import { rgbaToThumbHash, thumbHashToRGBA } from "thumbhash";
@@ -31,6 +33,7 @@ import {
   guessGroupMark,
   nextGroupColor,
 } from "../src/components/design-group-settings";
+import { iconsMatching } from "../src/components/design-icon-picker";
 import { periodTitleOf } from "../src/components/design-month-name";
 import {
   defaultWeekSettings,
@@ -412,6 +415,9 @@ const plain = (value: unknown): unknown => {
   return value;
 };
 
+const iconsOf = (sections: readonly IconSection[]) =>
+  sections.flatMap((section) => section.icons);
+
 const bookOfVectors = (patterns: readonly Partial<Pattern>[]): PatternBook =>
   Object.fromEntries(
     patterns.map((pattern) => [pattern.id ?? "", patternOf(pattern)] as const)
@@ -603,6 +609,13 @@ describe("spec/vectors/patterns.json", () => {
   for (const { name, used, expected } of patternChanges.nextColor) {
     test(`nextColor: ${name}`, () => {
       expect(nextColor(used)).toBe(expected);
+    });
+  }
+  for (const { name, query, expected } of patternChanges.iconSearch) {
+    test(`iconSearch: ${name}`, () => {
+      expect(iconsOf(iconsMatching(query))).toEqual(
+        expected ?? iconsOf(iconSections)
+      );
     });
   }
   for (const { name, ...job } of patternChanges.newJob) {
