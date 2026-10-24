@@ -5,9 +5,10 @@
  * still holds that time, so the set reads as no change and never reaches
  * the scheduler, which lets the time go once the run ends
  * (cloudflare/workerd#7915). getAlarm() reads null meanwhile, so the
- * run's time is kept here as each run begins, and an alarm asked for it
- * is set a millisecond after it, which the scheduler takes as any other.
- * Remove this once workerd schedules such a set (POC-266).
+ * run's time is kept here as each run begins, and an alarm asked for it,
+ * or for any time before it, is set a millisecond after it, which the
+ * scheduler takes as any other. Remove this once workerd schedules such
+ * a set (POC-266).
  */
 export class Alarm {
   /** When the latest run this object began was set for. */
@@ -57,11 +58,14 @@ export class Alarm {
    * that run's, and whatever the runtime sets is not that time. Written in
    * the call, in order with the object's other writes, and kept before any
    * reply leaves (the output gate, which a failed write breaks, failing
-   * the call), so a caller has nothing to wait for.
+   * the call), so a caller has nothing to wait for. The time asked of
+   * the runtime, which it sets unless that is past.
    */
-  set(at: number): void {
-    const after = this.lastRun === undefined ? at : this.lastRun + 1;
-    void this.storage.setAlarm(Math.max(at, after));
+  set(at: number): number {
+    const time =
+      this.lastRun === undefined ? at : Math.max(at, this.lastRun + 1);
+    void this.storage.setAlarm(time);
+    return time;
   }
 
   /**

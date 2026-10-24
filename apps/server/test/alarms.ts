@@ -12,8 +12,10 @@ import { UserDO } from "../src/user-do";
 // vitest's main process: nothing in the object shows such a run. So a
 // test asks for a run of its own, through the object's own Alarm, which
 // the runtime runs after any it took up: whichever run begins first is
-// the one waited on, and the asked-for alarm goes as it begins, since the
-// run would keep it as one set earlier and run again for it.
+// the one waited on, and the asked-for alarm goes as another run begins,
+// since that run would keep it as one set earlier and run again for it.
+// Asked for in a run's very millisecond, it is that run's own time, which
+// the run's begin() sets again.
 
 /** A Durable Object's alarm runs, as the runtime begins and ends them. */
 type Runs = {
@@ -69,7 +71,7 @@ const ownRuns = new WeakSet<AlarmInvocationInfo>();
  * What a test passes calling an object's alarm itself: a run set for
  * `at`, now unless given, as the runtime passes each run it begins.
  */
-export const ownRun = (at = Date.now()): AlarmInvocationInfo => {
+export const ownRun = (at = vi.getRealSystemTime()): AlarmInvocationInfo => {
   const run = { isRetry: false, retryCount: 0, scheduledTime: at };
   ownRuns.add(run);
   return run;
@@ -92,7 +94,10 @@ const watched = (handler: AlarmHandler): AlarmHandler =>
     wake(runs);
     try {
       if (runs.asked !== null) {
-        if ((await storage.getAlarm()) === runs.asked) {
+        if (
+          run.scheduledTime !== runs.asked &&
+          (await storage.getAlarm()) === runs.asked
+        ) {
           await storage.deleteAlarm();
         }
         runs.asked = null;
@@ -138,8 +143,7 @@ export const settle = async (
   if (when === "as set" && set !== null && set > vi.getRealSystemTime()) {
     return true;
   }
-  alarms.set(vi.getRealSystemTime());
-  runs.asked = await alarms.storage.getAlarm();
+  runs.asked = alarms.set(vi.getRealSystemTime());
   do {
     const after = runs.ended;
     // oxlint-disable-next-line no-await-in-loop -- each run as it ends
@@ -182,17 +186,19 @@ export const alarmOf = async (
   );
 
 /** The objects the running test leaves with no run going or due. */
-const afterTest = new Map<string, () => DurableObjectStub<GroupDO>>();
+const afterTest = new Map<string, () => Promise<void>>();
 
 /**
  * Has the object settled after the running test: a run that outlived its
  * test would call the next test's spies.
  */
-export const settleAfterTest = (
+export const settleAfterTest = <T extends GroupDO | UserDO>(
   name: string,
-  stub: () => DurableObjectStub<GroupDO>
+  stub: () => DurableObjectStub<T>
 ) => {
-  afterTest.set(name, stub);
+  afterTest.set(name, async () => {
+    await alarmsSettled(stub());
+  });
 };
 
 /** The classes whose alarms are watched, with each alarm as the code has it. */
@@ -214,9 +220,9 @@ export const watchAlarms = (): void => {
     }
   });
   afterEach(async () => {
-    for (const stub of afterTest.values()) {
+    for (const settled of afterTest.values()) {
       // oxlint-disable-next-line no-await-in-loop -- one object at a time
-      await alarmsSettled(stub());
+      await settled();
     }
     afterTest.clear();
   });

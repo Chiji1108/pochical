@@ -40,21 +40,18 @@ describe("a Durable Object's alarm", () => {
     expect(stored).toBe(at);
   });
 
-  // Read in the same turn as it is set: the runtime hears of the alarm
-  // only as that turn's writes are kept, so it takes none up in between.
-  it("is set for now when the time asked is past", async () => {
-    const before = Date.now();
-    const { stored } = await storedAfter((alarm) => {
-      alarm.set(before - 60_000);
-    });
-    expect(stored).toBeGreaterThanOrEqual(before);
-    expect(stored).toBeLessThanOrEqual(Date.now());
-  });
-
   it("asked for the time of the run going, is set a millisecond after it", async () => {
     const { at, stored } = await storedAfter(async (alarm, _, time) => {
       await alarm.begin(ownRun(time));
       alarm.set(time);
+    });
+    expect(stored).toBe(at + 1);
+  });
+
+  it("asked for a time before the run going, is set a millisecond after the run's", async () => {
+    const { at, stored } = await storedAfter(async (alarm, _, time) => {
+      await alarm.begin(ownRun(time));
+      alarm.set(time - 5);
     });
     expect(stored).toBe(at + 1);
   });
