@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- みんなのシフト, the group's shifts (spec/shift-patterns.md, Days everyone is off). -->
+<resources>
+  <string name="group_shifts_heading">シフト</string>
+  <string name="group_shifts_month">月で見る</string>
+  <string name="together_day">みんな休み</string>
+  <string name="next_together">次のみんな休み</string>
+  <string name="together_unsure">未入力の日あり</string>
+  <string name="today">今日</string>
+  <string name="tomorrow">明日</string>
+  <string name="days_later">%1$d日後</string>
+</resources>

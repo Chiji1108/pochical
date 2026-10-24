@@ -17,6 +17,9 @@ class OwnCalendar(
 
   private val byId = patterns.associateBy { it.id }
 
+  /** The pattern [id], archived or not; none for one that is gone. */
+  fun pattern(id: String): PatternRow? = byId[id]
+
   /** The pattern entering [shift] puts on the following day too, none when it names a pattern that is gone. */
   fun nextDay(shift: String): String? = byId[shift]?.nextDay?.takeIf { it in known }
 

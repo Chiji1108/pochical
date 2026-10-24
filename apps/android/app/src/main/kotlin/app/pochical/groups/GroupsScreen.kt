@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -55,6 +54,7 @@ import app.pochical.LocalAccount
 import app.pochical.R
 import app.pochical.RootPage
 import app.pochical.SectionHeader
+import app.pochical.calendar.rememberToday
 import app.pochical.design.Metrics
 import app.pochical.design.Radius
 import app.pochical.kit.AccountState
@@ -193,13 +193,12 @@ private fun GroupRail(groups: List<GroupRow>, openId: String, onOpen: (String) -
   }
 }
 
-/** The open group: its mark and name over its page, its buttons in the bar, and who is in it. */
+/** The open group: its mark and name over its page, its buttons in the bar, and everyone's next days. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GroupHub(group: GroupRow, actions: GroupsActions) {
-  val values = LocalValues.current
-  val members by remember(values, group.id) { values.members(group.id) }.collectAsState(emptyList())
-  val meId = rememberMeId()
+  val today = rememberToday()
+  val members = rememberGroupMembers(group.id, today, today.plusDays(NEXT_TOGETHER_DAYS - 1))
   Scaffold(
     topBar = {
       TopAppBar(
@@ -214,8 +213,10 @@ private fun GroupHub(group: GroupRow, actions: GroupsActions) {
     }
   ) { padding ->
     LazyColumn(contentPadding = padding) {
-      item { SectionHeader(stringResource(R.string.group_members)) }
-      items(members.filter { !it.left }, key = { it.userId }) { member -> MemberRow(member, group.id, me = member.userId == meId) }
+      item { SectionHeader(stringResource(R.string.group_shifts_heading)) }
+      if (members != null) {
+        item { MemberWeek(members, group.id, today, onOpen = null, Modifier.padding(horizontal = 16.dp)) }
+      }
       item { Spacer(Modifier.height(24.dp)) }
     }
   }

@@ -12,7 +12,8 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
@@ -57,8 +58,10 @@ internal class Device(
 
   suspend fun current() = account.userSocket.first { it == SocketState.Current }
 
+  // The account's work ends before the database closes: a read still running on another thread
+  // would throw past the test, into the next one's.
   fun close() {
-    scope.cancel()
+    runBlocking { scope.coroutineContext.job.cancelAndJoin() }
     database.close()
   }
 }
