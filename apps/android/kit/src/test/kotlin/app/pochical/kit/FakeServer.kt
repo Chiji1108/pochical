@@ -62,8 +62,11 @@ class FakeServer : AutoCloseable {
   /** What the anonymous sign-in answers in its body, null for the user as better-auth gives it. */
   @Volatile var signInBody: String? = null
 
-  /** How long `GetMe` takes to answer, in milliseconds. */
+  /** How long `GetMe` takes to answer, in milliseconds, read as each call comes in. */
   @Volatile var getMeDelayMs = 0L
+
+  /** How many `GetMe` calls have come in. */
+  @Volatile var getMes = 0
 
   /** The provider `GetMe` says the user is linked to. */
   @Volatile var provider = SignInProvider.SIGN_IN_PROVIDER_UNSPECIFIED
@@ -151,6 +154,7 @@ class FakeServer : AutoCloseable {
                 null -> refused("unauthenticated").also { refusedGetMes.incrementAndGet() }
                 else ->
                   MockResponse.Builder()
+                    .also { getMes += 1 }
                     .headersDelay(getMeDelayMs, TimeUnit.MILLISECONDS)
                     .addHeader("Content-Type", "application/proto")
                     .body(Buffer().write(getMeResponse { userId = user; provider = this@FakeServer.provider }.toByteArray()))

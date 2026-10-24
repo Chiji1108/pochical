@@ -1,5 +1,5 @@
 {
-  "about": "Changing the list of patterns (spec/shift-patterns.md). deleted: deleting pattern `id` takes it from `patterns` and changes nothing that names it: other patterns keep it as their `nextDay`, and days and orders keep it, each read as naming a pattern that is gone (spec/sync-protocol.md, Deleted values). newJob: changing jobs; the new job's `incoming` patterns take over from the person's `own`, and an old one still on a day before the switch (`usedBefore`) stays after them, archived (`archived`, written only when true): kept for its days, offered nowhere a pattern is picked. A ready-made pattern sharing an id with one of the person's that differs (name, mark, time, off, next day) and is still used before the switch keeps the person's id; the new job's takes a fresh one, which `sequence` (the new order) and next days use. Fresh ids are \"new-1\", \"new-2\"… in the order of `incoming`. `expected` lists the patterns by id, in order, with their next day. guessLook: a new pattern's mark from its name (design/src/patterns.ts, lookHints): the first hint with a word anywhere in the name gives its emoji and icon, else ⭐️ and the letter icon; the letter is the name's first character, trimmed. A mark picked by hand is never guessed again. nextColor: a new pattern's color, the first palette slot no pattern uses, else the count of patterns modulo the palette's 12 slots. readyCopies: the ready-made patterns `ids` (design/src/patterns.ts, readyPatterns) as the person's copies, in that order: each keeps its next day only when that pattern is among `keeping` (`ids` when not given), so a 当番 picked without its 非番, or a 夜勤 without its 明け, fills nothing on the next day. `keeping` is what パターンを追加 counts: the person's patterns and those added with them. refused: what the orders put in the way of pattern `id`, saved as `archived`, on `today`. An order in use or to come (`orders`, by start) that has it in its sequence or as its holiday shift refuses deleting it, and archiving it while it is in use; one only in periods over refuses neither, and bringing one back into use is never refused (spec/shift-patterns.md, Patterns no longer used). saved: saving pattern `id` over the person's `patterns`, in their order: one already there keeps its place, and a new one goes at the end of the order, which the device then sends as the patterns' order (spec/shift-patterns.md).",
+  "about": "Changing the list of patterns (spec/shift-patterns.md). deleted: deleting pattern `id` takes it from `patterns` and changes nothing that names it: other patterns keep it as their `nextDay`, and days and orders keep it, each read as naming a pattern that is gone (spec/sync-protocol.md, Deleted values). newJob: changing jobs; the new job's `incoming` patterns take over from the person's `own`, and an old one still on a day before the switch (`usedBefore`) stays after them, archived (`archived`, written only when true): kept for its days, offered nowhere a pattern is picked. A ready-made pattern sharing an id with one of the person's that differs (name, mark, time, off, next day) and is still used before the switch keeps the person's id; the new job's takes a fresh one, which `sequence` (the new order) and next days use. Fresh ids are \"new-1\", \"new-2\"… in the order of `incoming`. `expected` lists the patterns by id, in order, with their next day. guessLook: a new pattern's mark from its name (design/src/patterns.ts, lookHints): the first hint with a word anywhere in the name gives its emoji and icon, else ⭐️ and the letter icon; the letter is the name's first character, trimmed. A mark picked by hand is never guessed again. nextColor: a new pattern's color, the first palette slot no pattern uses, else the count of patterns modulo the palette's 12 slots. readyCopies: the ready-made patterns `ids` (design/src/patterns.ts, readyPatterns) as the person's copies, in that order: each keeps its next day only when that pattern is among `keeping` (`ids` when not given), so a 当番 picked without its 非番, or a 夜勤 without its 明け, fills nothing on the next day. `keeping` is what パターンを追加 counts: the person's patterns and those added with them. refused: what the orders put in the way of pattern `id`, saved as `archived`, on `today`. An order in use or to come (`orders`, by start) that has it in its sequence or as its holiday shift refuses deleting it, and archiving it while it is in use; one only in periods over refuses neither, and bringing one back into use is never refused (spec/shift-patterns.md, Patterns no longer used). saved: saving pattern `id` over the person's `patterns`, in their order: one already there keeps its place, and a new one goes at the end of the order, which the device then sends as the patterns' order (spec/shift-patterns.md). fits: whether the server takes `pattern` under its `id` (apps/server/src/pattern-values.ts), so a pattern the apps save stays once sent: a name of 1 to textLimits.shiftName characters, not only spaces; one emoji (spec/vectors/text.json, isEmoji); a letter of 1 to textLimits.shiftMark characters, not only spaces; an icon's name of 1 to syncLimits.idLength characters without spaces; a color of the palette's 12 slots; both times or neither, each HH:MM; and a next day that is another pattern's id, never its own.",
   "deleted": [
     {
       "name": "it goes from the list, and patterns that name it keep it",
@@ -580,6 +580,245 @@
         "archiving": true,
         "deleting": true
       }
+    }
+  ],
+  "fits": [
+    {
+      "name": "a pattern with its mark in each look and its time",
+      "pattern": {
+        "id": "day",
+        "name": "日勤",
+        "emoji": "☀️",
+        "symbol": "日",
+        "icon": "sun",
+        "color": 1,
+        "start": "09:00",
+        "end": "18:00"
+      },
+      "expected": true
+    },
+    {
+      "name": "all day, with neither time",
+      "pattern": {
+        "id": "day",
+        "name": "日勤",
+        "emoji": "☀️",
+        "symbol": "日",
+        "icon": "sun",
+        "color": 1
+      },
+      "expected": true
+    },
+    {
+      "name": "another pattern as its next day",
+      "pattern": {
+        "id": "day",
+        "name": "日勤",
+        "emoji": "☀️",
+        "symbol": "日",
+        "icon": "sun",
+        "color": 1,
+        "start": "09:00",
+        "end": "18:00",
+        "nextDay": "after"
+      },
+      "expected": true
+    },
+    {
+      "name": "an empty name",
+      "pattern": {
+        "id": "day",
+        "name": "",
+        "emoji": "☀️",
+        "symbol": "日",
+        "icon": "sun",
+        "color": 1,
+        "start": "09:00",
+        "end": "18:00"
+      },
+      "expected": false
+    },
+    {
+      "name": "a name of only spaces",
+      "pattern": {
+        "id": "day",
+        "name": "  ",
+        "emoji": "☀️",
+        "symbol": "日",
+        "icon": "sun",
+        "color": 1,
+        "start": "09:00",
+        "end": "18:00"
+      },
+      "expected": false
+    },
+    {
+      "name": "a name past the limit",
+      "pattern": {
+        "id": "day",
+        "name": "あいうえおかきくけ",
+        "emoji": "☀️",
+        "symbol": "日",
+        "icon": "sun",
+        "color": 1,
+        "start": "09:00",
+        "end": "18:00"
+      },
+      "expected": false
+    },
+    {
+      "name": "a word for its emoji",
+      "pattern": {
+        "id": "day",
+        "name": "日勤",
+        "emoji": "sun",
+        "symbol": "日",
+        "icon": "sun",
+        "color": 1,
+        "start": "09:00",
+        "end": "18:00"
+      },
+      "expected": false
+    },
+    {
+      "name": "two emoji",
+      "pattern": {
+        "id": "day",
+        "name": "日勤",
+        "emoji": "☀️☀️",
+        "symbol": "日",
+        "icon": "sun",
+        "color": 1,
+        "start": "09:00",
+        "end": "18:00"
+      },
+      "expected": false
+    },
+    {
+      "name": "an empty letter",
+      "pattern": {
+        "id": "day",
+        "name": "日勤",
+        "emoji": "☀️",
+        "symbol": "",
+        "icon": "sun",
+        "color": 1,
+        "start": "09:00",
+        "end": "18:00"
+      },
+      "expected": false
+    },
+    {
+      "name": "a letter of only a space",
+      "pattern": {
+        "id": "day",
+        "name": "日勤",
+        "emoji": "☀️",
+        "symbol": " ",
+        "icon": "sun",
+        "color": 1,
+        "start": "09:00",
+        "end": "18:00"
+      },
+      "expected": false
+    },
+    {
+      "name": "two letters",
+      "pattern": {
+        "id": "day",
+        "name": "日勤",
+        "emoji": "☀️",
+        "symbol": "日勤",
+        "icon": "sun",
+        "color": 1,
+        "start": "09:00",
+        "end": "18:00"
+      },
+      "expected": false
+    },
+    {
+      "name": "an empty icon",
+      "pattern": {
+        "id": "day",
+        "name": "日勤",
+        "emoji": "☀️",
+        "symbol": "日",
+        "icon": "",
+        "color": 1,
+        "start": "09:00",
+        "end": "18:00"
+      },
+      "expected": false
+    },
+    {
+      "name": "an icon with a space",
+      "pattern": {
+        "id": "day",
+        "name": "日勤",
+        "emoji": "☀️",
+        "symbol": "日",
+        "icon": "s un",
+        "color": 1,
+        "start": "09:00",
+        "end": "18:00"
+      },
+      "expected": false
+    },
+    {
+      "name": "a color past the palette",
+      "pattern": {
+        "id": "day",
+        "name": "日勤",
+        "emoji": "☀️",
+        "symbol": "日",
+        "icon": "sun",
+        "color": 12,
+        "start": "09:00",
+        "end": "18:00"
+      },
+      "expected": false
+    },
+    {
+      "name": "a start without an end",
+      "pattern": {
+        "id": "day",
+        "name": "日勤",
+        "emoji": "☀️",
+        "symbol": "日",
+        "icon": "sun",
+        "color": 1,
+        "start": "09:00"
+      },
+      "expected": false
+    },
+    {
+      "name": "a time past the clock",
+      "pattern": {
+        "id": "day",
+        "name": "日勤",
+        "emoji": "☀️",
+        "symbol": "日",
+        "icon": "sun",
+        "color": 1,
+        "start": "24:00",
+        "end": "18:00"
+      },
+      "expected": false
+    },
+    {
+      "name": "itself as its next day",
+      "pattern": {
+        "id": "day",
+        "name": "日勤",
+        "emoji": "☀️",
+        "symbol": "日",
+        "icon": "sun",
+        "color": 1,
+        "start": "09:00",
+        "end": "18:00",
+        "nextDay": "day"
+      },
+      "expected": false
     }
   ]
 }

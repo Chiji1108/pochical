@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import app.pochical.patterns.PatternsRow
 
 /** グループ, which heads itself (the group's hub comes with sync). */
 @Composable
@@ -32,6 +33,8 @@ fun SettingsScreen(open: (RootPage) -> Unit) {
   Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.tab_settings)) }) }) { padding ->
     LazyColumn(contentPadding = padding) {
       item { AccountRow(open) }
+      item { SectionHeader(stringResource(R.string.settings_shifts)) }
+      item { PatternsRow(open) }
       item { SectionHeader(stringResource(R.string.settings_display)) }
       item {
         ListItem(

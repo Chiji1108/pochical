@@ -1,10 +1,14 @@
 package app.pochical.calendar
 
 import androidx.compose.runtime.staticCompositionLocalOf
+import app.pochical.kit.PatternRefusal
+import app.pochical.kit.RepeatOrder
+import kotlinx.serialization.Serializable
 import java.time.LocalDate
 import kotlinx.coroutines.flow.StateFlow
 
 /** A pattern as the calendar draws it and offers it for a day. */
+@Serializable
 data class Pattern(
   val id: String,
   val name: String,
@@ -23,6 +27,7 @@ data class Pattern(
 )
 
 /** Start and end, "HH:MM"; an end at or before the start is the next day's. */
+@Serializable
 data class ShiftTime(val start: String, val end: String)
 
 /**
@@ -60,6 +65,9 @@ interface OwnCalendar {
 
   /** The pattern entering `shift` puts on the following day too, as 明け after 夜勤; none when it names one that is gone. */
   fun nextDay(shift: String): String?
+
+  /** The repeating orders, in their timeline's order: what refuses archiving or deleting a pattern. */
+  val orders: List<RepeatOrder>
 }
 
 /** Where the calendar comes from and where its edits go ([SyncedDays]). */
@@ -86,6 +94,21 @@ interface OwnDays {
    * written, which [calendar] may not show yet: what 完了 asks about must count the last key.
    */
   suspend fun shownOnceWritten(from: LocalDate, through: LocalDate): Set<LocalDate>
+
+  /**
+   * Keeps `pattern` as it is now, a new one at the end of the order (設定 › シフトパターン); a
+   * refusal says why it was not kept (spec/shift-patterns.md, Patterns no longer used).
+   */
+  suspend fun savePattern(pattern: Pattern): PatternRefusal?
+
+  /** Deletes a pattern, the days that show it keeping its id; a refusal says why it was not. */
+  suspend fun deletePattern(id: String): PatternRefusal?
+
+  /** Puts the patterns in this order, ポチポチ入力's keys with them. */
+  fun orderPatterns(ids: List<String>)
+
+  /** How many days show the pattern, of their own or from an order, once every edit before is written. */
+  suspend fun daysShowing(id: String): Int
 
   /** Keeps `note` as the day's memo; "" clears it, leaving the shift. */
   fun setNote(day: LocalDate, note: String)

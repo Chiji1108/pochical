@@ -68,11 +68,10 @@ class EnteringTest {
     }
 
   private suspend fun nightAndAfter() {
-    edits.savePattern("night", pattern {
-      name = "夜勤"
+    edits.savePattern("night", markedPattern("夜勤") {
       nextDay = "after"
     })
-    edits.savePattern("after", pattern { name = "明け" })
+    edits.savePattern("after", markedPattern("明け"))
   }
 
   private suspend fun calendar() = database.values().ownCalendar().first()
@@ -102,8 +101,7 @@ class EnteringTest {
 
   @Test
   fun fillingTheBlanksPutsTheDayOffOnEach() = runTest {
-    edits.savePattern("off", pattern {
-      name = "休み"
+    edits.savePattern("off", markedPattern("休み") {
       countsAsOff = true
     })
     val days = listOf(LocalDate.parse("2026-10-03"), LocalDate.parse("2026-10-05"))

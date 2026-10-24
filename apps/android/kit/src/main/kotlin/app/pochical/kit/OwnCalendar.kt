@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.combine
 class OwnCalendar(
   val patterns: List<PatternRow>,
   internal val own: Map<LocalDate, OwnDay>,
-  private val orders: List<RepeatOrder>,
+  val orders: List<RepeatOrder>,
 ) {
   private val known = patterns.mapTo(HashSet()) { it.id }
 

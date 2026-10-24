@@ -25,8 +25,8 @@ class SyncedDaysTest {
   /** 日勤 and 夜勤, and 日勤 every day from October. */
   @Before
   fun putPatterns() = runBlocking {
-    test.edits.savePattern("day", pattern { name = "日勤"; start = "09:00"; end = "18:00" })
-    test.edits.savePattern("night", pattern { name = "夜勤"; nextDay = "after" })
+    test.edits.savePattern("day", markedPattern("日勤") { start = "09:00"; end = "18:00" })
+    test.edits.savePattern("night", markedPattern("夜勤") { nextDay = "after" })
     test.edits.setRepeatOrders(
       listOf(
         repeatOrder {
@@ -47,8 +47,8 @@ class SyncedDaysTest {
     val calendar = days.calendar.value
     assertEquals(
       listOf(
-        Pattern("day", "日勤", "", "", "", 0, ShiftTime("09:00", "18:00"), countsAsOff = false),
-        Pattern("night", "夜勤", "", "", "", 0, null, countsAsOff = false, nextDay = "after"),
+        Pattern("day", "日勤", "star", "⭐️", "日", 0, ShiftTime("09:00", "18:00"), countsAsOff = false),
+        Pattern("night", "夜勤", "star", "⭐️", "夜", 0, null, countsAsOff = false, nextDay = "after"),
       ),
       calendar.patterns,
     )
