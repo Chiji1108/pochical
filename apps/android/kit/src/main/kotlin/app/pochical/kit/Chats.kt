@@ -4,7 +4,9 @@ import app.pochical.v1.ChatEdit
 import app.pochical.v1.LinkPreview
 import app.pochical.v1.ChatLine as WireLine
 import app.pochical.v1.chatChange
+import app.pochical.v1.chatDecide
 import app.pochical.v1.chatPin
+import app.pochical.v1.chatVote
 import app.pochical.v1.chatReact
 import app.pochical.v1.chatRead
 import app.pochical.v1.chatRecall
@@ -151,6 +153,33 @@ class Chats internal constructor(
       if (on) pinning(before, seq) else unpinning(before, seq)
     }
 
+  /** 行ける: the member can come on [day] of the poll [seq] ([on]), or takes it back, until it is settled. */
+  suspend fun vote(groupId: String, threadId: String, seq: Long, day: String, on: Boolean) {
+    database.write {
+      chatEdit(groupId, now()) {
+        vote = chatVote {
+          this.threadId = threadId
+          this.seq = seq
+          this.day = day
+          this.on = on
+        }
+      }
+    }
+  }
+
+  /** 日にちを決める, 決め直す: the poll [seq] settled on [day], which pins it for everyone. */
+  suspend fun decide(groupId: String, threadId: String, seq: Long, day: String) {
+    database.write {
+      chatEdit(groupId, now()) {
+        decide = chatDecide {
+          this.threadId = threadId
+          this.seq = seq
+          this.day = day
+        }
+      }
+    }
+  }
+
   /** 送信取消: the member's line [seq] taken back for everyone, its reactions, reply and pin with it. */
   suspend fun unsend(groupId: String, threadId: String, seq: Long) {
     database.write {
@@ -282,6 +311,13 @@ private class WaitingEdits(rows: List<ChatOutboxRow>, threadId: String, state: S
         ChatEdit.KindCase.CHANGE -> if (edit.change.threadId == threadId) toLines.getOrPut(edit.change.seq, ::mutableListOf) += edit
         ChatEdit.KindCase.REACT -> if (edit.react.threadId == threadId) toLines.getOrPut(edit.react.seq, ::mutableListOf) += edit
         ChatEdit.KindCase.PIN -> if (edit.pin.threadId == threadId) pinEdits += edit
+        ChatEdit.KindCase.VOTE -> if (edit.vote.threadId == threadId) toLines.getOrPut(edit.vote.seq, ::mutableListOf) += edit
+        ChatEdit.KindCase.DECIDE ->
+          if (edit.decide.threadId == threadId) {
+            toLines.getOrPut(edit.decide.seq, ::mutableListOf) += edit
+            // Settling pins the poll (spec/vectors/chat.json, pins).
+            pinEdits += edit
+          }
         ChatEdit.KindCase.RECALL ->
           if (edit.recall.threadId == threadId) {
             recalls += edit
@@ -412,6 +448,7 @@ private suspend fun SyncDao.pinned(groupId: String, threadId: String, waiting: W
       ChatEdit.KindCase.PIN -> if (edit.pin.on) pinning(pinned, edit.pin.seq).pins else unpinning(pinned, edit.pin.seq).pins
       ChatEdit.KindCase.UNSEND -> unpinning(pinned, edit.unsend.seq).pins
       ChatEdit.KindCase.RECALL -> seqOf(groupId, threadId, edit.recall.sendOpId)?.let { unpinning(pinned, it).pins } ?: pinned
+      ChatEdit.KindCase.DECIDE -> pinning(pinned, edit.decide.seq).pins
       else -> pinned
     }
   }
@@ -429,6 +466,16 @@ private fun showing(edits: List<ChatEdit>, line: ChatLine, me: String): ChatLine
       ChatEdit.KindCase.UNSEND,
       ChatEdit.KindCase.RECALL -> shown.copy(content = LineContent.Unsent, reactions = emptyList(), replyTo = null, pinnedOrder = 0)
       ChatEdit.KindCase.REACT -> shown.copy(reactions = shown.reactions.toggling(edit.react.emoji, me, edit.react.on))
+      ChatEdit.KindCase.VOTE -> {
+        // Only while it is open: a settled poll takes no more votes.
+        val poll = (shown.content as? LineContent.Poll)?.poll?.takeIf { it.decided.isEmpty() } ?: return@fold shown
+        val votes = voting(poll.votesList, edit.vote.day, me, edit.vote.on, poll.daysList)
+        shown.copy(content = LineContent.Poll(poll.toBuilder().clearVotes().addAllVotes(votes).build()))
+      }
+      ChatEdit.KindCase.DECIDE -> {
+        val poll = (shown.content as? LineContent.Poll)?.poll ?: return@fold shown
+        shown.copy(content = LineContent.Poll(poll.toBuilder().setDecided(edit.decide.day).build()))
+      }
       else -> shown
     }
   }

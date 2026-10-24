@@ -67,6 +67,7 @@ import app.pochical.kit.PhotoShelf
 import app.pochical.kit.WaitingLine
 import app.pochical.kit.textParts
 import app.pochical.v1.LinkPreview
+import java.time.LocalDate
 import kotlin.math.abs
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -127,6 +128,10 @@ class MessageLook(
   /** Its first link's page. */
   val page: LinkPreview?
     get() = parts.firstNotNullOfOrNull { (it as? PagePart)?.preview }
+
+  /** The days it puts to the vote. */
+  val poll: PollLook?
+    get() = parts.firstNotNullOfOrNull { (it as? PollPart)?.look }
 }
 
 /** A line gone to, lit once there: [time] tells one going to the same line again. */
@@ -156,6 +161,14 @@ class MessageHandlers(
   val spray: Spray?,
   /** A link opened in the system's browser sheet. */
   val openLink: (String) -> Unit,
+  /** The days everyone in the group is off (みんな休み) from one day through another, by their shifts. */
+  val together: @Composable (from: LocalDate, through: LocalDate) -> Set<LocalDate>,
+  /** 行ける on a poll's day, or taken back. */
+  val vote: (seq: Long, day: String, on: Boolean) -> Unit,
+  /** 日にちを決める or 決め直す: the sheet a poll is settled with. */
+  val decide: (seq: Long) -> Unit,
+  /** Who can come on a poll's day, by name. */
+  val voters: (day: LocalDate, people: List<String>) -> Unit,
 )
 
 /**
@@ -182,7 +195,7 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
           val chosen = look.reactions.filter { handlers.me in it.userIds }.map { it.emoji }.toSet()
           ReactionBar(chosen, onReact = { emoji -> handlers.react(seq, emoji, emoji !in chosen) }, onMore = { handlers.moreReactions(seq) })
         }
-      menu.open(MenuLine(look.key, look.mine, look.waiting != null, items, bar) { Bubble(look, handlers, onQuote = {}) }, at.unclipped())
+      menu.open(MenuLine(look.key, look.mine, look.waiting != null, items, bar) { LineBody(look, handlers, onQuote = {}) }, at.unclipped())
     }
   }
   val gestures =
@@ -264,7 +277,7 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
               .alpha(if (lifted) 0f else 1f)
               .lineGestures(gestures.takeIf { look.seq != null || look.waiting != null }, look.swipe, drag, { coordinates }, handlers.reducedMotion)
           ) {
-            Bubble(look, handlers, onQuote = { look.quote?.let { handlers.jump(it.seq) } })
+            LineBody(look, handlers, onQuote = { look.quote?.let { handlers.jump(it.seq) } })
           }
           if (!look.mine) TimeRoom(look.time, null, edited, look.pinned, items, Modifier.padding(start = 4.dp))
         }
@@ -290,6 +303,13 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
       if (look.mine) Spacer(Modifier.width(TAIL)) else Spacer(Modifier.width(AWAY))
     }
   }
+}
+
+/** What the line is drawn as: a poll's card, or a bubble. */
+@Composable
+private fun LineBody(look: MessageLook, handlers: MessageHandlers, onQuote: () -> Unit) {
+  val poll = look.poll
+  if (poll != null) PollCard(poll, handlers, look.seq) else Bubble(look, handlers, onQuote)
 }
 
 /**
@@ -440,7 +460,7 @@ fun messageLook(
         seq = line.seq,
         swipe = if (own) ReplySwipe.Leftward else ReplySwipe.Rightward,
         said = said,
-        parts = partsOf(line.content, quote, ReactionsPart(line.reactions, counted = direct)),
+        parts = partsOf(line.content, quote, ReactionsPart(line.reactions, counted = direct), poll = pollLook(line.content, own || writers[line.authorId]?.left == true, waiting = false)),
         pinned = pinned,
       )
     }
@@ -450,7 +470,7 @@ fun messageLook(
       val replying = quote?.let { stringResource(R.string.chat_reply_to_said, it.writer.orEmpty(), it.words) }
       val page = (line.content as? LineContent.Words)?.preview?.title
       val said = listOfNotNull(mine, replying, lineWords(line.content, nameOf), page, if (line.failed) notSent else sending).joinToString("、")
-      MessageLook(item.key, true, line.content, item.startsRun, null, false, null, line, null, null, said, partsOf(line.content, quote, reactions = null))
+      MessageLook(item.key, true, line.content, item.startsRun, null, false, null, line, null, null, said, partsOf(line.content, quote, reactions = null, poll = pollLook(line.content, canDecide = true, waiting = true)))
     }
     else -> null
   }
@@ -463,15 +483,23 @@ private fun LayoutCoordinates.unclipped(): Rect = Rect(positionInWindow(), size.
  * What a line shows besides its words, in the order a screen reader offers their actions: its
  * reactions (none on a line on its way), the line it answers, the links of its words and its page.
  */
-private fun partsOf(content: LineContent, quote: LineQuote?, reactions: ReactionsPart?): List<LinePart> {
+private fun partsOf(content: LineContent, quote: LineQuote?, reactions: ReactionsPart?, poll: PollPart?): List<LinePart> {
   val words = content as? LineContent.Words
   val links = words?.let { textParts(it.text).mapNotNull { part -> part.url } }.orEmpty()
   return listOfNotNull(
+    poll,
     reactions,
     quote?.let(::QuotePart),
     LinksPart(links).takeIf { links.isNotEmpty() },
     words?.preview?.let { PagePart(it, inWords = it.url in links) },
   )
+}
+
+/** A poll's part, for a line of days put to the vote; [canDecide] for its writer, or anyone once they left. */
+@Composable
+private fun pollLook(content: LineContent, canDecide: Boolean, waiting: Boolean): PollPart? {
+  val poll = content as? LineContent.Poll ?: return null
+  return PollPart(PollLook(poll.poll, canDecide, waiting))
 }
 
 /** How wide a line with a link's page is (spec/chat.md, Albums: as wide as an album). */

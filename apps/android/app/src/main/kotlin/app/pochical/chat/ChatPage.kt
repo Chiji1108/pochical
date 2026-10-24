@@ -6,6 +6,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.compose.LifecycleEventEffect
+import app.pochical.calendar.fullText
 import app.pochical.calendar.rememberReducedMotion
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -83,6 +84,8 @@ import app.pochical.R
 import app.pochical.design.Chat
 import app.pochical.design.SyncSocket
 import app.pochical.groups.HoldSocket
+import app.pochical.groups.groupDays
+import app.pochical.groups.rememberGroupMembers
 import app.pochical.groups.LocalValues
 import app.pochical.groups.rememberMeId
 import app.pochical.kit.ChatSocket
@@ -97,6 +100,7 @@ import app.pochical.kit.firstUnread
 import app.pochical.kit.otherIn
 import app.pochical.kit.pageAfter
 import kotlin.coroutines.cancellation.CancellationException
+import java.time.LocalDate
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -390,6 +394,13 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
   }
 
   val openLink = rememberLinkOpener()
+  // Polls (spec/chat.md, Polls): 行ける, the sheet a poll is settled with, and who can come on a day.
+  var deciding by remember { mutableStateOf<Long?>(null) }
+  var listing by remember { mutableStateOf<Pair<LocalDate, List<String>>?>(null) }
+  val vote = { seq: Long, day: String, on: Boolean ->
+    scope.launch { keeping({ notKept = true }) { chats.vote(groupId, threadId, seq, day, on) } }
+    Unit
+  }
   // Pinning says what happened, the oldest pin making room for a new one.
   val resources = LocalContext.current.resources
   val pin = { seq: Long, on: Boolean ->
@@ -408,7 +419,7 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
     Unit
   }
   var unsending by remember { mutableStateOf<Unsending?>(null) }
-  val actions = rememberLineActions(composer, nameOf, snackbar, onUnsend = { unsending = it }, onNotKept = { notKept = true }, onPin = pin)
+  val actions = rememberLineActions(composer, nameOf, snackbar, onUnsend = { unsending = it }, onNotKept = { notKept = true }, onPin = pin, onDecide = { deciding = it })
   val handlers =
     MessageHandlers(
       menu = menu,
@@ -426,6 +437,12 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
       choosers = { choosers = it },
       spray = spray,
       openLink = openLink,
+      together = { from, through ->
+        rememberGroupMembers(groupId, from, through)?.let { groupDays(it, from, through).together.days.toSet() }.orEmpty()
+      },
+      vote = vote,
+      decide = { deciding = it },
+      voters = { day, people -> listing = day to people },
     )
   Box {
     ChatScaffold(groupId, threadId, members, groups, socket, onBack) {
@@ -502,6 +519,24 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
     )
   }
   choosers?.let { ChoosersSheet(it, writers, nameOf) { choosers = null } }
+  listing?.let { (day, people) -> VotersSheet(day, people, writers, nameOf) { listing = null } }
+  deciding?.let { seq ->
+    val poll = (chat.line(seq)?.content as? LineContent.Poll)?.poll
+    if (poll == null) {
+      deciding = null
+    } else {
+      DecideSheet(poll, onDismiss = { deciding = null }) { day ->
+        deciding = null
+        scope.launch {
+          keeping({ notKept = true }) {
+            chats.decide(groupId, threadId, seq, day.toString())
+            // Said to whoever settled it.
+            snackbar.showSnackbar(resources.getString(R.string.chat_poll_decided_said, day.fullText))
+          }
+        }
+      }
+    }
+  }
   unsending?.let { asked ->
     UnsendDialog(asked, onDismiss = { unsending = null }) {
       unsending = null

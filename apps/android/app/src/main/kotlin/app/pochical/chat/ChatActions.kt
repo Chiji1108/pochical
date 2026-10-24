@@ -45,6 +45,8 @@ fun rememberLineActions(
   onNotKept: () -> Unit,
   /** Pins the line, or takes its pin off. */
   onPin: (seq: Long, on: Boolean) -> Unit,
+  /** 決め直す: the sheet a poll is settled with, on its day. */
+  onDecide: (seq: Long) -> Unit,
 ): (MessageLook) -> List<LineMenuItem> {
   val chats = LocalChats.current
   val scope = rememberCoroutineScope()
@@ -89,6 +91,10 @@ fun rememberLineActions(
                 onPin(seq, !pinned)
               }
             )
+          }
+          val poll = look.poll
+          if (poll != null && poll.poll.decided.isNotEmpty() && poll.canDecide) {
+            add(LineMenuItem(resources.getString(R.string.chat_poll_redecide), R.drawable.ic_event_available) { onDecide(seq) })
           }
           if (look.mine && words != null && rules.edit) {
             add(LineMenuItem(resources.getString(R.string.chat_edit), R.drawable.ic_edit) { composer.change(seq, words, nameOf) })

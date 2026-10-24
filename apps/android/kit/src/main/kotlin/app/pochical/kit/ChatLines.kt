@@ -5,6 +5,8 @@ import app.pochical.v1.ChatContent
 import app.pochical.v1.ChatNotice
 import app.pochical.v1.ChatPhoto
 import app.pochical.v1.ChatPoll
+import app.pochical.v1.ChatVotes
+import app.pochical.v1.chatVotes
 import app.pochical.v1.ChatSendContent
 import app.pochical.v1.LinkPreview
 import app.pochical.v1.ChatLine as WireLine
@@ -252,6 +254,20 @@ fun readTo(shown: Collection<Long>, read: Long): Long = maxOf(read, shown.maxOrN
 /** How many of others' lines are unread past the [read] mark, what ↓ counts (spec/vectors/chat.json, readTo). */
 fun unreadCount(lines: List<Pair<Long, LineWriter>>, read: Long): Int =
   lines.count { (seq, writer) -> seq > read && writer == LineWriter.Others }
+
+/**
+ * A poll's votes with [userId] coming on [day] ([on]) or taking it back: the member goes last among
+ * who can come that day, and the days stay in the poll's [order], one nobody can come on left out
+ * (spec/vectors/chat.json, votes).
+ */
+fun voting(votes: List<ChatVotes>, day: String, userId: String, on: Boolean, order: List<String>): List<ChatVotes> {
+  val byDay = votes.associate { it.day to it.userIdsList }.toMutableMap()
+  byDay[day] = byDay[day].orEmpty() - userId + listOfNotNull(userId.takeIf { on })
+  return order.mapNotNull { d -> byDay[d]?.takeIf { it.isNotEmpty() }?.let { users -> chatVotes { this.day = d; userIds += users } } }
+}
+
+/** Who can come on [day] of [poll], in the order they said so. */
+fun voters(poll: ChatPoll, day: String): List<String> = poll.votesList.firstOrNull { it.day == day }?.userIdsList.orEmpty()
 
 /** The pins of a chat after a step, the latest first, and the one that made room for a new one, if any (spec/vectors/chat.json, pins). */
 data class PinStep(val pins: List<Long>, val dropped: Long? = null)
