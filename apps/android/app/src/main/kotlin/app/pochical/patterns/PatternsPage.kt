@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -55,19 +56,22 @@ fun PatternsPage(navigation: PageNavigation) {
   val inUse = calendar.patterns.filterNot { it.archived }
   val archived = calendar.patterns.filter { it.archived }
   var sorting by rememberSaveable { mutableStateOf(false) }
-  // The order as it is dragged, written once a row is let go.
-  var dragged by remember { mutableStateOf<List<Pattern>?>(null) }
-  val rows = dragged ?: inUse
+  // The order as a finger drags it, then as written until the calendar shows it. Patterns sync
+  // brings meanwhile take their places from the calendar: one new comes after, one archived goes.
+  var order by remember { mutableStateOf<List<String>?>(null) }
+  var dragging by remember { mutableStateOf(false) }
+  val rows = order?.let { ids -> inUse.sortedBy { ids.indexOf(it.id).takeIf { place -> place >= 0 } ?: Int.MAX_VALUE } } ?: inUse
+  LaunchedEffect(inUse) { if (!dragging && order == inUse.map { it.id }) order = null }
   val haptics = LocalHapticFeedback.current
   val list = rememberLazyListState()
   val reorder =
     rememberReorderableLazyListState(list) { from, to ->
-      val order = (dragged ?: inUse).toMutableList()
-      val moving = order.indexOfFirst { it.id == from.key }
-      val target = order.indexOfFirst { it.id == to.key }
+      val ids = rows.map { it.id }.toMutableList()
+      val moving = ids.indexOf(from.key)
+      val target = ids.indexOf(to.key)
       if (moving < 0 || target < 0) return@rememberReorderableLazyListState
-      order.add(target, order.removeAt(moving))
-      dragged = order
+      ids.add(target, ids.removeAt(moving))
+      order = ids
       haptics.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
     }
   LaunchedEffect(inUse.size) { if (inUse.size < 2) sorting = false }
@@ -83,8 +87,7 @@ fun PatternsPage(navigation: PageNavigation) {
     },
   ) { padding ->
     LazyColumn(state = list, contentPadding = padding) {
-      items(rows, key = { it.id }) { pattern ->
-        val index = rows.indexOf(pattern)
+      itemsIndexed(rows, key = { _, pattern -> pattern.id }) { index, pattern ->
         ReorderableItem(reorder, key = pattern.id, enabled = sorting) {
           PatternRow(
             pattern,
@@ -98,11 +101,14 @@ fun PatternsPage(navigation: PageNavigation) {
                     onClick = {},
                     modifier =
                       Modifier.draggableHandle(
-                        onDragStarted = { haptics.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate) },
+                        onDragStarted = {
+                          dragging = true
+                          haptics.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
+                        },
                         onDragStopped = {
+                          dragging = false
                           haptics.performHapticFeedback(HapticFeedbackType.GestureEnd)
-                          dragged?.let { order -> days.orderPatterns(order.map { it.id } + archived.map { it.id }) }
-                          dragged = null
+                          if (order != null) days.orderPatterns(rows.map { it.id } + archived.map { it.id })
                         },
                       ),
                   ) {

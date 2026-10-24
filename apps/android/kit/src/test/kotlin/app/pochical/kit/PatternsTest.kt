@@ -182,7 +182,7 @@ class PatternsTest {
     }))
     edits.setDays(mapOf(LocalDate.parse("2026-10-02") to ShownDay("day"), LocalDate.parse("2026-10-04") to ShownDay("day")))
     // From the order's start through the last own day: the 1st and 3rd from the order, the 2nd and 4th their own.
-    assertEquals(4, database.values().daysShowing("day"))
+    assertEquals(4, database.daysShowing("day"))
     database.close()
   }
 

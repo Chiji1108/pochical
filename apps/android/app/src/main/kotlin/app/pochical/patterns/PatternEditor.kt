@@ -103,8 +103,10 @@ fun PatternEditor(id: String, isNew: Boolean, navigation: PageNavigation) {
           )
         }
     }
+  // Kept or deleted here, the page goes back once, by the button that did it.
+  var leaving by remember { mutableStateOf(false) }
   // A saved pattern deleted elsewhere while its page is open has nothing left to edit.
-  LaunchedEffect(saved == null) { if (!isNew && saved == null) navigation.back() }
+  LaunchedEffect(saved == null) { if (!isNew && saved == null && !leaving) navigation.back() }
   var draft by rememberSerializable { mutableStateOf(initial) }
   var name by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue(initial.name)) }
   var allDay by rememberSaveable { mutableStateOf(initial.time == null) }
@@ -123,7 +125,14 @@ fun PatternEditor(id: String, isNew: Boolean, navigation: PageNavigation) {
   val repeating = repeats(id, calendar.orders)
   // Locked only where turning it off is refused: one turned off before an order took it on may be turned back on.
   val archivingRefused = refusesArchiving(id, saved?.archived ?: false, calendar.orders)
-  val shaped = draft.copy(name = limitText(name.text, TextLimits.shiftName).trim(), time = if (allDay) null else time)
+  val shapedName = limitText(name.text, TextLimits.shiftName).trim()
+  // A letter left empty in 印と色 is the name's first, as a mark always has one.
+  val shaped =
+    draft.copy(
+      name = shapedName,
+      symbol = draft.symbol.ifBlank { guessLook(shapedName).symbol },
+      time = if (allDay) null else time,
+    )
 
   fun rename(text: TextFieldValue) {
     name = text.limited(TextLimits.shiftName)
@@ -138,7 +147,12 @@ fun PatternEditor(id: String, isNew: Boolean, navigation: PageNavigation) {
 
   /** Goes on as [done] once kept; a refusal of the repeating orders is said instead. */
   fun kept(refusal: PatternRefusal?, done: () -> Unit) {
-    if (refusal == null) done() else refused = true
+    if (refusal == null) {
+      leaving = true
+      done()
+    } else {
+      refused = true
+    }
   }
 
   SettingsPage(

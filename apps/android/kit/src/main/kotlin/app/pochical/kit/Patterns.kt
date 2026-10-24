@@ -3,9 +3,10 @@ package app.pochical.kit
 import app.pochical.design.MarkIconNames
 import app.pochical.design.ReadyPattern
 import app.pochical.design.ReadyPatterns
+import java.text.BreakIterator
 import java.text.Normalizer
 import java.time.LocalDate
-import kotlinx.coroutines.flow.first
+
 
 // The person's patterns as 設定 › シフトパターン makes and changes them (spec/shift-patterns.md),
 // as iOS's Pattern.swift and PatternEdits.swift: a new pattern's mark and color, ready-made copies,
@@ -35,11 +36,12 @@ fun guessLook(name: String): MarkLook {
 }
 
 /** The first character as a reader sees it, an emoji with its joiners whole. */
-fun firstCharacter(text: String): String {
-  val breaks = java.text.BreakIterator.getCharacterInstance()
-  breaks.setText(text)
-  val end = breaks.next()
-  return if (end == java.text.BreakIterator.DONE) "" else text.substring(0, end)
+fun firstCharacter(text: String): String = characterEnds(text).firstOrNull()?.let { text.substring(0, it) }.orEmpty()
+
+/** Where each character of [text] ends, as a reader counts them: grapheme clusters (spec/text-limits.md). */
+fun characterEnds(text: String): Sequence<Int> {
+  val characters = BreakIterator.getCharacterInstance().apply { setText(text) }
+  return generateSequence { characters.next().takeIf { it != BreakIterator.DONE } }
 }
 
 /**
@@ -112,12 +114,13 @@ fun markIconSections(query: String): List<MarkIconNames.Section> {
  * first day either reaches through the last own day or the latest order's start, past which only
  * own days could show one the order in use does not repeat.
  */
-suspend fun Values.daysShowing(id: String): Int {
-  val days = days().first()
-  val orders = repeatOrders().first()
+suspend fun AppDatabase.daysShowing(id: String): Int = write {
+  // In one transaction, so a change sync takes meanwhile counts whole or not at all.
+  val days = days("0000-01-01", "9999-12-31")
+  val orders = repeatOrders()
   val edges = days.map { LocalDate.parse(it.date) } + orders.map { LocalDate.parse(it.start) }
-  val first = edges.minOrNull() ?: return 0
-  return OwnCalendar.of(days, patterns().first(), orders).shown(first, edges.max()).values.count { it.shift == id }
+  val first = edges.minOrNull() ?: return@write 0
+  OwnCalendar.of(days, patterns(), orders).shown(first, edges.max()).values.count { it.shift == id }
 }
 
 private const val KATAKANA_TO_HIRAGANA = 0x60

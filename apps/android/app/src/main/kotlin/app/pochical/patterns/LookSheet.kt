@@ -1,5 +1,7 @@
 package app.pochical.patterns
 
+import android.icu.lang.UCharacter
+import android.icu.lang.UProperty
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -160,7 +162,9 @@ fun LookSheet(draft: Pattern, others: List<Pattern>, onChange: (Pattern, LookPar
             letter,
             { typed ->
               letter = typed.limited(TextLimits.shiftMark)
-              if (letter.composition == null) onChange(draft.copy(symbol = letter.text.trim()), LookPart.Symbol)
+              // An empty letter is not one picked: the name's first stands in for it.
+              val symbol = letter.text.trim()
+              if (letter.composition == null) onChange(draft.copy(symbol = symbol), LookPart.Symbol.takeIf { symbol.isNotEmpty() })
             },
             Modifier.fillMaxWidth(),
             label = { Text(stringResource(R.string.look_letter)) },
@@ -310,6 +314,16 @@ private fun EmojiDialog(onPick: (String) -> Unit, onDismiss: () -> Unit) {
   )
 }
 
-/** Whether a character is an emoji: its first code point a symbol, not a letter or a digit. */
-private fun isEmoji(character: String): Boolean =
-  character.isNotEmpty() && Character.getType(character.codePointAt(0)) == Character.OTHER_SYMBOL.toInt()
+/**
+ * Whether a character is an emoji as a keyboard's emoji are: one drawn as an emoji by itself, or one
+ * that may be and asks to be with VS16, as keycaps (1️⃣) do; text symbols like ★ or © are not.
+ */
+internal fun isEmoji(character: String): Boolean {
+  if (character.isEmpty()) return false
+  val first = character.codePointAt(0)
+  return UCharacter.hasBinaryProperty(first, UProperty.EMOJI_PRESENTATION) ||
+    (EMOJI_STYLE in character && UCharacter.hasBinaryProperty(first, UProperty.EMOJI))
+}
+
+/** VS16, which asks for a character's emoji style. */
+private const val EMOJI_STYLE = '\uFE0F'

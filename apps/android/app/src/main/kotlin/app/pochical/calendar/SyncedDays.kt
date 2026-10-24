@@ -29,7 +29,7 @@ import app.pochical.kit.OwnCalendar as KitCalendar
  * edit changes it, and edited through its outbox, which sends them to the server and the person's
  * other devices.
  */
-class SyncedDays(database: AppDatabase, private val edits: OwnEdits, scope: CoroutineScope) : OwnDays {
+class SyncedDays(private val database: AppDatabase, private val edits: OwnEdits, scope: CoroutineScope) : OwnDays {
   private val values = database.values()
 
   private val unread = Synced(KitCalendar.empty, emptyList())
@@ -75,7 +75,7 @@ class SyncedDays(database: AppDatabase, private val edits: OwnEdits, scope: Coro
     writes.trySend { edits.orderPatterns(ids) }
   }
 
-  override suspend fun daysShowing(id: String): Int = inTurn { values.daysShowing(id) }
+  override suspend fun daysShowing(id: String): Int = inTurn { database.daysShowing(id) }
 
   /** What [work] gives once every write before it is done, in the writes' turn. */
   private suspend fun <T> inTurn(work: suspend () -> T): T {
