@@ -25,6 +25,7 @@ internal suspend fun SyncDao.takeMembership(change: Change) {
   if (membership.left) {
     deleteGroup(membership.groupId)
     resetGroup(membership.groupId)
+    dropChats(membership.groupId)
     return
   }
   upsert(GroupRow(membership.groupId, membership.name, membership.joinedAtMs, membership.mark.value))
@@ -58,9 +59,11 @@ internal suspend fun SyncDao.resetGroup(groupId: String) {
   deleteGroupPatterns(groupId)
   deleteGroupOrders(groupId)
   deleteGroupCursor(groupId)
+  resetChats(groupId)
 }
 
 private suspend fun SyncDao.take(change: Change, groupId: String) {
+  if (takeChat(change, groupId)) return
   when (change.kindCase) {
     KindCase.GROUP_PROFILE -> {
       // The list of groups shows the name and mark the group last said.

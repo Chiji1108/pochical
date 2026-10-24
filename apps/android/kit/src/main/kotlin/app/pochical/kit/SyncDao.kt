@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.Flow
 
 /** What sync reads and writes, each call inside the transaction `AppDatabase.write` opens. */
 @Dao
-internal interface SyncDao {
+internal interface SyncDao : ChatDao {
   @Query("SELECT * FROM syncState WHERE id = 1") suspend fun syncState(): SyncState?
 
   @Upsert suspend fun upsert(state: SyncState)
