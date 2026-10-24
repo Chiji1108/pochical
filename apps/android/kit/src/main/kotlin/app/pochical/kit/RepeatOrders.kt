@@ -1,6 +1,8 @@
 package app.pochical.kit
 
 import app.pochical.design.Holidays
+import app.pochical.v1.repeatOrder
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
@@ -78,3 +80,51 @@ fun plannedShifts(orders: List<RepeatOrder>, known: Set<String>, from: LocalDate
   }
   return planned
 }
+
+/**
+ * The orders with a new job's [order] added: it takes over from its start, so an order starting on
+ * or after that day gives way to it entirely (spec/vectors/repeat.json, added).
+ */
+fun ordersAdding(orders: List<RepeatOrder>, order: RepeatOrder): List<RepeatOrder> = orders.filter { it.start < order.start } + order
+
+/**
+ * 繰り返し's periods with [order] put in on its start among the others, in place of one that started
+ * that day, and of the one starting on [replacing] when that period's start was moved; the rest stay
+ * (spec/vectors/repeat.json, put).
+ */
+fun ordersPutting(orders: List<RepeatOrder>, order: RepeatOrder, replacing: LocalDate? = null): List<RepeatOrder> =
+  (orders.filter { it.start != order.start && it.start != replacing } + order).sortedBy { it.start }
+
+/** 繰り返し's periods without the one starting on [start], the one before running on (spec/vectors/repeat.json, removed). */
+fun ordersRemoving(orders: List<RepeatOrder>, start: LocalDate): List<RepeatOrder> = orders.filter { it.start != start }
+
+/**
+ * Whether a new order starts with 祝日は休みにする on: a week of shifts with a pattern that counts as
+ * off on a Saturday or Sunday reads as office hours (spec/vectors/repeat.json, holidaysOffByDefault).
+ */
+fun holidaysOffByDefault(sequence: List<String>, start: LocalDate, countsAsOff: (String) -> Boolean): Boolean =
+  sequence.size == DAYS_A_WEEK &&
+    sequence.withIndex().any { (index, shift) ->
+      countsAsOff(shift) && start.plusDays(index.toLong()).dayOfWeek in setOf(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY)
+    }
+
+private const val DAYS_A_WEEK = 7
+
+/**
+ * What holidays become for someone off on them: the pattern [picked], while it is one of [daysOff],
+ * their patterns that count as off in their order, else the first of them (spec/vectors/repeat.json,
+ * holidayShift).
+ */
+fun holidayShift(daysOff: List<String>, picked: String? = null): String? = picked?.takeIf { it in daysOff } ?: daysOff.firstOrNull()
+
+/** The order as the wire carries it. */
+internal val RepeatOrder.wire: app.pochical.v1.RepeatOrder
+  get() =
+    repeatOrder {
+      sequence += this@wire.sequence
+      start = this@wire.start.toString()
+      this@wire.anchor?.let { anchor = it.toString() }
+      holidaysOff = this@wire.holidaysOff
+      this@wire.holidayShift?.let { holidayShift = it }
+      holidayCountry = this@wire.holidayCountry
+    }

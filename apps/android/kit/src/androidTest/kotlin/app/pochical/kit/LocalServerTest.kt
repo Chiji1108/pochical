@@ -153,6 +153,28 @@ class LocalServerTest {
   }
 
   @Test
+  fun aRepeatingOrderFillsTheOtherDevicesDays() = runBlocking<Unit> {
+    val phone = Device("orders")
+    phone.account.foreground()
+    withTimeout(20_000) { phone.account.userSocket.first { it == SocketState.Current } }
+    val ids = listOf("duty", "offDuty", "off")
+    val start = LocalDate.parse("2026-11-01")
+    phone.edits.changeJob(readyCopies(ids), ids, start, start, "JP")
+    phone.edits.setHolidaysOff(true, start = start)
+    withTimeout(20_000) { phone.database.sync().lastWaiting().first { it == null } }
+    Log.i(TAG, "Phone changed jobs to 当番・非番・休み from $start, holidays off, acknowledged")
+
+    val tablet = Device("orders-tablet")
+    tablet.sessions.write(phone.sessions.read()!!)
+    tablet.account.foreground()
+    val calendar = withTimeout(20_000) { tablet.database.values().ownCalendar().first { it.orders.isNotEmpty() && it.patterns.size == 3 } }
+    val shown = calendar.shown(start, start.plusDays(3))
+    assertEquals(listOf("duty", "offDuty", "off", "duty"), (0L..3L).map { shown.getValue(start.plusDays(it)).shift })
+    assertEquals(listOf(true to "off"), calendar.orders.map { it.holidaysOff to it.holidayShift })
+    Log.i(TAG, "Tablet shows the order's days")
+  }
+
+  @Test
   fun aGroupsMembersAndTheirSharedDaysComeOnItsSocket() = runBlocking<Unit> {
     val date = "2026-10-24"
     val phone = Device("group")

@@ -19,6 +19,10 @@ val LocalDate.monthDayText: String
 val LocalDate.fullText: String
   get() = "$monthDayText(${weekdayLetter(weekday)})"
 
+/** 11/1 where room is short, 2026/11/1 for a day of another year than today's. */
+val LocalDate.slashText: String
+  get() = "${if (year != LocalDate.now().year) "$year/" else ""}$monthValue/$dayOfMonth"
+
 /** 1日, where the month goes without saying. */
 val LocalDate.dayText: String
   get() = "${dayOfMonth}日"

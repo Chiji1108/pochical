@@ -7,6 +7,7 @@ import app.pochical.kit.PatternRefusal
 import app.pochical.kit.PatternRow
 import app.pochical.kit.RepeatOrder
 import app.pochical.kit.daysShowing
+import app.pochical.kit.readyCopies
 import app.pochical.kit.ShownDay
 import app.pochical.kit.newId
 import app.pochical.kit.ownCalendar
@@ -76,6 +77,16 @@ class SyncedDays(private val database: AppDatabase, private val edits: OwnEdits,
   }
 
   override suspend fun daysShowing(id: String): Int = inTurn { database.daysShowing(id) }
+
+  override suspend fun putOrder(order: RepeatOrder, replacing: LocalDate?) = inTurn { edits.putOrder(order, replacing) }
+
+  override suspend fun removeOrder(start: LocalDate) = inTurn { edits.removeOrder(start) }
+
+  override suspend fun setHolidaysOff(on: Boolean, picked: String?, start: LocalDate) = inTurn { edits.setHolidaysOff(on, picked, start) }
+
+  override suspend fun changeJob(ids: List<String>, sequence: List<String>, start: LocalDate, anchor: LocalDate) = inTurn {
+    edits.changeJob(readyCopies(ids), sequence, start, anchor, holidayCountry())
+  }
 
   /** What [work] gives once every write before it is done, in the writes' turn. */
   private suspend fun <T> inTurn(work: suspend () -> T): T {

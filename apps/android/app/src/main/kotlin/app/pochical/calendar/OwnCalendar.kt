@@ -110,6 +110,24 @@ interface OwnDays {
   /** How many days show the pattern, of their own or from an order, once every edit before is written. */
   suspend fun daysShowing(id: String): Int
 
+  /**
+   * 繰り返し's periods: `order` put in on its start among the others, or set again, or moved from
+   * `replacing`; the days the person entered stay over it.
+   */
+  suspend fun putOrder(order: RepeatOrder, replacing: LocalDate? = null)
+
+  /** Takes out the period starting on `start`, the one before running on. */
+  suspend fun removeOrder(start: LocalDate)
+
+  /** Turns 祝日は休みにする on or off for the period starting on `start`, holidays taking `picked`. */
+  suspend fun setHolidaysOff(on: Boolean, picked: String?, start: LocalDate)
+
+  /**
+   * 新しい仕事にする: the ready-made patterns `ids` take over from `start`, and `sequence` repeats
+   * from there counted from `anchor`; an empty one ends repeating.
+   */
+  suspend fun changeJob(ids: List<String>, sequence: List<String>, start: LocalDate, anchor: LocalDate)
+
   /** Keeps `note` as the day's memo; "" clears it, leaving the shift. */
   fun setNote(day: LocalDate, note: String)
 

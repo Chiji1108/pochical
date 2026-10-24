@@ -45,7 +45,7 @@ private val CELL_PADDING = 4.dp
 private val DATE_SIZE = 11.dp
 private val DATE_LINE = 14.dp
 
-/** How faint a day 完了's question would fill shows its mark. */
+/** How faint a day 完了's question would fill, or an order comes round on, shows its mark. */
 private const val PREVIEW_ALPHA = 0.4f
 
 
@@ -66,6 +66,8 @@ data class DayLook(
   val framesToday: Boolean = true,
   /** A blank day drawn faint with the pattern 完了's question would fill it with, still read as 未入力. */
   val preview: Pattern? = null,
+  /** Its shift drawn faint, as an order being typed comes round past the days typed. */
+  val faint: Boolean = false,
 )
 
 /**
@@ -86,7 +88,7 @@ fun DayCell(
   val pattern = look.pattern
   // A day off on a tint of its color, as 休みの見せ方 starts for icons
   // (強調); emoji and letters start with the mark alone (印だけ).
-  val tile = pattern?.takeIf { it.countsAsOff && style.style == MarkStyle.Icon }?.let {
+  val tile = pattern?.takeIf { it.countsAsOff && style.style == MarkStyle.Icon && !look.faint }?.let {
     colors.mark(if (style.colored) it.color else 0)
   }
   val shape = RoundedCornerShape(Radius.md)
@@ -156,7 +158,7 @@ fun DayCell(
     }
     val mark = pattern ?: look.preview
     if (mark != null) {
-      Box(Modifier.weight(1f).alpha(if (pattern == null) PREVIEW_ALPHA else 1f), contentAlignment = Alignment.Center) {
+      Box(Modifier.weight(1f).alpha(if (pattern == null || look.faint) PREVIEW_ALPHA else 1f), contentAlignment = Alignment.Center) {
         ShiftMark(
           mark.icon,
           mark.emoji,

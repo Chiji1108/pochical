@@ -25,6 +25,11 @@ import app.pochical.calendar.ShiftChoicePage
 import app.pochical.patterns.AddPatternPage
 import app.pochical.patterns.PatternEditor
 import app.pochical.patterns.PatternsPage
+import app.pochical.repeat.JobChangePage
+import app.pochical.repeat.RepeatEditor
+import app.pochical.repeat.RepeatPage
+import app.pochical.repeat.RepeatPeriodPage
+import app.pochical.repeat.StopRepeatPage
 import java.time.LocalDate
 
 /**
@@ -52,6 +57,11 @@ fun RootScreen(navigator: RootNavigator) {
       RootPage.AddPattern -> NavEntry(route) { AddPatternPage(rememberPageNavigation(navigator)) }
       is RootPage.PatternEditor ->
         NavEntry(route) { PatternEditor(route.id, route.isNew, rememberPageNavigation(navigator)) }
+      RootPage.Repeat -> NavEntry(route) { RepeatPage(rememberPageNavigation(navigator)) }
+      is RootPage.RepeatPeriod -> NavEntry(route) { RepeatPeriodPage(route.start, rememberPageNavigation(navigator)) }
+      is RootPage.RepeatEditor -> NavEntry(route) { RepeatEditor(route.mode, rememberPageNavigation(navigator)) }
+      RootPage.StopRepeat -> NavEntry(route) { StopRepeatPage(rememberPageNavigation(navigator)) }
+      RootPage.JobChange -> NavEntry(route) { JobChangePage(rememberPageNavigation(navigator)) }
     }
   }
 }
