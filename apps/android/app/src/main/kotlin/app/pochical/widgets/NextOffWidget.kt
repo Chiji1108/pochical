@@ -32,10 +32,11 @@ import app.pochical.calendar.weekdayName
  * 次の休み (/design's NextOffSmall; spec/widgets.md, Views): how soon the next day off comes, in
  * the 2×2 alone.
  */
-class NextOffWidget : PochicalWidget() {
+class NextOffWidget : PochicalWidget(Choosing.PeopleAndGroups) {
   @Composable
   override fun Content(drawn: Drawn) {
     val entry = drawn.entry
+    entry.pickAgain?.let { return PickAgain("一緒に休む人", it, drawn) }
     val soonest = if (entry.offs.today) NextOff(entry.today, 0) else entry.offs.next
     // The day off it counts, else today; set to someone or a group, in the group's table.
     val modifier =
@@ -89,11 +90,12 @@ private fun spokenOff(off: NextOff?, drawn: Drawn): String {
     .joinToString(if (english) ", " else "、")
 }
 
-/** The widget's title. */
+/** The widget's title, and the face of who it is set to beside it. */
 @Composable
 private fun OffsHead(text: String, drawn: Drawn) {
   Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
     Words(text, drawn.colors.secondary, 13.sp, modifier = GlanceModifier.defaultWeight())
+    drawn.entry.with?.let { CompanionFace(it, drawn) }
   }
 }
 

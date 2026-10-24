@@ -2,7 +2,7 @@ package app.pochical.widgets
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
+import androidx.core.net.toUri
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
@@ -56,6 +56,12 @@ import app.pochical.mark
 import java.time.LocalDate
 import java.time.YearMonth
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import androidx.datastore.preferences.core.Preferences
+import androidx.glance.appwidget.state.getAppWidgetState
+import androidx.glance.currentState
+import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.glance.LocalSize
@@ -142,7 +148,7 @@ fun groupLink(groupId: String, day: LocalDate? = null) = "pochical://group/$grou
 
 /** Opens the app on [link], as a tap on a widget does. */
 fun open(context: Context, link: String): Action =
-  actionStartActivity(Intent(Intent.ACTION_VIEW, Uri.parse(link), context, MainActivity::class.java))
+  actionStartActivity(Intent(Intent.ACTION_VIEW, link.toUri(), context, MainActivity::class.java))
 
 /** The modifier that opens [link] on a tap. */
 @Composable
@@ -153,10 +159,14 @@ fun GlanceModifier.spoken(day: WidgetDay, words: WidgetWords): GlanceModifier = 
 
 /**
  * Every kind of widget: the person's own days, read from the kit's database when the widget is
- * drawn, in the size the launcher gives it (Glance's LocalSize), the next midnight asked for.
+ * drawn and again as they change while Glance keeps its session, in the size the launcher gives it
+ * (Glance's LocalSize), the next midnight asked for. [chooses] is who a widget may be set to
+ * (spec/widgets.md, 次の休み with someone or a group), kept in its Glance state.
  */
-abstract class PochicalWidget : GlanceAppWidget() {
+abstract class PochicalWidget(private val chooses: Choosing = Choosing.Nobody) : GlanceAppWidget() {
   override val sizeMode: SizeMode = SizeMode.Exact
+
+  override val stateDefinition = PreferencesGlanceStateDefinition
 
   override suspend fun provideGlance(context: Context, id: GlanceId) {
     val sources = (context.applicationContext as PochicalApplication).widgetSources
@@ -165,14 +175,27 @@ abstract class PochicalWidget : GlanceAppWidget() {
     // session runs.
     val calendar = sources.calendar.first()
     val settings = sources.settings.first()
+    val firstChoice = choiceIn(getAppWidgetState(context, stateDefinition, id))
+    val firstRead = Companion(firstChoice, firstChoice?.let { sources.values.companion(it, LocalDate.now()).first() })
     WidgetDayReceiver.schedule(context)
     provideContent {
       val shownCalendar by sources.calendar.collectAsState(calendar)
       val shownSettings by sources.settings.collectAsState(settings)
       val today by sources.today.collectAsState(LocalDate.now())
+      val choice = choiceIn(currentState())
+      val read by
+        remember(choice, today) {
+          choice?.let { picked -> sources.values.companion(picked, today).map { Companion(picked, it) } } ?: flowOf(Companion(null, null))
+        }
+          .collectAsState(firstRead)
       val drawn =
-        remember(shownCalendar, shownSettings, today) {
-          Drawn(shownCalendar.widgetEntry(today, shownSettings.week, { it.holidayName(country) != null }), shownSettings)
+        remember(shownCalendar, shownSettings, today, read) {
+          // Read for another choice than the one now kept: the person's own days until it is.
+          val companion = read.companion.takeIf { read.choice == choice }
+          val entry = shownCalendar.widgetEntry(today, shownSettings.week, { it.holidayName(country) != null }, companion)
+          // Picked, but no longer there: what the widget shows changes only when the person changes it.
+          val gone = choice != null && read.choice == choice && companion == null
+          Drawn(entry.copy(pickAgain = choice?.groupId?.takeIf { gone }), shownSettings)
         }
       GlanceTheme {
         Box(GlanceModifier.fillMaxSize().background(drawn.colors.ground).padding(WIDGET_MARGIN)) { Content(drawn) }
@@ -180,7 +203,21 @@ abstract class PochicalWidget : GlanceAppWidget() {
     }
   }
 
+  /** Who the widget is set to, as [state] keeps it; groups themselves only where they may be picked. */
+  private fun choiceIn(state: Preferences): WidgetChoice? =
+    when (chooses) {
+      Choosing.Nobody -> null
+      Choosing.People -> WidgetChoice.of(state[WidgetChoice.KEY]) as? WidgetChoice.Member
+      Choosing.PeopleAndGroups -> WidgetChoice.of(state[WidgetChoice.KEY])
+    }
+
   @Composable protected abstract fun Content(drawn: Drawn)
+
+  /** Who a kind of widget can be set to. */
+  enum class Choosing { Nobody, People, PeopleAndGroups }
+
+  /** Who [choice] is, as last read. */
+  private data class Companion(val choice: WidgetChoice?, val companion: WidgetCompanion?)
 }
 
 /** The room Material keeps between a widget's edge and what is in it. */
