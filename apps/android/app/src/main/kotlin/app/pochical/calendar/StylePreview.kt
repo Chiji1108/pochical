@@ -152,7 +152,7 @@ fun StylePreview(scheme: PreviewScheme, today: LocalDate, modifier: Modifier = M
  * PreviewSchemeSwitch): drawn small, each side a touch target of its own.
  */
 @Composable
-private fun SchemeSwitch(dark: Boolean, enabled: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier = Modifier) {
+fun SchemeSwitch(dark: Boolean, enabled: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier = Modifier) {
   val colors = LocalThemeColors.current
   val label = stringResource(R.string.preview_scheme)
   Row(

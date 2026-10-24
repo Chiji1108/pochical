@@ -44,6 +44,7 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
@@ -293,6 +294,7 @@ fun CalendarScreen(open: (RootPage) -> Unit, hidesTabBar: (Boolean) -> Unit) {
       onThisMonth = { turnTo(YearMonth.from(today)) },
       onThisWeek = { openDay(today) },
       onDone = ::finish,
+      onSave = { open(RootPage.MonthPicture(range.monthAt(pager.settledPage).toString())) },
     )
     WeekdayRow(week, Modifier.padding(horizontal = SCREEN_EDGE).padding(bottom = 12.dp))
     BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
@@ -487,6 +489,7 @@ private fun Heading(
   onThisMonth: () -> Unit,
   onThisWeek: () -> Unit,
   onDone: () -> Unit,
+  onSave: () -> Unit,
 ) {
   var picking by remember { mutableStateOf(false) }
   val colors = LocalThemeColors.current
@@ -527,6 +530,12 @@ private fun Heading(
         colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary),
       ) {
         Text(stringResource(if (dayOpen) R.string.calendar_this_week else R.string.calendar_this_month))
+      }
+    }
+    // The heading's corner holds saving whenever it is wanted; it is never offered by itself.
+    if (!entering && !dayOpen) {
+      IconButton(onClick = onSave) {
+        Icon(painterResource(R.drawable.ic_download), stringResource(R.string.picture), tint = colors.textPrimary)
       }
     }
   }

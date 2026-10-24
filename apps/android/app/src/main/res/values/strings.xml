@@ -6,6 +6,16 @@
   <string name="tab_settings">設定</string>
   <string name="settings_display">表示</string>
   <string name="calendar_settings">カレンダー</string>
+  <string name="picture">画像で保存</string>
+  <string name="picture_label">%1$sのシフトの画像</string>
+  <string name="picture_title">%1$sのシフト</string>
+  <string name="picture_only">画像にだけ使う見た目です。アプリのスタイルは変わりません。</string>
+  <string name="picture_share">共有</string>
+  <string name="picture_save">保存</string>
+  <string name="picture_saved">写真に保存しました</string>
+  <string name="picture_not_saved">保存できませんでした</string>
+  <string name="picture_not_shared">共有できませんでした</string>
+  <string name="picture_app">ポチカル</string>
   <string name="calendar_settings_summary">%1$s曜はじまり・%2$s</string>
   <string name="calendar_names">月と曜日</string>
   <string name="calendar_names_japanese">日本語</string>
