@@ -97,8 +97,9 @@ fun PhotoEditor(
 
   // The app holds the camera permission for reading QR codes, and Android then lets the camera app
   // take a photo for it only once it is granted.
+  var cameraRefused by remember { mutableStateOf(false) }
   val cameraAllowed = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-    if (granted) takePhoto()
+    if (granted) takePhoto() else cameraRefused = true
   }
 
   fun change(action: suspend () -> Unit) {
@@ -164,6 +165,13 @@ fun PhotoEditor(
       cropping = null
       if (jpeg != null) change { onPhoto(jpeg) }
     }
+  }
+  if (cameraRefused) {
+    AlertDialog(
+      onDismissRequest = { cameraRefused = false },
+      confirmButton = { TextButton(onClick = { cameraRefused = false }) { Text(stringResource(R.string.ok)) } },
+      title = { Text(stringResource(R.string.scan_camera_denied)) },
+    )
   }
   if (unreadable) {
     AlertDialog(

@@ -53,6 +53,19 @@ public struct InviteDetails: Hashable, Sendable {
   public var full: Bool
 }
 
+/// Who is in a group as its join screen names them, in the order they
+/// joined (spec/vectors/groups.json, memberLine): with every name there it
+/// gives the count too, so nobody wonders whether the list holds more.
+public func memberLine(_ names: [String]) -> String {
+  let named = 3
+  switch names.count {
+  case 1: return "\(names[0])が参加中"
+  case ...named: return "\(names.joined(separator: "、"))の\(names.count)人が参加中"
+  default:
+    return "\(names.prefix(named - 1).joined(separator: "、"))ほか\(names.count - (named - 1))人が参加中"
+  }
+}
+
 /// Why an invitation cannot be taken up.
 public enum InviteError: Error {
   /// No group uses the code: remade since, or the group is gone.

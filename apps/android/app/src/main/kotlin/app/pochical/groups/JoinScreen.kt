@@ -1,7 +1,10 @@
 package app.pochical.groups
 
 import android.graphics.BitmapFactory
+import android.content.res.Resources
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
+import java.io.IOException
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -39,6 +42,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -73,14 +77,40 @@ import app.pochical.kit.PhotoShelf
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.launch
 
-/** The face a group shows of the person joining it: their usual one, one picked here, or none. */
+/**
+ * The face a group shows of the person joining it: their usual one, one picked here (held on the
+ * device under the id it is sent as, `GroupCalls.holdPhoto`), or none.
+ */
 sealed interface JoinFace {
   data object Usual : JoinFace
 
-  class Picked(val jpeg: ByteArray) : JoinFace
+  data class Held(val photoId: String) : JoinFace
 
   data object None : JoinFace
 }
+
+/**
+ * The choice kept across the activity made anew and the process's death, as the name typed beside
+ * it is: a face removed on purpose must not come back as the usual one. A picked photo is kept by
+ * its held id, its bytes in the app's cache.
+ */
+val JoinFaceSaver: Saver<JoinFace, String> =
+  Saver(
+    save = {
+      when (it) {
+        JoinFace.Usual -> "usual"
+        JoinFace.None -> "none"
+        is JoinFace.Held -> "held:${it.photoId}"
+      }
+    },
+    restore = {
+      when {
+        it == "none" -> JoinFace.None
+        it.startsWith("held:") -> JoinFace.Held(it.removePrefix("held:"))
+        else -> JoinFace.Usual
+      }
+    },
+  )
 
 /**
  * 参加の画面 (/design's JoinScreen), opened by an invitation's link or its QR code: the group, its
@@ -105,7 +135,7 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
   var loads by remember { mutableStateOf(0) }
   // A name of its own for this group; empty follows the usual one.
   var ownName by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
-  var face by remember { mutableStateOf<JoinFace>(JoinFace.Usual) }
+  var face by rememberSaveable(stateSaver = JoinFaceSaver) { mutableStateOf<JoinFace>(JoinFace.Usual) }
   var joining by remember { mutableStateOf(false) }
   var joinError by remember { mutableStateOf<InviteFailure.Reason?>(null) }
   var showingMembers by remember { mutableStateOf(false) }
@@ -126,15 +156,27 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
     }
   }
 
+  /** A photo picked here and let go of, by another, by none, or by closing, goes from the device. */
+  fun letGo(picked: JoinFace) {
+    if (picked is JoinFace.Held) scope.launch { calls.releasePhoto(picked.photoId) }
+  }
+
+  fun close() {
+    letGo(face)
+    onClose()
+  }
+  BackHandler(onBack = ::close)
+
   fun join() {
     joining = true
     scope.launch {
-      // Someone with no usual name yet keeps these as theirs everywhere, which the group then shows
-      // as it shows anyone's usual ones; kept or not, they still join with them.
-      val keptAsUsual = usualName.isEmpty() && keepAsUsual(calls, myName, face)
       try {
         val groupId = calls.join(code, myName)
-        if (!keptAsUsual && !setFace(calls, face, groupId)) {
+        // Once in the group: someone with no usual name yet keeps these as theirs everywhere, which
+        // the group then shows as it shows anyone's usual ones; anyone else's face is the group's.
+        val faced = if (usualName.isEmpty()) keepAsUsual(calls, myName, face) else setFace(calls, face, groupId)
+        (face as? JoinFace.Held)?.let { calls.releasePhoto(it.photoId) }
+        if (!faced) {
           // Said past this screen, which gives way to the group at once.
           Toast.makeText(context, resources.getString(R.string.join_face_failed), Toast.LENGTH_LONG).show()
         }
@@ -150,7 +192,7 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
     topBar = {
       TopAppBar(
         title = {},
-        navigationIcon = { IconButton(onClick = onClose) { Icon(painterResource(R.drawable.ic_close), stringResource(R.string.close)) } },
+        navigationIcon = { IconButton(onClick = ::close) { Icon(painterResource(R.drawable.ic_close), stringResource(R.string.close)) } },
       )
     }
   ) { padding ->
@@ -214,7 +256,10 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
       ownName = ownName,
       onOwnName = { ownName = it },
       face = face,
-      onFace = { face = it },
+      onFace = { chosen ->
+        if (chosen != face) letGo(face)
+        face = chosen
+      },
       usualPhoto = usualPhoto,
       myName = myName,
       onClose = { editingProfile = false },
@@ -259,7 +304,7 @@ private fun Invitation(details: InviteDetails, code: String, onMembers: () -> Un
         }
       }
       Text(
-        memberLine(details.members.map { it.name }),
+        memberLine(LocalResources.current, details.members.map { it.name }),
         Modifier.padding(top = 8.dp),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -271,15 +316,18 @@ private fun Invitation(details: InviteDetails, code: String, onMembers: () -> Un
 
 /**
  * Who is in a group, by name while that stays short (/design's memberLine): with every name there
- * it gives the count too, so nobody wonders whether the list holds more.
+ * it gives the count too, so nobody wonders whether the list holds more (spec/vectors/groups.json,
+ * memberLine).
  */
-@Composable
-private fun memberLine(names: List<String>): String =
+fun memberLine(resources: Resources, names: List<String>): String =
   when {
-    names.size == 1 -> stringResource(R.string.join_members_one, names[0])
-    names.size <= 3 -> stringResource(R.string.join_members_few, names.joinToString("、"), names.size)
-    else -> stringResource(R.string.join_members_many, names.take(2).joinToString("、"), names.size - 2)
+    names.size == 1 -> resources.getString(R.string.join_members_one, names[0])
+    names.size <= NAMED_MEMBERS -> resources.getString(R.string.join_members_few, names.joinToString("、"), names.size)
+    else -> resources.getString(R.string.join_members_many, names.take(NAMED_MEMBERS - 1).joinToString("、"), names.size - (NAMED_MEMBERS - 1))
   }
+
+/** How many members the line names, all of them then counted too. */
+private const val NAMED_MEMBERS = 3
 
 /** The invitation could not be read: a link that no longer works, as the site says it, or no connection, to try again. */
 @Composable
@@ -338,10 +386,7 @@ private fun MembersSheet(details: InviteDetails, code: String, onDismiss: () -> 
 @Composable
 private fun JoinFacePicture(face: JoinFace, name: String, usualPhoto: String, size: Dp) {
   when (face) {
-    is JoinFace.Picked -> {
-      val picture = remember(face) { BitmapFactory.decodeByteArray(face.jpeg, 0, face.jpeg.size)?.asImageBitmap() }
-      if (picture != null) Image(picture, null, Modifier.size(size).clip(CircleShape), contentScale = ContentScale.Crop)
-    }
+    is JoinFace.Held -> PhotoPicture(face.photoId, PhotoShelf.Mine, Modifier.size(size).clip(CircleShape))
     JoinFace.Usual -> MemberAvatar(name, usualPhoto, PhotoShelf.Mine, size, me = true)
     JoinFace.None -> MemberAvatar(name, "", null, size, me = true)
   }
@@ -365,6 +410,9 @@ private fun JoinProfileDialog(
   myName: String,
   onClose: () -> Unit,
 ) {
+  val calls = LocalGroupCalls.current
+  var photoFailed by remember { mutableStateOf(false) }
+  if (photoFailed) FailedDialog(stringResource(R.string.mark_photo_failed)) { photoFailed = false }
   Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
     Scaffold(
       topBar = {
@@ -375,11 +423,17 @@ private fun JoinProfileDialog(
       }
     ) { padding ->
       Column(Modifier.padding(padding).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        val hasPhoto = face is JoinFace.Picked || (face == JoinFace.Usual && usualPhoto.isNotEmpty())
+        val hasPhoto = face is JoinFace.Held || (face == JoinFace.Usual && usualPhoto.isNotEmpty())
         PhotoEditor(
           label = stringResource(R.string.photo_edit),
           shape = PhotoCropShape.Round,
-          onPhoto = { onFace(JoinFace.Picked(it)) },
+          onPhoto = {
+            try {
+              onFace(JoinFace.Held(calls.holdPhoto(it)))
+            } catch (_: IOException) {
+              photoFailed = true
+            }
+          },
           modifier = Modifier.padding(top = 16.dp),
           onUsual = if (face == JoinFace.Usual || usualPhoto.isEmpty()) null else ({ onFace(JoinFace.Usual) }),
           onRemove = if (hasPhoto) ({ onFace(JoinFace.None) }) else null,
@@ -409,7 +463,7 @@ private fun JoinProfileDialog(
  */
 private suspend fun keepAsUsual(calls: app.pochical.kit.GroupCalls, name: String, face: JoinFace): Boolean =
   try {
-    val photoId = if (face is JoinFace.Picked) calls.sendPhoto(face.jpeg, PhotoShelf.Mine) else ""
+    val photoId = (face as? JoinFace.Held)?.photoId?.also { calls.sendHeldPhoto(it, PhotoShelf.Mine) }.orEmpty()
     calls.setProfile(name, photoId)
     true
   } catch (e: CancellationException) {
@@ -423,7 +477,10 @@ private suspend fun setFace(calls: app.pochical.kit.GroupCalls, face: JoinFace, 
   try {
     when (face) {
       JoinFace.Usual -> Unit
-      is JoinFace.Picked -> calls.setGroupPhoto(groupId, usual = false, photoId = calls.sendPhoto(face.jpeg, PhotoShelf.Group(groupId)))
+      is JoinFace.Held -> {
+        calls.sendHeldPhoto(face.photoId, PhotoShelf.Group(groupId))
+        calls.setGroupPhoto(groupId, usual = false, photoId = face.photoId)
+      }
       JoinFace.None -> calls.setGroupPhoto(groupId, usual = false)
     }
     true

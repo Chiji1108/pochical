@@ -34,6 +34,7 @@ import app.pochical.design.TextLimits
 import app.pochical.kit.GroupMarkValue
 import app.pochical.kit.MarkPhotoGone
 import app.pochical.kit.NewGroupRequest
+import app.pochical.kit.PhotoShelf
 import app.pochical.kit.guessGroupMark
 import app.pochical.kit.nextColor
 import kotlin.coroutines.cancellation.CancellationException
@@ -86,7 +87,7 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
     scope.launch {
       try {
         // A picked photo goes up first, for the group to take.
-        if (request.mark.photoId.isNotEmpty()) calls.sendMarkPhoto(request.mark.photoId)
+        if (request.mark.photoId.isNotEmpty()) calls.sendHeldPhoto(request.mark.photoId, PhotoShelf.Mine)
         // Still making as the page gives way to the group, so 作る is not there to tap again.
         onMade(calls.create(request))
         return@launch

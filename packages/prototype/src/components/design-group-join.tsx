@@ -334,7 +334,7 @@ const shownFaces = 5;
 
 // It opens the list of them, so with every name there it gives the count
 // too, and nobody wonders whether the list holds more.
-function memberLine(names: string[]) {
+export function memberLine(names: string[]) {
   if (names.length === 1) {
     return `${names[0]}が参加中`;
   }

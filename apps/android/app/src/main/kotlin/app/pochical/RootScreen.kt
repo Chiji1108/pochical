@@ -43,7 +43,7 @@ import java.time.LocalDate
 fun RootScreen(navigator: RootNavigator) {
   // An invitation opened from a link comes over whatever shows.
   val invites = LocalOpenedInvites.current
-  LaunchedEffect(invites.pending) { invites.consume()?.let { navigator.open(RootPage.Join(it)) } }
+  LaunchedEffect(invites.pending) { invites.consume()?.let { navigator.openOnce(RootPage.Join(it)) } }
   NavDisplay(
     backStack = navigator.routes,
     onBack = navigator::back,
@@ -61,13 +61,8 @@ fun RootScreen(navigator: RootNavigator) {
         }
       RootPage.Scan ->
         NavEntry(route) {
-          ScanScreen(
-            onClose = rememberPageNavigation(navigator)::back,
-            onInvite = { code ->
-              navigator.back()
-              navigator.open(RootPage.Join(code))
-            },
-          )
+          val navigation = rememberPageNavigation(navigator)
+          ScanScreen(onClose = navigation::back, onInvite = { navigation.replace(RootPage.Join(it)) })
         }
       is RootPage.Join ->
         NavEntry(route) {

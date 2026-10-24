@@ -55,6 +55,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.design.Radius
@@ -114,6 +116,10 @@ fun ScanScreen(onClose: () -> Unit, onInvite: (String) -> Unit) {
     asked = true
   }
   LaunchedEffect(Unit) { if (!camera) permission.launch(Manifest.permission.CAMERA) }
+  // Allowed in the system's settings meanwhile, the camera starts as the screen comes back.
+  LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+    if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) camera = true
+  }
   val pick =
     rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
       if (uri == null) return@rememberLauncherForActivityResult

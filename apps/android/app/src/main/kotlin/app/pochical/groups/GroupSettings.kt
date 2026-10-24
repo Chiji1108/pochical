@@ -242,7 +242,7 @@ private fun EditForm(group: GroupRow, onBack: () -> Unit) {
     scope.launch {
       try {
         // A newly picked photo goes up first, for the group to take.
-        if (shown.photoId.isNotEmpty() && shown.photoId != group.mark.photoId) calls.sendMarkPhoto(shown.photoId)
+        if (shown.photoId.isNotEmpty() && shown.photoId != group.mark.photoId) calls.sendHeldPhoto(shown.photoId, PhotoShelf.Mine)
         calls.rename(groupId, trimmed, shown)
         onBack()
       } catch (e: CancellationException) {

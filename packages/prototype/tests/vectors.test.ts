@@ -26,6 +26,7 @@ import together from "../../../spec/vectors/together.json";
 import unread from "../../../spec/vectors/unread.json";
 import widgets from "../../../spec/vectors/widgets.json";
 import { bytesOf } from "../src/components/design-chat-photos";
+import { memberLine } from "../src/components/design-group-join";
 import { guessGroupMark } from "../src/components/design-group-settings";
 import { periodTitleOf } from "../src/components/design-month-name";
 import {
@@ -599,6 +600,11 @@ describe("spec/vectors/groups.json", () => {
           ? { emoji: expected.emoji, kind: "emoji" }
           : { color: expected.color, kind: "letter", text: expected.letter }
       );
+    });
+  }
+  for (const { name, names, expected } of groupVectors.memberLine) {
+    test(`memberLine: ${name}`, () => {
+      expect(memberLine(names)).toBe(expected);
     });
   }
 });

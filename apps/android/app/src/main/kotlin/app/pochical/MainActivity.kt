@@ -17,6 +17,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import app.pochical.calendar.LocalOwnDays
 import app.pochical.calendar.OwnDays
+import android.content.Intent
 import app.pochical.groups.LocalGroupCalls
 import app.pochical.groups.LocalOpenedInvites
 import app.pochical.groups.OpenedInvites
@@ -50,7 +51,8 @@ class MainActivity(
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
     // Made again, the activity's navigation keeps the join screen the first intent opened.
-    if (savedInstanceState == null) invites.take(intent)
+    // From Recents, Android hands the intent the task began with again: no link was opened now.
+    if (savedInstanceState == null && intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY == 0) invites.take(intent)
     addOnNewIntentListener(invites::take)
     lifecycleScope.launch {
       // Not cancelled with the activity, so a sample is never left half put in; read after it, so

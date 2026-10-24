@@ -100,6 +100,17 @@ class RootNavigator(
     pages.add(page)
   }
 
+  /** Opens `page` unless it is the one on top already, as a link opened twice is. */
+  fun openOnce(page: RootPage) {
+    if (pages.lastOrNull() != page) pages.add(page)
+  }
+
+  /** Puts `page` in place of the top page, as a code read opens its join screen in the scanner's place. */
+  fun replace(page: RootPage) {
+    if (pages.isNotEmpty()) pages.removeAt(pages.lastIndex)
+    pages.add(page)
+  }
+
   /** Goes to `tab`, as a tap on it does; the pages, none while the tab bar shows, stay. */
   fun select(tab: RootTab) {
     this.tab = tab
@@ -144,6 +155,8 @@ class PageNavigation(private val navigator: RootNavigator, private val lifecycle
     get() = navigator.tab
 
   fun open(page: RootPage) = whenSettled { navigator.open(page) }
+
+  fun replace(page: RootPage) = whenSettled { navigator.replace(page) }
 
   fun select(tab: RootTab) = whenSettled { navigator.select(tab) }
 

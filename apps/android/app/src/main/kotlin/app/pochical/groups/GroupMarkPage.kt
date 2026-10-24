@@ -106,7 +106,7 @@ fun GroupMarkPage(name: String, mark: GroupMarkValue, onMark: (GroupMarkValue) -
           shape = PhotoCropShape.Square,
           onPhoto = { jpeg ->
             try {
-              onMark(GroupMarkValue(photoId = calls.holdMarkPhoto(jpeg)))
+              onMark(GroupMarkValue(photoId = calls.holdPhoto(jpeg)))
               kind = null
             } catch (_: java.io.IOException) {
               photoFailed = true
