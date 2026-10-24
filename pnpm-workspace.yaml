@@ -1,0 +1,23 @@
+packages:
+  - apps/admin
+  - apps/design
+  - apps/try
+  - apps/server
+  - apps/web
+  - design
+  - packages/*
+
+# The scripts' runner, the test runner and Node's types, at one version for every
+# workspace that uses them.
+catalog:
+  "@types/node": 24.19.2
+  tsx: ^4.23.15
+  vitest: ~5.0.5
+
+# Each of these installs its binary from a platform's optional dependency, and
+# lefthook's hooks come from the root's prepare, so none runs its own script.
+allowBuilds:
+  "@parcel/watcher": false
+  esbuild: false
+  lefthook: false
+  workerd: false

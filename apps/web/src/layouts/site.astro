@@ -6,7 +6,7 @@ import { SHARE_IMAGE, site } from "@pochical/prototype/lib/brand";
 import { ArrowUpRight } from "lucide-react";
 
 import Link from "../components/link.astro";
-import { siteOrigin } from "../lib/site";
+import { designUrl, siteOrigin, sourceUrl } from "../lib/site";
 import type { PageImage } from "../lib/site";
 
 import "../styles.css";
@@ -96,6 +96,13 @@ const fullTitle = `${meta?.title} | ポチカル`;
           <Link href="/privacy">プライバシーポリシー</Link>
           <Link href="/terms">利用規約</Link>
           <Link href="/account/delete">アカウント削除</Link>
+          <a href={sourceUrl} rel="noopener noreferrer" target="_blank">
+            ソースコード（GitHub）
+            <ArrowUpRight aria-hidden="true" size={12} />
+          </a>
+          <a href={designUrl} rel="noopener noreferrer" target="_blank">
+            デザイン <ArrowUpRight aria-hidden="true" size={12} />
+          </a>
         </nav>
       </div>
       <div class="footer-bottom">

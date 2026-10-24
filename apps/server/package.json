@@ -1,19 +1,20 @@
 {
   "name": "@pochical/server",
   "private": true,
+  "license": "PolyForm-Strict-1.0.0",
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "cf-typegen": "rm -f worker-configuration.d.ts && wrangler types",
-    "auth:schema": "bunx @better-auth/cli@1 generate --config better-auth.config.ts --output src/db/auth-schema.ts -y",
+    "auth:schema": "pnpm dlx @better-auth/cli@1 generate --config better-auth.config.ts --output src/db/auth-schema.ts -y",
     "db:generate": "drizzle-kit generate",
     "group-do:generate": "drizzle-kit generate --config drizzle.group-do.config.ts",
     "user-do:generate": "drizzle-kit generate --config drizzle.user-do.config.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.tools.json",
     "test": "vitest run",
-    "check": "bun run --cwd ../.. check",
-    "fix": "bun run --cwd ../.. fix"
+    "check": "pnpm --dir ../.. check",
+    "fix": "pnpm --dir ../.. fix"
   },
   "dependencies": {
     "@better-auth/core": "1.7.12",
@@ -27,11 +28,11 @@
   "devDependencies": {
     "@bufbuild/protoc-gen-es": "2.16.0",
     "@cloudflare/vitest-plugin": "1.4.6",
-    "@types/node": "24.19.2",
+    "@types/node": "catalog:",
     "drizzle-kit": "^0.31.11",
     "typescript": "~7.0.2",
     "vite": "^8.0.0",
-    "vitest": "~5.0.5",
+    "vitest": "catalog:",
     "wrangler": "^4.151.3"
   }
 }

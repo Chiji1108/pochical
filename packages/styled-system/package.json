@@ -1,6 +1,7 @@
 {
   "name": "@pochical/styled-system",
   "private": true,
+  "license": "PolyForm-Strict-1.0.0",
   "type": "module",
   "exports": {
     "./base.css": "./base.css",
@@ -12,7 +13,7 @@
   },
   "scripts": {
     "codegen": "panda codegen --clean",
-    "prepare": "bun run codegen",
+    "prepare": "pnpm run codegen",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

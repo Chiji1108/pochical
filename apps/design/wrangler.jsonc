@@ -1,8 +1,9 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  // The design documents and /demo at design.pochical.app, behind
-  // Cloudflare Access (its Access tab) and kept out of search
-  // (src/routes/__root.tsx).
+  // The design documents and /demo at design.pochical.app, open to
+  // everyone and kept out of search (public/robots.txt and
+  // src/routes/__root.tsx), so a search for Pochical finds pochical.app
+  // rather than them.
   "name": "pochical-design",
   "main": "@tanstack/react-start/server-entry",
   "compatibility_date": "2026-09-24",
@@ -12,9 +13,8 @@
   // Builds (`wrangler preview`), which needs this block, even empty.
   "previews": {},
   "routes": [{ "pattern": "design.pochical.app", "custom_domain": true }],
-  // Kept beside the custom domain, behind the same Access, for each pull
-  // request's preview: with routes set, Wrangler turns workers.dev off
-  // unless told.
+  // Kept beside the custom domain for each pull request's preview: with
+  // routes set, Wrangler turns workers.dev off unless told.
   "workers_dev": true,
   "preview_urls": true,
 }
