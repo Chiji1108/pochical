@@ -16,7 +16,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
-// newJob comes with 新しい仕事にする.
 @Serializable
 private data class PatternsVectors(
   val saved: List<Saved>,
@@ -26,6 +25,7 @@ private data class PatternsVectors(
   val readyCopies: List<ReadyCopies>,
   val refused: List<Refused>,
   val fits: List<Fits>,
+  val newJob: List<NewJobCase>,
 ) {
   @Serializable
   data class Wire(
@@ -44,6 +44,36 @@ private data class PatternsVectors(
   }
 
   @Serializable data class Fits(override val name: String, val pattern: Wire, val expected: Boolean) : VectorCase
+
+  @Serializable
+  data class Full(
+    val id: String,
+    val name: String,
+    val countsAsOff: Boolean,
+    val emoji: String,
+    val icon: String,
+    val color: Int,
+    val time: List<String>? = null,
+    val nextDay: String? = null,
+    val archived: Boolean = false,
+  ) {
+    val row
+      get() = PatternRow(id, name, emoji, "", icon, color, time?.get(0), time?.get(1), countsAsOff, nextDay, archived)
+  }
+
+  @Serializable data class Listed3(val id: String, val nextDay: String? = null, val archived: Boolean = false)
+
+  @Serializable data class Job(val patterns: List<Listed3>, val sequence: List<String>)
+
+  @Serializable
+  data class NewJobCase(
+    override val name: String,
+    val own: List<Full>,
+    val incoming: List<Full>,
+    val sequence: List<String>,
+    val usedBefore: List<String>,
+    val expected: Job,
+  ) : VectorCase
 
   @Serializable
   data class Saved(override val name: String, val patterns: List<String>, val id: String, val expected: List<String>) : VectorCase
@@ -171,6 +201,14 @@ class PatternsTest {
     assertEquals(emptyList<OutboxEdit>(), database.write { outbox() })
     database.close()
   }
+
+  @Test
+  fun newJob() =
+    vectors.newJob.checkEach({ it.expected }) { case ->
+      var fresh = 0
+      val job = patternsForJob(case.own.map { it.row }, case.incoming.map { it.row }, case.sequence, case.usedBefore::contains) { "new-${++fresh}" }
+      PatternsVectors.Job(job.patterns.map { PatternsVectors.Listed3(it.id, it.nextDay, it.archived) }, job.sequence)
+    }
 
   @Test
   fun anOrderInUseRefusesArchivingAndDeletingItsPatternAndWritesNothing() = runTest {

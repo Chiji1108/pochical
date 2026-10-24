@@ -3,7 +3,7 @@ package app.pochical.kit
 import app.pochical.v1.Change
 import app.pochical.v1.DayField
 import app.pochical.v1.Pattern
-import app.pochical.v1.RepeatOrder
+import app.pochical.v1.RepeatOrder as WireOrder
 import app.pochical.v1.change
 import app.pochical.v1.coworkerOrder
 import app.pochical.v1.coworkerValue
@@ -104,14 +104,7 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
     if (pattern.archived && refusesArchiving(id, saved?.archived == true, repeatOrders().map { it.order })) {
       return@write PatternRefusal.Repeating
     }
-    val clock = nextClock(now())
-    edit(change {
-      this.pattern = patternValue {
-        this.id = id
-        this.pattern = pattern
-        hlc = clock
-      }
-    })
+    putPattern(id, pattern)
     if (saved == null) orderPatterns(patternIds() - id + id)
     null
   }
@@ -123,13 +116,7 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
    */
   suspend fun deletePattern(id: String): PatternRefusal? = database.write {
     if (repeats(id, repeatOrders().map { it.order })) return@write PatternRefusal.Repeating
-    val clock = nextClock(now())
-    edit(change {
-      pattern = patternValue {
-        this.id = id
-        hlc = clock
-      }
-    })
+    putPattern(id, null)
     orderPatterns(patternIds() - id)
     null
   }
@@ -142,7 +129,79 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
    * takes back the days' own shifts and times from there set before it (spec/sync-protocol.md,
    * Repeating orders).
    */
-  suspend fun setRepeatOrders(orders: List<RepeatOrder>, clearFrom: String? = null) = database.write {
+  suspend fun setRepeatOrders(orders: List<WireOrder>, clearFrom: String? = null) = database.write { writeOrders(orders, clearFrom) }
+
+  /**
+   * 繰り返し's periods: [order] put in on its start among the others, in place of one that started
+   * that day, the rest kept. The days the person entered stay over it.
+   */
+  suspend fun putOrder(order: RepeatOrder) = database.write {
+    writeOrders(ordersPutting(repeatOrders().map { it.order }, order).map { it.wire })
+  }
+
+  /**
+   * Moves the period starting on [from] to start on [to], its first shift staying on the day it fell
+   * on. A start not between those of the periods before and after it is refused, false, and nothing
+   * is written, so no period runs over another.
+   */
+  suspend fun moveOrder(from: LocalDate, to: LocalDate): Boolean = database.write {
+    val orders = repeatOrders().map { it.order }
+    val index = orders.indexOfFirst { it.start == from }
+    if (index < 0 || !startFits(orders, index, to)) return@write false
+    val order = orders[index]
+    if (to != from) writeOrders(ordersPutting(orders, order.copy(start = to, anchor = order.anchor ?: order.start), replacing = from).map { it.wire })
+    true
+  }
+
+  /** Takes out the period starting on [start], the one before running on. */
+  suspend fun removeOrder(start: LocalDate) = database.write {
+    writeOrders(ordersRemoving(repeatOrders().map { it.order }, start).map { it.wire })
+  }
+
+  /**
+   * Turns 祝日は休みにする on or off for the period starting on [start], holidays taking the pattern
+   * [holidaySetting] gives; with none in use that counts as off it cannot be turned on, but it can
+   * always be turned off (spec/shift-patterns.md, Holidays).
+   */
+  suspend fun setHolidaysOff(on: Boolean, picked: String? = null, start: LocalDate) = database.write {
+    val orders = repeatOrders().map { it.order }
+    val order = orders.find { it.start == start } ?: return@write
+    val daysOff = patterns().filter { it.countsAsOff && !it.archived }.map { it.id }
+    val setting = holidaySetting(daysOff, order.holidaysOff, order.holidayShift, picked)
+    if (on && !order.holidaysOff && !setting.canTurnOn) return@write
+    // Turned off, it keeps the pattern holidays took, so turned on again it takes it again.
+    val changed = order.copy(holidaysOff = on, holidayShift = setting.shift ?: order.holidayShift)
+    writeOrders(ordersPutting(orders, changed).map { it.wire })
+  }
+
+  /**
+   * 新しい仕事にする (spec/shift-patterns.md, Changing jobs): [incoming] take over the patterns from
+   * [start], a pattern of the person's still on a day before it staying after them, archived; and
+   * [sequence] repeats from [start] counted from [anchor], taking the days from there back from the
+   * person's own. An empty sequence ends repeating there.
+   */
+  suspend fun changeJob(
+    incoming: List<PatternRow>,
+    sequence: List<String>,
+    start: LocalDate,
+    anchor: LocalDate,
+    holidayCountry: String,
+  ) = database.write {
+    val shownBefore = shownSoFar(through = start.minusDays(1)).mapTo(HashSet()) { it.shift }
+    val job = patternsForJob(patterns(), incoming, sequence, usedBefore = shownBefore::contains, newId = ::newId)
+    val own = patterns()
+    val kept = job.patterns.mapTo(HashSet()) { it.id }
+    for (pattern in own) if (pattern.id !in kept) putPattern(pattern.id, null)
+    for (pattern in job.patterns) if (pattern !in own) putPattern(pattern.id, pattern.wire)
+    orderPatterns(job.patterns.map { it.id })
+    val byId = job.patterns.associateBy { it.id }
+    val offShift = holidayShift(job.patterns.filter { it.countsAsOff && !it.archived }.map { it.id })
+    val holidaysOff = offShift != null && holidaysOffByDefault(job.sequence, anchor) { byId[it]?.countsAsOff == true }
+    val order = RepeatOrder(job.sequence, start, anchor, holidaysOff, offShift.takeIf { holidaysOff }, holidayCountry)
+    writeOrders(ordersAdding(repeatOrders().map { it.order }, order).map { it.wire }, clearFrom = start.toString())
+  }
+
+  private suspend fun SyncDao.writeOrders(orders: List<WireOrder>, clearFrom: String? = null) {
     val clock = nextClock(now())
     edit(change {
       repeatOrders = repeatOrders {
@@ -150,6 +209,18 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
         hlc = clock
       }
     }, clearFrom)
+  }
+
+  /** Keeps [pattern] under [id], or deletes it with null, kept as a tombstone. */
+  private suspend fun SyncDao.putPattern(id: String, pattern: Pattern?) {
+    val clock = nextClock(now())
+    edit(change {
+      this.pattern = patternValue {
+        this.id = id
+        if (pattern != null) this.pattern = pattern
+        hlc = clock
+      }
+    })
   }
 
   /**

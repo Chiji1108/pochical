@@ -16,6 +16,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.serialization.NavBackStackSerializer
+import app.pochical.repeat.RepeatMode
 import kotlinx.serialization.Serializable
 
 // The app's one navigation, as iOS's RootNavigation: every page is pushed
@@ -60,6 +61,21 @@ sealed interface RootPage : RootRoute, NavKey {
 
   /** パターンを編集 for the pattern `id`, or with `isNew` a pattern made from scratch under that id. */
   @Serializable data class PatternEditor(val id: String, val isNew: Boolean = false) : RootPage
+
+  /** 繰り返し, from 設定. */
+  @Serializable data object Repeat : RootPage
+
+  /** The period of 繰り返し starting on `start` ("YYYY-MM-DD"). */
+  @Serializable data class RepeatPeriod(val start: String) : RootPage
+
+  /** An order typed on the calendar, set as `mode` says. */
+  @Serializable data class RepeatEditor(val mode: RepeatMode) : RootPage
+
+  /** 繰り返しをやめる, from 繰り返し. */
+  @Serializable data object StopRepeat : RootPage
+
+  /** 新しい仕事にする, from シフトパターン. */
+  @Serializable data object JobChange : RootPage
 }
 
 /**

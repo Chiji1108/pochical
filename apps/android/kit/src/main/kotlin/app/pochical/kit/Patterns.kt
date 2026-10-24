@@ -95,6 +95,36 @@ fun ReadyPattern.personsCopy(keeping: Set<String>): PatternRow =
 fun readyCopies(ids: List<String>, keeping: Set<String> = ids.toSet()): List<PatternRow> =
   ids.mapNotNull { id -> ReadyPatterns.all.find { it.id == id }?.personsCopy(keeping) }
 
+/** The patterns and order a new job brings, once its patterns take over the person's. */
+data class NewJob(val patterns: List<PatternRow>, val sequence: List<String>)
+
+/**
+ * The patterns after changing jobs (spec/shift-patterns.md, Changing jobs; spec/vectors/patterns.json,
+ * newJob): [incoming] take over [own], and an old one still on a day before the switch ([usedBefore])
+ * stays after them, archived. A ready-made one the person changed, still on those days, keeps its
+ * id; the new job's then comes in under a fresh one ([newId]), which [sequence] and next days use.
+ */
+fun patternsForJob(
+  own: List<PatternRow>,
+  incoming: List<PatternRow>,
+  sequence: List<String>,
+  usedBefore: (String) -> Boolean,
+  newId: () -> String,
+): NewJob {
+  val renamed =
+    incoming
+      .filter { pattern -> own.find { it.id == pattern.id }?.let { theirs -> usedBefore(theirs.id) && !theirs.isSame(pattern) } == true }
+      .associate { it.id to newId() }
+  val renameOf = { id: String -> renamed[id] ?: id }
+  val coming = incoming.map { it.copy(id = renameOf(it.id), nextDay = it.nextDay?.let(renameOf)) }
+  // Kept for its days, but archived: the old job's keys go.
+  val kept = own.filter { pattern -> coming.none { it.id == pattern.id } && usedBefore(pattern.id) }.map { it.copy(archived = true) }
+  return NewJob(coming + kept, sequence.map(renameOf))
+}
+
+/** Whether two patterns would show and count a day the same way, in use or not. */
+private fun PatternRow.isSame(other: PatternRow): Boolean = this == other.copy(id = id, archived = archived)
+
 /**
  * Whether one of [orders], in their timeline's order, in use or to come on [today] puts the pattern
  * on days, in its sequence or on holidays: it cannot be deleted until that order changes. One only
@@ -136,14 +166,7 @@ fun markIconSections(query: String): List<MarkIconNames.Section> {
  * first day either reaches through the last own day or the latest order's start, past which only
  * own days could show one the order in use does not repeat.
  */
-suspend fun AppDatabase.daysShowing(id: String): Int = write {
-  // In one transaction, so a change sync takes meanwhile counts whole or not at all.
-  val days = days("0000-01-01", "9999-12-31")
-  val orders = repeatOrders()
-  val edges = days.map { LocalDate.parse(it.date) } + orders.map { LocalDate.parse(it.start) }
-  val first = edges.minOrNull() ?: return@write 0
-  OwnCalendar.of(days, patterns(), orders).shown(first, edges.max()).values.count { it.shift == id }
-}
+suspend fun AppDatabase.daysShowing(id: String): Int = write { shownSoFar().count { it.shift == id } }
 
 private const val KATAKANA_TO_HIRAGANA = 0x60
 

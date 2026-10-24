@@ -2,7 +2,7 @@ import {
   dateKey,
   defaultHolidaysOff,
   giveDaysToOrder,
-  holidayShiftOf,
+  holidayChoiceOf,
   withOrder,
   withOrderPut,
   withoutOrder,
@@ -36,12 +36,19 @@ export function useWorkChanges(schedule: Schedule) {
           rule.anchor ?? rule.start,
           bookOf(patterns)
         ));
-    const holidayShift = holidaysOff
-      ? holidayShiftOf(patternsInUse(patterns), rule.holidayShift)
-      : undefined;
+    // The pattern the period keeps stays, even one no longer counting as off.
+    const { shift: holidayShift } = holidayChoiceOf(
+      patternsInUse(patterns),
+      holidaysOff,
+      rule.holidayShift
+    );
     // Off only with a pattern for them to take.
     return rule.sequence.length > 0
-      ? { ...rule, holidayShift, holidaysOff: holidayShift !== undefined }
+      ? {
+          ...rule,
+          holidayShift,
+          holidaysOff: holidaysOff && holidayShift !== undefined,
+        }
       : rule;
   }
   function fillRule(rule: RepeatRule, patterns = ownPatterns) {

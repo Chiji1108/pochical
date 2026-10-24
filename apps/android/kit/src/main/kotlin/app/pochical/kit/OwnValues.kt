@@ -7,6 +7,7 @@ import app.pochical.v1.Hlc
 import app.pochical.v1.Pattern
 import app.pochical.v1.RepeatOrder
 import app.pochical.v1.change
+import app.pochical.v1.pattern
 import app.pochical.v1.coworkerOrder
 import app.pochical.v1.patternOrder
 import app.pochical.v1.repeatOrders
@@ -228,6 +229,22 @@ internal fun Pattern.row(id: String) =
     nextDay = if (hasNextDay()) nextDay else null,
     archived = archived,
   )
+
+/** The pattern as the wire carries it, its id aside. */
+internal val PatternRow.wire: Pattern
+  get() =
+    pattern {
+      name = this@wire.name
+      emoji = this@wire.emoji
+      symbol = this@wire.symbol
+      icon = this@wire.icon
+      color = this@wire.color
+      this@wire.start?.let { start = it }
+      this@wire.end?.let { end = it }
+      countsAsOff = this@wire.countsAsOff
+      this@wire.nextDay?.let { nextDay = it }
+      archived = this@wire.archived
+    }
 
 internal fun RepeatOrder.row(position: Int) =
   RepeatOrderRow(

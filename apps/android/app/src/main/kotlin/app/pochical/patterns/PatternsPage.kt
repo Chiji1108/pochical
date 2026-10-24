@@ -139,6 +139,15 @@ fun PatternsPage(navigation: PageNavigation) {
           }
           item { Footnote(stringResource(R.string.patterns_archived_note)) }
         }
+        // Choosing the patterns again with the repeat, for a new job.
+        item { SectionHeader(stringResource(R.string.job)) }
+        item {
+          ListItem(
+            headlineContent = { Text(stringResource(R.string.job_change)) },
+            supportingContent = { Text(stringResource(R.string.job_change_note)) },
+            modifier = Modifier.clickable { navigation.open(RootPage.JobChange) },
+          )
+        }
       }
     }
   }

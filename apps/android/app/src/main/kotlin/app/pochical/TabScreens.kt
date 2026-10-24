@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.pochical.patterns.PatternsRow
+import app.pochical.repeat.RepeatRow
 
 /** グループ, which heads itself (the group's hub comes with sync). */
 @Composable
@@ -35,6 +36,7 @@ fun SettingsScreen(open: (RootPage) -> Unit) {
       item { AccountRow(open) }
       item { SectionHeader(stringResource(R.string.settings_shifts)) }
       item { PatternsRow(open) }
+      item { RepeatRow(open) }
       item { SectionHeader(stringResource(R.string.settings_display)) }
       item {
         ListItem(
