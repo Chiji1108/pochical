@@ -49,7 +49,8 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { content: "width=device-width, initial-scale=1", name: "viewport" },
-      // Design documents, not pages for search.
+      // Design documents, open to everyone but not pages for search,
+      // which leads to pochical.app instead (public/robots.txt too).
       { content: "noindex, nofollow", name: "robots" },
     ],
   }),
