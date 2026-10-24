@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 設定 › 通知 › リマインド (spec/calendar.md, Reminders; /design's RemindersPage). -->
+<resources>
+  <string name="reminders">リマインド</string>
+  <!-- 設定's row: what arrives, the one reminder on, or how many. -->
+  <string name="reminders_count">%1$d件</string>
+  <string name="reminders_add">リマインドを追加</string>
+  <string name="reminder_edit">リマインドを編集</string>
+  <!-- A row's line under its name: when it next goes off, and for which shift. -->
+  <string name="reminder_next">次は %1$s・%2$s</string>
+  <string name="reminder_none_ahead">この先、届くシフトがありません</string>
+  <!-- The shifts it goes off for, when not all, for a screen reader. -->
+  <string name="reminder_only">%1$sだけ</string>
+
+  <!-- The editor. -->
+  <string name="reminder_day_before">前日</string>
+  <string name="reminder_before_start">開始前</string>
+  <string name="reminder_time">時刻</string>
+  <string name="reminder_start">シフトの開始</string>
+  <string name="reminder_minutes_before">%1$s前</string>
+  <string name="reminder_shifts">届くシフト</string>
+  <string name="reminder_next_sample">次の通知・%1$s</string>
+  <string name="reminder_sample">通知の例</string>
+  <string name="reminder_delete">このリマインドを削除</string>
+  <string name="reminder_delete_ask">このリマインドを削除しますか？</string>
+
+  <!-- Over the page while the system may bring a reminder late: Android's exact alarms not allowed. -->
+  <string name="reminder_exact">時刻ちょうどに届けるには</string>
+  <string name="reminder_exact_about">「アラームとリマインダー」を許可すると、リマインドが時刻どおりに届きます。許可しないと、1時間ほど遅れて届くことがあります。</string>
+  <string name="reminder_exact_allow">許可する</string>
+
+  <!-- The offer, once, the first time shifts are entered. -->
+  <string name="reminder_offer">前の晩に、明日のシフトをお知らせしますか？</string>
+  <string name="reminder_offer_about">%1$sに通知が届きます。</string>
+  <string name="reminder_offer_later">あとで</string>
+  <string name="reminder_offer_yes">お知らせする</string>
+</resources>

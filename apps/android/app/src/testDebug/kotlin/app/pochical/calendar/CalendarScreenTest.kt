@@ -10,22 +10,24 @@ import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipe
+import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeLeft
 import app.pochical.DeviceSettingsState
 import app.pochical.LocalDeviceSettings
 import app.pochical.PochicalTheme
 import app.pochical.RootPage
 import app.pochical.kit.DeviceSettings
+import app.pochical.notifications.LocalNotificationPermission
+import app.pochical.notifications.NotificationPermission
 import app.pochical.v1.pattern
 import java.time.LocalDate
 import java.time.YearMonth
@@ -38,6 +40,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
@@ -60,6 +63,7 @@ class CalendarScreenTest {
       CompositionLocalProvider(
         LocalDeviceSettings provides DeviceSettingsState(settings) {},
         LocalOwnDays provides days,
+        LocalNotificationPermission provides NotificationPermission(RuntimeEnvironment.getApplication()),
       ) {
         PochicalTheme(settings) { CalendarScreen(open = { opened += it }, hidesTabBar = { tabBarHidden = it }) }
       }

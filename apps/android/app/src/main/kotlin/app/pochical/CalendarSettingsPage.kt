@@ -105,7 +105,7 @@ fun CalendarSettingsPage(onBack: () -> Unit) {
 
 /** Material's segmented buttons, one for each of [options], each read as [spoken] says. */
 @Composable
-private fun <T> Segments(
+internal fun <T> Segments(
   options: List<T>,
   picked: T,
   label: @Composable (T) -> String,

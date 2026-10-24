@@ -47,6 +47,13 @@ data class DeviceSettings(
    * the account: on every device they would go off on each (spec/sync-protocol.md).
    */
   val reminders: List<Reminder> = Reminder.defaults,
+  /** The reminders were offered once, after shifts were first entered; never again, whatever the answer. */
+  val reminderOffered: Boolean = false,
+  /**
+   * A repeating order was set up (新しい仕事にする): it fills the days without ポチポチ入力, so the
+   * calendar offers the reminders as it next shows.
+   */
+  val reminderOfferWaiting: Boolean = false,
   /**
    * Android 13's question whether the app may notify was turned down for good, refused once more
    * after being refused before: only the system's settings turn notifications on now.

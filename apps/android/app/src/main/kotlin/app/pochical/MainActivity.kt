@@ -1,6 +1,7 @@
 package app.pochical
 
 import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -16,14 +17,16 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import app.pochical.calendar.LocalOwnDays
 import app.pochical.calendar.OwnDays
-import android.content.Intent
 import app.pochical.groups.LocalGroupCalls
 import app.pochical.groups.LocalValues
 import app.pochical.kit.DeviceSettings
 import app.pochical.kit.PochicalKit
 import app.pochical.kit.SyncedSettings
-import app.pochical.notifications.LocalPush
+import app.pochical.notifications.LocalNotificationPermission
+import app.pochical.notifications.NotificationPermission
 import app.pochical.notifications.Push
+import app.pochical.reminders.LocalReminderAlarms
+import app.pochical.reminders.ReminderAlarms
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoMap
 import dev.zacsweers.metro.Inject
@@ -41,6 +44,8 @@ class MainActivity(
   private val ownDays: OwnDays,
   private val kit: PochicalKit,
   private val push: Push,
+  private val notificationPermission: NotificationPermission,
+  private val reminderAlarms: ReminderAlarms,
 ) : ComponentActivity() {
   private var settings by mutableStateOf<DeviceSettings?>(null)
   private val appleSignIn = AppleSignIn(this, kit.appleSignIn)
@@ -78,7 +83,8 @@ class MainActivity(
         LocalGroupCalls provides kit.groups,
         LocalValues provides kit.database.values(),
         LocalOpenedLinks provides links,
-        LocalPush provides push,
+        LocalNotificationPermission provides notificationPermission,
+        LocalReminderAlarms provides reminderAlarms,
       ) {
         PochicalTheme(device) { AccountRoot() }
       }
