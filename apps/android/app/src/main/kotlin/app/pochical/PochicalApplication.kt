@@ -10,7 +10,9 @@ import app.pochical.calendar.SyncedDays
 import app.pochical.kit.PochicalKit
 import app.pochical.kit.SyncedSettings
 import app.pochical.kit.deviceSettingsStore
+import app.pochical.kit.ownCalendar
 import app.pochical.notifications.Push
+import app.pochical.reminders.ReminderAlarms
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.DependencyGraph
 import dev.zacsweers.metro.Provides
@@ -21,6 +23,8 @@ import dev.zacsweers.metrox.android.MetroApplication
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 /** What the app holds once for as long as it runs, the activities it makes among them. */
 @DependencyGraph(AppScope::class)
@@ -52,9 +56,23 @@ interface AppGraph : MetroAppComponentProviders {
   fun push(application: Application, kit: PochicalKit): Push =
     Push(application, kit, CoroutineScope(SupervisorJob() + Dispatchers.Default))
 
+  /** The reminders' alarms, read from the days, the device settings and the permission. */
+  @Provides
+  @SingleIn(AppScope::class)
+  fun reminderAlarms(application: Application, kit: PochicalKit, settings: SyncedSettings, push: Push): ReminderAlarms =
+    ReminderAlarms(
+      application,
+      kit.database.values().ownCalendar(),
+      settings.settings.map { it.reminders }.distinctUntilChanged(),
+      push.allowed,
+      CoroutineScope(SupervisorJob() + Dispatchers.Default),
+    )
+
   val kit: PochicalKit
 
   val push: Push
+
+  val reminderAlarms: ReminderAlarms
 
   @DependencyGraph.Factory
   fun interface Factory {
@@ -62,7 +80,7 @@ interface AppGraph : MetroAppComponentProviders {
   }
 }
 
-class PochicalApplication : Application(), MetroApplication, PochicalKit.Holder, Push.Holder {
+class PochicalApplication : Application(), MetroApplication, PochicalKit.Holder, Push.Holder, ReminderAlarms.Holder {
   private val graph by lazy { createGraphFactory<AppGraph.Factory>().create(this) }
 
   override val appComponentProviders: MetroAppComponentProviders
@@ -74,15 +92,22 @@ class PochicalApplication : Application(), MetroApplication, PochicalKit.Holder,
   override val push: Push
     get() = graph.push
 
+  override val reminderAlarms: ReminderAlarms
+    get() = graph.reminderAlarms
+
   override fun onCreate() {
     super.onCreate()
     graph.kit.followProcess()
     graph.push.start()
+    graph.reminderAlarms.start()
     ProcessLifecycleOwner.get()
       .lifecycle
       .addObserver(
         object : DefaultLifecycleObserver {
-          override fun onStart(owner: LifecycleOwner) = graph.push.foreground()
+          override fun onStart(owner: LifecycleOwner) {
+            graph.push.foreground()
+            graph.reminderAlarms.readExact()
+          }
         }
       )
   }
