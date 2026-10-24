@@ -28,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -84,6 +85,7 @@ fun ReactionRow(
 ) {
   // The emoji there as the line was drawn: only those coming after pop in.
   val there = remember { reactions.map { it.emoji }.toSet() }
+  if (reactions.isEmpty()) return
   FlowRow(
     modifier.padding(top = 4.dp),
     horizontalArrangement = Arrangement.spacedBy(4.dp, if (mine) Alignment.End else Alignment.Start),
@@ -91,6 +93,7 @@ fun ReactionRow(
   ) {
     for (reaction in reactions) {
       val own = me != null && me in reaction.userIds
+      key(reaction.emoji) {
       ReactionPill(
         reaction,
         own,
@@ -101,6 +104,7 @@ fun ReactionRow(
         onTap = { onToggle(reaction.emoji, !own) },
         onLongPress = { onChoosers(reaction) },
       )
+      }
     }
   }
 }
@@ -165,8 +169,12 @@ private fun SprayBurst(spray: Spray) {
   val density = LocalDensity.current
   val drops = remember(spray) { List(SPRAY_DROPS) { Random.nextFloat() } }
   val progress = remember(spray) { Animatable(0f) }
-  LaunchedEffect(spray) { progress.animateTo(1f, tween(SPRAY_MS, easing = FastOutSlowInEasing)) }
-  if (progress.value >= 1f) return
+  var played by remember(spray) { mutableStateOf(false) }
+  LaunchedEffect(spray) {
+    progress.animateTo(1f, tween(SPRAY_MS, easing = FastOutSlowInEasing))
+    played = true
+  }
+  if (played) return
   for ((index, drift) in drops.withIndex()) {
     val rise = with(density) { (60 + 90 * drift).dp.toPx() }
     val across = with(density) { ((index - SPRAY_DROPS / 2) * 14 + drift * 10).dp.toPx() }
@@ -218,4 +226,4 @@ fun reactionWords(reactions: List<LineReaction>, me: String?): String? {
 
 private val FACE_SIZE = 16.dp
 private const val SPRAY_DROPS = 5
-private const val SPRAY_MS = 900
+internal const val SPRAY_MS = 900

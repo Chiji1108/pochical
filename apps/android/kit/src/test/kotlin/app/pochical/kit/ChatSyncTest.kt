@@ -2,8 +2,6 @@ package app.pochical.kit
 
 import app.pochical.design.Chat
 import app.pochical.v1.ChatEdit
-import app.pochical.v1.ChatLine as WireLine
-import app.pochical.v1.ChatReaction
 import app.pochical.v1.block
 import app.pochical.v1.change
 import app.pochical.v1.chatMute
@@ -309,19 +307,14 @@ class ChatValuesTest {
   }
 
   @Test
-  fun theMembersReactionsShowAtOnceInTheOrderChosen() = runTest {
+  fun theMembersReactionShowsAtOnceAsTheirs() = runTest {
     database.write { upsert(state().copy(owner = "me")) }
     val chats = Chats(database, now = { 0 })
-    val line = WireLine.newBuilder(wordsLine(1, "u2")).addReactions(ChatReaction.newBuilder().setEmoji("👍").addUserIds("u2")).build()
-    database.write { takeChanges(listOf(line), "g1") }
+    database.write { takeChanges(listOf(wordsLine(1, "u2")), "g1") }
     chats.react("g1", GROUP_THREAD, 1, "❤️", on = true)
-    chats.react("g1", GROUP_THREAD, 1, "👍", on = true)
-    val shown = database.read { chatState("g1", GROUP_THREAD, "me", null, now = 0) }.lines.single().reactions
-    assertEquals(listOf(LineReaction("👍", listOf("u2", "me")), LineReaction("❤️", listOf("me"))), shown)
-
+    assertEquals(listOf(LineReaction("❤️", listOf("me"))), database.read { chatState("g1", GROUP_THREAD, "me", null, now = 0) }.lines.single().reactions)
     chats.react("g1", GROUP_THREAD, 1, "❤️", on = false)
-    val off = database.read { chatState("g1", GROUP_THREAD, "me", null, now = 0) }.lines.single().reactions
-    assertEquals(listOf(LineReaction("👍", listOf("u2", "me"))), off)
+    assertTrue(database.read { chatState("g1", GROUP_THREAD, "me", null, now = 0) }.lines.single().reactions.isEmpty())
   }
 
   @Test

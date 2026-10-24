@@ -149,14 +149,20 @@ class LineMenuState {
   fun lift(at: Offset, slid: Boolean) {
     val line = open ?: return
     if (!slid) return
-    val under = targets.entries.firstOrNull { it.value.contains(at) }?.key ?: return
     lit = null
+    val under = targets.entries.firstOrNull { it.value.contains(at) }?.key ?: return
     val bar = line.bar
     when {
       under.startsWith(ITEM) -> pick(line.items[under.removePrefix(ITEM).toInt()])
-      under == MORE -> bar?.let { close(); it.onMore() }
+      under == MORE -> bar?.let(::more)
       under.startsWith(REACT) -> bar?.let { react(it, under.removePrefix(REACT)) }
     }
+  }
+
+  /** + in the bar: the system's emoji picker, as the menu closes. */
+  fun more(bar: ReactionBar) {
+    close()
+    bar.onMore()
   }
 
   /** A reaction picked from the bar, as the menu closes: the reader's own taken back, else put on. */
@@ -328,10 +334,7 @@ private fun BarSurface(bar: ReactionBar, state: LineMenuState) {
           .onGloballyPositioned { state.targets[MORE] = it.boundsInWindow() }
           .clip(CircleShape)
           .background(if (state.lit == MORE) MaterialTheme.colorScheme.onSurface.copy(alpha = LIT) else Color.Transparent)
-          .clickable {
-            state.close()
-            bar.onMore()
-          }
+          .clickable { state.more(bar) }
           .semantics { contentDescription = more },
         contentAlignment = Alignment.Center,
       ) {

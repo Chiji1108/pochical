@@ -35,6 +35,7 @@ private data class ChatVectors(
   val draft: List<Draft>,
   val edited: List<Edited>,
   val composer: List<Composer>,
+  val reactions: List<Reactions>,
 ) {
   @Serializable
   data class Writer(override val name: String, val author: String, val me: String, val kind: String, val expected: String) : VectorCase
@@ -101,6 +102,13 @@ private data class ChatVectors(
   @Serializable
   data class Step(val reply: Long? = null, val edit: Long? = null, val share: List<String>? = null, val stop: Boolean? = null)
 
+  @Serializable data class Reaction(val emoji: String, val userIds: List<String>)
+
+  @Serializable data class React(val user: String, val emoji: String, val on: Boolean)
+
+  @Serializable
+  data class Reactions(override val name: String, val reactions: List<Reaction>, val step: React, val expected: List<Reaction>) : VectorCase
+
   @Serializable
   data class Composer(override val name: String, val composer: Held, val step: Step, val lines: List<HeldLine>, val expected: Held) :
     VectorCase
@@ -160,6 +168,12 @@ class ChatVectorsTest {
       keptDraft(KeptDraft(case.draft.text, case.draft.replyTo, case.draft.editing), lines::get)?.let {
         ChatVectors.Kept(it.text, it.replyTo, it.editing)
       }
+    }
+
+  @Test
+  fun reactions() =
+    chat.reactions.checkEach({ case -> case.expected.map { LineReaction(it.emoji, it.userIds) } }) { case ->
+      case.reactions.map { LineReaction(it.emoji, it.userIds) }.toggling(case.step.emoji, case.step.user, case.step.on)
     }
 
   @Test

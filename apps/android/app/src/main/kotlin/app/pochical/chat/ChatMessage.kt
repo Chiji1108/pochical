@@ -173,6 +173,7 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
     )
   val items = handlers.items(look)
   // Its menu's items, each reaction on it put on or taken off, and 返信元を表示, as its actions.
+  val reactionLabel = stringResource(R.string.chat_reaction)
   val reactOn = stringResource(R.string.chat_reaction_on)
   val reactOff = stringResource(R.string.chat_reaction_off)
   val actions =
@@ -182,7 +183,11 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
         val own = handlers.me in reaction.userIds
         CustomAccessibilityAction((if (own) reactOff else reactOn).format(reaction.emoji)) { handlers.react(seq, reaction.emoji, !own); true }
       } +
-      listOfNotNull(look.quote?.let { quote -> CustomAccessibilityAction(stringResource(R.string.chat_show_quoted)) { handlers.jump(quote.seq); true } })
+      listOfNotNull(
+        // リアクション: the reactions and menu over the chat, for the screen reader to go into.
+        look.seq?.let { CustomAccessibilityAction(reactionLabel) { openMenu(); true } },
+        look.quote?.let { quote -> CustomAccessibilityAction(stringResource(R.string.chat_show_quoted)) { handlers.jump(quote.seq); true } },
+      )
   val menuLabel = stringResource(R.string.chat_menu)
   Box(
     modifier
@@ -259,7 +264,8 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
           Text(stringResource(R.string.chat_not_sent), style = MaterialTheme.typography.labelSmall, color = colors.dangerDefault)
         }
         val seq = look.seq
-        if (seq != null && look.reactions.isNotEmpty()) {
+        // There from the line's first drawing, so its first reaction coming pops in too.
+        if (seq != null) {
           ReactionRow(
             look.reactions,
             handlers.me,

@@ -324,6 +324,12 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
   // haptic (spec/haptics.md), but with animations off; + opens the system's emoji picker, and a
   // long press on a pill lists who chose it.
   var spray by remember { mutableStateOf<Spray?>(null) }
+  // Played once: gone once its time is over, so a line scrolled back does not spray again.
+  LaunchedEffect(spray) {
+    if (spray == null) return@LaunchedEffect
+    delay(SPRAY_MS.toLong())
+    spray = null
+  }
   var picking by remember { mutableStateOf<Long?>(null) }
   var choosers by remember { mutableStateOf<LineReaction?>(null) }
   val haptics = LocalHapticFeedback.current
