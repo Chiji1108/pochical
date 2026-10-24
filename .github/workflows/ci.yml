@@ -109,7 +109,7 @@ jobs:
       - run: pnpm run build && pnpm exec wrangler deploy --dry-run
         working-directory: apps/admin
       # The tokens the native apps are generated from design/.
-      - run: pnpm exec tsx design/scripts/gen.ts --check
+      - run: mise run design:check
       # The migrations drizzle-kit gives from each SQL schema (D1, Group DO,
       # User DO) are all in the branch, and agree with each other.
       - run: mise run db:check
