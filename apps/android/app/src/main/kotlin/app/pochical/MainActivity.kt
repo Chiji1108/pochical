@@ -11,7 +11,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.datastore.core.DataStore
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -22,7 +21,9 @@ import app.pochical.groups.LocalGroupCalls
 import app.pochical.groups.LocalOpenedInvites
 import app.pochical.groups.OpenedInvites
 import app.pochical.groups.LocalValues
+import app.pochical.kit.DeviceSettings
 import app.pochical.kit.PochicalKit
+import app.pochical.kit.SyncedSettings
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoMap
 import dev.zacsweers.metro.Inject
@@ -36,7 +37,7 @@ import kotlinx.coroutines.withContext
 @ActivityKey
 @Inject
 class MainActivity(
-  private val deviceSettings: DataStore<DeviceSettings>,
+  private val deviceSettings: SyncedSettings,
   private val ownDays: OwnDays,
   private val kit: PochicalKit,
 ) : ComponentActivity() {
@@ -67,12 +68,7 @@ class MainActivity(
     setContent {
       val device = settings ?: return@setContent
       if (!calendarRead) return@setContent
-      val state =
-        remember(device) {
-          DeviceSettingsState(device) { change ->
-            lifecycleScope.launch { deviceSettings.updateData(change) }
-          }
-        }
+      val state = remember(device) { DeviceSettingsState(device, deviceSettings::change) }
       CompositionLocalProvider(
         LocalDeviceSettings provides state,
         LocalOwnDays provides ownDays,

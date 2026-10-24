@@ -83,10 +83,10 @@ import app.pochical.LocalDeviceSettings
 import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.RootPage
-import app.pochical.Week
 import app.pochical.design.Metrics
 import app.pochical.design.PochicalTextStyles
 import app.pochical.design.Springs
+import app.pochical.kit.Week
 import app.pochical.kit.firstBlankDay
 import app.pochical.kit.gapDays
 import app.pochical.kit.selectedAfterEntering
@@ -174,6 +174,13 @@ fun CalendarScreen(open: (RootPage) -> Unit, hidesTabBar: (Boolean) -> Unit) {
   var gapPick by rememberSaveable { mutableStateOf<String?>(null) }
   val offPatterns = calendar.patterns.daysOff()
   val gapFill = offPatterns.find { it.id == gapPick } ?: offPatterns.firstOrNull()
+  // 今月の内訳's month while it is open, and the days off of the months a swipe can bring in,
+  // counted as the days or the month change rather than as a finger moves the pages.
+  var breakingDown by rememberSaveable { mutableStateOf<String?>(null) }
+  val offCounts =
+    remember(calendar, pager.settledPage) {
+      (-2..2).map { range.monthAt(pager.settledPage + it) }.associateWith { calendar.daysOffCount(it) }
+    }
   val hidesBar by rememberUpdatedState(hidesTabBar)
   val showsDay = opened != null && !closing
   LaunchedEffect(showsDay || entering != null) { hidesBar(showsDay || entering != null) }
@@ -375,18 +382,29 @@ fun CalendarScreen(open: (RootPage) -> Unit, hidesTabBar: (Boolean) -> Unit) {
       Crossfade(entering != null, Modifier.padding(horizontal = SCREEN_EDGE).padding(top = 12.dp, bottom = 12.dp), label = "entering") { on ->
         val day = trayDay
         if (!on || day == null) {
-          Button(
-            onClick = {
-              // The month the pages settle on, as a swipe while entering starts there too.
-              val month = range.monthAt(pager.settledPage)
-              said = null
-              enteringKey = firstBlank(month).toString()
-            },
-            modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control),
-          ) {
-            Icon(painterResource(R.drawable.ic_edit), null, Modifier.size(20.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(stringResource(R.string.entering), style = PochicalTextStyles.headline)
+          Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            MonthSummary(
+              pages = { pager.currentPage + pager.currentPageOffsetFraction },
+              monthAt = range::monthAt,
+              thisMonth = YearMonth.from(today),
+              reduceMotion = reduceMotion,
+              daysOff = { month -> offCounts[month] ?: calendar.daysOffCount(month) },
+              // The row fading out as entering starts opens nothing.
+              onOpen = { if (enteringKey == null) breakingDown = it.toString() },
+            )
+            Button(
+              onClick = {
+                // The month the pages settle on, as a swipe while entering starts there too.
+                val month = range.monthAt(pager.settledPage)
+                said = null
+                enteringKey = firstBlank(month).toString()
+              },
+              modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control),
+            ) {
+              Icon(painterResource(R.drawable.ic_edit), null, Modifier.size(20.dp))
+              Spacer(Modifier.width(8.dp))
+              Text(stringResource(R.string.entering), style = PochicalTextStyles.headline)
+            }
           }
         } else {
           val last = YearMonth.from(day).atEndOfMonth()
@@ -427,6 +445,9 @@ fun CalendarScreen(open: (RootPage) -> Unit, hidesTabBar: (Boolean) -> Unit) {
         }
       }
     }
+  }
+  breakingDown?.let { month ->
+    MonthBreakdownSheet(remember(calendar, month) { calendar.breakdown(YearMonth.parse(month)) }, onDismiss = { breakingDown = null })
   }
   if (gaps.isNotEmpty() && gapFill != null) {
     GapSheet(
@@ -567,7 +588,7 @@ private fun List<Pattern>.daysOff(): List<Pattern> = filter { it.countsAsOff && 
 
 /** The weekday names over the pages, from the week's start, Sundays and Saturdays in their colors unless turned off. */
 @Composable
-internal fun WeekdayRow(week: Week, modifier: Modifier = Modifier) {
+fun WeekdayRow(week: Week, modifier: Modifier = Modifier) {
   val colors = LocalThemeColors.current
   Row(modifier.padding(bottom = 12.dp).clearAndSetSemantics {}, horizontalArrangement = Arrangement.spacedBy(DAY_GAP)) {
     repeat(7) { index ->
@@ -624,6 +645,8 @@ private class PageDays(
             isSelected = day == selected,
             framesToday = !isEntering,
             preview = preview[day].takeIf { entry == null },
+            // Blank days off come back faint while entering and in a day's week, where the days are looked at.
+            offShown = if (selected != null) OffShown.Faint else OffShown.Hidden,
           ),
           height = cell,
           colorsHoliday = week.holiday,
@@ -717,7 +740,7 @@ private fun dayHeight(fitting: Dp): Dp = ((fitting - DAY_GAP * 5) / 6).coerceIn(
 
 /** Today, moving on at midnight while the screen is open, as the system says the date changed. */
 @Composable
-internal fun rememberToday(): LocalDate {
+fun rememberToday(): LocalDate {
   val context = LocalContext.current
   var today by remember { mutableStateOf(LocalDate.now()) }
   DisposableEffect(context) {

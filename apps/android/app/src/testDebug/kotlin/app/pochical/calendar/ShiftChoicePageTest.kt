@@ -4,10 +4,10 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import app.pochical.DeviceSettings
 import app.pochical.DeviceSettingsState
 import app.pochical.LocalDeviceSettings
 import app.pochical.PochicalTheme
+import app.pochical.kit.DeviceSettings
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Rule

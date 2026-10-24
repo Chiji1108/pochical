@@ -69,6 +69,7 @@ dependencies {
   implementation(libs.okhttp)
   implementation(libs.connect.kotlin.okhttp)
   implementation(libs.kotlinx.serialization.json)
+  api(libs.datastore)
   implementation(libs.lifecycle.process)
   implementation(libs.work.runtime)
   implementation(libs.blockstore)

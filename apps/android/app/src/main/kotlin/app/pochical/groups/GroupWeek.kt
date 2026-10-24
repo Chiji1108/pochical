@@ -42,7 +42,7 @@ import androidx.compose.ui.unit.sp
 import app.pochical.LocalDeviceSettings
 import app.pochical.LocalThemeColors
 import app.pochical.R
-import app.pochical.Week
+import app.pochical.kit.Week
 import app.pochical.calendar.fullText
 import app.pochical.calendar.holidayName
 import app.pochical.calendar.holidayCountry

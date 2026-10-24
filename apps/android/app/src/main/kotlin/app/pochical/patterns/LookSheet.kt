@@ -32,18 +32,18 @@ import app.pochical.Footnote
 import app.pochical.IconPickerSheet
 import app.pochical.LocalDeviceSettings
 import app.pochical.LocalThemeColors
-import app.pochical.Look
 import app.pochical.MarkChoiceGrid
 import app.pochical.MarkColorGrid
 import app.pochical.MarkFrame
 import app.pochical.MarkLetterField
-import app.pochical.MarkStyle
 import app.pochical.R
 import app.pochical.ShiftMark
 import app.pochical.calendar.Pattern
 import app.pochical.design.MarkIconNames
 import app.pochical.design.ReadyPatterns
 import app.pochical.design.TextLimits
+import app.pochical.kit.Look
+import app.pochical.kit.MarkStyle
 import app.pochical.withPicked
 
 /** The pattern's mark on the frame a group's mark stands on, as its page heads with it. */

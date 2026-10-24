@@ -5,15 +5,23 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
-// The marks' rules of text.json; characterCount and limitText are the app's TextLimitsTest's.
+// The marks' rules of text.json and a day's shift name; characterCount and limitText are the app's TextLimitsTest's.
 @Serializable
-private data class TextVectors(val isEmoji: List<IsEmoji>, val fitsText: List<FitsText>, val markLetter: List<MarkLetter>) {
+private data class TextVectors(
+  val isEmoji: List<IsEmoji>,
+  val fitsText: List<FitsText>,
+  val markLetter: List<MarkLetter>,
+  val dayName: List<DayName>,
+) {
   @Serializable data class IsEmoji(override val name: String, val text: String, val expected: Boolean) : VectorCase
 
   @Serializable data class FitsText(override val name: String, val text: String, val limit: Int, val expected: Boolean) : VectorCase
 
   @Serializable
   data class MarkLetter(override val name: String, val before: String, val after: String, val limit: Int, val expected: String) : VectorCase
+
+  /** [name] is the shift's name, and names the case too. */
+  @Serializable data class DayName(override val name: String, val length: Int, val expected: String) : VectorCase
 }
 
 // Robolectric, for the Unicode properties Android's ICU has.
@@ -26,4 +34,6 @@ class TextTest {
   @Test fun fitsText() = vectors.fitsText.checkEach({ it.expected }) { fitsText(it.text, it.limit) }
 
   @Test fun markLetter() = vectors.markLetter.checkEach({ it.expected }) { markLetter(it.before, it.after, it.limit) }
+
+  @Test fun dayName() = vectors.dayName.checkEach({ it.expected }) { dayName(it.name, it.length) }
 }
