@@ -69,7 +69,7 @@ class MainActivity(
         LocalAccount provides kit.account,
         LocalAppleSignIn provides appleSignIn,
       ) {
-        PochicalTheme(device) { RootScreen(rememberRootNavigator()) }
+        PochicalTheme(device) { AccountRoot() }
       }
     }
   }

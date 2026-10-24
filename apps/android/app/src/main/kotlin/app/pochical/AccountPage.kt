@@ -48,12 +48,17 @@ import androidx.compose.ui.unit.dp
 import app.pochical.design.GoogleButtonColors
 import app.pochical.design.Metrics
 import app.pochical.kit.AccountState
-import app.pochical.kit.LinkResult
+import app.pochical.kit.AccountSuspended
+import app.pochical.kit.DeletionFailure
+import app.pochical.kit.Holdings
+import app.pochical.kit.InUse
 import app.pochical.kit.LinkRefused
 import app.pochical.kit.LinkedAccount
 import app.pochical.kit.NotSignedIn
 import app.pochical.kit.ProviderToken
+import app.pochical.kit.SignInResult
 import app.pochical.kit.SyncAccount
+import app.pochical.kit.linked
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
@@ -64,7 +69,7 @@ val LocalAccount = staticCompositionLocalOf<SyncAccount> { error("No account pro
 @Composable
 fun AccountRow(open: (RootPage) -> Unit) {
   val state by LocalAccount.current.state.collectAsState()
-  val linked = (state as? AccountState.SignedIn)?.linked
+  val linked = state.linked
   ListItem(
     headlineContent = { Text(stringResource(R.string.account)) },
     supportingContent = { Text(linked?.provider?.displayName ?: stringResource(R.string.account_not_signed_in)) },
@@ -94,7 +99,7 @@ fun AccountPage(onBack: () -> Unit) {
     }
   ) { padding ->
     LazyColumn(contentPadding = padding) {
-      val linked = (state as? AccountState.SignedIn)?.linked
+      val linked = state.linked
       if (linked != null) {
         item { SectionHeader(stringResource(R.string.account_signed_in)) }
         item {
@@ -112,6 +117,7 @@ fun AccountPage(onBack: () -> Unit) {
           )
         }
         item { Footnote(stringResource(R.string.account_signed_in_note)) }
+        item { DeleteRow(state) }
       } else {
         item { SignInSection(state) }
       }
@@ -119,7 +125,12 @@ fun AccountPage(onBack: () -> Unit) {
   }
 }
 
-/** What signing in keeps, and the ways in, ready once the device has its session. */
+/**
+ * What signing in keeps, and the ways in, ready once the device has its session: one path for
+ * Apple and Google (spec/sync-protocol.md, Signing in; Switching to an account in use). Either links
+ * the provider's account to this user, or, when it is another user's already, keeps one side,
+ * asking which only when both hold something.
+ */
 @Composable
 private fun SignInSection(state: AccountState) {
   val signedIn = state is AccountState.SignedIn
@@ -127,19 +138,18 @@ private fun SignInSection(state: AccountState) {
   val apple = LocalAppleSignIn.current
   val context = LocalContext.current
   val scope = rememberCoroutineScope()
-  // The provider whose sign-in runs, one at a time, and what went wrong with whose.
+  // The provider whose sign-in runs, one at a time; the choice asked of the person; what went wrong.
   var busy by remember { mutableStateOf<LinkedAccount.Provider?>(null) }
+  var choosing by remember { mutableStateOf<InUse?>(null) }
   var problem by remember { mutableStateOf<Pair<SignInProblem, LinkedAccount.Provider>?>(null) }
-  fun signIn(provider: LinkedAccount.Provider, providerToken: suspend () -> ProviderToken?) {
+  fun run(provider: LinkedAccount.Provider, step: suspend () -> Unit) {
     if (busy != null) return
     busy = provider
     scope.launch {
       val failed =
         try {
-          when (providerToken()?.let { account.link(it) }) {
-            null, LinkResult.Linked -> null
-            LinkResult.InUse -> SignInProblem.InUse
-          }
+          step()
+          null
         } catch (e: CancellationException) {
           throw e
         } catch (_: NotSignedIn) {
@@ -148,6 +158,8 @@ private fun SignInSection(state: AccountState) {
         } catch (e: LinkRefused) {
           // Linked already, as on another device: the page shows the account the server names.
           if (e.status == 417) null else SignInProblem.Failed
+        } catch (_: AccountSuspended) {
+          SignInProblem.Suspended
         } catch (_: NoGoogleAccount) {
           SignInProblem.NoGoogleAccount
         } catch (_: Exception) {
@@ -158,6 +170,11 @@ private fun SignInSection(state: AccountState) {
       problem = failed?.let { it to provider }
     }
   }
+  fun signIn(provider: LinkedAccount.Provider, providerToken: suspend () -> ProviderToken?) =
+    run(provider) {
+      val result = providerToken()?.let { account.signIn(it) }
+      if (result is SignInResult.Choose) choosing = result.inUse
+    }
   Column(
     Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 24.dp),
     horizontalAlignment = Alignment.CenterHorizontally,
@@ -185,32 +202,143 @@ private fun SignInSection(state: AccountState) {
   Footnote(
     stringResource(
       when (state) {
-        is AccountState.SignedIn -> R.string.account_sign_in_note
-        AccountState.SigningIn -> R.string.account_sign_in_offline
+        is AccountState.SignedIn, is AccountState.Changing -> R.string.account_sign_in_note
+        AccountState.SigningIn, is AccountState.Erasing -> R.string.account_sign_in_offline
         AccountState.SessionEnded -> R.string.account_sign_in_session_ended
       }
     )
   )
+  choosing?.let { inUse ->
+    val provider = inUse.token.provider
+    AlertDialog(
+      onDismissRequest = { choosing = null },
+      title = { Text(stringResource(R.string.account_choose_title)) },
+      text = {
+        Text(
+          stringResource(R.string.account_choose_body, provider.displayName, summary(inUse.account), summary(inUse.device))
+        )
+      },
+      // Three answers, the account's first, as someone signing in to an account they used is more
+      // often after its data.
+      confirmButton = {
+        Column(horizontalAlignment = Alignment.End) {
+          TextButton(
+            onClick = {
+              choosing = null
+              run(provider) { account.useAccount(inUse) }
+            }
+          ) {
+            Text(stringResource(R.string.account_use_account))
+          }
+          TextButton(
+            onClick = {
+              choosing = null
+              run(provider) { account.keepDevice(inUse) }
+            }
+          ) {
+            Text(stringResource(R.string.account_keep_device))
+          }
+          TextButton(onClick = { choosing = null }) { Text(stringResource(R.string.cancel)) }
+        }
+      },
+    )
+  }
   problem?.let { (shown, provider) ->
     AlertDialog(
       onDismissRequest = { problem = null },
       confirmButton = { TextButton(onClick = { problem = null }) { Text(stringResource(R.string.ok)) } },
       title = { Text(stringResource(shown.title, provider.displayName)) },
-      text = shown.message?.let { message -> { Text(stringResource(message)) } },
+      text = shown.message?.let { message -> { Text(stringResource(message, provider.displayName)) } },
     )
   }
 }
 
-/** Why signing in did not link the account, each said in a dialog naming the provider where it says one. */
+/** What one side holds, in a few words, or なし. */
+@Composable
+private fun summary(held: Holdings): String {
+  val parts =
+    listOfNotNull(
+      if (held.shiftDays > 0) stringResource(R.string.holdings_shift_days, held.shiftDays) else null,
+      if (held.repeating) stringResource(R.string.holdings_repeating) else null,
+      if (held.coworkers > 0) stringResource(R.string.holdings_coworkers, held.coworkers) else null,
+      if (held.groups > 0) stringResource(R.string.holdings_groups, held.groups) else null,
+    )
+  return if (parts.isEmpty()) stringResource(R.string.none) else parts.joinToString(stringResource(R.string.holdings_separator))
+}
+
+/** Why signing in did not go, each said in a dialog naming the provider where it says one. */
 private enum class SignInProblem(val title: Int, val message: Int?) {
   Failed(R.string.account_sign_in_failed, null),
   NoGoogleAccount(R.string.account_no_google_title, R.string.account_no_google_body),
-  /**
-   * The account is another user's, as from another phone: the device cannot switch to it yet
-   * (spec/sync-protocol.md, Signing in), so nothing changes.
-   */
-  InUse(R.string.account_in_use_title, R.string.account_in_use_body),
+  /** Suspended by Pochical's people: said as such, as trying again would not help. */
+  Suspended(R.string.account_suspended_title, R.string.account_suspended_body),
 }
+
+/**
+ * アカウントを削除 (spec/sync-protocol.md, Deleting an account), asked first, on the spot, and
+ * offered only while the device has its session: an Apple account has Apple's page asked once more
+ * for the code its tokens are revoked with. Once deleted, the app shows the device erasing in place
+ * of every page (AccountRoot).
+ */
+@Composable
+private fun DeleteRow(state: AccountState) {
+  val account = LocalAccount.current
+  val apple = LocalAppleSignIn.current
+  val scope = rememberCoroutineScope()
+  var confirming by remember { mutableStateOf(false) }
+  var failure by remember { mutableStateOf<DeletionFailure.Reason?>(null) }
+  val busy = state is AccountState.Changing
+  ListItem(
+    headlineContent = { Text(stringResource(R.string.account_delete), color = MaterialTheme.colorScheme.error) },
+    trailingContent = if (busy) ({ CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp) }) else null,
+    modifier = Modifier.clickable(enabled = state is AccountState.SignedIn) { confirming = true },
+  )
+  if (confirming) {
+    AlertDialog(
+      onDismissRequest = { confirming = false },
+      title = { Text(stringResource(R.string.account_delete_title)) },
+      text = { Text(stringResource(R.string.account_delete_body)) },
+      dismissButton = { TextButton(onClick = { confirming = false }) { Text(stringResource(R.string.cancel)) } },
+      confirmButton = {
+        TextButton(
+          onClick = {
+            confirming = false
+            scope.launch {
+              try {
+                account.deleteAccount(appleCode = apple::authorizationCode)
+              } catch (e: DeletionFailure) {
+                // A session the server does not know is said in place of the app, not here.
+                if (e.reason != DeletionFailure.Reason.SessionEnded) failure = e.reason
+              }
+            }
+          },
+          colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+        ) {
+          Text(stringResource(R.string.account_delete_confirm))
+        }
+      },
+    )
+  }
+  failure?.let { reason ->
+    AlertDialog(
+      onDismissRequest = { failure = null },
+      confirmButton = { TextButton(onClick = { failure = null }) { Text(stringResource(R.string.ok)) } },
+      title = { Text(stringResource(R.string.account_not_deleted)) },
+      text = { Text(stringResource(whatToDo(reason))) },
+    )
+  }
+}
+
+/** What to do next after a deletion that did not go. */
+private fun whatToDo(reason: DeletionFailure.Reason): Int =
+  when (reason) {
+    DeletionFailure.Reason.NotSignedIn -> R.string.account_not_deleted_not_signed_in
+    DeletionFailure.Reason.AccountChanged -> R.string.account_not_deleted_changed
+    DeletionFailure.Reason.Offline -> R.string.account_not_deleted_offline
+    DeletionFailure.Reason.AppleUnconfirmed -> R.string.account_not_deleted_apple_unconfirmed
+    DeletionFailure.Reason.AppleRefused -> R.string.account_not_deleted_apple_refused
+    DeletionFailure.Reason.ServerFailed, DeletionFailure.Reason.SessionEnded -> R.string.account_not_deleted_later
+  }
 
 /**
  * Appleで続ける, as Apple's guidelines draw Sign in with Apple's button where the system has none:

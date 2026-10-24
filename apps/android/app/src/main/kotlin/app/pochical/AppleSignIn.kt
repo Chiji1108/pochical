@@ -8,6 +8,7 @@ import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import app.pochical.kit.AppleAnswer
 import app.pochical.kit.AppleWebSignIn
 import app.pochical.kit.ProviderToken
 import kotlinx.coroutines.CompletableDeferred
@@ -67,7 +68,16 @@ class AppleSignIn(private val activity: ComponentActivity, private val web: Appl
    * The person's Apple account: null when they closed the page or cancelled on it;
    * [app.pochical.kit.AppleSignInFailed] when Apple's page or the server failed.
    */
-  suspend fun signIn(): ProviderToken? {
+  suspend fun signIn(): ProviderToken? = ask()?.token
+
+  /**
+   * Apple asked once more, for a fresh authorization code, as deleting the account needs one to
+   * revoke Apple's tokens with (spec/sync-protocol.md, Deleting an account); null when the person
+   * closed the page or cancelled on it.
+   */
+  suspend fun authorizationCode(): String? = ask()?.authorizationCode
+
+  private suspend fun ask(): AppleAnswer? {
     val attempt = web.start()
     val returned = browse(attempt.url) ?: return null
     return attempt.finish(returned)

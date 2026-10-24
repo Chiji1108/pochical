@@ -142,3 +142,56 @@ describe.each<Provider>(["apple", "google"])(
     });
   }
 );
+
+/** Apple's token for the Services ID, as Android's sign-in gets it. */
+const webToken = async (subject: string, nonce: string) =>
+  await idToken("apple", subject, nonce, { aud: env.APPLE_SERVICES_ID });
+
+describe("an Apple account linked on iOS, signed in to from Android's web page", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("is the same account: in use, counted, and signed in to", async () => {
+    providerKeys();
+    const subject = "apple-ios-then-android";
+    const iPhone = await signInAnonymously();
+    await link(iPhone, "apple", await idToken("apple", subject, "n0"), "n0");
+    await makeGroup(iPhone);
+    const android = await signInAnonymously();
+    const linking = await link(
+      android,
+      "apple",
+      await webToken(subject, "n1"),
+      "n1"
+    );
+    const counted = await peek(android, {
+      idToken: await webToken(subject, "n2"),
+      nonce: "n2",
+      provider: "SIGN_IN_PROVIDER_APPLE",
+    });
+    const signedIn = await exports.default.fetch(
+      `${ORIGIN}/api/auth/sign-in/social`,
+      {
+        body: JSON.stringify({
+          idToken: { nonce: "n3", token: await webToken(subject, "n3") },
+          provider: "apple",
+        }),
+        headers: {
+          Authorization: `Bearer ${android}`,
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      }
+    );
+    expect([
+      linking,
+      counted,
+      await userIdOf(signedIn.headers.get("set-auth-token") ?? ""),
+    ]).toStrictEqual([
+      409,
+      { body: { groups: 1 }, status: 200 },
+      await userIdOf(iPhone),
+    ]);
+  });
+});
