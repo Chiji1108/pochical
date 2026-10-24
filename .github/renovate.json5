@@ -129,14 +129,5 @@
         "Before merging, resolve the Swift packages (`xcodebuild -resolvePackageDependencies -project apps/ios/Pochical/Pochical.xcodeproj`, and `swift package resolve --package-path` for a changed package under `apps/ios/Packages`) and commit any `Package.resolved` change.",
       ],
     },
-    {
-      description: "mise.toml and packageManager pin the same Bun",
-      matchDepNames: ["bun", "@types/bun"],
-      groupName: "Bun",
-      separateMajorMinor: false,
-      prBodyNotes: [
-        "Before merging, set `BUN_VERSION` to the new version in each Worker's Workers Builds settings (server, web, design, try, admin) in the Cloudflare dashboard. Renovate cannot change it.",
-      ],
-    },
   ],
 }

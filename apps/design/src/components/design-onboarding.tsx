@@ -6,10 +6,7 @@ import {
 } from "@pochical/prototype/components/design-account";
 import type { AccountProvider } from "@pochical/prototype/components/design-account";
 import { DesignApp } from "@pochical/prototype/components/design-app";
-import {
-  DARK_DRAWING,
-  useAppIcons,
-} from "@pochical/prototype/components/design-app-icon";
+import { useAppIcons } from "@pochical/prototype/components/design-app-icon";
 import { Phone } from "@pochical/prototype/components/design-phone";
 import {
   ColorSchemeContext,
@@ -25,6 +22,7 @@ import type {
   Step,
   WorkSetup,
 } from "@pochical/prototype/components/design-work-setup";
+import { DARK_DRAWING } from "@pochical/prototype/lib/app-icon-paint";
 import type { RepeatRule } from "@pochical/prototype/lib/design-days";
 import { monthAfter } from "@pochical/prototype/lib/design-days";
 import { useDevice } from "@pochical/prototype/lib/design-device";

@@ -3,6 +3,6 @@
   "include": ["**/*.ts", "**/*.tsx"],
   "exclude": [],
   "compilerOptions": {
-    "types": ["node", "vite/client", "bun"]
+    "types": ["node", "vite/client"]
   }
 }

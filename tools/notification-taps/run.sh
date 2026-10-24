@@ -29,7 +29,7 @@ prepare
 new_group "$shared/invite"
 code=$(cat "$shared/invite")
 group=$(jq -r .groupId "$root/tools/api-try/out/state.json")
-bun "$root/tools/chat-try/index.ts" "$code" 30
+pnpm --dir "$root" exec tsx "$root/tools/chat-try/index.ts" "$code" 30
 
 TEST_RUNNER_NOTIFICATION_TAP_DIR=$shared xcodebuild_for test-without-building \
   -collect-test-diagnostics never -parallel-testing-enabled NO \
@@ -48,12 +48,12 @@ step() {
 if step joined; then
   # The simulator's user: the session made last, once it has joined.
   me=$(cd "$root/apps/server" &&
-    bunx wrangler d1 execute pochical --local --json \
+    pnpm exec wrangler d1 execute pochical --local --json \
       --command "select user_id from session order by created_at desc limit 1" |
     jq -r '.[0].results[0].user_id')
   for each in background cold; do
     step "$each" || break
-    bun "$root/tools/chat-try/index.ts" "$code" 1
+    pnpm --dir "$root" exec tsx "$root/tools/chat-try/index.ts" "$code" 1
     jq -n --arg group "$group" --arg me "$me" '{
       aps: {
         alert: {

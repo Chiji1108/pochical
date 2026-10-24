@@ -20,7 +20,9 @@
 // Cloudflare login wrangler uses; the groups' Durable Objects stay, but
 // nothing can reach them once their users and link are gone.
 
-import { mkdir } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { devServer } from "../dev-server";
@@ -40,9 +42,9 @@ const [command = "", ...rest] = process.argv
   .filter((arg) => arg !== "--local");
 const api = local ? devServer : "https://api.pochical.app";
 const site = local ? "http://localhost:3000" : "https://pochical.app";
-const outDir = path.join(import.meta.dir, "out");
+const outDir = path.join(import.meta.dirname, "out");
 const statePath = path.join(outDir, "state.json");
-const serverDir = path.join(import.meta.dir, "../../apps/server");
+const serverDir = path.join(import.meta.dirname, "../../apps/server");
 
 // Ids that go into SQL for cleanup: better-auth's ids and UUIDs.
 const SAFE_ID = /^[\w-]+$/u;
@@ -66,11 +68,10 @@ const fail = (message: string): never => {
 };
 
 const loadState = async (): Promise<State> => {
-  const file = Bun.file(statePath);
-  if (!(await file.exists())) {
+  if (!existsSync(statePath)) {
     return { local, users: [] };
   }
-  const state: unknown = await file.json();
+  const state: unknown = JSON.parse(await readFile(statePath, "utf-8"));
   if (!isState(state)) {
     return fail("out/state.json is not this tool's; delete it");
   }
@@ -84,7 +85,7 @@ const loadState = async (): Promise<State> => {
 
 const saveState = async (state: State): Promise<void> => {
   await mkdir(outDir, { recursive: true });
-  await Bun.write(statePath, `${JSON.stringify(state, null, 2)}\n`);
+  await writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`);
 };
 
 // A Connect JSON call, as the apps make one.
@@ -227,9 +228,10 @@ const cleanup = async (state: State): Promise<void> => {
     ]
       .filter(Boolean)
       .join("; ");
-    const wrangler = Bun.spawn(
+    const wrangler = spawnSync(
+      "pnpm",
       [
-        "bunx",
+        "exec",
         "wrangler",
         "d1",
         "execute",
@@ -238,19 +240,13 @@ const cleanup = async (state: State): Promise<void> => {
         "--command",
         sql,
       ],
-      {
-        cwd: serverDir,
-        stderr: "inherit",
-        stdout: "ignore",
-      }
+      { cwd: serverDir, stdio: ["ignore", "ignore", "inherit"] }
     );
-    if ((await wrangler.exited) !== 0) {
+    if (wrangler.status !== 0) {
       return fail("wrangler d1 execute failed; out/state.json is kept");
     }
   }
-  await Bun.file(statePath)
-    .delete()
-    .catch(() => undefined);
+  await rm(statePath, { force: true });
   console.log(
     `${ids.length}人のユーザーと${groupIds.length}つのグループのリンクを削除しました`
   );

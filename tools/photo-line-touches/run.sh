@@ -27,7 +27,7 @@ hidden=""
 put_back() {
   [ -n "$hidden" ] || return 0
   (cd "$root/apps/server" &&
-    bunx wrangler r2 object put "pochical-photos/$hidden" --local --file "$shared/hidden.jpg" \
+    pnpm exec wrangler r2 object put "pochical-photos/$hidden" --local --file "$shared/hidden.jpg" \
       --content-type image/jpeg)
   hidden=""
 }
@@ -55,7 +55,7 @@ group=$(jq -r .groupId "$root/tools/api-try/out/state.json")
 mkdir "$shared/first" "$shared/second"
 photo "#d53a7b" 2 "$shared/first/2.jpg"
 photo "#3ad57b" 3 "$shared/second/3.jpg"
-bun "$root/tools/chat-try/index.ts" "$code" --photos "$shared/first"
+pnpm --dir "$root" exec tsx "$root/tools/chat-try/index.ts" "$code" --photos "$shared/first"
 
 run_test test1HoldingOthersPhotoOpensItsMenu || failed=1
 run_test test2HoldingOnesOwnPhotoJustSentOpensItsMenu || failed=1
@@ -64,14 +64,14 @@ stop_server
 run_test test3TappingXStopsAPhotoGoingUp || failed=1
 start_server
 
-bun "$root/tools/chat-try/index.ts" "$code" --photos "$shared/second"
+pnpm --dir "$root" exec tsx "$root/tools/chat-try/index.ts" "$code" --photos "$shared/second"
 bucket=$(ls "$root"/apps/server/.wrangler/state/v3/r2/miniflare-R2BucketObject/*.sqlite |
   grep -v metadata)
 key=$(sqlite3 "$bucket" \
   "select key from _mf_objects where key like 'groups/$group/photos/%' and key not like '%/small' order by uploaded desc limit 1")
 (cd "$root/apps/server" &&
-  bunx wrangler r2 object get "pochical-photos/$key" --local --file "$shared/hidden.jpg" &&
-  bunx wrangler r2 object delete "pochical-photos/$key" --local)
+  pnpm exec wrangler r2 object get "pochical-photos/$key" --local --file "$shared/hidden.jpg" &&
+  pnpm exec wrangler r2 object delete "pochical-photos/$key" --local)
 hidden=$key
 
 run_test test4HoldingAndTappingAPhotoNotFetched &

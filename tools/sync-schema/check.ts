@@ -4,7 +4,7 @@
 // that starts reading something new must raise the schema to take
 // everything again.
 //
-//   bun tools/sync-schema/check.ts [--write]
+//   pnpm exec tsx tools/sync-schema/check.ts [--write]
 //
 // `--write` records the fingerprint for each app whose schema was raised
 // past the recorded one.
@@ -14,7 +14,7 @@ import path from "node:path";
 
 import { wireFingerprint } from "./wire";
 
-const root = path.join(import.meta.dir, "../..");
+const root = path.join(import.meta.dirname, "../..");
 
 /** Where each app declares its sync schema, and where its check is recorded. */
 const apps = [
