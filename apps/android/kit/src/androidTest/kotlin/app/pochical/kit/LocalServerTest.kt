@@ -54,8 +54,14 @@ class LocalServerTest {
       .grantRuntimePermission(context.packageName, Manifest.permission.ACCESS_LOCAL_NETWORK)
   }
 
+  /** The devices' settings files, gone with the test. */
+  private val settingsFiles = java.io.File(context.cacheDir, "e2e-settings")
+
   @After
-  fun end() = scope.cancel()
+  fun end() {
+    scope.cancel()
+    settingsFiles.deleteRecursively()
+  }
 
   @Test
   fun anEditGoesThroughTheServerToTheUsersOtherDevice() = runBlocking<Unit> {
@@ -178,7 +184,7 @@ class LocalServerTest {
   fun preferencesReachTheUsersOtherDeviceAndItsOwnStayHome() = runBlocking<Unit> {
     fun Device.settings() =
       SyncedSettings(
-        deviceSettingsStore(java.io.File(context.cacheDir, "e2e-${java.util.UUID.randomUUID()}.json"), scope),
+        deviceSettingsStore(java.io.File(settingsFiles, "${java.util.UUID.randomUUID()}.json"), scope),
         database,
         edits,
         scope,

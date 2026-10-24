@@ -4,7 +4,10 @@ import app.pochical.v1.Change
 import app.pochical.v1.change
 import app.pochical.v1.hlc
 import app.pochical.v1.preferenceValue
+import app.pochical.v1.WeekPreference
 import app.pochical.v1.themePreference
+import app.pochical.v1.weekPreference
+import com.google.protobuf.ByteString
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -37,6 +40,18 @@ class SyncedSettingsTest {
     database.close()
   }
 
+  /** A preference as the account sends it, set on the user's iPad. */
+  private fun fromIpad(key: String, message: ByteString) = change {
+    preference = preferenceValue {
+      this.key = key
+      this.message = message
+      hlc = hlc {
+        physicalMs = 1
+        deviceId = "ipad"
+      }
+    }
+  }
+
   /** The keys of the edits waiting to go, in the order they were made. */
   private suspend fun waiting(): List<String> = database.write { outbox() }.map { Change.parseFrom(it.change).preference.key }
 
@@ -52,20 +67,21 @@ class SyncedSettingsTest {
   }
 
   @Test
+  fun aChangeIsMadeOnWhatTheAccountHoldsThen() = runBlocking {
+    settings.settings.first()
+    database.write { takeOwn(fromIpad("week", weekPreference { start = 1; sunday = false; saturday = true; holiday = true }.toByteString())) }
+    settings.change { it.copy(week = it.week.copy(saturday = false)) }
+
+    val kept = withTimeout(5_000) { settings.settings.first { !it.week.saturday } }
+    assertEquals(Week(start = 1, sunday = false, saturday = false), kept.week)
+    val sent = database.write { outbox() }.single().let { Change.parseFrom(it.change).preference }
+    assertEquals(weekPreference { start = 1; sunday = false; saturday = false; holiday = true }, WeekPreference.parseFrom(sent.message))
+  }
+
+  @Test
   fun aPreferenceFromAnotherDeviceIsTaken() = runBlocking {
     settings.settings.first()
-    database.write {
-      takeOwn(change {
-        preference = preferenceValue {
-          key = "theme"
-          message = themePreference { id = "sakura" }.toByteString()
-          hlc = hlc {
-            physicalMs = 1
-            deviceId = "ipad"
-          }
-        }
-      })
-    }
+    database.write { takeOwn(fromIpad("theme", themePreference { id = "sakura" }.toByteString())) }
 
     val taken = withTimeout(5_000) { settings.settings.first { it.themeId == "sakura" } }
     assertEquals(Appearance.System, taken.appearance)

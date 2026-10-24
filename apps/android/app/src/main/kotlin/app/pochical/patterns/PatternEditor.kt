@@ -320,7 +320,7 @@ fun SwitchRow(title: String, note: String?, on: Boolean, enabled: Boolean = true
     headlineContent = { Text(title) },
     supportingContent = note?.let { { Text(it) } },
     trailingContent = {
-      // The on track a step quieter than the accent, so the white thumb stands out on 墨 and 黒板 (POC-57).
+      // accentSwitch, the accent held under 墨's and 黒板's near-white, so the thumb stays clear of its track (POC-57).
       Switch(
         checked = on,
         onCheckedChange = null,
