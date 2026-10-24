@@ -14,11 +14,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -33,9 +34,11 @@ import app.pochical.R
 import app.pochical.RootPage
 import app.pochical.design.Chat
 import app.pochical.groups.HoldSocket
+import app.pochical.groups.LocalValues
+import app.pochical.groups.MemberAvatar
 import app.pochical.groups.rememberMeId
 import app.pochical.kit.GROUP_THREAD
-import app.pochical.kit.appDevice
+import app.pochical.kit.PhotoShelf
 
 // The chat with the people who make Pochical (spec/chat.md, The chat with Pochical's people; /design's
 // SupportRow and SupportChatPage): a chat of its own place, opened from 設定 as a chat's row, and the
@@ -49,14 +52,17 @@ import app.pochical.kit.appDevice
  */
 @Composable
 fun SupportRow(open: (RootPage) -> Unit) {
-  HoldSocket(Chat.supportPlace)
   val me = rememberMeId() ?: return
+  HoldSocket(Chat.supportPlace)
+  // The place's members as it names them: the user, and ポチカル for Pochical's people.
+  val values = LocalValues.current
+  val members by remember(values) { values.members(Chat.supportPlace) }.collectAsState(emptyList())
   ChatRow(
     Chat.supportPlace,
     GROUP_THREAD,
     me,
     stringResource(R.string.support_title),
-    names = emptyMap(),
+    names = members.associate { it.userId to it.shownName() },
     blocked = emptySet(),
     empty = stringResource(R.string.support_empty),
     onOpen = { open(RootPage.Chat(Chat.supportPlace, GROUP_THREAD)) },
@@ -72,8 +78,8 @@ fun SupportRow(open: (RootPage) -> Unit) {
 @Composable
 fun SupportHead(modifier: Modifier = Modifier) {
   val colors = LocalThemeColors.current
-  val context = LocalContext.current
-  val device = remember(context) { appDevice(context) }
+  // What each line takes with it, as the chats send it.
+  val device = LocalChats.current.device
   Box(modifier.fillMaxWidth().padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
     Column(Modifier.widthIn(max = 300.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
       AppIcon(56.dp)
@@ -93,6 +99,15 @@ fun SupportHead(modifier: Modifier = Modifier) {
       )
     }
   }
+}
+
+/**
+ * Someone's face in a chat ([userId] and their [name] and photo as the place shows them): the app's
+ * icon for Pochical's people, who answer under it, else their face as a group's member.
+ */
+@Composable
+fun Face(userId: String, name: String, photoId: String, shelf: PhotoShelf?, size: Dp, modifier: Modifier = Modifier) {
+  if (userId == Chat.pochicalMember) AppIcon(size, modifier) else MemberAvatar(name, photoId, shelf, size, modifier)
 }
 
 /**

@@ -64,7 +64,6 @@ import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.design.Chat
 import app.pochical.design.Radius
-import app.pochical.groups.MemberAvatar
 import app.pochical.kit.ChatLine
 import app.pochical.kit.GroupMemberRow
 import app.pochical.kit.LineContent
@@ -274,12 +273,7 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
         // A tap on the face opens their profile (spec/chat.md, The chat's page).
         val profile = handlers.openProfile?.takeIf { writer != null && !writer.deleted }
         Box(Modifier.size(FACE).clip(CircleShape).then(if (profile != null && writer != null) Modifier.clickable { profile(writer) } else Modifier).clearAndSetSemantics {}) {
-          when {
-            writer == null -> {}
-            // Pochical's people answer under the app's icon.
-            writer.userId == Chat.pochicalMember -> AppIcon(FACE)
-            else -> MemberAvatar(writer.shownName(), writer.photoId, PhotoShelf.place(writer.groupId), FACE)
-          }
+          if (writer != null) Face(writer.userId, writer.shownName(), writer.photoId, PhotoShelf.place(writer.groupId), FACE)
         }
         Spacer(Modifier.width(TAIL))
       } else {

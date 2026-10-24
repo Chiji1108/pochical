@@ -43,8 +43,12 @@ class Chats internal constructor(
    * The app's version and the device (ポチカル 1.0・Pixel 10a・Android 17), sent with each line where the
    * place's rules ask for it (`sendsDevice`: the chat with Pochical's people, whose head says so).
    */
-  private val device: () -> String = { "" },
+  private val deviceWords: () -> String = { "" },
 ) {
+  /** The app's version and the device, as each line of a place that keeps them takes them. */
+  val device: String
+    get() = deviceWords()
+
   /**
    * The chat as its screen shows it, for [me]: the lines of the run without a gap holding the first
    * line held at or after [from], from [from] to the run's last, so they stay as later lines come
@@ -346,7 +350,7 @@ class Chats internal constructor(
 
   /** The app and the device on a line sent where the place [placeId] keeps them. */
   private fun ChatSendKt.Dsl.stamp(placeId: String) {
-    if (placeRules(placeId).sendsDevice) device = this@Chats.device()
+    if (placeRules(placeId).sendsDevice) device = this@Chats.device
   }
 
   private fun <T> observe(vararg tables: String, read: suspend SyncDao.(now: Long) -> Timed<T>): Flow<T> =

@@ -52,7 +52,6 @@ import app.pochical.calendar.fullText
 import app.pochical.calendar.rememberToday
 import app.pochical.design.Chat
 import app.pochical.design.Radius
-import app.pochical.groups.MemberAvatar
 import app.pochical.kit.ChatLine
 import app.pochical.kit.GroupMemberRow
 import app.pochical.kit.LineContent
@@ -223,7 +222,7 @@ fun TypingRow(typers: List<GroupMemberRow>, modifier: Modifier = Modifier) {
   val said = stringResource(R.string.chat_typing, typers.joinToString("、") { it.shownName(deleted) })
   val transition = rememberInfiniteTransition(label = "typing")
   Row(modifier.fillMaxWidth().padding(top = Chat.runGap.dp).clearAndSetSemantics { contentDescription = said }) {
-    MemberAvatar(first.shownName(), first.photoId, PhotoShelf.place(first.groupId), FACE)
+    Face(first.userId, first.shownName(), first.photoId, PhotoShelf.place(first.groupId), FACE)
     Spacer(Modifier.width(TAIL))
     Row(
       Modifier.background(colors.fillTertiary, BubbleShape(mine = false, tail = true)).padding(horizontal = 14.dp, vertical = 14.dp),

@@ -215,7 +215,7 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit, open: (RootP
       else -> null
     }
   // While the chat is read, its title opens nothing yet: the sheets come with the chat.
-  val chat = state ?: return ChatScaffold(groupId, threadId, members, groups, socket, onBack, onPhotos, onTitle = null) {}
+  val chat = state ?: return ChatScaffold(groupId, threadId, support, members, groups, socket, onBack, onPhotos, onTitle = null) {}
 
   val blockedIds = remember(blocked) { blocked.map { it.userId }.toSet() }
   // Blocked members' lines in the place's own chat, folded but those shown this once, by seq.
@@ -522,7 +522,7 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit, open: (RootP
       showFolded = { seq -> shownBlocked = shownBlocked + seq },
     )
   Box {
-    ChatScaffold(groupId, threadId, members, groups, socket, onBack, onPhotos, onTitle) {
+    ChatScaffold(groupId, threadId, support, members, groups, socket, onBack, onPhotos, onTitle) {
       Column(Modifier.fillMaxSize().imePadding()) {
         Box(Modifier.weight(1f).fillMaxWidth()) {
           // What floats over the lines' top keeps its room there, so the first of them scrolls out from under it.
@@ -653,6 +653,8 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit, open: (RootP
 private fun ChatScaffold(
   groupId: String,
   threadId: String,
+  /** The chat with Pochical's people, titled with the app's name and nobody counted. */
+  support: Boolean,
   members: List<GroupMemberRow>,
   groups: List<GroupRow>,
   socket: ChatSocket?,
@@ -665,7 +667,6 @@ private fun ChatScaffold(
 ) {
   val me = rememberMeId()
   val other = me?.let { otherIn(threadId, it) }?.let { id -> members.firstOrNull { it.userId == id } }
-  val support = groupId == Chat.supportPlace
   // The other member's name, the group's, or the app's for Pochical's people.
   val title = other?.shownName() ?: if (support) stringResource(R.string.app_name) else groups.firstOrNull { it.id == groupId }?.name.orEmpty()
   val count = members.count { !it.left }
@@ -674,7 +675,7 @@ private fun ChatScaffold(
     topBar = {
       TopAppBar(
         title = {
-          val opens = stringResource(if (other != null) R.string.profile else R.string.group_settings)
+          val opens = onTitle?.let { stringResource(if (other != null) R.string.profile else R.string.group_settings) }
           Column(if (onTitle != null) Modifier.clickable(onClickLabel = opens, onClick = onTitle) else Modifier) {
             Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis)
             val under = status ?: if (threadId == GROUP_THREAD && !support) stringResource(R.string.chat_members, count) else null
