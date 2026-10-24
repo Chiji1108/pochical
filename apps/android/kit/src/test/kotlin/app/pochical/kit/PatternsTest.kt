@@ -1,5 +1,6 @@
 package app.pochical.kit
 
+import app.pochical.design.MarkIconNames
 import app.pochical.v1.Change
 import app.pochical.v1.change
 import app.pochical.v1.pattern
@@ -22,6 +23,7 @@ private data class PatternsVectors(
   val deleted: List<Deleted>,
   val guessLook: List<GuessLook>,
   val nextColor: List<NextColor>,
+  val iconSearch: List<IconSearch>,
   val readyCopies: List<ReadyCopies>,
   val refused: List<Refused>,
   val fits: List<Fits>,
@@ -90,6 +92,8 @@ private data class PatternsVectors(
   @Serializable data class GuessLook(override val name: String, val text: String, val expected: Look) : VectorCase
 
   @Serializable data class NextColor(override val name: String, val used: List<Int>, val expected: Int) : VectorCase
+
+  @Serializable data class IconSearch(override val name: String, val query: String, val expected: List<String>?) : VectorCase
 
   @Serializable
   data class ReadyCopies(override val name: String, val ids: List<String>, val keeping: List<String>? = null, val expected: List<Linked>) :
@@ -176,6 +180,12 @@ class PatternsTest {
     vectors.guessLook.checkEach({ MarkLook(it.expected.emoji, it.expected.icon, it.expected.symbol) }) { guessLook(it.text) }
 
   @Test fun nextColor() = vectors.nextColor.checkEach({ it.expected }) { nextColor(it.used, SLOTS) }
+
+  @Test
+  fun iconSearch() =
+    vectors.iconSearch.checkEach({ it.expected ?: MarkIconNames.sections.flatMap { section -> section.icons } }) { case ->
+      markIconSections(case.query).flatMap { it.icons }
+    }
 
   @Test
   fun readyCopies() =
