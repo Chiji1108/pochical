@@ -42,6 +42,9 @@ import kotlinx.coroutines.launch
 class WidgetSources(database: AppDatabase, settings: SyncedSettings) {
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
+  /** What the database holds, for who a widget is set to. */
+  val values = database.values()
+
   /** The person's own calendar. */
   val calendar: Flow<OwnCalendar> = database.values().ownCalendar().shareIn(scope, SharingStarted.WhileSubscribed(), replay = 1)
 
@@ -62,8 +65,12 @@ suspend fun updateAllWidgets(context: Context) {
   for (widget in listOf(SimpleWidget(), UpcomingWidget(), CalendarWidget(), NextOffWidget())) widget.updateAll(context)
 }
 
-/** The tables a widget's entry is read from: the person's own. */
-private val WIDGET_TABLES = arrayOf("days", "patterns", "patternOrder", "repeatOrders")
+/**
+ * The tables a widget's entry is read from: the person's own, and their groups' for the widgets set
+ * to someone.
+ */
+private val WIDGET_TABLES =
+  arrayOf("days", "patterns", "patternOrder", "repeatOrders", "syncState", "groups", "groupMembers", "memberDays", "memberPatterns", "memberOrders")
 
 /**
  * Draws the widgets again whenever, while the app runs, sync or an edit changes the tables they

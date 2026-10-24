@@ -29,6 +29,7 @@ import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import app.pochical.calendar.Pattern
 import app.pochical.calendar.TimeChange
+import app.pochical.kit.GroupMarkValue
 import app.pochical.kit.Look
 import app.pochical.kit.MarkStyle
 import app.pochical.markLayers
@@ -57,9 +58,9 @@ private val drawn =
   }
 
 /** What is in the mark's own color, white on clear, [size] across, for the launcher to tint. */
-private fun markPicture(context: Context, pattern: Pattern, look: Look, size: Dp, change: TimeChange?): Bitmap {
+private fun markPicture(context: Context, icon: String, symbol: String, look: Look, size: Dp, change: TimeChange?): Bitmap {
   val side = (size.value * context.resources.displayMetrics.density).toInt().coerceAtLeast(1)
-  val key = listOf(look.style, look.fill, pattern.icon, pattern.symbol, side, change?.early, change?.late).joinToString("|")
+  val key = listOf(look.style, look.fill, icon, symbol, side, change?.early, change?.late).joinToString("|")
   drawn.get(key)?.let { return it }
   val picture = createBitmap(side, side)
   val canvas = Canvas(picture)
@@ -74,16 +75,16 @@ private fun markPicture(context: Context, pattern: Pattern, look: Look, size: Dp
     canvas.drawText(symbol, px / 2, px / 2 - (metrics.ascent + metrics.descent) / 2, paint)
   }
   when (look.style) {
-    MarkStyle.Badge -> letter(pattern.symbol, 0.56f, bold = true)
+    MarkStyle.Badge -> letter(symbol, 0.56f, bold = true)
     MarkStyle.Emoji -> {}
     MarkStyle.Icon -> {
-      val layers = markLayers(pattern.icon, filled = look.fill)
+      val layers = markLayers(icon, filled = look.fill)
       if (layers == null) {
         // The letter in a thin ring, for an icon with no glyph.
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = px * 0.07f
         canvas.drawCircle(px / 2, px / 2, px / 2 - paint.strokeWidth / 2, paint)
-        letter(pattern.symbol, 0.5f, bold = true)
+        letter(symbol, 0.5f, bold = true)
       } else {
         val scale = Matrix().apply { setScale(px / ICON_GRID, px / ICON_GRID) }
         paint.style = Paint.Style.FILL
@@ -128,22 +129,54 @@ private fun cornersPicture(context: Context, size: Dp, change: TimeChange): Bitm
  */
 @Composable
 fun WidgetShiftMark(pattern: Pattern, size: Dp, change: TimeChange?, look: Look, colors: WidgetColors, faint: Boolean = false) {
+  WidgetMarkOf(pattern.icon, pattern.emoji, pattern.symbol, if (look.colored) pattern.color else 0, size, change, look, colors, faint)
+}
+
+/**
+ * A group's mark, [size] across, as the group's screens draw it: its emoji, its icon, or its
+ * letters on a tile of its color's tint. A photo stands as the group's first letter until widgets
+ * show photos.
+ */
+@Composable
+fun WidgetGroupMark(mark: GroupMarkValue, name: String, size: Dp, colors: WidgetColors) {
+  val style =
+    when {
+      mark.emoji.isNotEmpty() -> MarkStyle.Emoji
+      mark.icon.isNotEmpty() -> MarkStyle.Icon
+      else -> MarkStyle.Badge
+    }
+  val letter = mark.letter.ifEmpty { name.trim().take(1) }
+  WidgetMarkOf(mark.icon, mark.emoji, letter, mark.color, size, null, Look(style = style, fill = true), colors)
+}
+
+/** A mark of [icon], [emoji] or [symbol] as [look] draws it, in the テーマ's color [slot]. */
+@Composable
+private fun WidgetMarkOf(
+  icon: String,
+  emoji: String,
+  symbol: String,
+  slot: Int,
+  size: Dp,
+  change: TimeChange?,
+  look: Look,
+  colors: WidgetColors,
+  faint: Boolean = false,
+) {
   val context = LocalContext.current
-  val slot = if (look.colored) pattern.color else 0
   val alpha = if (faint) 0.35f else 1f
   when (look.style) {
     MarkStyle.Emoji ->
       Box(GlanceModifier.size(size), contentAlignment = Alignment.Center) {
-        Text(pattern.emoji, style = TextStyle(fontSize = (size.value * 0.8f).sp))
+        Text(emoji, style = TextStyle(fontSize = (size.value * 0.8f).sp))
         if (change != null) {
           Image(provider = ImageProvider(cornersPicture(context, size, change)), contentDescription = null, modifier = GlanceModifier.size(size), colorFilter = ColorFilter.tint(colors.secondary))
         }
       }
     MarkStyle.Badge ->
       Box(GlanceModifier.size(size).background(colors.markTint(slot)).cornerRadius(size * TILE_ROUNDING), contentAlignment = Alignment.Center) {
-        MarkImage(markPicture(context, pattern, look, size, change), size, colors.mark(slot), alpha)
+        MarkImage(markPicture(context, icon, symbol, look, size, change), size, colors.mark(slot), alpha)
       }
-    MarkStyle.Icon -> MarkImage(markPicture(context, pattern, look, size, change), size, colors.mark(slot), alpha)
+    MarkStyle.Icon -> MarkImage(markPicture(context, icon, symbol, look, size, change), size, colors.mark(slot), alpha)
   }
 }
 
