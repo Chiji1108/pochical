@@ -69,6 +69,14 @@
   <string name="clear">消す</string>
   <string name="calendar_this_month">今月</string>
   <string name="calendar_this_week">今週</string>
+  <string name="summary_days_off">のお休み</string>
+  <string name="summary_days_off_spoken">%1$sのお休み %2$d日</string>
+  <string name="summary_days">日</string>
+  <string name="summary_open">内訳を見る</string>
+  <string name="breakdown_title">今月の内訳</string>
+  <string name="breakdown_unfilled">未入力</string>
+  <string name="breakdown_length">この月は全%1$d日</string>
+  <string name="breakdown_days">%1$d日</string>
   <string name="day_before">前の日</string>
   <string name="day_after">次の日</string>
   <string name="day_shift">シフト</string>
