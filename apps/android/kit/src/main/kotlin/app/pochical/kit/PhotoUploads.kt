@@ -2,7 +2,6 @@ package app.pochical.kit
 
 import app.pochical.design.Chat
 import kotlin.coroutines.cancellation.CancellationException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.currentCoroutineContext
@@ -11,16 +10,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.withContext
 
 /**
  * The member's photo lines on their way up (spec/chat.md, Photos), as iOS's PhotoUploads.swift
  * keeps them: how far each photo going up has gone, for its line to show, and a way to stop a line,
  * as Signal and Telegram ring a photo going up with × to stop it. A line uploads its photos not yet
  * up one after another (which are up is kept with it in the outbox, `PhotosUp`), is sent once all
- * are, and is then taken, or else not sent. Once its photos are all up and it is being sent it
- * cannot be stopped any more: [stop] and [send] decide under one lock, one before the other, so a
- * × tapped as the last upload ends either stops the line or does nothing.
+ * are, and is then taken, or else not sent. Whether × stops a line or comes too late is not decided
+ * here but in the line's outbox row (`ChatOutboxRow.sending`), in one write each: here is only how
+ * far each photo has gone, and the upload going on now, which × cuts short.
  */
 class PhotoUploads internal constructor() {
   private val lock = Any()
@@ -30,57 +28,46 @@ class PhotoUploads internal constructor() {
   /** How much of each photo going up now has gone, from 0 to 1, by its id; none for one not going up (up already, or waiting its turn or for the network). */
   val sent: StateFlow<Map<String, Float>> = mutableSent.asStateFlow()
 
-  private val mutableSending = MutableStateFlow<Set<String>>(emptySet())
-
-  /** The lines whose photos are all up, being sent, by op_id: past stopping. */
-  val sending: StateFlow<Set<String>> = mutableSending.asStateFlow()
-
-  /** Stops the photo going up now of each line, by the line's op_id. */
+  /** Cuts short the photo going up now of each line, by the line's op_id. */
   private val stops = mutableMapOf<String, () -> Unit>()
-
-  /** The lines stopped with ×, which [send] then lets go nowhere until sent again. */
-  private val stopped = mutableSetOf<String>()
 
   /** Each photo's try going up now, so a step of an earlier one, coming late, is not drawn. */
   private val tries = mutableMapOf<String, Any>()
 
-  /**
-   * Stops the line [opId]'s photos going up, if they are; false, stopping nothing, once they are up
-   * and it is being sent. The caller marks the line not sent only on true.
-   */
-  fun stop(opId: String): Boolean =
-    synchronized(lock) {
-      if (opId in mutableSending.value) return false
-      stopped += opId
-      stops.remove(opId)?.invoke()
-      true
-    }
+  /** The photos each line has begun to send, by its op_id, for [forget] to let go of. */
+  private val lines = mutableMapOf<String, MutableSet<String>>()
 
-  /** The line [opId]'s photos are all up: it goes now unless stopped, and can then no longer be stopped; true for it to be sent. */
-  internal fun send(opId: String): Boolean =
-    synchronized(lock) {
-      if (opId in stopped) return false
-      mutableSending.update { it + opId }
-      true
-    }
-
-  /** The line [opId] has gone, is sent again or is taken back: nothing of it is drawn any more, and a photo of it going up stops. */
-  internal fun forget(opId: String, photoIds: List<String>) {
-    synchronized(lock) {
-      stopped -= opId
-      stops.remove(opId)?.invoke()
-      mutableSending.update { it - opId }
-      for (id in photoIds) tries -= id
-      mutableSent.update { it - photoIds.toSet() }
-    }
+  /** Cuts short the line [opId]'s photo going up now, if one is: × has marked the line not sent. */
+  internal fun cancel(opId: String) {
+    synchronized(lock) { stops.remove(opId) }?.invoke()
   }
 
-  /** The photo [photoId] of the line [opId] began going up as the try [attempt], which [stop] ends. */
+  /**
+   * The lines [opIds] have gone (the group took them), are sent again or are taken back: nothing of
+   * them is drawn any more, and a photo of theirs going up stops.
+   */
+  internal fun forget(opIds: Collection<String>) {
+    val cuts =
+      synchronized(lock) {
+        opIds.mapNotNull { opId ->
+          val photoIds = lines.remove(opId).orEmpty()
+          tries -= photoIds
+          mutableSent.update { it - photoIds }
+          stops.remove(opId)
+        }
+      }
+    cuts.forEach { it() }
+  }
+
+  /** Every line let go of, as the device erases the user they were of. */
+  internal fun forgetAll() = forget(synchronized(lock) { lines.keys + stops.keys })
+
+  /** The photo [photoId] of the line [opId] began going up as the try [attempt], which [cancel] cuts short. */
   internal fun began(photoId: String, opId: String, attempt: Any, stop: () -> Unit) {
     synchronized(lock) {
-      mutableSending.update { it - opId }
       stops[opId] = stop
       tries[photoId] = attempt
+      lines.getOrPut(opId, ::mutableSetOf) += photoId
       mutableSent.update { it + (photoId to 0f) }
     }
   }
@@ -149,12 +136,11 @@ internal class LinePhotos(val photos: Photos, val files: ChatPhotoFiles, val upl
   /**
    * Uploads the member's photo [photoId] of the line [opId] to the group's photos, its small version
    * first, so the lines find it as soon as they are sent, telling [uploads] how far the two have
-   * gone as one; × ([PhotoUploads.stop]) cuts it short, throwing as cancelled. [PhotoCannotGo] for
-   * one the device no longer holds or the server refuses; [PhotoFailure] for one to try again.
+   * gone as one; × ([PhotoUploads.stop]) cuts it short with [PhotoStopped]. [PhotoCannotGo] for one
+   * the device no longer holds or the server refuses; [PhotoFailure] for one to try again.
    */
   suspend fun upload(groupId: String, photoId: String, opId: String, credentials: Credentials) {
-    val jpeg = files.toUpload(groupId, photoId) ?: throw PhotoCannotGo()
-    val small = withContext(Dispatchers.Default) { PhotoShrinking.small(jpeg) }
+    val (jpeg, small) = files.toUpload(groupId, photoId) ?: throw PhotoCannotGo()
     val total = ((small?.size ?: 0) + jpeg.size).toFloat()
     val attempt = Any()
     val shelf = PhotoShelf.Group(groupId)
@@ -182,5 +168,11 @@ internal class LinePhotos(val photos: Photos, val files: ChatPhotoFiles, val upl
       }
     }
     files.up(groupId, photoId)
+  }
+
+  /** Every photo kept, and every line's upload, gone with the user the device erases. */
+  suspend fun eraseAll() {
+    uploads.forgetAll()
+    files.eraseAll()
   }
 }

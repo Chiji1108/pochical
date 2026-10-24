@@ -169,13 +169,23 @@ internal suspend fun SyncDao.stillGoing(opId: String, now: Long): Boolean {
 }
 
 /**
- * The photos of the lines [changes] take back or hide, as the device held them before: let go of
- * from the device as the group takes the line back (spec/chat.md, Photos). Read in the transaction
- * the changes are taken in, before them.
+ * The line [opId]'s photos are all up: it goes now if still going (not stopped with ×, taken back
+ * or waited too long), and is from then on past ×; true for it to be sent.
+ */
+internal suspend fun SyncDao.sendOnceUp(opId: String, now: Long): Boolean {
+  if (!stillGoing(opId, now)) return false
+  markSending(opId)
+  return true
+}
+
+/**
+ * The photos of the lines [changes] take back, as the device held them before: let go of from the
+ * device as the group takes the line back (spec/chat.md, Photos). Read in the transaction the
+ * changes are taken in, before them.
  */
 internal suspend fun SyncDao.photosLetGo(changes: List<Change>, groupId: String): List<String> =
   changes
-    .filter { it.kindCase == KindCase.CHAT_LINE && it.chatLine.content.kindCase != ChatContent.KindCase.PHOTOS }
+    .filter { it.kindCase == KindCase.CHAT_LINE && it.chatLine.content.kindCase == ChatContent.KindCase.UNSENT }
     .flatMap { change ->
       val held = line(groupId, change.chatLine.threadId, change.chatLine.seq) ?: return@flatMap emptyList()
       if (held.kind != LineKind.Photos.key) return@flatMap emptyList()

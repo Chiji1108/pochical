@@ -108,7 +108,7 @@ class Chats internal constructor(
   suspend fun sendPhotos(groupId: String, threadId: String, photos: List<ShrunkPhoto>, replyTo: Long? = null) {
     val lined = photos.map { newId() to it }
     try {
-      for ((id, photo) in lined) this.photos.files.keep(groupId, id, photo.jpeg)
+      for ((id, photo) in lined) this.photos.files.keep(groupId, id, photo)
       database.write {
         chatEdit(groupId, now()) {
           send = chatSend {
@@ -129,8 +129,9 @@ class Chats internal constructor(
    * もう一度送る and 削除 (spec/chat.md, Photos); nothing once its photos are up and it is being sent.
    */
   suspend fun stopSending(opId: String) {
-    if (!photos.uploads.stop(opId)) return
-    database.write { failChatEdits(listOf(opId)) }
+    // Decided in the row, in one write against the socket's marking it sent (`sendOnceUp`).
+    val stopped = database.write { stopGoingUp(opId) > 0 }
+    if (stopped) photos.uploads.cancel(opId)
   }
 
   /**
@@ -269,7 +270,7 @@ class Chats internal constructor(
       } ?: return
     // The photos kept for it go too, and one of them going up stops.
     val (groupId, photoIds) = taken
-    photos.uploads.forget(opId, photoIds)
+    photos.uploads.forget(listOf(opId))
     photos.files.forget(groupId, photoIds)
   }
 
@@ -278,25 +279,24 @@ class Chats internal constructor(
    * sent; its photos not up go again from waiting their turn, × stopping it.
    */
   suspend fun sendAgain(opId: String) {
-    val edit =
-      database.write {
-        val row = chatEdit(opId) ?: return@write null
-        deleteChatEdits(listOf(opId))
-        // Its photos up stay up, as long as the group keeps them (`PhotosUp`).
-        insert(
-          ChatOutboxRow(
-            groupId = row.groupId,
-            opId = opId,
-            edit = row.edit,
-            madeAtMs = state().corrected(now()),
-            wentOut = row.wentOut,
-            upIds = row.upIds,
-            upAtMs = row.upAtMs,
-          )
+    // A new row, not yet stopped nor being sent: × works on it again. Its rings start again too.
+    photos.uploads.forget(listOf(opId))
+    database.write {
+      val row = chatEdit(opId) ?: return@write
+      deleteChatEdits(listOf(opId))
+      // Its photos up stay up, as long as the group keeps them (`PhotosUp`).
+      insert(
+        ChatOutboxRow(
+          groupId = row.groupId,
+          opId = opId,
+          edit = row.edit,
+          madeAtMs = state().corrected(now()),
+          wentOut = row.wentOut,
+          upIds = row.upIds,
+          upAtMs = row.upAtMs,
         )
-        row.chatEdit
-      } ?: return
-    photos.uploads.forget(opId, edit.send.content.photos.photosList.map { it.id })
+      )
+    }
   }
 
   /** Keeps what is being written in a chat, or forgets it when it makes no draft (`keptDraft`). */
@@ -362,7 +362,7 @@ private class WaitingEdits(rows: List<ChatOutboxRow>, threadId: String, state: S
           if (edit.send.threadId == threadId) {
             val failed = row.notSent(edit, corrected)
             if (!failed) row.failsAt(edit)?.let { at -> failsAt = minOf(failsAt ?: at, at) }
-            lines += WaitingLine(edit.opId, row.madeAtMs, LineContent.of(edit.send.content), edit.send.replyTo.takeIf { it != 0L }, failed)
+            lines += WaitingLine(edit.opId, row.madeAtMs, LineContent.of(edit.send.content), edit.send.replyTo.takeIf { it != 0L }, failed, sending = row.sending)
           }
         ChatEdit.KindCase.READ -> if (edit.read.threadId == threadId) ownRead = maxOf(ownRead, edit.read.lastReadSeq)
         ChatEdit.KindCase.UNSEND ->

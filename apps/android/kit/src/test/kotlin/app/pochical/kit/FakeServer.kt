@@ -135,6 +135,9 @@ class FakeServer : AutoCloseable {
   /** What a group's photo put answers: 204 keeps it. */
   @Volatile var photoStatus = 204
 
+  /** How long a group's photo put waits before it answers, in milliseconds. */
+  @Volatile var photoDelayMs = 0L
+
   /** How long `SetDisplayName` takes to answer, in milliseconds. */
   @Volatile var displayNameDelayMs = 0L
 
@@ -302,7 +305,7 @@ class FakeServer : AutoCloseable {
               } else if (request.method == "PUT" && request.url.encodedPath.matches(Regex("/v1/groups/[^/]+/photos/[^/]+"))) {
                 val small = request.url.queryParameter("size") == "small"
                 groupPhotos += request.url.pathSegments[4] + if (small) "?small" else ""
-                MockResponse.Builder().code(photoStatus).build()
+                MockResponse.Builder().code(photoStatus).headersDelay(photoDelayMs, TimeUnit.MILLISECONDS).build()
               } else {
                 MockResponse.Builder().code(404).build()
               }

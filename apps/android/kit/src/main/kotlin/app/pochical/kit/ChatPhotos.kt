@@ -25,9 +25,9 @@ import kotlinx.coroutines.withContext
 /**
  * A photo shrunk to send: a JPEG no larger than `chatRules.photoMaxEdge` on its longer side, drawn
  * again from its pixels so none of the original's metadata (its location among them) goes along,
- * and its ThumbHash.
+ * its small version (null for one no larger than `chatRules.photoSmallEdge`) and its ThumbHash.
  */
-class ShrunkPhoto(val jpeg: ByteArray, val width: Int, val height: Int, val thumbHash: ByteArray) {
+class ShrunkPhoto(val jpeg: ByteArray, val width: Int, val height: Int, val thumbHash: ByteArray, val small: ByteArray? = null) {
   /** The photo as its line sends it, under [id]. */
   fun line(id: String): ChatPhoto = chatPhoto {
     this.id = id
@@ -47,12 +47,21 @@ object PhotoShrinking {
   fun shrink(source: ImageDecoder.Source, maxEdge: Int = Chat.photoMaxEdge): ShrunkPhoto? {
     val image = upright(source, maxEdge) ?: return null
     val jpeg = jpeg(image) ?: return null
-    return ShrunkPhoto(jpeg, image.width, image.height, ThumbHash.of(image))
+    // Made once, from the pixels at hand, however many times the photo goes up.
+    val longer = max(image.width, image.height)
+    val small =
+      if (longer <= Chat.photoSmallEdge) null
+      else {
+        val scale = Chat.photoSmallEdge.toDouble() / longer
+        jpeg(Bitmap.createScaledBitmap(image, max(1, (image.width * scale).roundToInt()), max(1, (image.height * scale).roundToInt()), true))
+      }
+    return ShrunkPhoto(jpeg, image.width, image.height, ThumbHash.of(image), small)
   }
 
   /**
    * The photo's small version to send beside it, its longer side at `chatRules.photoSmallEdge`, for
    * the chat's lines and quotes to fetch in its place; null when the photo is no larger than that.
+   * Made again from the photo as kept to show, when the one made as it was shrunk is gone.
    */
   fun small(jpeg: ByteArray): ByteArray? {
     var larger = false
@@ -116,26 +125,42 @@ class ChatPhotoFiles internal constructor(private val caches: File, private val 
 
   internal fun pending(groupId: String, photoId: String) = File(files, "pending-photos/$groupId/$photoId.jpg")
 
-  /** Keeps the member's own photo to send: until it is up, and to show. */
-  internal suspend fun keep(groupId: String, photoId: String, jpeg: ByteArray) =
+  /** Its small version, kept beside it until it is up. */
+  private fun pendingSmall(groupId: String, photoId: String) = File(files, "pending-photos/$groupId/$photoId.small.jpg")
+
+  /** Keeps the member's own photo to send: until it is up, with its small version, and to show. */
+  internal suspend fun keep(groupId: String, photoId: String, photo: ShrunkPhoto) =
     withContext(Dispatchers.IO) {
-      for (file in listOf(pending(groupId, photoId), shown(groupId, photoId))) {
+      val kept = listOf(pending(groupId, photoId) to photo.jpeg, shown(groupId, photoId) to photo.jpeg) + listOfNotNull(photo.small?.let { pendingSmall(groupId, photoId) to it })
+      for ((file, bytes) in kept) {
         file.parentFile?.mkdirs()
-        file.writeBytes(jpeg)
+        file.writeBytes(bytes)
       }
     }
 
-  /** The photo's bytes to upload: the copy kept to send, else the one kept to show; null once both are gone. */
-  internal suspend fun toUpload(groupId: String, photoId: String): ByteArray? =
-    withContext(Dispatchers.IO) { listOf(pending(groupId, photoId), shown(groupId, photoId)).firstOrNull { it.exists() }?.readBytes() }
+  /**
+   * The photo's bytes to upload, and its small version's: the copies kept to send, else the one kept
+   * to show and a small version made from it again; null once the photo is gone from the device.
+   */
+  internal suspend fun toUpload(groupId: String, photoId: String): Pair<ByteArray, ByteArray?>? =
+    withContext(Dispatchers.IO) {
+      val pending = pending(groupId, photoId)
+      if (pending.exists()) return@withContext pending.readBytes() to pendingSmall(groupId, photoId).takeIf { it.exists() }?.readBytes()
+      val shown = shown(groupId, photoId).takeIf { it.exists() }?.readBytes() ?: return@withContext null
+      shown to PhotoShrinking.small(shown)
+    }
 
   /** It is up: only the copy to show stays. */
   internal suspend fun up(groupId: String, photoId: String) {
-    withContext(Dispatchers.IO) { pending(groupId, photoId).delete() }
+    withContext(Dispatchers.IO) {
+      pending(groupId, photoId).delete()
+      pendingSmall(groupId, photoId).delete()
+    }
   }
 
   /** Where the member's own photo is held on the device, sent or waiting to go, if it is. */
-  fun held(groupId: String, photoId: String): File? = listOf(shown(groupId, photoId), pending(groupId, photoId)).firstOrNull { it.exists() }
+  suspend fun held(groupId: String, photoId: String): File? =
+    withContext(Dispatchers.IO) { listOf(shown(groupId, photoId), pending(groupId, photoId)).firstOrNull { it.exists() } }
 
   /** Takes photos off the device, as their line is taken back or deleted before it went. */
   internal suspend fun forget(groupId: String, photoIds: List<String>) {
@@ -144,6 +169,7 @@ class ChatPhotoFiles internal constructor(private val caches: File, private val 
       for (id in photoIds) {
         shown(groupId, id).delete()
         pending(groupId, id).delete()
+        pendingSmall(groupId, id).delete()
       }
     }
     for (id in photoIds) mutableForgotten.emit(ForgottenPhoto(PhotoShelf.Group(groupId), id))

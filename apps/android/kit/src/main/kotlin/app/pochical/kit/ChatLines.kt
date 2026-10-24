@@ -201,6 +201,8 @@ data class WaitingLine(
   val replyTo: Long? = null,
   /** Not sent (the group refused it, or it waited too long): to send again or delete. */
   val failed: Boolean = false,
+  /** A line of photos all up, being sent: × (送信をやめる) no longer stops it. */
+  val sending: Boolean = false,
 )
 
 /**
@@ -288,9 +290,10 @@ fun unpinning(pins: List<Long>, seq: Long): PinStep = PinStep(pins.filter { it !
 /**
  * How many of a line's [count] photos go in each of its album's rows, top first: two side by side,
  * three as one over two, and past that rows of two and three, as few as can be, the twos first
- * (spec/vectors/chat.json, albumRows).
+ * (spec/vectors/chat.json, albumRows). A line of one is a photo alone, a row of it.
  */
 fun albumRows(count: Int): List<Int> {
+  if (count <= 1) return listOfNotNull(count.takeIf { it == 1 })
   if (count == 3) return listOf(1, 2)
   val rows = (count + 2) / 3
   val twos = 3 * rows - count

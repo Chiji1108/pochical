@@ -272,6 +272,9 @@ class SyncClient internal constructor(
               sendChatOutbox(socket, peer.id)
             } catch (_: NotTheOwner) {
               messages.send(SocketMessage.Ended(SocketEvent.Refused(Stop.NotTheOwner)))
+            } catch (_: SessionRefused) {
+              // A photo's upload found the session unknown, as the socket's own 401 would.
+              messages.send(SocketMessage.Ended(SocketEvent.Refused(Stop.SignedOut)))
             } catch (e: CancellationException) {
               throw e
             } catch (e: Exception) {
@@ -306,6 +309,8 @@ class SyncClient internal constructor(
             take(changes, peer.id)
           }
           linePhotos.files.forget(peer.id, letGo)
+          // A line of the member's the group took stops waiting, as its Acked would say.
+          linePhotos.uploads.forget(changes.filter { it.hasChatLine() && it.chatLine.opId.isNotEmpty() }.map { it.chatLine.opId })
         } else {
           write { take(changes) }
         }
@@ -316,6 +321,8 @@ class SyncClient internal constructor(
         val acked = frame.acked
         if (peer is Peer.Group) {
           takeInto(peer.id) { acknowledgeChat(acked.opIdsList, acked.refusedList.map { it.opId }) }
+          // Done with, their photos' rings go with them.
+          linePhotos.uploads.forget(acked.opIdsList)
         } else {
           write { acknowledge(acked.opIdsList) }
         }
@@ -387,7 +394,7 @@ class SyncClient internal constructor(
     }
     // Stopped as the last bytes went: left as the member left it. Past here × does nothing, so the
     // line is sent as it shows.
-    return read { stillGoing(edit.opId, now()) } && linePhotos.uploads.send(edit.opId)
+    return write { sendOnceUp(edit.opId, now()) }
   }
 
   /**

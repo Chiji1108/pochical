@@ -778,7 +778,7 @@ class SyncAccount internal constructor(
           upsert(state().copy(erased = userId))
         }
         // Their photos with the rest: the outbox that would send them is gone.
-        linePhotos.files.eraseAll()
+        linePhotos.eraseAll()
         sessions.forgetSession()
         break
       } catch (e: CancellationException) {
@@ -892,7 +892,7 @@ class SyncAccount internal constructor(
         claim(userId)
         true
       }
-    if (erased) linePhotos.files.eraseAll()
+    if (erased) linePhotos.eraseAll()
     commands.send(Command.SignedIn(session, kept = kept != null))
   }
 

@@ -156,15 +156,48 @@ class ChatSyncTest {
   }
 
   @Test
-  fun aLineStoppedWhileItsPhotosGoUpIsNotSentAndOnceSentCannotBeStopped() {
-    val uploads = PhotoUploads()
-    assertTrue(uploads.stop("a"))
-    assertFalse(uploads.send("a"))
-    assertTrue(uploads.send("b"))
-    assertFalse(uploads.stop("b"))
-    // Sent again, it goes again.
-    uploads.forget("a", emptyList())
-    assertTrue(uploads.send("a"))
+  fun xStopsALineUntilItIsBeingSentAndASendAgainIsStoppedAfresh() = runBlocking {
+    val database = AppDatabase.open(org.robolectric.RuntimeEnvironment.getApplication(), inMemory = true)
+    try {
+      val chats = Chats(database, testLinePhotos(), now = { 1_000 })
+      database.listGroup()
+      chats.sendPhotos("g1", GROUP_THREAD, listOf(ShrunkPhoto(byteArrayOf(1), 1, 1, byteArrayOf())))
+      val opId = database.read { chatOutbox().single().opId }
+      fun waiting() = runBlocking { chats.state("g1", GROUP_THREAD, "me", null).first().waiting.single() }
+
+      // Stopped first: the socket's send that follows finds it not going.
+      chats.stopSending(opId)
+      assertTrue(waiting().failed)
+      assertFalse(database.write { sendOnceUp(opId, 1_000) })
+
+      // Sent again, it is a new row, which × stops no more once it is being sent.
+      chats.sendAgain(opId)
+      assertFalse(waiting().failed)
+      assertTrue(database.write { sendOnceUp(opId, 1_000) })
+      chats.stopSending(opId)
+      val sending = waiting()
+      assertFalse(sending.failed)
+      assertTrue(sending.sending)
+    } finally {
+      database.close()
+    }
+  }
+
+  @Test
+  fun xCutsShortAPhotoGoingUpAndTheLinesAfterItGoAtOnce() = runBlocking {
+    val phone = signedIn()
+    val me = server.userId
+    // The server would hold the upload a minute: only cancelling the call ends it sooner.
+    server.photoDelayMs = 60_000
+    phone.chats.sendPhotos("g1", GROUP_THREAD, listOf(ShrunkPhoto(byteArrayOf(1), 1, 1, byteArrayOf())))
+    val photo = withTimeout(10_000) { phone.linePhotos.uploads.sent.first { it.isNotEmpty() } }.keys.single()
+    val opId = phone.chat(me).waiting.single().opId
+    phone.chats.send("g1", GROUP_THREAD, "やめた")
+    phone.chats.stopSending(opId)
+
+    val after = phone.chat(me) { it.lines.isNotEmpty() && it.waiting.singleOrNull()?.failed == true }
+    assertEquals(LineContent.Words("やめた"), after.lines.single().content)
+    assertTrue(photo !in phone.linePhotos.uploads.sent.value)
   }
 
   @Test

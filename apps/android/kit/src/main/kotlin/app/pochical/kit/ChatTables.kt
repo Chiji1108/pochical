@@ -59,6 +59,11 @@ class ChatOutboxRow(
   val upIds: String = "",
   /** When the upload of the latest of them began, by the server's time. */
   val upAtMs: Long = 0,
+  /**
+   * A line of photos all up, being sent: past × (送信をやめる). Decided in the same write as × marks
+   * it not sent, so one comes wholly before the other; sent again, it is a new row, not yet past it.
+   */
+  val sending: Boolean = false,
 ) {
   /** Which of its photos are up. */
   internal val up: PhotosUp

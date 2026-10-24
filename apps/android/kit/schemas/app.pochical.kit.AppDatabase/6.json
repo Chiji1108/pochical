@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 6,
-    "identityHash": "7f19c998cd9f9b004eaf4c10dcdaa578",
+    "identityHash": "0e74d03d17b42cc34c60ed9439e5009e",
     "entities": [
       {
         "tableName": "days",
@@ -924,7 +924,7 @@
       },
       {
         "tableName": "chatOutbox",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `groupId` TEXT NOT NULL, `opId` TEXT NOT NULL, `edit` BLOB NOT NULL, `madeAtMs` INTEGER NOT NULL, `failed` INTEGER NOT NULL, `wentOut` INTEGER NOT NULL, `upIds` TEXT NOT NULL, `upAtMs` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `groupId` TEXT NOT NULL, `opId` TEXT NOT NULL, `edit` BLOB NOT NULL, `madeAtMs` INTEGER NOT NULL, `failed` INTEGER NOT NULL, `wentOut` INTEGER NOT NULL, `upIds` TEXT NOT NULL, `upAtMs` INTEGER NOT NULL, `sending` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -977,6 +977,12 @@
           {
             "fieldPath": "upAtMs",
             "columnName": "upAtMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sending",
+            "columnName": "sending",
             "affinity": "INTEGER",
             "notNull": true
           }
@@ -1156,7 +1162,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '7f19c998cd9f9b004eaf4c10dcdaa578')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '0e74d03d17b42cc34c60ed9439e5009e')"
     ]
   }
 }

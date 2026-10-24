@@ -146,10 +146,11 @@ internal class Photos(private val http: OkHttpClient, private val server: HttpUr
   /** The user's own and an invitation's are read alike by every user, so the user is part of the key. */
   private fun key(shelf: PhotoShelf, photoId: String, credentials: Credentials) = "${credentials.userId}/${shelf.path}$photoId"
 
+  /** The server's answer to [request], read by [read]; cancelling the caller cancels the call, its upload with it (×). */
   private suspend fun <T> answer(request: Request, read: (Response) -> T): T =
     withContext(Dispatchers.IO) {
       try {
-        http.newCall(request).execute().use {
+        http.answer(request).use {
           when {
             it.code == 401 -> throw SessionRefused()
             !it.isSuccessful -> throw PhotoFailure(it.code)
