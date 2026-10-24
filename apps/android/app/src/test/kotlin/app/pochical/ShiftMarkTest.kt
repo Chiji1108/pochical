@@ -13,6 +13,9 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.dp
 import app.pochical.design.ReadyPatterns
 import app.pochical.design.Theme
+import app.pochical.kit.DeviceSettings
+import app.pochical.kit.Look
+import app.pochical.kit.MarkStyle
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull

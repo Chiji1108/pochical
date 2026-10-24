@@ -3,6 +3,7 @@ package app.pochical.calendar
 import app.pochical.kit.AppDatabase
 import app.pochical.kit.CoworkerRow
 import app.pochical.kit.OwnEdits
+import app.pochical.kit.PageSummary
 import app.pochical.kit.PatternRefusal
 import app.pochical.kit.PatternRow
 import app.pochical.kit.RepeatOrder
@@ -11,6 +12,7 @@ import app.pochical.kit.readyCopies
 import app.pochical.kit.ShownDay
 import app.pochical.kit.newId
 import app.pochical.kit.ownCalendar
+import app.pochical.kit.summary
 import app.pochical.v1.DayField
 import app.pochical.v1.pattern
 import java.time.LocalDate
@@ -113,6 +115,8 @@ class SyncedDays(private val database: AppDatabase, private val edits: OwnEdits,
 
     override fun shown(from: LocalDate, through: LocalDate): Map<LocalDate, DayEntry> =
       own.shown(from, through).mapValues { (_, day) -> DayEntry(day.shift, day.start, day.end, day.people.orEmpty()) }
+
+    override fun summary(first: LocalDate, last: LocalDate): PageSummary = own.summary(first, last)
 
     override fun note(day: LocalDate): String? = own.note(day)
 

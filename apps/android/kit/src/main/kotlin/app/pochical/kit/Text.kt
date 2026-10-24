@@ -2,6 +2,7 @@ package app.pochical.kit
 
 import android.icu.lang.UCharacter
 import android.icu.lang.UProperty
+import app.pochical.design.TextFields
 import java.text.BreakIterator
 
 // Text counted as spec/text-limits.md has it, in characters as a reader sees them, and the limits
@@ -61,6 +62,12 @@ fun markLetter(before: String, after: String, limit: Int): String {
   while (end < shared - start && was[was.size - 1 - end] == now[now.size - 1 - end]) end++
   val typed = now.subList(start, now.size - end)
   return (typed.ifEmpty { now }).take(limit).joinToString("")
+}
+
+/** A shift's name as a day shows it: whole up to [length] characters, else its first [length] - 1 and …. */
+fun dayName(name: String, length: Int = TextFields.dayNameLength): String {
+  val characters = characters(name)
+  return if (characters.size <= length) name else characters.take(length - 1).joinToString("") + "…"
 }
 
 private fun characters(text: String): List<String> {
