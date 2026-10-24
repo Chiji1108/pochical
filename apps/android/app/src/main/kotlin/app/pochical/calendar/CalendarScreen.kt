@@ -192,12 +192,12 @@ fun CalendarScreen(open: (RootPage) -> Unit, hidesTabBar: (Boolean) -> Unit) {
   // The reminders offered, once, the first time shifts are entered or an order was set up: what
   // they are for, then Android's question only if wanted (spec/calendar.md, Reminders).
   val settings by rememberUpdatedState(LocalDeviceSettings.current)
-  val asking by rememberUpdatedState(LocalNotificationAsking.current)
+  val asking = LocalNotificationAsking.current
   var offeringReminders by rememberSaveable { mutableStateOf<String?>(null) }
   // A shift was entered since ポチポチ入力 opened, so its closing may offer the reminders.
   var entered by rememberSaveable { mutableStateOf(false) }
   fun offerReminders() {
-    val time = settings.device.reminderOfferTime(asking.mayAsk) ?: return
+    val time = settings.device.reminderOfferTime(asking.notAsked) ?: return
     settings.change { it.copy(reminderOffered = true) }
     offeringReminders = time
   }

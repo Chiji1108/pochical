@@ -2,6 +2,7 @@ package app.pochical.calendar
 
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
@@ -56,13 +57,16 @@ class CalendarScreenTest {
   private val opened = mutableListOf<RootPage>()
   private var tabBarHidden = false
 
+  /** The question whether the app may notify, which the calendar may not put here. */
+  private val asking = NotificationAsking(mutableStateOf(NotificationAsking.Asked(mayAsk = false, asked = false))) {}
+
   private fun show() {
     val settings = DeviceSettings()
     compose.setContent {
       CompositionLocalProvider(
         LocalDeviceSettings provides DeviceSettingsState(settings) {},
         LocalOwnDays provides days,
-        LocalNotificationAsking provides NotificationAsking(mayAsk = false) {},
+        LocalNotificationAsking provides asking,
       ) {
         PochicalTheme(settings) { CalendarScreen(open = { opened += it }, hidesTabBar = { tabBarHidden = it }) }
       }

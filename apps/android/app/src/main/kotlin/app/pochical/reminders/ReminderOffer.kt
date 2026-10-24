@@ -14,11 +14,12 @@ import app.pochical.kit.Reminder
 // this device only, never offered again whatever the answer, as iOS's ReminderOffer.
 
 /**
- * The time the offer says, 21:00, when it is to be made now: never made, Android's question still
- * to be put ([mayAsk]), and a 前日 reminder on, the evening's the offer speaks of.
+ * The time the offer says, 21:00, when it is to be made now: never made, Android's question
+ * never put ([notAsked]), and a 前日 reminder on, the evening's the offer speaks of. Before Android 13
+ * no question is put, notifications needing no asking, so it is not offered.
  */
-fun DeviceSettings.reminderOfferTime(mayAsk: Boolean): String? {
-  if (reminderOffered || !mayAsk) return null
+fun DeviceSettings.reminderOfferTime(notAsked: Boolean): String? {
+  if (reminderOffered || !notAsked) return null
   return reminders.firstNotNullOfOrNull { reminder -> (reminder.kind as? Reminder.Kind.DayBefore)?.takeIf { reminder.on }?.time }
     ?.removePrefix("0")
 }

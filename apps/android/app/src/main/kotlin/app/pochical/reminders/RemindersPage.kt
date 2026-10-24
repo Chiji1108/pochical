@@ -28,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -65,6 +66,7 @@ import app.pochical.notifications.PermissionCard
 import app.pochical.notifications.LocalNotificationAsking
 import java.time.LocalDate
 import java.time.ZonedDateTime
+import java.util.UUID
 
 /** The reminders' alarms, for the screens. */
 val LocalReminderAlarms = staticCompositionLocalOf<ReminderAlarms> { error("No reminders above this screen") }
@@ -171,7 +173,7 @@ private fun ReminderRow(reminder: Reminder, calendar: OwnCalendar, onOpen: () ->
     supportingContent =
       if (reminder.on) {
         {
-          val next = nextFiring(reminder, calendar)
+          val next = remember(reminder, calendar) { nextFiring(reminder, calendar) }
           Text(
             next?.let { stringResource(R.string.reminder_next, it.text, it.shift) } ?: stringResource(R.string.reminder_none_ahead)
           )
@@ -190,7 +192,9 @@ private fun ReminderRow(reminder: Reminder, calendar: OwnCalendar, onOpen: () ->
 fun ReminderEditorPage(id: String?, navigation: PageNavigation) {
   val settings = LocalDeviceSettings.current
   val reminders = settings.device.reminders
-  val reminder = reminders.find { it.id == id }
+  // As the page opened, so one deleted here stays itself while the page leaves.
+  val reminder = remember { reminders.find { it.id == id } }
+  val draftId = rememberSaveable { reminder?.id ?: newId() }
   val calendar by LocalOwnDays.current.calendar.collectAsStateWithLifecycle()
   val asking = LocalNotificationAsking.current
   var dayBefore by rememberSaveable { mutableStateOf(reminder?.kind !is Reminder.Kind.BeforeStart) }
@@ -204,7 +208,7 @@ fun ReminderEditorPage(id: String?, navigation: PageNavigation) {
   var deleting by rememberSaveable { mutableStateOf(false) }
   val draft =
     Reminder(
-      id = reminder?.id ?: newId(reminders),
+      id = draftId,
       on = reminder?.on ?: true,
       skip = skip,
       kind = if (dayBefore) Reminder.Kind.DayBefore(time) else Reminder.Kind.BeforeStart(minutes),
@@ -368,11 +372,8 @@ private fun sample(draft: Reminder, calendar: OwnCalendar): Pair<ReminderFiring,
     ?.let { it to false }
 }
 
-/** One no other reminder has. */
-private fun newId(reminders: List<Reminder>): String {
-  val used = reminders.mapTo(HashSet()) { it.id }
-  return generateSequence(reminders.size) { it + 1 }.map { "reminder-$it" }.first { it !in used }
-}
+/** One no reminder has had, so a new one never takes a deleted one's notifications for its own. */
+private fun newId(): String = "reminder-${UUID.randomUUID()}"
 
 /** When it arrives, as a row says it: 10月9日(金) 21:00. */
 private val ReminderFiring.text: String

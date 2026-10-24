@@ -59,6 +59,8 @@ data class DeviceSettings(
    * after being refused before: only the system's settings turn notifications on now.
    */
   val notificationsRefused: Boolean = false,
+  /** Android 13's question whether the app may notify was put once at least, whatever the answer. */
+  val notificationsAsked: Boolean = false,
 ) {
   /** The テーマ in use; one no longer known is the app's own. */
   val theme: Theme
