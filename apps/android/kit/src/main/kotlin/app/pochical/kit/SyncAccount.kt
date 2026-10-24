@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.first
@@ -312,6 +313,36 @@ class SyncAccount(
    */
   fun startAfresh() {
     commands.trySend(Command.StartAfresh)
+  }
+
+  /**
+   * Runs [call] as the user the device is signed in as: one asked while it signs in, or while a change
+   * of account waits on the server, waits for it, for a while at most, rather than going as no one
+   * (spec/sync-protocol.md, Sockets). [NotSignedIn] when the device is not signed in by then, or when
+   * the server says it does not know the session ([SessionRefused]), which ends it as a socket's 401
+   * does.
+   */
+  suspend fun <T> asSignedIn(call: suspend (Credentials) -> T): T {
+    val credentials =
+      withTimeoutOrNull(SIGN_IN_WAIT_MS) {
+        state
+          .map { now ->
+            when (now) {
+              is AccountState.SignedIn -> signedIn()
+              AccountState.SigningIn,
+              is AccountState.Changing -> null
+              else -> throw NotSignedIn()
+            }
+          }
+          .filterNotNull()
+          .first()
+      } ?: throw NotSignedIn()
+    try {
+      return call(credentials)
+    } catch (e: SessionRefused) {
+      commands.send(Command.SessionUnknown(credentials.generation))
+      throw NotSignedIn()
+    }
   }
 
   /** The credentials of the stretch signed in now, null when the device is not signed in or is changing. */
@@ -893,6 +924,8 @@ class SyncAccount(
     const val TAG = "PochicalAccount"
     const val ERASE_FIRST_WAIT_MS = 1_000L
     const val ERASE_LONGEST_WAIT_MS = 30_000L
+    /** How long a call waits for the device to be signed in, as iOS's CurrentAccount.signInWait. */
+    const val SIGN_IN_WAIT_MS = 15_000L
   }
 }
 

@@ -7,6 +7,10 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import java.io.File
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 
@@ -35,6 +39,18 @@ class PochicalKit(context: Context) {
       network = DefaultNetworkWatch(context),
       sendInBackground = { SendOutboxWorker.enqueue(context) },
     )
+
+  private val photos = Photos(http, server, File(context.cacheDir, "held-photos"))
+
+  /** GroupService, the profile and the photos, as the user the device is signed in as. */
+  val groups = GroupCalls(account, http, server, photos)
+
+  init {
+    // What was fetched as a user goes with them, as the rest of their data does.
+    CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
+      account.state.map { (it as? AccountState.SignedIn)?.userId }.distinctUntilChanged().collect { photos.forget() }
+    }
+  }
 
   /** Sign in with Apple through Apple's web page, which Android has in place of iOS's own. */
   val appleSignIn = AppleWebSignIn(server, http)

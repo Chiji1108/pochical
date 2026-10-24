@@ -42,6 +42,9 @@ interface Values {
   /** The preferences the account holds, each its message's bytes by key. */
   @Query("SELECT * FROM preferences") fun preferences(): Flow<List<PreferenceRow>>
 
+  /** The user's usual name and photo, null before they set either. */
+  @Query("SELECT * FROM profile WHERE id = 1") fun profile(): Flow<ProfileRow?>
+
   /** The user's groups in the order they joined them. */
   @Query("SELECT * FROM groups ORDER BY joinedAtMs") fun groups(): Flow<List<GroupRow>>
 

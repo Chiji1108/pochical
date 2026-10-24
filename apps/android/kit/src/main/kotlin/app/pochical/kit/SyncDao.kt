@@ -102,6 +102,10 @@ internal interface SyncDao {
   /** The newest edit in the outbox, null when none waits. */
   @Query("SELECT MAX(id) FROM outbox") fun lastWaiting(): Flow<Long?>
 
+  @Upsert suspend fun upsert(profile: ProfileRow)
+
+  @Query("DELETE FROM profile") suspend fun deleteProfile()
+
   @Upsert suspend fun upsert(group: GroupRow)
 
   @Query(

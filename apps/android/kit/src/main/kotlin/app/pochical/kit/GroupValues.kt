@@ -5,13 +5,21 @@ import app.pochical.v1.Change.KindCase
 import app.pochical.v1.DayField
 import app.pochical.v1.DayValue
 import app.pochical.v1.GroupMark
+import app.pochical.v1.groupMark
 
 // The user's groups as their User DO lists them, and what each group's socket brings
 // (spec/sync-protocol.md, Groups; Group projection), each in one transaction with the cursor it
 // moves. Nothing of a group is edited on the device.
 
-/** A group the user is in, from their own socket: a group left goes, with what the device holds of it. */
+/**
+ * What the user's own socket says of them beside their values: a group they are in, a group left
+ * going with what the device holds of it, and their usual name and photo.
+ */
 internal suspend fun SyncDao.takeMembership(change: Change) {
+  if (change.kindCase == KindCase.PROFILE) {
+    upsert(ProfileRow(name = change.profile.name, photoId = change.profile.photoId))
+    return
+  }
   if (change.kindCase != KindCase.MEMBERSHIP) return
   val membership = change.membership
   if (membership.left) {
@@ -22,8 +30,11 @@ internal suspend fun SyncDao.takeMembership(change: Change) {
   upsert(GroupRow(membership.groupId, membership.name, membership.joinedAtMs, membership.mark.value))
 }
 
-/** A Reset of the user's socket: the groups come again with everything else. */
-internal suspend fun SyncDao.resetMemberships() = deleteGroups()
+/** A Reset of the user's socket: the groups and the profile come again with everything else. */
+internal suspend fun SyncDao.resetMemberships() {
+  deleteGroups()
+  deleteProfile()
+}
 
 /** The cursor to say in the group's Hello: 0 before any. */
 internal suspend fun SyncDao.cursorOf(groupId: String): Long = groupCursor(groupId) ?: 0
@@ -118,5 +129,14 @@ private suspend fun SyncDao.takeDay(value: DayValue, userId: String, groupId: St
   if (shown == empty) deleteMemberDay(groupId, userId, value.date) else upsert(shown)
 }
 
-private val GroupMark.value
+internal val GroupMark.value
   get() = GroupMarkValue(emoji, icon, letter, color, photoId)
+
+internal val GroupMarkValue.proto: GroupMark
+  get() = groupMark {
+    emoji = this@proto.emoji
+    icon = this@proto.icon
+    letter = this@proto.letter
+    color = this@proto.color.coerceAtLeast(0)
+    photoId = this@proto.photoId
+  }

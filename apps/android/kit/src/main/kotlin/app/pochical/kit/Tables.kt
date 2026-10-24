@@ -150,6 +150,19 @@ data class GroupMarkValue(
   val photoId: String = "",
 )
 
+/**
+ * The user's usual name and photo (spec/sync-protocol.md, Profile), as their User DO last sent them:
+ * each group shows them unless the user gave it their own. One row, none before the user sets one.
+ */
+@Entity(tableName = "profile")
+data class ProfileRow(
+  @PrimaryKey val id: Int = 1,
+  /** Empty for none. */
+  val name: String,
+  /** One of the user's own photos (/v1/me/photos/{id}); empty for none. */
+  val photoId: String,
+)
+
 // What a group's socket brings (spec/sync-protocol.md, Groups; Group projection): who is in the
 // group, and each member's shared days, patterns and repeating orders, kept for each group as the
 // server last sent them. Nothing here is edited on the device.

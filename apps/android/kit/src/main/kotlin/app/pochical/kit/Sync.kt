@@ -21,10 +21,11 @@ import app.pochical.v1.RepeatOrdersEdits
  * field of one, it did not read before: a device moves its cursor past Changes it cannot read, so
  * after the update it takes everything again (`TakeAllAgainIfOlder`). 1: the user's own values,
  * their preferences and memberships, and the groups' members and their shared values. 2: a
- * preference's value as its key's message (`PreferenceValue.message`). `mise run
- * sync:check` fails when `Change`'s messages in proto/ change while this stays.
+ * preference's value as its key's message (`PreferenceValue.message`). 3: the user's `Profile`,
+ * their usual name and photo. `mise run sync:check` fails when `Change`'s messages in proto/ change
+ * while this stays.
  */
-const val SYNC_SCHEMA = 2
+const val SYNC_SCHEMA = 3
 
 // What the user's socket brings into the device's database (spec/sync-protocol.md, Sockets; Change
 // log and cursor), each in one transaction with the cursor it moves.
@@ -54,6 +55,7 @@ internal suspend fun SyncDao.eraseUserData() {
   deleteOutbox()
   resetOwn()
   deleteGroups()
+  deleteProfile()
   deleteAllMembers()
   deleteAllMemberDays()
   deleteAllMemberPatterns()
