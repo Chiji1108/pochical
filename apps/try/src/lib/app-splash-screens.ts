@@ -1,4 +1,4 @@
-// Written by scripts/app-assets.ts (bun run icon:app); do not edit.
+// Written by scripts/app-assets.ts (pnpm run icon:app); do not edit.
 // iOS's launch images for apps/try, one per screen size, light and dark.
 export const appSplashScreens = [
   {

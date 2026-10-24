@@ -2,43 +2,36 @@
   "name": "pochical",
   "private": true,
   "license": "PolyForm-Strict-1.0.0",
-  "workspaces": [
-    "apps/admin",
-    "apps/design",
-    "apps/try",
-    "apps/server",
-    "apps/web",
-    "design",
-    "packages/*"
-  ],
   "type": "module",
   "scripts": {
-    "typecheck": "bun run --cwd design typecheck && bun run --cwd packages/styled-system typecheck && bun run --cwd packages/jsx typecheck && bun run --cwd packages/prototype typecheck && bun run --cwd apps/web typecheck && bun run --cwd apps/design typecheck && bun run --cwd apps/try typecheck && bun run --cwd apps/server typecheck && bun run --cwd apps/admin typecheck && tsc --noEmit -p tools && tsc --noEmit -p tools/layout-diff",
-    "test": "bun run --cwd packages/jsx test && bun run --cwd packages/prototype test && bun run --cwd apps/web test && bun run --cwd apps/design test && bun run --cwd apps/server test",
+    "typecheck": "pnpm -r typecheck && tsc --noEmit -p tools && tsc --noEmit -p tools/layout-diff",
+    "test": "pnpm -r --workspace-concurrency=1 test",
     "check": "ultracite check",
     "fix": "ultracite fix",
     "prepare": "lefthook install",
-    "web": "bun run --cwd apps/web dev",
-    "build:web": "bun run --cwd apps/web build",
-    "preview:web": "bun run --cwd apps/web preview",
-    "design": "bun run --cwd apps/design dev",
-    "try": "bun run --cwd apps/try dev",
-    "server": "bun run --cwd apps/server dev",
-    "admin": "bun run --cwd apps/admin dev"
+    "web": "pnpm --dir apps/web dev",
+    "build:web": "pnpm --dir apps/web build",
+    "preview:web": "pnpm --dir apps/web preview",
+    "design": "pnpm --dir apps/design dev",
+    "try": "pnpm --dir apps/try dev",
+    "server": "pnpm --dir apps/server dev",
+    "admin": "pnpm --dir apps/admin dev"
   },
   "devDependencies": {
     "@astrojs/compiler-rs": "^0.5.2",
     "@bufbuild/protobuf": "2.16.0",
     "@pochical/design": "workspace:*",
-    "@types/bun": "^1.4.3",
+    "@types/node": "catalog:",
     "lefthook": "^2.2.2",
     "oxfmt": "^0.74.0",
     "oxlint": "^1.89.0",
     "oxlint-tsgolint": "^7.0.2004",
     "playwright-core": "^1.64.1",
     "sharp": "0.35.5",
+    "tsx": "catalog:",
     "typescript": "~7.0.2",
-    "ultracite": "8.0.1"
+    "ultracite": "8.0.1",
+    "vitest": "catalog:"
   },
-  "packageManager": "bun@1.4.3"
+  "packageManager": "pnpm@12.15.0"
 }

@@ -3,18 +3,21 @@
 // icon of the ground's color behind the drawing, with the drawing alone as
 // the mask Android 13's themed icons tint, and the 512-pixel icon Google
 // Play's store listing asks for beside the sources.
-// Run again after changing the drawing or the colors: bun run icon:android
+// Run again after changing the drawing or the colors: pnpm run icon:android
 import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
 
 import sharp from "sharp";
 
+import { DRAWING_SHARE, paintedPixels } from "../src/lib/app-icon-paint";
 import {
-  DRAWING_SHARE,
-  lightDrawing,
-  paintedPixels,
-} from "../src/components/design-app-icon";
-import type { IconColors } from "../src/components/design-app-icon";
-import { colorsOf, cutIcon, height, lightness, paint, width } from "./app-icon";
+  colorsOf,
+  cutIcon,
+  height,
+  lightness,
+  paint,
+  peekingPoodle,
+  width,
+} from "./app-icon";
 
 const MAIN = new URL("../../../apps/android/app/src/main/", import.meta.url)
   .pathname;
@@ -31,7 +34,7 @@ const PLAY_SIZE = 512;
 // 次の休み's 92dp dog peeking from the widget's corner, at xxxhdpi.
 const PEEKING_SIZE = 368;
 const GENERATED =
-  "<!-- Written by packages/prototype/scripts/android-app-icons.ts (bun run icon:android). -->";
+  "<!-- Written by packages/prototype/scripts/android-app-icons.ts (pnpm run icon:android). -->";
 
 const moss = colorsOf("moss");
 const foreground = paintedPixels(lightness, width, height, moss, true);
@@ -113,26 +116,16 @@ ${GENERATED}
   ),
 ]);
 
-// The dog 次の休み's widget peeks from its corner with on a day off, as
-// ios-app-icons.ts writes iOS's: white in dark lines in light, the default
-// icon's dark look in dark, each without its ground. Glance shows the one
-// the launcher's light or dark picks.
-const peeking: [string, IconColors][] = [
-  ["drawable-nodpi", lightDrawing],
-  ["drawable-night-nodpi", colorsOf("moss-dark")],
+// 次の休み's peeking dog (app-icon.ts's peekingPoodle), as ios-app-icons.ts
+// writes iOS's: Glance shows the one the launcher's light or dark picks.
+const { light, dark } = await peekingPoodle(PEEKING_SIZE);
+const peeking: [string, Buffer][] = [
+  ["drawable-nodpi", light],
+  ["drawable-night-nodpi", dark],
 ];
 await Promise.all(
-  peeking.map(async ([folder, colors]) => {
+  peeking.map(async ([folder, picture]) => {
     await mkdir(`${RES}${folder}/`, { recursive: true });
-    const pixels = paintedPixels(lightness, width, height, colors, true);
-    await writeFile(
-      `${RES}${folder}/widget_poodle.png`,
-      await sharp(Buffer.from(pixels.buffer), {
-        raw: { channels: RGBA, height, width },
-      })
-        .resize(PEEKING_SIZE, PEEKING_SIZE, { kernel: "lanczos3" })
-        .png({ compressionLevel: 9 })
-        .toBuffer()
-    );
+    await writeFile(`${RES}${folder}/widget_poodle.png`, picture);
   })
 );

@@ -9,9 +9,9 @@ pre-commit:
       # they are not listed here again. The globs are every type oxfmt or
       # oxlint takes in this repository, as `ultracite check` covers them.
       run: |
-        # GUI Git clients may not load the shell's mise/proto/Bun PATH settings.
-        export PATH="$HOME/.local/share/mise/shims:$PATH:${PROTO_HOME:-$HOME/.proto}/shims:${BUN_INSTALL:-$HOME/.bun}/bin"
-        bun x ultracite fix --no-error-on-unmatched-pattern {staged_files}
+        # GUI Git clients may not load the shell's mise/proto PATH settings.
+        export PATH="$HOME/.local/share/mise/shims:$PATH:${PROTO_HOME:-$HOME/.proto}/shims"
+        pnpm exec ultracite fix --no-error-on-unmatched-pattern {staged_files}
       glob:
         - "**/*.js"
         - "**/*.jsx"

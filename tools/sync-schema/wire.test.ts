@@ -1,7 +1,8 @@
-import { describe, expect, test } from "bun:test";
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+
+import { describe, expect, test } from "vitest";
 
 import { wireFingerprint } from "./wire";
 

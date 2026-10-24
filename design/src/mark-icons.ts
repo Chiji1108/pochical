@@ -1,7 +1,7 @@
 // The icons a pattern's mark can be drawn with, by the id a pattern keeps
 // (pochical.v1.Pattern's icon), each with Phosphor's name for its glyph.
 // Every platform draws them from the paths in mark-icon-paths.ts, which
-// `bun run --cwd design icon:marks` writes from Phosphor itself. "letter"
+// `pnpm --dir design icon:marks` writes from Phosphor itself. "letter"
 // has no glyph: it draws the pattern's letter inside a thin circle, so any
 // shift has an icon. The sky has only the glyphs that stay apart at
 // calendar size (a dim sun reads as the sun), so shifts in the same part

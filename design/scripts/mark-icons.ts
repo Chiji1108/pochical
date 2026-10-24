@@ -3,7 +3,7 @@
 // @phosphor-icons/react ships all six weights in every icon, which would
 // put the four unused ones in every page that shows a calendar.
 // Run again after adding an icon to markIconGlyphs (src/mark-icons.ts):
-// bun run --cwd design icon:marks
+// pnpm --dir design icon:marks
 import { writeFile } from "node:fs/promises";
 
 import { markIconGlyphs } from "../src/mark-icons";
@@ -28,7 +28,7 @@ if (import.meta.main) {
   await writeFile(
     OUTPUT,
     [
-      "// Written by scripts/mark-icons.ts (bun run --cwd design icon:marks); do not edit.",
+      "// Written by scripts/mark-icons.ts (pnpm --dir design icon:marks); do not edit.",
       `// Phosphor's paths for the shift marks' icons, ${markIconWeights.join(" and ")}, on a 256 grid.`,
       "type MarkIconPath = { d: string; opacity?: number };",
       `export type MarkIconName = ${phosphorNames.map((name) => `"${name}"`).join(" | ")};`,

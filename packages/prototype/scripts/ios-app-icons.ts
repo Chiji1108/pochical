@@ -3,7 +3,7 @@
 // an app icon set, with its dark twin for a home screen set to dark icons,
 // and a small preview of each for 設定 > アプリアイコン to show; and the
 // drawing alone, as the first run's welcome shows it.
-// Run again after changing the drawing or the colors: bun run icon:ios
+// Run again after changing the drawing or the colors: pnpm run icon:ios
 import { mkdir, rm, writeFile } from "node:fs/promises";
 
 import sharp from "sharp";
@@ -12,11 +12,17 @@ import {
   darkTwinOf,
   ICON_SIZE,
   iconColorOptions,
-  lightDrawing,
   paintedPixels,
-} from "../src/components/design-app-icon";
-import type { IconColors } from "../src/components/design-app-icon";
-import { colorsOf, height, lightness, paint, width } from "./app-icon";
+} from "../src/lib/app-icon-paint";
+import type { IconColors } from "../src/lib/app-icon-paint";
+import {
+  colorsOf,
+  height,
+  lightness,
+  paint,
+  peekingPoodle,
+  width,
+} from "./app-icon";
 
 const ASSETS = new URL(
   "../../../apps/ios/Pochical/Pochical/Assets.xcassets/",
@@ -153,27 +159,12 @@ const writeWelcome = async () => {
 
 await writeWelcome();
 
-// The dog 次の休み's widget peeks from its corner with on a day off, as
-// /design draws it: the whole drawing, white in dark lines in light and
-// the default icon's dark look in dark, each without its ground.
+// 次の休み's peeking dog (app-icon.ts's peekingPoodle), light and dark.
 const writePeeking = async () => {
   const folder = `${WIDGET_ASSETS}PeekingPoodle.imageset/`;
   await rm(folder, { force: true, recursive: true });
   await mkdir(folder, { recursive: true });
-  const [light, dark] = await Promise.all(
-    [lightDrawing, colorsOf("moss-dark")].map(
-      async (colors) =>
-        await sharp(
-          Buffer.from(
-            paintedPixels(lightness, width, height, colors, true).buffer
-          ),
-          { raw: { channels: RGBA, height, width } }
-        )
-          .resize(PEEKING_SIZE, PEEKING_SIZE, { kernel: "lanczos3" })
-          .png({ compressionLevel: 9 })
-          .toBuffer()
-    )
-  );
+  const { light, dark } = await peekingPoodle(PEEKING_SIZE);
   await Promise.all([
     writeFile(`${folder}light.png`, light),
     writeFile(`${folder}dark.png`, dark),
