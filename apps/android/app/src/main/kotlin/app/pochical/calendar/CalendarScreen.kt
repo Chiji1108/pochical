@@ -588,7 +588,7 @@ private fun List<Pattern>.daysOff(): List<Pattern> = filter { it.countsAsOff && 
 
 /** The weekday names over the pages, from the week's start, Sundays and Saturdays in their colors unless turned off. */
 @Composable
-private fun WeekdayRow(week: Week, modifier: Modifier = Modifier) {
+fun WeekdayRow(week: Week, modifier: Modifier = Modifier) {
   val colors = LocalThemeColors.current
   Row(modifier.padding(bottom = 12.dp).clearAndSetSemantics {}, horizontalArrangement = Arrangement.spacedBy(DAY_GAP)) {
     repeat(7) { index ->
@@ -645,6 +645,8 @@ private class PageDays(
             isSelected = day == selected,
             framesToday = !isEntering,
             preview = preview[day].takeIf { entry == null },
+            // Blank days off come back faint while entering and in a day's week, where the days are looked at.
+            offShown = if (selected != null) OffShown.Faint else OffShown.Hidden,
           ),
           height = cell,
           colorsHoliday = week.holiday,
@@ -738,7 +740,7 @@ private fun dayHeight(fitting: Dp): Dp = ((fitting - DAY_GAP * 5) / 6).coerceIn(
 
 /** Today, moving on at midnight while the screen is open, as the system says the date changed. */
 @Composable
-private fun rememberToday(): LocalDate {
+fun rememberToday(): LocalDate {
   val context = LocalContext.current
   var today by remember { mutableStateOf(LocalDate.now()) }
   DisposableEffect(context) {

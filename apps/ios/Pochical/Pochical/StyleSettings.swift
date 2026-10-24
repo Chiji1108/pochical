@@ -20,7 +20,7 @@ struct StyleSettings: View {
     let calendar = OwnCalendar(days: [], patterns: patterns, patternOrder: patternOrder, orders: [])
     let work = calendar.patterns.inUse.first { !$0.countsAsOff }
     let offs = calendar.patterns.inUse.filter(\.countsAsOff)
-    let samples = styleSamples(of: calendar.patterns).compactMap { calendar.patternsByID[$0] }
+    let samples = styleSamples(of: calendar.patterns.inUse).compactMap { calendar.patternsByID[$0] }
     Form {
       Section {
         StylePreview(picked: $picked)

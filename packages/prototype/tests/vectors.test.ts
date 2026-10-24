@@ -21,6 +21,7 @@ import periods from "../../../spec/vectors/periods.json";
 import reconnect from "../../../spec/vectors/reconnect.json";
 import repeat from "../../../spec/vectors/repeat.json";
 import review from "../../../spec/vectors/review.json";
+import stylePreview from "../../../spec/vectors/style-preview.json";
 import text from "../../../spec/vectors/text.json";
 import thumbHashes from "../../../spec/vectors/thumbhash.json";
 import timeChange from "../../../spec/vectors/time-change.json";
@@ -36,6 +37,10 @@ import {
 import { iconsMatching } from "../src/components/design-icon-picker";
 import { pageSummaryOf } from "../src/components/design-month-breakdown";
 import { periodTitleOf } from "../src/components/design-month-name";
+import {
+  sampleSequence,
+  styleSamplesOf,
+} from "../src/components/design-settings-preview";
 import {
   defaultWeekSettings,
   monthDatesFrom,
@@ -297,6 +302,38 @@ describe("spec/vectors/month.json", () => {
         daysOff: summary.daysOff,
         unfilled: summary.unfilled,
       }).toEqual(vector.expected);
+    });
+  }
+});
+
+describe("spec/vectors/style-preview.json", () => {
+  const patternsOf = (list: readonly Partial<Pattern>[]) =>
+    list.map((pattern) => patternOf({ countsAsOff: false, ...pattern }));
+  for (const { name, patterns, expected } of stylePreview.sequence) {
+    test(name, () => {
+      expect(sampleSequence(patternsOf(patterns))).toEqual(expected);
+    });
+  }
+  for (const { name, patterns, days, expected } of stylePreview.days) {
+    test(name, () => {
+      const first = dayOf("2026-10-04");
+      const dates = Array.from({ length: days }, (_, index) =>
+        addDays(first, index)
+      );
+      const schedule = repeatSchedule(
+        sampleSequence(patternsOf(patterns)),
+        first,
+        first,
+        dates.at(-1) ?? first
+      );
+      expect(
+        dates.map((date) => schedule[dateKey(date)]?.shift ?? null)
+      ).toEqual(expected);
+    });
+  }
+  for (const { name, patterns, expected } of stylePreview.samples) {
+    test(name, () => {
+      expect(styleSamplesOf(patternsOf(patterns))).toEqual(expected);
     });
   }
 });

@@ -29,6 +29,7 @@ fun SettingsScreen(open: (RootPage) -> Unit) {
       item { PatternsRow(open) }
       item { RepeatRow(open) }
       item { SectionHeader(stringResource(R.string.settings_display)) }
+      item { StyleRow(open) }
       item {
         ListItem(
           headlineContent = { Text(stringResource(R.string.appearance)) },
