@@ -931,7 +931,7 @@ class SyncAccount internal constructor(
     }
 
     private fun group(groupId: String): SyncClient =
-      groups.value[groupId] ?: client(Peer.Group(groupId)).also { client -> groups.value += groupId to client }
+      groups.value[groupId] ?: client(Peer.place(groupId)).also { client -> groups.value += groupId to client }
 
     fun end() = scope.cancel()
 

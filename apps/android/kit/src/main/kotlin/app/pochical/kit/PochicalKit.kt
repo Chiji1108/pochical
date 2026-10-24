@@ -40,8 +40,11 @@ class PochicalKit(context: Context) {
   val photoUploads = PhotoUploads()
   private val linePhotos = LinePhotos(photos, photoFiles, photoUploads)
 
+  /** The app's version and the device (`appDevice`), read once a line first needs them. */
+  val device: String by lazy { appDevice(context) }
+
   /** The chats' lines as the screens show them, and the member's edits of them. */
-  val chats = Chats(database, linePhotos, device = appDevice(context))
+  val chats = Chats(database, linePhotos, device = { device })
   val account =
     SyncAccount(
       database = database,

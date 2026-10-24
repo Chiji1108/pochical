@@ -132,7 +132,10 @@ class FakeServer : AutoCloseable {
   /** The ids of the photos put in groups' photos, in the order they came, a small version's ending in ?small. */
   val groupPhotos = CopyOnWriteArrayList<String>()
 
-  /** What each line sent said of the app and the device (`ChatSend.device`), by its words. */
+  /** The ids of the photos sent to the chat with Pochical's people, in the order they came. */
+  val supportPhotos = CopyOnWriteArrayList<String>()
+
+  /** What each line sent said of the app and the device (`ChatSend.device`), by its send's op_id. */
   val sentDevices = java.util.concurrent.ConcurrentHashMap<String, String>()
 
   /** The paths the sockets of the chats' places were opened at. */
@@ -314,6 +317,9 @@ class FakeServer : AutoCloseable {
               } else if (request.method == "PUT" && request.url.encodedPath.startsWith("/v1/me/photos/")) {
                 ownPhotos += request.url.encodedPath.removePrefix("/v1/me/photos/")
                 MockResponse.Builder().code(204).build()
+              } else if (request.method == "PUT" && request.url.encodedPath.matches(Regex("/v1/support/photos/[^/]+"))) {
+                supportPhotos += request.url.pathSegments[3]
+                MockResponse.Builder().code(204).build()
               } else if (request.method == "PUT" && request.url.encodedPath.matches(Regex("/v1/groups/[^/]+/photos/[^/]+"))) {
                 val small = request.url.queryParameter("size") == "small"
                 groupPhotos += request.url.pathSegments[4] + if (small) "?small" else ""
@@ -433,7 +439,7 @@ class FakeServer : AutoCloseable {
             ChatEdit.KindCase.SEND -> {
               val send = edit.send
               if (lines(groupId, send.threadId).any { it.opId == edit.opId }) continue
-              sentDevices[send.content.words.text] = send.device
+              sentDevices[edit.opId] = send.device
               if (refuseSends) {
                 refused += refusedSend { opId = edit.opId; reason = RefusedSend.Reason.REASON_DOES_NOT_FIT }
                 continue
