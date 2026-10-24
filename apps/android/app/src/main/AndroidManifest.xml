@@ -42,6 +42,16 @@
         <data android:scheme="pochical" android:host="apple-sign-in" />
       </intent-filter>
     </activity>
+    <!-- The camera app writes a photo taken for a face or a mark here (PhotoEditor). -->
+    <provider
+      android:name="androidx.core.content.FileProvider"
+      android:authorities="${applicationId}.photos"
+      android:exported="false"
+      android:grantUriPermissions="true">
+      <meta-data
+        android:name="android.support.FILE_PROVIDER_PATHS"
+        android:resource="@xml/photo_paths" />
+    </provider>
   </application>
 
 </manifest>

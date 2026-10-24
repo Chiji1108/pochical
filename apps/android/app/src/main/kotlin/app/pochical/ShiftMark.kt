@@ -97,8 +97,9 @@ private fun triangle(a: Offset, b: Offset, c: Offset) =
 fun markLayers(id: String, filled: Boolean): List<MarkIcons.Layer>? =
   MarkIcons.glyphs[id]?.let { MarkIcons.drawings[it]?.get(if (filled) "duotone" else "regular") }
 
+/** A mark icon's [layers] in [mark]'s color, [size] across: a pattern's or a group's. */
 @Composable
-private fun IconLayers(layers: List<MarkIcons.Layer>, mark: MarkColor, size: Dp, modifier: Modifier) {
+internal fun IconLayers(layers: List<MarkIcons.Layer>, mark: MarkColor, size: Dp, modifier: Modifier) {
   val paths = remember(layers) { layers.map { PathParser().parsePathString(it.pathData).toPath() } }
   Canvas(modifier.size(size)) {
     scale(this.size.width / ICON_GRID, pivot = Offset.Zero) {

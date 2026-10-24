@@ -22,6 +22,9 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import app.pochical.calendar.CalendarScreen
 import app.pochical.calendar.ShiftChoicePage
+import app.pochical.groups.GroupsActions
+import app.pochical.groups.GroupsScreen
+import app.pochical.groups.NewGroupPage
 import java.time.LocalDate
 
 /**
@@ -41,6 +44,8 @@ fun RootScreen(navigator: RootNavigator) {
       RootPage.Account -> NavEntry(route) { AccountPage(onBack = rememberPageNavigation(navigator)::back) }
       RootPage.Appearance ->
         NavEntry(route) { AppearancePage(onBack = rememberPageNavigation(navigator)::back) }
+      RootPage.NewGroup ->
+        NavEntry(route) { NewGroupPage(onBack = rememberPageNavigation(navigator)::back, onMade = { navigator.showGroup(it) }) }
       is RootPage.ShiftChoice ->
         NavEntry(route) {
           ShiftChoicePage(LocalDate.parse(route.date), onBack = rememberPageNavigation(navigator)::back)
@@ -80,7 +85,8 @@ private fun TabsScreen(navigator: RootNavigator, navigation: PageNavigation) {
     tabStates.SaveableStateProvider(navigation.tab) {
       when (navigation.tab) {
         RootTab.Calendar -> CalendarScreen(open = navigation::open, onDayOpen = { barHidden = it })
-        RootTab.Groups -> GroupsScreen()
+        RootTab.Groups ->
+          GroupsScreen(navigator.openGroup, { navigator.openGroup = it }, GroupsActions(onNew = { navigation.open(RootPage.NewGroup) }))
         RootTab.Settings -> SettingsScreen(open = navigation::open)
       }
     }
