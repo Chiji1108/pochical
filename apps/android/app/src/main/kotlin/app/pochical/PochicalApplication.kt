@@ -11,6 +11,7 @@ import app.pochical.kit.PochicalKit
 import app.pochical.kit.SyncedSettings
 import app.pochical.kit.deviceSettingsStore
 import app.pochical.kit.ownCalendar
+import app.pochical.notifications.NotificationPermission
 import app.pochical.notifications.Push
 import app.pochical.reminders.ReminderAlarms
 import dev.zacsweers.metro.AppScope
@@ -53,18 +54,28 @@ interface AppGraph : MetroAppComponentProviders {
   /** The notifications from the server. */
   @Provides
   @SingleIn(AppScope::class)
-  fun push(application: Application, kit: PochicalKit): Push =
-    Push(application, kit, CoroutineScope(SupervisorJob() + Dispatchers.Default))
+  fun push(application: Application, kit: PochicalKit, permission: NotificationPermission): Push =
+    Push(application, kit, permission, CoroutineScope(SupervisorJob() + Dispatchers.Default))
+
+  /** Whether the system lets the app show notifications. */
+  @Provides
+  @SingleIn(AppScope::class)
+  fun notificationPermission(application: Application): NotificationPermission = NotificationPermission(application)
 
   /** The reminders' alarms, read from the days, the device settings and the permission. */
   @Provides
   @SingleIn(AppScope::class)
-  fun reminderAlarms(application: Application, kit: PochicalKit, settings: SyncedSettings, push: Push): ReminderAlarms =
+  fun reminderAlarms(
+    application: Application,
+    kit: PochicalKit,
+    settings: SyncedSettings,
+    permission: NotificationPermission,
+  ): ReminderAlarms =
     ReminderAlarms(
       application,
       kit.database.values().ownCalendar(),
       settings.settings.map { it.reminders }.distinctUntilChanged(),
-      push.allowed,
+      permission.allowed,
       CoroutineScope(SupervisorJob() + Dispatchers.Default),
     )
 

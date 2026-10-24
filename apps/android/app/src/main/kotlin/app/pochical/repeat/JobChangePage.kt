@@ -31,6 +31,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.Footnote
+import app.pochical.LocalDeviceSettings
 import app.pochical.LocalThemeColors
 import app.pochical.PageNavigation
 import app.pochical.R
@@ -85,6 +86,7 @@ private val readyById = readyCopies(ReadyPatterns.all.map { it.id }).associate {
 @Composable
 fun JobChangePage(navigation: PageNavigation) {
   val days = LocalOwnDays.current
+  val settings = LocalDeviceSettings.current
   val calendar by days.calendar.collectAsStateWithLifecycle()
   var start by rememberSaveable { mutableStateOf(nextMonthStart().toString()) }
   val first = LocalDate.parse(start)
@@ -105,6 +107,8 @@ fun JobChangePage(navigation: PageNavigation) {
   fun finish(ids: List<String>, sequence: List<String>, anchor: LocalDate) {
     scope.launch {
       days.changeJob(ids, sequence, first, anchor)
+      // The order fills the days without ポチポチ入力: the calendar offers the reminders as it shows.
+      if (sequence.isNotEmpty()) settings.change { it.copy(reminderOfferWaiting = true) }
       navigation.back()
     }
   }

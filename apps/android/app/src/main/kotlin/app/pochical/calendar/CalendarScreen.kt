@@ -92,6 +92,9 @@ import app.pochical.kit.Week
 import app.pochical.kit.firstBlankDay
 import app.pochical.kit.gapDays
 import app.pochical.kit.selectedAfterEntering
+import app.pochical.notifications.LocalNotificationAsking
+import app.pochical.reminders.ReminderOfferDialog
+import app.pochical.reminders.reminderOfferTime
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
@@ -185,6 +188,32 @@ fun CalendarScreen(open: (RootPage) -> Unit, hidesTabBar: (Boolean) -> Unit) {
     }
   val hidesBar by rememberUpdatedState(hidesTabBar)
   val showsDay = opened != null && !closing
+
+  // The reminders offered, once, the first time shifts are entered or an order was set up: what
+  // they are for, then Android's question only if wanted (spec/calendar.md, Reminders).
+  val settings by rememberUpdatedState(LocalDeviceSettings.current)
+  val asking = LocalNotificationAsking.current
+  var offeringReminders by rememberSaveable { mutableStateOf<String?>(null) }
+  // A shift was entered since ポチポチ入力 opened, so its closing may offer the reminders.
+  var entered by rememberSaveable { mutableStateOf(false) }
+  fun offerReminders() {
+    val time = settings.device.reminderOfferTime(asking.notAsked) ?: return
+    settings.change { it.copy(reminderOffered = true) }
+    offeringReminders = time
+  }
+  // ポチポチ入力 and 完了's question about the blank days have closed.
+  fun closedEntering() {
+    if (!entered) return
+    entered = false
+    offerReminders()
+  }
+  // A repeating order set up fills the days without ポチポチ入力: offered as the calendar shows.
+  val offerWaiting = LocalDeviceSettings.current.device.reminderOfferWaiting
+  LaunchedEffect(offerWaiting) {
+    if (!offerWaiting) return@LaunchedEffect
+    settings.change { it.copy(reminderOfferWaiting = false) }
+    offerReminders()
+  }
   LaunchedEffect(showsDay || entering != null) { hidesBar(showsDay || entering != null) }
 
   fun monthShowing(day: LocalDate, month: YearMonth): YearMonth =
@@ -231,11 +260,12 @@ fun CalendarScreen(open: (RootPage) -> Unit, hidesTabBar: (Boolean) -> Unit) {
     val day = enteringKey?.let(LocalDate::parse) ?: return
     enteringKey = null
     said = null
-    if (calendar.patterns.daysOff().isEmpty()) return
+    if (calendar.patterns.daysOff().isEmpty()) return closedEntering()
     val month = YearMonth.from(day)
     scope.launch {
       val shown = days.shownOnceWritten(month.atDay(1), month.atEndOfMonth())
       gapKeys = gapDays(month.atDay(1), month.atEndOfMonth(), shown::contains).joinToString(",")
+      if (gapKeys.isEmpty()) closedEntering()
     }
   }
   BackHandler(enabled = entering != null, onBack = ::finish)
@@ -427,6 +457,7 @@ fun CalendarScreen(open: (RootPage) -> Unit, hidesTabBar: (Boolean) -> Unit) {
               // A key of the tray fading out after 完了 enters nothing.
               if (enteringKey != day.toString()) return@EntryTray
               days.enter(day, shift)
+              if (shift != null) entered = true
               val next = selectedAfterEntering(shift, day, last, calendar::nextDay)
               enteringKey = next.toString()
               val pattern = shift?.let { id -> calendar.patterns.find { it.id == id } }
@@ -466,9 +497,11 @@ fun CalendarScreen(open: (RootPage) -> Unit, hidesTabBar: (Boolean) -> Unit) {
       onDismiss = {
         gapKeys = ""
         gapPick = null
+        closedEntering()
       },
     )
   }
+  offeringReminders?.let { time -> ReminderOfferDialog(time, onAccept = asking::ask, onDismiss = { offeringReminders = null }) }
 }
 
 /**

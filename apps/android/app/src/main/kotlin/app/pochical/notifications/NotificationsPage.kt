@@ -26,8 +26,12 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -43,13 +47,10 @@ import app.pochical.R
 import app.pochical.RootPage
 import app.pochical.SettingsPage
 
-/** The app's notifications from the server, for the screens. */
-val LocalPush = staticCompositionLocalOf<Push> { error("No notifications above this screen") }
-
 /** 設定 › 通知 › チャット's row: オン while the app may notify, オフ otherwise. */
 @Composable
 fun ChatNotificationsRow(open: (RootPage) -> Unit) {
-  val allowed by LocalPush.current.allowed.collectAsStateWithLifecycle()
+  val allowed by LocalNotificationPermission.current.allowed.collectAsStateWithLifecycle()
   ListItem(
     headlineContent = { Text(stringResource(R.string.notifications_chat)) },
     supportingContent = { Text(stringResource(if (allowed) R.string.notifications_on else R.string.notifications_off)) },
@@ -86,21 +87,23 @@ fun ChatNotificationsPage(onBack: () -> Unit) {
  */
 @Composable
 fun PermissionCard() {
-  val push = LocalPush.current
-  val allowed by push.allowed.collectAsStateWithLifecycle()
+  val allowed by LocalNotificationPermission.current.allowed.collectAsStateWithLifecycle()
   if (allowed) return
-  val settings = LocalDeviceSettings.current
-  val activity = LocalActivity.current
   val context = LocalContext.current
-  // Whether the question was refused before it was put this time: refused again, it is refused for
-  // good, as Android then puts it no more. Refused once, or dismissed unanswered, it is put again.
-  var refusedBefore by rememberSaveable { mutableStateOf(false) }
-  val ask =
-    rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-      if (!granted && refusedBefore) settings.change { it.copy(notificationsRefused = true) }
-      push.readPermission()
-    }
-  val mayAsk = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !settings.device.notificationsRefused
+  val asking = LocalNotificationAsking.current
+  val mayAsk = asking.mayAsk
+  AskingCard(
+    icon = if (mayAsk) R.drawable.ic_notifications else R.drawable.ic_notifications_off,
+    title = stringResource(if (mayAsk) R.string.permission_not_asked else R.string.permission_denied),
+    about = stringResource(if (mayAsk) R.string.permission_not_asked_about else R.string.permission_denied_about),
+    action = stringResource(if (mayAsk) R.string.permission_ask else R.string.permission_open_settings),
+    onAction = { if (mayAsk) asking.ask() else context.startActivity(systemSettings(context.packageName)) },
+  )
+}
+
+/** A card over a settings page asking for what the system has not allowed yet: what, why, and the way to it. */
+@Composable
+fun AskingCard(icon: Int, title: String, about: String, action: String, onAction: () -> Unit) {
   Card(
     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
     modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -110,37 +113,74 @@ fun PermissionCard() {
         Modifier.size(40.dp).background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
         contentAlignment = Alignment.Center,
       ) {
-        Icon(
-          painterResource(if (mayAsk) R.drawable.ic_notifications else R.drawable.ic_notifications_off),
-          contentDescription = null,
-          tint = MaterialTheme.colorScheme.onPrimaryContainer,
-        )
+        Icon(painterResource(icon), contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
       }
       Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
-          stringResource(if (mayAsk) R.string.permission_not_asked else R.string.permission_denied),
-          style = MaterialTheme.typography.titleSmall,
-        )
-        Text(
-          stringResource(if (mayAsk) R.string.permission_not_asked_about else R.string.permission_denied_about),
-          style = MaterialTheme.typography.bodyMedium,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Button(
-          onClick = {
-            if (mayAsk) {
-              refusedBefore =
-                activity?.shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS) == true
-              ask.launch(Manifest.permission.POST_NOTIFICATIONS)
-            } else {
-              context.startActivity(systemSettings(context.packageName))
-            }
-          },
-          modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-        ) {
-          Text(stringResource(if (mayAsk) R.string.permission_ask else R.string.permission_open_settings))
-        }
+        Text(title, style = MaterialTheme.typography.titleSmall)
+        Text(about, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Button(onClick = onAction, modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) { Text(action) }
       }
+    }
+  }
+}
+
+/**
+ * Android 13's question whether the app may notify: whether it may be put now, whether it was ever
+ * put, and putting it.
+ */
+@Stable
+class NotificationAsking(private val state: State<Asked>, private val put: () -> Unit) {
+  /** Where the question stands: whether it may be put now, and whether it ever was. */
+  data class Asked(val mayAsk: Boolean, val asked: Boolean)
+
+  val mayAsk: Boolean
+    get() = state.value.mayAsk
+
+  /** It may be put and never was: what iOS calls not asked, when the reminders are offered. */
+  val notAsked: Boolean
+    get() = state.value.mayAsk && !state.value.asked
+
+  /** Puts the question, while it may be put; otherwise nothing. */
+  fun ask() {
+    if (mayAsk) put()
+  }
+}
+
+/** The question whether the app may notify, for the screens: [rememberNotificationAsking]'s, at the root. */
+val LocalNotificationAsking = staticCompositionLocalOf<NotificationAsking> { error("No notification question above this screen") }
+
+/**
+ * The question whether the app may notify, put while Android 13 can put it: not before Android 13,
+ * where notifications need no asking, while the app may notify, or once turned down for good. Held
+ * at the root of the screens and handed down ([LocalNotificationAsking]), so its answer is heard
+ * whatever page put it, one that closed as it was put too (saving a reminder).
+ */
+@Composable
+fun rememberNotificationAsking(): NotificationAsking {
+  val permission = LocalNotificationPermission.current
+  val allowed by permission.allowed.collectAsStateWithLifecycle()
+  val settings by rememberUpdatedState(LocalDeviceSettings.current)
+  val activity = LocalActivity.current
+  // Whether the question was refused before it was put this time: refused again, it is refused for
+  // good, as Android then puts it no more. Refused once, or dismissed unanswered, it is put again.
+  var refusedBefore by rememberSaveable { mutableStateOf(false) }
+  val launcher =
+    rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+      if (!granted && refusedBefore) settings.change { it.copy(notificationsRefused = true) }
+      permission.read()
+    }
+  val state = rememberUpdatedState(
+    NotificationAsking.Asked(
+      mayAsk = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !allowed && !settings.device.notificationsRefused,
+      asked = settings.device.notificationsAsked,
+    )
+  )
+  return remember(launcher, activity) {
+    NotificationAsking(state) put@{
+      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return@put
+      refusedBefore = activity?.shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS) == true
+      if (!settings.device.notificationsAsked) settings.change { it.copy(notificationsAsked = true) }
+      launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
     }
   }
 }

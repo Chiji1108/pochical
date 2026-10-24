@@ -3,6 +3,8 @@ package app.pochical.calendar
 import androidx.compose.runtime.staticCompositionLocalOf
 import app.pochical.kit.PageSummary
 import app.pochical.kit.PatternRefusal
+import app.pochical.kit.Reminder
+import app.pochical.kit.ReminderFiring
 import app.pochical.kit.RepeatOrder
 import app.pochical.kit.ShiftTime
 import java.time.LocalDate
@@ -72,6 +74,9 @@ interface OwnCalendar {
 
   /** Whether the person set the day's shift themselves, which stays over any order. */
   fun hasOwnShift(day: LocalDate): Boolean
+
+  /** What `reminder` sends for the shifts from `from` through `through`, in order (spec/calendar.md, Reminders). */
+  fun firings(reminder: Reminder, from: LocalDate, through: LocalDate): List<ReminderFiring>
 }
 
 /** Where the calendar comes from and where its edits go ([SyncedDays]). */

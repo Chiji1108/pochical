@@ -59,6 +59,12 @@ sealed interface RootPage : RootRoute, NavKey {
   /** チャット, from 設定's 通知. */
   @Serializable data object ChatNotifications : RootPage
 
+  /** リマインド, from 設定's 通知. */
+  @Serializable data object Reminders : RootPage
+
+  /** A reminder `id` to change, or none to add one, from リマインド. */
+  @Serializable data class ReminderEditor(val id: String?) : RootPage
+
   /** 画像で保存 for `month` ("YYYY-MM"), from the calendar's heading. */
   @Serializable data class MonthPicture(val month: String) : RootPage
 
