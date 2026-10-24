@@ -2,6 +2,7 @@ package app.pochical.calendar
 
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -18,14 +19,17 @@ import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
+import androidx.compose.ui.test.swipe
 import androidx.compose.ui.test.swipeLeft
 import app.pochical.DeviceSettings
 import app.pochical.DeviceSettingsState
 import app.pochical.LocalDeviceSettings
 import app.pochical.PochicalTheme
 import app.pochical.RootPage
+import app.pochical.v1.pattern
 import java.time.LocalDate
 import java.time.YearMonth
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -224,6 +228,36 @@ class CalendarScreenTest {
     val calendar = test.awaitCalendar { it.shown(night, after)[night]?.shift == "night" }
     assertEquals("after", calendar.shown(after, after)[after]?.shift)
     traySays("${night.monthDayText}、夜勤を入力しました。翌日は明けです。${night.dayOfMonth + 2}日を選択中")
+  }
+
+  @Test
+  fun theKeysStayOnTheirPageAsDaysAreEntered() {
+    // Seven more than the sample's four: a second page of keys.
+    runBlocking {
+      for (number in 1..7) {
+        test.edits.savePattern("extra$number", pattern {
+          name = "追加$number"
+          emoji = "⭐️"
+          symbol = "追"
+          icon = "star"
+        })
+      }
+    }
+    test.awaitCalendar { it.patterns.size == 11 }
+    show()
+    startEntering()
+    // Further than the key itself, which is narrower than half a page.
+    compose.onNodeWithText("日勤").performTouchInput { swipe(centerRight, Offset(centerX - width * 5, centerY)) }
+    compose.waitForIdle()
+    compose.onNodeWithText("追加7").assertIsDisplayed()
+    val day = today.withDayOfMonth(10)
+    tap(day)
+    repeat(3) {
+      compose.onNodeWithText("追加7").performClick()
+      compose.waitForIdle()
+    }
+    compose.onNodeWithText("追加7").assertIsDisplayed()
+    traySays("${day.plusDays(2).monthDayText}、追加7を入力しました。${day.plusDays(3).dayText}を選択中")
   }
 
   @Test
