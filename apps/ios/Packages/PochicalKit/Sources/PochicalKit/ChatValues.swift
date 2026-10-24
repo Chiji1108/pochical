@@ -112,6 +112,9 @@ extension [LineReaction] {
   /// The reactions with `userID`'s `emoji` put on or taken off: a new emoji
   /// goes last, and one nobody holds any more goes.
   func toggling(_ emoji: String, by userID: String, on: Bool) -> [LineReaction] {
+    // One the member holds already, or one they do not taken back, changes
+    // nothing, as the group takes it (spec/vectors/chat.json, reactions).
+    if contains(where: { $0.emoji == emoji && $0.userIDs.contains(userID) }) == on { return self }
     var reactions = self
     if let at = reactions.firstIndex(where: { $0.emoji == emoji }) {
       reactions[at].userIDs.removeAll { $0 == userID }
