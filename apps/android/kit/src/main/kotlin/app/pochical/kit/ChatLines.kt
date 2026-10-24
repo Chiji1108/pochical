@@ -290,10 +290,9 @@ fun unpinning(pins: List<Long>, seq: Long): PinStep = PinStep(pins.filter { it !
 /**
  * How many of a line's [count] photos go in each of its album's rows, top first: two side by side,
  * three as one over two, and past that rows of two and three, as few as can be, the twos first
- * (spec/vectors/chat.json, albumRows). A line of one is a photo alone, a row of it.
+ * (spec/vectors/chat.json, albumRows): an album, of two photos or more; a line of one is a photo alone.
  */
 fun albumRows(count: Int): List<Int> {
-  if (count <= 1) return listOfNotNull(count.takeIf { it == 1 })
   if (count == 3) return listOf(1, 2)
   val rows = (count + 2) / 3
   val twos = 3 * rows - count
