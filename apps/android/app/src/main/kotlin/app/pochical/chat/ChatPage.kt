@@ -203,29 +203,28 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit, open: (RootP
   val reportAndBlock = remember { ReportAndBlockState() }
   val other = me?.let { otherIn(threadId, it) }
   // A tap on the title opens what the chat is of: the other member's profile, or the group's settings.
-  val onTitle = {
-    val person = other?.let { id -> members.firstOrNull { it.userId == id } }
+  val person = other?.let { id -> members.firstOrNull { it.userId == id } }
+  val onTitle: (() -> Unit)? =
     when {
-      other == null -> open(RootPage.GroupSettings(groupId))
-      person != null && !person.deleted -> reportAndBlock.profileOf = ProfileOf(person.userId, person.displayName, person.photoId)
+      other == null -> { { open(RootPage.GroupSettings(groupId)) } }
+      person != null && !person.deleted -> { { reportAndBlock.profileOf = ProfileOf.of(person) } }
+      else -> null
     }
-  }
-  val chat = state ?: return ChatScaffold(groupId, threadId, members, groups, socket, onBack, onPhotos, onTitle) {}
+  // While the chat is read, its title opens nothing yet: the sheets come with the chat.
+  val chat = state ?: return ChatScaffold(groupId, threadId, members, groups, socket, onBack, onPhotos, onTitle = null) {}
 
   val blockedIds = remember(blocked) { blocked.map { it.userId }.toSet() }
-  // Blocked members' lines folded in the place's own chat, but those shown this once, by seq.
+  // Blocked members' lines in the place's own chat, folded but those shown this once, by seq.
   var shownBlocked by rememberSaveable { mutableStateOf(emptyList<Long>()) }
-  val folded =
-    remember(blockedIds, shownBlocked, threadId) {
-      { line: ChatLine -> line.seq !in shownBlocked && folds(line.content.kind, ownChat = threadId == GROUP_THREAD, writerBlocked = line.authorId in blockedIds) }
-    }
+  val blockedLine = remember(blockedIds) { { line: ChatLine -> line.folds(blockedIds) } }
+  val folded = remember(blockedLine, shownBlocked) { { line: ChatLine -> blockedLine(line) && line.seq !in shownBlocked } }
   // Others writing, shown for chatRules.typingShowMs unless said again; a blocked member's is not.
   val typers = rememberTypers(socket, threadId, me, blockedIds)
   // From the foot up, as the list lays them out, who is writing at the very foot: an item's index
   // here is its index in the list.
   val items =
-    remember(chat, me, unreadFrom, typers, folded) {
-      val lines = chatItems(chat, me, unreadFrom, folded = folded).asReversed()
+    remember(chat, me, unreadFrom, typers, blockedLine) {
+      val lines = chatItems(chat, me, unreadFrom, blocked = blockedLine).asReversed()
       if (typers.isEmpty()) lines else listOf(ChatItem.Typing(typers)) + lines
     }
   val list = rememberLazyListState()
@@ -495,8 +494,17 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit, open: (RootP
       openPhoto = { seq, index ->
         // The keyboard down, as the photo takes the screen.
         focus.clearFocus()
-        val folded = if (threadId == GROUP_THREAD) blockedIds else emptySet()
-        viewing = OpenPhotos(PhotoRun.opened(chat.lines.flatMap { ChatPhotoItem.of(it, folded) }, PhotoKey(seq, index)))
+        val held = chat.lines.flatMap { ChatPhotoItem.of(it, blockedIds) }
+        val key = PhotoKey(seq, index)
+        val line = chat.line(seq)
+        viewing =
+          if (held.none { it.key == key } && line != null) {
+            // A blocked member's line shown this once is not among the chat's photos: its own open alone.
+            val own = (line.content as? LineContent.Photos)?.photos.orEmpty().mapIndexed { at, photo -> ChatPhotoItem(PhotoKey(seq, at), photo, line.authorId, line.sentAtMs) }
+            OpenPhotos(PhotoRun.opened(own, key), follows = false)
+          } else {
+            OpenPhotos(PhotoRun.opened(held, key))
+          }
       },
       openOwnPhoto = { line, index ->
         focus.clearFocus()
@@ -504,7 +512,7 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit, open: (RootP
         val items = photos.mapIndexed { at, photo -> ChatPhotoItem(PhotoKey(0, at), photo, me.orEmpty(), line.madeAtMs) }
         viewing = OpenPhotos(PhotoRun.opened(items, PhotoKey(0, index)), follows = false)
       },
-      openProfile = { writer -> reportAndBlock.profileOf = ProfileOf(writer.userId, writer.displayName, writer.photoId) },
+      openProfile = { writer -> reportAndBlock.profileOf = ProfileOf.of(writer) },
       folded = folded,
       showFolded = { seq -> shownBlocked = shownBlocked + seq },
     )
@@ -580,6 +588,7 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit, open: (RootP
   val group = groups.firstOrNull { it.id == groupId }
   ReportAndBlock(
     reportAndBlock,
+    blockedIds,
     groupId,
     group?.name.orEmpty(),
     group?.mark ?: GroupMarkValue(),
@@ -644,8 +653,8 @@ private fun ChatScaffold(
   onBack: () -> Unit,
   /** 写真 in its ⋯: the chat's photos alone. */
   onPhotos: () -> Unit,
-  /** A tap on the title: what the chat is of. */
-  onTitle: () -> Unit,
+  /** A tap on the title: what the chat is of; null while it opens nothing. */
+  onTitle: (() -> Unit)?,
   content: @Composable () -> Unit,
 ) {
   val me = rememberMeId()
@@ -658,7 +667,7 @@ private fun ChatScaffold(
       TopAppBar(
         title = {
           val opens = stringResource(if (other != null) R.string.profile else R.string.group_settings)
-          Column(Modifier.clickable(onClickLabel = opens, onClick = onTitle)) {
+          Column(if (onTitle != null) Modifier.clickable(onClickLabel = opens, onClick = onTitle) else Modifier) {
             Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis)
             val under = status ?: if (threadId == GROUP_THREAD) stringResource(R.string.chat_members, count) else null
             if (under != null) {

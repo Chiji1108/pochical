@@ -44,6 +44,7 @@ import app.pochical.design.Radius
 import app.pochical.groups.LocalValues
 import app.pochical.groups.MemberAvatar
 import app.pochical.kit.ChatSummary
+import app.pochical.kit.folds
 import app.pochical.kit.GROUP_THREAD
 import app.pochical.kit.GroupMemberRow
 import app.pochical.kit.LineContent
@@ -229,7 +230,7 @@ private fun RowWords(summary: ChatSummary, me: String, names: Map<String, String
               LineContent.Hidden -> stringResource(R.string.chat_none)
               else ->
                 when {
-                  last.authorId in blocked -> stringResource(R.string.chat_blocked_line)
+                  last.folds(blocked) -> stringResource(R.string.chat_blocked_line)
                   last.authorId == me -> "$mine：${listWords(content, nameOf)}"
                   else -> listWords(content, nameOf)
                 }

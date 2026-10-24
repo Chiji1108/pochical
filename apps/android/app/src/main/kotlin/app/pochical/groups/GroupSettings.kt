@@ -83,6 +83,9 @@ fun GroupSettingsPage(
   var leaving by remember { mutableStateOf(false) }
   var failed by remember { mutableStateOf<String?>(null) }
   val reportAndBlock = remember { ReportAndBlockState() }
+  val values = LocalValues.current
+  val blockRows by remember(values) { values.blocks() }.collectAsState(emptyList())
+  val blocked = remember(blockRows) { blockRows.map { it.userId }.toSet() }
   var confirmingRemove by remember { mutableStateOf<GroupMemberRow?>(null) }
 
   GroupPage(groupId, stringResource(R.string.group_settings), onBack) { group ->
@@ -115,7 +118,7 @@ fun GroupSettingsPage(
         MemberRow(
           member,
           groupId,
-          if (mine) Modifier else Modifier.clickable { reportAndBlock.profileOf = ProfileOf(member.userId, member.displayName, member.photoId) },
+          if (mine) Modifier else Modifier.clickable { reportAndBlock.profileOf = ProfileOf.of(member) },
           me = mine,
         )
       }
@@ -140,6 +143,7 @@ fun GroupSettingsPage(
 
     ReportAndBlock(
       reportAndBlock,
+      blocked,
       groupId,
       group.name,
       group.mark,

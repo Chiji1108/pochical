@@ -73,6 +73,7 @@ import app.pochical.groups.LocalValues
 import app.pochical.groups.MemberAvatar
 import app.pochical.kit.GroupCalls
 import app.pochical.kit.GroupMarkValue
+import app.pochical.kit.GroupMemberRow
 import app.pochical.kit.PhotoShelf
 import app.pochical.kit.Reported
 import app.pochical.v1.ReportReason
@@ -94,7 +95,12 @@ sealed interface ReportTarget {
 }
 
 /** Someone else whose profile is open: their id, and their name and photo as the group shows them. */
-data class ProfileOf(val id: String, val name: String, val photoId: String)
+data class ProfileOf(val id: String, val name: String, val photoId: String) {
+  companion object {
+    /** A member's profile as the group shows them. */
+    fun of(member: GroupMemberRow) = ProfileOf(member.userId, member.displayName, member.photoId)
+  }
+}
 
 /** Someone being blocked or unblocked, asked first; [afterReport] right after reporting them, as Instagram and X ask. */
 data class BlockQuestion(val userId: String, val name: String, val block: Boolean, val afterReport: Boolean = false)
@@ -116,6 +122,8 @@ class ReportAndBlockState {
 @Composable
 fun ReportAndBlock(
   state: ReportAndBlockState,
+  /** Whom the user has blocked. */
+  blocked: Set<String>,
   groupId: String,
   groupName: String,
   groupMark: GroupMarkValue,
@@ -123,12 +131,9 @@ fun ReportAndBlock(
   messaging: (ProfileOf) -> (() -> Unit)?,
   onRemove: ((ProfileOf) -> Unit)? = null,
 ) {
-  val values = LocalValues.current
   val calls = LocalGroupCalls.current
   val scope = rememberCoroutineScope()
   val resources = LocalResources.current
-  val blockRows by remember(values) { values.blocks() }.collectAsState(emptyList())
-  val blocked = blockRows.map { it.userId }.toSet()
 
   state.profileOf?.let { person ->
     val isBlocked = person.id in blocked

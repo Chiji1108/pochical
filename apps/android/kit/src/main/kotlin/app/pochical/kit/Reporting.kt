@@ -17,6 +17,9 @@ fun placeRules(placeId: String): ChatPlaceRules = if (placeId == Chat.supportPla
  */
 fun folds(kind: LineKind, ownChat: Boolean, writerBlocked: Boolean): Boolean = ownChat && writerBlocked && kind.isMessage
 
+/** Whether the line shows folded for a reader who blocked those in [blocked] (`folds`). */
+fun ChatLine.folds(blocked: Set<String>): Boolean = folds(content.kind, ownChat = threadId == GROUP_THREAD, writerBlocked = authorId in blocked)
+
 /** Whether a line of [kind] offers 通報 in its menu: someone else's message ([mine] false), where the place's [rules] take reports. */
 fun reportable(kind: LineKind, mine: Boolean, rules: ChatPlaceRules): Boolean = !mine && rules.reports && kind.isMessage
 
