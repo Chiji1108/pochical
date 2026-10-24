@@ -48,6 +48,22 @@ describe("members' photos", () => {
     expect(byOutsider.status).toBe(403);
   });
 
+  it("keep what a change of the name or the photo alone leaves out", async () => {
+    const token = await signInAnonymously();
+    const photoId = crypto.randomUUID();
+    await upload(`/v1/me/photos/${photoId}`, token);
+    await call("UserService/SetProfile", { name: "さくら", photoId }, token);
+    // Another device's name, then this one's photo taken off: neither undoes the other.
+    await call("UserService/SetProfile", { name: "はな" }, token);
+    await call("UserService/SetProfile", { photoId: "" }, token);
+    const phone = await syncSocket("/v1/me/socket", token);
+    expect(
+      changesIn(await phone.frames.next()).filter(
+        ({ kind }) => kind.case === "profile"
+      )
+    ).toMatchObject([{ kind: { value: { name: "はな", photoId: "" } } }]);
+  });
+
   it("are read from the user's own photos by them alone", async () => {
     const { guest, maker } = await pair();
     const photoId = crypto.randomUUID();

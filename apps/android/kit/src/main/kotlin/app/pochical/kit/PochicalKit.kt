@@ -43,7 +43,7 @@ class PochicalKit(context: Context) {
   private val photos = Photos(http, server, File(context.cacheDir, "held-photos"))
 
   /** GroupService, the profile and the photos, as the user the device is signed in as. */
-  val groups = GroupCalls(account, http, server, photos, CoroutineScope(SupervisorJob() + Dispatchers.Default), database.values())
+  val groups = GroupCalls(account, http, server, photos, CoroutineScope(SupervisorJob() + Dispatchers.Default))
 
   init {
     // What was fetched as a user goes with them, as the rest of their data does.

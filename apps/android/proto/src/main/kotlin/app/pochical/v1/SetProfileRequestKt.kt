@@ -30,7 +30,12 @@ public object SetProfileRequestKt {
     internal fun _build(): app.pochical.v1.SetProfileRequest = _builder.build()
 
     /**
-     * `string name = 1 [json_name = "name"];`
+     * ```
+     * The usual name, empty for none; unset keeps the one set before, so a
+     * device changing only the photo cannot undo another's new name.
+     * ```
+     *
+     * `optional string name = 1 [json_name = "name"];`
      */
     public var name: kotlin.String
       @kotlin.jvm.JvmName("getName")
@@ -40,18 +45,36 @@ public object SetProfileRequestKt {
         _builder.name = value
       }
     /**
-     * `string name = 1 [json_name = "name"];`
+     * ```
+     * The usual name, empty for none; unset keeps the one set before, so a
+     * device changing only the photo cannot undo another's new name.
+     * ```
+     *
+     * `optional string name = 1 [json_name = "name"];`
      */
     public fun clearName() {
       _builder.clearName()
     }
+    /**
+     * ```
+     * The usual name, empty for none; unset keeps the one set before, so a
+     * device changing only the photo cannot undo another's new name.
+     * ```
+     *
+     * `optional string name = 1 [json_name = "name"];`
+     * @return Whether the name field is set.
+     */
+    public fun hasName(): kotlin.Boolean {
+      return _builder.hasName()
+    }
 
     /**
      * ```
-     * One of the user's own photos, uploaded to /v1/me/photos/{id} first.
+     * One of the user's own photos, uploaded to /v1/me/photos/{id} first,
+     * empty for none; unset keeps the one set before.
      * ```
      *
-     * `string photo_id = 2 [json_name = "photoId"];`
+     * `optional string photo_id = 2 [json_name = "photoId"];`
      */
     public var photoId: kotlin.String
       @kotlin.jvm.JvmName("getPhotoId")
@@ -62,13 +85,26 @@ public object SetProfileRequestKt {
       }
     /**
      * ```
-     * One of the user's own photos, uploaded to /v1/me/photos/{id} first.
+     * One of the user's own photos, uploaded to /v1/me/photos/{id} first,
+     * empty for none; unset keeps the one set before.
      * ```
      *
-     * `string photo_id = 2 [json_name = "photoId"];`
+     * `optional string photo_id = 2 [json_name = "photoId"];`
      */
     public fun clearPhotoId() {
       _builder.clearPhotoId()
+    }
+    /**
+     * ```
+     * One of the user's own photos, uploaded to /v1/me/photos/{id} first,
+     * empty for none; unset keeps the one set before.
+     * ```
+     *
+     * `optional string photo_id = 2 [json_name = "photoId"];`
+     * @return Whether the photoId field is set.
+     */
+    public fun hasPhotoId(): kotlin.Boolean {
+      return _builder.hasPhotoId()
     }
   }
 }

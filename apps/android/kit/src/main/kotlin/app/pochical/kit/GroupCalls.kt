@@ -26,7 +26,6 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
@@ -44,7 +43,6 @@ class GroupCalls internal constructor(
   server: HttpUrl,
   private val photos: Photos,
   private val scope: CoroutineScope,
-  private val values: Values,
 ) {
   private val client =
     ProtocolClient(
@@ -57,26 +55,7 @@ class GroupCalls internal constructor(
   /** The names and profiles kept, sent one at a time in the order they were kept. */
   private val kept = Channel<Kept>(Channel.UNLIMITED)
 
-  /**
-   * The usual name and photo this kit last set, until the account's word after it comes back on the
-   * socket: meanwhile what a change to one of them keeps of the other. The server tells it in order,
-   * so any word other than the one the device held as it set them is that or later, another
-   * device's change among it, and from then on the device's own copy is the word.
-   */
-  @Volatile private var profileSent: SentProfile? = null
-
-  private class SentProfile(val userId: String, val profile: ProfileRow, val heldBefore: ProfileRow?)
-
-  /** The device's copy of the usual name and photo, as last read. */
-  @Volatile private var heldProfile: ProfileRow? = null
-
   init {
-    scope.launch {
-      values.profile().collect { now ->
-        heldProfile = now
-        synchronized(this@GroupCalls) { if (profileSent?.let { now != it.heldBefore } == true) profileSent = null }
-      }
-    }
     scope.launch {
       for (kept in kept) {
         try {
@@ -102,23 +81,17 @@ class GroupCalls internal constructor(
   /**
    * Keeps the user's usual name, photo or both (spec/sync-protocol.md, Profile), as [keepDisplayName]
    * keeps a group's name: taken at once and sent in turn by the kit, whether the page still waits or
-   * not. What is not given stays as last set; a new photo goes up to the user's own photos first.
+   * not. What is not given stays as the account has it, another device's change included; a new photo
+   * goes up to the user's own photos first.
    */
   fun keepProfile(name: String? = null, photo: UsualPhoto? = null): Deferred<Unit> = keep {
-    account.asSignedIn { credentials ->
-      val held = values.profile().first()
-      val before = profileSent?.takeIf { it.userId == credentials.userId }?.profile ?: held ?: ProfileRow(name = "", photoId = "")
-      val photoId =
-        when (photo) {
-          null -> before.photoId
-          UsualPhoto.None -> ""
-          is UsualPhoto.New -> sendPhoto(photo.jpeg, PhotoShelf.Mine)
-        }
-      val after = ProfileRow(name = name ?: before.name, photoId = photoId)
-      setProfile(after.name, after.photoId)
-      // The word may have come back already, while the call was answered.
-      synchronized(this@GroupCalls) { profileSent = SentProfile(credentials.userId, after, held).takeIf { heldProfile == held } }
-    }
+    val photoId =
+      when (photo) {
+        null -> null
+        UsualPhoto.None -> ""
+        is UsualPhoto.New -> sendPhoto(photo.jpeg, PhotoShelf.Mine)
+      }
+    setProfile(name, photoId)
   }
 
   private fun keep(send: suspend () -> Unit): Deferred<Unit> {
@@ -255,13 +228,16 @@ class GroupCalls internal constructor(
     Unit
   }
 
-  /** Sets the user's usual name and photo (spec/sync-protocol.md, Profile), each empty for none. */
-  suspend fun setProfile(name: String, photoId: String) = call { headers ->
+  /**
+   * Sets the user's usual name and photo (spec/sync-protocol.md, Profile), each empty for none, and
+   * either left as the account has it when not given.
+   */
+  suspend fun setProfile(name: String?, photoId: String?) = call { headers ->
     users
       .setProfile(
         setProfileRequest {
-          this.name = name
-          this.photoId = photoId
+          name?.let { this.name = it }
+          photoId?.let { this.photoId = it }
         },
         headers,
       )

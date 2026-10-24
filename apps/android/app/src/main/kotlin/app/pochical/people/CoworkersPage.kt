@@ -20,13 +20,11 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -42,8 +40,6 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.Footnote
 import app.pochical.LimitedTextField
@@ -61,6 +57,8 @@ import app.pochical.kit.coworkerDays
 import app.pochical.limitText
 import app.pochical.limited
 import app.pochical.rememberDragOrder
+import app.pochical.rememberKeptField
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
 
@@ -207,33 +205,18 @@ fun CoworkerEditorPage(id: String, navigation: PageNavigation) {
 @Composable
 private fun CoworkerForm(person: Coworker, count: Int?, taken: List<String>, navigation: PageNavigation) {
   val days = LocalOwnDays.current
-  var name by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue(person.name)) }
-  // The name this page started from or last kept: only a name typed here is written, so a rename
-  // from another device meanwhile is not undone by a field left as it was.
-  var from by rememberSaveable { mutableStateOf(person.name) }
+  // An empty name or another's is not kept, and the person keeps theirs. The days' own writes take
+  // it at once, after a delete made here; the kit keeps nothing for someone gone.
+  val name =
+    rememberKeptField(person.name, fits = { it.isNotEmpty() && it !in taken }) {
+      days.renameCoworker(person.id, it)
+      CompletableDeferred(Unit)
+    }
   var confirming by rememberSaveable { mutableStateOf(false) }
-  var deleted by remember { mutableStateOf(false) }
-  val trimmed = name.text.trim()
+  val trimmed = name.field.value.text.trim()
   val duplicate = trimmed in taken
-  // Renamed elsewhere while the field is as it was, it shows the new name.
-  LaunchedEffect(person.name) {
-    if (trimmed == from) {
-      name = TextFieldValue(person.name)
-      from = person.name
-    }
-  }
-  // An empty name or another's is not kept, and the person keeps theirs.
-  val keep by rememberUpdatedState {
-    if (!deleted && trimmed.isNotEmpty() && !duplicate && trimmed != from) {
-      days.renameCoworker(person.id, trimmed)
-      from = trimmed
-    }
-  }
-  DisposableEffect(Unit) { onDispose { keep() } }
-  LifecycleEventEffect(Lifecycle.Event.ON_STOP) { keep() }
 
   fun delete() {
-    deleted = true
     days.deleteCoworker(person.id)
     navigation.back()
   }
@@ -241,11 +224,11 @@ private fun CoworkerForm(person: Coworker, count: Int?, taken: List<String>, nav
   SettingsPage(person.name, onBack = navigation::back) { padding ->
     Column(Modifier.padding(padding)) {
       LimitedTextField(
-        name,
-        { name = it },
+        name.field.value,
+        { name.field.value = it },
         TextLimits.personName,
         stringResource(R.string.name),
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).onFocusChanged { if (!it.isFocused) keep() },
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).onFocusChanged { if (!it.isFocused) name.keep() },
       )
       val problem =
         when {

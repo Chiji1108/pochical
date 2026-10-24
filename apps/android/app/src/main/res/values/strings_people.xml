@@ -17,5 +17,6 @@
   <string name="profile">プロフィール</string>
   <string name="profile_unset">未設定</string>
   <string name="profile_name">いつもの名前</string>
+  <string name="photo_not_saved">写真を保存できませんでした。通信できるときに、もう一度お試しください。</string>
   <string name="profile_note">グループでは、この名前と写真で表示されます。グループごとに違う名前や写真にしたいときは、各グループの設定で変えられます。</string>
 </resources>

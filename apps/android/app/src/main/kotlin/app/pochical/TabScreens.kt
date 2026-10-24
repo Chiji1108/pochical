@@ -15,7 +15,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.pochical.patterns.PatternsRow
 import app.pochical.people.CoworkersRow
-import app.pochical.people.ProfileRow
+import app.pochical.people.UsualProfileRow
 import app.pochical.repeat.RepeatRow
 
 /** 設定: each row's page pushed over the tabs. */
@@ -26,7 +26,7 @@ fun SettingsScreen(open: (RootPage) -> Unit) {
   Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.tab_settings)) }) }) { padding ->
     LazyColumn(contentPadding = padding) {
       item { AccountRow(open) }
-      item { ProfileRow(open) }
+      item { UsualProfileRow(open) }
       item { SectionHeader(stringResource(R.string.settings_shifts)) }
       item { PatternsRow(open) }
       item { RepeatRow(open) }
