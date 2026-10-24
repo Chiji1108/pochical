@@ -53,9 +53,30 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
    */
   suspend fun setDays(edits: Map<LocalDate, ShownDay?>) = database.write {
     val first = edits.keys.minOrNull() ?: return@write
-    val last = edits.keys.max()
-    val calendar = ownCalendar(first, last)
-    val edited = editedOwnDays(calendar.own, calendar.planned(first, last), edits)
+    setShown(edits, ownCalendar(first, edits.keys.max()))
+  }
+
+  /**
+   * Enters [shift] on [day], or clears it with null, as a key of ポチポチ入力's tray does: a pattern
+   * with a next day fills the day after too (spec/vectors/entering.json, enter).
+   */
+  suspend fun enter(shift: String?, day: LocalDate) = database.write {
+    val next = day.plusDays(1)
+    val calendar = ownCalendar(day, next)
+    val shown = calendar.shown(day, next)
+    val entered = enteringShift(shift, day, shown, calendar::nextDay)
+    setShown(listOf(day, next).filter { entered[it] != shown[it] }.associateWith { entered[it] }, calendar)
+  }
+
+  /** Puts [shift] on each of [days], as filling the blanks 完了 asks about does. */
+  suspend fun fill(days: List<LocalDate>, shift: String) = database.write {
+    val first = days.minOrNull() ?: return@write
+    setShown(days.associateWith { ShownDay(shift) }, ownCalendar(first, days.max()))
+  }
+
+  private suspend fun SyncDao.setShown(edits: Map<LocalDate, ShownDay?>, calendar: OwnCalendar) {
+    if (edits.isEmpty()) return
+    val edited = editedOwnDays(calendar.own, calendar.planned(edits.keys.min(), edits.keys.max()), edits)
     for (day in edits.keys.sorted()) {
       for ((field, value) in changedFields(calendar.own[day], edited[day])) {
         val clock = nextClock(now())

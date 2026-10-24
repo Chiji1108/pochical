@@ -49,6 +49,14 @@ class SyncedDays(database: AppDatabase, private val edits: OwnEdits, scope: Coro
     writes.trySend { edits.setDays(mapOf(day to shown)) }
   }
 
+  override fun enter(day: LocalDate, shift: String?) {
+    writes.trySend { edits.enter(shift, day) }
+  }
+
+  override fun fill(days: List<LocalDate>, shift: String) {
+    writes.trySend { edits.fill(days, shift) }
+  }
+
   override fun setNote(day: LocalDate, note: String) {
     writes.trySend { edits.setDay(day.toString(), DayField.DAY_FIELD_NOTE, note.ifEmpty { null }) }
   }
@@ -67,6 +75,8 @@ class SyncedDays(database: AppDatabase, private val edits: OwnEdits, scope: Coro
       own.shown(from, through).mapValues { (_, day) -> DayEntry(day.shift, day.start, day.end, day.people.orEmpty()) }
 
     override fun note(day: LocalDate): String? = own.note(day)
+
+    override fun nextDay(shift: String): String? = own.nextDay(shift)
   }
 }
 

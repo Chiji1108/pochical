@@ -54,7 +54,7 @@ fun RootScreen(navigator: RootNavigator) {
 private fun TabsScreen(navigator: RootNavigator, navigation: PageNavigation) {
   val tabStates = rememberSaveableStateHolder()
   BackHandler(enabled = navigator.backGoesToFirstTab, onBack = navigator::back)
-  // The tab bar gives way to a day's week, as iOS's and /design's do.
+  // The tab bar gives way to a day's week and to ポチポチ入力's tray, as iOS's and /design's do.
   var barHidden by rememberSaveable { mutableStateOf(false) }
   val suite =
     rememberNavigationSuiteScaffoldState(
@@ -79,7 +79,7 @@ private fun TabsScreen(navigator: RootNavigator, navigation: PageNavigation) {
   ) {
     tabStates.SaveableStateProvider(navigation.tab) {
       when (navigation.tab) {
-        RootTab.Calendar -> CalendarScreen(open = navigation::open, onDayOpen = { barHidden = it })
+        RootTab.Calendar -> CalendarScreen(open = navigation::open, hidesTabBar = { barHidden = it })
         RootTab.Groups -> GroupsScreen()
         RootTab.Settings -> SettingsScreen(open = navigation::open)
       }

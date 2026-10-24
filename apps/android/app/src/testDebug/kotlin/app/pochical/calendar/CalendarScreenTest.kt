@@ -4,6 +4,7 @@ import androidx.activity.ComponentActivity
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.hasSetTextAction
@@ -47,7 +48,7 @@ class CalendarScreenTest {
 
   @After fun close() = test.close()
   private val opened = mutableListOf<RootPage>()
-  private var dayOpen = false
+  private var tabBarHidden = false
 
   private fun show() {
     val settings = DeviceSettings()
@@ -56,7 +57,7 @@ class CalendarScreenTest {
         LocalDeviceSettings provides DeviceSettingsState(settings) {},
         LocalOwnDays provides days,
       ) {
-        PochicalTheme(settings) { CalendarScreen(open = { opened += it }, onDayOpen = { dayOpen = it }) }
+        PochicalTheme(settings) { CalendarScreen(open = { opened += it }, hidesTabBar = { tabBarHidden = it }) }
       }
     }
   }
@@ -107,12 +108,12 @@ class CalendarScreenTest {
     show()
     val day = today.withDayOfMonth(8)
     tap(day)
-    assertTrue(dayOpen)
+    assertTrue(tabBarHidden)
     compose.onNodeWithText(day.fullText).assertIsDisplayed()
     compose.onNodeWithText("棚卸し").assertIsDisplayed()
     compose.onNodeWithText("残業").assertIsDisplayed()
     back()
-    assertEquals(false, dayOpen)
+    assertEquals(false, tabBarHidden)
     compose.onNodeWithText(day.fullText).assertDoesNotExist()
   }
 
@@ -126,7 +127,7 @@ class CalendarScreenTest {
       .onFirst()
       .performTouchInput { swipeDown(startY = centerY, endY = centerY + 1500f, durationMillis = 600) }
     compose.waitForIdle()
-    assertEquals(false, dayOpen)
+    assertEquals(false, tabBarHidden)
     compose.onNodeWithText(day.fullText).assertDoesNotExist()
     compose.onNodeWithText(day.plusDays(1).fullText).assertDoesNotExist()
   }
@@ -198,5 +199,65 @@ class CalendarScreenTest {
     tap(day)
     compose.onNodeWithText("シフト").performClick()
     assertEquals(listOf<RootPage>(RootPage.ShiftChoice(day.toString())), opened)
+  }
+
+  private fun startEntering() {
+    compose.onNodeWithText("ポチポチ入力").performClick()
+    compose.waitForIdle()
+  }
+
+  /** What the tray says, which a screen reader hears as it changes. */
+  private fun traySays(words: String) = compose.onNodeWithContentDescription(words).assertIsDisplayed()
+
+  @Test
+  fun aNightShiftEnteredFillsItsNextDayAndMovesPastIt() {
+    show()
+    startEntering()
+    assertTrue(tabBarHidden)
+    // A day in the middle of the month, which no page beside it shows too.
+    val night = today.withDayOfMonth(10)
+    tap(night)
+    traySays("入力する日付：${night.monthDayText}")
+    compose.onNodeWithText("夜勤").performClick()
+    compose.waitForIdle()
+    val after = night.plusDays(1)
+    val calendar = test.awaitCalendar { it.shown(night, after)[night]?.shift == "night" }
+    assertEquals("after", calendar.shown(after, after)[after]?.shift)
+    traySays("${night.monthDayText}、夜勤を入力しました。翌日は明けです。${night.dayOfMonth + 2}日を選択中")
+  }
+
+  @Test
+  fun entersOnTheMonthsLastDayUntilDone() {
+    show()
+    startEntering()
+    val last = YearMonth.from(today).atEndOfMonth()
+    tap(last)
+    compose.onNodeWithText("日勤").performClick()
+    compose.waitForIdle()
+    traySays("${last.monthDayText}、日勤を入力しました。月末です。入力が終わったら完了を押してください")
+    compose.onNodeWithText("翌日へ").assertIsNotEnabled()
+  }
+
+  @Test
+  fun doneAsksAboutTheBlankDaysAndFillsThemWithADayOff() {
+    show()
+    startEntering()
+    // Days in the middle of the month, which no page beside it shows too.
+    val blanks = listOf(today.withDayOfMonth(12), today.withDayOfMonth(14))
+    for (day in blanks) {
+      tap(day)
+      compose.onNodeWithText("消す").performClick()
+    }
+    compose.waitForIdle()
+    test.awaitCalendar { calendar -> blanks.all { calendar.shown(it, it).isEmpty() } }
+    compose.onNodeWithText("完了").performClick()
+    compose.waitForIdle()
+    assertEquals(false, tabBarHidden)
+    compose.onNodeWithText("この2日はお休みですか？").assertIsDisplayed()
+    compose.onNodeWithText("休みにする").performClick()
+    compose.waitForIdle()
+    val calendar = test.awaitCalendar { calendar -> blanks.all { calendar.shown(it, it).isNotEmpty() } }
+    assertEquals(listOf("off", "off"), blanks.map { calendar.shown(it, it).getValue(it).shift })
+    compose.onNodeWithText("この2日はお休みですか？").assertDoesNotExist()
   }
 }

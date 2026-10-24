@@ -5,6 +5,8 @@ import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.pochical.v1.DayField
+import app.pochical.v1.pattern
+import java.time.LocalDate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -79,6 +81,41 @@ class LocalServerTest {
     tablet.edits.setDay(date, DayField.DAY_FIELD_NOTE, "タブレットから")
     withTimeout(20_000) { while (phone.note(date) != "タブレットから") delay(50) }
     Log.i(TAG, "Phone took the tablet's edit while open")
+  }
+
+  @Test
+  fun aShiftEnteredWithItsNextDayReachesTheUsersOtherDevice() = runBlocking<Unit> {
+    val night = LocalDate.parse("2026-11-02")
+    val after = night.plusDays(1)
+    val phone = Device("entering")
+    phone.account.foreground()
+    withTimeout(20_000) { phone.account.userSocket.first { it == SocketState.Current } }
+    phone.edits.savePattern("night", pattern {
+      name = "夜勤"
+      emoji = "🌙"
+      symbol = "夜"
+      icon = "moon"
+      nextDay = "after"
+    })
+    phone.edits.savePattern("after", pattern {
+      name = "明け"
+      emoji = "🌅"
+      symbol = "明"
+      icon = "sunHorizon"
+    })
+    phone.edits.enter("night", night)
+    withTimeout(20_000) { phone.database.sync().lastWaiting().first { it == null } }
+    Log.i(TAG, "Phone entered 夜勤 on $night, its 明け with it, acknowledged")
+
+    val tablet = Device("entering-tablet")
+    tablet.sessions.write(phone.sessions.read()!!)
+    tablet.account.foreground()
+    val shown =
+      withTimeout(20_000) {
+        tablet.database.values().ownCalendar().first { it.shown(night, after).size == 2 }.shown(night, after)
+      }
+    assertEquals(mapOf(night to ShownDay("night"), after to ShownDay("after")), shown)
+    Log.i(TAG, "Tablet shows 夜勤 and 明け")
   }
 
   @Test
