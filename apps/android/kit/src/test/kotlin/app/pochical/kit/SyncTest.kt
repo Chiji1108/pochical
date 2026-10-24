@@ -176,6 +176,21 @@ class SyncTest {
   }
 
   @Test
+  fun comingBackAtOnceAfterLeavingOpensANewSocket() = runBlocking<Unit> {
+    val phone = device()
+    phone.account.foreground()
+    withTimeout(10_000) { phone.current() }
+
+    repeat(20) {
+      val opened = server.sockets.size
+      phone.account.background()
+      phone.account.foreground()
+      eventually { server.sockets.size > opened }
+      withTimeout(10_000) { phone.current() }
+    }
+  }
+
+  @Test
   fun aSessionTheServerDoesNotKnowEndsSyncKeepingWhatTheDeviceHolds() = runBlocking {
     val phone = device()
     phone.account.foreground()
