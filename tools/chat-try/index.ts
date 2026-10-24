@@ -38,11 +38,11 @@ import {
   ClientFrameSchema,
   ServerFrameSchema,
 } from "../../apps/server/src/gen/pochical/v1/sync_pb";
+import { CURRENT_PROTOCOL_VERSION } from "../../apps/server/src/protocol";
 import { devServer } from "../dev-server";
 
 const api = devServer;
 const GROUP_THREAD = "group";
-const PROTOCOL_VERSION = 1;
 const DEFAULT_COUNT = 10;
 const ACK_TIMEOUT_MS = 10_000;
 
@@ -309,7 +309,7 @@ socket.addEventListener("open", () => {
   const hello = create(ClientFrameSchema, {
     kind: {
       case: "hello",
-      value: { cursor: 0n, protocolVersion: PROTOCOL_VERSION },
+      value: { cursor: 0n, protocolVersion: CURRENT_PROTOCOL_VERSION },
     },
   });
   socket.send(toBinary(ClientFrameSchema, hello));

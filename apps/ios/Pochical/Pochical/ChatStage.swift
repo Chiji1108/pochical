@@ -130,8 +130,6 @@ struct LinesRow: Equatable {
   var environment = EnvironmentValues()
   /// Each item's look, as last laid out.
   var looks: [String: AnyHashable] = [:]
-  /// Where the lines' parts play their effects, over the lines.
-  var effects: ChatEffects?
   /// Each item's height as measured, at its look and the width it had.
   private var heights: [String: (look: AnyHashable, width: CGFloat, height: CGFloat)] = [:] {
     didSet {
@@ -363,11 +361,6 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
       systemName: "arrowshape.turn.up.left.circle.fill",
       withConfiguration: UIImage.SymbolConfiguration(pointSize: 28)))
   private let replyFeel = UIImpactFeedbackGenerator(style: .light)
-  /// Over the lines, under the pins and the composer: what plays past a
-  /// line for a moment (ChatEffects).
-  private let effectsLayer = ChatEffectsLayer()
-  /// The lines and what plays over them, shown and hidden as one.
-  private let stage = UIView()
   /// Holds a line's bubble for its reactions and menu.
   private lazy var press = TouchedPress(target: self, action: #selector(pressed))
   /// The line whose bubble the press is on, and the cell's space it was
@@ -421,12 +414,13 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
       if cell.item != id {
         cell.item = id
         cell.space = LineSpace()
+        cell.effects.clear()
       }
       let content = model.row(id)
       let environment = model.environment
       let space = cell.space
       let drawing = model.drawing(of: id)
-      let effects = model.effects
+      let effects = cell.effects
       cell.measure = { width in model.height(of: id, width: width) }
       cell.contentConfiguration = UIHostingConfiguration {
         LineCellContent(
@@ -465,11 +459,7 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
       object: nil)
     replyArrow.alpha = 0
     lines.addSubview(replyArrow)
-    model.effects = effectsLayer.effects
-    stage.translatesAutoresizingMaskIntoConstraints = false
-    stage.addSubview(lines)
-    stage.addSubview(effectsLayer)
-    view.addSubview(stage)
+    view.addSubview(lines)
 
     host(empty, sizing: .intrinsicContentSize)
     host(top, sizing: .preferredContentSize)
@@ -483,18 +473,14 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     composer.view.addInteraction(edge)
     view.addLayoutGuide(room)
     NSLayoutConstraint.activate([
-      stage.topAnchor.constraint(equalTo: view.topAnchor),
-      stage.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-      stage.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-      stage.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-      lines.topAnchor.constraint(equalTo: stage.topAnchor),
+      lines.topAnchor.constraint(equalTo: view.topAnchor),
       // Going on under the composer and the keyboard to the screen's foot,
       // kept clear of them by the lines' inset (fitRoom), as ChatLayout's
       // Example keeps them over its input bar: their height stays as the
       // keyboard comes and goes, so no cell is made again for it.
-      lines.bottomAnchor.constraint(equalTo: stage.bottomAnchor),
-      lines.leadingAnchor.constraint(equalTo: stage.leadingAnchor),
-      lines.trailingAnchor.constraint(equalTo: stage.trailingAnchor),
+      lines.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+      lines.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+      lines.trailingAnchor.constraint(equalTo: view.trailingAnchor),
       top.view.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
       top.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
       top.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
@@ -570,7 +556,6 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     place()
     layoutMenu()
     makeRoomForMenu()
-    followEffects()
   }
 
   override func viewWillDisappear(_ animated: Bool) {
@@ -596,11 +581,10 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     composer.rootView = AnyView(
       Hosted(width: width, content: settings.composer).environment(\.self, environment))
     replyArrow.tintColor = UIColor(environment.themeColors.textTertiary)
-    effectsLayer.environment = environment
     let alpha: CGFloat = settings.shown ? 1 : 0
-    if stage.alpha != alpha {
+    if lines.alpha != alpha {
       UIView.animate(withDuration: alpha == 1 ? 0.15 : 0, delay: 0, options: .curveEaseOut) {
-        self.stage.alpha = alpha
+        self.lines.alpha = alpha
       }
     }
     let look = LinesLook(environment)
@@ -669,7 +653,6 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
       UIView.performWithoutAnimation {
         source.applySnapshotUsingReloadData(snapshot, commitAlongsideUpdates: {})
         lines.layoutIfNeeded()
-        followEffects()
       }
       laidOutAnew()
       return true
@@ -697,10 +680,8 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
       }
       keep(held)
       // An open or closing menu's line moved by the update, its bubble
-      // with it, and what plays on a line with the line, in the same
-      // animation.
+      // with it, in the same animation.
       layoutMenu()
-      followEffects()
     }
     // In one animation of the lines' own, however they changed: lines
     // coming in, and lines growing or shrinking in place (a reaction, an
@@ -1278,7 +1259,6 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     let sign: CGFloat = way == .rightward ? 1 : -1
     // The cell itself: its hosted content keeps a transform of its own.
     cell.transform = CGAffineTransform(translationX: sign * shift, y: 0)
-    followEffects()
     // Where the line stands in its cell, unmoved, inside the room kept
     // for its tail.
     let size = replyArrow.intrinsicContentSize
@@ -1307,7 +1287,6 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     let back = {
       cell?.transform = .identity
       self.replyArrow.alpha = 0
-      self.followEffects()
     }
     if reduceMotion {
       back()
@@ -1401,9 +1380,6 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
       if let self, let layer { menuClosed(layer) }
     }
     window.addSubview(layer)
-    effectsLayer.menuOpened(ground: layer.effects, lifting: ids[path.item]) { [weak layer] in
-      layer?.removeFromSuperview()
-    }
     menuLayer = layer
     menuAnchor = (ids[path.item], spot.frame)
     UIView.performWithoutAnimation { layoutMenu() }
@@ -1435,22 +1411,6 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
       keyboardTop: keyboard < bottom - 1 ? keyboard : nil)
   }
 
-  /// The effects' layer over the lines as they are laid out now, in
-  /// whatever animation laid them out: each item in the lines' bounds where
-  /// the layout has it, as the menu is placed (in the layout's own order,
-  /// the update's as it is put in), before its cell is there as the lines
-  /// scroll, with its cell's drag aside to reply.
-  private func followEffects() {
-    var places: [String: ItemPlace] = [:]
-    for attributes in layout.layoutAttributesForElements(in: lines.bounds) ?? []
-    where attributes.representedElementCategory == .cell && attributes.indexPath.item < ids.count {
-      places[ids[attributes.indexPath.item]] = ItemPlace(
-        frame: attributes.frame,
-        transform: lines.cellForItem(at: attributes.indexPath)?.transform ?? .identity)
-    }
-    effectsLayer.follow(lines, items: places)
-  }
-
   /// A keyboard up goes down when the bubble, the bar and the menu do not
   /// fit over it where the bubble is (MenuPlacement), and they go down
   /// with the line as it does. Asked again as the keyboard changes while
@@ -1461,16 +1421,16 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     putKeyboardAway()
   }
 
-  /// The menu has gone: its line draws its bubble again as the layer's
-  /// goes, both in this pass, so they reach the screen in the same frame
-  /// and the bubble is never missing between the two.
+  /// The menu has gone: its line draws its bubble again as the layer goes,
+  /// both in this pass, so they reach the screen in the same frame and the
+  /// bubble is never missing between the two.
   private func menuClosed(_ layer: MenuLayer) {
     guard menuLayer === layer else { return }
     let item = menuAnchor?.item
     menuLayer = nil
     menuAnchor = nil
     settings?.onMenuClosed()
-    effectsLayer.menuClosed()
+    layer.removeFromSuperview()
     // VoiceOver back on the line.
     if UIAccessibility.isVoiceOverRunning,
       let index = item.flatMap({ ids.firstIndex(of: $0) })
@@ -1485,7 +1445,6 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
   func closeMenuNow() {
     guard let menuLayer else { return }
     menuLayer.close(fade: true)
-    menuLayer.takePartsAway()
     menuClosed(menuLayer)
   }
 
@@ -1504,7 +1463,6 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
   }
 
   func scrollViewDidScroll(_ scrollView: UIScrollView) {
-    followEffects()
     seePlace()
   }
 
@@ -1678,14 +1636,22 @@ private final class LineCell: UICollectionViewCell {
   /// The height of the item it draws, at a width.
   var measure: ((CGFloat) -> CGFloat)?
 
+  /// What plays past its line for a moment (a reaction's pop and spray).
+  let effects = LineEffects()
+
   /// Cut to its frame: a line laid out taller at once (layoutSubviews)
   /// shows what it gains (a reaction, a link's page, the words past
   /// 続きを読む) as the cell grows, never over the line next to it first.
-  /// What plays past a line for a moment plays over the lines instead
-  /// (ChatEffects).
+  /// While its effects play it draws whole, over the lines next to it.
   override init(frame: CGRect) {
     super.init(frame: frame)
     clipsToBounds = true
+    effects.onChange = { [weak self] playing in self?.drawsWhole(playing) }
+  }
+
+  private func drawsWhole(_ whole: Bool) {
+    clipsToBounds = !whole
+    layer.zPosition = whole ? 1 : 0
   }
 
   /// Its line laid out whole, at once, at the cell's new size, so the
@@ -1737,8 +1703,8 @@ private struct LineCellContent: View {
   let environment: EnvironmentValues
   let space: LineSpace
   let drawing: KeptDrawing
-  /// The chat's effects; none for a line only measured, which plays none.
-  var effects: ChatEffects?
+  /// The cell's effects; none for a line only measured, which plays none.
+  var effects: LineEffects?
   var measuring = false
 
   var body: some View {
@@ -1751,7 +1717,7 @@ private struct LineCellContent: View {
       .coordinateSpace(.named(LineSpace.name))
       .environment(\.lineSpace, space)
       .environment(\.keptDrawing, drawing)
-      .environment(\.chatEffects, effects)
+      .environment(\.lineEffects, effects)
       .environment(\.measuringLine, measuring)
       .environment(\.self, environment)
   }
