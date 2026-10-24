@@ -274,6 +274,31 @@ public func reconnectWaitMost(tries: Int, firstMs: Int, mostMs: Int) -> Int {
   return min(most, mostMs)
 }
 
+/// The tries a socket makes since it last caught up, the one under way or
+/// waited for included, which the wait before each grows by
+/// (spec/sync-protocol.md, Reconnecting; spec/vectors/reconnect.json, tries).
+struct ReconnectTries: Equatable, Sendable {
+  private(set) var count = 0
+
+  /// A try at once, the count started again: the socket was asked to be
+  /// open, another network became the default, or its clocks were ahead.
+  mutating func atOnce() {
+    count = 1
+  }
+
+  /// The Pong to the Ping after Welcome: the next try is the first again.
+  mutating func caughtUp() {
+    count = 0
+  }
+
+  /// The socket dropped: the try after it, which waits up to
+  /// `reconnectWaitMost` for the count it returns.
+  mutating func dropped() -> Int {
+    count += 1
+    return count
+  }
+}
+
 /// What the sockets hear of the device's default network (spec/sync-protocol.md,
 /// Keepalive): none, or another than the one before.
 enum NetworkChange: Equatable, Sendable {
