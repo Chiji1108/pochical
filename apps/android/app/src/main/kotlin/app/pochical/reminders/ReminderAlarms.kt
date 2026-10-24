@@ -8,6 +8,7 @@ import android.content.Intent
 import androidx.core.app.AlarmManagerCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.edit
 import app.pochical.MainActivity
 import app.pochical.R
 import app.pochical.kit.OwnCalendar
@@ -103,7 +104,7 @@ class ReminderAlarms(
   /** The system woke the app for the reminders at [at]: what is due since, if it may be shown. */
   private fun fired(at: Long, scheduled: Scheduled) {
     // Shown or not, the alarm is spent.
-    kept.edit().remove(KEY_SET_FOR).apply()
+    kept.edit { remove(KEY_SET_FOR) }
     if (!scheduled.allowed) return
     val now = clock()
     val since = Instant.ofEpochMilli(at - 1).atZone(now.zone)
@@ -126,11 +127,11 @@ class ReminderAlarms(
     val next =
       if (scheduled.allowed) scheduled.reminders.sending(scheduled.calendar, after, now.plusDays(LOOK_AHEAD_DAYS)).firstOrNull() else null
     if (next == null) {
-      kept.edit().remove(KEY_SET_FOR).apply()
+      kept.edit { remove(KEY_SET_FOR) }
       return alarms.cancel(waking())
     }
     val at = next.at(zone).toInstant().toEpochMilli()
-    kept.edit().putLong(KEY_SET_FOR, at).apply()
+    kept.edit { putLong(KEY_SET_FOR, at) }
     val fire = waking(at)
     if (AlarmManagerCompat.canScheduleExactAlarms(alarms)) {
       AlarmManagerCompat.setExactAndAllowWhileIdle(alarms, AlarmManager.RTC_WAKEUP, at, fire)
