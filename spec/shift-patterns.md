@@ -50,7 +50,7 @@ Many people leave days off blank, moving on with 翌日へ. Rather than stop the
 
 ## Picking a mark's icon
 
-Beyond the icons offered first, ほかのアイコンを選ぶ shows every icon a mark can take, sorted into kinds, each drawn as the mark would be with the one picked edged. A search keeps the icons whose name or words hold every word typed (`design/src/mark-icon-names.ts`), width, case and katakana folded, so ケア, けあ and ｹｱ find the same. An icon picked from there leads the offered ones while it is the mark's.
+Beyond the icons offered first, ほかのアイコンを選ぶ shows every icon a mark can take, sorted into kinds, each drawn as the mark would be with the one picked edged. A search keeps the icons whose name or words hold every word typed (`design/src/mark-icon-names.ts`), width, case and katakana folded, so ケア, けあ and ｹｱ find the same (`spec/vectors/patterns.json`, iconSearch). An icon picked from there leads the offered ones while it is the mark's.
 
 ## Patterns no longer used
 

@@ -235,6 +235,18 @@ class AccountChangeTest {
   }
 
   @Test
+  fun aCallAskedWhileAChangeWaitsGoesAsTheUserBefore() = runBlocking<Unit> {
+    val phone = signedInDevice()
+    server.deleteDelayMs = 500
+    val deleting = async { phone.account.deleteAccount { null } }
+    eventually { phone.account.state.value is AccountState.Changing }
+
+    // Never as whoever the change leaves the device signed in as (spec/sync-protocol.md, Sockets).
+    assertEquals("user-1", phone.account.asSignedIn { it.userId })
+    assertTrue(deleting.await())
+  }
+
+  @Test
   fun anAppEndedWhileErasingGoesOnErasingAndNeverSignsInAsTheUserDeleted() = runBlocking<Unit> {
     val phone = signedInDevice()
     phone.edits.setDay("2026-11-02", DayField.DAY_FIELD_PATTERN, "night")

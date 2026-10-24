@@ -76,28 +76,6 @@ class GroupsVectorsTest {
   }
 }
 
-class MarkIconSearchTest {
-  private fun found(query: String) = markIconSections(query).flatMap { it.icons }
-
-  @Test
-  fun katakanaHiraganaAndWidthFindTheSame() {
-    assertEquals(listOf("handHeart"), found("ケア"))
-    assertEquals(found("ケア"), found("けあ"))
-    assertEquals(found("ケア"), found("ｹｱ"))
-  }
-
-  @Test
-  fun everyWordTypedMustBeThere() {
-    assertEquals(listOf("moon"), found("夜勤 夜"))
-    assertEquals(emptyList<String>(), found("夜勤 ケア"))
-  }
-
-  @Test
-  fun nothingTypedShowsEveryKind() {
-    assertEquals(app.pochical.design.MarkIconNames.sections, markIconSections("  "))
-  }
-}
-
 class NewGroupRequestTest {
   private val mark = GroupMarkValue(emoji = "🏠")
   private var ids = 0
