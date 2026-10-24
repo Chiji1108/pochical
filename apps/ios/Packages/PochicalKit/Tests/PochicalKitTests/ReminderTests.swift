@@ -72,9 +72,12 @@ struct ReminderVectors: Decodable, Sendable {
   let remindable: [Remindable]
 }
 
+/// The file's patterns, read once for every case.
+private let reminderPatterns = (try? vectors("reminders", as: ReminderVectors.self))?.patterns.map(\.pattern) ?? []
+
 @Test(arguments: try vectors("reminders", as: ReminderVectors.self).firings)
 func reminderFirings(_ vector: ReminderVectors.Firings) throws {
-  let patterns = try vectors("reminders", as: ReminderVectors.self).patterns.map(\.pattern)
+  let patterns = reminderPatterns
   let days = Dictionary(
     uniqueKeysWithValues: vector.days.map { key, day in
       (Day(key)!, DayEntry(shift: day.shift, start: day.start, end: day.end))
@@ -98,7 +101,7 @@ func reminderName(_ vector: ReminderVectors.Named) {
 
 @Test(arguments: try vectors("reminders", as: ReminderVectors.self).remindable)
 func reminderRemindable(_ vector: ReminderVectors.Remindable) throws {
-  let patterns = try vectors("reminders", as: ReminderVectors.self).patterns.map(\.pattern)
+  let patterns = reminderPatterns
   #expect(vector.reminder.reminder.remindable(patterns).map(\.id) == vector.expected)
 }
 

@@ -4,7 +4,13 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import kotlinx.serialization.SerialName
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.JsonDecoder
 
 /**
  * A reminder of the person's own shifts (spec/calendar.md, Reminders; iOS's Reminder.swift): a
@@ -47,9 +53,9 @@ data class Reminder(val id: String, val on: Boolean = true, val skip: List<Strin
     if (shown.shift in skip) return null
     val (at, minute) =
       when (kind) {
-        is Kind.DayBefore -> day.minusDays(1) to minutes(kind.time)
+        is Kind.DayBefore -> day.minusDays(1) to (minutesOrNull(kind.time) ?: return null)
         is Kind.BeforeStart -> {
-          val start = minutes(shown.start ?: pattern.time?.start ?: return null) - kind.minutes
+          val start = (minutesOrNull(shown.start ?: pattern.time?.start ?: return null) ?: return null) - kind.minutes
           if (start < 0) day.minusDays(1) to start + MINUTES_A_DAY else day to start
         }
       }
@@ -66,9 +72,11 @@ data class Reminder(val id: String, val on: Boolean = true, val skip: List<Strin
 
   /** Its firings for the shifts from [from] through [through] of [calendar], in order. */
   fun firings(calendar: OwnCalendar, from: LocalDate, through: LocalDate): List<ReminderFiring> =
-    calendar.shown(from, through).entries.sortedBy { it.key }.mapNotNull { (day, shown) ->
-      calendar.pattern(shown.shift)?.let { firing(day, shown, it) }
-    }
+    firings(calendar, calendar.shown(from, through))
+
+  /** Its firings for the days [shown] of [calendar], in order. */
+  internal fun firings(calendar: OwnCalendar, shown: Map<LocalDate, ShownDay>): List<ReminderFiring> =
+    shown.entries.sortedBy { it.key }.mapNotNull { (day, entry) -> calendar.pattern(entry.shift)?.let { firing(day, entry, it) } }
 
   companion object {
     const val DEFAULT_TIME = "21:00"
@@ -119,17 +127,38 @@ data class ReminderFiring(
  * the device has the system wake it for, and those due once it wakes.
  */
 fun List<Reminder>.sending(calendar: OwnCalendar, after: ZonedDateTime, through: ZonedDateTime): List<ReminderFiring> {
-  val zone = after.zone
   // A shift's reminder comes on its day or the day before.
+  val shown = calendar.shown(after.toLocalDate(), through.toLocalDate().plusDays(1))
   return filter { it.on }
-    .flatMap { it.firings(calendar, after.toLocalDate(), through.toLocalDate().plusDays(1)) }
-    .filter { it.at(zone) > after && it.at(zone) <= through }
-    .sortedBy { it.at(zone) }
+    .flatMap { it.firings(calendar, shown) }
+    .map { it to it.at(after.zone) }
+    .filter { (_, at) -> at > after && at <= through }
+    .sortedBy { (_, at) -> at }
+    .map { (firing) -> firing }
 }
 
-/** The pattern's standard hours; none for a pattern without a time. */
-val PatternRow.time: ShiftTime?
-  get() = start?.let { start -> end?.let { ShiftTime(start, it) } }
+/**
+ * The reminders as the device settings keep them: ones this app cannot read, as a kind a later
+ * version adds, are the defaults, rather than every other setting with them (DeviceSettings).
+ */
+internal object KeptReminders : KSerializer<List<Reminder>> {
+  private val list = ListSerializer(Reminder.serializer())
+  override val descriptor = list.descriptor
+
+  override fun serialize(encoder: Encoder, value: List<Reminder>) = list.serialize(encoder, value)
+
+  override fun deserialize(decoder: Decoder): List<Reminder> {
+    val json = decoder as JsonDecoder
+    val kept = json.decodeJsonElement()
+    return try {
+      json.json.decodeFromJsonElement(list, kept)
+    } catch (e: SerializationException) {
+      Reminder.defaults
+    } catch (e: IllegalArgumentException) {
+      Reminder.defaults
+    }
+  }
+}
 
 /**
  * The shift by name, with the day's own 早出 or 残業 always said, as the calendar marks them: the
