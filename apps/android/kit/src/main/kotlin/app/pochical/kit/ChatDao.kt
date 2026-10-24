@@ -59,6 +59,10 @@ internal interface ChatDao {
   )
   suspend fun othersAfter(groupId: String, threadId: String, after: Long, me: String): Int
 
+  /** The group's chats that have a line held. */
+  @Query("SELECT DISTINCT threadId FROM chatLines WHERE groupId = :groupId")
+  suspend fun lineThreads(groupId: String): List<String>
+
   @Query("DELETE FROM chatLines WHERE groupId = :groupId") suspend fun deleteChatLines(groupId: String)
 
   @Query("DELETE FROM chatLines") suspend fun deleteAllChatLines()
@@ -119,6 +123,9 @@ internal interface ChatDao {
 
   @Query("DELETE FROM chatMutes") suspend fun deleteChatMutes()
 
+  @Query("SELECT EXISTS(SELECT 1 FROM chatMutes WHERE groupId = :groupId AND threadId = :threadId)")
+  suspend fun muted(groupId: String, threadId: String): Boolean
+
   @Upsert suspend fun upsert(settings: ChatNotificationSettingsRow)
 
   @Query("DELETE FROM chatNotificationSettings") suspend fun deleteChatNotificationSettings()
@@ -130,6 +137,8 @@ internal interface ChatDao {
 
   @Query("DELETE FROM chatDrafts WHERE groupId = :groupId AND threadId = :threadId")
   suspend fun deleteChatDraft(groupId: String, threadId: String)
+
+  @Query("SELECT threadId FROM chatDrafts WHERE groupId = :groupId") suspend fun draftThreads(groupId: String): List<String>
 
   @Query("DELETE FROM chatDrafts WHERE groupId = :groupId") suspend fun deleteChatDrafts(groupId: String)
 

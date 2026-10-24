@@ -289,4 +289,41 @@ class ChatValuesTest {
     database.write { reset() }
     assertEquals(0, Chats(database).summary("g1", GROUP_THREAD, "me").first().unread)
   }
+
+  @Test
+  fun theListHasTheChatsWithALineALineOnItsWayOrADraft() = runTest {
+    val chats = Chats(database)
+    database.write { takeChanges(listOf(wordsLine(1, "u2", thread = directThread("me", "u2"))), "g1") }
+    chats.keepDraft("g1", directThread("me", "u3"), KeptDraft("あとで"))
+    database.write {
+      chatEdit("g1", 0) {
+        send = chatSend { threadId = directThread("me", "u4"); content = chatSendContent { words = chatSendWords { text = "やあ" } } }
+      }
+    }
+    assertEquals(
+      setOf(directThread("me", "u2"), directThread("me", "u3"), directThread("me", "u4")),
+      chats.threads("g1").first(),
+    )
+  }
+
+  @Test
+  fun aChatMarksAnUnreadMentionAndBeingTurnedOff() = runTest {
+    val chats = Chats(database, now = { 0 })
+    database.write {
+      take(listOf(change { unreadCount = unreadCount { groupId = "g1"; threadId = GROUP_THREAD; count = 2; mentions = 1 } }))
+      takeChanges(listOf(wordsLine(1, "u2", "<@me> 見て"), wordsLine(2, "u2", "ね")), "g1")
+    }
+    val counted = chats.summary("g1", GROUP_THREAD, "me").first()
+    assertTrue(counted.mentioned)
+    assertFalse(counted.muted)
+
+    // Read past the mention, the read still waiting: counted on the device, with no mention left.
+    chats.read("g1", GROUP_THREAD, "me", 1)
+    val read = chats.summary("g1", GROUP_THREAD, "me").first()
+    assertEquals(1, read.unread)
+    assertFalse(read.mentioned)
+
+    database.write { take(listOf(change { chatMute = chatMute { groupId = "g1"; threadId = GROUP_THREAD; muted = true } })) }
+    assertTrue(chats.summary("g1", GROUP_THREAD, "me").first().muted)
+  }
 }

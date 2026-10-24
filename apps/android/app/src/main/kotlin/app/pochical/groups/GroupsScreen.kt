@@ -56,8 +56,7 @@ import app.pochical.R
 import app.pochical.RootPage
 import app.pochical.SectionHeader
 import app.pochical.calendar.rememberToday
-import app.pochical.chat.GroupChatRow
-import app.pochical.kit.GROUP_THREAD
+import app.pochical.chat.ChatList
 import app.pochical.design.Metrics
 import app.pochical.design.Radius
 import app.pochical.kit.AccountState
@@ -237,7 +236,7 @@ private fun GroupHub(group: GroupRow, actions: GroupsActions) {
       val me = me
       if (me != null) {
         item { SectionHeader(stringResource(R.string.chat_heading)) }
-        item { GroupChatRow(group.id, me) { actions.onChat(group.id, GROUP_THREAD) } }
+        item { ChatList(group.id, group.name, me, onOpen = { actions.onChat(group.id, it) }) }
       }
       item { Spacer(Modifier.height(24.dp)) }
     }
