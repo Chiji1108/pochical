@@ -1,0 +1,86 @@
+{
+  "about": "The style pages' preview (spec/calendar.md, The month: スタイル shows this week and the next, カレンダー this week): a made-up run of the person's own `patterns`, in their order, the same whatever they have entered. sequence: each working pattern (one that counts as off, or one another names as its `nextDay`, is not one) followed by its nextDay when that is among the patterns, and by the first pattern that counts as off after every second working pattern and after one with a nextDay; the run ends on that day off, which is added at the end when it does not already, and there is none of it without a pattern that counts as off. days: the run repeated over `days` days from the first, one pattern a day, nothing without a run. samples: the marks the テーマ and シフトの色 choices show, the run's patterns each once in the order they first come, the first four.",
+  "sequence": [
+    {
+      "name": "each shift with what follows it, and days off between",
+      "patterns": [
+        { "id": "day" },
+        { "id": "night", "nextDay": "after" },
+        { "id": "after" },
+        { "id": "late" },
+        { "id": "off", "countsAsOff": true }
+      ],
+      "expected": ["day", "night", "after", "off", "late", "off"]
+    },
+    {
+      "name": "the first day off is the one between, whatever comes before it",
+      "patterns": [
+        { "id": "paid", "countsAsOff": true },
+        { "id": "day" },
+        { "id": "off", "countsAsOff": true },
+        { "id": "early" }
+      ],
+      "expected": ["day", "early", "paid"]
+    },
+    {
+      "name": "a next day that is gone is not run",
+      "patterns": [
+        { "id": "night", "nextDay": "gone" },
+        { "id": "off", "countsAsOff": true }
+      ],
+      "expected": ["night", "off"]
+    },
+    {
+      "name": "without a day off the run is the working shifts alone",
+      "patterns": [
+        { "id": "day" },
+        { "id": "night", "nextDay": "after" },
+        { "id": "after" }
+      ],
+      "expected": ["day", "night", "after"]
+    },
+    {
+      "name": "only days off run as the day off",
+      "patterns": [{ "id": "off", "countsAsOff": true }],
+      "expected": ["off"]
+    },
+    {
+      "name": "without patterns there is no run",
+      "patterns": [],
+      "expected": []
+    }
+  ],
+  "days": [
+    {
+      "name": "the run repeats over the preview's days",
+      "patterns": [{ "id": "day" }, { "id": "off", "countsAsOff": true }],
+      "days": 3,
+      "expected": ["day", "off", "day"]
+    },
+    {
+      "name": "without patterns the preview is blank",
+      "patterns": [],
+      "days": 2,
+      "expected": [null, null]
+    }
+  ],
+  "samples": [
+    {
+      "name": "each of the run once, up to four",
+      "patterns": [
+        { "id": "day" },
+        { "id": "night", "nextDay": "after" },
+        { "id": "after" },
+        { "id": "late" },
+        { "id": "early" },
+        { "id": "off", "countsAsOff": true }
+      ],
+      "expected": ["day", "night", "after", "off"]
+    },
+    {
+      "name": "fewer than four shows them all",
+      "patterns": [{ "id": "day" }, { "id": "off", "countsAsOff": true }],
+      "expected": ["day", "off"]
+    }
+  ]
+}
