@@ -5,7 +5,8 @@ import kotlinx.serialization.Serializable
 import org.junit.Test
 
 // Of repeat.json, schedule and shown are what the calendar reads; of own-days.json, edited is what a
-// day's detail writes. The rest come with the screens that change orders.
+// day's detail writes (givenToOrder is GivenToOrderTest's). The rest come with the screens that
+// change orders.
 
 /** A day's values as the vectors write them. */
 @Serializable

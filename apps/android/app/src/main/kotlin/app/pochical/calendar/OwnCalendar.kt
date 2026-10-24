@@ -57,6 +57,9 @@ interface OwnCalendar {
 
   /** The day's memo, or none. */
   fun note(day: LocalDate): String?
+
+  /** The pattern entering `shift` puts on the following day too, as 明け after 夜勤; none when it names one that is gone. */
+  fun nextDay(shift: String): String?
 }
 
 /** Where the calendar comes from and where its edits go ([SyncedDays]). */
@@ -68,6 +71,21 @@ interface OwnDays {
 
   /** Puts `entry` on `day`; none clears its shift with its hours and people, keeping the memo. */
   fun set(day: LocalDate, entry: DayEntry?)
+
+  /**
+   * Enters `shift` on `day` as ポチポチ入力's keys do, a pattern's next day on the day after too;
+   * none clears the day's shift, keeping its memo.
+   */
+  fun enter(day: LocalDate, shift: String?)
+
+  /** Puts `shift` on each of `days`, the blank days 完了 asks about. */
+  fun fill(days: List<LocalDate>, shift: String)
+
+  /**
+   * The days from `from` through `through` that show a shift once every edit made before this is
+   * written, which [calendar] may not show yet: what 完了 asks about must count the last key.
+   */
+  suspend fun shownOnceWritten(from: LocalDate, through: LocalDate): Set<LocalDate>
 
   /** Keeps `note` as the day's memo; "" clears it, leaving the shift. */
   fun setNote(day: LocalDate, note: String)

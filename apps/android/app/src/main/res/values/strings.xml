@@ -95,4 +95,20 @@
   <string name="day_early">早出</string>
   <string name="day_late">残業</string>
   <string name="day_hours_moved">時間変更</string>
+  <string name="entering">ポチポチ入力</string>
+  <string name="entering_done">完了</string>
+  <string name="entering_skip">翌日へ</string>
+  <string name="entering_day">入力する日付：%1$s</string>
+  <string name="entering_key_page">シフトのページ %1$d/%2$d</string>
+  <string name="entering_entered">%1$sを入力しました</string>
+  <string name="entering_entered_next">%1$sを入力しました。翌日は%2$sです</string>
+  <string name="entering_cleared">シフトを消しました</string>
+  <string name="entering_skipped">変更せずに進みました</string>
+  <string name="entering_said">%1$s、%2$s。%3$s</string>
+  <string name="entering_selecting">%1$sを選択中</string>
+  <string name="entering_month_end">月末です。入力が終わったら完了を押してください</string>
+  <string name="gaps_title_one">この日はお休みですか？</string>
+  <string name="gaps_title">この%1$d日はお休みですか？</string>
+  <string name="gaps_patterns">入れるパターン</string>
+  <string name="gaps_fill">%1$sにする</string>
 </resources>

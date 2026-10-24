@@ -15,6 +15,11 @@ class OwnCalendar(
 ) {
   private val known = patterns.mapTo(HashSet()) { it.id }
 
+  private val byId = patterns.associateBy { it.id }
+
+  /** The pattern entering [shift] puts on the following day too, none when it names a pattern that is gone. */
+  fun nextDay(shift: String): String? = byId[shift]?.nextDay?.takeIf { it in known }
+
   /** Every day from [from] through [through] that shows a shift: its own, else its order's. */
   fun shown(from: LocalDate, through: LocalDate): Map<LocalDate, ShownDay> =
     shownDays(own.filterKeys { it in from..through }, planned(from, through), known)
