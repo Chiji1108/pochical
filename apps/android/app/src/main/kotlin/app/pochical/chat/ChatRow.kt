@@ -7,7 +7,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.add
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -276,13 +281,16 @@ private fun listedTime(ms: Long, today: LocalDate): String {
 private fun StartChatSheet(members: List<GroupMemberRow>, groupId: String, groupName: String, onDismiss: () -> Unit, onPick: (GroupMemberRow) -> Unit) {
   val colors = LocalThemeColors.current
   ModalBottomSheet(onDismissRequest = onDismiss) {
-    Column(Modifier.navigationBarsPadding().padding(bottom = 16.dp)) {
-      Text(
-        stringResource(R.string.chat_start),
-        Modifier.padding(horizontal = 24.dp, vertical = 8.dp).semantics { heading() },
-        style = MaterialTheme.typography.titleLarge,
-      )
-      for (member in members) {
+    // A list that scrolls within the sheet, as a group holds up to GROUP_MAX_MEMBERS people.
+    LazyColumn(contentPadding = WindowInsets.navigationBars.add(WindowInsets(bottom = 16.dp)).asPaddingValues()) {
+      item {
+        Text(
+          stringResource(R.string.chat_start),
+          Modifier.padding(horizontal = 24.dp, vertical = 8.dp).semantics { heading() },
+          style = MaterialTheme.typography.titleLarge,
+        )
+      }
+      items(members, key = { it.userId }) { member ->
         ListItem(
           headlineContent = { Text(member.shownName(), maxLines = 1, overflow = TextOverflow.Ellipsis) },
           leadingContent = { MemberAvatar(member.shownName(), member.photoId, PhotoShelf.Group(groupId), 40.dp) },
@@ -290,13 +298,15 @@ private fun StartChatSheet(members: List<GroupMemberRow>, groupId: String, group
           modifier = Modifier.fillMaxWidth().clickable { onPick(member) },
         )
       }
-      // The chat is the group's, with the names and faces it shows.
-      Text(
-        stringResource(R.string.chat_start_note, groupName),
-        Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-        style = MaterialTheme.typography.bodySmall,
-        color = colors.textSecondary,
-      )
+      item {
+        // The chat is the group's, with the names and faces it shows.
+        Text(
+          stringResource(R.string.chat_start_note, groupName),
+          Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+          style = MaterialTheme.typography.bodySmall,
+          color = colors.textSecondary,
+        )
+      }
     }
   }
 }
