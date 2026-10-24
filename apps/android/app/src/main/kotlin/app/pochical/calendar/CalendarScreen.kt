@@ -174,6 +174,9 @@ fun CalendarScreen(open: (RootPage) -> Unit, hidesTabBar: (Boolean) -> Unit) {
   var gapPick by rememberSaveable { mutableStateOf<String?>(null) }
   val offPatterns = calendar.patterns.daysOff()
   val gapFill = offPatterns.find { it.id == gapPick } ?: offPatterns.firstOrNull()
+  // 今月の内訳's month while it is open; each month's days off, counted once for the days as they are.
+  var breakingDown by rememberSaveable { mutableStateOf<String?>(null) }
+  val offCounts = remember(calendar) { mutableMapOf<YearMonth, Int>() }
   val hidesBar by rememberUpdatedState(hidesTabBar)
   val showsDay = opened != null && !closing
   LaunchedEffect(showsDay || entering != null) { hidesBar(showsDay || entering != null) }
@@ -375,18 +378,28 @@ fun CalendarScreen(open: (RootPage) -> Unit, hidesTabBar: (Boolean) -> Unit) {
       Crossfade(entering != null, Modifier.padding(horizontal = SCREEN_EDGE).padding(top = 12.dp, bottom = 12.dp), label = "entering") { on ->
         val day = trayDay
         if (!on || day == null) {
-          Button(
-            onClick = {
-              // The month the pages settle on, as a swipe while entering starts there too.
-              val month = range.monthAt(pager.settledPage)
-              said = null
-              enteringKey = firstBlank(month).toString()
-            },
-            modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control),
-          ) {
-            Icon(painterResource(R.drawable.ic_edit), null, Modifier.size(20.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(stringResource(R.string.entering), style = PochicalTextStyles.headline)
+          Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            MonthSummary(
+              pages = pager.currentPage + pager.currentPageOffsetFraction,
+              monthAt = range::monthAt,
+              thisMonth = YearMonth.from(today),
+              reduceMotion = reduceMotion,
+              daysOff = { month -> offCounts.getOrPut(month) { calendar.daysOff(month) } },
+              onOpen = { breakingDown = it.toString() },
+            )
+            Button(
+              onClick = {
+                // The month the pages settle on, as a swipe while entering starts there too.
+                val month = range.monthAt(pager.settledPage)
+                said = null
+                enteringKey = firstBlank(month).toString()
+              },
+              modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control),
+            ) {
+              Icon(painterResource(R.drawable.ic_edit), null, Modifier.size(20.dp))
+              Spacer(Modifier.width(8.dp))
+              Text(stringResource(R.string.entering), style = PochicalTextStyles.headline)
+            }
           }
         } else {
           val last = YearMonth.from(day).atEndOfMonth()
@@ -427,6 +440,9 @@ fun CalendarScreen(open: (RootPage) -> Unit, hidesTabBar: (Boolean) -> Unit) {
         }
       }
     }
+  }
+  breakingDown?.let { month ->
+    MonthBreakdownSheet(remember(calendar, month) { calendar.breakdown(YearMonth.parse(month)) }, onDismiss = { breakingDown = null })
   }
   if (gaps.isNotEmpty() && gapFill != null) {
     GapSheet(

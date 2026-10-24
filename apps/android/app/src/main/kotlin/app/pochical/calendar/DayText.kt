@@ -31,6 +31,10 @@ val LocalDate.dayText: String
 val LocalDate.dayWeekdayText: String
   get() = "$dayText(${weekdayLetter(weekday)})"
 
+/** 11月, where the year goes without saying. */
+val YearMonth.monthText: String
+  get() = "${monthValue}月"
+
 /** 2026年11月 */
 val YearMonth.yearMonthText: String
   get() = "${year}年${monthValue}月"
