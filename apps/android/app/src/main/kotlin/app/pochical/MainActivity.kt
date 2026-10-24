@@ -22,6 +22,8 @@ import app.pochical.groups.LocalOpenedInvites
 import app.pochical.groups.OpenedInvites
 import app.pochical.groups.LocalValues
 import app.pochical.chat.LocalChats
+import app.pochical.chat.LocalPhotoFiles
+import app.pochical.chat.LocalPhotoUploads
 import app.pochical.kit.DeviceSettings
 import app.pochical.kit.PochicalKit
 import app.pochical.kit.SyncedSettings
@@ -78,6 +80,8 @@ class MainActivity(
         LocalGroupCalls provides kit.groups,
         LocalValues provides kit.database.values(),
         LocalChats provides kit.chats,
+        LocalPhotoUploads provides kit.photoUploads,
+        LocalPhotoFiles provides kit.photoFiles,
         LocalOpenedInvites provides invites,
       ) {
         PochicalTheme(device) { AccountRoot() }

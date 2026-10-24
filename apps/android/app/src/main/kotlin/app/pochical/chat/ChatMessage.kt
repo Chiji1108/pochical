@@ -171,6 +171,10 @@ class MessageHandlers(
   val decide: (seq: Long) -> Unit,
   /** Who can come on a poll's day, by name. */
   val voters: (day: LocalDate, people: List<String>) -> Unit,
+  /** The chat's group, whose photos its lines show. */
+  val groupId: String,
+  /** 送信をやめる: the member's line of photos [opId] stops going up, not sent. */
+  val stopSending: (opId: String) -> Unit,
 )
 
 /**
@@ -311,7 +315,46 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
 @Composable
 private fun LineBody(look: MessageLook, handlers: MessageHandlers, live: Boolean = true, onQuote: () -> Unit) {
   val poll = look.poll
-  if (poll != null) PollCard(poll, handlers, look.seq.takeIf { live }, live) else Bubble(look, handlers, onQuote)
+  val photos = look.content as? LineContent.Photos
+  when {
+    poll != null -> PollCard(poll, handlers, look.seq.takeIf { live }, live)
+    photos != null -> PhotoBody(look, photos, handlers, live, onQuote)
+    else -> Bubble(look, handlers, onQuote)
+  }
+}
+
+/**
+ * A line of photos, with no bubble (spec/chat.md, Photos): one answering a line sits in a bubble
+ * under its quote, a little in from its edge, keeping its own corners and edge. [live] false for the
+ * copy lifted over the menu, on which nothing acts.
+ */
+@Composable
+private fun PhotoBody(look: MessageLook, photos: LineContent.Photos, handlers: MessageHandlers, live: Boolean, onQuote: () -> Unit) {
+  val waiting = look.waiting
+  val line = @Composable {
+    PhotoLine(
+      photos.photos,
+      handlers.groupId,
+      waiting,
+      onStop = waiting?.takeIf { live }?.let { { handlers.stopSending(it.opId) } },
+      onOpen = null,
+    )
+  }
+  val quote = look.quote
+  if (quote == null) return line()
+  val colors = LocalThemeColors.current
+  val shape = remember(look.mine, look.startsRun) { BubbleShape(look.mine, tail = look.startsRun) }
+  val ink = if (look.mine) colors.accentOnFill else colors.textPrimary
+  Column(
+    Modifier.width(IntrinsicSize.Max)
+      .background(if (look.mine) colors.accentFill else colors.fillTertiary, shape)
+      .litWhenGoneTo(handlers.lit?.takeIf { it.seq == look.seq }, shape, handlers.reducedMotion)
+      .padding(top = 8.dp, bottom = PHOTO_INSET, start = PHOTO_INSET, end = PHOTO_INSET)
+  ) {
+    BubbleQuote(quote, ink, inset = 12.dp - PHOTO_INSET, onOpen = onQuote)
+    Spacer(Modifier.height(6.dp))
+    line()
+  }
 }
 
 /**
@@ -446,7 +489,7 @@ fun messageLook(
       val pinned = line.seq in pins
       val quote = line.replyTo?.let { quoteOf(it) }
       val replying = quote?.let { stringResource(R.string.chat_reply_to_said, it.writer.orEmpty(), it.words) }
-      val words = lineWords(line.content, nameOf)
+      val words = saidWords(line.content, nameOf)
       val said =
         listOfNotNull(
             if (own) mine else nameOf(line.authorId),
@@ -480,12 +523,21 @@ fun messageLook(
       val quote = line.replyTo?.let { quoteOf(it) }
       val replying = quote?.let { stringResource(R.string.chat_reply_to_said, it.writer.orEmpty(), it.words) }
       val page = (line.content as? LineContent.Words)?.preview?.title
-      val said = listOfNotNull(mine, replying, lineWords(line.content, nameOf), page, if (line.failed) notSent else sending).joinToString("、")
-      MessageLook(item.key, true, line.content, item.startsRun, null, false, null, line, null, null, said, partsOf(line.content, quote, reactions = null, poll = pollLook(line.content, canDecide = true, waiting = !line.failed)))
+      val said = listOfNotNull(mine, replying, saidWords(line.content, nameOf), page, if (line.failed) notSent else sending).joinToString("、")
+      MessageLook(item.key, true, line.content, item.startsRun, null, false, null, line, null, null, said, partsOf(line.content, quote, reactions = null, poll = pollLook(line.content, canDecide = true, waiting = !line.failed), waiting = line))
     }
     else -> null
   }
 }
+
+/** What a screen reader reads of a line's content: its words, or its photos as how many (3枚の写真, spec/chat.md, Albums). */
+@Composable
+private fun saidWords(content: LineContent, nameOf: (String) -> String): String =
+  when {
+    content !is LineContent.Photos -> lineWords(content, nameOf)
+    content.photos.size > 1 -> stringResource(R.string.chat_photo_count, content.photos.size)
+    else -> stringResource(R.string.chat_photo)
+  }
 
 /** A line as a screen reader has it: what it reads, its actions, and its menu opened by activating it, as the long press opens it. */
 private fun androidx.compose.ui.semantics.SemanticsPropertyReceiver.lineSemantics(
@@ -512,10 +564,12 @@ private fun LayoutCoordinates.unclipped(): Rect = Rect(positionInWindow(), size.
  * What a line shows besides its words, in the order a screen reader offers their actions: its
  * reactions (none on a line on its way), the line it answers, the links of its words and its page.
  */
-private fun partsOf(content: LineContent, quote: LineQuote?, reactions: ReactionsPart?, poll: PollPart?): List<LinePart> {
+private fun partsOf(content: LineContent, quote: LineQuote?, reactions: ReactionsPart?, poll: PollPart?, waiting: WaitingLine? = null): List<LinePart> {
   val words = content as? LineContent.Words
   val links = words?.let { textParts(it.text).mapNotNull { part -> part.url } }.orEmpty()
+  val photos = (content as? LineContent.Photos)?.let { PhotosPart(it.photos.size, waiting) }
   return listOfNotNull(
+    photos,
     poll,
     reactions,
     quote?.let(::QuotePart),
@@ -529,6 +583,9 @@ private fun pollLook(content: LineContent, canDecide: Boolean, waiting: Boolean)
   val poll = content as? LineContent.Poll ?: return null
   return PollPart(PollLook(poll.poll, canDecide, waiting))
 }
+
+/** How far in from its bubble's edge a photo answering a line sits. */
+private val PHOTO_INSET = 4.dp
 
 /** How wide a line with a link's page is (spec/chat.md, Albums: as wide as an album). */
 private val PREVIEW_WIDTH = 240.dp

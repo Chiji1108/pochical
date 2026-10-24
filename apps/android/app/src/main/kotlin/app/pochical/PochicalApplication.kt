@@ -4,7 +4,11 @@ import android.app.Application
 import androidx.datastore.dataStoreFile
 import app.pochical.calendar.OwnDays
 import app.pochical.calendar.SyncedDays
+import app.pochical.chat.chatImageLoader
 import app.pochical.kit.PochicalKit
+import coil3.ImageLoader
+import coil3.PlatformContext
+import coil3.SingletonImageLoader
 import app.pochical.kit.SyncedSettings
 import app.pochical.kit.deviceSettingsStore
 import dev.zacsweers.metro.AppScope
@@ -50,7 +54,7 @@ interface AppGraph : MetroAppComponentProviders {
   }
 }
 
-class PochicalApplication : Application(), MetroApplication, PochicalKit.Holder {
+class PochicalApplication : Application(), MetroApplication, PochicalKit.Holder, SingletonImageLoader.Factory {
   private val graph by lazy { createGraphFactory<AppGraph.Factory>().create(this) }
 
   override val appComponentProviders: MetroAppComponentProviders
@@ -63,4 +67,8 @@ class PochicalApplication : Application(), MetroApplication, PochicalKit.Holder 
     super.onCreate()
     graph.kit.followProcess()
   }
+
+  /** The one image loader every picture the app shows comes through (`chatImageLoader`). */
+  override fun newImageLoader(context: PlatformContext): ImageLoader =
+    chatImageLoader(context, graph.kit.groups, graph.kit.photoFiles, CoroutineScope(SupervisorJob() + Dispatchers.Default))
 }

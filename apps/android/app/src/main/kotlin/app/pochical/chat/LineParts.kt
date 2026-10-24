@@ -5,6 +5,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import app.pochical.R
 import app.pochical.kit.LineReaction
+import app.pochical.kit.WaitingLine
 import app.pochical.kit.site
 import app.pochical.v1.LinkPreview
 
@@ -42,6 +43,19 @@ data class ReactionsPart(val reactions: List<LineReaction>, val counted: Boolean
         CustomAccessibilityAction((if (own) off else on).format(reaction.emoji)) { handlers.react(seq, reaction.emoji, !own); true }
       } +
       reactions.map { reaction -> CustomAccessibilityAction(choosers.format(reaction.emoji)) { handlers.choosers(reaction); true } }
+  }
+}
+
+/**
+ * A line's photos, [count] of them: while they go up ([waiting] still being sent and not yet past
+ * stopping), 送信をやめる, which × in their rings offers.
+ */
+data class PhotosPart(val count: Int, val waiting: WaitingLine?) : LinePart {
+  @Composable
+  override fun actions(line: PartLine): List<CustomAccessibilityAction> {
+    val waiting = waiting?.takeIf { !it.failed && !it.sending } ?: return emptyList()
+    val stop = stringResource(R.string.chat_photo_stop)
+    return listOf(CustomAccessibilityAction(stop) { line.handlers.stopSending(waiting.opId); true })
   }
 }
 

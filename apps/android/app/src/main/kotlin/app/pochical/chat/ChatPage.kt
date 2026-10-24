@@ -419,7 +419,7 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
     Unit
   }
   var unsending by remember { mutableStateOf<Unsending?>(null) }
-  val actions = rememberLineActions(composer, nameOf, snackbar, onUnsend = { unsending = it }, onNotKept = { notKept = true }, onPin = pin, onDecide = { deciding = it })
+  val actions = rememberLineActions(groupId, composer, nameOf, snackbar, onUnsend = { unsending = it }, onNotKept = { notKept = true }, onPin = pin, onDecide = { deciding = it })
   val handlers =
     MessageHandlers(
       menu = menu,
@@ -444,6 +444,8 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
       vote = vote,
       decide = { deciding = it },
       voters = { day, people -> listing = day to people },
+      groupId = groupId,
+      stopSending = { opId -> scope.launch { keeping({ notKept = true }) { chats.stopSending(opId) } } },
     )
   Box {
     ChatScaffold(groupId, threadId, members, groups, socket, onBack) {
@@ -503,6 +505,7 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
             going = Going.ToFoot
           },
           onNotKept = { notKept = true },
+          onSay = { said -> scope.launch { snackbar.showSnackbar(said) } },
         )
       }
     }

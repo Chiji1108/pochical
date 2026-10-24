@@ -98,6 +98,7 @@ dependencies {
   implementation(libs.browser)
   implementation(libs.emojipicker)
   implementation(libs.reorderable)
+  implementation(libs.coil.compose)
   implementation(libs.zxing.core)
   implementation(libs.camerax.camera2)
   implementation(libs.camerax.lifecycle)
