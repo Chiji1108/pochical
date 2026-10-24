@@ -335,9 +335,9 @@ class SyncAccount(
   }
 
   /**
-   * Runs [call] as the user the device is signed in as: one asked while it signs in, or while a change
-   * of account waits on the server, waits for it, for a while at most, rather than going as no one
-   * (spec/sync-protocol.md, Sockets). [NotSignedIn] when the device is not signed in by then, or when
+   * Runs [call] as the user the device is signed in as, the user before while a change of account
+   * waits on the server: one asked while it signs in waits for it, for a while at most, rather than
+   * going as no one (spec/sync-protocol.md, Sockets). [NotSignedIn] when the device is not signed in by then, or when
    * the server says it does not know the session ([SessionRefused]), which ends it as a socket's 401
    * does.
    */
@@ -347,9 +347,10 @@ class SyncAccount(
         state
           .map { now ->
             when (now) {
-              is AccountState.SignedIn -> signedIn()
-              AccountState.SigningIn,
-              is AccountState.Changing -> null
+              // While a change waits on the server, the device is still the user before.
+              is AccountState.SignedIn,
+              is AccountState.Changing -> stretch.value?.credentials
+              AccountState.SigningIn -> null
               else -> throw NotSignedIn()
             }
           }
