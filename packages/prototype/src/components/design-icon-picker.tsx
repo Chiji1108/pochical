@@ -30,7 +30,8 @@ function folded(text: string) {
     );
 }
 
-function matching(query: string): readonly IconSection[] {
+// The search, pinned by spec/vectors/patterns.json (iconSearch).
+export function iconsMatching(query: string): readonly IconSection[] {
   const words = folded(query).split(SPACES).filter(Boolean);
   if (words.length === 0) {
     return iconSections;
@@ -82,7 +83,7 @@ export function IconPickerSheet({
     }
     onOpenChange(next);
   };
-  const sections = matching(query);
+  const sections = iconsMatching(query);
   return (
     <Sheet label="アイコンを選ぶ" onOpenChange={setOpen} open={open}>
       <SheetHeading

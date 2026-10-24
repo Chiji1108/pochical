@@ -1722,8 +1722,15 @@ struct LookVectors: Decodable, Sendable {
     let expected: Int
   }
 
+  struct IconSearchCase: VectorCase {
+    let name: String
+    let query: String
+    let expected: [String]?
+  }
+
   let guessLook: [GuessCase]
   let nextColor: [ColorCase]
+  let iconSearch: [IconSearchCase]
 }
 
 @Test(arguments: try vectors("patterns", as: LookVectors.self).guessLook)
@@ -1737,6 +1744,12 @@ func aMarkGuessedFromTheName(_ vector: LookVectors.GuessCase) {
 @Test(arguments: try vectors("patterns", as: LookVectors.self).nextColor)
 func aNewPatternsColor(_ vector: LookVectors.ColorCase) {
   #expect(nextColor(vector.used, slots: 12) == vector.expected)
+}
+
+@Test(arguments: try vectors("patterns", as: LookVectors.self).iconSearch)
+func aMarksIconSearched(_ vector: LookVectors.IconSearchCase) {
+  let icons = MarkIconSearch.sections(matching: vector.query).flatMap(\.icons)
+  #expect(icons == vector.expected ?? MarkIconNames.sections.flatMap(\.icons))
 }
 
 @Test func aDeletedMembersLinesAreHeldWithNoName() throws {
