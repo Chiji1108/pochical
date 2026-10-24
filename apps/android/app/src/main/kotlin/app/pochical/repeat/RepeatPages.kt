@@ -329,7 +329,8 @@ fun RepeatEditor(mode: RepeatMode, navigation: PageNavigation) {
   // Until set by hand in 完了's sheet, the period's own, else on when the order reads as office hours.
   val turnedOn =
     holidaysOff ?: fixing?.holidaysOff ?: (daysOff.isNotEmpty() && holidaysOffByDefault(typing.sequence, typing.anchor) { byId[it]?.countsAsOff == true })
-  val setting = holidaySetting(daysOff, turnedOn, fixing?.holidayShift, holidayPick)
+  // As the period has it, as on its page, whatever the sheet's switch says now.
+  val setting = holidaySetting(daysOff, fixing?.holidaysOff == true, fixing?.holidayShift, holidayPick)
   val holidays = turnedOn && setting.shift != null
   val offShift = setting.shift
   // The order runs until the next period starts.
