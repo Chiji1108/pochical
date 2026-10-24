@@ -58,6 +58,7 @@ import app.pochical.ShiftMark
 import app.pochical.design.COWORKERS_MAX
 import app.pochical.design.TextLimits
 import app.pochical.limitText
+import app.pochical.limited
 import java.time.LocalDate
 
 /**
@@ -179,7 +180,7 @@ private fun HoursRow(entry: DayEntry, time: ShiftTime, onChange: (DayEntry) -> U
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TimeDialog(time: String, onPick: (String) -> Unit, onDismiss: () -> Unit) {
+internal fun TimeDialog(time: String, onPick: (String) -> Unit, onDismiss: () -> Unit) {
   val (hour, minute) = time.split(":").map(String::toInt)
   val state = rememberTimePickerState(initialHour = hour, initialMinute = minute, is24Hour = true)
   AlertDialog(
@@ -383,15 +384,4 @@ private fun ClearButton(entry: DayEntry, coworkers: List<Coworker>, onClear: () 
       dismissButton = { TextButton(onClick = { asking = false }) { Text(stringResource(R.string.cancel)) } },
     )
   }
-}
-
-/**
- * The field's text cut to `limit` characters once it is committed: while the
- * IME is still composing (kana before conversion), it is left whole, or the
- * composition would be cut off under the person's fingers.
- */
-private fun TextFieldValue.limited(limit: Int): TextFieldValue {
-  if (composition != null) return this
-  val text = limitText(text, limit)
-  return if (text == this.text) this else TextFieldValue(text, TextRange(text.length))
 }

@@ -92,10 +92,16 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
     }
   }
 
-  /** Keeps [pattern] as it is now; a new one goes at the end of the order. */
-  suspend fun savePattern(id: String, pattern: Pattern) = database.write {
+  /**
+   * Keeps [pattern] as it is now; a new one goes at the end of the order. Archiving one a repeating
+   * order in use or to come still has is refused, and nothing is written.
+   */
+  suspend fun savePattern(id: String, pattern: Pattern): PatternRefusal? = database.write {
     // Asked before the edit shows it.
-    val isNew = !hasPattern(id)
+    val saved = pattern(id)
+    if (pattern.archived && refusesArchiving(id, saved?.archived == true, repeatOrders().map { it.order })) {
+      return@write PatternRefusal.Repeating
+    }
     val clock = nextClock(now())
     edit(change {
       this.pattern = patternValue {
@@ -104,14 +110,17 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
         hlc = clock
       }
     })
-    if (isNew) orderPatterns(patternIds() - id + id)
+    if (saved == null) orderPatterns(patternIds() - id + id)
+    null
   }
 
   /**
    * Deletes a pattern: it goes from the list and its order, kept as a tombstone, and nothing that
-   * names it changes (spec/sync-protocol.md, Deleted values).
+   * names it changes (spec/sync-protocol.md, Deleted values). One a repeating order in use or to
+   * come still has is refused, and nothing is written.
    */
-  suspend fun deletePattern(id: String) = database.write {
+  suspend fun deletePattern(id: String): PatternRefusal? = database.write {
+    if (repeats(id, repeatOrders().map { it.order })) return@write PatternRefusal.Repeating
     val clock = nextClock(now())
     edit(change {
       pattern = patternValue {
@@ -120,6 +129,7 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
       }
     })
     orderPatterns(patternIds() - id)
+    null
   }
 
   /** Puts the patterns in this order. */

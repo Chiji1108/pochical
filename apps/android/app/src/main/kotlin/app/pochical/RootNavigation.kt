@@ -51,6 +51,15 @@ sealed interface RootPage : RootRoute, NavKey {
 
   /** シフト for the day `date` ("YYYY-MM-DD"), from its detail. */
   @Serializable data class ShiftChoice(val date: String) : RootPage
+
+  /** シフトパターン, from 設定. */
+  @Serializable data object Patterns : RootPage
+
+  /** パターンを追加, from シフトパターン. */
+  @Serializable data object AddPattern : RootPage
+
+  /** パターンを編集 for the pattern `id`, or with `isNew` a pattern made from scratch under that id. */
+  @Serializable data class PatternEditor(val id: String, val isNew: Boolean = false) : RootPage
 }
 
 /**
@@ -88,6 +97,11 @@ class RootNavigator(private val pages: NavBackStack<RootPage>, tab: MutableState
   fun back() {
     if (pages.isNotEmpty()) pages.removeAt(pages.lastIndex) else tab = RootTab.entries.first()
   }
+
+  /** Takes away the top `count` pages at once, as a page made from the one under it goes back past both. */
+  fun back(count: Int) {
+    repeat(minOf(count, pages.size)) { pages.removeAt(pages.lastIndex) }
+  }
 }
 
 /**
@@ -104,6 +118,8 @@ class PageNavigation(private val navigator: RootNavigator, private val lifecycle
   fun select(tab: RootTab) = whenSettled { navigator.select(tab) }
 
   fun back() = whenSettled { navigator.back() }
+
+  fun back(count: Int) = whenSettled { navigator.back(count) }
 
   private fun whenSettled(action: () -> Unit) {
     if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) action()

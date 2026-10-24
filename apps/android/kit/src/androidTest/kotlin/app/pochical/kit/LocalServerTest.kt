@@ -119,6 +119,40 @@ class LocalServerTest {
   }
 
   @Test
+  fun patternsReorderedAndArchivedReachTheUsersOtherDevice() = runBlocking<Unit> {
+    val phone = Device("patterns")
+    phone.account.foreground()
+    withTimeout(20_000) { phone.account.userSocket.first { it == SocketState.Current } }
+    for (ready in readyCopies(listOf("day", "night", "after", "off"))) {
+      phone.edits.savePattern(ready.id, pattern {
+        name = ready.name
+        emoji = ready.emoji
+        symbol = ready.symbol
+        icon = ready.icon
+        color = ready.color
+        ready.nextDay?.let { nextDay = it }
+      })
+    }
+    phone.edits.orderPatterns(listOf("off", "day", "night", "after"))
+    phone.edits.savePattern("after", pattern {
+      name = "明け"
+      emoji = "🌅"
+      symbol = "明"
+      icon = "sunHorizon"
+      archived = true
+    })
+    withTimeout(20_000) { phone.database.sync().lastWaiting().first { it == null } }
+    Log.i(TAG, "Phone reordered its patterns and archived 明け, acknowledged")
+
+    val tablet = Device("patterns-tablet")
+    tablet.sessions.write(phone.sessions.read()!!)
+    tablet.account.foreground()
+    val patterns = withTimeout(20_000) { tablet.database.values().patterns().first { it.size == 4 } }
+    assertEquals(listOf("off" to false, "day" to false, "night" to false, "after" to true), patterns.map { it.id to it.archived })
+    Log.i(TAG, "Tablet lists them in the phone's order, 明け archived")
+  }
+
+  @Test
   fun aGroupsMembersAndTheirSharedDaysComeOnItsSocket() = runBlocking<Unit> {
     val date = "2026-10-24"
     val phone = Device("group")

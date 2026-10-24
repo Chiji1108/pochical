@@ -22,6 +22,9 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import app.pochical.calendar.CalendarScreen
 import app.pochical.calendar.ShiftChoicePage
+import app.pochical.patterns.AddPatternPage
+import app.pochical.patterns.PatternEditor
+import app.pochical.patterns.PatternsPage
 import java.time.LocalDate
 
 /**
@@ -45,6 +48,10 @@ fun RootScreen(navigator: RootNavigator) {
         NavEntry(route) {
           ShiftChoicePage(LocalDate.parse(route.date), onBack = rememberPageNavigation(navigator)::back)
         }
+      RootPage.Patterns -> NavEntry(route) { PatternsPage(rememberPageNavigation(navigator)) }
+      RootPage.AddPattern -> NavEntry(route) { AddPatternPage(rememberPageNavigation(navigator)) }
+      is RootPage.PatternEditor ->
+        NavEntry(route) { PatternEditor(route.id, route.isNew, rememberPageNavigation(navigator)) }
     }
   }
 }
