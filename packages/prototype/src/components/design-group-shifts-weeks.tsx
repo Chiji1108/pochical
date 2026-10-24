@@ -10,12 +10,7 @@ import { Avatar, cornerMonth, Mark, toneColor } from "./design-group-parts";
 import { offTile, pickedFrame } from "./design-group-shifts-parts";
 import { shortMonthOf } from "./design-month-name";
 import { srOnly } from "./design-ui";
-import {
-  englishWeekdayNames,
-  useWeek,
-  weekdayNames,
-  weekLength,
-} from "./design-week";
+import { useWeek, weekdayHeadOf, weekLength } from "./design-week";
 
 // 週ごと: the shift table as weeks, a row per member under each week's
 // dates, also the group hub's glance at this week.
@@ -375,9 +370,7 @@ export function MemberTable({
         const tone =
           weekTools.weekdays.find((weekday) => weekday.day === day)?.tone ??
           "plain";
-        const label = weekTools.english
-          ? englishWeekdayNames[day].toUpperCase()
-          : weekdayNames[day];
+        const label = weekdayHeadOf(day, weekTools.english);
         return { day, label, tone };
       })
     : weekTools.weekdays;

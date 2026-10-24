@@ -315,9 +315,17 @@ fun PatternEditor(id: String, isNew: Boolean, navigation: PageNavigation) {
 
 /** A row with a switch, the whole row toggling it, and words under its name. */
 @Composable
-fun SwitchRow(title: String, note: String?, on: Boolean, enabled: Boolean = true, onChange: (Boolean) -> Unit) {
+fun SwitchRow(
+  title: String,
+  note: String?,
+  on: Boolean,
+  enabled: Boolean = true,
+  leading: (@Composable () -> Unit)? = null,
+  onChange: (Boolean) -> Unit,
+) {
   ListItem(
     headlineContent = { Text(title) },
+    leadingContent = leading,
     supportingContent = note?.let { { Text(it) } },
     trailingContent = {
       // accentSwitch, the accent held under 墨's and 黒板's near-white, so the thumb stays clear of its track (#798).

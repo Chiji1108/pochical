@@ -64,6 +64,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
@@ -274,8 +275,11 @@ fun CalendarScreen(open: (RootPage) -> Unit, hidesTabBar: (Boolean) -> Unit) {
     }
   }
 
+  val sky = rememberSurpriseSky(reduceMotion)
   Column(
-    Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
+    Modifier.fillMaxSize()
+      .drawBehind(sky)
+      .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
   ) {
     Heading(
       pages = if (opened != null) range.pageOf(folded).toFloat() else pager.currentPage + pager.currentPageOffsetFraction,
@@ -290,7 +294,7 @@ fun CalendarScreen(open: (RootPage) -> Unit, hidesTabBar: (Boolean) -> Unit) {
       onThisWeek = { openDay(today) },
       onDone = ::finish,
     )
-    WeekdayRow(week, Modifier.padding(horizontal = SCREEN_EDGE))
+    WeekdayRow(week, Modifier.padding(horizontal = SCREEN_EDGE).padding(bottom = 12.dp))
     BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
       val cell = dayHeight(fitting = maxHeight - DAY_GAP)
       val monthHeight = cell * 6 + DAY_GAP * 5
@@ -486,17 +490,27 @@ private fun Heading(
 ) {
   var picking by remember { mutableStateOf(false) }
   val colors = LocalThemeColors.current
+  val settings = LocalDeviceSettings.current
   Row(
     Modifier.fillMaxWidth().padding(start = SCREEN_EDGE + 8.dp, end = SCREEN_EDGE, top = 8.dp, bottom = 12.dp),
     verticalAlignment = Alignment.Bottom,
   ) {
     val pickLabel = stringResource(R.string.calendar_pick_month)
+    val skyLabel = stringResource(R.string.calendar_change_sky)
     MonthName(
       pages,
       range::monthAt,
       reduceMotion,
-      // Only the month on its own opens 月を選ぶ; entering and a day's week keep to the days around.
-      if (dayOpen || entering) Modifier else Modifier.clickable(onClickLabel = pickLabel, role = Role.Button) { picking = true },
+      // Only the month on its own opens 月を選ぶ, or with おたのしみ drifts the sky to another;
+      // entering and a day's week keep to the days around.
+      when {
+        dayOpen || entering -> Modifier
+        settings.device.heading.surprise ->
+          Modifier.clickable(onClickLabel = skyLabel, role = Role.Button) {
+            settings.change { it.copy(heading = it.heading.copy(sky = nextSky(it.heading.sky, it.theme))) }
+          }
+        else -> Modifier.clickable(onClickLabel = pickLabel, role = Role.Button) { picking = true }
+      },
     )
     Spacer(Modifier.weight(1f))
     val away = if (dayOpen) (if (thisWeekAway) 1f else 0f) else abs(pages - todayPage).coerceAtMost(1f)
@@ -588,13 +602,14 @@ private fun List<Pattern>.daysOff(): List<Pattern> = filter { it.countsAsOff && 
 
 /** The weekday names over the pages, from the week's start, Sundays and Saturdays in their colors unless turned off. */
 @Composable
-private fun WeekdayRow(week: Week, modifier: Modifier = Modifier) {
+fun WeekdayRow(week: Week, modifier: Modifier = Modifier) {
   val colors = LocalThemeColors.current
-  Row(modifier.padding(bottom = 12.dp).clearAndSetSemantics {}, horizontalArrangement = Arrangement.spacedBy(DAY_GAP)) {
+  val english = LocalDeviceSettings.current.device.heading.english
+  Row(modifier.clearAndSetSemantics {}, horizontalArrangement = Arrangement.spacedBy(DAY_GAP)) {
     repeat(7) { index ->
       val weekday = (week.start + index) % 7
       Text(
-        weekdayLetter(weekday),
+        weekdayLetter(weekday, english),
         Modifier.weight(1f),
         style = PochicalTextStyles.caption2,
         color = weekdayColor(weekday, holiday = false, week, plain = colors.textTertiary),
@@ -645,6 +660,8 @@ private class PageDays(
             isSelected = day == selected,
             framesToday = !isEntering,
             preview = preview[day].takeIf { entry == null },
+            // Blank days off come back faint while entering and in a day's week, where the days are looked at.
+            offShown = if (selected != null) OffShown.Faint else OffShown.Hidden,
           ),
           height = cell,
           colorsHoliday = week.holiday,
@@ -738,7 +755,7 @@ private fun dayHeight(fitting: Dp): Dp = ((fitting - DAY_GAP * 5) / 6).coerceIn(
 
 /** Today, moving on at midnight while the screen is open, as the system says the date changed. */
 @Composable
-private fun rememberToday(): LocalDate {
+fun rememberToday(): LocalDate {
   val context = LocalContext.current
   var today by remember { mutableStateOf(LocalDate.now()) }
   DisposableEffect(context) {

@@ -10,6 +10,7 @@ import { rgbaToThumbHash, thumbHashToRGBA } from "thumbhash";
 // the native apps' tests read the same files.
 import chatText from "../../../spec/vectors/chat-text.json";
 import chatMessages from "../../../spec/vectors/chat.json";
+import dayNames from "../../../spec/vectors/day-names.json";
 import entering from "../../../spec/vectors/entering.json";
 import groupVectors from "../../../spec/vectors/groups.json";
 import hlc from "../../../spec/vectors/hlc.json";
@@ -21,6 +22,7 @@ import periods from "../../../spec/vectors/periods.json";
 import reconnect from "../../../spec/vectors/reconnect.json";
 import repeat from "../../../spec/vectors/repeat.json";
 import review from "../../../spec/vectors/review.json";
+import stylePreview from "../../../spec/vectors/style-preview.json";
 import text from "../../../spec/vectors/text.json";
 import thumbHashes from "../../../spec/vectors/thumbhash.json";
 import timeChange from "../../../spec/vectors/time-change.json";
@@ -35,11 +37,24 @@ import {
 } from "../src/components/design-group-settings";
 import { iconsMatching } from "../src/components/design-icon-picker";
 import { pageSummaryOf } from "../src/components/design-month-breakdown";
-import { periodTitleOf } from "../src/components/design-month-name";
+import {
+  englishMonthOf,
+  monthTitleOf,
+  monthWithYearOf,
+  periodTitleOf,
+  shortMonthOf,
+} from "../src/components/design-month-name";
+import {
+  sampleSequence,
+  styleSamplesOf,
+} from "../src/components/design-settings-preview";
 import {
   defaultWeekSettings,
   monthDatesFrom,
   periodDatesFrom,
+  weekdayHeadOf,
+  weekdayLetterOf,
+  weekdayNameOf,
 } from "../src/components/design-week";
 import { guessLook, nextColor } from "../src/components/shift-mark";
 import {
@@ -297,6 +312,56 @@ describe("spec/vectors/month.json", () => {
         daysOff: summary.daysOff,
         unfilled: summary.unfilled,
       }).toEqual(vector.expected);
+    });
+  }
+});
+
+describe("spec/vectors/day-names.json", () => {
+  for (const { name, day, english, expected } of dayNames.cases) {
+    test(name, () => {
+      const date = dayOf(day);
+      const weekday = date.getDay();
+      expect({
+        headingMonth: english ? englishMonthOf(date) : null,
+        monthTitle: monthTitleOf(date, english),
+        monthWithYear: monthWithYearOf(date, english),
+        shortMonth: shortMonthOf(date, english),
+        weekdayHead: weekdayHeadOf(weekday, english),
+        weekdayLetter: weekdayLetterOf(weekday, english),
+        weekdayName: weekdayNameOf(weekday, english),
+      }).toEqual(expected);
+    });
+  }
+});
+
+describe("spec/vectors/style-preview.json", () => {
+  const patternsOf = (list: readonly Partial<Pattern>[]) =>
+    list.map((pattern) => patternOf({ countsAsOff: false, ...pattern }));
+  for (const { name, patterns, expected } of stylePreview.sequence) {
+    test(name, () => {
+      expect(sampleSequence(patternsOf(patterns))).toEqual(expected);
+    });
+  }
+  for (const { name, patterns, days, expected } of stylePreview.days) {
+    test(name, () => {
+      const first = dayOf("2026-10-04");
+      const dates = Array.from({ length: days }, (_, index) =>
+        addDays(first, index)
+      );
+      const schedule = repeatSchedule(
+        sampleSequence(patternsOf(patterns)),
+        first,
+        first,
+        dates.at(-1) ?? first
+      );
+      expect(
+        dates.map((date) => schedule[dateKey(date)]?.shift ?? null)
+      ).toEqual(expected);
+    });
+  }
+  for (const { name, patterns, expected } of stylePreview.samples) {
+    test(name, () => {
+      expect(styleSamplesOf(patternsOf(patterns))).toEqual(expected);
     });
   }
 });
