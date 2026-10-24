@@ -5,7 +5,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,7 +25,6 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
  * finger drags it, then as dropped until the source shows it; rows the source brings meanwhile take
  * their places from it, one new after the rest.
  */
-@Stable
 class DragOrder<T>(
   val rows: List<T>,
   val state: ReorderableLazyListState,
@@ -65,9 +63,12 @@ fun <T> rememberDragOrder(rows: List<T>, key: (T) -> String, list: LazyListState
   var order by remember { mutableStateOf<List<String>?>(null) }
   var dragging by remember { mutableStateOf(false) }
   val shown = order?.let { ids -> rows.sortedBy { row -> ids.indexOf(key(row)).takeIf { it >= 0 } ?: Int.MAX_VALUE } } ?: rows
-  LaunchedEffect(rows) { if (!dragging && order == rows.map(key)) order = null }
+  // Let go of once the source shows it, or once a drop left it as it was, which changes nothing there.
+  LaunchedEffect(rows, dragging) { if (!dragging && order == rows.map(key)) order = null }
   val haptics = LocalHapticFeedback.current
   val drop by rememberUpdatedState(onDrop)
+  // The rows' ids as shown when let go: only those the source still has, each once.
+  val shownIds by rememberUpdatedState(shown.map(key))
   val state =
     rememberReorderableLazyListState(list) { from, to ->
       val ids = shown.map(key).toMutableList()
@@ -78,5 +79,5 @@ fun <T> rememberDragOrder(rows: List<T>, key: (T) -> String, list: LazyListState
       order = ids
       haptics.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
     }
-  return DragOrder(shown, state, haptics, onDragging = { dragging = it }, onDropped = { order?.let(drop) })
+  return DragOrder(shown, state, haptics, onDragging = { dragging = it }, onDropped = { if (order != null) drop(shownIds) })
 }

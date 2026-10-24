@@ -10,6 +10,7 @@
   <string name="coworker_days">%1$d日</string>
   <string name="coworker_days_note">%1$d日の予定に入っています。名前を変えると、その日の表示も変わります。</string>
   <string name="coworker_duplicate">同じ名前の人がもういます。</string>
+  <string name="coworker_name_empty">名前が空のままでは保存されません。</string>
   <string name="coworker_delete">この人を削除</string>
   <string name="coworker_delete_title">%1$sを削除しますか？</string>
   <string name="coworker_delete_body">%1$d日の予定から%2$sが外れます。</string>

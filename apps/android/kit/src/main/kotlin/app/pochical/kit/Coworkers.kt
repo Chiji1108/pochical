@@ -8,6 +8,4 @@ import kotlinx.coroutines.flow.map
  * whenever the days change. Someone on no day is not in it.
  */
 fun Values.coworkerDays(): Flow<Map<String, Int>> =
-  days().map { days ->
-    days.flatMap { day -> day.people?.split(" ").orEmpty().filter { it.isNotEmpty() }.distinct() }.groupingBy { it }.eachCount()
-  }
+  dayPeople().map { days -> days.flatMap { people -> people.split(" ").filter { it.isNotEmpty() }.distinct() }.groupingBy { it }.eachCount() }

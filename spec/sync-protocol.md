@@ -255,6 +255,7 @@ A deleted pattern or coworker is kept as a tombstone (a value without its patter
 - A pattern's `next_day` naming one that is gone fills nothing (`spec/vectors/entering.json`, enter).
 - A day's people, and the patterns' and coworkers' orders, skip ids that are gone.
 - When a device writes a reference field (a day's people), it leaves out ids that are gone, so they go as the values are touched (Coworkers).
+- A device writes no new value for a pattern or coworker it holds as gone: an editor left open on one deleted from another device keeps nothing as it closes, as its newer clock would bring the value back. An editor that keeps a field as it is left writes only what was typed there, never the name it opened with, so a change from another device meanwhile stands.
 
 Keeping the ids also lets a deletion be undone with what named it intact.
 

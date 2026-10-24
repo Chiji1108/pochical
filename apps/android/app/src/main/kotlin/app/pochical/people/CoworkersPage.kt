@@ -22,7 +22,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -65,11 +64,11 @@ import app.pochical.rememberDragOrder
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
 
-/** How many of the person's days note each of 一緒に働く人, by id, as the days change. */
+/** How many of the person's days note each of 一緒に働く人, by id, as the days change; null until first read. */
 @Composable
-private fun coworkerDays(): Map<String, Int> {
+private fun coworkerDays(): Map<String, Int>? {
   val values = LocalValues.current
-  return remember(values) { values.coworkerDays() }.collectAsState(emptyMap()).value
+  return remember(values) { values.coworkerDays() }.collectAsStateWithLifecycle(null).value
 }
 
 /**
@@ -83,7 +82,7 @@ fun CoworkersPage(navigation: PageNavigation) {
   val days = LocalOwnDays.current
   val calendar by days.calendar.collectAsStateWithLifecycle()
   val people = calendar.coworkers
-  val counts = coworkerDays()
+  val counts = coworkerDays().orEmpty()
   val resources = LocalResources.current
   val snackbar = remember { SnackbarHostState() }
   val scope = rememberCoroutineScope()
@@ -193,7 +192,8 @@ fun CoworkerEditorPage(id: String, navigation: PageNavigation) {
   val days = LocalOwnDays.current
   val calendar by days.calendar.collectAsStateWithLifecycle()
   val person = calendar.coworkers.firstOrNull { it.id == id }
-  val count = coworkerDays()[id] ?: 0
+  // Unknown until read, when 削除 waits, as it asks first when days note them.
+  val count = coworkerDays()?.let { it[id] ?: 0 }
   // Gone, from here or another device: nothing of them is kept any more.
   var seen by remember { mutableStateOf(false) }
   LaunchedEffect(person != null) { if (person != null) seen = true else if (seen) navigation.back() }
@@ -205,16 +205,29 @@ fun CoworkerEditorPage(id: String, navigation: PageNavigation) {
 }
 
 @Composable
-private fun CoworkerForm(person: Coworker, count: Int, taken: List<String>, navigation: PageNavigation) {
+private fun CoworkerForm(person: Coworker, count: Int?, taken: List<String>, navigation: PageNavigation) {
   val days = LocalOwnDays.current
   var name by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue(person.name)) }
+  // The name this page started from or last kept: only a name typed here is written, so a rename
+  // from another device meanwhile is not undone by a field left as it was.
+  var from by rememberSaveable { mutableStateOf(person.name) }
   var confirming by rememberSaveable { mutableStateOf(false) }
   var deleted by remember { mutableStateOf(false) }
   val trimmed = name.text.trim()
   val duplicate = trimmed in taken
+  // Renamed elsewhere while the field is as it was, it shows the new name.
+  LaunchedEffect(person.name) {
+    if (trimmed == from) {
+      name = TextFieldValue(person.name)
+      from = person.name
+    }
+  }
   // An empty name or another's is not kept, and the person keeps theirs.
   val keep by rememberUpdatedState {
-    if (!deleted && trimmed.isNotEmpty() && !duplicate && trimmed != person.name) days.renameCoworker(person.id, trimmed)
+    if (!deleted && trimmed.isNotEmpty() && !duplicate && trimmed != from) {
+      days.renameCoworker(person.id, trimmed)
+      from = trimmed
+    }
   }
   DisposableEffect(Unit) { onDispose { keep() } }
   LifecycleEventEffect(Lifecycle.Event.ON_STOP) { keep() }
@@ -234,13 +247,19 @@ private fun CoworkerForm(person: Coworker, count: Int, taken: List<String>, navi
         stringResource(R.string.name),
         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).onFocusChanged { if (!it.isFocused) keep() },
       )
+      val problem =
+        when {
+          duplicate -> stringResource(R.string.coworker_duplicate)
+          trimmed.isEmpty() -> stringResource(R.string.coworker_name_empty)
+          else -> null
+        }
       Text(
-        if (duplicate) stringResource(R.string.coworker_duplicate) else stringResource(R.string.coworker_days_note, count),
+        problem ?: count?.let { stringResource(R.string.coworker_days_note, it) }.orEmpty(),
         Modifier.padding(horizontal = 16.dp),
         style = MaterialTheme.typography.bodyMedium,
-        color = if (duplicate) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+        color = if (problem != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
       )
-      TextButton(onClick = { if (count == 0) delete() else confirming = true }, Modifier.padding(16.dp)) {
+      TextButton(onClick = { if (count == 0) delete() else confirming = true }, Modifier.padding(16.dp), enabled = count != null) {
         Text(stringResource(R.string.coworker_delete), color = MaterialTheme.colorScheme.error)
       }
     }
@@ -249,7 +268,7 @@ private fun CoworkerForm(person: Coworker, count: Int, taken: List<String>, navi
     AlertDialog(
       onDismissRequest = { confirming = false },
       title = { Text(stringResource(R.string.coworker_delete_title, person.name)) },
-      text = { Text(stringResource(R.string.coworker_delete_body, count, person.name)) },
+      text = { Text(stringResource(R.string.coworker_delete_body, count ?: 0, person.name)) },
       confirmButton = {
         TextButton(
           onClick = {

@@ -204,6 +204,10 @@ private func outbox(_ db: Database) throws -> [Pochical_V1_DayValue] {
 
     try OwnValues.deleteCoworker(ken, now: 6, in: db)
     #expect(try OwnValues.coworkers(in: db).map(\.name) == ["あやか"])
+
+    // An editor still open on someone deleted elsewhere does not bring them back.
+    try OwnValues.renameCoworker(ken, to: "けんじ", now: 7, in: db)
+    #expect(try OwnValues.coworkers(in: db).map(\.name) == ["あやか"])
   }
 }
 

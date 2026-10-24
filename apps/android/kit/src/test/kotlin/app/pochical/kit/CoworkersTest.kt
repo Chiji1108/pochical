@@ -1,5 +1,6 @@
 package app.pochical.kit
 
+import app.pochical.v1.Change
 import app.pochical.v1.DayField
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -37,6 +38,17 @@ class CoworkersTest {
     edits.addCoworker("高橋", id = "takahashi")
 
     assertEquals(listOf("鈴木", "高橋"), values.coworkers().first().map { it.name })
+  }
+
+  @Test
+  fun aRenameOfSomeoneGoneDoesNotBringThemBack() = runTest {
+    edits.addCoworker("佐藤", id = "satou")
+    edits.deleteCoworker("satou")
+
+    edits.renameCoworker("satou", "佐藤さん")
+
+    assertEquals(emptyList<CoworkerRow>(), values.coworkers().first())
+    assertEquals(0, database.write { outbox() }.count { Change.parseFrom(it.change).coworker.name == "佐藤さん" })
   }
 
   @Test
