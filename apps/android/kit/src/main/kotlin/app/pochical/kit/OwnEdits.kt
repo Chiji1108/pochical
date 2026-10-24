@@ -159,17 +159,18 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
   }
 
   /**
-   * Turns 祝日は休みにする on or off for the period starting on [start]: holidays then take the
-   * pattern [picked], else the one they took, else the person's first in use that counts as off;
-   * with none it cannot be turned on (spec/shift-patterns.md, Holidays).
+   * Turns 祝日は休みにする on or off for the period starting on [start], holidays taking the pattern
+   * [holidaySetting] gives; with none in use that counts as off it cannot be turned on, but it can
+   * always be turned off (spec/shift-patterns.md, Holidays).
    */
   suspend fun setHolidaysOff(on: Boolean, picked: String? = null, start: LocalDate) = database.write {
     val orders = repeatOrders().map { it.order }
     val order = orders.find { it.start == start } ?: return@write
-    val shift = holidayShift(patterns().filter { it.countsAsOff && !it.archived }.map { it.id }, picked ?: order.holidayShift)
-    if (on && shift == null) return@write
+    val daysOff = patterns().filter { it.countsAsOff && !it.archived }.map { it.id }
+    val setting = holidaySetting(daysOff, order.holidaysOff, order.holidayShift, picked)
+    if (on && !order.holidaysOff && !setting.canTurnOn) return@write
     // Turned off, it keeps the pattern holidays took, so turned on again it takes it again.
-    val changed = order.copy(holidaysOff = on, holidayShift = if (on) shift else order.holidayShift)
+    val changed = order.copy(holidaysOff = on, holidayShift = setting.shift ?: order.holidayShift)
     writeOrders(ordersPutting(orders, changed).map { it.wire })
   }
 

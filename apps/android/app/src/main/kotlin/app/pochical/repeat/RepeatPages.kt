@@ -55,7 +55,7 @@ import app.pochical.calendar.slashText
 import app.pochical.design.Metrics
 import app.pochical.design.Radius
 import app.pochical.kit.RepeatOrder
-import app.pochical.kit.holidayShift
+import app.pochical.kit.holidaySetting
 import app.pochical.kit.holidaysOffByDefault
 import java.time.LocalDate
 import kotlinx.coroutines.launch
@@ -230,8 +230,7 @@ fun RepeatPeriodPage(startKey: String, navigation: PageNavigation) {
           HolidayChoice(
             inUse,
             on = order.holidaysOff,
-            // The one it takes, even one that no longer counts as off.
-            shift = order.holidayShift ?: holidayShift(inUse.filter { it.countsAsOff }.map { it.id }),
+            setting = holidaySetting(inUse.filter { it.countsAsOff }.map { it.id }, order.holidaysOff, order.holidayShift),
             onChange = { on -> scope.launch { days.setHolidaysOff(on, null, order.start) } },
             onPick = { picked -> scope.launch { days.setHolidaysOff(true, picked, order.start) } },
           )
@@ -326,10 +325,13 @@ fun RepeatEditor(mode: RepeatMode, navigation: PageNavigation) {
   var confirming by rememberSaveable { mutableStateOf(false) }
   val start = fixing?.start ?: typing.anchor
   // The period's own holiday pattern stays until changed, even one that no longer counts as off.
-  val offShift = holidayPick ?: fixing?.holidayShift?.takeIf { fixing.holidaysOff } ?: holidayShift(inUse.filter { it.countsAsOff }.map { it.id })
-  val holidays =
-    offShift != null &&
-      (holidaysOff ?: fixing?.holidaysOff ?: holidaysOffByDefault(typing.sequence, typing.anchor) { byId[it]?.countsAsOff == true })
+  val daysOff = inUse.filter { it.countsAsOff }.map { it.id }
+  // Until set by hand in 完了's sheet, the period's own, else on when the order reads as office hours.
+  val turnedOn =
+    holidaysOff ?: fixing?.holidaysOff ?: (daysOff.isNotEmpty() && holidaysOffByDefault(typing.sequence, typing.anchor) { byId[it]?.countsAsOff == true })
+  val setting = holidaySetting(daysOff, turnedOn, fixing?.holidayShift, holidayPick)
+  val holidays = turnedOn && setting.shift != null
+  val offShift = setting.shift
   // The order runs until the next period starts.
   val until = orders.firstOrNull { it.start > start }?.start
   val country = remember { fixing?.holidayCountry ?: holidayCountry() }
@@ -395,11 +397,12 @@ fun RepeatEditor(mode: RepeatMode, navigation: PageNavigation) {
           color = LocalThemeColors.current.textSecondary,
           modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
         )
-        HolidayChoice(inUse, on = holidays, shift = offShift, onChange = { holidaysOff = it }, onPick = { holidayPick = it })
+        HolidayChoice(inUse, on = holidays, setting = setting, onChange = { holidaysOff = it }, onPick = { holidayPick = it })
         Button(
           onClick = {
             confirming = false
-            val order = RepeatOrder(typing.sequence, start, typing.anchor, holidays, offShift.takeIf { holidays }, country)
+            // Off, it keeps the pattern holidays took, as turning it off on the period's page does.
+            val order = RepeatOrder(typing.sequence, start, typing.anchor, holidays, offShift, country)
             scope.launch {
               days.putOrder(order)
               navigation.back()

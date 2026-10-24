@@ -19,7 +19,20 @@ private data class OrdersVectors(
   val removed: List<Removed>,
   val holidaysOffByDefault: List<OffByDefault>,
   val holidayShift: List<HolidayShift>,
+  val holidayChoice: List<HolidayChoice>,
 ) {
+  @Serializable data class Choice(val shown: Boolean, val canTurnOn: Boolean, val shift: String? = null)
+
+  @Serializable
+  data class HolidayChoice(
+    override val name: String,
+    val patterns: List<Off>,
+    val on: Boolean,
+    val kept: String? = null,
+    val picked: String? = null,
+    val expected: Choice,
+  ) : VectorCase
+
   @Serializable
   data class Order(val sequence: List<String>, val start: String) {
     val order
@@ -83,6 +96,31 @@ class OrdersTest {
     vectors.holidayShift.checkEach({ it.expected }) { case ->
       holidayShift(case.patterns.filter { it.countsAsOff }.map { it.id }, case.picked)
     }
+
+  @Test
+  fun holidayChoice() =
+    vectors.holidayChoice.checkEach({ HolidaySetting(it.expected.shown, it.expected.canTurnOn, it.expected.shift) }) { case ->
+      holidaySetting(case.patterns.filter { it.countsAsOff }.map { it.id }, case.on, case.kept, case.picked)
+    }
+
+  @Test
+  fun holidaysKeepTheirPatternAfterItStopsCountingAsOffAndCanStillBeTurnedOff() = runTest {
+    val database = testDatabase()
+    val edits = OwnEdits(database)
+    edits.savePattern("day", markedPattern("日勤"))
+    edits.savePattern("off", markedPattern("休み") { countsAsOff = true })
+    val start = LocalDate.parse("2026-01-01")
+    edits.putOrder(RepeatOrder(listOf("day"), start, holidayCountry = "JP"))
+    edits.setHolidaysOff(true, start = start)
+    edits.savePattern("off", markedPattern("休み"))
+    edits.setHolidaysOff(true, start = start)
+    assertEquals(listOf(true to "off"), database.values().ownCalendar().first().orders.map { it.holidaysOff to it.holidayShift })
+    edits.setHolidaysOff(false, start = start)
+    edits.setHolidaysOff(true, start = start)
+    // With none that counts as off it is not turned on again.
+    assertEquals(listOf(false to "off"), database.values().ownCalendar().first().orders.map { it.holidaysOff to it.holidayShift })
+    database.close()
+  }
 
   @Test
   fun aPeriodPutOnTheDaysKeepsWhatThePersonEntered() = runTest {

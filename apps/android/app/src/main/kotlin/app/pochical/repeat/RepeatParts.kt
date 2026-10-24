@@ -37,6 +37,7 @@ import app.pochical.calendar.slashText
 import app.pochical.calendar.weekdayColor
 import app.pochical.calendar.weekdayLetter
 import app.pochical.design.Radius
+import app.pochical.kit.HolidaySetting
 import app.pochical.kit.RepeatOrder
 import app.pochical.patterns.SwitchRow
 import java.time.Instant
@@ -132,16 +133,22 @@ private fun Tiles(count: Int, modifier: Modifier, tile: @Composable (Int) -> Uni
 }
 
 /**
- * 祝日は休みにする (/design's HolidayChoice): on, holidays take a pattern that counts as off, picked
- * among them as chips when there are more than one. With none there is nothing for holidays to take,
- * so it is not asked (spec/shift-patterns.md, Holidays).
+ * 祝日は休みにする (/design's HolidayChoice) as [setting] has it (spec/shift-patterns.md, Holidays):
+ * asked while on, so it can always be turned off, or while a pattern counts as off, which alone lets
+ * it be turned on; on, holidays take one picked among those as chips when there are more than one.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun HolidayChoice(patterns: List<Pattern>, on: Boolean, shift: String?, onChange: (Boolean) -> Unit, onPick: (String) -> Unit) {
+fun HolidayChoice(patterns: List<Pattern>, on: Boolean, setting: HolidaySetting, onChange: (Boolean) -> Unit, onPick: (String) -> Unit) {
+  if (!setting.shown) return
   val offs = patterns.filter { it.countsAsOff }
-  if (offs.isEmpty()) return
-  SwitchRow(stringResource(R.string.repeat_holidays_off), stringResource(R.string.repeat_holidays_off_note), on, onChange = onChange)
+  SwitchRow(
+    stringResource(R.string.repeat_holidays_off),
+    stringResource(R.string.repeat_holidays_off_note),
+    on,
+    enabled = on || setting.canTurnOn,
+    onChange = onChange,
+  )
   if (on && offs.size > 1) {
     val label = stringResource(R.string.repeat_holiday_patterns)
     FlowRow(
@@ -150,7 +157,7 @@ fun HolidayChoice(patterns: List<Pattern>, on: Boolean, shift: String?, onChange
     ) {
       for (pattern in offs) {
         FilterChip(
-          selected = pattern.id == shift,
+          selected = pattern.id == setting.shift,
           onClick = { onPick(pattern.id) },
           label = { Text(pattern.name) },
           leadingIcon = { ShiftMark(pattern.icon, pattern.emoji, pattern.symbol, pattern.color, size = 16.dp) },

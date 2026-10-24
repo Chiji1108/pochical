@@ -3,6 +3,7 @@ package app.pochical.repeat
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onLast
@@ -83,6 +84,36 @@ class RepeatPagesTest {
     val orders = test.awaitCalendar { it.orders.size == 2 }.orders
     assertEquals(listOf("day", "off") to start, orders.last().sequence to orders.last().start)
     assertEquals(listOf(Tabs, RootPage.Repeat), navigator.routes)
+  }
+
+  /** The order's holidays on as 休み, which then stops counting as off, leaving none that does. */
+  private fun holidaysOnAPatternNoLongerOff() = runBlocking {
+    dayAndOffInAnOrder()
+    test.edits.setHolidaysOff(true, start = LocalDate.parse("2026-01-01"))
+    test.edits.savePattern("off", markedPattern("休み"))
+    test.awaitCalendar { calendar -> calendar.patterns.none { it.countsAsOff } && calendar.orders.single().holidaysOff }
+  }
+
+  @Test
+  fun holidaysOnWithNoDayOffLeftCanStillBeTurnedOff() {
+    holidaysOnAPatternNoLongerOff()
+    show(listOf(RootPage.Repeat, RootPage.RepeatPeriod("2026-01-01"))) { RepeatPeriodPage("2026-01-01", navigation) }
+    compose.onNodeWithText("祝日は休みにする").assertIsEnabled().performClick()
+    compose.waitForIdle()
+    assertEquals(listOf(false to "off"), test.awaitCalendar { !it.orders.single().holidaysOff }.orders.map { it.holidaysOff to it.holidayShift })
+  }
+
+  @Test
+  fun settingAPeriodAgainKeepsItsHolidayPattern() {
+    holidaysOnAPatternNoLongerOff()
+    val fix = RepeatMode.Fix("2026-01-01")
+    show(listOf(RootPage.Repeat, RootPage.RepeatEditor(fix))) { RepeatEditor(fix, navigation) }
+    compose.onNodeWithText("完了").performClick()
+    compose.onNodeWithText("入れ直す").performClick()
+    compose.waitForIdle()
+    assertEquals(listOf(Tabs, RootPage.Repeat), navigator.routes)
+    // Written again, the period now names its anchor.
+    assertEquals(listOf(true to "off"), test.awaitCalendar { it.orders.single().anchor != null }.orders.map { it.holidaysOff to it.holidayShift })
   }
 
   @Test

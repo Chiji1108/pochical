@@ -70,6 +70,7 @@ import {
   editedOwnDays,
   gapDaysIn,
   giveDaysToOrder,
+  holidayChoiceOf,
   holidayShiftOf,
   patternsWithout,
   plannedShifts,
@@ -202,6 +203,25 @@ describe("spec/vectors/repeat.json", () => {
       expect(holidayShiftOf(patterns.map(patternOf), picked) ?? null).toBe(
         expected
       );
+    });
+  }
+  for (const {
+    name,
+    patterns,
+    on,
+    expected,
+    ...rest
+  } of repeat.holidayChoice) {
+    const kept = "kept" in rest ? rest.kept : undefined;
+    const picked = "picked" in rest ? rest.picked : undefined;
+    test(name, () => {
+      const { shift, ...choice } = holidayChoiceOf(
+        patterns.map(patternOf),
+        on,
+        kept,
+        picked
+      );
+      expect({ ...choice, shift: shift ?? null }).toStrictEqual(expected);
     });
   }
   const ruleOf = (order: { sequence: string[]; start: string }) => ({

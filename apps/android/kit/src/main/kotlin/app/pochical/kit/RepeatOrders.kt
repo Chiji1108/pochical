@@ -121,6 +121,24 @@ private const val DAYS_A_WEEK = 7
  */
 fun holidayShift(daysOff: List<String>, picked: String? = null): String? = picked?.takeIf { it in daysOff } ?: daysOff.firstOrNull()
 
+/** 祝日は休みにする as a period has it: whether it is asked, whether it may be turned on, and what holidays take. */
+data class HolidaySetting(val shown: Boolean, val canTurnOn: Boolean, val shift: String?)
+
+/**
+ * 祝日は休みにする on a period's page and as an order is saved (spec/shift-patterns.md, Holidays;
+ * spec/vectors/repeat.json, holidayChoice), [on] as the period has it, with [kept] the pattern it
+ * keeps for holidays and [picked] one picked among [daysOff], the person's patterns in use that count
+ * as off, in their order. It is asked while on, so it can always be turned off, or while one counts
+ * as off, which alone lets it be turned on. Holidays take the one picked, else, while on, the one
+ * kept even if it no longer counts as off, else [holidayShift]'s.
+ */
+fun holidaySetting(daysOff: List<String>, on: Boolean, kept: String?, picked: String? = null): HolidaySetting =
+  HolidaySetting(
+    shown = on || daysOff.isNotEmpty(),
+    canTurnOn = daysOff.isNotEmpty(),
+    shift = picked?.takeIf { it in daysOff } ?: kept?.takeIf { on } ?: holidayShift(daysOff, kept),
+  )
+
 /** The order as the wire carries it. */
 internal val RepeatOrder.wire: app.pochical.v1.RepeatOrder
   get() =

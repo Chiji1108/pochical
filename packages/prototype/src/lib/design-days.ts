@@ -145,6 +145,27 @@ export function holidayShiftOf(
   return (offs.find((pattern) => pattern.id === picked) ?? offs[0])?.id;
 }
 
+// 祝日は休みにする as a period has it (spec/vectors/repeat.json,
+// holidayChoice), `on` as the period has it with `kept` the pattern it
+// keeps for holidays: asked while on, so it can always be turned off, or
+// while a pattern counts as off, which alone lets it be turned on.
+// Holidays take the one picked, else, while on, the one kept even if it
+// no longer counts as off, else holidayShiftOf's.
+export function holidayChoiceOf(
+  patterns: readonly Pattern[],
+  on: boolean,
+  kept?: Shift,
+  picked?: Shift
+): { canTurnOn: boolean; shift?: Shift; shown: boolean } {
+  const offs = patterns.filter((pattern) => pattern.countsAsOff);
+  const pick = offs.find((pattern) => pattern.id === picked)?.id;
+  return {
+    canTurnOn: offs.length > 0,
+    shift: pick ?? (on ? kept : undefined) ?? holidayShiftOf(patterns, kept),
+    shown: on || offs.length > 0,
+  };
+}
+
 const sampleDetails: Record<string, Omit<DayEntry, "shift">> = {
   "2026-09-02": { people: ["tanaka"] },
   "2026-09-08": { end: "20:00", note: "棚卸し" },
