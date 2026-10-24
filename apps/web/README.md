@@ -4,15 +4,15 @@
 
 ## 開発
 
-リポジトリのルートで `bun install`、`bun run web` を実行すると、通常は http://localhost:3000 で起動します。
+リポジトリのルートで `pnpm install`、`pnpm run web` を実行すると、通常は http://localhost:3000 で起動します。
 
-- `bun run build:web`: Workers向けにビルド
-- `bun run preview:web`: ビルド済みのサイトをWorkersランタイムで確認
-- `bun run typecheck`: TypeScriptの全パッケージ（apps、packages、design）の型チェック
-- `bun run test`: packages、web、design、serverのテスト
-- `bun run check` / `bun run fix`: 共通のUltracite設定でチェック・整形
+- `pnpm run build:web`: Workers向けにビルド
+- `pnpm run preview:web`: ビルド済みのサイトをWorkersランタイムで確認
+- `pnpm run typecheck`: TypeScriptの全パッケージ（apps、packages、design）の型チェック
+- `pnpm run test`: packages、web、design、serverのテスト
+- `pnpm run check` / `pnpm run fix`: 共通のUltracite設定でチェック・整形
 
-ルートの `bun.lock` を使います。ページは `src/pages` の `.astro` ファイルです。`bun run --cwd apps/web typecheck` は `astro check` で `.astro` を、`tsc --noEmit` で `src` のTS/TSXとそこから読み込むファイル（`@pochical/prototype` を含む）を確かめます。`astro check` が報告するのは `src` のファイルだけで、読み込み先の型エラーは出さないからです。`worker-configuration.d.ts` は `mise run gen:worker-types` で、ほかの Worker の分と一緒に生成します。CI は `mise run worker-types:check` でコミットとの差を確かめます。Workers設定を変更したら型を再生成してください。
+ルートの `pnpm-lock.yaml` を使います。ページは `src/pages` の `.astro` ファイルです。`pnpm --dir apps/web typecheck` は `astro check` で `.astro` を、`tsc --noEmit` で `src` のTS/TSXとそこから読み込むファイル（`@pochical/prototype` を含む）を確かめます。`astro check` が報告するのは `src` のファイルだけで、読み込み先の型エラーは出さないからです。`worker-configuration.d.ts` は `mise run gen:worker-types` で、ほかの Worker の分と一緒に生成します。CI は `mise run worker-types:check` でコミットとの差を確かめます。Workers設定を変更したら型を再生成してください。
 
 ## ページ
 
@@ -54,4 +54,4 @@
 - Webでの本人確認つき削除（認証ができてから）
 - 規約・プライバシー表記の運用確認。運営名・窓口は旧サイトのCHIJI TECHと連絡先を使用。外部サービスのログ・バックアップの保持期間など、実際の契約・設定で決まる事項を公開前に確認する。
 
-公開はmainへのマージでWorkers Buildsが行います（ビルドコマンド `bun run build`、デプロイコマンド `bunx wrangler deploy`、ルートディレクトリ `apps/web`）。`wrangler deploy` はビルドが書き出す `dist/server/wrangler.json` を使います。事前確認には `bun run build` のあと `bun x wrangler deploy --dry-run` を利用できます。
+公開はmainへのマージでWorkers Buildsが行います（ビルドコマンド `pnpm run build`、デプロイコマンド `pnpm exec wrangler deploy`、ルートディレクトリ `apps/web`）。`wrangler deploy` はビルドが書き出す `dist/server/wrangler.json` を使います。事前確認には `pnpm run build` のあと `pnpm exec wrangler deploy --dry-run` を利用できます。

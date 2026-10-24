@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev --configLoader runner",
-    "icon:app": "bun scripts/app-assets.ts",
+    "icon:app": "tsx scripts/app-assets.ts",
     "build": "vite build --configLoader runner",
     "preview": "vite preview --configLoader runner",
-    "deploy": "bun run build && wrangler deploy",
+    "deploy": "pnpm run build && wrangler deploy",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.tools.json"
   },
   "dependencies": {
@@ -23,11 +23,12 @@
   },
   "devDependencies": {
     "@pandacss/dev": "^2.3.0",
-    "@types/node": "24.19.2",
+    "@types/node": "catalog:",
     "@types/react": "~19.3.0",
     "@types/react-dom": "^19.2.0",
     "@vite-pwa/assets-generator": "^2.0.0",
     "sharp": "0.35.5",
+    "tsx": "catalog:",
     "typescript": "~7.0.2",
     "vite": "^8.0.0",
     "wrangler": "^4.151.3"

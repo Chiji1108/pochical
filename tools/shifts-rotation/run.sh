@@ -30,7 +30,7 @@ trap stop_server EXIT
 
 prepare
 new_group "$shared/invite"
-for _ in $(seq 10); do bun "$root/tools/api-try/index.ts" join --local; done
+for _ in $(seq 10); do pnpm --dir "$root" exec tsx "$root/tools/api-try/index.ts" join --local; done
 new_group "$shared/small-invite" 少人数
 
 failed=0

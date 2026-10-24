@@ -1,13 +1,14 @@
-import { expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
+
+import { expect, test } from "vitest";
 
 // The pages under /design/components are the shared pieces' spec: each
 // one drawn as it is, with the SwiftUI and Compose piece it becomes (Item
 // requires both). A piece added to the shared files without a place there
 // fails here, so the pages never fall behind the code.
 const components = path.join(
-  import.meta.dir,
+  import.meta.dirname,
   "../../../packages/prototype/src/components"
 );
 const shared = [
@@ -25,8 +26,8 @@ const shared = [
 
 // The groups of pieces, a file for each page (src/components/inventory),
 // and the pages that place them (content/design/components).
-const inventory = path.join(import.meta.dir, "../src/components/inventory");
-const pages = path.join(import.meta.dir, "../content/design/components");
+const inventory = path.join(import.meta.dirname, "../src/components/inventory");
+const pages = path.join(import.meta.dirname, "../content/design/components");
 const readAll = (folder: string, extension: string) =>
   readdirSync(folder)
     .filter((file) => file.endsWith(extension))

@@ -23,9 +23,9 @@ const demo = (variants: string) =>
 // read out. A name here, a string to match whole or a pattern, may have
 // spaces between any two of its characters, or none where it has one.
 //
-// A pattern's pieces: an escape (Bun writes the characters past ASCII as
-// \u escapes, an emoji as two), a set in [], a count in {}, or one
-// character.
+// A pattern's pieces: an escape (a transpiler may write the characters
+// past ASCII as \u escapes, an emoji as two or as one \u{}), a set in [],
+// a count in {}, or one character.
 const PIECE =
   /\\ud[89ab][\da-f]{2}\\ud[c-f][\da-f]{2}|\\u\{[\da-f]+\}|\\u[\da-f]{4}|\\.|\[(?:\\.|[^\]\\])*\]|\{\d+(?:,\d*)?\}|[^]/giu;
 const CHARACTER = /^(?:\\u|[^\\^$.*+?()[\]{}|])/u;

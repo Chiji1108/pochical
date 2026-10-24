@@ -1,10 +1,9 @@
-import { describe, expect, test } from "bun:test";
-
 import { iconSections } from "@pochical/design/mark-icon-names";
 import type { IconSection } from "@pochical/design/mark-icon-names";
 import { characterCount } from "@pochical/design/text";
 import { widgetRules } from "@pochical/design/widgets";
 import { rgbaToThumbHash, thumbHashToRGBA } from "thumbhash";
+import { describe, expect, test } from "vitest";
 
 // The cases every platform checks its own code against (spec/vectors);
 // the native apps' tests read the same files.
