@@ -54,9 +54,8 @@ import java.time.LocalDate
  * under the date when it is one.
  */
 @Composable
-fun DaySheetContent(day: LocalDate, members: List<GroupMember>, groupId: String, meId: String?) {
+fun DaySheetContent(day: LocalDate, members: List<GroupMember>, days: GroupDays, groupId: String, meId: String?) {
   val colors = LocalThemeColors.current
-  val days = rememberGroupDays(members, day, day)
   Column(Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
       Text(day.fullText, Modifier.semantics { heading() }, style = PochicalTextStyles.headline, color = colors.textPrimary)
@@ -90,7 +89,7 @@ private fun hours(shift: MemberShift): String? {
   val hours = hoursText(shift.start ?: time.start, shift.end ?: time.end)
   val change = shift.change ?: return hours
   val moves = listOfNotNull(stringResource(R.string.day_early).takeIf { change.early }, stringResource(R.string.day_late).takeIf { change.late })
-  return "${moves.joinToString("・")} $hours"
+  return listOf(moves.joinToString("・"), hours).filter { it.isNotEmpty() }.joinToString(" ")
 }
 
 /**

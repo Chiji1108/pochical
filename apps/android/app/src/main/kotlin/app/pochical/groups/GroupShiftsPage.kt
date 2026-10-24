@@ -57,6 +57,7 @@ import app.pochical.R
 import app.pochical.calendar.MonthPicker
 import app.pochical.calendar.holidayCountry
 import app.pochical.calendar.rememberToday
+import app.pochical.calendar.shortText
 import app.pochical.calendar.weekStartingOn
 import app.pochical.calendar.yearMonthText
 import app.pochical.design.PochicalTextStyles
@@ -116,8 +117,9 @@ private fun places(layout: ShiftsLayout, thisMonth: YearMonth, weekStart: Int): 
         ShiftsLayout.Days -> (1..month.lengthOfMonth()).map { Place.Day(month.atDay(it)) }
         ShiftsLayout.Weeks ->
           generateSequence(month.atDay(1).weekStartingOn(weekStart)) { it.plusDays(7) }
-            .takeWhile { YearMonth.from(it.plusDays(6)) <= month }
-            .filter { YearMonth.from(it.plusDays(6)) == month }
+            .takeWhile { it <= month.atEndOfMonth() }
+            // A week belongs to the month it ends in; the list's last month keeps the one its last days are in.
+            .filter { YearMonth.from(it.plusDays(6)) == month || (offset == MONTH_SPAN && it <= month.atEndOfMonth()) }
             .map { start -> Place.Week((0L until 7L).map(start::plusDays)) }
             .toList()
       }
@@ -160,6 +162,8 @@ private fun ShiftsPage(group: GroupRow, opening: LocalDate?, onBack: () -> Unit)
   val layout = pickedLayout ?: if (wide) ShiftsLayout.Weeks else ShiftsLayout.Days
   // 一覧's columns: the viewer's own first in a big group, pinned beside the dates, as /design's.
   val tableMembers = remember(shown, meId, wide) { if (wide) shown.sortedByDescending { it.userId == meId } else shown }
+  // Where each of 一覧's columns is among the members.
+  val tableColumns = remember(tableMembers, shown) { tableMembers.map(shown::indexOf) }
   val places = remember(layout, thisMonth, weekStart) { places(layout, thisMonth, weekStart) }
   val list = rememberLazyListState()
   val scope = rememberCoroutineScope()
@@ -167,7 +171,6 @@ private fun ShiftsPage(group: GroupRow, opening: LocalDate?, onBack: () -> Unit)
   fun go(day: LocalDate) = scope.launch { list.scrollToItem(indexOf(day)) }
   fun goMonth(month: YearMonth) = scope.launch { list.scrollToItem(places.indexOfFirst { it is Place.Heading && it.month == month }.coerceAtLeast(0)) }
 
-  // Once the members are read, as they decide the layout, to the day it opens on with its sheet up.
   // Once the members are read, as they decide the layout, to the day it opens on with its sheet up;
   // in a new layout, to the picked day or today. Here, once the new layout's list is laid out, as
   // the list keeps the item it had at its top by key across the change.
@@ -181,19 +184,27 @@ private fun ShiftsPage(group: GroupRow, opening: LocalDate?, onBack: () -> Unit)
 
   val sheet = rememberBottomSheetScaffoldState(rememberStandardBottomSheetState(initialValue = SheetValue.Hidden, skipHiddenState = false))
   LaunchedEffect(picked) { if (picked != null) sheet.bottomSheetState.expand() else sheet.bottomSheetState.hide() }
-  // Swiped away, the day is no longer picked.
+  // Swiped down, the day is no longer picked: the sheet settles hidden or, with no peek, part way
+  // up, which looks the same.
   LaunchedEffect(sheet) {
-    snapshotFlow { sheet.bottomSheetState.currentValue }.collect { if (it == SheetValue.Hidden && sheet.bottomSheetState.targetValue == SheetValue.Hidden) pickedDay = null }
+    snapshotFlow { sheet.bottomSheetState.run { currentValue to targetValue } }
+      .collect { (current, target) -> if (current == target && current != SheetValue.Expanded) pickedDay = null }
   }
   BackHandler(enabled = picked != null) { pickedDay = null }
   var sheetHeight by remember { mutableIntStateOf(0) }
+  // The day the sheet shows, kept while it goes down once no day is picked.
+  var sheetDay by remember { mutableStateOf(picked) }
+  if (picked != null) sheetDay = picked
+  val monthDays = remember(members) { HashMap<YearMonth, GroupDays>() }
+  fun daysOf(month: YearMonth) = monthDays.getOrPut(month) { groupDays(shown, month.atDay(1), month.atEndOfMonth()) }
+  val monthInSight by remember(places) { derivedStateOf { places.getOrNull(list.firstVisibleItemIndex)?.month ?: thisMonth } }
 
   BottomSheetScaffold(
     scaffoldState = sheet,
     sheetPeekHeight = 0.dp,
     sheetContent = {
       Box(Modifier.onSizeChanged { sheetHeight = it.height }) {
-        if (picked != null) DaySheetContent(picked, shown, group.id, meId)
+        sheetDay?.let { day -> DaySheetContent(day, shown, daysOf(YearMonth.from(day)), group.id, meId) }
       }
     },
     topBar = {
@@ -206,12 +217,9 @@ private fun ShiftsPage(group: GroupRow, opening: LocalDate?, onBack: () -> Unit)
   ) { padding ->
     if (members == null) return@BottomSheetScaffold
     val sideways = if (wide && layout == ShiftsLayout.Days) rememberScrollState() else null
-    val monthInSight by remember(places) { derivedStateOf { places.getOrNull(list.firstVisibleItemIndex)?.month ?: thisMonth } }
     val todayIndex = places.indexOfFirst { it.holds(today) }
     val todayInSight by remember(places, todayIndex) { derivedStateOf { list.layoutInfo.visibleItemsInfo.any { it.index == todayIndex } } }
     val bottom = with(LocalDensity.current) { if (picked != null) sheetHeight.toDp() else 0.dp }
-    val monthDays = remember(members) { HashMap<YearMonth, GroupDays>() }
-    fun daysOf(month: YearMonth) = monthDays.getOrPut(month) { groupDays(members, month.atDay(1), month.atEndOfMonth()) }
     Column(Modifier.padding(padding).fillMaxSize()) {
       MonthRow(monthInSight, todayInSight, onChoose = { choosingMonth = true }, onToday = { go(today) })
       when (layout) {
@@ -229,7 +237,7 @@ private fun ShiftsPage(group: GroupRow, opening: LocalDate?, onBack: () -> Unit)
               GroupDayRow(
                 place.day,
                 tableMembers,
-                tableMembers.map { member -> days.shifts[members.indexOf(member)][place.day] },
+                tableColumns.map { column -> days.shifts[column][place.day] },
                 together = place.day in days.together.days,
                 picked = place.day == picked,
                 today = today,
@@ -262,7 +270,7 @@ private fun ShiftsPage(group: GroupRow, opening: LocalDate?, onBack: () -> Unit)
   legendOf?.let { first -> LegendSheet(shown, group.id, first) { legendOf = null } }
   togetherOf?.let { key ->
     val month = YearMonth.parse(key)
-    val days = groupDays(shown, month.atDay(1), month.atEndOfMonth()).together.days
+    val days = daysOf(month).together.days
     TogetherSheet(togetherTitle(month, thisMonth), days, country, onPick = { day ->
       togetherOf = null
       pickedDay = day.toString()
@@ -271,7 +279,7 @@ private fun ShiftsPage(group: GroupRow, opening: LocalDate?, onBack: () -> Unit)
   }
   if (choosingMonth) {
     MonthPicker(
-      thisMonth,
+      monthInSight,
       thisMonth.minusMonths(MONTH_SPAN)..thisMonth.plusMonths(MONTH_SPAN),
       onPick = { goMonth(it) },
       onDismiss = { choosingMonth = false },
@@ -282,11 +290,7 @@ private fun ShiftsPage(group: GroupRow, opening: LocalDate?, onBack: () -> Unit)
 /** What a month's みんな休み is called: this month's as 今月, another by its name. */
 @Composable
 private fun togetherTitle(month: YearMonth, thisMonth: YearMonth): String =
-  stringResource(R.string.together_of, if (month == thisMonth) stringResource(R.string.calendar_this_month) else monthName(month, thisMonth))
-
-/** A month by its name alone this year, with its year in another. */
-private fun monthName(month: YearMonth, thisMonth: YearMonth): String =
-  if (month.year == thisMonth.year) "${month.monthValue}月" else month.yearMonthText
+  stringResource(R.string.together_of, if (month == thisMonth) stringResource(R.string.calendar_this_month) else month.shortText(thisMonth))
 
 /** The month in sight, pinned over the list, which opens 月を選ぶ, and 今日 while today is out of sight (/design's MonthRow). */
 @Composable
@@ -310,7 +314,7 @@ private fun MonthRow(month: YearMonth, todayInSight: Boolean, onChoose: () -> Un
 @Composable
 private fun MonthHeading(month: YearMonth, thisMonth: YearMonth, layout: ShiftsLayout, together: app.pochical.kit.Together?, onOpen: () -> Unit) {
   val colors = LocalThemeColors.current
-  val name = monthName(month, thisMonth)
+  val name = month.shortText(thisMonth)
   Column(
     Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = if (layout == ShiftsLayout.Weeks) 12.dp else 36.dp, bottom = if (layout == ShiftsLayout.Weeks) 6.dp else 12.dp),
     verticalArrangement = Arrangement.spacedBy(12.dp),
