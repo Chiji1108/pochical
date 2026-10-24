@@ -6,8 +6,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import app.pochical.LocalDeviceSettings
-import app.pochical.Look
-import app.pochical.MarkStyle
+import app.pochical.kit.Look
+import app.pochical.kit.MarkStyle
 import app.pochical.ShiftMark
 import app.pochical.calendar.Pattern
 import app.pochical.calendar.TimeChange
@@ -58,7 +58,7 @@ fun rememberGroupDays(members: List<GroupMember>, from: LocalDate, through: Loca
  * (spec/sync-protocol.md, Profile); the app's own default, filled icons, before theirs is known.
  */
 fun Look.drawing(member: GroupMember): Look {
-  val style = MarkStyle.entries.firstOrNull { MarkStyle.serializer().descriptor.getElementName(it.ordinal) == member.markStyle }
+  val style = MarkStyle.entries.firstOrNull { it.id == member.markStyle }
   return copy(style = style ?: MarkStyle.Icon, fill = if (style == null) true else member.markFill)
 }
 

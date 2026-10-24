@@ -44,6 +44,30 @@ class OwnCalendar(
   }
 }
 
+/**
+ * What 今月のお休み and 今月の内訳 count on a page (spec/calendar.md, The month;
+ * spec/vectors/month.json, summary): its days off, each pattern's days in the patterns' order, and
+ * the days that show no shift (未入力).
+ */
+data class PageSummary(val daysOff: Int, val counts: List<Pair<String, Int>>, val unfilled: Int) {
+  companion object {
+    /** The page from [first] through [last], with [shown] each day's shift by date and [patterns] the person's, archived too. */
+    fun of(first: LocalDate, last: LocalDate, shown: Map<LocalDate, String>, patterns: List<PatternRow>): PageSummary {
+      val onPage = shown.filterKeys { it in first..last }.values
+      val off = patterns.filter { it.countsAsOff }.mapTo(HashSet()) { it.id }
+      return PageSummary(
+        daysOff = onPage.count { it in off },
+        counts = patterns.map { pattern -> pattern.id to onPage.count { it == pattern.id } },
+        unfilled = daysFrom(first, last).count() - onPage.size,
+      )
+    }
+  }
+}
+
+/** What the page from [first] through [last] counts. */
+fun OwnCalendar.summary(first: LocalDate, last: LocalDate): PageSummary =
+  PageSummary.of(first, last, shown(first, last).mapValues { it.value.shift }, patterns)
+
 /** The person's own calendar, again whenever sync or an edit changes it. */
 fun Values.ownCalendar(): Flow<OwnCalendar> = combine(days(), patterns(), repeatOrders(), OwnCalendar::of)
 

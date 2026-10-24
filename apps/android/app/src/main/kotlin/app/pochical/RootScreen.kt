@@ -67,6 +67,7 @@ fun RootScreen(navigator: RootNavigator) {
       RootPage.Account -> NavEntry(route) { AccountPage(onBack = rememberPageNavigation(navigator)::back) }
       RootPage.Appearance ->
         NavEntry(route) { AppearancePage(onBack = rememberPageNavigation(navigator)::back) }
+      RootPage.Style -> NavEntry(route) { StylePage(onBack = rememberPageNavigation(navigator)::back) }
       RootPage.NewGroup ->
         NavEntry(route) {
           NewGroupPage(onBack = rememberPageNavigation(navigator)::back, onMade = { navigator.showGroup(it, RootPage.GroupInvite(it)) })

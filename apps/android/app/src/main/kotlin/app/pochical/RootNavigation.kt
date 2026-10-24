@@ -50,6 +50,9 @@ sealed interface RootPage : RootRoute, NavKey {
   /** 外観, from 設定's 表示. */
   @Serializable data object Appearance : RootPage
 
+  /** スタイル, from 設定's 表示. */
+  @Serializable data object Style : RootPage
+
   /** シフト for the day `date` ("YYYY-MM-DD"), from its detail. */
   @Serializable data class ShiftChoice(val date: String) : RootPage
 
