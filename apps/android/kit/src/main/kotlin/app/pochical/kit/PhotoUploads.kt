@@ -136,7 +136,7 @@ internal class LinePhotos(val photos: Photos, val files: ChatPhotoFiles, val upl
   /**
    * Uploads the member's photo [photoId] of the line [opId] to the group's photos, its small version
    * first, so the lines find it as soon as they are sent, telling [uploads] how far the two have
-   * gone as one; × ([PhotoUploads.stop]) cuts it short with [PhotoStopped]. [PhotoCannotGo] for one
+   * gone as one; × ([Chats.stopSending], [PhotoUploads.cancel]) cuts it short with [PhotoStopped]. [PhotoCannotGo] for one
    * the device no longer holds or the server refuses; [PhotoFailure] for one to try again.
    */
   suspend fun upload(groupId: String, photoId: String, opId: String, credentials: Credentials) {
