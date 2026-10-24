@@ -21,13 +21,11 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -39,14 +37,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LifecycleEventEffect
 import app.pochical.Footnote
 import app.pochical.LimitedTextField
 import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.SectionHeader
 import app.pochical.characterCount
+import app.pochical.rememberKeptField
 import app.pochical.design.TextLimits
 import app.pochical.kit.GroupMarkValue
 import app.pochical.kit.GroupMemberRow
@@ -333,35 +330,10 @@ private fun ProfileForm(groupName: String, me: GroupMemberRow, modifier: Modifie
   val groupId = me.groupId
   val usualName = remember(values) { values.profile() }.collectAsState(null).value?.name.orEmpty()
   val kept = if (me.ownName) me.displayName else ""
-  var name by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue(kept)) }
-  // The name last kept, empty for the usual one: what is typed is kept once it differs.
-  var sent by rememberSaveable { mutableStateOf(kept) }
-  var nameFailed by remember { mutableStateOf(false) }
-
-  val keep by rememberUpdatedState {
-    val typed = name.text.trim()
-    val fits = characterCount(typed) <= TextLimits.personName && !(typed.isEmpty() && usualName.isEmpty())
-    if (typed != sent && fits) {
-      val before = sent
-      sent = typed
-      // Taken by the kit at once, the page leaving or not; its answer is told while the page is here.
-      val send = calls.keepDisplayName(groupId, typed)
-      scope.launch {
-        nameFailed =
-          try {
-            send.await()
-            false
-          } catch (e: CancellationException) {
-            throw e
-          } catch (_: Exception) {
-            sent = before
-            true
-          }
-      }
+  val name =
+    rememberKeptField(kept, fits = { characterCount(it) <= TextLimits.personName && !(it.isEmpty() && usualName.isEmpty()) }) {
+      calls.keepDisplayName(groupId, it)
     }
-  }
-  DisposableEffect(Unit) { onDispose { keep() } }
-  LifecycleEventEffect(Lifecycle.Event.ON_STOP) { keep() }
 
   suspend fun change(making: suspend () -> Unit) {
     try {
@@ -387,14 +359,14 @@ private fun ProfileForm(groupName: String, me: GroupMemberRow, modifier: Modifie
       MemberAvatar(me.displayName, me.photoId, PhotoShelf.Group(groupId), 88.dp, me = true)
     }
     LimitedTextField(
-      name,
-      { name = it },
+      name.field.value,
+      { name.field.value = it },
       TextLimits.personName,
       stringResource(R.string.name),
-      Modifier.fillMaxWidth().padding(horizontal = 16.dp).onFocusChanged { if (!it.isFocused) keep() },
+      Modifier.fillMaxWidth().padding(horizontal = 16.dp).onFocusChanged { if (!it.isFocused) name.keep() },
       placeholder = usualName.ifEmpty { stringResource(R.string.person_name_example) },
     )
-    if (nameFailed) {
+    if (name.failed) {
       Text(
         stringResource(R.string.name_not_saved),
         Modifier.padding(horizontal = 16.dp),

@@ -10,6 +10,8 @@ import app.pochical.v1.ServerFrame
 import app.pochical.v1.SignInProvider
 import app.pochical.v1.DeleteAccountRequest
 import app.pochical.v1.SetDisplayNameRequest
+import app.pochical.v1.SetProfileRequest
+import app.pochical.v1.setProfileResponse
 import app.pochical.v1.setDisplayNameResponse
 import app.pochical.v1.deleteAccountResponse
 import app.pochical.v1.getMeResponse
@@ -108,6 +110,12 @@ class FakeServer : AutoCloseable {
 
   /** Each `SetDisplayName` the server took, in the order it took them. */
   val displayNames = CopyOnWriteArrayList<SetDisplayNameRequest>()
+
+  /** Each `SetProfile` the server took, in the order it took them. */
+  val profiles = CopyOnWriteArrayList<SetProfileRequest>()
+
+  /** The ids of the photos put in a user's own photos, in the order they came. */
+  val ownPhotos = CopyOnWriteArrayList<String>()
 
   /** How long `SetDisplayName` takes to answer, in milliseconds. */
   @Volatile var displayNameDelayMs = 0L
@@ -236,6 +244,14 @@ class FakeServer : AutoCloseable {
                 }
               }
             }
+            "/pochical.v1.UserService/SetProfile" ->
+              when (userOf(request.headers["Authorization"])) {
+                null -> refused("unauthenticated")
+                else -> {
+                  profiles += SetProfileRequest.parseFrom(request.body!!.toByteArray())
+                  proto(setProfileResponse {})
+                }
+              }
             "/api/auth/link-social" -> {
               links += request.headers["Authorization"] to request.body!!.utf8()
               MockResponse.Builder().code(linkStatus).body("{}").build()
@@ -245,7 +261,13 @@ class FakeServer : AutoCloseable {
                 null -> MockResponse.Builder().code(401).build().also { refusedSockets.incrementAndGet() }
                 else -> MockResponse.Builder().webSocketUpgrade(Socket(user)).build()
               }
-            else -> MockResponse.Builder().code(404).build()
+            else ->
+              if (request.method == "PUT" && request.url.encodedPath.startsWith("/v1/me/photos/")) {
+                ownPhotos += request.url.encodedPath.removePrefix("/v1/me/photos/")
+                MockResponse.Builder().code(204).build()
+              } else {
+                MockResponse.Builder().code(404).build()
+              }
           }
       }
     server.start()

@@ -114,14 +114,34 @@ public nonisolated struct Pochical_V1_SetProfileRequest: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var name: String = String()
+  /// The usual name, empty for none; unset keeps the one set before, so a
+  /// device changing only the photo cannot undo another's new name.
+  public var name: String {
+    get {_name ?? String()}
+    set {_name = newValue}
+  }
+  /// Returns true if `name` has been explicitly set.
+  public var hasName: Bool {self._name != nil}
+  /// Clears the value of `name`. Subsequent reads from it will return its default value.
+  public mutating func clearName() {self._name = nil}
 
-  /// One of the user's own photos, uploaded to /v1/me/photos/{id} first.
-  public var photoID: String = String()
+  /// One of the user's own photos, uploaded to /v1/me/photos/{id} first,
+  /// empty for none; unset keeps the one set before.
+  public var photoID: String {
+    get {_photoID ?? String()}
+    set {_photoID = newValue}
+  }
+  /// Returns true if `photoID` has been explicitly set.
+  public var hasPhotoID: Bool {self._photoID != nil}
+  /// Clears the value of `photoID`. Subsequent reads from it will return its default value.
+  public mutating func clearPhotoID() {self._photoID = nil}
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _name: String? = nil
+  fileprivate var _photoID: String? = nil
 }
 
 public nonisolated struct Pochical_V1_SetProfileResponse: Sendable {
@@ -492,26 +512,30 @@ nonisolated extension Pochical_V1_SetProfileRequest: SwiftProtobuf.Message, Swif
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.name) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.photoID) }()
+      case 1: try { try decoder.decodeSingularStringField(value: &self._name) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self._photoID) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.name.isEmpty {
-      try visitor.visitSingularStringField(value: self.name, fieldNumber: 1)
-    }
-    if !self.photoID.isEmpty {
-      try visitor.visitSingularStringField(value: self.photoID, fieldNumber: 2)
-    }
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._name {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 1)
+    } }()
+    try { if let v = self._photoID {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 2)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pochical_V1_SetProfileRequest, rhs: Pochical_V1_SetProfileRequest) -> Bool {
-    if lhs.name != rhs.name {return false}
-    if lhs.photoID != rhs.photoID {return false}
+    if lhs._name != rhs._name {return false}
+    if lhs._photoID != rhs._photoID {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

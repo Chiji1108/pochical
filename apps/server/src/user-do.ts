@@ -759,8 +759,9 @@ export class UserDO extends DurableObject<Env> {
   }
 
   /**
-   * Sets the usual name and photo, each empty for none, sent to the user's
-   * devices and pushed to their groups. A new photo is copied from the
+   * Sets the usual name and photo, each empty for none and either left as
+   * it was when not given, sent to the user's devices and pushed to their
+   * groups. A new photo is copied from the
    * user's upload of it to where the usual photo is kept, noted as going
    * before it is stored, and let off in the transaction that names it, so
    * one stored and never named is deleted. The photo it replaces is noted
@@ -769,10 +770,16 @@ export class UserDO extends DurableObject<Env> {
    * reaches the user meanwhile, so the alarm's delete never takes the
    * photo as it is set.
    */
-  async setProfile(name: string, photoId: string): Promise<boolean> {
+  async setProfile(
+    given: string | undefined,
+    givenPhotoId: string | undefined
+  ): Promise<boolean> {
     return await this.ctx.blockConcurrencyWhile(async () => {
       const userId = this.ctx.id.name ?? "";
-      const before = this.profileOf().photoId;
+      const now = this.profileOf();
+      const before = now.photoId;
+      const name = given ?? now.name;
+      const photoId = givenPhotoId ?? before;
       if (this.ctx.storage.kv.get(ERASED_KEY) === true) {
         return false;
       }

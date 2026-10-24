@@ -11,12 +11,32 @@ public interface SetProfileRequestOrBuilder extends
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**
-   * <code>string name = 1 [json_name = "name"];</code>
+   * <pre>
+   * The usual name, empty for none; unset keeps the one set before, so a
+   * device changing only the photo cannot undo another's new name.
+   * </pre>
+   *
+   * <code>optional string name = 1 [json_name = "name"];</code>
+   * @return Whether the name field is set.
+   */
+  boolean hasName();
+  /**
+   * <pre>
+   * The usual name, empty for none; unset keeps the one set before, so a
+   * device changing only the photo cannot undo another's new name.
+   * </pre>
+   *
+   * <code>optional string name = 1 [json_name = "name"];</code>
    * @return The name.
    */
   java.lang.String getName();
   /**
-   * <code>string name = 1 [json_name = "name"];</code>
+   * <pre>
+   * The usual name, empty for none; unset keeps the one set before, so a
+   * device changing only the photo cannot undo another's new name.
+   * </pre>
+   *
+   * <code>optional string name = 1 [json_name = "name"];</code>
    * @return The bytes for name.
    */
   com.google.protobuf.ByteString
@@ -24,19 +44,31 @@ public interface SetProfileRequestOrBuilder extends
 
   /**
    * <pre>
-   * One of the user's own photos, uploaded to /v1/me/photos/{id} first.
+   * One of the user's own photos, uploaded to /v1/me/photos/{id} first,
+   * empty for none; unset keeps the one set before.
    * </pre>
    *
-   * <code>string photo_id = 2 [json_name = "photoId"];</code>
+   * <code>optional string photo_id = 2 [json_name = "photoId"];</code>
+   * @return Whether the photoId field is set.
+   */
+  boolean hasPhotoId();
+  /**
+   * <pre>
+   * One of the user's own photos, uploaded to /v1/me/photos/{id} first,
+   * empty for none; unset keeps the one set before.
+   * </pre>
+   *
+   * <code>optional string photo_id = 2 [json_name = "photoId"];</code>
    * @return The photoId.
    */
   java.lang.String getPhotoId();
   /**
    * <pre>
-   * One of the user's own photos, uploaded to /v1/me/photos/{id} first.
+   * One of the user's own photos, uploaded to /v1/me/photos/{id} first,
+   * empty for none; unset keeps the one set before.
    * </pre>
    *
-   * <code>string photo_id = 2 [json_name = "photoId"];</code>
+   * <code>optional string photo_id = 2 [json_name = "photoId"];</code>
    * @return The bytes for photoId.
    */
   com.google.protobuf.ByteString

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 設定 › 一緒に働く人 (spec/sync-protocol.md, Coworkers). -->
+<!-- 設定 › 一緒に働く人 and プロフィール (spec/sync-protocol.md, Coworkers; Profile). -->
 <resources>
   <string name="coworkers">一緒に働く人</string>
   <string name="coworkers_count">%1$d人</string>
@@ -14,4 +14,9 @@
   <string name="coworker_delete">この人を削除</string>
   <string name="coworker_delete_title">%1$sを削除しますか？</string>
   <string name="coworker_delete_body">%1$d日の予定から%2$sが外れます。</string>
+  <string name="profile">プロフィール</string>
+  <string name="profile_unset">未設定</string>
+  <string name="profile_name">いつもの名前</string>
+  <string name="photo_not_saved">写真を保存できませんでした。通信できるときに、もう一度お試しください。</string>
+  <string name="profile_note">グループでは、この名前と写真で表示されます。グループごとに違う名前や写真にしたいときは、各グループの設定で変えられます。</string>
 </resources>

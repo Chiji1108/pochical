@@ -18,10 +18,29 @@ public  final class SetProfileRequest extends
     name_ = "";
     photoId_ = "";
   }
+  private int bitField0_;
   public static final int NAME_FIELD_NUMBER = 1;
   private java.lang.String name_;
   /**
-   * <code>string name = 1 [json_name = "name"];</code>
+   * <pre>
+   * The usual name, empty for none; unset keeps the one set before, so a
+   * device changing only the photo cannot undo another's new name.
+   * </pre>
+   *
+   * <code>optional string name = 1 [json_name = "name"];</code>
+   * @return Whether the name field is set.
+   */
+  @java.lang.Override
+  public boolean hasName() {
+    return ((bitField0_ & 0x00000001) != 0);
+  }
+  /**
+   * <pre>
+   * The usual name, empty for none; unset keeps the one set before, so a
+   * device changing only the photo cannot undo another's new name.
+   * </pre>
+   *
+   * <code>optional string name = 1 [json_name = "name"];</code>
    * @return The name.
    */
   @java.lang.Override
@@ -29,7 +48,12 @@ public  final class SetProfileRequest extends
     return name_;
   }
   /**
-   * <code>string name = 1 [json_name = "name"];</code>
+   * <pre>
+   * The usual name, empty for none; unset keeps the one set before, so a
+   * device changing only the photo cannot undo another's new name.
+   * </pre>
+   *
+   * <code>optional string name = 1 [json_name = "name"];</code>
    * @return The bytes for name.
    */
   @java.lang.Override
@@ -38,41 +62,70 @@ public  final class SetProfileRequest extends
     return com.google.protobuf.ByteString.copyFromUtf8(name_);
   }
   /**
-   * <code>string name = 1 [json_name = "name"];</code>
+   * <pre>
+   * The usual name, empty for none; unset keeps the one set before, so a
+   * device changing only the photo cannot undo another's new name.
+   * </pre>
+   *
+   * <code>optional string name = 1 [json_name = "name"];</code>
    * @param value The name to set.
    */
   private void setName(
       java.lang.String value) {
     java.util.Objects.requireNonNull(value);
-
+    bitField0_ |= 0x00000001;
     name_ = value;
   }
   /**
-   * <code>string name = 1 [json_name = "name"];</code>
+   * <pre>
+   * The usual name, empty for none; unset keeps the one set before, so a
+   * device changing only the photo cannot undo another's new name.
+   * </pre>
+   *
+   * <code>optional string name = 1 [json_name = "name"];</code>
    */
   private void clearName() {
-
+    bitField0_ = (bitField0_ & ~0x00000001);
     name_ = getDefaultInstance().getName();
   }
   /**
-   * <code>string name = 1 [json_name = "name"];</code>
+   * <pre>
+   * The usual name, empty for none; unset keeps the one set before, so a
+   * device changing only the photo cannot undo another's new name.
+   * </pre>
+   *
+   * <code>optional string name = 1 [json_name = "name"];</code>
    * @param value The bytes for name to set.
    */
   private void setNameBytes(
       com.google.protobuf.ByteString value) {
     checkByteStringIsUtf8(value);
     name_ = value.toStringUtf8();
-
+    bitField0_ |= 0x00000001;
   }
 
   public static final int PHOTO_ID_FIELD_NUMBER = 2;
   private java.lang.String photoId_;
   /**
    * <pre>
-   * One of the user's own photos, uploaded to /v1/me/photos/{id} first.
+   * One of the user's own photos, uploaded to /v1/me/photos/{id} first,
+   * empty for none; unset keeps the one set before.
    * </pre>
    *
-   * <code>string photo_id = 2 [json_name = "photoId"];</code>
+   * <code>optional string photo_id = 2 [json_name = "photoId"];</code>
+   * @return Whether the photoId field is set.
+   */
+  @java.lang.Override
+  public boolean hasPhotoId() {
+    return ((bitField0_ & 0x00000002) != 0);
+  }
+  /**
+   * <pre>
+   * One of the user's own photos, uploaded to /v1/me/photos/{id} first,
+   * empty for none; unset keeps the one set before.
+   * </pre>
+   *
+   * <code>optional string photo_id = 2 [json_name = "photoId"];</code>
    * @return The photoId.
    */
   @java.lang.Override
@@ -81,10 +134,11 @@ public  final class SetProfileRequest extends
   }
   /**
    * <pre>
-   * One of the user's own photos, uploaded to /v1/me/photos/{id} first.
+   * One of the user's own photos, uploaded to /v1/me/photos/{id} first,
+   * empty for none; unset keeps the one set before.
    * </pre>
    *
-   * <code>string photo_id = 2 [json_name = "photoId"];</code>
+   * <code>optional string photo_id = 2 [json_name = "photoId"];</code>
    * @return The bytes for photoId.
    */
   @java.lang.Override
@@ -94,42 +148,45 @@ public  final class SetProfileRequest extends
   }
   /**
    * <pre>
-   * One of the user's own photos, uploaded to /v1/me/photos/{id} first.
+   * One of the user's own photos, uploaded to /v1/me/photos/{id} first,
+   * empty for none; unset keeps the one set before.
    * </pre>
    *
-   * <code>string photo_id = 2 [json_name = "photoId"];</code>
+   * <code>optional string photo_id = 2 [json_name = "photoId"];</code>
    * @param value The photoId to set.
    */
   private void setPhotoId(
       java.lang.String value) {
     java.util.Objects.requireNonNull(value);
-
+    bitField0_ |= 0x00000002;
     photoId_ = value;
   }
   /**
    * <pre>
-   * One of the user's own photos, uploaded to /v1/me/photos/{id} first.
+   * One of the user's own photos, uploaded to /v1/me/photos/{id} first,
+   * empty for none; unset keeps the one set before.
    * </pre>
    *
-   * <code>string photo_id = 2 [json_name = "photoId"];</code>
+   * <code>optional string photo_id = 2 [json_name = "photoId"];</code>
    */
   private void clearPhotoId() {
-
+    bitField0_ = (bitField0_ & ~0x00000002);
     photoId_ = getDefaultInstance().getPhotoId();
   }
   /**
    * <pre>
-   * One of the user's own photos, uploaded to /v1/me/photos/{id} first.
+   * One of the user's own photos, uploaded to /v1/me/photos/{id} first,
+   * empty for none; unset keeps the one set before.
    * </pre>
    *
-   * <code>string photo_id = 2 [json_name = "photoId"];</code>
+   * <code>optional string photo_id = 2 [json_name = "photoId"];</code>
    * @param value The bytes for photoId to set.
    */
   private void setPhotoIdBytes(
       com.google.protobuf.ByteString value) {
     checkByteStringIsUtf8(value);
     photoId_ = value.toStringUtf8();
-
+    bitField0_ |= 0x00000002;
   }
 
   public static app.pochical.v1.SetProfileRequest parseFrom(
@@ -230,7 +287,25 @@ public  final class SetProfileRequest extends
 
 
     /**
-     * <code>string name = 1 [json_name = "name"];</code>
+     * <pre>
+     * The usual name, empty for none; unset keeps the one set before, so a
+     * device changing only the photo cannot undo another's new name.
+     * </pre>
+     *
+     * <code>optional string name = 1 [json_name = "name"];</code>
+     * @return Whether the name field is set.
+     */
+    @java.lang.Override
+    public boolean hasName() {
+      return instance.hasName();
+    }
+    /**
+     * <pre>
+     * The usual name, empty for none; unset keeps the one set before, so a
+     * device changing only the photo cannot undo another's new name.
+     * </pre>
+     *
+     * <code>optional string name = 1 [json_name = "name"];</code>
      * @return The name.
      */
     @java.lang.Override
@@ -238,7 +313,12 @@ public  final class SetProfileRequest extends
       return instance.getName();
     }
     /**
-     * <code>string name = 1 [json_name = "name"];</code>
+     * <pre>
+     * The usual name, empty for none; unset keeps the one set before, so a
+     * device changing only the photo cannot undo another's new name.
+     * </pre>
+     *
+     * <code>optional string name = 1 [json_name = "name"];</code>
      * @return The bytes for name.
      */
     @java.lang.Override
@@ -247,7 +327,12 @@ public  final class SetProfileRequest extends
       return instance.getNameBytes();
     }
     /**
-     * <code>string name = 1 [json_name = "name"];</code>
+     * <pre>
+     * The usual name, empty for none; unset keeps the one set before, so a
+     * device changing only the photo cannot undo another's new name.
+     * </pre>
+     *
+     * <code>optional string name = 1 [json_name = "name"];</code>
      * @param value The name to set.
      * @return This builder for chaining.
      */
@@ -258,7 +343,12 @@ public  final class SetProfileRequest extends
       return this;
     }
     /**
-     * <code>string name = 1 [json_name = "name"];</code>
+     * <pre>
+     * The usual name, empty for none; unset keeps the one set before, so a
+     * device changing only the photo cannot undo another's new name.
+     * </pre>
+     *
+     * <code>optional string name = 1 [json_name = "name"];</code>
      * @return This builder for chaining.
      */
     public Builder clearName() {
@@ -267,7 +357,12 @@ public  final class SetProfileRequest extends
       return this;
     }
     /**
-     * <code>string name = 1 [json_name = "name"];</code>
+     * <pre>
+     * The usual name, empty for none; unset keeps the one set before, so a
+     * device changing only the photo cannot undo another's new name.
+     * </pre>
+     *
+     * <code>optional string name = 1 [json_name = "name"];</code>
      * @param value The bytes for name to set.
      * @return This builder for chaining.
      */
@@ -280,10 +375,24 @@ public  final class SetProfileRequest extends
 
     /**
      * <pre>
-     * One of the user's own photos, uploaded to /v1/me/photos/{id} first.
+     * One of the user's own photos, uploaded to /v1/me/photos/{id} first,
+     * empty for none; unset keeps the one set before.
      * </pre>
      *
-     * <code>string photo_id = 2 [json_name = "photoId"];</code>
+     * <code>optional string photo_id = 2 [json_name = "photoId"];</code>
+     * @return Whether the photoId field is set.
+     */
+    @java.lang.Override
+    public boolean hasPhotoId() {
+      return instance.hasPhotoId();
+    }
+    /**
+     * <pre>
+     * One of the user's own photos, uploaded to /v1/me/photos/{id} first,
+     * empty for none; unset keeps the one set before.
+     * </pre>
+     *
+     * <code>optional string photo_id = 2 [json_name = "photoId"];</code>
      * @return The photoId.
      */
     @java.lang.Override
@@ -292,10 +401,11 @@ public  final class SetProfileRequest extends
     }
     /**
      * <pre>
-     * One of the user's own photos, uploaded to /v1/me/photos/{id} first.
+     * One of the user's own photos, uploaded to /v1/me/photos/{id} first,
+     * empty for none; unset keeps the one set before.
      * </pre>
      *
-     * <code>string photo_id = 2 [json_name = "photoId"];</code>
+     * <code>optional string photo_id = 2 [json_name = "photoId"];</code>
      * @return The bytes for photoId.
      */
     @java.lang.Override
@@ -305,10 +415,11 @@ public  final class SetProfileRequest extends
     }
     /**
      * <pre>
-     * One of the user's own photos, uploaded to /v1/me/photos/{id} first.
+     * One of the user's own photos, uploaded to /v1/me/photos/{id} first,
+     * empty for none; unset keeps the one set before.
      * </pre>
      *
-     * <code>string photo_id = 2 [json_name = "photoId"];</code>
+     * <code>optional string photo_id = 2 [json_name = "photoId"];</code>
      * @param value The photoId to set.
      * @return This builder for chaining.
      */
@@ -320,10 +431,11 @@ public  final class SetProfileRequest extends
     }
     /**
      * <pre>
-     * One of the user's own photos, uploaded to /v1/me/photos/{id} first.
+     * One of the user's own photos, uploaded to /v1/me/photos/{id} first,
+     * empty for none; unset keeps the one set before.
      * </pre>
      *
-     * <code>string photo_id = 2 [json_name = "photoId"];</code>
+     * <code>optional string photo_id = 2 [json_name = "photoId"];</code>
      * @return This builder for chaining.
      */
     public Builder clearPhotoId() {
@@ -333,10 +445,11 @@ public  final class SetProfileRequest extends
     }
     /**
      * <pre>
-     * One of the user's own photos, uploaded to /v1/me/photos/{id} first.
+     * One of the user's own photos, uploaded to /v1/me/photos/{id} first,
+     * empty for none; unset keeps the one set before.
      * </pre>
      *
-     * <code>string photo_id = 2 [json_name = "photoId"];</code>
+     * <code>optional string photo_id = 2 [json_name = "photoId"];</code>
      * @param value The bytes for photoId to set.
      * @return This builder for chaining.
      */
@@ -363,12 +476,13 @@ public  final class SetProfileRequest extends
       }
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
+            "bitField0_",
             "name_",
             "photoId_",
           };
           java.lang.String info =
-              "\u0000\u0002\u0000\u0000\u0001\u0002\u0002\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
-              "";
+              "\u0000\u0002\u0000\u0001\u0001\u0002\u0002\u0000\u0000\u0000\u0001\u1208\u0000\u0002" +
+              "\u1208\u0001";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {
