@@ -1,5 +1,6 @@
 package app.pochical.chat
 
+import android.content.ActivityNotFoundException
 import android.content.Context
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.background
@@ -47,7 +48,11 @@ import app.pochical.v1.LinkPreview
 
 /** A link opened in the system's browser sheet over the chat (Custom Tabs, spec/chat.md, In a message). */
 fun openLink(context: Context, url: String) {
-  CustomTabsIntent.Builder().setShowTitle(true).build().launchUrl(context, url.toUri())
+  try {
+    CustomTabsIntent.Builder().setShowTitle(true).build().launchUrl(context, url.toUri())
+  } catch (_: ActivityNotFoundException) {
+    // No browser on the device to open it (a work profile with every one turned off): nothing opens.
+  }
 }
 
 /**

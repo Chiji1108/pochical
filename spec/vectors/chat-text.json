@@ -255,6 +255,10 @@
     {
       "url": "https://shop.www.example/",
       "expected": "shop.www.example"
+    },
+    {
+      "url": "https://WWW.Cafe.example/menu",
+      "expected": "cafe.example"
     }
   ],
   "largeEmoji": [

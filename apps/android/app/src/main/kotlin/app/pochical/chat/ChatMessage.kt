@@ -65,6 +65,7 @@ import app.pochical.kit.LineContent
 import app.pochical.kit.LineReaction
 import app.pochical.kit.PhotoShelf
 import app.pochical.kit.WaitingLine
+import app.pochical.kit.site
 import app.pochical.kit.textParts
 import kotlin.math.abs
 import kotlinx.coroutines.coroutineScope
@@ -177,6 +178,7 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
   val items = handlers.items(look)
   // Its menu's items, each reaction on it put on or taken off, and 返信元を表示, as its actions.
   val reactionLabel = stringResource(R.string.chat_reaction)
+  val openLinkLabel = stringResource(R.string.chat_open_link)
   val reactOn = stringResource(R.string.chat_reaction_on)
   val choosersLabel = stringResource(R.string.chat_reaction_choosers)
   val reactOff = stringResource(R.string.chat_reaction_off)
@@ -189,6 +191,7 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
       } +
       // Who chose each, which the pill's long press lists, out of a screen reader's reach.
       look.reactions.map { reaction -> CustomAccessibilityAction(choosersLabel.format(reaction.emoji)) { handlers.choosers(reaction); true } } +
+      linkActions(look.content, openLinkLabel, handlers.openLink) +
       listOfNotNull(
         // リアクション: the reactions and menu over the chat, for the screen reader to go into.
         look.seq?.let { CustomAccessibilityAction(reactionLabel) { openMenu(); true } },
@@ -346,7 +349,13 @@ fun Bubble(look: MessageLook, handlers: MessageHandlers, onQuote: () -> Unit) {
       .padding(top = 8.dp, bottom = if (preview != null) 0.dp else 8.dp)
       // As wide as the widest of the quote and the words, the quote's rule across it; a line with a
       // link's page as wide as the page is drawn.
-      .then(if (preview != null) Modifier.width(PREVIEW_WIDTH) else Modifier.width(IntrinsicSize.Max))
+      .then(
+        when {
+          preview == null -> Modifier.width(IntrinsicSize.Max)
+          LocalDensity.current.fontScale >= ACCESSIBILITY_SCALE -> Modifier.fillMaxWidth()
+          else -> Modifier.width(PREVIEW_WIDTH)
+        }
+      )
   ) {
     look.quote?.let { BubbleQuote(it, ink, inset = 12.dp, onOpen = onQuote) }
     Text(
@@ -409,8 +418,8 @@ fun messageLook(
             if (own) mine else nameOf(line.authorId),
             replying,
             words,
-            clock(line.sentAtMs),
             (line.content as? LineContent.Words)?.preview?.title,
+            clock(line.sentAtMs),
             edited.takeIf { (line.content as? LineContent.Words)?.edited == true },
             reactionWords(line.reactions, me),
           )
@@ -436,7 +445,8 @@ fun messageLook(
       val line = item.line
       val quote = line.replyTo?.let { quoteOf(it) }
       val replying = quote?.let { stringResource(R.string.chat_reply_to_said, it.writer.orEmpty(), it.words) }
-      val said = listOfNotNull(mine, replying, lineWords(line.content, nameOf), if (line.failed) notSent else sending).joinToString("、")
+      val page = (line.content as? LineContent.Words)?.preview?.title
+      val said = listOfNotNull(mine, replying, lineWords(line.content, nameOf), page, if (line.failed) notSent else sending).joinToString("、")
       MessageLook(item.key, true, line.content, item.startsRun, null, false, null, line, quote, null, null, said)
     }
     else -> null
@@ -446,8 +456,17 @@ fun messageLook(
 /** Where the bubble is in the window, whole: the list's clip would cut one scrolled partly out of sight. */
 private fun LayoutCoordinates.unclipped(): Rect = Rect(positionInWindow(), size.toSize())
 
+/** リンクを開く for each link of a line's words, with its site, one for each even to one site (spec/chat.md, Screen readers). */
+private fun linkActions(content: LineContent, label: String, open: (String) -> Unit): List<CustomAccessibilityAction> {
+  val words = content as? LineContent.Words ?: return emptyList()
+  return textParts(words.text).mapNotNull { it.url }.map { url -> CustomAccessibilityAction(label.format(site(url))) { open(url); true } }
+}
+
 /** How wide a line with a link's page is (spec/chat.md, Albums: as wide as an album). */
 private val PREVIEW_WIDTH = 240.dp
+
+/** The text size from which a line takes nearly the screen's width (spec/chat.md, Text size and contrast). */
+private const val ACCESSIBILITY_SCALE = 1.3f
 
 /** How dim a line on its way is, as it would be on the chat's ground. */
 private const val WAITING_ALPHA = 0.6f

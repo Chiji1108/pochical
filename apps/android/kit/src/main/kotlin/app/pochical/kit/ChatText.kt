@@ -76,7 +76,8 @@ fun site(url: String): String {
     } catch (_: URISyntaxException) {
       null
     } ?: return url
-  return host.removePrefix("www.")
+  // A host is named in lowercase, whatever case it was written in.
+  return host.lowercase().removePrefix("www.")
 }
 
 /** A member picked from the composer's list of names, or still picked in words put back in it. */

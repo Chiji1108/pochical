@@ -98,7 +98,7 @@ class ComposerState(writing: Writing<Nothing>, tookDraft: Boolean) {
       Saver(
         save = { state ->
           val w = state.writing
-          listOf(w.text, w.replyTo ?: -1L, w.editing ?: -1L, w.picked.flatMap { listOf(it.id, it.name) }, state.tookDraft)
+          listOf(w.text, w.replyTo ?: -1L, w.editing ?: -1L, w.picked.flatMap { listOf(it.id, it.name) }, state.tookDraft, w.previewRemoved.orEmpty())
         },
         restore = { saved ->
           val list = saved as List<*>
@@ -109,6 +109,8 @@ class ComposerState(writing: Writing<Nothing>, tookDraft: Boolean) {
               picked = picked,
               replyTo = (list[1] as Long).takeIf { it >= 0 },
               editing = (list[2] as Long).takeIf { it >= 0 },
+              // × holds until the line is sent, across a rotation too.
+              previewRemoved = (list[5] as String).takeIf { it.isNotEmpty() },
             )
           ComposerState(writing, list[4] as Boolean)
         },
@@ -205,24 +207,31 @@ fun Composer(
   val calls = LocalGroupCalls.current
   val link = previewLink(writing.sent)?.takeIf { editedWords == null || !keepsPreview(editedWords, writing.sent) }
   val pages = remember { mutableStateMapOf<String, LinkPreview>() }
-  var asked by remember { mutableStateOf(emptySet<String>()) }
+  // The links the server answered for, and the one asked for now: a link left while asked is asked
+  // again should it come back.
   var answered by remember { mutableStateOf(emptySet<String>()) }
+  var asking by remember { mutableStateOf<String?>(null) }
   LaunchedEffect(link) {
-    if (link == null || link in asked) return@LaunchedEffect
+    if (link == null || link in answered) return@LaunchedEffect
     delay(Chat.linkPreviewSettleMs.toLong())
-    asked = asked + link
+    asking = link
     try {
       calls.linkPreview(link)?.let { pages[link] = it }
+      answered = answered + link
     } catch (e: CancellationException) {
       throw e
     } catch (_: Exception) {
       // None shown, and the server reads the page itself once it has the line.
+      answered = answered + link
+    } finally {
+      if (asking == link) asking = null
     }
-    answered = answered + link
   }
   val page = link?.takeIf { it != writing.previewRemoved }?.let { pages[it] }
-  // Shown while asked and not answered (読み込み中…), and once a page came.
-  val showsPage = link != null && link != writing.previewRemoved && link in asked && (link !in answered || page != null)
+  // Shown while asked (読み込み中…), and once a page came; kept as it goes, so it leaves whole.
+  val showsPage = link != null && link != writing.previewRemoved && (asking == link || page != null)
+  var pageShown by remember { mutableStateOf<Pair<String, LinkPreview?>?>(null) }
+  if (showsPage && link != null) pageShown = link to page
   Surface(modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surfaceContainer) {
     Column(Modifier.navigationBarsPadding()) {
       val editingWords = stringResource(R.string.chat_editing)
@@ -239,7 +248,10 @@ fun Composer(
         shown?.let { ComposerBar(it.title, it.words, stringResource(it.stop)) { state.writing = state.writing.stop() } }
       }
       AnimatedVisibility(showsPage) {
-        if (link != null) ComposerPreview(site(link), page) { state.writing = state.writing.copy(previewRemoved = link) }
+        pageShown?.let { (url, shownPage) ->
+          // The page's own site's name once it came, as the line will show it.
+          ComposerPreview(shownPage?.site ?: site(url), shownPage) { state.writing = state.writing.copy(previewRemoved = url) }
+        }
       }
       Row(Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.Bottom) {
         OutlinedTextField(
