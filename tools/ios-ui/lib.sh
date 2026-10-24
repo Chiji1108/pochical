@@ -15,7 +15,7 @@ port=${BASH_REMATCH[1]}
 server=""
 
 # The server runs in a process group of its own, led by mise (`server`),
-# which runs the task's shell, bun, wrangler and workerd in a group of
+# which runs the task's shell, pnpm, wrangler and workerd in a group of
 # their own; stopping signals both groups.
 start_server() {
   (cd "$root" && exec perl -e 'setpgrp; exec @ARGV' mise run server -- --port "$port" >>"$server_log" 2>&1) &
@@ -55,7 +55,7 @@ prepare() {
   xcrun simctl shutdown "$device" 2>/dev/null || true
   xcrun simctl erase "$device"
   xcrun simctl boot "$device"
-  (cd "$root/apps/server" && bunx wrangler d1 migrations apply pochical --local >/dev/null)
+  (cd "$root/apps/server" && pnpm exec wrangler d1 migrations apply pochical --local >/dev/null)
   start_server
 }
 
@@ -63,6 +63,6 @@ prepare() {
 # named "$2" if given.
 new_group() {
   rm -f "$root/tools/api-try/out/state.json"
-  bun "$root/tools/api-try/index.ts" create ${2:+"$2"} --local
+  pnpm --dir "$root" exec tsx "$root/tools/api-try/index.ts" create ${2:+"$2"} --local
   jq -r .inviteCode "$root/tools/api-try/out/state.json" >"$1"
 }

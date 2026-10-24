@@ -6,7 +6,7 @@
       "runtimeExecutable": "sh",
       "runtimeArgs": [
         "-c",
-        "cd apps/web && exec bun x astro dev --port \"$PORT\" --ignore-lock"
+        "cd apps/web && exec pnpm exec astro dev --port \"$PORT\" --ignore-lock"
       ],
       "port": 3000,
       "autoPort": true
@@ -14,13 +14,13 @@
     {
       "name": "design",
       "runtimeExecutable": "sh",
-      "runtimeArgs": ["-c", "cd apps/design && exec bun run dev"],
+      "runtimeArgs": ["-c", "cd apps/design && exec pnpm run dev"],
       "port": 3200
     },
     {
       "name": "try",
       "runtimeExecutable": "sh",
-      "runtimeArgs": ["-c", "cd apps/try && exec bun run dev"],
+      "runtimeArgs": ["-c", "cd apps/try && exec pnpm run dev"],
       "port": 3202
     },
     {
@@ -34,7 +34,7 @@
       "runtimeExecutable": "sh",
       "runtimeArgs": [
         "-c",
-        "cd apps/admin && exec bun x react-router dev --port 3100 --strictPort"
+        "cd apps/admin && exec pnpm exec react-router dev --port 3100 --strictPort"
       ],
       "port": 3100
     }

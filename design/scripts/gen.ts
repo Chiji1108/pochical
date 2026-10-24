@@ -65,7 +65,7 @@ import { kotlinReadyPatterns, swiftReadyPatterns } from "./pattern-code";
 import { swiftPhrases } from "./phrases";
 import { kotlinSkies, swiftSkies } from "./sky-code";
 
-const root = path.join(import.meta.dir, "../..");
+const root = path.join(import.meta.dirname, "../..");
 const themes: readonly Preset[] = presets;
 const HEADER = "Code generated from design/ by `mise run gen`. Do not edit.";
 

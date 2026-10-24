@@ -1,6 +1,6 @@
 # ポチカル
 
-SwiftUI・Jetpack Compose・Cloudflare Workersで作る多言語のモノレポです。ツールのバージョンとタスクは [mise](https://mise.jdx.dev) で管理し、TypeScriptのパッケージはBun workspacesで管理します。
+SwiftUI・Jetpack Compose・Cloudflare Workersで作る多言語のモノレポです。ツールのバージョンとタスクは [mise](https://mise.jdx.dev) で管理し、TypeScriptのパッケージはpnpm workspacesで管理します。
 
 ```text
 proto/           通信のスキーマ（Protobuf）。buf generateで各アプリにコードを生成
@@ -14,7 +14,7 @@ apps/
 
 ## 開発
 
-リポジトリのルートで `mise install` と `bun install` を実行します。
+リポジトリのルートで `mise install` と `pnpm install` を実行します。
 
 | ルートで実行するコマンド | 内容 |
 | --- | --- |
@@ -23,11 +23,11 @@ apps/
 | `mise run server` | サーバーの開発環境を `http://localhost:8787` で起動（`-- --port <n>` で別のポート。先に `apps/server/.dev.vars` に `BETTER_AUTH_SECRET=<32文字以上のランダムな値>` を書く） |
 | `mise run server:test` | サーバーのテストをWorkersのランタイムで実行 |
 | `mise run api:try -- create [名前] [絵文字]` | 本番のサーバーで、匿名ユーザーとしてグループを作り招待リンクを表示する。続けて `join`・`preview`・`remake`、最後に `cleanup` で後片付け（`--local` でローカル） |
-| `bun run web` | Webの開発サーバーを起動 |
-| `bun run build:web` / `bun run preview:web` | Webのビルド・プレビュー |
-| `bun run typecheck` | Web・サーバーの型チェック |
-| `bun run test` | Web・サーバーのテスト |
-| `bun run check` / `bun run fix` | TypeScriptのコードチェック・整形 |
+| `pnpm run web` | Webの開発サーバーを起動 |
+| `pnpm run build:web` / `pnpm run preview:web` | Webのビルド・プレビュー |
+| `pnpm run typecheck` | Web・サーバーの型チェック |
+| `pnpm run test` | Web・サーバーのテスト |
+| `pnpm run check` / `pnpm run fix` | TypeScriptのコードチェック・整形 |
 
 Webの開発・公開設定は [WebのREADME](apps/web/README.md) を参照してください。
 

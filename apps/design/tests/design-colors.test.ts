@@ -1,16 +1,16 @@
-import { expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 import { colorRoleNames } from "@pochical/design/themes";
+import { expect, test } from "vitest";
 
 // The app's pieces take their colors from the color tokens (design/), by
 // name, so a テーマ reaches every one and the native apps have the same
 // roles to draw them with. What is not the app's own keeps its colors.
 // The site's design pages and the prototype's pieces they show.
 const folders = [
-  path.join(import.meta.dir, "../src/components"),
-  path.join(import.meta.dir, "../../../packages/prototype/src/components"),
+  path.join(import.meta.dirname, "../src/components"),
+  path.join(import.meta.dirname, "../../../packages/prototype/src/components"),
 ];
 const componentFiles = folders.flatMap((folder) =>
   readdirSync(folder).map((file) => ({ file, full: path.join(folder, file) }))

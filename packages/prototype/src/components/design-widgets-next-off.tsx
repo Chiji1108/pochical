@@ -2,12 +2,13 @@ import { css, cx } from "@pochical/styled-system/css";
 import { useContext, useLayoutEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
+import { DARK_DRAWING, LIGHT_DRAWING } from "../lib/app-icon-paint";
 import type {
   WidgetEntry,
   WidgetNoOff,
   WidgetOff,
 } from "../lib/design-widgets";
-import { DARK_DRAWING, LIGHT_DRAWING, useAppIcons } from "./design-app-icon";
+import { useAppIcons } from "./design-app-icon";
 import { GroupIcon, PhotoAvatar } from "./design-group-parts";
 import { ColorSchemeContext } from "./design-theme";
 import { srOnly } from "./design-ui";
