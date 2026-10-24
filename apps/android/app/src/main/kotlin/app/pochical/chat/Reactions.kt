@@ -11,19 +11,13 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -39,9 +33,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.pochical.LocalThemeColors
@@ -193,27 +184,17 @@ private fun SprayBurst(spray: Spray) {
   }
 }
 
-/** Everyone who chose a reaction, by name, in the order they did: a long press on its pill. */
-@OptIn(ExperimentalMaterial3Api::class)
+/** Everyone who chose a reaction, by name, in the order they did: a long press on its pill, or its screen reader's action. */
 @Composable
 fun ChoosersSheet(reaction: LineReaction, writers: Map<String, GroupMemberRow>, nameOf: (String) -> String, onDismiss: () -> Unit) {
-  ModalBottomSheet(onDismissRequest = onDismiss) {
-    Column(Modifier.navigationBarsPadding().padding(bottom = 16.dp)) {
-      Text(
-        reaction.emoji,
-        Modifier.padding(horizontal = 24.dp, vertical = 8.dp).semantics { heading() },
-        style = MaterialTheme.typography.headlineSmall,
-      )
-      for (id in reaction.userIds) {
-        val writer = writers[id]
-        ListItem(
-          headlineContent = { Text(nameOf(id), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-          leadingContent = { MemberAvatar(nameOf(id), writer?.photoId.orEmpty(), writer?.let { PhotoShelf.Group(it.groupId) }, 40.dp) },
-          colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        )
-      }
-    }
-  }
+  MemberSheet(
+    reaction.emoji,
+    reaction.userIds.map { id ->
+      val writer = writers[id]
+      SheetMember(id, nameOf(id), writer?.photoId.orEmpty(), writer?.let { PhotoShelf.Group(it.groupId) })
+    },
+    onDismiss,
+  )
 }
 
 /** A line's reactions as a screen reader sums them up: each emoji and how many chose it, the reader's own said. */

@@ -175,6 +175,7 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
   // Its menu's items, each reaction on it put on or taken off, and 返信元を表示, as its actions.
   val reactionLabel = stringResource(R.string.chat_reaction)
   val reactOn = stringResource(R.string.chat_reaction_on)
+  val choosersLabel = stringResource(R.string.chat_reaction_choosers)
   val reactOff = stringResource(R.string.chat_reaction_off)
   val actions =
     items.map { item -> CustomAccessibilityAction(item.label) { item.run(); true } } +
@@ -183,6 +184,8 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
         val own = handlers.me in reaction.userIds
         CustomAccessibilityAction((if (own) reactOff else reactOn).format(reaction.emoji)) { handlers.react(seq, reaction.emoji, !own); true }
       } +
+      // Who chose each, which the pill's long press lists, out of a screen reader's reach.
+      look.reactions.map { reaction -> CustomAccessibilityAction(choosersLabel.format(reaction.emoji)) { handlers.choosers(reaction); true } } +
       listOfNotNull(
         // リアクション: the reactions and menu over the chat, for the screen reader to go into.
         look.seq?.let { CustomAccessibilityAction(reactionLabel) { openMenu(); true } },
