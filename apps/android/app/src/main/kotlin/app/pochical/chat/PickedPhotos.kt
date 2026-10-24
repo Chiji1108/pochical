@@ -56,7 +56,7 @@ data class PickedPhoto(val id: String, val width: Int, val height: Int, val thum
 }
 
 /** Where picked photos wait to be sent, the system free to empty it. */
-private fun pickedDir(context: Context) = File(context.cacheDir, "picked-photos").apply { mkdirs() }
+private fun pickedDir(context: Context) = File(context.cacheDir, "picked-photos")
 
 private fun pickedFile(context: Context, id: String, small: Boolean = false) = File(pickedDir(context), if (small) "$id.small.jpg" else "$id.jpg")
 
@@ -67,6 +67,7 @@ class Picked(val photos: List<PickedPhoto>, val unreadable: Boolean)
 suspend fun pickPhotos(context: Context, uris: List<Uri>): Picked =
   withContext(Dispatchers.Default) {
     val shrunk = uris.map { uri -> runCatching { PhotoShrinking.shrink(ImageDecoder.createSource(context.contentResolver, uri)) }.getOrNull() }
+    pickedDir(context).mkdirs()
     val photos =
       shrunk.filterNotNull().map { photo ->
         val id = newId()
@@ -77,15 +78,26 @@ suspend fun pickPhotos(context: Context, uris: List<Uri>): Picked =
     Picked(photos, unreadable = shrunk.any { it == null })
   }
 
-/** The picked photos as they are sent; null when the system emptied the cache of one meanwhile. */
-suspend fun shrunkPhotos(context: Context, photos: List<PickedPhoto>): List<ShrunkPhoto>? =
+/**
+ * The picked photos as they are sent, by their picked ones; one the system emptied from the cache
+ * meanwhile is not among them, and is said as one the phone could not read.
+ */
+suspend fun shrunkPhotos(context: Context, photos: List<PickedPhoto>): Map<PickedPhoto, ShrunkPhoto> =
   withContext(Dispatchers.IO) {
-    photos.map { photo ->
-      val jpeg = pickedFile(context, photo.id).takeIf { it.exists() }?.readBytes() ?: return@withContext null
-      val small = if (photo.small) pickedFile(context, photo.id, small = true).takeIf { it.exists() }?.readBytes() else null
-      ShrunkPhoto(jpeg, photo.width, photo.height, Base64.decode(photo.thumbHash, Base64.NO_WRAP), small)
-    }
+    photos
+      .mapNotNull { photo ->
+        val jpeg = pickedFile(context, photo.id).takeIf { it.exists() }?.readBytes() ?: return@mapNotNull null
+        val small = if (photo.small) pickedFile(context, photo.id, small = true).takeIf { it.exists() }?.readBytes() else null
+        photo to ShrunkPhoto(jpeg, photo.width, photo.height, Base64.decode(photo.thumbHash, Base64.NO_WRAP), small)
+      }
+      .toMap()
   }
+
+/** Lets go of every picked photo the composer no longer holds ([kept]): taken out by 編集, or left with a chat. */
+suspend fun sweepPicked(context: Context, kept: List<PickedPhoto>) {
+  val ids = kept.map { it.id }.toSet()
+  withContext(Dispatchers.IO) { pickedDir(context).listFiles()?.filter { it.name.substringBefore('.') !in ids }?.forEach(File::delete) }
+}
 
 /** Lets go of picked photos, sent or taken out. */
 suspend fun dropPicked(context: Context, photos: List<PickedPhoto>) {

@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -341,7 +342,11 @@ private fun PhotoBody(look: MessageLook, photos: LineContent.Photos, handlers: M
     )
   }
   val quote = look.quote
-  if (quote == null) return line()
+  if (quote == null) {
+    // Lit in its own rounded outline as it is gone to, as a bubble is.
+    val shape = RoundedCornerShape(Radius.lg)
+    return Box(Modifier.litWhenGoneTo(handlers.lit?.takeIf { it.seq == look.seq }, shape, handlers.reducedMotion)) { line() }
+  }
   val colors = LocalThemeColors.current
   val shape = remember(look.mine, look.startsRun) { BubbleShape(look.mine, tail = look.startsRun) }
   val ink = if (look.mine) colors.accentOnFill else colors.textPrimary

@@ -173,7 +173,9 @@ fun Composer(
   }
   // The picker stops at the room left; it takes two at least, one alone picked as one.
   val most = maxOf(Chat.photosPerSend - state.writing.photos.size, 2)
-  val pickMany = rememberLauncherForActivityResult(remember(most) { ActivityResultContracts.PickMultipleVisualMedia(most) }) { took(it) }
+  // Picked photos the composer no longer holds (taken out by 編集, or left with a chat) go as it opens.
+  LaunchedEffect(Unit) { sweepPicked(context, state.writing.photos) }
+  val pickMany =rememberLauncherForActivityResult(remember(most) { ActivityResultContracts.PickMultipleVisualMedia(most) }) { took(it) }
   val pickOne = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> took(listOfNotNull(uri)) }
   val pickPhotos = {
     val room = Chat.photosPerSend - state.writing.photos.size
@@ -313,10 +315,14 @@ fun Composer(
                 // The photos first, as one line answering what the composer answers; the words after
                 // them as a line of their own.
                 if (seq == null && going.photos.isNotEmpty()) {
-                  val shrunk = shrunkPhotos(context, going.photos) ?: throw PickedGone()
-                  chats.sendPhotos(groupId, threadId, shrunk, going.replyTo)
-                  dropPicked(context, going.photos)
-                  left = going.copy(photos = emptyList(), replyTo = null)
+                  val shrunk = shrunkPhotos(context, going.photos)
+                  // One the system let go of from the cache meanwhile is left out, as one the phone cannot read.
+                  if (shrunk.size < going.photos.size) onSay(resources.getString(R.string.chat_photo_unreadable))
+                  if (shrunk.isNotEmpty()) {
+                    chats.sendPhotos(groupId, threadId, going.photos.mapNotNull { shrunk[it] }, going.replyTo)
+                    dropPicked(context, going.photos)
+                  }
+                  left = going.copy(photos = emptyList(), replyTo = going.replyTo.takeIf { shrunk.isEmpty() })
                 }
                 if (words.isNotBlank()) {
                   // The page as it came for the words' first link, or none taken off with ×.
@@ -403,9 +409,6 @@ class LinkPages {
     }
   }
 }
-
-/** A photo picked was let go of by the system before it was sent: the composer keeps the others to send again. */
-private class PickedGone : Exception()
 
 /** What the bar over the composer says: what it is, the line in one line of words, and its ×. */
 private data class Bar(val title: String, val words: String?, @param:StringRes val stop: Int)

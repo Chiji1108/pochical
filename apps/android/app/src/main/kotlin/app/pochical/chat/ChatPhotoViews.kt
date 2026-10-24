@@ -175,11 +175,15 @@ fun ChatPhotoImage(photo: ChatPhoto, groupId: String, retries: Boolean, onOpen: 
       ImageRequest.Builder(context).data(ChatPhotoData(photo.id, groupId, small = true, attempt = attempt)).crossfade(if (blur != null) Chat.photoFadeMs else 0).build()
     }
   val open by rememberUpdatedState(onOpen)
+  // A tap, not a press held: one held `chatRules.longPressMs` opens the line's menu, and its lift is no tap.
   val tap = Modifier.pointerInput(failed, retries) {
+    var pressedAt = 0L
     detectTapGestures(
+      onPress = { pressedAt = System.currentTimeMillis() },
       onTap = {
+        if (System.currentTimeMillis() - pressedAt >= Chat.longPressMs) return@detectTapGestures
         if (failed && retries) attempt++ else open?.invoke()
-      }
+      },
     )
   }
   Box(modifier.then(tap)) {

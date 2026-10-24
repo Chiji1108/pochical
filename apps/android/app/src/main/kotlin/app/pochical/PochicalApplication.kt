@@ -5,6 +5,7 @@ import androidx.datastore.dataStoreFile
 import app.pochical.calendar.OwnDays
 import app.pochical.calendar.SyncedDays
 import app.pochical.chat.chatImageLoader
+import app.pochical.chat.followForgotten
 import app.pochical.kit.PochicalKit
 import coil3.ImageLoader
 import coil3.PlatformContext
@@ -19,8 +20,10 @@ import dev.zacsweers.metro.createGraphFactory
 import dev.zacsweers.metrox.android.MetroAppComponentProviders
 import dev.zacsweers.metrox.android.MetroApplication
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 /** What the app holds once for as long as it runs, the activities it makes among them. */
 @DependencyGraph(AppScope::class)
@@ -65,10 +68,13 @@ class PochicalApplication : Application(), MetroApplication, PochicalKit.Holder,
 
   override fun onCreate() {
     super.onCreate()
+    // Listening before anything syncs, so a photo let go of is never missed (`followForgotten`).
+    CoroutineScope(SupervisorJob() + Dispatchers.Default).launch(start = CoroutineStart.UNDISPATCHED) {
+      followForgotten(graph.kit.photoFiles) { SingletonImageLoader.get(this@PochicalApplication) }
+    }
     graph.kit.followProcess()
   }
 
   /** The one image loader every picture the app shows comes through (`chatImageLoader`). */
-  override fun newImageLoader(context: PlatformContext): ImageLoader =
-    chatImageLoader(context, graph.kit.groups, graph.kit.photoFiles, CoroutineScope(SupervisorJob() + Dispatchers.Default))
+  override fun newImageLoader(context: PlatformContext): ImageLoader = chatImageLoader(context, graph.kit.groups, graph.kit.photoFiles)
 }

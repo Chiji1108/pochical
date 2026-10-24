@@ -20,8 +20,6 @@ import coil3.fetch.SourceFetchResult
 import coil3.key.Keyer
 import coil3.memory.MemoryCache
 import coil3.request.Options
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import okio.Buffer
 import okio.FileSystem
 import okio.Path.Companion.toOkioPath
@@ -52,39 +50,43 @@ private fun photoKey(groupId: String, photoId: String, small: Boolean) = "chat/$
 /**
  * The app's one image loader: the chat's photos at most `chatRules.photoMemoryBytes` drawn in
  * memory and `chatRules.photoDiskBytes` on the disk among the caches, the member's own read from
- * where they are held as sent and not kept twice; faces and pictures in memory beside them. What
- * the device lets go of ([ChatPhotoFiles.forgotten]: a line taken back, every photo with the
- * user) goes from both at once.
+ * where they are held as sent and not kept twice; faces and pictures in memory beside them.
  */
-fun chatImageLoader(context: Context, calls: GroupCalls, files: ChatPhotoFiles, scope: CoroutineScope): ImageLoader {
-  val loader =
-    ImageLoader.Builder(context)
-      .memoryCache { MemoryCache.Builder().maxSizeBytes(Chat.photoMemoryBytes.toLong()).build() }
-      .diskCache { DiskCache.Builder().directory(context.cacheDir.resolve("chat-photo-cache").toOkioPath()).maxSizeBytes(Chat.photoDiskBytes.toLong()).build() }
-      .components {
-        add(Keyer<ChatPhotoData> { data, _ -> data.key })
-        add(ChatPhotoFetcher.Factory(calls, files))
-        add(Keyer<Picture> { data, _ -> "picture/${data.shelf?.path}${data.photoId}" })
-        add(PictureFetcher.Factory(calls))
-      }
-      .build()
-  scope.launch {
-    files.forgotten.collect { gone ->
-      val groupId = (gone.shelf as? PhotoShelf.Group)?.groupId
-      val photoId = gone.photoId
-      if (groupId == null || photoId == null) {
-        loader.memoryCache?.clear()
-        loader.diskCache?.clear()
-        return@collect
-      }
-      for (small in listOf(true, false)) {
-        val key = photoKey(groupId, photoId, small)
-        loader.diskCache?.remove(key)
-        loader.memoryCache?.keys?.filter { it.key == key }?.forEach { loader.memoryCache?.remove(it) }
-      }
+fun chatImageLoader(context: Context, calls: GroupCalls, files: ChatPhotoFiles): ImageLoader =
+  ImageLoader.Builder(context)
+    .memoryCache { MemoryCache.Builder().maxSizeBytes(Chat.photoMemoryBytes.toLong()).build() }
+    .diskCache { DiskCache.Builder().directory(context.cacheDir.resolve("chat-photo-cache").toOkioPath()).maxSizeBytes(Chat.photoDiskBytes.toLong()).build() }
+    .components {
+      add(Keyer<ChatPhotoData> { data, _ -> data.key })
+      add(ChatPhotoFetcher.Factory(calls, files))
+      add(Keyer<Picture> { data, _ -> "picture/${data.shelf?.path}${data.photoId}" })
+      add(PictureFetcher.Factory(calls))
+    }
+    .build()
+
+/**
+ * Lets go from the app's image loader of what the device lets go of ([ChatPhotoFiles.forgotten]: a
+ * line taken back; every photo, face and picture with the user, as the device erases them), from
+ * memory and the disk at once. Called as the app starts, before anything syncs, so nothing let go
+ * of is missed however long before the first picture is drawn.
+ */
+suspend fun followForgotten(files: ChatPhotoFiles, loader: () -> ImageLoader) {
+  files.forgotten.collect { gone ->
+    val disk = loader().diskCache
+    val memory = loader().memoryCache
+    val groupId = (gone.shelf as? PhotoShelf.Group)?.groupId
+    val photoId = gone.photoId
+    if (groupId == null || photoId == null) {
+      memory?.clear()
+      disk?.clear()
+      return@collect
+    }
+    for (small in listOf(true, false)) {
+      val key = photoKey(groupId, photoId, small)
+      disk?.remove(key)
+      memory?.keys?.filter { it.key == key }?.forEach { memory.remove(it) }
     }
   }
-  return loader
 }
 
 /** Fetches a chat's photo: the member's own from the device, else from the disk cache, else from the group, kept there. */
@@ -131,7 +133,7 @@ private const val JPEG = "image/jpeg"
 private class PictureFetcher(private val data: Picture, private val calls: GroupCalls) : Fetcher {
   override suspend fun fetch(): FetchResult {
     val bytes = calls.photo(data.photoId, data.shelf ?: PhotoShelf.Mine)
-    return SourceFetchResult(ImageSource(Buffer().write(bytes), FileSystem.SYSTEM), null, DataSource.MEMORY)
+    return SourceFetchResult(ImageSource(Buffer().write(bytes), FileSystem.SYSTEM), null, DataSource.NETWORK)
   }
 
   class Factory(private val calls: GroupCalls) : Fetcher.Factory<Picture> {
