@@ -22,6 +22,7 @@ import app.pochical.groups.LocalValues
 import app.pochical.kit.DeviceSettings
 import app.pochical.kit.PochicalKit
 import app.pochical.kit.SyncedSettings
+import app.pochical.widgets.followForWidgetPreviews
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoMap
 import dev.zacsweers.metro.Inject
@@ -63,6 +64,8 @@ class MainActivity(
     lifecycleScope.launch {
       repeatOnLifecycle(Lifecycle.State.STARTED) { deviceSettings.settings.collect { settings = it } }
     }
+    // The widgets' previews in the picker follow the settings the screens change.
+    lifecycleScope.launch { followForWidgetPreviews(this@MainActivity, deviceSettings) }
     setContent {
       val device = settings ?: return@setContent
       if (!calendarRead) return@setContent

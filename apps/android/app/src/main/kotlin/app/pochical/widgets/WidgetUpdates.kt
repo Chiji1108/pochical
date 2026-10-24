@@ -5,6 +5,10 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.os.Build
+import androidx.core.content.edit
+import app.pochical.BuildConfig
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.updateAll
 import app.pochical.kit.AppDatabase
 import app.pochical.kit.DeviceSettings
@@ -24,6 +28,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
@@ -63,6 +68,35 @@ class WidgetSources(database: AppDatabase, settings: SyncedSettings) {
 /** Every kind of widget, drawn again. */
 suspend fun updateAllWidgets(context: Context) {
   for (widget in listOf(SimpleWidget(), UpcomingWidget(), CalendarWidget(), NextOffWidget())) widget.updateAll(context)
+}
+
+/**
+ * Keeps the picker's previews drawn in the settings that draw the widgets (the theme, the marks, the
+ * week), while the app's screens are open, where they change: published once for each version of
+ * the app in each, the last kept across runs.
+ */
+suspend fun followForWidgetPreviews(context: Context, settings: SyncedSettings) {
+  val published = context.getSharedPreferences("widget-previews", Context.MODE_PRIVATE)
+  settings.settings
+    .map { "${BuildConfig.VERSION_CODE} ${BuildConfig.VERSION_NAME} ${listOf(it.themeId, it.look, it.week, it.heading.english).toString().hashCode()}" }
+    .distinctUntilChanged()
+    .filter { it != published.getString("drawn", null) }
+    .collect { drawn ->
+      publishWidgetPreviews(context)
+      published.edit { putString("drawn", drawn) }
+    }
+}
+
+/**
+ * Gives the picker each kind's generated preview, the sample week in the person's settings (Android
+ * 15 on). The system takes a few an hour and keeps the last it took.
+ */
+suspend fun publishWidgetPreviews(context: Context) {
+  if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) return
+  val manager = GlanceAppWidgetManager(context)
+  for (receiver in listOf(SimpleWidgetReceiver::class, UpcomingWidgetReceiver::class, CalendarWidgetReceiver::class, NextOffWidgetReceiver::class)) {
+    manager.setWidgetPreviews(receiver)
+  }
 }
 
 /**

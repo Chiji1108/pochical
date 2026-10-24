@@ -197,9 +197,23 @@ abstract class PochicalWidget(private val chooses: Choosing = Choosing.Nobody) :
           val gone = choice != null && read.choice == choice && companion == null
           Drawn(entry.copy(pickAgain = choice?.groupId?.takeIf { gone }), shownSettings)
         }
-      GlanceTheme {
-        Box(GlanceModifier.fillMaxSize().background(drawn.colors.ground).padding(WIDGET_MARGIN)) { Content(drawn) }
-      }
+      Framed(drawn)
+    }
+  }
+
+  /** The picker's generated preview (Android 15 on): the sample week, in the person's settings. */
+  override val previewSizeMode = SizeMode.Responsive(PREVIEW_SIZES)
+
+  override suspend fun providePreview(context: Context, widgetCategory: Int) {
+    val settings = (context.applicationContext as PochicalApplication).widgetSources.settings.first()
+    val drawn = Drawn(sampleWidgetEntry(LocalDate.now(), settings.week), settings)
+    provideContent { Framed(drawn) }
+  }
+
+  @Composable
+  private fun Framed(drawn: Drawn) {
+    GlanceTheme {
+      Box(GlanceModifier.fillMaxSize().background(drawn.colors.ground).padding(WIDGET_MARGIN)) { Content(drawn) }
     }
   }
 
@@ -219,6 +233,9 @@ abstract class PochicalWidget(private val chooses: Choosing = Choosing.Nobody) :
   /** Who [choice] is, as last read. */
   private data class Companion(val choice: WidgetChoice?, val companion: WidgetCompanion?)
 }
+
+/** The sizes a preview is drawn at: a phone's 2×2, 4×2 and 4×4 (/design's android families). */
+private val PREVIEW_SIZES = setOf(DpSize(179.dp, 202.dp), DpSize(373.dp, 202.dp), DpSize(373.dp, 415.dp))
 
 /** The room Material keeps between a widget's edge and what is in it. */
 val WIDGET_MARGIN = 16.dp

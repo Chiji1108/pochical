@@ -18,6 +18,7 @@ import app.pochical.kit.ShownDay
 import app.pochical.kit.Week
 import app.pochical.kit.allOff
 import app.pochical.kit.mayAllBeOff
+import app.pochical.kit.readyCopies
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -290,4 +291,28 @@ private fun pair(
       WidgetPairDay(theirs, together = mine.off && theirs?.off == true)
     }
   return WidgetPair(companion.with, companion.me, days, member.markStyle, member.markFill)
+}
+
+/**
+ * The sample week the picker shows before a widget is placed (/design/widgets' ふつう): 日勤, 夜勤
+ * and its 明け, and days off, coming round, in the ready-made patterns.
+ */
+fun sampleWidgetEntry(today: LocalDate, week: Week): WidgetEntry {
+  val ids = listOf("day", "day", "night", "after", "off", "off", "day")
+  val patterns = readyCopies(ids.distinct()).associate { it.id to it.pattern }
+  val weekStart = today.weekStartingOn(week.start)
+  fun day(date: LocalDate): WidgetDay {
+    val id = ids[Math.floorMod(date.toEpochDay() - today.toEpochDay(), ids.size)]
+    return WidgetDay.of(date, ShownDay(id), patterns[id], noted = false, week = week, holiday = false)
+  }
+  val todayDay = day(today)
+  return WidgetEntry(
+    date = today,
+    nothingEntered = false,
+    today = todayDay,
+    offs = widgetOffs(todayDay, emptyList()) { day(today.plusDays(it.toLong())) },
+    upcoming = List(7) { day(today.plusDays(it.toLong())) },
+    twoWeeks = List(14) { day(weekStart.plusDays(it.toLong())) },
+    month = monthWeeks(YearMonth.from(today), week.start).map { it.map(::day) },
+  )
 }
