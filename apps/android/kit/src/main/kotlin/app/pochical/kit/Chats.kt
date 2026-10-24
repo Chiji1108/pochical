@@ -10,13 +10,10 @@ import app.pochical.v1.chatSendWords
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.transformLatest
 
 /**
  * The chats as the screens read and write them: each chat's lines laid out and the member's own
@@ -72,7 +69,7 @@ class Chats internal constructor(
    */
   suspend fun read(groupId: String, threadId: String, me: String, seq: Long) {
     database.write {
-      val before = maxOf(readMarks(groupId, threadId).firstOrNull { it.userId == me }?.lastReadSeq ?: 0, ownRead(groupId, threadId))
+      val before = lastRead(groupId, threadId, me, now())
       if (readTo(listOf(seq), before) == before) return@write
       chatEdit(groupId, now()) { read = chatRead { this.threadId = threadId; lastReadSeq = seq } }
     }
@@ -115,7 +112,7 @@ class Chats internal constructor(
   suspend fun keepDraft(groupId: String, threadId: String, draft: KeptDraft) {
     database.write {
       deleteChatDraft(groupId, threadId)
-      val kept = keptDraft(draft, groupId, threadId) ?: return@write
+      val kept = keptDraft(draft, groupId, threadId, now()) ?: return@write
       upsert(ChatDraftRow(groupId, threadId, kept.text, kept.replyTo, kept.editing))
     }
   }
@@ -131,89 +128,106 @@ class Chats internal constructor(
       } catch (e: CancellationException) {
         throw e
       } catch (_: Exception) {
-        notKept()
+        withContext(Dispatchers.Main) { notKept() }
       }
     }
   }
 
   /** The chat's draft as it opens, with its lines as they are now; null for none. */
-  suspend fun draft(groupId: String, threadId: String): KeptDraft? = database.read { keptDraft(groupId, threadId) }
+  suspend fun draft(groupId: String, threadId: String): KeptDraft? = database.read { keptDraft(groupId, threadId, now()) }
 
-  /** What [read] gives now, and again as [tables] change and at the time it says it changes by time alone. */
-  @OptIn(ExperimentalCoroutinesApi::class)
   private fun <T> observe(vararg tables: String, read: suspend SyncDao.(now: Long) -> Timed<T>): Flow<T> =
-    database.invalidationTracker
-      .createFlow(*tables)
-      .transformLatest {
-        while (true) {
-          val timed = database.read { read(now()) }
-          emit(timed.value)
-          val at = timed.changesAt ?: break
-          delay(maxOf(at - now(), 0))
-        }
+    database.observe(*tables, now = now, read = read)
+}
+
+/**
+ * The member's edits of one chat waiting in its group's outbox, read once: the lines they send, in
+ * the order written, each not sent or not at the device's [now], and when the next still being
+ * sent stops going by itself, by the device's clock; their changes to each line, in the order made
+ * (a recall by its send's op_id); and how far their reads go.
+ */
+private class WaitingEdits(rows: List<ChatOutboxRow>, threadId: String, state: SyncState, now: Long) {
+  val lines = mutableListOf<WaitingLine>()
+  val toLines = mutableMapOf<Long, MutableList<ChatEdit>>()
+  val recalls = mutableListOf<ChatEdit>()
+  var ownRead = 0L
+    private set
+
+  var failsAt: Long? = null
+    private set
+
+  init {
+    val corrected = state.corrected(now)
+    for (row in rows) {
+      val edit = row.chatEdit
+      when (edit.kindCase) {
+        ChatEdit.KindCase.SEND ->
+          if (edit.send.threadId == threadId) {
+            val failed = row.notSent(edit, corrected)
+            if (!failed) row.failsAt(edit)?.let { at -> failsAt = minOf(failsAt ?: at, at) }
+            lines += WaitingLine(edit.opId, row.madeAtMs, LineContent.of(edit.send.content), edit.send.replyTo.takeIf { it != 0L }, failed)
+          }
+        ChatEdit.KindCase.READ -> if (edit.read.threadId == threadId) ownRead = maxOf(ownRead, edit.read.lastReadSeq)
+        ChatEdit.KindCase.UNSEND -> if (edit.unsend.threadId == threadId) toLines.getOrPut(edit.unsend.seq, ::mutableListOf) += edit
+        ChatEdit.KindCase.CHANGE -> if (edit.change.threadId == threadId) toLines.getOrPut(edit.change.seq, ::mutableListOf) += edit
+        ChatEdit.KindCase.RECALL -> if (edit.recall.threadId == threadId) recalls += edit
+        else -> {}
       }
-      .distinctUntilChanged()
+    }
+    failsAt = failsAt?.let { it - state.offsetMs }
+  }
 }
 
-/** The chat's draft as kept, with its lines as they are now. */
-internal suspend fun SyncDao.keptDraft(groupId: String, threadId: String): KeptDraft? {
+/** The member's waiting edits of the chat, each recall placed on the line the group has for it. */
+private suspend fun SyncDao.waitingEdits(groupId: String, threadId: String, now: Long): WaitingEdits =
+  WaitingEdits(chatOutbox(groupId), threadId, state(), now).also { waiting ->
+    for (recall in waiting.recalls) {
+      seqOf(groupId, threadId, recall.recall.sendOpId)?.let { waiting.toLines.getOrPut(it, ::mutableListOf) += recall }
+    }
+  }
+
+/** The line [seq] as the screen shows it, the member's waiting edits to it in place; null when not held. */
+private suspend fun SyncDao.shownLine(groupId: String, threadId: String, seq: Long, waiting: WaitingEdits): ChatLine? =
+  line(groupId, threadId, seq)?.let { showing(waiting.toLines[seq].orEmpty(), ChatLine.of(WireLine.parseFrom(it.line))) }
+
+/** How far [me] has read the chat: their mark, or on to their read still waiting. */
+private fun lastRead(marks: List<ReadMarkRow>, me: String, waiting: WaitingEdits): Long =
+  maxOf(marks.firstOrNull { it.userId == me }?.lastReadSeq ?: 0, waiting.ownRead)
+
+/** The chat's draft as kept, with its lines as they show now. */
+internal suspend fun SyncDao.keptDraft(groupId: String, threadId: String, now: Long): KeptDraft? =
+  keptDraft(groupId, threadId, waitingEdits(groupId, threadId, now))
+
+private suspend fun SyncDao.keptDraft(groupId: String, threadId: String, waiting: WaitingEdits): KeptDraft? {
   val row = chatDraft(groupId, threadId) ?: return null
-  return keptDraft(KeptDraft(row.text, row.replyTo, row.editing), groupId, threadId)
+  return keptDraft(KeptDraft(row.text, row.replyTo, row.editing), groupId, threadId, waiting)
 }
 
-private suspend fun SyncDao.keptDraft(draft: KeptDraft, groupId: String, threadId: String): KeptDraft? {
-  val seq = draft.editing ?: draft.replyTo
-  val line = seq?.let { line(groupId, threadId, it) }?.let { ChatLine.of(WireLine.parseFrom(it.line)) }
-  // The target's line is the one asked for.
+private suspend fun SyncDao.keptDraft(draft: KeptDraft, groupId: String, threadId: String, now: Long): KeptDraft? =
+  keptDraft(draft, groupId, threadId, waitingEdits(groupId, threadId, now))
+
+private suspend fun SyncDao.keptDraft(draft: KeptDraft, groupId: String, threadId: String, waiting: WaitingEdits): KeptDraft? {
+  // The target's line is the one asked for, as the screen shows it: one being taken back is.
+  val line = (draft.editing ?: draft.replyTo)?.let { shownLine(groupId, threadId, it, waiting) }
   return keptDraft(draft) { line?.content }
 }
 
-/** How far the member's own reads waiting in the group's outbox go in the chat, 0 with none. */
-private suspend fun SyncDao.ownRead(groupId: String, threadId: String): Long =
-  chatOutbox(groupId).map { it.chatEdit }.filter { it.kindCase == ChatEdit.KindCase.READ && it.read.threadId == threadId }
-    .maxOfOrNull { it.read.lastReadSeq } ?: 0
-
 /**
- * The member's lines of the chat waiting in the group's outbox, in the order written, each not sent
- * or not by the device's [now]; and when the next still being sent stops going by itself, by the
- * device's clock. A line the group has taken is no longer in the outbox.
+ * How many of others' lines after [read] are unread: those held, and every line not held yet up to
+ * the latest held, as ↓ counts them past the lines laid out.
  */
-private suspend fun SyncDao.waitingLines(groupId: String, threadId: String, now: Long): Pair<List<WaitingLine>, Long?> {
-  val state = state()
-  val corrected = state.corrected(now)
-  var failsAt: Long? = null
-  val lines =
-    chatOutbox(groupId).mapNotNull { row ->
-      val edit = row.chatEdit
-      if (edit.kindCase != ChatEdit.KindCase.SEND || edit.send.threadId != threadId) return@mapNotNull null
-      val failed = row.notSent(edit, corrected)
-      if (!failed) row.failsAt(edit)?.let { failsAt = minOf(failsAt ?: it, it) }
-      WaitingLine(edit.opId, row.madeAtMs, LineContent.of(edit.send.content), edit.send.replyTo.takeIf { it != 0L }, failed)
-    }
-  return lines to failsAt?.let { it - state.offsetMs }
+private suspend fun SyncDao.unreadPast(groupId: String, threadId: String, read: Long, me: String): Int {
+  val latest = latestSeq(groupId, threadId) ?: return 0
+  if (latest <= read) return 0
+  return (latest - read).toInt() - heldAfter(groupId, threadId, read) + othersAfter(groupId, threadId, read, me)
 }
 
 /** The chat as its screen shows it (`Chats.state`). */
 internal suspend fun SyncDao.chatState(groupId: String, threadId: String, me: String?, from: Long?, now: Long): ChatState {
-  val (waiting, failsAt) = waitingLines(groupId, threadId, now)
-  // The member's waiting edits to each line, in the order made, and their read.
-  val edits = mutableMapOf<Long, MutableList<ChatEdit>>()
-  var ownRead = 0L
-  for (edit in chatOutbox(groupId).map { it.chatEdit }) {
-    when (edit.kindCase) {
-      ChatEdit.KindCase.READ -> if (edit.read.threadId == threadId) ownRead = maxOf(ownRead, edit.read.lastReadSeq)
-      ChatEdit.KindCase.UNSEND -> if (edit.unsend.threadId == threadId) edits.getOrPut(edit.unsend.seq, ::mutableListOf) += edit
-      ChatEdit.KindCase.CHANGE -> if (edit.change.threadId == threadId) edits.getOrPut(edit.change.seq, ::mutableListOf) += edit
-      // Taken back by its send's op_id, should the line have come.
-      ChatEdit.KindCase.RECALL ->
-        if (edit.recall.threadId == threadId) {
-          seqOf(groupId, threadId, edit.recall.sendOpId)?.let { edits.getOrPut(it, ::mutableListOf) += edit }
-        }
-      else -> {}
-    }
-  }
-  val marks = readMarks(groupId, threadId).associate { it.userId to it.lastReadSeq }
-  val read = me?.let { maxOf(marks[it] ?: 0, ownRead) }
+  val waiting = waitingEdits(groupId, threadId, now)
+  val markRows = readMarks(groupId, threadId)
+  val marks = markRows.associate { it.userId to it.lastReadSeq }
+  val read = me?.let { lastRead(markRows, it, waiting) }
   val latest = latestSeq(groupId, threadId)
   // The line the run laid out holds: the first held from `from`, else the latest, laid out as the chat opens.
   val firstHeld = from?.let { firstHeld(groupId, threadId, it) }
@@ -225,20 +239,16 @@ internal suspend fun SyncDao.chatState(groupId: String, threadId: String, me: St
   var lines = emptyList<ChatLine>()
   if (runFrom != null && runThrough != null) {
     laidFrom = minOf(maxOf(runFrom, start), runThrough)
-    lines = lines(groupId, threadId, laidFrom, runThrough).map { showing(edits[it.seq].orEmpty(), ChatLine.of(WireLine.parseFrom(it.line))) }
+    lines = lines(groupId, threadId, laidFrom, runThrough).map { showing(waiting.toLines[it.seq].orEmpty(), ChatLine.of(WireLine.parseFrom(it.line))) }
   }
   val atEnd = runThrough == null || latest == null || runThrough >= latest
-  var unreadAfter = 0
-  if (!atEnd && me != null && read != null) {
-    // Past both the lines laid out and the mark: others' lines held, and every line not held yet.
-    val after = maxOf(runThrough!!, read)
-    if (after < latest!!) unreadAfter = (latest - after).toInt() - heldAfter(groupId, threadId, after) + othersAfter(groupId, threadId, after, me)
-  }
+  // Past both the lines laid out and the mark: others' lines held, and every line not held yet.
+  val unreadAfter = if (!atEnd && me != null && read != null) unreadPast(groupId, threadId, maxOf(runThrough!!, read), me) else 0
   val atStart = (lines.firstOrNull()?.seq ?: 1) <= 1
   // A line not sent shows where it falls among the lines laid out, not past them while later or
   // earlier lines are still to be laid out.
   val shownWaiting =
-    waiting.filter { line ->
+    waiting.lines.filter { line ->
       when {
         !line.failed -> true
         !atEnd && lines.isNotEmpty() && line.madeAtMs >= lines.last().sentAtMs -> false
@@ -249,14 +259,14 @@ internal suspend fun SyncDao.chatState(groupId: String, threadId: String, me: St
   return ChatState(
     lines = lines,
     waiting = shownWaiting,
-    failsAt = failsAt,
+    failsAt = waiting.failsAt,
     atStart = atStart,
     heldBefore = runFrom?.let { maxOf(laidFrom - it, 0).toInt() } ?: 0,
     heldFrom = runFrom,
     atEnd = atEnd,
     unreadAfter = unreadAfter,
     marks = marks,
-    ownRead = ownRead,
+    ownRead = waiting.ownRead,
   )
 }
 
@@ -277,27 +287,26 @@ private fun showing(edits: List<ChatEdit>, line: ChatLine): ChatLine =
   }
 
 /**
- * The chat as a list shows it, for [me]: its latest line, and its unread lines as the group counted
- * them, or, while a read of theirs waits to be sent, others' lines the device holds past it, so
- * reading clears it at once.
+ * The chat as a list shows it, for [me]: its latest line as the chat shows it, and its unread lines
+ * as the group counted them, or, while a read of theirs waits to be sent, as the device counts
+ * them past it, so reading clears it at once (spec/sync-protocol.md, Unread summary).
  */
 internal suspend fun SyncDao.chatSummary(groupId: String, threadId: String, me: String, now: Long): ChatSummary {
-  val ownRead = ownRead(groupId, threadId)
-  val last = lastLine(groupId, threadId)?.let { ChatLine.of(WireLine.parseFrom(it.line)) }
-  val (waiting, failsAt) = waitingLines(groupId, threadId, now)
+  val waiting = waitingEdits(groupId, threadId, now)
+  val last = lastLine(groupId, threadId)?.let { shownLine(groupId, threadId, it.seq, waiting) }
   // The chat's latest line: one of the member's waiting, or null for the group's.
   val latest =
     chatOrder(
         sent = listOfNotNull(last?.let { TimedLine<WaitingLine?>(null, it.sentAtMs) }),
-        waiting = waiting.map { TimedLine<WaitingLine?>(it, it.madeAtMs, it.failed) },
+        waiting = waiting.lines.map { TimedLine<WaitingLine?>(it, it.madeAtMs, it.failed) },
       )
       .lastOrNull()
   val unread =
-    if (ownRead == 0L) {
-      unreadCount(groupId, threadId)?.count ?: 0
-    } else {
-      val read = maxOf(readMarks(groupId, threadId).firstOrNull { it.userId == me }?.lastReadSeq ?: 0, ownRead)
-      othersAfter(groupId, threadId, read, me)
-    }
-  return ChatSummary(last, latest, failsAt, unread, keptDraft(groupId, threadId))
+    if (waiting.ownRead == 0L) unreadCount(groupId, threadId)?.count ?: 0
+    else unreadPast(groupId, threadId, lastRead(readMarks(groupId, threadId), me, waiting), me)
+  return ChatSummary(last, latest, waiting.failsAt, unread, keptDraft(groupId, threadId, waiting))
 }
+
+/** How far [me] has read the chat, their read still waiting included. */
+internal suspend fun SyncDao.lastRead(groupId: String, threadId: String, me: String, now: Long): Long =
+  lastRead(readMarks(groupId, threadId), me, waitingEdits(groupId, threadId, now))

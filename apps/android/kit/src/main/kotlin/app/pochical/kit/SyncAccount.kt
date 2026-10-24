@@ -33,7 +33,6 @@ import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -141,18 +140,21 @@ class SyncAccount(
    * The groups whose chat outbox has edits still to send: their sockets stay open until it is sent,
    * the page that held them gone or the app in the background (spec/sync-protocol.md, Sockets).
    */
-  private val chatsToSend: Flow<Set<String>> =
-    database.invalidationTracker
-      .createFlow("chatOutbox")
-      .transformLatest {
-        while (true) {
-          val waiting = database.read { chatsToSend(now()) }
-          emit(waiting.value)
-          val at = waiting.changesAt ?: break
-          delay(maxOf(at - now(), 0))
+  private val chatsToSend: Flow<Set<String>> = database.observe("chatOutbox", now = now) { now -> chatsToSend(now) }
+
+  /** The groups whose sockets stopped trying, as the stretch signed in now has them. */
+  private val stoppedGroups: Flow<Set<String>> =
+    stretch.flatMapLatest { stretch ->
+      stretch?.groups?.flatMapLatest { groups ->
+        if (groups.isEmpty()) {
+          flowOf(emptySet())
+        } else {
+          combine(groups.map { (id, client) -> client.state.map { id to it } }) { states ->
+            states.filter { (_, state) -> state is SocketState.Stopped }.map { it.first }.toSet()
+          }
         }
-      }
-      .distinctUntilChanged()
+      } ?: flowOf(emptySet())
+    }
 
   /**
    * The socket of the group [groupId] as the stretch signed in now has it, for a chat's screen:
@@ -209,7 +211,8 @@ class SyncAccount(
     commands.send(Command.Send(waiting = true))
     try {
       return merge(
-          combine(database.sync().lastWaiting(), chatsToSend) { own, chats -> own == null && chats.isEmpty() }
+          // A group whose socket stopped (left, or taken out) sends nothing more: nothing to wait for.
+          combine(database.sync().lastWaiting(), chatsToSend, stoppedGroups) { own, chats, stopped -> own == null && (chats - stopped).isEmpty() }
             .filter { it }
             .map { true },
           state.filter { it == AccountState.SessionEnded }.map { false },
@@ -523,6 +526,8 @@ class SyncAccount(
       }
       Command.Background -> {
         foreground = false
+        // Read now, not as last heard: a line written just before may not have been heard of yet.
+        chatWaiting = database.read { chatsToSend(now()) }.value
         val waits = database.sync().lastWaiting().first() != null || chatWaiting.isNotEmpty()
         if (waits) {
           sendBeforeClosing()
@@ -553,10 +558,7 @@ class SyncAccount(
       }
       is Command.ChatWaiting -> {
         chatWaiting = command.groups
-        // Written as the app left, or from outside it: sent in the time the OS gives.
-        val sendsNow = !foreground && chatWaiting.isNotEmpty() && closingUser?.isActive != true
-        if (sendsNow) sendBeforeClosing()
-        current?.openGroups(sendingSoon = sendsNow)
+        current?.openGroups()
       }
       is Command.SignedIn -> {
         if (state.value != AccountState.SigningIn) return

@@ -10,6 +10,12 @@ import app.pochical.v1.ClientFrame
 import app.pochical.v1.chatEdits
 import app.pochical.v1.clientFrame
 import app.pochical.v1.ChatLine as WireLine
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.transformLatest
 
 // What the sockets bring of the chats into the device's database, and what the group's socket
 // sends from its chat outbox (spec/sync-protocol.md, Chat; Unread summary; Chat notifications;
@@ -163,3 +169,22 @@ internal suspend fun SyncDao.chatsToSend(now: Long): Timed<Set<String>> {
 
 /** A value read now, and when, by the device's clock, it may change by time alone; null for never. */
 internal data class Timed<T>(val value: T, val changesAt: Long?)
+
+/**
+ * What [read] gives at the device's time, now, and again as [tables] change and at the time it
+ * says it changes by time alone (a line's wait running out), whatever else runs then.
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+internal fun <T> AppDatabase.observe(vararg tables: String, now: () -> Long, read: suspend SyncDao.(now: Long) -> Timed<T>): Flow<T> =
+  // The device's time is corrected by each Welcome (HLC): a line judged to have waited too long by
+  // the clock before may not have, and the other way about.
+  combine(invalidationTracker.createFlow(*tables), sync().offsetMs().distinctUntilChanged()) { _, _ -> }
+    .transformLatest {
+      while (true) {
+        val timed = read { read(now()) }
+        emit(timed.value)
+        val at = timed.changesAt ?: break
+        delay(maxOf(at - now(), 0))
+      }
+    }
+    .distinctUntilChanged()
