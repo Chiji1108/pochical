@@ -7,10 +7,10 @@ import UIKit
 /// is: one SwiftUI pushed on the stack itself would be its own, popped by
 /// SwiftUI as the navigator took it away (a notification's chat over its
 /// tab alone), the page just opened with it. The page is drawn by the
-/// link, kept current with what the link's page has while that page is
-/// drawn. Under the page it opened it is not, being off the screen, so
-/// what the page changes reaches it through a binding, which the page
-/// follows itself.
+/// link, kept current with what the link's page has, as a NavigationLink's
+/// destination is: the link's page, hidden under the one it opened, goes on
+/// following its state and what it reads, and hands the page each value
+/// as it is now (POC-235).
 struct PageLink<Label: View, Destination: View>: View {
   @Environment(\.rootNavigator) private var navigator
   @State private var page = LinkedPage()
