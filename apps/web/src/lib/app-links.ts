@@ -11,7 +11,12 @@ export const ANDROID_PACKAGE = "app.pochical";
 // app signing): the app signing key's, which signs every install from Play,
 // and the upload key's, which signs a bundle before Play re-signs it. Public
 // values, not secrets.
-export const ANDROID_CERTIFICATES: readonly string[] = [];
+export const ANDROID_CERTIFICATES: readonly string[] = [
+  // App signing key
+  "50:B4:DE:07:E3:66:31:AB:D2:04:CE:69:A9:B1:70:73:6E:FE:C2:35:A8:75:FC:E5:A1:8F:C7:3F:89:E5:0A:96",
+  // Upload key
+  "35:01:A7:F8:4A:DB:96:7A:00:53:41:89:8F:94:E6:59:95:9D:18:5B:A7:EA:A7:AF:E0:D6:7B:22:90:E5:BA:B1",
+];
 
 type AssetLink = {
   relation: string[];
