@@ -1,8 +1,5 @@
 package app.pochical.kit
 
-import java.net.URI
-import java.net.URISyntaxException
-
 // A chat message's words as spec/chat.md has them: its links, and the members it mentions
 // (spec/vectors/chat-text.json), as iOS's ChatText.swift and the prototype's chat-text.ts cut them.
 // Ids and the characters a URL is written in are ASCII, so every platform cuts a message alike.
@@ -58,23 +55,3 @@ fun mentions(text: String): List<String> = textParts(text).mapNotNull { it.menti
 /** The message as words alone, each mention as @ and the member's name: for コピー, the chat list, a quote. */
 fun plainText(text: String, nameOf: (String) -> String): String =
   textParts(text).joinToString("") { part -> part.mention?.let { "@${nameOf(it)}" } ?: part.text }
-
-/** The link a message's preview is for: its first. */
-fun firstLink(text: String): String? = textParts(text).firstNotNullOfOrNull { it.url }
-
-/** Whether new words keep the line's page: while their first link is the line's (spec/vectors/chat.json, edited). */
-fun keepsPreview(text: String, editedTo: String): Boolean = firstLink(text) == firstLink(editedTo)
-
-/** The link a page is asked for while writing: the words' first, unless it is one of Pochical's invitations. */
-fun previewLink(text: String): String? = firstLink(text)?.takeIf { inviteCode(it) == null }
-
-/** A link's host without a leading www., as a page's site is named without its own (spec/vectors/chat-text.json, site). */
-fun site(url: String): String {
-  val host =
-    try {
-      URI(url).host
-    } catch (_: URISyntaxException) {
-      null
-    } ?: return url
-  return host.removePrefix("www.")
-}

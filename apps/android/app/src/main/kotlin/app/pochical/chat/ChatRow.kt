@@ -54,6 +54,7 @@ import app.pochical.kit.LineContent
 import app.pochical.kit.PhotoShelf
 import app.pochical.kit.directThread
 import app.pochical.kit.plainText
+import java.time.LocalDate
 import java.time.ZoneId
 
 /**
@@ -67,18 +68,21 @@ fun ChatList(groupId: String, groupName: String, me: String, onOpen: (threadId: 
   val chats = LocalChats.current
   val values = LocalValues.current
   val colors = LocalThemeColors.current
-  val writers by remember(values, groupId) { values.members(groupId) }.collectAsState(emptyList())
+  // Null until read, so a group is not taken for a group of one meanwhile.
+  val writers by remember(values, groupId) { values.members(groupId) }.collectAsState(null)
   val threads by remember(chats, groupId) { chats.threads(groupId) }.collectAsState(emptySet())
   val blocked by remember(values) { values.blocks() }.collectAsState(emptyList())
+  val today = rememberToday()
   val blockedIds = blocked.map { it.userId }.toSet()
-  val names = writers.associate { it.userId to it.shownName() }
-  val talking = writers.filter { it.userId != me && directThread(me, it.userId) in threads && it.userId !in blockedIds }
-  val present = writers.filter { !it.left }
+  val everyone = writers.orEmpty()
+  val names = everyone.associate { it.userId to it.shownName() }
+  val talking = everyone.filter { it.userId != me && directThread(me, it.userId) in threads && it.userId !in blockedIds }
+  val present = everyone.filter { !it.left }
   val untouched = present.filter { it.userId != me && talking.none { t -> t.userId == it.userId } && it.userId !in blockedIds }
   var starting by rememberSaveable { mutableStateOf(false) }
   Column(modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
     Column(Modifier.clip(RoundedCornerShape(Radius.xxl)).background(colors.fillQuaternary)) {
-      ChatRow(groupId, GROUP_THREAD, me, stringResource(R.string.group_chat), names, blockedIds, onOpen = { onOpen(GROUP_THREAD) }) {
+      ChatRow(groupId, GROUP_THREAD, me, stringResource(R.string.group_chat), names, blockedIds, today, onOpen = { onOpen(GROUP_THREAD) }) {
         Box(Modifier.size(28.dp).background(colors.accentContainer, RoundedCornerShape(Radius.sm)), contentAlignment = Alignment.Center) {
           Icon(painterResource(R.drawable.ic_forum), contentDescription = null, Modifier.size(16.dp), tint = colors.accentDefault)
         }
@@ -86,7 +90,7 @@ fun ChatList(groupId: String, groupName: String, me: String, onOpen: (threadId: 
       for (member in talking) {
         RowRule()
         val thread = directThread(me, member.userId)
-        ChatRow(groupId, thread, me, member.shownName(), names, blockedIds, onOpen = { onOpen(thread) }) {
+        ChatRow(groupId, thread, me, member.shownName(), names, blockedIds, today, onOpen = { onOpen(thread) }) {
           MemberAvatar(member.shownName(), if (member.deleted) "" else member.photoId, PhotoShelf.Group(groupId), 28.dp)
         }
       }
@@ -101,7 +105,7 @@ fun ChatList(groupId: String, groupName: String, me: String, onOpen: (threadId: 
       }
     }
     // Alone in the group, why there is no one to talk to one to one.
-    if (present.size <= 1) {
+    if (writers != null && present.size <= 1) {
       Text(
         stringResource(R.string.chat_invite_to_talk),
         Modifier.padding(horizontal = 16.dp),
@@ -138,6 +142,7 @@ private fun ChatRow(
   label: String,
   names: Map<String, String>,
   blocked: Set<String>,
+  today: LocalDate,
   onOpen: () -> Unit,
   icon: @Composable () -> Unit,
 ) {
@@ -166,19 +171,17 @@ private fun ChatRow(
       else {
         {
           Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            if (time != null) Text(listedTime(time), style = MaterialTheme.typography.labelSmall, color = colors.textTertiary)
+            if (time != null) Text(listedTime(time, today), style = MaterialTheme.typography.labelSmall, color = colors.textTertiary)
             if (summary.unread > 0) {
               Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                 if (summary.mentioned) {
                   val said = stringResource(R.string.chat_mentioned)
-                  Text(
-                    "@",
+                  Box(
                     Modifier.size(18.dp).background(colors.accentFill, CircleShape).semantics { contentDescription = said },
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = colors.accentOnFill,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                  )
+                    contentAlignment = Alignment.Center,
+                  ) {
+                    Text("@", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = colors.accentOnFill)
+                  }
                 }
                 Badge { Text("${summary.unread}") }
               }
@@ -226,6 +229,7 @@ private fun RowWords(summary: ChatSummary, me: String, names: Map<String, String
               is LineContent.Notice -> noticeWords(content.notice, nameOf(last.authorId), nameOf(content.notice.subjectId))
               LineContent.Unsent ->
                 if (last.authorId == me) stringResource(R.string.chat_unsent_mine) else stringResource(R.string.chat_unsent, nameOf(last.authorId))
+              // Never the latest line: not the reader's to see (`lastLine`).
               LineContent.Hidden -> stringResource(R.string.chat_none)
               else ->
                 when {
@@ -257,8 +261,7 @@ private fun listWords(content: LineContent, nameOf: (String) -> String): String 
 
 /** A chat's time in the list: 9:41 today, 昨日, else 10/5 (2025/10/5 in another year). */
 @Composable
-private fun listedTime(ms: Long): String {
-  val today = rememberToday()
+private fun listedTime(ms: Long, today: LocalDate): String {
   val day = dayOf(ms, ZoneId.systemDefault())
   return when (day) {
     today -> clock(ms)

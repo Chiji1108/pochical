@@ -106,6 +106,10 @@ internal interface ChatDao {
   @Query("SELECT * FROM unreadCounts WHERE groupId = :groupId AND threadId = :threadId")
   suspend fun unreadCount(groupId: String, threadId: String): UnreadCountRow?
 
+  /** The group's chats with unread lines, as the user's socket counted them. */
+  @Query("SELECT threadId FROM unreadCounts WHERE groupId = :groupId AND count > 0")
+  suspend fun unreadThreads(groupId: String): List<String>
+
   @Query("DELETE FROM unreadCounts WHERE groupId = :groupId") suspend fun deleteUnreadCounts(groupId: String)
 
   @Query("DELETE FROM unreadCounts") suspend fun deleteAllUnreadCounts()

@@ -48,13 +48,13 @@ class Chats internal constructor(
     }
 
   /**
-   * The group's chats that have a line, one of the member's own on its way, or a draft: the
-   * one-to-one chats its list shows beside its own.
+   * The group's chats that have a line, unread lines counted before their lines come, one of the
+   * member's own on its way, or a draft: the one-to-one chats its list shows beside its own.
    */
   fun threads(groupId: String): Flow<Set<String>> =
-    observe("chatLines", "chatOutbox", "chatDrafts") {
+    observe("chatLines", "unreadCounts", "chatOutbox", "chatDrafts") {
       val sending = chatOutbox(groupId).map { it.chatEdit }.filter { it.kindCase == ChatEdit.KindCase.SEND }.map { it.send.threadId }
-      Timed(lineThreads(groupId).toSet() + sending + draftThreads(groupId), null)
+      Timed(lineThreads(groupId).toSet() + unreadThreads(groupId) + sending + draftThreads(groupId), null)
     }
 
   /**

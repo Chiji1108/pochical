@@ -3,15 +3,14 @@ package app.pochical.kit
 import kotlinx.serialization.Serializable
 import org.junit.Test
 
-// A message's links and mentions (spec/vectors/chat-text.json); inviteCode is checked with the
-// groups' links (GroupsVectorsTest).
+// A message's links, mentions and Pochical's invitation links (spec/vectors/chat-text.json).
 
 @Serializable
-private data class MessageTextVectors(
+private data class ChatTextVectors(
   val textParts: List<Parts>,
   val mentions: List<Mentions>,
   val plainText: List<Plain>,
-  val site: List<Site>,
+  val inviteCode: List<InviteCode>,
 ) {
   @Serializable data class Part(val text: String, val url: String? = null, val mention: String? = null)
 
@@ -30,14 +29,14 @@ private data class MessageTextVectors(
   }
 
   @Serializable
-  data class Site(val url: String, val expected: String) : VectorCase {
+  data class InviteCode(val url: String, val expected: String?) : VectorCase {
     override val name
       get() = url
   }
 }
 
 class ChatTextTest {
-  private val text = vectors<MessageTextVectors>("chat-text")
+  private val text = vectors<ChatTextVectors>("chat-text")
 
   @Test
   fun textParts() =
@@ -47,5 +46,5 @@ class ChatTextTest {
 
   @Test fun plainText() = text.plainText.checkEach({ it.expected }) { case -> plainText(case.text) { case.names[it].orEmpty() } }
 
-  @Test fun site() = text.site.checkEach({ it.expected }) { site(it.url) }
+  @Test fun inviteCode() = text.inviteCode.checkEach({ it.expected }) { inviteCode(it.url) }
 }
