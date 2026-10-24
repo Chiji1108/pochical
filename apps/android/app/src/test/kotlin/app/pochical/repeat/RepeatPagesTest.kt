@@ -22,6 +22,7 @@ import app.pochical.RootNavigator
 import app.pochical.RootPage
 import app.pochical.RootTab
 import app.pochical.Tabs
+import app.pochical.awaitRoutes
 import app.pochical.calendar.LocalOwnDays
 import app.pochical.calendar.TestDays
 import app.pochical.calendar.markedPattern
@@ -83,7 +84,7 @@ class RepeatPagesTest {
     val start = nextMonthStart()
     val orders = test.awaitCalendar { it.orders.size == 2 }.orders
     assertEquals(listOf("day", "off") to start, orders.last().sequence to orders.last().start)
-    assertEquals(listOf(Tabs, RootPage.Repeat), navigator.routes)
+    compose.awaitRoutes(navigator, Tabs, RootPage.Repeat)
   }
 
   /** The order's holidays on as 休み, which then stops counting as off, leaving none that does. */
@@ -111,7 +112,7 @@ class RepeatPagesTest {
     compose.onNodeWithText("完了").performClick()
     compose.onNodeWithText("入れ直す").performClick()
     compose.waitForIdle()
-    assertEquals(listOf(Tabs, RootPage.Repeat), navigator.routes)
+    compose.awaitRoutes(navigator, Tabs, RootPage.Repeat)
     // Written again, the period now names its anchor.
     assertEquals(listOf(true to "off"), test.awaitCalendar { it.orders.single().anchor != null }.orders.map { it.holidaysOff to it.holidayShift })
   }
@@ -142,6 +143,6 @@ class RepeatPagesTest {
     // 日勤 is still on the days before the switch, so it stays, archived; the person's 休み, on no day before, gives way.
     assertEquals(listOf("duty" to false, "offDuty" to false, "off" to false, "day" to true), calendar.patterns.map { it.id to it.archived })
     assertEquals(listOf("duty", "offDuty", "off") to nextMonthStart(), calendar.orders.last().sequence to calendar.orders.last().start)
-    assertEquals(listOf(Tabs, RootPage.Patterns), navigator.routes)
+    compose.awaitRoutes(navigator, Tabs, RootPage.Patterns)
   }
 }
