@@ -40,7 +40,60 @@ struct MonthVectors: Decodable, Sendable {
     let expected: Expected
   }
 
+  struct Summary: VectorCase {
+    struct OwnPattern: Decodable, Sendable {
+      let id: String
+      let countsAsOff: Bool
+      var archived = false
+
+      enum CodingKeys: CodingKey {
+        case id, countsAsOff, archived
+      }
+
+      init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        countsAsOff = try container.decode(Bool.self, forKey: .countsAsOff)
+        archived = try container.decodeIfPresent(Bool.self, forKey: .archived) ?? false
+      }
+    }
+
+    struct Count: Decodable, Sendable, Equatable {
+      let id: String
+      let days: Int
+    }
+
+    struct Expected: Decodable, Sendable {
+      let daysOff: Int
+      let counts: [Count]
+      let unfilled: Int
+    }
+
+    let name: String
+    let first: String
+    let last: String
+    let patterns: [OwnPattern]
+    let shown: [String: String]
+    let expected: Expected
+  }
+
   let weeks: [Case]
+  let summary: [Summary]
+}
+
+@Test(arguments: try vectors("month", as: MonthVectors.self).summary)
+func countsAPagesDaysOffAndEachPattern(_ vector: MonthVectors.Summary) throws {
+  let page = Period(first: try #require(Day(vector.first)), last: try #require(Day(vector.last)))
+  let patterns = vector.patterns.map {
+    Pattern(
+      id: $0.id, name: $0.id, emoji: "⭐️", symbol: $0.id, icon: "star", color: 0,
+      countsAsOff: $0.countsAsOff, archived: $0.archived)
+  }
+  let shown = Dictionary(uniqueKeysWithValues: try vector.shown.map { (try #require(Day($0.key)), $0.value) })
+  let summary = PageSummary(page: page, shown: shown, patterns: patterns)
+  #expect(summary.daysOff == vector.expected.daysOff)
+  #expect(summary.counts.map { MonthVectors.Summary.Count(id: $0.pattern, days: $0.days) } == vector.expected.counts)
+  #expect(summary.unfilled == vector.expected.unfilled)
 }
 
 @Test(arguments: try vectors("month", as: MonthVectors.self).weeks)

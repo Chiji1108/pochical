@@ -1,11 +1,12 @@
 package app.pochical
 
 import android.app.Application
-import androidx.datastore.core.DataStore
 import androidx.datastore.dataStoreFile
 import app.pochical.calendar.OwnDays
 import app.pochical.calendar.SyncedDays
 import app.pochical.kit.PochicalKit
+import app.pochical.kit.SyncedSettings
+import app.pochical.kit.deviceSettingsStore
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.DependencyGraph
 import dev.zacsweers.metro.Provides
@@ -20,10 +21,16 @@ import kotlinx.coroutines.SupervisorJob
 /** What the app holds once for as long as it runs, the activities it makes among them. */
 @DependencyGraph(AppScope::class)
 interface AppGraph : MetroAppComponentProviders {
+  /** The device settings, the preferences among them kept with the account. */
   @Provides
   @SingleIn(AppScope::class)
-  fun deviceSettings(application: Application): DataStore<DeviceSettings> =
-    deviceSettingsStore(application.dataStoreFile("device-settings.json"))
+  fun settings(application: Application, kit: PochicalKit): SyncedSettings =
+    SyncedSettings(
+      deviceSettingsStore(application.dataStoreFile("device-settings.json")),
+      kit.database,
+      kit.edits,
+      CoroutineScope(SupervisorJob() + Dispatchers.Default),
+    )
 
   @Provides
   @SingleIn(AppScope::class)

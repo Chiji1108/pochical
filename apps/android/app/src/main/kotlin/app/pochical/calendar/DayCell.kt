@@ -31,10 +31,13 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.pochical.LocalDeviceSettings
 import app.pochical.LocalThemeColors
-import app.pochical.MarkStyle
 import app.pochical.R
 import app.pochical.ShiftMark
 import app.pochical.design.Radius
+import app.pochical.kit.Look
+import app.pochical.kit.MarkStyle
+import app.pochical.kit.OffLook
+import app.pochical.kit.dayName
 import app.pochical.mark
 import java.time.LocalDate
 
@@ -44,6 +47,8 @@ val DAY_FULL_HEIGHT = 64.dp
 private val CELL_PADDING = 4.dp
 private val DATE_SIZE = 11.dp
 private val DATE_LINE = 14.dp
+private val NAME_SIZE = 9.dp
+private val NAME_LINE = 12.dp
 
 /** How faint a day 完了's question would fill, or an order comes round on, shows its mark. */
 private const val PREVIEW_ALPHA = 0.4f
@@ -68,11 +73,24 @@ data class DayLook(
   val preview: Pattern? = null,
   /** Its shift drawn faint, as an order being typed comes round past the days typed. */
   val faint: Boolean = false,
+  /** How a day off the look leaves blank (休みの見せ方 空白) shows here. */
+  val offShown: OffShown = OffShown.Hidden,
 )
 
 /**
+ * How the days off the look leaves blank (休みの見せ方 空白) show where they are drawn: left out on
+ * the month, or faint while entering and in a day's week, where they are what is being looked at.
+ */
+enum class OffShown {
+  Hidden,
+  Faint,
+}
+
+/**
  * A day of a month's page, as iOS's DayCell: its date, a memo's highlighter
- * stroke under it, and its shift's mark; today framed inside the day.
+ * stroke under it, and its shift's mark drawn in [style], with its name under
+ * it when the style says so; a day off on a tint of its color, as a mark
+ * alone, or blank, as 休みの見せ方 has it; today framed inside the day.
  */
 @Composable
 fun DayCell(
@@ -82,15 +100,16 @@ fun DayCell(
   onClick: () -> Unit,
   modifier: Modifier = Modifier,
   enabled: Boolean = true,
+  style: Look = LocalDeviceSettings.current.device.look,
 ) {
   val colors = LocalThemeColors.current
-  val style = LocalDeviceSettings.current.device.look
   val pattern = look.pattern
-  // A day off on a tint of its color, as 休みの見せ方 starts for icons
-  // (強調); emoji and letters start with the mark alone (印だけ).
-  val tile = pattern?.takeIf { it.countsAsOff && style.style == MarkStyle.Icon && !look.faint }?.let {
+  val offLook = pattern?.takeIf { it.countsAsOff }?.let { style.options.offLook(it.id) }
+  val blank = offLook == OffLook.Blank
+  val tile = pattern?.takeIf { offLook == OffLook.Highlight && !look.faint }?.let {
     colors.mark(if (style.colored) it.color else 0)
   }
+  val names = style.options.names
   val shape = RoundedCornerShape(Radius.md)
   // The date keeps its size whatever the reader's text size, as iOS's does,
   // so six weeks always fit; its line is centered rather than sitting on the
@@ -100,6 +119,14 @@ fun DayCell(
       TextStyle(
         fontSize = DATE_SIZE.toSp(),
         lineHeight = DATE_LINE.toSp(),
+        lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.Both),
+      )
+    }
+  val nameStyle =
+    with(LocalDensity.current) {
+      TextStyle(
+        fontSize = NAME_SIZE.toSp(),
+        lineHeight = NAME_LINE.toSp(),
         lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.Both),
       )
     }
@@ -156,17 +183,32 @@ fun DayCell(
         modifier = Modifier.padding(horizontal = 3.dp),
       )
     }
-    val mark = pattern ?: look.preview
+    // A preview shows whatever the look: it is what would be filled.
+    val mark = pattern?.takeIf { !(blank && look.offShown == OffShown.Hidden) } ?: look.preview
     if (mark != null) {
-      Box(Modifier.weight(1f).alpha(if (pattern == null || look.faint) PREVIEW_ALPHA else 1f), contentAlignment = Alignment.Center) {
+      val faint = pattern == null || look.faint || blank
+      // Letters stand on a tile a little larger; a name under the mark takes some of the room.
+      val full = if (style.style == MarkStyle.Badge) (if (names) 22.dp else 26.dp) else if (names) 21.dp else 24.dp
+      Box(Modifier.weight(1f).alpha(if (faint) PREVIEW_ALPHA else 1f), contentAlignment = if (names) Alignment.BottomCenter else Alignment.Center) {
         ShiftMark(
           mark.icon,
           mark.emoji,
           mark.symbol,
           mark.color,
           // As large as iOS's where the day has room, smaller on a short screen's shorter days.
-          size = minOf(if (style.style == MarkStyle.Badge) 26.dp else 24.dp, height - CELL_PADDING * 2 - DATE_LINE - 2.dp),
+          size = minOf(full, height - CELL_PADDING * 2 - DATE_LINE - 2.dp - if (names) NAME_LINE + 2.dp else 0.dp),
           change = look.entry?.let { timeChange(it.start, it.end, mark.time) },
+          look = style,
+        )
+      }
+      if (names) {
+        Text(
+          dayName(mark.name),
+          Modifier.height(NAME_LINE).alpha(if (faint) PREVIEW_ALPHA else 1f),
+          style = nameStyle,
+          color = colors.textSecondary,
+          maxLines = 1,
+          softWrap = false,
         )
       }
     } else {

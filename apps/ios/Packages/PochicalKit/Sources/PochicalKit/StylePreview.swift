@@ -13,12 +13,17 @@ public func stylePreviewDays(_ days: [Day], patterns: [Pattern]) -> [Day: DayEnt
   return shown
 }
 
-/// Each working pattern with what follows it, like 明け after 夜勤, and a
-/// day off after every second one and after those followed.
+/// Each working pattern with what follows it, like 明け after 夜勤, and the
+/// first day off no pattern follows with after every second one and after
+/// those followed.
 func sampleSequence(of patterns: [Pattern]) -> [PatternID] {
   let ids = Set(patterns.map(\.id))
   let followers = Set(patterns.compactMap(\.nextDay))
-  let off = patterns.first(where: \.countsAsOff)?.id
+  // A day off another follows with, like 明け set to count as off, comes
+  // with it already.
+  let off =
+    (patterns.first { $0.countsAsOff && !followers.contains($0.id) }
+    ?? patterns.first(where: \.countsAsOff))?.id
   let working = patterns.filter { !$0.countsAsOff && !followers.contains($0.id) }
   var sequence: [PatternID] = []
   for (index, pattern) in working.enumerated() {

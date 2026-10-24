@@ -27,6 +27,7 @@ import type { Schedule } from "../lib/design-days";
 import {
   isDayOff,
   OwnPatternsContext,
+  patternsInUse,
   presetPatterns,
 } from "../lib/design-patterns";
 import type { Pattern, Shift } from "../lib/design-patterns";
@@ -66,23 +67,35 @@ export function stylePreviewOf(
   from: Date = designToday
 ): StylePreviewData {
   const dates = [...weekDates(from), ...weekDates(addDays(from, weekLength))];
+  const sequence = sampleSequence(patternsInUse(patterns));
   return {
     dates,
-    schedule: repeatSchedule(
-      sampleSequence(patterns),
-      dates[0],
-      dates[0],
-      dates.at(-1) ?? dates[0]
-    ),
+    schedule:
+      sequence.length === 0
+        ? {}
+        : repeatSchedule(
+            sequence,
+            dates[0],
+            dates[0],
+            dates.at(-1) ?? dates[0]
+          ),
   };
 }
 
-// Each working pattern with what follows it, like 明け after 夜勤, and a day
-// off after every second one.
-function sampleSequence(patterns: readonly Pattern[]): Shift[] {
+// How many shifts the テーマ and color samples show in a row.
+const WEEK_SAMPLE = 4;
+
+// Each working pattern with what follows it, like 明け after 夜勤, and the
+// first day off no pattern follows with after every second one and after
+// those followed, ending on that day off (spec/vectors/style-preview.json).
+export function sampleSequence(patterns: readonly Pattern[]): Shift[] {
   const ids = new Set(patterns.map((pattern) => pattern.id));
   const followers = new Set(patterns.map((pattern) => pattern.nextDay));
-  const off = holidayShiftOf(patterns) ?? presetPatterns.off.id;
+  // A day off another follows with, like 明け set to count as off, comes
+  // with it already.
+  const off =
+    patterns.find((pattern) => isDayOff(pattern) && !followers.has(pattern.id))
+      ?.id ?? holidayShiftOf(patterns);
   const working = patterns.filter(
     (pattern) => !(isDayOff(pattern) || followers.has(pattern.id))
   );
@@ -90,18 +103,23 @@ function sampleSequence(patterns: readonly Pattern[]): Shift[] {
   for (const [index, pattern] of working.entries()) {
     sequence.push(pattern.id);
     const next = pattern.nextDay;
-    if (next && ids.has(next)) {
+    if (next !== undefined && ids.has(next)) {
       sequence.push(next);
     }
-    if (index % 2 === 1 || next) {
+    if (off !== undefined && (index % 2 === 1 || next !== undefined)) {
       sequence.push(off);
     }
   }
-  return sequence.at(-1) === off ? sequence : [...sequence, off];
+  return off === undefined || sequence.at(-1) === off
+    ? sequence
+    : [...sequence, off];
 }
 
-// How many shifts the テーマ and color samples show in a row.
-const WEEK_SAMPLE = 4;
+// The marks the テーマ and シフトの色 choices show side by side: the run's
+// patterns each once, the first four.
+export function styleSamplesOf(patterns: readonly Pattern[]): Shift[] {
+  return [...new Set(sampleSequence(patterns))].slice(0, WEEK_SAMPLE);
+}
 
 // The marks beside each choice on the style pages are the person's own,
 // as is the preview over them: a choice shows how their calendar would
@@ -115,7 +133,7 @@ export function useOwnSamples() {
     patterns.find((pattern) => isDayOff(pattern)) ?? presetPatterns.off;
   return {
     off: off.id,
-    week: [...new Set(sampleSequence(patterns))].slice(0, WEEK_SAMPLE),
+    week: styleSamplesOf(patternsInUse(patterns)),
     work,
   };
 }

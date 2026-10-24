@@ -246,18 +246,20 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
   suspend fun orderCoworkers(ids: List<String>) = database.write { orderCoworkers(ids) }
 
   /**
-   * Sets one of the preferences kept with the account to [message], its key's message encoded
-   * (proto/pochical/v1/preferences.proto), or clears it.
+   * Sets preferences kept with the account, each its key's message encoded
+   * (proto/pochical/v1/preferences.proto), in one write, so no reader sees some set and not others.
    */
-  suspend fun setPreference(key: String, message: ByteArray?) = database.write {
-    val clock = nextClock(now())
-    edit(change {
-      preference = preferenceValue {
-        this.key = key
-        if (message != null) this.message = ByteString.copyFrom(message)
-        hlc = clock
-      }
-    })
+  suspend fun setPreferences(messages: Map<String, ByteArray>) = database.write {
+    for ((key, message) in messages.toSortedMap()) {
+      val clock = nextClock(now())
+      edit(change {
+        preference = preferenceValue {
+          this.key = key
+          this.message = ByteString.copyFrom(message)
+          hlc = clock
+        }
+      })
+    }
   }
 
   private suspend fun SyncDao.edit(change: Change, clearFrom: String? = null) = edit(change, newId(), clearFrom)
