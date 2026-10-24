@@ -5,14 +5,16 @@ import SwiftUI
 /// (spec/sync-protocol.md, Reconnecting): signed out or deleted on another
 /// device or by request, or the server set wrong for a while. Nothing more
 /// syncs, and nothing on the device is cleared but by the person:
-/// もう一度つなぐ tries the session again, and はじめから使う, asked first,
+/// もう一度つなぐ asks the server about the session again, the app coming
+/// back only if it knows it, and はじめから使う, asked first,
 /// erases what the device holds and starts as a new install does, where
 /// signing in with Apple or Google again brings back an account's data.
 struct SessionEndedScreen: View {
   @Environment(\.themeColors) private var colors
-  let tryAgain: () -> Void
+  let tryAgain: () async -> Void
   let startAfresh: () -> Void
   @State private var confirming = false
+  @State private var trying = false
 
   var body: some View {
     VStack(spacing: 16) {
@@ -35,8 +37,22 @@ struct SessionEndedScreen: View {
       .buttonBorderShape(.capsule)
       .tint(colors.accentFill)
       .foregroundStyle(colors.accentOnFill)
-      Button("もう一度つなぐ", action: tryAgain)
-        .font(.subheadline)
+      Button {
+        trying = true
+        Task {
+          await tryAgain()
+          trying = false
+        }
+      } label: {
+        // The label keeps its size under the spinner, so nothing moves.
+        Text("もう一度つなぐ")
+          .opacity(trying ? 0 : 1)
+          .overlay {
+            if trying { ProgressView() }
+          }
+      }
+      .font(.subheadline)
+      .disabled(trying)
     }
     .multilineTextAlignment(.center)
     .padding(.horizontal, 20)

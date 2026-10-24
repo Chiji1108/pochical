@@ -45,8 +45,7 @@ fun repeatSchedule(
   holidayCountry: String,
 ): Map<LocalDate, String> {
   if (sequence.isEmpty()) return emptyMap()
-  return generateSequence(from) { it.plusDays(1) }
-    .takeWhile { it <= through }
+  return daysFrom(from, through)
     .associateWith { day ->
       if (holidayShift != null && Holidays.nameOf(day.toString(), holidayCountry) != null) {
         holidayShift
