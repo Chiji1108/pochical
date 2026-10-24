@@ -52,11 +52,15 @@ import app.pochical.design.ThemeColors
 import app.pochical.kit.DeviceSettings
 import app.pochical.kit.OffLook
 import app.pochical.kit.dayName
-import app.pochical.kit.ownCalendar
 import app.pochical.mark
 import java.time.LocalDate
 import java.time.YearMonth
 import kotlinx.coroutines.flow.first
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.glance.LocalSize
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.runtime.collectAsState
 
 // The pieces every kind of widget draws days with (iOS's WidgetParts.swift; /design's
 // design-widgets.tsx): the colors, a day's mark or dash and its name, a day off's look, the memo's
@@ -144,8 +148,8 @@ fun open(context: Context, link: String): Action =
 @Composable
 fun GlanceModifier.opening(link: String): GlanceModifier = clickable(open(LocalContext.current, link))
 
-/** The modifier that reads a whole day aloud as one. */
-fun GlanceModifier.spoken(day: WidgetDay, english: Boolean): GlanceModifier = semantics { contentDescription = day.spoken(english) }
+/** The modifier that reads a whole day aloud as one, in [words]' language. */
+fun GlanceModifier.spoken(day: WidgetDay, words: WidgetWords): GlanceModifier = semantics { contentDescription = words.spoken(day) }
 
 /**
  * Every kind of widget: the person's own days, read from the kit's database when the widget is
@@ -155,17 +159,26 @@ abstract class PochicalWidget : GlanceAppWidget() {
   override val sizeMode: SizeMode = SizeMode.Exact
 
   override suspend fun provideGlance(context: Context, id: GlanceId) {
-    val drawn = read(context, id)
-    MidnightWorker.schedule(context)
+    val sources = (context.applicationContext as PochicalApplication).widgetSources
+    val country = holidayCountry()
+    // What is there now, so the first drawing is whole; then again as it changes, while the
+    // session runs.
+    val calendar = sources.calendar.first()
+    val settings = sources.settings.first()
+    WidgetDayReceiver.schedule(context)
     provideContent {
+      val shownCalendar by sources.calendar.collectAsState(calendar)
+      val shownSettings by sources.settings.collectAsState(settings)
+      val today by sources.today.collectAsState(LocalDate.now())
+      val drawn =
+        remember(shownCalendar, shownSettings, today) {
+          Drawn(shownCalendar.widgetEntry(today, shownSettings.week, { it.holidayName(country) != null }), shownSettings)
+        }
       GlanceTheme {
         Box(GlanceModifier.fillMaxSize().background(drawn.colors.ground).padding(WIDGET_MARGIN)) { Content(drawn) }
       }
     }
   }
-
-  /** What this widget is drawn from now. */
-  protected open suspend fun read(context: Context, id: GlanceId): Drawn = readOwn(context)
 
   @Composable protected abstract fun Content(drawn: Drawn)
 }
@@ -173,14 +186,9 @@ abstract class PochicalWidget : GlanceAppWidget() {
 /** The room Material keeps between a widget's edge and what is in it. */
 val WIDGET_MARGIN = 16.dp
 
-/** The person's own entry for today, and the settings, as the database and the device keep them. */
-suspend fun readOwn(context: Context, today: LocalDate = LocalDate.now()): Drawn {
-  val sources = (context.applicationContext as PochicalApplication).widgetSources
-  val settings = sources.settings.settings.first()
-  val calendar = sources.kit.database.values().ownCalendar().first()
-  val country = holidayCountry()
-  return Drawn(calendar.widgetEntry(today, settings.week, { it.holidayName(country) != null }), settings)
-}
+/** The room inside a widget, its size less the margins round it. */
+val innerSize: DpSize
+  @Composable get() = LocalSize.current.let { DpSize(it.width - WIDGET_MARGIN * 2, it.height - WIDGET_MARGIN * 2) }
 
 /** How a day off shows, following 休みの見せ方 for its pattern as the calendar does. */
 class OffDrawing(day: WidgetDay, drawn: Drawn, inWeek: Boolean) {
@@ -199,8 +207,14 @@ class OffDrawing(day: WidgetDay, drawn: Drawn, inWeek: Boolean) {
   }
 }
 
-/** A day off's tile color: its pattern's tint, the テーマ's in ワントーン. */
-fun Drawn.tileColor(day: WidgetDay): ColorProvider = colors.markTint(if (look.colored) day.pattern?.color ?: 0 else 0)
+/** A day's slot in the テーマ's shift colors: its pattern's, the テーマ's own in ワントーン. */
+fun Drawn.slot(day: WidgetDay): Int = if (look.colored) day.pattern?.color ?: 0 else 0
+
+/** A day off's tile color: its pattern's tint. */
+fun Drawn.tileColor(day: WidgetDay): ColorProvider = colors.markTint(slot(day))
+
+/** A memo's stroke under a day's date, on its tile when it is on one. */
+fun Drawn.strokeColor(day: WidgetDay, onTile: Boolean): ColorProvider = if (onTile) colors.noteOnTint(slot(day)) else colors.noteMarker
 
 /**
  * A day's mark, or a quiet dash where nothing is entered; with names on, the name small under it,
@@ -287,15 +301,16 @@ class WidgetWords(val english: Boolean) {
       else -> if (count == 0) "今日" else if (count == 1) "明日" else "${count}日後"
     }
 
+  /** The whole day read aloud: its date, the shift and its hours, and a memo. */
+  fun spoken(day: WidgetDay): String {
+    val shift = day.pattern?.name ?: if (english) "No shift" else "予定なし"
+    val memo = if (day.noted) (if (english) "memo" else "メモあり") else null
+    return listOfNotNull(date(day.date), shift, day.time, memo).joinToString(if (english) ", " else "、")
+  }
+
   val tomorrow = if (english) "Tomorrow" else "明日"
   val nothingYet = if (english) "Nothing yet" else "まだ入っていません"
   val firstRun = if (english) "Shifts you enter\nshow here" else "シフトを入れると\nここに出ます"
-}
-
-/** The whole day read aloud: its date, the shift and its hours, in the language its date is shown in. */
-fun WidgetDay.spoken(english: Boolean): String {
-  val parts = listOfNotNull(WidgetWords(english).date(date), pattern?.name ?: "予定なし", time, if (noted) (if (english) "memo" else "メモあり") else null)
-  return parts.joinToString(if (english) ", " else "、")
 }
 
 /** The words a day says under its mark: what changed, 予定なし where nothing is entered, else nothing. */

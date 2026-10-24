@@ -140,13 +140,13 @@ private fun androidx.glance.layout.RowScope.GridDay(
   var cell = GlanceModifier.defaultWeight().fillMaxHeight().padding(1.dp)
   // Today's frame: the accent's, round the day, as the calendar frames it.
   if (isToday) cell = cell.background(colors.accentFrame).cornerRadius(8.dp).padding(1.5.dp)
-  Box(cell.opening(dayLink(day.date)).spoken(day, drawn.english)) {
+  Box(cell.opening(dayLink(day.date)).spoken(day, drawn.words)) {
     var inner = GlanceModifier.fillMaxSize().cornerRadius(8.dp)
     inner = if (off.tile && inMonth) inner.background(drawn.tileColor(day)) else if (isToday) inner.background(colors.ground) else inner
     Column(inner.padding(vertical = 3.dp), horizontalAlignment = Alignment.CenterHorizontally) {
       val faded = !inMonth || gone
       val dateColor = if (isToday) colors.accent else if (day.holiday) colors.holiday else colors.words
-      NoteStroke(day.noted, if (off.tile && inMonth) colors.noteOnTint(if (drawn.look.colored) day.pattern?.color ?: 0 else 0) else colors.noteMarker) {
+      NoteStroke(day.noted, drawn.strokeColor(day, onTile = off.tile && inMonth)) {
         Text(
           day.date.dayOfMonth.toString(),
           style =

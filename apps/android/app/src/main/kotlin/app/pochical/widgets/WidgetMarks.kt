@@ -50,8 +50,11 @@ private const val CORNER_SHARE = 0.32f
 /** The icons' paths read so far, by their path data: the same few icons are drawn at each size. */
 private val paths = HashMap<String, Path>()
 
-/** The pictures drawn so far, by what is in them, for the widgets drawn again and again. */
-private val drawn = LruCache<String, Bitmap>(256)
+/** The pictures drawn so far, by what is in them, for the widgets drawn again and again: 4 MB of them. */
+private val drawn =
+  object : LruCache<String, Bitmap>(4 * 1024 * 1024) {
+    override fun sizeOf(key: String, value: Bitmap) = value.byteCount
+  }
 
 /** What is in the mark's own color, white on clear, [size] across, for the launcher to tint. */
 private fun markPicture(context: Context, pattern: Pattern, look: Look, size: Dp, change: TimeChange?): Bitmap {

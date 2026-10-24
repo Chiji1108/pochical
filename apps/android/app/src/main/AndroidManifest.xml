@@ -128,9 +128,10 @@
         android:name="android.appwidget.provider"
         android:resource="@xml/widget_calendar" />
     </receiver>
-    <!-- The clock set or the time zone changed: the widgets' day and midnight move (WidgetUpdates). -->
+    <!-- Midnight's alarm, the clock set or the time zone changed: the widgets' day turns
+         (WidgetUpdates). -->
     <receiver
-      android:name=".widgets.WidgetClockReceiver"
+      android:name=".widgets.WidgetDayReceiver"
       android:exported="false">
       <intent-filter>
         <action android:name="android.intent.action.TIME_SET" />

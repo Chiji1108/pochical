@@ -7,6 +7,7 @@ import app.pochical.calendar.SyncedDays
 import app.pochical.kit.PochicalKit
 import app.pochical.kit.SyncedSettings
 import app.pochical.kit.deviceSettingsStore
+import app.pochical.widgets.WidgetSources
 import app.pochical.widgets.followForWidgets
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.DependencyGraph
@@ -64,8 +65,7 @@ class PochicalApplication : Application(), MetroApplication, PochicalKit.Holder 
     get() = graph.kit
 
   /** What the widgets draw from: the kit's database and the settings. */
-  val widgetSources: AppGraph
-    get() = graph
+  val widgetSources by lazy { WidgetSources(graph.kit.database, graph.settings) }
 
   override fun onCreate() {
     super.onCreate()

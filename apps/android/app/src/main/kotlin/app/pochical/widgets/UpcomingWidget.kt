@@ -62,7 +62,7 @@ private fun UpcomingSmall(drawn: Drawn) {
     Spacer(GlanceModifier.height(8.dp))
     Row(GlanceModifier.fillMaxWidth()) {
       for (day in entry.upcoming.subList(1, 4)) {
-        Column(GlanceModifier.defaultWeight().spoken(day, drawn.english), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(GlanceModifier.defaultWeight().spoken(day, drawn.words), horizontalAlignment = Alignment.CenterHorizontally) {
           NoteStroke(day.noted, colors.noteMarker) { Words(weekdayHead(day.date.weekday, drawn.english), colors.weekday(day.tone), 11.sp) }
           Spacer(GlanceModifier.height(2.dp))
           DayMark(day, drawn, if (drawn.named) 24.dp - NAME_ROOM else 24.dp, named = drawn.named, reserve = true)
@@ -78,7 +78,7 @@ private fun UpcomingHead(day: WidgetDay, drawn: Drawn) {
   val colors = drawn.colors
   val said = day.news
   val size = (if (said != null) 34.dp else 40.dp) - (if (drawn.named) NAME_ROOM else 0.dp)
-  Row(GlanceModifier.spoken(day, drawn.english), verticalAlignment = Alignment.CenterVertically) {
+  Row(GlanceModifier.spoken(day, drawn.words), verticalAlignment = Alignment.CenterVertically) {
     DayMark(day, drawn, size, named = drawn.named, large = true)
     Spacer(GlanceModifier.width(8.dp))
     Column {
@@ -97,7 +97,7 @@ private fun UpcomingHead(day: WidgetDay, drawn: Drawn) {
 private fun DayColumns(drawn: Drawn) {
   val roomy = LocalSize.current.height >= COLUMNS_ROOMY
   // No wider than a column leaves room for, its tile's inset and a little air.
-  val column = LocalSize.current.width / 5 - 14.dp
+  val column = innerSize.width / 5 - 14.dp
   val size = minOf(if (roomy) 44.dp else 36.dp, column) - (if (drawn.named) NAME_ROOM else 0.dp)
   Row(GlanceModifier.fillMaxSize()) {
     drawn.entry.upcoming.take(5).forEachIndexed { index, day -> ColumnDay(day, drawn, first = index == 0, size = size) }
@@ -110,7 +110,7 @@ private fun RowScope.ColumnDay(day: WidgetDay, drawn: Drawn, first: Boolean, siz
   // still read apart.
   val off = OffDrawing(day, drawn, inWeek = false)
   var column = GlanceModifier.defaultWeight().fillMaxHeight().padding(horizontal = 3.dp)
-  column = column.opening(drawn.link(day.date)).spoken(day, drawn.english)
+  column = column.opening(drawn.link(day.date)).spoken(day, drawn.words)
   Box(column) {
     var inner = GlanceModifier.fillMaxSize()
     if (off.tile) inner = inner.background(drawn.tileColor(day)).cornerRadius(8.dp)
@@ -136,8 +136,7 @@ private fun ColumnHead(day: WidgetDay, drawn: Drawn, first: Boolean, onTile: Boo
   val colors = drawn.colors
   Column(GlanceModifier.padding(top = 4.dp, bottom = 2.dp), horizontalAlignment = Alignment.CenterHorizontally) {
     Words(weekdayHead(day.date.weekday, drawn.english), colors.weekday(day.tone), 11.sp)
-    val stroke = if (onTile) colors.noteOnTint(if (drawn.look.colored) day.pattern?.color ?: 0 else 0) else colors.noteMarker
-    NoteStroke(day.noted, stroke) {
+    NoteStroke(day.noted, drawn.strokeColor(day, onTile)) {
       Row(verticalAlignment = Alignment.Bottom) {
         val color = if (day.holiday) colors.holiday else colors.words
         if (first) {
@@ -160,8 +159,8 @@ private fun ColumnLine(words: String?, drawn: Drawn) {
     Words(" ", drawn.colors.secondary, 10.sp)
     return
   }
-  // A column's room, the widget's width shared by five, less its padding.
-  val room = LocalSize.current.width.value / 5 - 6
+  // A column's room, the widget's inside shared by five, less its padding.
+  val room = innerSize.width.value / 5 - 6
   // About how wide a digit or 〜 is at a size, digits half an em and 〜 a whole one.
   fun width(text: String, size: Float) = text.sumOf { if (it.isDigit() || it == ':') 0.55 else 1.0 } * size
   val (text, size) =

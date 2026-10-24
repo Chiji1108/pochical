@@ -114,7 +114,7 @@ private fun NextOffSmall(soonest: NextOff?, drawn: Drawn) {
       else -> {
         val text = soonest?.let { words.inDays(it.inDays) } ?: "–"
         // Glance's text does not shrink by itself: Tomorrow takes a size that fits the widget's width.
-        val room = LocalSize.current.width.value - 2 * WIDGET_MARGIN.value
+        val room = innerSize.width.value
         val size = minOf(36f, room / (text.length * 0.6f).coerceAtLeast(1f))
         Words(text, colors.words, size.sp, bold = true)
       }
