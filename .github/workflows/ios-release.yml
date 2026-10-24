@@ -1,0 +1,71 @@
+# The iOS app's release: each push to main that changes it archives the app
+# with its extensions, signs it for the App Store and uploads it to App
+# Store Connect, from where TestFlight hands it out. The keys live only in
+# the app-store-connect environment, which only main may use (AGENTS.md,
+# How to ship).
+name: iOS release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/ios/**"
+      - ".xcode-version"
+      - ".github/workflows/ios-release.yml"
+  workflow_dispatch:
+
+# Runs queue rather than cancel: a run cut short may already have uploaded.
+concurrency:
+  group: ios-release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: xcode-27
+    timeout-minutes: 40
+    environment: app-store-connect
+    env:
+      # ios:test needs none of mise.toml's tools.
+      MISE_TASK_RUN_AUTO_INSTALL: "false"
+    steps:
+      - uses: actions/checkout@v7
+      - run: sudo xcode-select --switch "/Applications/Xcode_$(cat .xcode-version).app"
+      - uses: jdx/mise-action@v5
+        with:
+          install: false
+      # The commit released passed its own tests, not only its pull request's.
+      - run: mise run ios:test
+      # The archive is signed for development with this one certificate, as
+      # automatic signing does. Left to make its own, Xcode would make a new
+      # certificate on each fresh runner and keep none of their private keys.
+      # Pinned by commit, as it is handed the certificate.
+      - uses: Apple-Actions/import-codesign-certs@77ba2a2a8f5cfc8c405ebf3159f767c323e238f9 # v7.1.0
+        with:
+          p12-file-base64: ${{ secrets.APPLE_DEVELOPMENT_CERTIFICATE_P12_BASE64 }}
+          p12-password: ${{ secrets.APPLE_DEVELOPMENT_CERTIFICATE_PASSWORD }}
+      - env:
+          KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+        run: printf '%s\n' "$KEY" > "$RUNNER_TEMP/AuthKey.p8"
+      # With the API key, Xcode makes the provisioning profiles the app and
+      # its extensions need (the App Group among them). App Store Connect
+      # takes each build number once per version; this workflow's run number
+      # only grows while this file keeps its name. -skipMacroValidation and
+      # -skipPackagePluginValidation: no one is here to trust the packages'
+      # macros and plugins, as Xcode asks once.
+      - env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+        run: >-
+          xcodebuild archive -project apps/ios/Pochical/Pochical.xcodeproj -scheme Pochical -configuration Release -destination generic/platform=iOS -archivePath "$RUNNER_TEMP/Pochical.xcarchive" -skipMacroValidation -skipPackagePluginValidation -allowProvisioningUpdates -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER_ID" CURRENT_PROJECT_VERSION=${{ github.run_number }}
+      # Signs for the App Store with the team's cloud-managed distribution
+      # certificate, which needs an API key with the Admin role, and uploads
+      # (ExportOptions.plist).
+      - env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+        run: >-
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/Pochical.xcarchive" -exportOptionsPlist apps/ios/Pochical/ExportOptions.plist -exportPath "$RUNNER_TEMP/export" -allowProvisioningUpdates -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER_ID"
