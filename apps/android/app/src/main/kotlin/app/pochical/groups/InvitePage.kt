@@ -1,13 +1,10 @@
 package app.pochical.groups
 
 import android.content.ClipData
-import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color
-import android.os.Environment
-import android.provider.MediaStore
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -60,8 +57,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.core.content.FileProvider
 import app.pochical.R
+import app.pochical.savePicture
+import app.pochical.sharePicture
 import app.pochical.design.Metrics
 import app.pochical.design.Radius
 import app.pochical.kit.inviteLink
@@ -69,8 +67,6 @@ import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
-import java.io.File
-import java.util.UUID
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -250,63 +246,12 @@ private fun sendLink(context: Context, link: String) {
   context.startActivity(Intent.createChooser(send, null))
 }
 
-/**
- * Shares the QR code as a picture through Android's share sheet, a file of its own each time in the
- * app's cache, read through its FileProvider; whether the sheet opened.
- */
+/** Shares the QR code as a picture through Android's share sheet; whether the sheet opened. */
 private suspend fun shareQr(context: Context, qr: Bitmap, groupName: String): Boolean =
-  try {
-    val file =
-      withContext(Dispatchers.IO) {
-        val shared = File(context.cacheDir, "shared").apply { mkdirs() }
-        File(shared, "invite-${UUID.randomUUID()}.png").also { file -> file.outputStream().use { qr.compress(Bitmap.CompressFormat.PNG, 100, it) } }
-      }
-    val uri = FileProvider.getUriForFile(context, "${context.packageName}.photos", file)
-    val send =
-      Intent(Intent.ACTION_SEND)
-        .setType("image/png")
-        .putExtra(Intent.EXTRA_STREAM, uri)
-        .putExtra(Intent.EXTRA_TITLE, context.getString(R.string.invite_to, groupName))
-        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    // The grant reaches the sheet, for its preview, and the app picked only through ClipData.
-    send.clipData = ClipData.newRawUri(null, uri)
-    context.startActivity(Intent.createChooser(send, null))
-    true
-  } catch (e: CancellationException) {
-    throw e
-  } catch (_: Exception) {
-    false
-  }
+  sharePicture(context, qr, "invite", context.getString(R.string.invite_to, groupName))
 
-/** Saves the QR code to the phone's pictures (MediaStore, no permission needed); whether it was. */
-private suspend fun saveQr(context: Context, qr: Bitmap): Boolean =
-  try {
-    writeQr(context, qr)
-  } catch (e: CancellationException) {
-    throw e
-  } catch (_: Exception) {
-    false
-  }
-
-private suspend fun writeQr(context: Context, qr: Bitmap): Boolean =
-  withContext(Dispatchers.IO) {
-    val resolver = context.contentResolver
-    val details =
-      ContentValues().apply {
-        put(MediaStore.Images.Media.DISPLAY_NAME, "pochical-invite.png")
-        put(MediaStore.Images.Media.MIME_TYPE, "image/png")
-        put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
-        put(MediaStore.Images.Media.IS_PENDING, 1)
-      }
-    val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, details) ?: return@withContext false
-    val written = resolver.openOutputStream(uri)?.use { qr.compress(Bitmap.CompressFormat.PNG, 100, it) } ?: false
-    if (written) {
-      resolver.update(uri, ContentValues().apply { put(MediaStore.Images.Media.IS_PENDING, 0) }, null, null)
-    } else {
-      resolver.delete(uri, null, null)
-    }
-    written
-  }
+/** Saves the QR code to the phone's pictures; whether it was. */
+private suspend fun saveQr(context: Context, qr: Bitmap): Boolean = savePicture(context, qr, "pochical-invite.png")
 
 /**
  * The link as a QR code, black on white with the white margin of four modules readers expect,

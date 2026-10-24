@@ -2,7 +2,7 @@
 // 全消去): every account as deleting it erases it, every group left, and
 // the photos bucket. Each step may be run again, so a reset cut off part
 // way is finished by running it again. To be removed before release
-// (POC-155).
+// (#801).
 import { count, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
