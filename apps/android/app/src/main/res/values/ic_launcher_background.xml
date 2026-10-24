@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Written by packages/prototype/scripts/android-app-icons.ts (bun run icon:android). -->
+<resources>
+  <color name="ic_launcher_background">#486444</color>
+</resources>

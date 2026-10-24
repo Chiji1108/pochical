@@ -10,17 +10,14 @@ import sharp from "sharp";
 
 import {
   darkTwinOf,
-  darkTwins,
-  DRAWING_SHARE,
   ICON_SIZE,
   iconColorOptions,
-  inkBounds,
   lightDrawing,
   paintedPixels,
 } from "../src/components/design-app-icon";
 import type { IconColors } from "../src/components/design-app-icon";
+import { colorsOf, height, lightness, paint, width } from "./app-icon";
 
-const SOURCE = new URL("../src/assets/poodle.png", import.meta.url).pathname;
 const ASSETS = new URL(
   "../../../apps/ios/Pochical/Pochical/Assets.xcassets/",
   import.meta.url
@@ -29,7 +26,6 @@ const WIDGET_ASSETS = new URL(
   "../../../apps/ios/Pochical/PochicalWidgets/Assets.xcassets/",
   import.meta.url
 ).pathname;
-const CHANNELS = 3;
 const RGBA = 4;
 // Big enough for 設定's two-across grid on a 3x screen.
 const PREVIEW_SIZE = 312;
@@ -43,63 +39,6 @@ const WELCOME_BRIGHTNESS = 1.12;
 const WELCOME_CONTRAST = 1.2;
 // The app's own icon set; the others are named after it.
 const PRIMARY = "moss";
-
-const { data, info } = await sharp(SOURCE)
-  .removeAlpha()
-  .raw()
-  .toBuffer({ resolveWithObject: true });
-const { width, height } = info;
-const lightness = new Uint8Array(width * height);
-for (let index = 0; index < lightness.length; index += 1) {
-  const offset = index * CHANNELS;
-  lightness[index] = Math.round(
-    ((data[offset] ?? 0) + (data[offset + 1] ?? 0) + (data[offset + 2] ?? 0)) /
-      CHANNELS
-  );
-}
-const bounds = inkBounds(lightness, width, height);
-const drawn = Math.max(bounds.right - bounds.left, bounds.bottom - bounds.top);
-// A square around the lines, at the share of the icon they take.
-const crop = Math.round(ICON_SIZE / ((ICON_SIZE * DRAWING_SHARE) / drawn));
-
-const colorsOf = (id: string): IconColors => {
-  const colors = [...iconColorOptions, ...darkTwins].find(
-    (option) => option.id === id
-  );
-  if (!colors) {
-    throw new Error(`No icon colors named ${id}`);
-  }
-  return colors;
-};
-
-// The icon in these colors at `size`, opaque, as iOS asks of app icons.
-const paint = async (colors: IconColors, size: number) => {
-  const painted = Buffer.from(
-    paintedPixels(lightness, width, height, colors).buffer
-  );
-  const [red, green, blue] = [1, 3, 5].map((start) =>
-    Number.parseInt(colors.ground.slice(start, start + 2), 16)
-  );
-  const background = { alpha: 1, b: blue ?? 0, g: green ?? 0, r: red ?? 0 };
-  const padded = await sharp(painted, {
-    raw: { channels: RGBA, height, width },
-  })
-    .extend({ background, bottom: crop, left: crop, right: crop, top: crop })
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-  return await sharp(padded.data, { raw: padded.info })
-    .extract({
-      height: crop,
-      left: Math.round((bounds.left + bounds.right - crop) / 2 + crop),
-      top: Math.round((bounds.top + bounds.bottom - crop) / 2 + crop),
-      width: crop,
-    })
-    .resize(size, size, { kernel: "lanczos3" })
-    .flatten({ background })
-    .removeAlpha()
-    .png({ compressionLevel: 9 })
-    .toBuffer();
-};
 
 const json = (value: unknown) => `${JSON.stringify(value, null, 2)}\n`;
 const author = { author: "xcode", version: 1 };
