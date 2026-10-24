@@ -65,7 +65,7 @@ import {
 // them: by account, under the name the account has there (iOS calls a
 // Google account "Gmail"; Android names it by its address). Read-only ones,
 // like holidays and birthdays, are left out. A Google account's own
-// calendar is named by its address.
+// calendar is named by its address, here one that belongs to nobody.
 const deviceCalendars = [
   { color: "#5b8def", id: "icloud-home", name: "ホーム", source: "iCloud" },
   { color: "#e0894a", id: "icloud-work", name: "仕事", source: "iCloud" },
@@ -73,7 +73,7 @@ const deviceCalendars = [
   {
     color: "#4f9d69",
     id: "google",
-    name: "sakura.sato@gmail.com",
+    name: "sakura.sato@example.com",
     source: "Gmail",
   },
   { color: "#d9534f", id: "google-job", name: "バイト", source: "Gmail" },
