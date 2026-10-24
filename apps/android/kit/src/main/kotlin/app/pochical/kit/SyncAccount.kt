@@ -604,7 +604,9 @@ class SyncAccount(
         current.scope.launch { askLinked(current.credentials, asOf) }
       }
       is Command.Linked -> {
-        val before = state.value as? AccountState.SignedIn ?: return
+        val now = state.value
+        // Heard while a change is asked, it is the user's as they are kept should the change fail.
+        val before = (now as? AccountState.Changing)?.before ?: now as? AccountState.SignedIn ?: return
         if (current?.credentials?.generation != command.generation) return
         // A link made here wins over what the server said of the user before it.
         if (command.asOf == null) links += 1 else if (command.asOf != links) return
@@ -616,7 +618,8 @@ class SyncAccount(
           }
         if (after == before.linked) return
         keepLinked(after)
-        mutableState.value = AccountState.SignedIn(current.credentials.userId, after)
+        val linked = AccountState.SignedIn(current.credentials.userId, after)
+        mutableState.value = if (now is AccountState.Changing) now.copy(before = linked) else linked
       }
       Command.NetworkLost -> current?.clients()?.forEach { it.networkLost() }
       Command.NetworkChanged -> current?.clients()?.forEach { it.networkChanged() }
