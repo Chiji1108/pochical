@@ -117,20 +117,4 @@ class GroupMembersTest {
 
     assertEquals(listOf("sakura", "yuki"), database.values().groupMembers(GROUP, day, day).first().map { it.userId })
   }
-
-  @Test
-  fun aMembersDaysOffAreTheirPatternsThatCountAsOff() = runTest {
-    inGroup(
-      joined("sakura", 1),
-      patternOf("sakura", "off", off = true),
-      patternOf("sakura", "day"),
-      dayOf("sakura", "2026-10-03", DayField.DAY_FIELD_PATTERN, "off"),
-      dayOf("sakura", "2026-10-04", DayField.DAY_FIELD_PATTERN, "day"),
-    )
-    val from = LocalDate.parse("2026-10-03")
-    val through = LocalDate.parse("2026-10-05")
-
-    val member = database.values().groupMembers(GROUP, from, through).first().single()
-    assertEquals(mapOf(from to true, from.plusDays(1) to false), member.offDays(from, through))
-  }
 }

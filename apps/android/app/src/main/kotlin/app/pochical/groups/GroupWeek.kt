@@ -35,7 +35,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -118,8 +117,9 @@ fun GroupWeek(
   val colors = LocalThemeColors.current
   val week = LocalDeviceSettings.current.device.week
   val country = holidayCountry()
-  val shifts = members.map { it.shifts(days.first(), days.last()) }
-  val together = members.together(days.first(), days.last()).days.toSet()
+  val groupDays = rememberGroupDays(members, days.first(), days.last())
+  val shifts = groupDays.shifts
+  val together = groupDays.together.days.toSet()
   val dateHeight = if (compact) 24.dp else 26.dp
   val rowHeight = if (compact) 26.dp else 30.dp
   val meId = rememberMeId()
@@ -132,7 +132,7 @@ fun GroupWeek(
         Box(
           Modifier.height(rowHeight)
             .then(if (onFace != null) Modifier.clickable(role = Role.Button) { onFace(member) } else Modifier)
-            .semantics { contentDescription = member.name },
+            .clearAndSetSemantics { contentDescription = member.name },
           contentAlignment = Alignment.Center,
         ) {
           MemberAvatar(member.name, member.photoId, PhotoShelf.Group(groupId), if (compact) 20.dp else 24.dp, me = member.userId == meId)
@@ -153,7 +153,7 @@ fun GroupWeek(
                   members.forEachIndexed { index, member -> add("${member.name}：${shifts[index][day]?.pattern?.name ?: unentered}") }
                 }
                 .joinToString("、")
-            selected = day == picked
+            if (onPick != null) selected = day == picked
           },
         horizontalAlignment = Alignment.CenterHorizontally,
       ) {
@@ -238,7 +238,8 @@ fun MemberWeek(members: List<GroupMember>, groupId: String, today: LocalDate, on
       GroupWeek(days, members, groupId, today, compact = true, marksToday = false)
     }
     HorizontalDivider(color = colors.separator)
-    val next = members.together(today, today.plusDays(NEXT_TOGETHER_DAYS - 1)).days.firstOrNull()
+    val ahead = rememberGroupDays(members, today, today.plusDays(NEXT_TOGETHER_DAYS - 1)).together
+    val next = ahead.days.firstOrNull()
     Row(
       Modifier.fillMaxWidth()
         .then(if (next != null && onOpen != null) Modifier.clickable { onOpen(next) } else Modifier)
@@ -247,7 +248,8 @@ fun MemberWeek(members: List<GroupMember>, groupId: String, today: LocalDate, on
     ) {
       Text(stringResource(R.string.next_together), Modifier.weight(1f), style = PochicalTextStyles.footnote, color = colors.textSecondary)
       Text(
-        next?.let { "${it.fullText}・${fromToday(it, today)}" } ?: stringResource(R.string.none),
+        // Days someone has not entered may yet be one, so it does not say there are none.
+        next?.let { "${it.fullText}・${fromToday(it, today)}" } ?: stringResource(if (ahead.unsure) R.string.together_unsure else R.string.none),
         style = PochicalTextStyles.footnote,
         fontWeight = FontWeight.SemiBold,
         color = if (next == null) colors.textTertiary else colors.accentDefault,

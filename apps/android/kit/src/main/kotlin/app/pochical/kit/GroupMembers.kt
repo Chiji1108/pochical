@@ -20,11 +20,7 @@ data class GroupMember(
   /** Their icons drawn filled. */
   val markFill: Boolean,
   val calendar: OwnCalendar,
-) {
-  /** Each day from [from] through [through] that shows a shift: whether it is a day off. */
-  fun offDays(from: LocalDate, through: LocalDate): Map<LocalDate, Boolean> =
-    calendar.shown(from, through).mapValues { (_, day) -> calendar.pattern(day.shift)?.countsAsOff == true }
-}
+)
 
 /**
  * Everyone in the group [groupId] in the order they joined, those who left not among them, each with

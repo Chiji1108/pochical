@@ -32,30 +32,32 @@ fun GroupMember.shifts(from: LocalDate, through: LocalDate): Map<LocalDate, Memb
     day to MemberShift(pattern, timeChange(shown.start, shown.end, pattern.time))
   }.toMap()
 
+/** Everyone's shifts over some days, member by member, and the days among them everyone is off. */
+class GroupDays(val shifts: List<Map<LocalDate, MemberShift>>, val together: Together)
+
 /**
- * The days from [from] through [through] everyone is off, and whether another may yet be (みんな休み,
- * spec/shift-patterns.md): none with only one member, as one person's days off are not shared ones.
+ * Everyone's shifts from [from] through [through], and みんな休み among them (spec/shift-patterns.md,
+ * Days everyone is off): none with only one member, as one person's days off are not shared ones.
  */
-fun List<GroupMember>.together(from: LocalDate, through: LocalDate): Together =
-  if (size > 1) together(map { it.offDays(from, through) }, from, through) else Together(emptyList(), unsure = false)
+fun groupDays(members: List<GroupMember>, from: LocalDate, through: LocalDate): GroupDays {
+  val shifts = members.map { it.shifts(from, through) }
+  val offs = shifts.map { days -> days.mapValues { (_, shift) -> shift.pattern.countsAsOff } }
+  return GroupDays(shifts, if (members.size > 1) together(offs, from, through) else Together(emptyList(), unsure = false))
+}
+
+/** [groupDays], worked out again only as the members or the days change. */
+@Composable
+fun rememberGroupDays(members: List<GroupMember>, from: LocalDate, through: LocalDate): GroupDays =
+  remember(members, from, through) { groupDays(members, from, through) }
 
 /**
  * The look a member's marks are drawn in: their shape and fill, the rest the viewer's own
  * (spec/sync-protocol.md, Profile); the app's own default, filled icons, before theirs is known.
  */
 fun Look.drawing(member: GroupMember): Look {
-  val style = MarkStyle.entries.firstOrNull { it.wire == member.markStyle }
+  val style = MarkStyle.entries.firstOrNull { MarkStyle.serializer().descriptor.getElementName(it.ordinal) == member.markStyle }
   return copy(style = style ?: MarkStyle.Icon, fill = if (style == null) true else member.markFill)
 }
-
-/** The style as the wire names it (proto MarkLook). */
-private val MarkStyle.wire: String
-  get() =
-    when (this) {
-      MarkStyle.Icon -> "icon"
-      MarkStyle.Emoji -> "emoji"
-      MarkStyle.Badge -> "badge"
-    }
 
 /** A member's pattern's mark, in their own shape and the viewer's colors. */
 @Composable
