@@ -12,6 +12,8 @@ import app.pochical.v1.chatNotifications
 import app.pochical.v1.membership
 import app.pochical.v1.unreadCount
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
@@ -118,6 +120,22 @@ class ChatSyncTest {
   }
 
   @Test
+  fun aPageOnItsWayAsTheUserLeavesBringsNothingBack() = runBlocking {
+    server.write("g1", "u2", (1..120).map { "$it" })
+    val phone = signedIn()
+    val me = server.userId
+    phone.account.hold("g1")
+    phone.chat(me) { it.lines.size == Chat.pageSize }
+    val socket = withTimeout(10_000) { phone.account.chatSocket("g1").first { it != null }!! }
+    server.pageDelayMs = 500
+    eventually { socket.requestPage(GROUP_THREAD, beforeSeq = 71) }
+    // Left meanwhile, as the user's own socket says it.
+    phone.database.write { take(listOf(change { membership = membership { groupId = "g1"; left = true } })) }
+    delay(1_000)
+    assertTrue(phone.chat(me).lines.isEmpty())
+  }
+
+  @Test
   fun othersTypingReachesTheChat() = runBlocking {
     val phone = signedIn()
     phone.account.hold("g1")
@@ -173,6 +191,24 @@ class ChatValuesTest {
     assertTrue(database.read { chatState("g1", GROUP_THREAD, "me", null, now = over) }.waiting.single().failed)
     assertTrue(database.read { toSend("g1", 0, over) }.first.isEmpty())
     assertEquals(emptySet<String>(), database.read { chatsToSend(over) }.value)
+  }
+
+  @Test
+  fun aLineJudgedByTheClockIsJudgedAgainAsAWelcomeCorrectsIt() = runTest {
+    send("時計", now = 1_000)
+    val chats = Chats(database, now = { 1_000 })
+    val states = mutableListOf<Boolean>()
+    val watching = launch(kotlinx.coroutines.Dispatchers.Default) {
+      chats.state("g1", GROUP_THREAD, "me", null).collect { synchronized(states) { states += it.waiting.single().failed } }
+    }
+    eventually { synchronized(states) { states.size == 1 } }
+    // A clock running far behind the server's, corrected by a Welcome, and corrected back.
+    database.write { upsert(state().copy(offsetMs = Chat.unsentAfterMs.toLong())) }
+    eventually { synchronized(states) { states.last() } }
+    database.write { upsert(state().copy(offsetMs = 0)) }
+    eventually { synchronized(states) { !states.last() } }
+    watching.cancel()
+    assertEquals(listOf(false, true, false), synchronized(states) { states.toList() })
   }
 
   @Test

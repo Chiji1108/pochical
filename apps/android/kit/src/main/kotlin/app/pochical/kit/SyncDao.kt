@@ -11,6 +11,9 @@ import kotlinx.coroutines.flow.Flow
 internal interface SyncDao : ChatDao {
   @Query("SELECT * FROM syncState WHERE id = 1") suspend fun syncState(): SyncState?
 
+  /** What the device adds to its own time to correct it (HLC), 0 before its first Welcome. */
+  @Query("SELECT COALESCE((SELECT offsetMs FROM syncState WHERE id = 1), 0)") fun offsetMs(): Flow<Long>
+
   @Upsert suspend fun upsert(state: SyncState)
 
   @Query("SELECT * FROM days WHERE date = :date") suspend fun day(date: String): DayRow?

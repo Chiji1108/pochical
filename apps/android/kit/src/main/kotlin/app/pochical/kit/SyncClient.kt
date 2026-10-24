@@ -268,6 +268,12 @@ class SyncClient internal constructor(
               sendChatOutbox(socket, peer.id)
             } catch (_: NotTheOwner) {
               messages.send(SocketMessage.Ended(SocketEvent.Refused(Stop.NotTheOwner)))
+            } catch (e: CancellationException) {
+              throw e
+            } catch (e: Exception) {
+              // A write that failed, as a frame's would: the next socket sends them all again.
+              log("Sending the chat outbox failed: $e")
+              messages.send(SocketMessage.Ended(SocketEvent.Dropped))
             }
           }
         }
@@ -288,17 +294,21 @@ class SyncClient internal constructor(
       }
       ServerFrame.KindCase.CHANGES -> {
         val changes = frame.changes.changesList
-        write { if (peer is Peer.Group) take(changes, peer.id) else take(changes) }
+        if (peer is Peer.Group) takeInto(peer.id) { take(changes, peer.id) } else write { take(changes) }
         log("Took ${changes.size} changes")
       }
-      ServerFrame.KindCase.RESET -> write { if (peer is Peer.Group) resetGroup(peer.id) else reset() }
+      ServerFrame.KindCase.RESET -> if (peer is Peer.Group) takeInto(peer.id) { resetGroup(peer.id) } else write { reset() }
       ServerFrame.KindCase.ACKED -> {
         val acked = frame.acked
-        write { if (peer is Peer.Group) acknowledgeChat(acked.opIdsList, acked.refusedList.map { it.opId }) else acknowledge(acked.opIdsList) }
+        if (peer is Peer.Group) {
+          takeInto(peer.id) { acknowledgeChat(acked.opIdsList, acked.refusedList.map { it.opId }) }
+        } else {
+          write { acknowledge(acked.opIdsList) }
+        }
         for (refused in acked.refusedList) log("A send was refused: ${refused.opId} ${refused.reason}")
         log("${acked.opIdsCount} edits acknowledged")
       }
-      ServerFrame.KindCase.CHAT_PAGE -> if (peer is Peer.Group) write { take(frame.chatPage, peer.id) }
+      ServerFrame.KindCase.CHAT_PAGE -> if (peer is Peer.Group) takeInto(peer.id) { take(frame.chatPage, peer.id) }
       ServerFrame.KindCase.TYPING -> mutableTyping.tryEmit(frame.typing)
       ServerFrame.KindCase.PONG -> if (frame.pong.nonce == catchUpNonce) on(SocketEvent.CaughtUp)
       ServerFrame.KindCase.ERROR ->
@@ -382,6 +392,9 @@ class SyncClient internal constructor(
     ownedBy(credentials)
     block()
   }
+
+  /** Takes what the group's socket brought, only while the user is in the group (`intoGroup`). */
+  private suspend fun takeInto(groupId: String, block: suspend SyncDao.() -> Unit) = write { intoGroup(groupId, block) }
 
   private suspend fun <T> read(block: suspend SyncDao.() -> T): T = database.read {
     ownedBy(credentials)
