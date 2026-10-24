@@ -32,6 +32,7 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.LayoutCoordinates
@@ -195,7 +196,7 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
           val chosen = look.reactions.filter { handlers.me in it.userIds }.map { it.emoji }.toSet()
           ReactionBar(chosen, onReact = { emoji -> handlers.react(seq, emoji, emoji !in chosen) }, onMore = { handlers.moreReactions(seq) })
         }
-      menu.open(MenuLine(look.key, look.mine, look.waiting != null, items, bar) { LineBody(look, handlers, onQuote = {}) }, at.unclipped())
+      menu.open(MenuLine(look.key, look.mine, look.waiting != null, items, bar) { LineBody(look, handlers, live = false, onQuote = {}) }, at.unclipped())
     }
   }
   val gestures =
@@ -305,11 +306,11 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
   }
 }
 
-/** What the line is drawn as: a poll's card, or a bubble. */
+/** What the line is drawn as: a poll's card, or a bubble; [live] false for the copy lifted over the menu, on which nothing acts. */
 @Composable
-private fun LineBody(look: MessageLook, handlers: MessageHandlers, onQuote: () -> Unit) {
+private fun LineBody(look: MessageLook, handlers: MessageHandlers, live: Boolean = true, onQuote: () -> Unit) {
   val poll = look.poll
-  if (poll != null) PollCard(poll, handlers, look.seq) else Bubble(look, handlers, onQuote)
+  if (poll != null) PollCard(poll, handlers, look.seq.takeIf { live }, live) else Bubble(look, handlers, onQuote)
 }
 
 /**
@@ -324,45 +325,10 @@ fun Bubble(look: MessageLook, handlers: MessageHandlers, onQuote: () -> Unit) {
   val shape = remember(look.mine, look.startsRun) { BubbleShape(look.mine, tail = look.startsRun) }
   val ink = if (look.mine) colors.accentOnFill else colors.textPrimary
   val preview = look.page
-  val light = remember { Animatable(0f) }
-  val shine = remember { Animatable(0f) }
-  val lit = handlers.lit?.takeIf { it.seq == look.seq }
-  LaunchedEffect(lit) {
-    if (lit == null) return@LaunchedEffect
-    if (handlers.reducedMotion) {
-      light.snapTo(1f)
-      delay(Chat.jumpFlashMs.toLong())
-      light.snapTo(0f)
-      return@LaunchedEffect
-    }
-    val half = Chat.jumpFlashMs / 2
-    shine.snapTo(0f)
-    coroutineScope {
-      launch { shine.animateTo(1f, tween(Chat.jumpFlashMs, easing = LinearEasing)) }
-      light.animateTo(1f, tween(half))
-      light.animateTo(0f, tween(half))
-    }
-  }
-  val accent = colors.accentDefault
   Column(
     Modifier.alpha(if (look.waiting != null && !look.waiting.failed) WAITING_ALPHA else 1f)
       .background(if (look.mine) colors.accentFill else colors.fillTertiary, shape)
-      .drawWithContent {
-        drawContent()
-        if (light.value > 0f) {
-          val outline = shape.createOutline(size, layoutDirection, this)
-          drawOutline(outline, accent.copy(alpha = LIGHT * light.value))
-          val x = size.width * (shine.value * 1.6f - 0.3f)
-          drawOutline(
-            outline,
-            Brush.linearGradient(
-              listOf(Color.Transparent, Color.White.copy(alpha = 0.25f * light.value), Color.Transparent),
-              start = Offset(x - BAND, 0f),
-              end = Offset(x + BAND, size.height),
-            ),
-          )
-        }
-      }
+      .litWhenGoneTo(handlers.lit?.takeIf { it.seq == look.seq }, shape, handlers.reducedMotion)
       // A page's picture is cut to the bubble's outline.
       .then(if (preview != null) Modifier.clip(shape) else Modifier)
       .padding(top = 8.dp, bottom = if (preview != null) 0.dp else 8.dp)
@@ -386,6 +352,50 @@ fun Bubble(look: MessageLook, handlers: MessageHandlers, onQuote: () -> Unit) {
     if (preview != null) {
       Spacer(Modifier.height(8.dp))
       PreviewCard(preview, ink) { handlers.openLink(preview.url) }
+    }
+  }
+}
+
+/**
+ * Lit when its line is gone to (a quote, a pin): the accent over it inside its [shape]'s outline,
+ * coming and going once over `chatRules.jumpFlashMs` with a band of shine sweeping across, still
+ * with motion reduced (spec/chat.md, Pins). A bubble's and a card's alike.
+ */
+@Composable
+fun Modifier.litWhenGoneTo(lit: Lit?, shape: Shape, reducedMotion: Boolean): Modifier {
+  val light = remember { Animatable(0f) }
+  val shine = remember { Animatable(0f) }
+  LaunchedEffect(lit) {
+    if (lit == null) return@LaunchedEffect
+    if (reducedMotion) {
+      light.snapTo(1f)
+      delay(Chat.jumpFlashMs.toLong())
+      light.snapTo(0f)
+      return@LaunchedEffect
+    }
+    val half = Chat.jumpFlashMs / 2
+    shine.snapTo(0f)
+    coroutineScope {
+      launch { shine.animateTo(1f, tween(Chat.jumpFlashMs, easing = LinearEasing)) }
+      light.animateTo(1f, tween(half))
+      light.animateTo(0f, tween(half))
+    }
+  }
+  val accent = LocalThemeColors.current.accentDefault
+  return drawWithContent {
+    drawContent()
+    if (light.value > 0f) {
+      val outline = shape.createOutline(size, layoutDirection, this)
+      drawOutline(outline, accent.copy(alpha = LIGHT * light.value))
+      val x = size.width * (shine.value * 1.6f - 0.3f)
+      drawOutline(
+        outline,
+        Brush.linearGradient(
+          listOf(Color.Transparent, Color.White.copy(alpha = 0.25f * light.value), Color.Transparent),
+          start = Offset(x - BAND, 0f),
+          end = Offset(x + BAND, size.height),
+        ),
+      )
     }
   }
 }
@@ -470,7 +480,7 @@ fun messageLook(
       val replying = quote?.let { stringResource(R.string.chat_reply_to_said, it.writer.orEmpty(), it.words) }
       val page = (line.content as? LineContent.Words)?.preview?.title
       val said = listOfNotNull(mine, replying, lineWords(line.content, nameOf), page, if (line.failed) notSent else sending).joinToString("、")
-      MessageLook(item.key, true, line.content, item.startsRun, null, false, null, line, null, null, said, partsOf(line.content, quote, reactions = null, poll = pollLook(line.content, canDecide = true, waiting = true)))
+      MessageLook(item.key, true, line.content, item.startsRun, null, false, null, line, null, null, said, partsOf(line.content, quote, reactions = null, poll = pollLook(line.content, canDecide = true, waiting = !line.failed)))
     }
     else -> null
   }
@@ -496,7 +506,6 @@ private fun partsOf(content: LineContent, quote: LineQuote?, reactions: Reaction
 }
 
 /** A poll's part, for a line of days put to the vote; [canDecide] for its writer, or anyone once they left. */
-@Composable
 private fun pollLook(content: LineContent, canDecide: Boolean, waiting: Boolean): PollPart? {
   val poll = content as? LineContent.Poll ?: return null
   return PollPart(PollLook(poll.poll, canDecide, waiting))

@@ -144,10 +144,12 @@ fun writerOf(kind: LineKind, authorId: String, me: String): LineWriter =
 data class LineReaction(val emoji: String, val userIds: List<String>)
 
 /**
- * The reactions with [userId]'s [emoji] put on ([on]) or taken off: a new emoji goes last, a member
- * choosing it again goes last among its choosers, and one nobody holds any more goes.
+ * The reactions with [userId]'s [emoji] put on ([on]) or taken off, as the group takes it: a new
+ * emoji goes last, a member choosing one goes last among its choosers, one they hold already
+ * changes nothing, and one nobody holds any more goes (spec/vectors/chat.json, reactions).
  */
 fun List<LineReaction>.toggling(emoji: String, userId: String, on: Boolean): List<LineReaction> {
+  if (any { it.emoji == emoji && userId in it.userIds } == on) return this
   val reactions = map { if (it.emoji == emoji) it.copy(userIds = it.userIds - userId + listOfNotNull(userId.takeIf { on })) else it }
   val added = if (on && none { it.emoji == emoji }) listOf(LineReaction(emoji, listOf(userId))) else emptyList()
   return (reactions + added).filter { it.userIds.isNotEmpty() }
@@ -257,10 +259,12 @@ fun unreadCount(lines: List<Pair<Long, LineWriter>>, read: Long): Int =
 
 /**
  * A poll's votes with [userId] coming on [day] ([on]) or taking it back: the member goes last among
- * who can come that day, and the days stay in the poll's [order], one nobody can come on left out
+ * who can come that day, a vote they have already changes nothing, and the days stay in the poll's [order], one nobody can come on left out
  * (spec/vectors/chat.json, votes).
  */
 fun voting(votes: List<ChatVotes>, day: String, userId: String, on: Boolean, order: List<String>): List<ChatVotes> {
+  // A vote the member has already, or one they do not have taken back, changes nothing.
+  if (votes.any { it.day == day && userId in it.userIdsList } == on) return votes
   val byDay = votes.associate { it.day to it.userIdsList }.toMutableMap()
   byDay[day] = byDay[day].orEmpty() - userId + listOfNotNull(userId.takeIf { on })
   return order.mapNotNull { d -> byDay[d]?.takeIf { it.isNotEmpty() }?.let { users -> chatVotes { this.day = d; userIds += users } } }

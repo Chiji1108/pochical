@@ -67,7 +67,7 @@ import java.time.LocalDate
 // the card everyone votes on, and the sheet it is settled with.
 
 /** Whose poll it is, and what the reader can do with it. */
-class PollLook(
+data class PollLook(
   val poll: ChatPoll,
   /** 日にちを決める at its foot until settled, 決め直す in its menu: its writer, or anyone once they left. */
   val canDecide: Boolean,
@@ -113,7 +113,7 @@ data class PollPart(val look: PollLook) : LinePart {
  * 日にちを決める; the chosen day is marked 決定 on the accent's container, the rest fade.
  */
 @Composable
-fun PollCard(look: PollLook, handlers: MessageHandlers, seq: Long?) {
+fun PollCard(look: PollLook, handlers: MessageHandlers, seq: Long?, live: Boolean = true) {
   val colors = LocalThemeColors.current
   val poll = look.poll
   val days = remember(poll.daysList) { poll.daysList.map(LocalDate::parse) }
@@ -127,6 +127,7 @@ fun PollCard(look: PollLook, handlers: MessageHandlers, seq: Long?) {
       .alpha(if (look.waiting) WAITING else 1f)
       .background(MaterialTheme.colorScheme.surfaceContainerLow, shape)
       .border(1.dp, colors.borderDefault, shape)
+      .litWhenGoneTo(handlers.lit?.takeIf { it.seq == seq && seq != null }, shape, handlers.reducedMotion)
   ) {
     Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
       Icon(painterResource(R.drawable.ic_event_available), contentDescription = null, Modifier.size(20.dp), tint = colors.accentDefault)
@@ -141,7 +142,7 @@ fun PollCard(look: PollLook, handlers: MessageHandlers, seq: Long?) {
     }
     HorizontalDivider(color = colors.separator)
     Column(Modifier.padding(vertical = 4.dp)) {
-      for (day in days) PollRow(day, poll, decided, day in together, look.waiting, handlers, seq)
+      for (day in days) PollRow(day, poll, decided, day in together, look.waiting, handlers, seq, live)
     }
     if (look.canDecide && decided == null && !look.waiting && seq != null) {
       HorizontalDivider(color = colors.separator)
@@ -153,7 +154,7 @@ fun PollCard(look: PollLook, handlers: MessageHandlers, seq: Long?) {
 }
 
 @Composable
-private fun PollRow(day: LocalDate, poll: ChatPoll, decided: LocalDate?, together: Boolean, waiting: Boolean, handlers: MessageHandlers, seq: Long?) {
+private fun PollRow(day: LocalDate, poll: ChatPoll, decided: LocalDate?, together: Boolean, waiting: Boolean, handlers: MessageHandlers, seq: Long?, live: Boolean) {
   val colors = LocalThemeColors.current
   val week = LocalDeviceSettings.current.device.week
   val country = remember { holidayCountry() }
@@ -179,7 +180,7 @@ private fun PollRow(day: LocalDate, poll: ChatPoll, decided: LocalDate?, togethe
     }
     // Who can come: three faces, or two and +N; a tap lists them all by name.
     Row(
-      Modifier.weight(1f).heightIn(min = 32.dp).clickable(enabled = people.isNotEmpty()) { handlers.voters(day, people) },
+      Modifier.weight(1f).heightIn(min = 32.dp).clickable(enabled = live && people.isNotEmpty()) { handlers.voters(day, people) },
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.spacedBy((-4).dp),
     ) {
@@ -262,7 +263,7 @@ fun DecideSheet(poll: ChatPoll, onDismiss: () -> Unit, onDecide: (LocalDate) -> 
 @Composable
 fun VotersSheet(day: LocalDate, people: List<String>, writers: Map<String, GroupMemberRow>, nameOf: (String) -> String, onDismiss: () -> Unit) {
   MemberSheet(
-    stringResource(R.string.chat_poll_who_title, day.fullText),
+    stringResource(R.string.chat_poll_who, day.fullText),
     people.map { id ->
       val writer = writers[id]
       SheetMember(id, nameOf(id), writer?.photoId.orEmpty(), writer?.let { PhotoShelf.Group(it.groupId) })

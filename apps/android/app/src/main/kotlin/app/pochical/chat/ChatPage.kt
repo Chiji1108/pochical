@@ -84,7 +84,7 @@ import app.pochical.R
 import app.pochical.design.Chat
 import app.pochical.design.SyncSocket
 import app.pochical.groups.HoldSocket
-import app.pochical.groups.groupDays
+import app.pochical.groups.rememberGroupDays
 import app.pochical.groups.rememberGroupMembers
 import app.pochical.groups.LocalValues
 import app.pochical.groups.rememberMeId
@@ -438,7 +438,8 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
       spray = spray,
       openLink = openLink,
       together = { from, through ->
-        rememberGroupMembers(groupId, from, through)?.let { groupDays(it, from, through).together.days.toSet() }.orEmpty()
+        val members = rememberGroupMembers(groupId, from, through)
+        if (members == null) emptySet() else rememberGroupDays(members, from, through).together.days.toSet()
       },
       vote = vote,
       decide = { deciding = it },
@@ -520,19 +521,18 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
   }
   choosers?.let { ChoosersSheet(it, writers, nameOf) { choosers = null } }
   listing?.let { (day, people) -> VotersSheet(day, people, writers, nameOf) { listing = null } }
-  deciding?.let { seq ->
-    val poll = (chat.line(seq)?.content as? LineContent.Poll)?.poll
-    if (poll == null) {
+  // The poll being settled, gone with its line should it go from the chat meanwhile.
+  val settling = deciding?.let { seq -> (chat.line(seq)?.content as? LineContent.Poll)?.poll?.let { seq to it } }
+  LaunchedEffect(deciding, settling) { if (deciding != null && settling == null) deciding = null }
+  settling?.let { (seq, poll) ->
+    DecideSheet(poll, onDismiss = { deciding = null }) { day ->
       deciding = null
-    } else {
-      DecideSheet(poll, onDismiss = { deciding = null }) { day ->
-        deciding = null
-        scope.launch {
-          keeping({ notKept = true }) {
-            chats.decide(groupId, threadId, seq, day.toString())
-            // Said to whoever settled it.
-            snackbar.showSnackbar(resources.getString(R.string.chat_poll_decided_said, day.fullText))
-          }
+      scope.launch {
+        keeping({ notKept = true }) {
+          val step = chats.decide(groupId, threadId, seq, day.toString())
+          // Said to whoever settled it; settling pins the poll, the oldest pin making room.
+          snackbar.showSnackbar(resources.getString(R.string.chat_poll_decided_said, day.fullText))
+          if (step.dropped != null) snackbar.showSnackbar(resources.getString(R.string.chat_pin_dropped, Chat.maxPins))
         }
       }
     }

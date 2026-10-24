@@ -167,9 +167,10 @@ class Chats internal constructor(
     }
   }
 
-  /** 日にちを決める, 決め直す: the poll [seq] settled on [day], which pins it for everyone. */
-  suspend fun decide(groupId: String, threadId: String, seq: Long, day: String) {
+  /** 日にちを決める, 決め直す: the poll [seq] settled on [day], which pins it for everyone; the pins after it. */
+  suspend fun decide(groupId: String, threadId: String, seq: Long, day: String): PinStep =
     database.write {
+      val before = pinned(groupId, threadId, waitingEdits(groupId, threadId, now()))
       chatEdit(groupId, now()) {
         decide = chatDecide {
           this.threadId = threadId
@@ -177,8 +178,8 @@ class Chats internal constructor(
           this.day = day
         }
       }
+      pinning(before, seq)
     }
-  }
 
   /** 送信取消: the member's line [seq] taken back for everyone, its reactions, reply and pin with it. */
   suspend fun unsend(groupId: String, threadId: String, seq: Long) {
