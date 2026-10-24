@@ -200,7 +200,7 @@ fun GroupMarkPage(name: String, mark: GroupMarkValue, onMark: (GroupMarkValue) -
   }
 }
 
-/** The mark's letters, at most textLimits.groupMark: each one typed is the mark's, an empty field none. */
+/** The mark's letters, at most textLimits.groupMark: each typed is the mark's; emptied, the letters before stay. */
 @Composable
 private fun LetterField(letter: String, onLetter: (String) -> Unit) {
   var draft by remember { mutableStateOf(TextFieldValue(letter)) }

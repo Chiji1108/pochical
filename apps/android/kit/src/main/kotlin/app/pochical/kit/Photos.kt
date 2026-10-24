@@ -98,8 +98,16 @@ internal class Photos(private val http: OkHttpClient, private val server: HttpUr
     return bytes
   }
 
-  /** Drops what was fetched as any user, as the device goes on as another. */
-  fun forget() = fetched.evictAll()
+  /** Lets go of the held photo [photoId], the group now holding its copy. */
+  suspend fun release(photoId: String) {
+    withContext(Dispatchers.IO) { heldFile(photoId).delete() }
+  }
+
+  /** Drops what was fetched or held as any user, as the device goes on as another. */
+  suspend fun forget() {
+    fetched.evictAll()
+    withContext(Dispatchers.IO) { held.deleteRecursively() }
+  }
 
   private fun url(shelf: PhotoShelf, photoId: String): HttpUrl =
     server.newBuilder().addEncodedPathSegments(shelf.path.trimEnd('/')).addPathSegment(photoId).build()

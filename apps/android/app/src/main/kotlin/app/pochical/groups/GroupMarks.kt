@@ -33,6 +33,7 @@ import app.pochical.kit.NewGroupRequest
 import app.pochical.kit.PhotoShelf
 import app.pochical.kit.Values
 import app.pochical.mark
+import app.pochical.markShape
 import app.pochical.markLayers
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -64,9 +65,6 @@ val RequestSaver: Saver<NewGroupRequest?, Any> =
 
 /** How much of the square an icon's glyph and an emoji take; letters take most of that across. */
 private const val INNER = 0.62f
-
-/** A group mark's corner, as /design's GroupIcon rounds it: 28% of its side. */
-fun markShape(size: Dp) = RoundedCornerShape(size * 0.28f)
 
 /**
  * A group's mark filling [size] (/design's GroupIcon): a photo filling its rounded square, read from

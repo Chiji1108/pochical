@@ -46,19 +46,23 @@ class GroupCalls internal constructor(
   private val users = UserServiceClient(client)
 
   /** Makes the group [request] asks for, with the user in it: the new group's id. */
-  suspend fun create(request: NewGroupRequest): String = call { headers ->
-    groups
-      .createGroup(
-        createGroupRequest {
-          name = request.name
-          mark = request.mark.proto
-          displayName = request.displayName
-          requestId = request.id
-        },
-        headers,
-      )
-      .answer()
-      .groupId
+  suspend fun create(request: NewGroupRequest): String {
+    val groupId = call { headers ->
+      groups
+        .createGroup(
+          createGroupRequest {
+            name = request.name
+            mark = request.mark.proto
+            displayName = request.displayName
+            requestId = request.id
+          },
+          headers,
+        )
+        .answer()
+        .groupId
+    }
+    releaseMark(request.mark)
+    return groupId
   }
 
   /** The group's live invitation code. */
@@ -113,7 +117,7 @@ class GroupCalls internal constructor(
         headers,
       )
       .answer()
-    Unit
+    releaseMark(mark)
   }
 
   /** How the user appears in the group from now on: empty, or their usual name, follows the usual one. */
@@ -194,6 +198,11 @@ class GroupCalls internal constructor(
 
   /** The photo [photoId] of [shelf], from the device or else the server. */
   suspend fun photo(photoId: String, shelf: PhotoShelf): ByteArray = account.asSignedIn { photos.photo(photoId, shelf, it) }
+
+  /** A photo mark the group has taken a copy of is let go of on the device, which held it until now. */
+  private suspend fun releaseMark(mark: GroupMarkValue) {
+    if (mark.photoId.isNotEmpty()) photos.release(mark.photoId)
+  }
 
   private suspend fun <T> call(call: suspend (Map<String, List<String>>) -> T): T =
     account.asSignedIn { credentials ->

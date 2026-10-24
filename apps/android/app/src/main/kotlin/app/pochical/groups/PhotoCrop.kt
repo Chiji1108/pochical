@@ -6,7 +6,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,15 +14,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,28 +36,34 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.design.Chat
+import app.pochical.markShape
 import java.io.ByteArrayOutputStream
 import kotlin.math.min
 import kotlin.math.roundToInt
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** What a picked photo is cut to: a face's circle, or a group mark's rounded square. */
 enum class PhotoCropShape {
   Round,
   Square;
 
-  /** The frame's shape, [side] across. */
-  fun shape(side: androidx.compose.ui.unit.Dp): Shape = if (this == Round) CircleShape else RoundedCornerShape(side * 0.28f)
+  /** The frame's shape, [side] across: a group mark's as it is drawn. */
+  fun shape(side: androidx.compose.ui.unit.Dp): Shape = if (this == Round) CircleShape else markShape(side)
 }
 
 /** Where a photo sits in its frame: moved by [offset] from the middle, in the frame's pixels, and zoomed by [zoom]. */
@@ -114,22 +118,26 @@ fun PhotoCrop(photo: Bitmap, shape: PhotoCropShape, onDone: (ByteArray?) -> Unit
   val colors = LocalThemeColors.current
   val picture = remember(photo) { photo.asImageBitmap() }
   val photoSize = Size(photo.width.toFloat(), photo.height.toFloat())
-  var place by remember(photo) { mutableStateOf(CropPlace()) }
-  var side by remember { mutableFloatStateOf(1f) }
+  val density = LocalDensity.current
+  val scope = rememberCoroutineScope()
+  // The room between the title and the buttons, as laid out: the frame is the square inside it.
+  var room by remember { mutableStateOf(IntSize.Zero) }
+  val side = with(density) { (min(room.width, room.height) - INSET.roundToPx() * 2).coerceAtLeast(1).toFloat() }
+  val frame = with(density) { side.toDp() }
+  // A new frame, as the phone turns, starts the photo again, its place being in the frame's pixels.
+  var place by remember(photo, side) { mutableStateOf(CropPlace()) }
+  var cutting by remember { mutableStateOf(false) }
   Dialog(
     onDismissRequest = { onDone(null) },
     properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
   ) {
     Box(Modifier.fillMaxSize().background(colors.mediaBackground)) {
-      BoxWithConstraints(
-        Modifier.fillMaxSize().safeDrawingPadding().padding(vertical = BARS).pointerInput(photo) {
+      Box(
+        Modifier.fillMaxSize().safeDrawingPadding().padding(vertical = BARS).onSizeChanged { room = it }.pointerInput(photo, side) {
           detectTransformGestures { _, pan, zoomBy, _ -> place = place.moved(pan, zoomBy, photoSize, side) }
         },
         contentAlignment = Alignment.Center,
       ) {
-        val frame = min(maxWidth.value, maxHeight.value).dp - INSET * 2
-        val density = LocalDensity.current
-        side = with(density) { frame.toPx() }
         val scale = place.scale(photoSize, side)
         Image(
           picture,
@@ -159,7 +167,14 @@ fun PhotoCrop(photo: Bitmap, shape: PhotoCropShape, onDone: (ByteArray?) -> Unit
       Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().safeDrawingPadding().padding(horizontal = 8.dp, vertical = 4.dp)) {
         TextButton(onClick = { onDone(null) }) { Text(stringResource(R.string.cancel), color = colors.mediaText) }
         Spacer(Modifier.weight(1f))
-        TextButton(onClick = { onDone(cutJpeg(photo, place.cut(photoSize, side))) }) {
+        TextButton(
+          onClick = {
+            cutting = true
+            val cut = place.cut(photoSize, side)
+            scope.launch { onDone(withContext(Dispatchers.Default) { cutJpeg(photo, cut) }) }
+          },
+          enabled = !cutting,
+        ) {
           Text(stringResource(R.string.photo_crop_choose), color = colors.mediaText, fontWeight = FontWeight.SemiBold)
         }
       }

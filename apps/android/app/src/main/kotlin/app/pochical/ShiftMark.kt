@@ -69,7 +69,7 @@ fun ShiftMark(
       Box(
         drawn
           .sizeIn(minWidth = size, minHeight = size)
-          .background(mark.tint, RoundedCornerShape(size * 0.28f)),
+          .background(mark.tint, markShape(size)),
         contentAlignment = Alignment.Center,
       ) {
         Text(symbol, color = mark.color, fontSize = fontSize * 0.56f, fontWeight = FontWeight.Bold)
@@ -84,6 +84,9 @@ fun ShiftMark(
     }
   }
 }
+
+/** A mark's tile, a pattern's letters or a group's, as /design rounds it: 28% of its side. */
+fun markShape(size: Dp) = RoundedCornerShape(size * 0.28f)
 
 private fun triangle(a: Offset, b: Offset, c: Offset) =
   Path().apply {

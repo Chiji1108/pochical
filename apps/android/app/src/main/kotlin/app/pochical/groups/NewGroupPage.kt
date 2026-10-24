@@ -41,14 +41,13 @@ import app.pochical.kit.NewGroupRequest
 import app.pochical.kit.guessGroupMark
 import app.pochical.kit.nextColor
 import kotlin.coroutines.cancellation.CancellationException
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
  * グループを作る (/design's NewGroupPage): its name, its mark and how the person is called in it.
  * The mark follows the name until one is picked: a fitting emoji, else its first letter in a color
  * the user's other groups do not use yet (spec/sync-protocol.md, Groups). Once the group is made,
- * [onMade] gets its id, after the group has reached the device.
+ * [onMade] gets its id; the group may reach the device a moment later, on the user's socket.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,10 +91,8 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
       try {
         // A picked photo goes up first, for the group to take.
         if (request.mark.photoId.isNotEmpty()) calls.sendMarkPhoto(request.mark.photoId)
-        val made = calls.create(request)
-        // Still making until the group has come, so 作る is not there to tap again meanwhile.
-        values.groups().first { list -> list.any { it.id == made } }
-        onMade(made)
+        // Still making as the page gives way to the group, so 作る is not there to tap again.
+        onMade(calls.create(request))
         return@launch
       } catch (e: CancellationException) {
         throw e

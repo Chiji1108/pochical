@@ -29,6 +29,8 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -113,7 +115,7 @@ fun MarkColorGrid(chosen: Int, pick: (Int) -> Unit, modifier: Modifier = Modifie
 @Composable
 fun IconPickerSheet(picked: String, onPick: (String) -> Unit, onDismiss: () -> Unit, mark: @Composable (String) -> Unit) {
   var query by rememberSaveable { mutableStateOf("") }
-  val sections = markIconSections(query)
+  val sections = remember(query) { markIconSections(query) }
   ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
     Text(
       stringResource(R.string.icon_picker_title),
@@ -164,10 +166,11 @@ fun IconPickerSheet(picked: String, onPick: (String) -> Unit, onDismiss: () -> U
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EmojiPickerSheet(onPick: (String) -> Unit, onDismiss: () -> Unit) {
+  val picked by rememberUpdatedState(onPick)
   ModalBottomSheet(onDismissRequest = onDismiss) {
     BoxWithConstraints {
       AndroidView(
-        factory = { context -> EmojiPickerView(context).apply { setOnEmojiPickedListener { onPick(it.emoji) } } },
+        factory = { context -> EmojiPickerView(context).apply { setOnEmojiPickedListener { picked(it.emoji) } } },
         modifier = Modifier.fillMaxWidth().heightIn(max = maxHeight).padding(bottom = 16.dp),
       )
     }

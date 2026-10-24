@@ -83,7 +83,7 @@ fun PhotoEditor(
     rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { taken ->
       val file = taking?.let(::File)
       taking = null
-      if (taken && file != null) crop(Uri.fromFile(file))
+      if (taken && file != null) crop(Uri.fromFile(file)) else file?.delete()
     }
 
   fun change(action: suspend () -> Unit) {
@@ -170,15 +170,20 @@ private fun cameraFile(context: Context): File =
  */
 private suspend fun readPhoto(context: Context, uri: Uri): Bitmap =
   withContext(Dispatchers.IO) {
-    ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, uri)) { decoder, info, _ ->
-      decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
-      val shorter = minOf(info.size.width, info.size.height)
-      if (shorter > READ_EDGE) {
-        val ratio = READ_EDGE.toFloat() / shorter
-        decoder.setTargetSize(max(1, (info.size.width * ratio).toInt()), max(1, (info.size.height * ratio).toInt()))
+    try {
+      ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, uri)) { decoder, info, _ ->
+        decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+        val shorter = minOf(info.size.width, info.size.height)
+        if (shorter > READ_EDGE) {
+          val ratio = READ_EDGE.toFloat() / shorter
+          decoder.setTargetSize(max(1, (info.size.width * ratio).toInt()), max(1, (info.size.height * ratio).toInt()))
+        }
       }
+    } finally {
+      // A photo the camera app took is the app's own copy, read once.
+      if (uri.scheme == "file") uri.path?.let { File(it).delete() }
     }
-  }.also { if (uri.scheme == "file") uri.path?.let { File(it).delete() } }
+  }
 
 /** Room to zoom in a few times before a crop's square falls under chatRules.pictureMaxEdge. */
 private const val READ_EDGE = 2048
