@@ -46,7 +46,7 @@ data class DeviceSettings(
    * Reminders of the person's shifts, sent by this device on its own, so kept with it rather than
    * the account: on every device they would go off on each (spec/sync-protocol.md).
    */
-  val reminders: List<Reminder> = Reminder.defaults,
+  @Serializable(with = KeptReminders::class) val reminders: List<Reminder> = Reminder.defaults,
   /**
    * Android 13's question whether the app may notify was turned down for good, refused once more
    * after being refused before: only the system's settings turn notifications on now.

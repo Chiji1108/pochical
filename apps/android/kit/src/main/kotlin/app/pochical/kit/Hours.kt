@@ -47,7 +47,15 @@ fun hoursText(start: String, end: String): String {
 }
 
 /** "HH:MM" as minutes since midnight. */
-internal fun minutes(time: String): Int {
-  val (hours, minutes) = time.split(":").map(String::toInt)
-  return hours * 60 + minutes
+internal fun minutes(time: String): Int = checkNotNull(minutesOrNull(time)) { "Not a time: $time" }
+
+/** "HH:MM" as minutes since midnight; none for what is not a time, as iOS's minutes. */
+internal fun minutesOrNull(time: String): Int? {
+  val parts = time.split(":").map { it.toIntOrNull() ?: return null }
+  if (parts.size != 2) return null
+  return parts[0] * 60 + parts[1]
 }
+
+/** The pattern's standard hours; none for a pattern without a time. */
+val PatternRow.time: ShiftTime?
+  get() = start?.let { start -> end?.let { ShiftTime(start, it) } }

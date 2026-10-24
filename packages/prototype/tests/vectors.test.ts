@@ -143,7 +143,7 @@ import type {
 } from "../src/lib/design-patterns";
 import {
   clockText,
-  firingFor,
+  firings as reminderFirings,
   notificationText,
   remindable,
   reminderName,
@@ -426,26 +426,19 @@ describe("spec/vectors/reminders.json", () => {
     test(name, () => {
       const reminder = reminderOf(written);
       const schedule: Schedule = days;
-      const firings = [];
-      for (
-        let date = dayOf(from);
-        date <= dayOf(through);
-        date = addDays(date, 1)
-      ) {
-        const entry = schedule[dateKey(date)];
-        const pattern = entry && book[entry.shift];
-        const when =
-          entry && pattern && firingFor(reminder, date, entry, pattern);
-        if (entry && pattern && when) {
-          firings.push({
-            day: dateKey(when),
-            shiftDay: dateKey(date),
-            time: clockText(when).padStart(5, "0"),
-            ...notificationText(reminder, { entry, pattern }),
-          });
-        }
-      }
-      expect(firings).toEqual(
+      const sent = reminderFirings(
+        reminder,
+        schedule,
+        book,
+        dayOf(from),
+        dayOf(through)
+      ).map(({ date, entry, pattern, when }) => ({
+        day: dateKey(when),
+        shiftDay: dateKey(date),
+        time: clockText(when).padStart(5, "0"),
+        ...notificationText(reminder, { entry, pattern }),
+      }));
+      expect(sent).toEqual(
         expected.map((firing) => ({
           ...firing,
           body: firing.body ?? undefined,
