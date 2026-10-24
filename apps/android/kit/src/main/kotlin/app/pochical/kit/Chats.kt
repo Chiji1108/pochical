@@ -7,7 +7,12 @@ import app.pochical.v1.chatRecall
 import app.pochical.v1.chatSend
 import app.pochical.v1.chatSendContent
 import app.pochical.v1.chatSendWords
+import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -19,7 +24,12 @@ import kotlinx.coroutines.flow.transformLatest
  * chat outbox in the same transaction as they show, whether its socket is open or not: the group's
  * socket sends them once it is (spec/sync-protocol.md, Chat; spec/chat.md, Lines on their way).
  */
-class Chats internal constructor(private val database: AppDatabase, private val now: () -> Long = System::currentTimeMillis) {
+class Chats internal constructor(
+  private val database: AppDatabase,
+  private val now: () -> Long = System::currentTimeMillis,
+  /** Where what outlives the screen that asked runs: a draft kept as its chat is left. */
+  private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+) {
   /**
    * The chat as its screen shows it, for [me]: the lines of the run without a gap holding the first
    * line held at or after [from], from [from] to the run's last, so they stay as later lines come
@@ -107,6 +117,22 @@ class Chats internal constructor(private val database: AppDatabase, private val 
       deleteChatDraft(groupId, threadId)
       val kept = keptDraft(draft, groupId, threadId) ?: return@write
       upsert(ChatDraftRow(groupId, threadId, kept.text, kept.replyTo, kept.editing))
+    }
+  }
+
+  /**
+   * Keeps the draft as the chat is left or the app leaves the screen, finishing though the screen
+   * goes; [notKept] is told should the device not keep it.
+   */
+  fun keepDraftLeaving(groupId: String, threadId: String, draft: KeptDraft, notKept: () -> Unit = {}) {
+    scope.launch {
+      try {
+        keepDraft(groupId, threadId, draft)
+      } catch (e: CancellationException) {
+        throw e
+      } catch (_: Exception) {
+        notKept()
+      }
     }
   }
 

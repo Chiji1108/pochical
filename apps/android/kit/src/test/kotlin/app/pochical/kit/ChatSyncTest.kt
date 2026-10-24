@@ -177,7 +177,7 @@ class ChatValuesTest {
 
   @Test
   fun aLineTakenBackAfterItWentOutIsRecalledAndOneThatNeverWentIsNot() = runTest {
-    val chats = Chats(database) { 1_000 }
+    val chats = Chats(database, now = { 1_000 })
     val never = send("まだ", now = 1_000)
     chats.takeBack(never)
     assertTrue(database.read { chatOutbox("g1") }.isEmpty())
