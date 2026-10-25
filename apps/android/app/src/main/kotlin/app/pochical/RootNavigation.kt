@@ -17,6 +17,7 @@ import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.serialization.NavBackStackSerializer
 import app.pochical.repeat.RepeatMode
+import java.time.LocalDate
 import kotlinx.serialization.Serializable
 
 // The app's one navigation, as iOS's RootNavigation: every page is pushed
@@ -174,6 +175,16 @@ class RootNavigator(
     page?.let(pages::add)
     tab = RootTab.Groups
     openGroup = groupId
+  }
+
+  /** The day a link asks the calendar to open, until it has. */
+  var openingDay by mutableStateOf<LocalDate?>(null)
+
+  /** Shows [day] in the calendar, opened as a tap opens it, in place of the pages open (spec/widgets.md, Opening the app). */
+  fun showDay(day: LocalDate) {
+    pages.clear()
+    tab = RootTab.Calendar
+    openingDay = day
   }
 
   /** Takes away every page, back to the tabs, as leaving a group does from its pages. */

@@ -178,7 +178,14 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
     }
   }
   LaunchedEffect(list) {
-    list.interactionSource.interactions.collect { if (it is DragInteraction.Start) { touched = true; following = false } }
+    // The person's scroll takes the place of one asked for (↓, a line sent), which stops there.
+    list.interactionSource.interactions.collect {
+      if (it is DragInteraction.Start) {
+        touched = true
+        following = false
+        going = null
+      }
+    }
   }
   LaunchedEffect(list) {
     snapshotFlow { list.isScrollInProgress }.filter { !it }.collect { if (touched) following = !list.canScrollBackward }

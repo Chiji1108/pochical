@@ -36,8 +36,10 @@ import app.pochical.design.TextLimits
 import app.pochical.kit.KeptDraft
 import app.pochical.kit.fitsText
 import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * The chat's composer (spec/chat.md, Photos; Drafts; Unread lines and typing): Material's own field
@@ -120,7 +122,8 @@ fun Composer(
           text = ""
           scope.launch {
             try {
-              chats.send(groupId, threadId, words)
+              // Kept though the chat is left meanwhile: the words are no longer in the composer to be kept as its draft.
+              withContext(NonCancellable) { chats.send(groupId, threadId, words) }
             } catch (e: CancellationException) {
               throw e
             } catch (_: Exception) {
