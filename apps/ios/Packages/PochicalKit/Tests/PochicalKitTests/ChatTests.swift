@@ -946,7 +946,7 @@ struct ReactionVectors: Decodable, Sendable {
   struct Case: VectorCase {
     let name: String
     let reactions: [Reaction]
-    let step: Step
+    let steps: [Step]
     let expected: [Reaction]
   }
 
@@ -954,11 +954,11 @@ struct ReactionVectors: Decodable, Sendable {
 }
 
 @Test(arguments: try vectors("chat", as: ReactionVectors.self).reactions)
-func reactionsAfterAStep(_ vector: ReactionVectors.Case) {
-  let step = vector.step
-  #expect(
-    vector.reactions.map(\.line).toggling(step.emoji, by: step.user, on: step.on)
-      == vector.expected.map(\.line))
+func reactionsAfterSteps(_ vector: ReactionVectors.Case) {
+  let after = vector.steps.reduce(vector.reactions.map(\.line)) { reactions, step in
+    reactions.toggling(step.emoji, by: step.user, on: step.on)
+  }
+  #expect(after == vector.expected.map(\.line))
 }
 
 struct VoteVectors: Decodable, Sendable {

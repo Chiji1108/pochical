@@ -43,7 +43,7 @@ internal suspend fun SyncDao.state(): SyncState =
  */
 internal suspend fun SyncDao.claim(userId: String): Boolean {
   val state = state()
-  if (state.owner.isEmpty()) upsert(state.copy(owner = userId, erased = ""))
+  if (state.owner.isEmpty()) upsert(state.copy(owner = userId, erased = "", erasedWhy = ""))
   return state.owner.isEmpty() || state.owner == userId
 }
 

@@ -16,6 +16,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.collectAsState
@@ -27,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import app.pochical.calendar.LocalOwnDays
 import app.pochical.design.Metrics
 import app.pochical.kit.AccountState
 
@@ -48,7 +50,7 @@ fun AccountRoot() {
     AccountState.SessionEnded -> SessionEndedScreen(tryAgain = account::tryAgain, startAfresh = account::startAfresh)
     else ->
       key(deleted) {
-        RootScreen(rememberRootNavigator())
+        FirstRunOrTabs()
         if (deleted > said) {
           AlertDialog(
             onDismissRequest = { said = deleted },
@@ -99,4 +101,18 @@ private fun ErasingScreen(erasing: AccountState.Erasing, retry: () -> Unit) {
       }
     }
   }
+}
+
+/**
+ * はじめの設定 while it is not done and the device holds no pattern, else the tabs. Patterns
+ * arriving, from the questions or from an account signed in to, end it for good. An invitation
+ * opened meanwhile waits for the tabs (OpenedLinks), and is asked about there as any other time.
+ */
+@Composable
+private fun FirstRunOrTabs() {
+  val firstRun = LocalFirstRun.current
+  val calendar by LocalOwnDays.current.calendar.collectAsState()
+  val holds = calendar.patterns.isNotEmpty()
+  LaunchedEffect(holds, firstRun.done) { if (holds && !firstRun.done) firstRun.kit.finish() }
+  if (firstRun.done || holds) RootScreen(rememberRootNavigator()) else Onboarding()
 }
