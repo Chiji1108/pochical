@@ -83,6 +83,61 @@
         android:name="android.support.FILE_PROVIDER_PATHS"
         android:resource="@xml/photo_paths" />
     </provider>
+    <!-- The home screen widgets (widgets/, spec/widgets.md), drawn by Glance. -->
+    <receiver
+      android:name=".widgets.SimpleWidgetReceiver"
+      android:exported="true"
+      android:label="@string/widget_simple">
+      <intent-filter>
+        <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+      </intent-filter>
+      <meta-data
+        android:name="android.appwidget.provider"
+        android:resource="@xml/widget_simple" />
+    </receiver>
+    <receiver
+      android:name=".widgets.NextOffWidgetReceiver"
+      android:exported="true"
+      android:label="@string/widget_next_off">
+      <intent-filter>
+        <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+      </intent-filter>
+      <meta-data
+        android:name="android.appwidget.provider"
+        android:resource="@xml/widget_next_off" />
+    </receiver>
+    <receiver
+      android:name=".widgets.UpcomingWidgetReceiver"
+      android:exported="true"
+      android:label="@string/widget_upcoming">
+      <intent-filter>
+        <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+      </intent-filter>
+      <meta-data
+        android:name="android.appwidget.provider"
+        android:resource="@xml/widget_upcoming" />
+    </receiver>
+    <receiver
+      android:name=".widgets.CalendarWidgetReceiver"
+      android:exported="true"
+      android:label="@string/widget_calendar">
+      <intent-filter>
+        <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+      </intent-filter>
+      <meta-data
+        android:name="android.appwidget.provider"
+        android:resource="@xml/widget_calendar" />
+    </receiver>
+    <!-- Midnight's alarm, the clock set or the time zone changed: the widgets' day turns
+         (WidgetUpdates). -->
+    <receiver
+      android:name=".widgets.WidgetDayReceiver"
+      android:exported="false">
+      <intent-filter>
+        <action android:name="android.intent.action.TIME_SET" />
+        <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+      </intent-filter>
+    </receiver>
   </application>
 
 </manifest>
