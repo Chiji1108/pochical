@@ -2,8 +2,9 @@ package app.pochical
 
 import android.content.Intent
 import android.net.Uri
-import org.robolectric.RuntimeEnvironment
-import app.pochical.notifications.ChatNotifier
+import app.pochical.kit.AppLink
+import app.pochical.kit.appLink
+import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -18,7 +19,7 @@ class OpenedLinksTest {
   fun anInvitationsLinkWaitsForTheScreensOnce() {
     val links = OpenedLinks()
     links.take(opening("https://pochical.app/invite/Toko2345"))
-    assertEquals(Opened.Invite("Toko2345"), links.consume())
+    assertEquals(AppLink.Invite("Toko2345"), links.consume())
     assertNull("taken once", links.consume())
   }
 
@@ -35,18 +36,29 @@ class OpenedLinksTest {
   fun theSitesOpenInTheAppOpensItsInvitation() {
     val links = OpenedLinks()
     links.take(opening("pochical://invite/Toko2345"))
-    assertEquals(Opened.Invite("Toko2345"), links.pending)
+    assertEquals(AppLink.Invite("Toko2345"), links.pending)
   }
 
   @Test
-  fun aChatsNotificationOpensItsChat() {
-    val links = OpenedLinks()
-    links.take(
-      Intent(RuntimeEnvironment.getApplication(), MainActivity::class.java)
-        .setAction(ChatNotifier.ACTION_OPEN_CHAT)
-        .putExtra(ChatNotifier.EXTRA_GROUP_ID, "g1")
-        .putExtra(ChatNotifier.EXTRA_THREAD_ID, "group")
-    )
-    assertEquals(Opened.Chat("g1", "group"), links.consume())
+  fun readsTheDaysAndGroupsAWidgetOpens() {
+    val day = LocalDate.of(2026, 9, 24)
+    assertEquals(AppLink.Day(day), appLink("pochical://day/2026-09-24"))
+    assertEquals(AppLink.Group("g1"), appLink("pochical://group/g1"))
+    assertEquals(AppLink.Group("g1", day), appLink("pochical://group/g1/day/2026-09-24"))
+    // A day it cannot read opens the group's top, as on iOS.
+    assertEquals(AppLink.Group("g1"), appLink("pochical://group/g1/week/2026-09-24"))
+    assertEquals(AppLink.Group("g1"), appLink("pochical://group/g1/day/2026-13-01"))
+  }
+
+  @Test
+  fun leavesWhatItDoesNotOpen() {
+    val urls =
+      listOf(
+        "pochical://day/",
+        "pochical://day/2026-13-01",
+        "pochical://group/",
+        "https://example.com/day/2026-09-24",
+      )
+    for (url in urls) assertNull(url, appLink(url))
   }
 }
