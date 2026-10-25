@@ -288,8 +288,8 @@ private fun showing(edits: List<ChatEdit>, line: ChatLine): ChatLine =
 
 /**
  * The chat as a list shows it, for [me]: its latest line as the chat shows it, and its unread lines
- * as the group counted them, or, while a read of theirs waits to be sent, as the device counts
- * them past it, so reading clears it at once (spec/sync-protocol.md, Unread summary).
+ * as the group counted them, or, while a read of theirs waits to be sent, others' lines the device
+ * holds past it, so reading clears it at once (spec/sync-protocol.md, Unread summary).
  */
 internal suspend fun SyncDao.chatSummary(groupId: String, threadId: String, me: String, now: Long): ChatSummary {
   val waiting = waitingEdits(groupId, threadId, now)
@@ -303,7 +303,7 @@ internal suspend fun SyncDao.chatSummary(groupId: String, threadId: String, me: 
       .lastOrNull()
   val unread =
     if (waiting.ownRead == 0L) unreadCount(groupId, threadId)?.count ?: 0
-    else unreadPast(groupId, threadId, lastRead(readMarks(groupId, threadId), me, waiting), me)
+    else othersAfter(groupId, threadId, lastRead(readMarks(groupId, threadId), me, waiting), me)
   return ChatSummary(last, latest, waiting.failsAt, unread, keptDraft(groupId, threadId, waiting))
 }
 

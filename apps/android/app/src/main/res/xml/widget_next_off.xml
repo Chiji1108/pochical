@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 次の休み (spec/widgets.md, Views): 2×2. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+  android:configure="app.pochical.widgets.WidgetWithActivity"
+  android:widgetFeatures="reconfigurable|configuration_optional"
+  android:description="@string/widget_next_off_description"
+  android:initialLayout="@layout/glance_default_loading_layout"
+  android:minWidth="130dp"
+  android:minHeight="130dp"
+  android:minResizeWidth="130dp"
+  android:minResizeHeight="130dp"
+  android:maxResizeWidth="230dp"
+  android:maxResizeHeight="230dp"
+  android:targetCellWidth="2"
+  android:targetCellHeight="2"
+  android:resizeMode="none"
+  android:updatePeriodMillis="0"
+  android:widgetCategory="home_screen" />
