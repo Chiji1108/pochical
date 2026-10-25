@@ -12,6 +12,8 @@ declare global {
     // oxlint-disable-next-line typescript/consistent-type-definitions -- declaration merging needs an interface
     interface Env {
       TEST_MIGRATIONS: D1Migration[];
+      // FCM_SERVICE_ACCOUNT's public key, for checking what it signed.
+      FCM_TEST_PUBLIC_KEY: string;
     }
   }
 }

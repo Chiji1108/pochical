@@ -51,7 +51,8 @@ public protocol Pochical_V1_UserServiceClientInterface: Sendable {
     func `setBlocked`(request: Pochical_V1_SetBlockedRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_SetBlockedResponse>
 
     /// Keeps a device's push token for the user's notifications (spec/chat.md,
-    /// Notifications); sent each launch, as iOS may change it.
+    /// Notifications); sent each launch, as iOS and FCM may change it.
+    /// INVALID_ARGUMENT for a token not of its platform's shape.
     @available(iOS 13, *)
     func `registerPushToken`(request: Pochical_V1_RegisterPushTokenRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_RegisterPushTokenResponse>
 

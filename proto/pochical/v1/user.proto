@@ -50,7 +50,8 @@ service UserService {
   }
 
   // Keeps a device's push token for the user's notifications (spec/chat.md,
-  // Notifications); sent each launch, as iOS may change it.
+  // Notifications); sent each launch, as iOS and FCM may change it.
+  // INVALID_ARGUMENT for a token not of its platform's shape.
   rpc RegisterPushToken(RegisterPushTokenRequest) returns (RegisterPushTokenResponse) {
     option idempotency_level = IDEMPOTENT;
   }
@@ -116,10 +117,23 @@ message SetMarkLookRequest {
 message SetMarkLookResponse {}
 
 message RegisterPushTokenRequest {
-  // The device's APNs token, as hex.
+  // The device's token: APNs' as hex, or FCM's registration token.
   string token = 1;
-  // From a development build: sent through APNs' sandbox.
+  // From an iOS development build: sent through APNs' sandbox. Never for
+  // FCM, which has none.
   bool sandbox = 2;
+  // Whose token it is, which the server sends through.
+  PushPlatform platform = 3;
+}
+
+// The push service a device's notifications go through (spec/sync-protocol.md,
+// Push).
+enum PushPlatform {
+  PUSH_PLATFORM_UNSPECIFIED = 0;
+  // Apple's, for iOS.
+  PUSH_PLATFORM_APNS = 1;
+  // Firebase Cloud Messaging, for Android.
+  PUSH_PLATFORM_FCM = 2;
 }
 
 message RegisterPushTokenResponse {}

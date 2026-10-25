@@ -19,8 +19,6 @@ import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 
 import { Alarm } from "./alarm";
-import { sendAlert, sendWithdrawal } from "./apns";
-import type { Alert, Sent } from "./apns";
 import { deleteOrphans } from "./bucket-audit";
 import type { Orphan, OwnerCleanup } from "./bucket-audit";
 import { hasKey, SHARED_DAY_FIELDS } from "./day-values";
@@ -49,6 +47,8 @@ import {
   sharePersonPhoto,
   uploadedPhotoKey,
 } from "./photos";
+import { sendAlert, sendWithdrawal } from "./push";
+import type { Alert, Sent } from "./push";
 import { devicesOf, dropPushToken } from "./push-tokens";
 import type { Device } from "./push-tokens";
 import { bucketRetryWait, countFailure, retryWait } from "./retry-wait";
@@ -927,7 +927,7 @@ export class UserDO extends DurableObject<Env> {
 
   /**
    * Sends to each of the user's devices, those of their sessions now; a
-   * token APNs says is gone is dropped.
+   * token its push service says is gone is dropped.
    */
   private async toDevices(
     push: (device: Device, userId: string) => Promise<Sent>

@@ -56,7 +56,8 @@ public interface UserServiceClientInterface {
 
   /**
    *  Keeps a device's push token for the user's notifications (spec/chat.md,
-   *  Notifications); sent each launch, as iOS may change it.
+   *  Notifications); sent each launch, as iOS and FCM may change it.
+   *  INVALID_ARGUMENT for a token not of its platform's shape.
    */
   public suspend fun registerPushToken(request: RegisterPushTokenRequest, headers: Headers = emptyMap()): ResponseMessage<RegisterPushTokenResponse>
 

@@ -7,8 +7,13 @@ import { drizzle } from "drizzle-orm/d1";
 import { session } from "./db/auth-schema";
 import { pushTokens } from "./db/schema";
 
-/** A device notifications go to. */
-export type Device = { token: string; sandbox: boolean };
+/**
+ * A device notifications go to: an iPhone through APNs, its sandbox for a
+ * development build, or an Android phone through FCM.
+ */
+export type Device =
+  | { platform: "apns"; token: string; sandbox: boolean }
+  | { platform: "fcm"; token: string };
 
 /**
  * Keeps the device's token under the session, moved from whichever
@@ -19,7 +24,13 @@ export const registerPushToken = async (
   sessionId: string,
   device: Device
 ): Promise<void> => {
-  const row = { ...device, sessionId, updatedAt: new Date() };
+  const row = {
+    platform: device.platform,
+    sandbox: device.platform === "apns" && device.sandbox,
+    sessionId,
+    token: device.token,
+    updatedAt: new Date(),
+  };
   await drizzle(db)
     .insert(pushTokens)
     .values(row)
@@ -30,14 +41,22 @@ export const registerPushToken = async (
 export const devicesOf = async (
   db: D1Database,
   userId: string
-): Promise<Device[]> =>
-  await drizzle(db)
-    .select({ sandbox: pushTokens.sandbox, token: pushTokens.token })
+): Promise<Device[]> => {
+  const rows = await drizzle(db)
+    .select({
+      platform: pushTokens.platform,
+      sandbox: pushTokens.sandbox,
+      token: pushTokens.token,
+    })
     .from(pushTokens)
     .innerJoin(session, eq(session.id, pushTokens.sessionId))
     .where(eq(session.userId, userId));
+  return rows.map(({ platform, sandbox, token }) =>
+    platform === "apns" ? { platform, sandbox, token } : { platform, token }
+  );
+};
 
-/** Drops a token APNs says is no longer the app's. */
+/** Drops a token its push service says is no longer the app's. */
 export const dropPushToken = async (
   db: D1Database,
   token: string

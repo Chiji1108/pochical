@@ -22,7 +22,8 @@
     "@connectrpc/connect": "2.2.0",
     "@pochical/design": "workspace:*",
     "better-auth": "^1.7.12",
-    "drizzle-orm": "^0.45.4"
+    "drizzle-orm": "^0.45.4",
+    "jose": "^6.2.12"
   },
   "devDependencies": {
     "@bufbuild/protoc-gen-es": "2.16.0",
