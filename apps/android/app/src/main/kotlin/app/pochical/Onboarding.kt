@@ -1,5 +1,15 @@
 package app.pochical
 
+import kotlinx.coroutines.CancellationException
+import app.pochical.repeat.patternsQuestion
+import app.pochical.repeat.needed
+import app.pochical.repeat.jobOrderTitle
+import app.pochical.repeat.chooseJob
+import app.pochical.repeat.asksMore
+import app.pochical.repeat.JobOrderCalendar
+import app.pochical.kit.AccountState
+import androidx.compose.runtime.remember
+import android.util.Log
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
@@ -55,8 +65,6 @@ import androidx.navigation3.runtime.serialization.NavBackStackSerializer
 import androidx.navigation3.ui.NavDisplay
 import app.pochical.calendar.LocalOwnDays
 import app.pochical.calendar.OwnDays
-import app.pochical.calendar.holidayCountry
-import app.pochical.calendar.weekday
 import app.pochical.design.JobTemplate
 import app.pochical.design.Metrics
 import app.pochical.design.ReadyPatterns
@@ -64,14 +72,11 @@ import app.pochical.kit.DeviceSettings
 import app.pochical.kit.FirstRun
 import app.pochical.kit.SignInResult
 import app.pochical.kit.SocketState
-import app.pochical.kit.holidayShift
-import app.pochical.kit.holidaysOffByDefault
 import app.pochical.patterns.ReadyPatternChips
 import app.pochical.patterns.chosenPatterns
 import app.pochical.repeat.KeysPreview
 import app.pochical.repeat.OrderCover
 import app.pochical.repeat.OrderTyping
-import app.pochical.repeat.RepeatCalendar
 import app.pochical.repeat.SequenceTiles
 import app.pochical.repeat.jobTemplate
 import app.pochical.repeat.readyById
@@ -124,21 +129,29 @@ fun Onboarding() {
       NavBackStack<FirstRunStep>(FirstRunStep.Welcome)
     }
 
-  fun begin(ids: List<String>, sequence: List<String>, anchor: LocalDate) {
-    scope.launch { beginFirstRun(days, settings.change, ids, sequence, anchor) }
-  }
+  // While the patterns chosen are kept, once: the questions' last button waits.
+  var beginning by remember { mutableStateOf(false) }
 
-  // The patterns chosen: a weekly order ends the questions from the Sunday the month starts in, an
-  // order goes on to typing it, and a roster's work ends with its patterns.
-  fun choose(template: JobTemplate, ids: List<String>) {
-    val sequence = template.sequence
-    val month = LocalDate.now().withDayOfMonth(1)
-    when {
-      sequence != null && template.weekly -> begin(ids, sequence, month.minusDays(month.weekday.toLong()))
-      sequence != null -> steps.add(FirstRunStep.Order(template.id, ids))
-      else -> begin(ids, emptyList(), LocalDate.now())
+  fun begin(ids: List<String>, sequence: List<String>, anchor: LocalDate) {
+    if (beginning) return
+    beginning = true
+    scope.launch {
+      try {
+        beginFirstRun(days, settings.change, ids, sequence, anchor)
+      } catch (e: CancellationException) {
+        throw e
+      } catch (e: Exception) {
+        // Not kept: said to the review prompt (SyncedDays), and the questions stay to answer again.
+        Log.w("PochicalFirstRun", "The first run's patterns were not kept: $e")
+      } finally {
+        beginning = false
+      }
     }
   }
+
+  // From this month's 1st, a weekly order from the Sunday of its week.
+  fun choose(template: JobTemplate, ids: List<String>) =
+    chooseJob(template, ids, LocalDate.now().withDayOfMonth(1), ::begin) { steps.add(FirstRunStep.Order(template.id, ids)) }
 
   NavDisplay(
     backStack = steps,
@@ -177,8 +190,8 @@ fun Onboarding() {
               }
             }
           }
-        is FirstRunStep.Patterns -> PatternsStep(jobTemplate(step.template), back, ::choose)
-        is FirstRunStep.Order -> OrderStep(jobTemplate(step.template), step.patterns, back, onDone = ::begin)
+        is FirstRunStep.Patterns -> PatternsStep(jobTemplate(step.template), back, waiting = beginning, onNext = ::choose)
+        is FirstRunStep.Order -> OrderStep(jobTemplate(step.template), step.patterns, back, waiting = beginning, onDone = ::begin)
       }
     }
   }
@@ -246,9 +259,17 @@ private fun SignInStep(onBack: () -> Unit, onEmpty: () -> Unit) {
     footnote = stringResource(R.string.first_run_sign_in_footnote),
   ) {
     SignInButtons(state) { result ->
-      // Switched, the device takes in the account's data until its socket has caught up.
-      if (result == SignInResult.Switched) account.userSocket.first { it == SocketState.Current }
+      // Switched, the device takes in the account's data until its socket has caught up, or until it
+      // waits to try again offline, when the questions go on and the account's patterns, coming
+      // later, end them.
+      if (result == SignInResult.Switched) {
+        account.userSocket.first { it == SocketState.Current || it is SocketState.Waiting || it is SocketState.Stopped }
+      }
       if (!firstRun.kit.holdsPatterns()) onEmpty()
+    }
+    // Before the device has its session, as offline at a first launch, the buttons wait.
+    if (state !is AccountState.SignedIn) {
+      Text(stringResource(R.string.account_sign_in_offline), style = MaterialTheme.typography.bodySmall, color = LocalThemeColors.current.textTertiary)
     }
   }
 }
@@ -258,27 +279,25 @@ private fun SignInStep(onBack: () -> Unit, onEmpty: () -> Unit) {
  * over the chips, in reach however many: 次へ when an order is asked next, else はじめる.
  */
 @Composable
-private fun PatternsStep(template: JobTemplate, onBack: () -> Unit, onNext: (JobTemplate, List<String>) -> Unit) {
+private fun PatternsStep(template: JobTemplate, onBack: () -> Unit, waiting: Boolean, onNext: (JobTemplate, List<String>) -> Unit) {
   var picked by rememberSerializable(template.id) { mutableStateOf(template.patternIds.toSet()) }
-  // Those in the kind of work's order stay picked, as the order needs them.
-  val needed = if (template.custom) emptySet() else template.sequence.orEmpty().toSet()
-  val asksMore = template.sequence != null && !template.weekly
+  val (title, note) = patternsQuestion(template)
   StepPage(
-    stringResource(if (template.custom) R.string.job_patterns_custom_title else R.string.job_patterns_title),
-    stringResource(if (template.custom) R.string.job_patterns_custom_note else R.string.job_patterns_note),
+    title,
+    note,
     onBack,
     foot = {
       Button(
         onClick = { onNext(template, chosenPatterns(picked)) },
-        enabled = picked.isNotEmpty(),
+        enabled = picked.isNotEmpty() && !waiting,
         modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control),
       ) {
-        Text(stringResource(if (asksMore) R.string.job_next else R.string.welcome_start))
+        Text(stringResource(if (template.asksMore) R.string.job_next else R.string.welcome_start))
       }
     },
   ) {
-    ReadyPatternChips(picked, { picked = it }, Modifier.fillMaxWidth(), needed = needed)
-    if (needed.isNotEmpty()) {
+    ReadyPatternChips(picked, { picked = it }, Modifier.fillMaxWidth(), needed = template.needed)
+    if (template.needed.isNotEmpty()) {
       Text(stringResource(R.string.job_patterns_needed), style = MaterialTheme.typography.bodySmall, color = LocalThemeColors.current.textTertiary)
     }
   }
@@ -291,35 +310,28 @@ private fun PatternsStep(template: JobTemplate, onBack: () -> Unit, onNext: (Job
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun OrderStep(template: JobTemplate, ids: List<String>, onBack: () -> Unit, onDone: (List<String>, List<String>, LocalDate) -> Unit) {
+private fun OrderStep(template: JobTemplate, ids: List<String>, onBack: () -> Unit, waiting: Boolean, onDone: (List<String>, List<String>, LocalDate) -> Unit) {
   val calendar by LocalOwnDays.current.calendar.collectAsStateWithLifecycle()
   var typing by
     rememberSaveable(template.id, stateSaver = OrderTyping.saver) {
       mutableStateOf(OrderTyping(template.sequence.orEmpty(), LocalDate.now().withDayOfMonth(1)))
     }
-  val first = template.sequence?.firstOrNull()?.let { readyById[it]?.name }
   SettingsPage(
-    if (template.custom || first == null) stringResource(R.string.job_order_title) else stringResource(R.string.job_order_title_first, first),
+    jobOrderTitle(template),
     onBack = onBack,
     actions = {
-      TextButton(onClick = { onDone(ids, typing.sequence, typing.anchor) }, enabled = typing.sequence.isNotEmpty()) {
+      TextButton(onClick = { onDone(ids, typing.sequence, typing.anchor) }, enabled = typing.sequence.isNotEmpty() && !waiting) {
         Text(stringResource(R.string.job_done))
       }
     },
   ) { padding ->
-    val keys = ids.mapNotNull(readyById::get)
-    // Holidays as the order will set them: off when it reads as office hours.
-    val offShift = holidayShift(keys.filter { it.countsAsOff }.map { it.id })
-    val holidaysOff = offShift != null && holidaysOffByDefault(typing.sequence, typing.anchor) { readyById[it]?.countsAsOff == true }
-    RepeatCalendar(
+    JobOrderCalendar(
       typing,
       { typing = it },
+      ids,
       cover = OrderCover.Always,
-      patterns = keys,
-      modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
       before = calendar,
-      holidayShift = offShift.takeIf { holidaysOff },
-      holidayCountry = holidayCountry(),
+      modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
     )
   }
 }
@@ -414,5 +426,11 @@ internal suspend fun beginFirstRun(
   anchor: LocalDate,
 ) {
   if (sequence.isNotEmpty()) changeSettings { it.copy(reminderOfferWaiting = true) }
-  days.begin(ids, sequence, anchor)
+  try {
+    days.begin(ids, sequence, anchor)
+  } catch (e: Exception) {
+    // Not kept, so no order to offer the reminders for.
+    if (sequence.isNotEmpty()) changeSettings { it.copy(reminderOfferWaiting = false) }
+    throw e
+  }
 }

@@ -809,7 +809,11 @@ class SyncAccount internal constructor(
     var wait = ERASE_FIRST_WAIT_MS
     while (true) {
       try {
-        database.write { eraseUserData() }
+        database.write {
+          eraseUserData()
+          // The device starts as a new one does, with はじめの設定 (spec/shift-patterns.md, The first run).
+          upsert(state().copy(firstRunDone = false))
+        }
         // Their photos with the rest: the outbox that would send them is gone.
         linePhotos.eraseAll()
         sessions.forgetSession()

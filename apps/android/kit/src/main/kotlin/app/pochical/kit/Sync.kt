@@ -63,7 +63,7 @@ internal suspend fun SyncDao.eraseUserData() {
   deleteAllMemberOrders()
   deleteGroupCursors()
   eraseChats()
-  upsert(state().copy(cursor = 0, owner = "", firstRunDone = false))
+  upsert(state().copy(cursor = 0, owner = ""))
 }
 
 /** What the device holds of the user that the person entered, counted as the server counts an account's. */

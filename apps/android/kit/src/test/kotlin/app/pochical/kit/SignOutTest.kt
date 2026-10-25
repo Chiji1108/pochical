@@ -11,6 +11,7 @@ import kotlinx.coroutines.withTimeout
 import okhttp3.OkHttpClient
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Test
@@ -43,6 +44,7 @@ class SignOutTest {
   @Test
   fun signingOutSendsTheOutboxFirstThenErasesAndStartsAsSomeoneNew() = runBlocking<Unit> {
     val phone = signedInDevice()
+    FirstRun(phone.database).finish()
     phone.edits.setDay("2026-11-02", DayField.DAY_FIELD_PATTERN, "night")
 
     phone.account.signOut()
@@ -53,8 +55,9 @@ class SignOutTest {
     withTimeout(10_000) { phone.account.state.first { it is AccountState.SignedIn && it.userId == "user-2" } }
     assertNull(phone.pattern("2026-11-02"))
     assertEquals("user-2", phone.sessions.read()?.userId)
-    // Not a deletion: nothing says アカウントを削除しました.
+    // Not a deletion: nothing says アカウントを削除しました. The device starts with はじめの設定.
     assertEquals(0, phone.account.deleted.value)
+    assertFalse(FirstRun(phone.database).done.first())
   }
 
   @Test

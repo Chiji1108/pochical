@@ -5,9 +5,9 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 
 /**
  * はじめの設定 (spec/shift-patterns.md, The first run), whether it is done for the user the database
- * holds: kept with the database, so erasing the user's data (ログアウト, a deletion, はじめから使う,
- * spec/sync-protocol.md) asks it again in the same step, and the app ending anywhere between asks
- * it as a relaunch would.
+ * holds: kept with the database, so letting go of the user (ログアウト, a deletion, はじめから使う,
+ * spec/sync-protocol.md) asks it again in the step that erases their data, and the app ending
+ * anywhere between asks it as a relaunch would. A switch to an account in use keeps it.
  */
 class FirstRun(private val database: AppDatabase) {
   /** Whether it is done, or the patterns of an account signed in to came. */

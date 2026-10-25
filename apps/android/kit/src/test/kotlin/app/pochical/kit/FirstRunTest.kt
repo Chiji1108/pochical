@@ -33,12 +33,12 @@ class FirstRunTest {
   }
 
   @Test
-  fun erasingTheUsersDataAsksItAgain() = runBlocking {
+  fun aSwitchThatErasesWhatTheDeviceHeldKeepsItDone() = runBlocking {
     firstRun.finish()
 
     database.write { eraseUserData() }
 
-    assertFalse(firstRun.done.first())
+    assertTrue(firstRun.done.first())
   }
 
   @Test

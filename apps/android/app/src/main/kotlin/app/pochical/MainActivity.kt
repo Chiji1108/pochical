@@ -87,7 +87,8 @@ class MainActivity(
     setContent {
       val device = settings ?: return@setContent
       if (!calendarRead) return@setContent
-      val firstRun = FirstRunState(firstRunDone ?: return@setContent, kit.firstRun)
+      val done = firstRunDone ?: return@setContent
+      val firstRun = remember(done) { FirstRunState(done, kit.firstRun) }
       val state = remember(device) { DeviceSettingsState(device, deviceSettings::change) }
       CompositionLocalProvider(
         LocalDeviceSettings provides state,
