@@ -7,7 +7,6 @@ import app.pochical.kit.AccountState
 import app.pochical.kit.PochicalKit
 import app.pochical.kit.Pushed
 import app.pochical.kit.pushedOf
-import com.google.firebase.FirebaseApp
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -23,8 +22,7 @@ import kotlinx.coroutines.tasks.await
 /**
  * The app's notifications from the server (spec/sync-protocol.md, Push), through Firebase Cloud
  * Messaging: the channels, the device's token kept by the server, what the system lets the app
- * show, and the notifications shown. A build with no Firebase project (no google-services.json, as
- * on CI) runs the same, and hears nothing.
+ * show, and the notifications shown.
  */
 class Push(private val application: Application, kit: PochicalKit, private val scope: CoroutineScope) {
   /** The app, which holds the one Push for what runs without its screens, as the FCM service. */
@@ -47,14 +45,11 @@ class Push(private val application: Application, kit: PochicalKit, private val s
   fun start() {
     Channels.create(application)
     readPermission()
-    if (hasFirebase) askToken() else Log.i(TAG, "No Firebase project in this build: no notifications from the server")
+    askToken()
     // The device letting go of a user (spec/sync-protocol.md, Sockets): the notifications of the
     // user before go with their data.
     scope.launch { lettingGo(states).collect { notifier.forgetAll() } }
   }
-
-  private val hasFirebase
-    get() = FirebaseApp.getApps(application).isNotEmpty()
 
   /** Asks FCM for the device's token; one not given is asked for again as the app comes to the front. */
   private fun askToken() {
@@ -91,7 +86,7 @@ class Push(private val application: Application, kit: PochicalKit, private val s
   /** The app came to the front. */
   fun foreground() {
     readPermission()
-    if (hasFirebase && !tokens.hasToken) askToken()
+    if (!tokens.hasToken) askToken()
     tokens.foreground()
   }
 

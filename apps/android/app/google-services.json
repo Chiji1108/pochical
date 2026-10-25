@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "608132058597",
+    "project_id": "pochical-app",
+    "storage_bucket": "pochical-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:608132058597:android:c317cd284009d0419f730c",
+        "android_client_info": {
+          "package_name": "app.pochical"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "608132058597-2ldp23dv5lqc7ld5omtob4pk04cglre1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCkOZzzopUJ9LFOXSShR7n9nJEQTIpFjSs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "608132058597-2ldp23dv5lqc7ld5omtob4pk04cglre1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "608132058597-dpqpcmsadl021doot4vun3fcmerddffj.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "app.pochical"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
