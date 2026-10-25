@@ -14,22 +14,24 @@ import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipe
+import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeLeft
 import app.pochical.DeviceSettingsState
 import app.pochical.LocalDeviceSettings
 import app.pochical.PochicalTheme
 import app.pochical.RootPage
 import app.pochical.kit.DeviceSettings
+import app.pochical.notifications.LocalNotificationAsking
+import app.pochical.notifications.NotificationAsking
 import app.pochical.v1.pattern
 import java.time.LocalDate
 import java.time.YearMonth
@@ -58,12 +60,16 @@ class CalendarScreenTest {
   private val opened = mutableListOf<RootPage>()
   private var tabBarHidden = false
 
+  /** The question whether the app may notify, which the calendar may not put here. */
+  private val asking = NotificationAsking(mutableStateOf(NotificationAsking.Asked(mayAsk = false, asked = false))) {}
+
   private fun show() {
     val settings = DeviceSettings()
     compose.setContent {
       CompositionLocalProvider(
         LocalDeviceSettings provides DeviceSettingsState(settings) {},
         LocalOwnDays provides days,
+        LocalNotificationAsking provides asking,
       ) {
         PochicalTheme(settings) { CalendarScreen(open = { opened += it }, hidesTabBar = { tabBarHidden = it }) }
       }
@@ -81,6 +87,7 @@ class CalendarScreenTest {
       CompositionLocalProvider(
         LocalDeviceSettings provides DeviceSettingsState(settings) {},
         LocalOwnDays provides days,
+        LocalNotificationAsking provides asking,
       ) {
         PochicalTheme(settings) {
           CalendarScreen(open = { opened += it }, hidesTabBar = { tabBarHidden = it }, opening = opening, onOpening = { opening = null })

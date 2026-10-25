@@ -7,6 +7,8 @@ import app.pochical.kit.OwnEdits
 import app.pochical.kit.PageSummary
 import app.pochical.kit.PatternRefusal
 import app.pochical.kit.PatternRow
+import app.pochical.kit.Reminder
+import app.pochical.kit.ReminderFiring
 import app.pochical.kit.RepeatOrder
 import app.pochical.kit.ShownDay
 import app.pochical.kit.daysShowing
@@ -139,6 +141,9 @@ class SyncedDays(private val database: AppDatabase, private val edits: OwnEdits,
       get() = own.orders
 
     override fun hasOwnShift(day: LocalDate): Boolean = own.hasOwnShift(day)
+
+    override fun firings(reminder: Reminder, from: LocalDate, through: LocalDate): List<ReminderFiring> =
+      reminder.firings(own, from, through)
   }
 }
 

@@ -20,6 +20,7 @@ import app.pochical.notifications.ChatNotificationsRow
 import app.pochical.patterns.PatternsRow
 import app.pochical.people.CoworkersRow
 import app.pochical.people.UsualProfileRow
+import app.pochical.reminders.RemindersRow
 import app.pochical.repeat.RepeatRow
 
 /** 設定: each row's page pushed over the tabs. */
@@ -36,6 +37,7 @@ fun SettingsScreen(open: (RootPage) -> Unit) {
       item { RepeatRow(open) }
       item { CoworkersRow(open) }
       item { SectionHeader(stringResource(R.string.settings_notifications)) }
+      item { RemindersRow(open) }
       item { ChatNotificationsRow(open) }
       item { SectionHeader(stringResource(R.string.settings_display)) }
       item { StyleRow(open) }

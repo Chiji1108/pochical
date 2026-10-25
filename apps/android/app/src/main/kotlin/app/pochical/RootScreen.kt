@@ -16,8 +16,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.navigation3.runtime.NavEntry
@@ -26,27 +26,30 @@ import app.pochical.calendar.CalendarScreen
 import app.pochical.calendar.ShiftChoicePage
 import app.pochical.chat.ChatPage
 import app.pochical.chat.ChatPhotosPage
+import app.pochical.design.Chat
 import app.pochical.groups.GroupButtons
 import app.pochical.groups.GroupEditPage
 import app.pochical.groups.GroupProfilePage
 import app.pochical.groups.GroupSettingsPage
 import app.pochical.groups.GroupShiftsPage
 import app.pochical.groups.GroupsActions
+import app.pochical.groups.GroupsScreen
 import app.pochical.groups.InvitePage
 import app.pochical.groups.JoinScreen
-import app.pochical.notifications.ChatNotificationsPage
 import app.pochical.groups.LocalValues
 import app.pochical.kit.AppLink
-import app.pochical.groups.ScanScreen
-import app.pochical.groups.GroupsScreen
 import app.pochical.groups.NewGroupPage
+import app.pochical.groups.ScanScreen
+import app.pochical.notifications.ChatNotificationsPage
 import app.pochical.patterns.AddPatternPage
 import app.pochical.patterns.PatternEditor
 import app.pochical.patterns.PatternsPage
-import app.pochical.repeat.JobChangePage
 import app.pochical.people.CoworkerEditorPage
 import app.pochical.people.CoworkersPage
 import app.pochical.people.ProfilePage
+import app.pochical.reminders.ReminderEditorPage
+import app.pochical.reminders.RemindersPage
+import app.pochical.repeat.JobChangePage
 import app.pochical.repeat.RepeatEditor
 import app.pochical.repeat.RepeatPage
 import app.pochical.repeat.RepeatPeriodPage
@@ -94,6 +97,8 @@ fun RootScreen(navigator: RootNavigator) {
       RootPage.Style -> NavEntry(route) { StylePage(onBack = rememberPageNavigation(navigator)::back) }
       RootPage.ChatNotifications ->
         NavEntry(route) { ChatNotificationsPage(onBack = rememberPageNavigation(navigator)::back) }
+      RootPage.Reminders -> NavEntry(route) { RemindersPage(rememberPageNavigation(navigator)) }
+      is RootPage.ReminderEditor -> NavEntry(route) { ReminderEditorPage(route.id, rememberPageNavigation(navigator)) }
       RootPage.CalendarSettings -> NavEntry(route) { CalendarSettingsPage(onBack = rememberPageNavigation(navigator)::back) }
       is RootPage.MonthPicture ->
         NavEntry(route) { MonthPicturePage(java.time.YearMonth.parse(route.month), onBack = rememberPageNavigation(navigator)::back) }
