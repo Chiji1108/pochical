@@ -11,6 +11,7 @@ import kotlin.random.Random
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.job
@@ -19,6 +20,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -47,10 +49,14 @@ internal class Device(
   val edits = OwnEdits(database, now)
   /** How many times the account asked the OS for time to send in the background. */
   val backgroundSends = java.util.concurrent.atomic.AtomicInteger()
+  val linePhotos = testLinePhotos(server.url)
   val account =
-    SyncAccount(database, sessions, server.url, OkHttpClient(), scope, network, now, random) {
+    SyncAccount(database, sessions, server.url, OkHttpClient(), scope, network, now, random, linePhotos) {
       backgroundSends.incrementAndGet()
     }
+
+  /** The device's chats, sending through its outbox. */
+  val chats = Chats(database, linePhotos, now)
 
   suspend fun note(date: String) = database.values().days(date, date).first().singleOrNull()?.note
 
@@ -64,6 +70,12 @@ internal class Device(
     runBlocking { scope.coroutineContext.job.cancelAndJoin() }
     database.close()
   }
+}
+
+/** What uploads a device's chat photos to [server], kept in a folder of its own. */
+internal fun testLinePhotos(server: okhttp3.HttpUrl = "http://localhost/".toHttpUrl()): LinePhotos {
+  val root = java.nio.file.Files.createTempDirectory("photos").toFile().apply { deleteOnExit() }
+  return LinePhotos(Photos(OkHttpClient(), server, java.io.File(root, "held")), ChatPhotoFiles(java.io.File(root, "caches"), java.io.File(root, "files")), PhotoUploads())
 }
 
 /** The OS's default network, as the test tells of it. */
@@ -84,10 +96,16 @@ private object LongestWait : Random() {
   override fun nextLong(until: Long) = until - 1
 }
 
-/** Waits for [condition], polling, for a few seconds at most. */
+/**
+ * Waits for [condition], polling, for a few seconds at most, in real time: what it waits on runs on
+ * other threads, and under runTest's virtual clock its delays and timeout would pass at once, giving
+ * up before those threads have run (as on a cold start, or a busy CI runner).
+ */
 internal suspend fun eventually(condition: suspend () -> Boolean) =
-  withTimeout(10_000) {
-    while (!condition()) delay(20)
+  withContext(Dispatchers.Default) {
+    withTimeout(10_000) {
+      while (!condition()) delay(20)
+    }
   }
 
 @RunWith(RobolectricTestRunner::class)
@@ -210,7 +228,7 @@ class SyncTest {
     assertEquals(true, phone.sessions.read()?.ended)
     assertEquals("残す", phone.note("2026-10-04"))
     // Nothing tries again, a relaunch included: no new anonymous user.
-    val again = SyncAccount(phone.database, phone.sessions, server.url, OkHttpClient(), phone.scope)
+    val again = SyncAccount(phone.database, phone.sessions, server.url, OkHttpClient(), phone.scope, linePhotos = phone.linePhotos)
     again.foreground()
     withTimeout(10_000) { again.state.first { it == AccountState.SessionEnded } }
     assertEquals("token-1", phone.sessions.read()?.token)
@@ -262,7 +280,7 @@ class SyncTest {
     withTimeout(10_000) { phone.account.state.first { it == AccountState.SignedIn(server.userId, account) } }
     assertEquals(StoredSession(server.token, server.userId, linked = account), phone.sessions.read())
     // A relaunch shows the account as kept.
-    val again = SyncAccount(phone.database, phone.sessions, server.url, OkHttpClient(), phone.scope)
+    val again = SyncAccount(phone.database, phone.sessions, server.url, OkHttpClient(), phone.scope, linePhotos = phone.linePhotos)
     again.foreground()
     withTimeout(10_000) { again.state.first { it == AccountState.SignedIn(server.userId, account) } }
   }
@@ -336,7 +354,7 @@ class SyncTest {
     assertEquals(google, phone.sessions.read()?.linked)
 
     server.provider = SignInProvider.SIGN_IN_PROVIDER_UNSPECIFIED
-    val again = SyncAccount(phone.database, phone.sessions, server.url, OkHttpClient(), phone.scope)
+    val again = SyncAccount(phone.database, phone.sessions, server.url, OkHttpClient(), phone.scope, linePhotos = phone.linePhotos)
     again.foreground()
     withTimeout(10_000) { again.state.first { it == AccountState.SignedIn(server.userId, null) } }
     assertNull(phone.sessions.read()?.linked)
@@ -352,7 +370,7 @@ class SyncTest {
     withTimeout(10_000) { phone.account.state.first { it == AccountState.SignedIn(server.userId, account) } }
 
     server.provider = SignInProvider.SIGN_IN_PROVIDER_GOOGLE
-    val again = SyncAccount(phone.database, phone.sessions, server.url, OkHttpClient(), phone.scope)
+    val again = SyncAccount(phone.database, phone.sessions, server.url, OkHttpClient(), phone.scope, linePhotos = phone.linePhotos)
     again.foreground()
     withTimeout(10_000) { again.userSocket.first { it == SocketState.Current } }
     delay(300)
@@ -406,7 +424,7 @@ class SyncTest {
     val phone = device()
     phone.database.write { claim("someone-else") }
     val client =
-      SyncClient(phone.database, Peer.User, server.url, OkHttpClient(), Credentials(1, server.token, server.userId) { 1 }, phone.scope)
+      SyncClient(phone.database, Peer.User, server.url, OkHttpClient(), Credentials(1, server.token, server.userId) { 1 }, phone.linePhotos, phone.scope)
     client.start()
     assertEquals(SocketState.Stopped(Stop.NotTheOwner), withTimeout(10_000) { client.state.first { it is SocketState.Stopped } })
     assertEquals(0, server.sockets.size)

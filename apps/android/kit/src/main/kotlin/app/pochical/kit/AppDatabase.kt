@@ -40,6 +40,14 @@ import androidx.sqlite.execSQL
       MemberOrderRow::class,
       GroupCursorRow::class,
       ProfileRow::class,
+      ChatLineRow::class,
+      ReadMarkRow::class,
+      ChatOutboxRow::class,
+      UnreadCountRow::class,
+      BlockRow::class,
+      ChatMuteRow::class,
+      ChatNotificationSettingsRow::class,
+      ChatDraftRow::class,
     ],
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -61,7 +69,7 @@ abstract class AppDatabase : RoomDatabase() {
   suspend fun owner(): String? = read { state().owner }.ifEmpty { null }
 
   companion object {
-    const val VERSION = 4
+    const val VERSION = 7
 
     /** The app's database in [context]'s files, or one in memory alone for tests. */
     fun open(context: Context, inMemory: Boolean = false): AppDatabase =
@@ -77,12 +85,17 @@ abstract class AppDatabase : RoomDatabase() {
  * A device that took its values under an older sync schema than the app's moves every cursor back
  * to the start, its User DO's and every group's, so its next Hellos bring everything again, read as
  * the app reads now (spec/sync-protocol.md, Change log and cursor). Its values stay until
- * overwritten, so its screens still show offline, and its outbox stays to send.
+ * overwritten, so its screens still show offline, and its outboxes stay to send. Its chats' lines
+ * go, as at a Reset: a catch-up from the start brings only each chat's latest page, so a change to
+ * an earlier line held would never come; they come again as pages.
  */
 private object TakeAllAgainIfOlder : RoomDatabase.Callback() {
   override suspend fun onOpen(connection: SQLiteConnection) {
     // One transaction, so the schema is never raised without its cursors rewound.
     connection.execSQL("BEGIN IMMEDIATE")
+    for (table in listOf("chatLines", "readMarks")) {
+      connection.execSQL("DELETE FROM $table WHERE (SELECT schema FROM syncState WHERE id = 1) < $SYNC_SCHEMA")
+    }
     connection.execSQL(
       "UPDATE groupCursors SET cursor = 0 WHERE (SELECT schema FROM syncState WHERE id = 1) < $SYNC_SCHEMA"
     )

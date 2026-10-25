@@ -1,5 +1,5 @@
 {
-  "about": "What a chat's lines become as people use them (spec/chat.md). pins (Pins, Polls, Editing and unsending): a chat's `lines` by id in order, its `pins` the latest first, then one `step`: pin or unpin a line, unsend one (送信取消), or settle the poll a line carries (日にちを決める). `expected` is the pins after it, the latest first, and the one that made room for the new pin (`dropped`, for the app to say so), if any. The most pinned at once is design/src/chat.ts's chatRules.maxPins, 5. edited (Editing and unsending): a line with words and its link's page is given new words; `expected` says whether it keeps its page (`kept`) or takes the new words' (`new`). firstUnread (Unread lines and typing): who wrote each line, oldest first (`others`, `me`, or `app` for the app's own lines such as someone joining), and how many are unread; `expected` is the index of the line the chat opens on under ここから新着, null with nothing unread. Only others' lines count. writer (Unread lines and typing): whose a line is to the reader `me`, which every count of unread lines and ここから新着 go by: from its `author` and its `kind` (spec/chat.md, What a line is): `words`, a `notice` from the app, or `hidden` (sent in a one-to-one chat by someone the reader blocked, never delivered); `expected` is `me`, `others` or `app`, the app's own and the undelivered ones never counted. directThread (One-to-one chats, spec/sync-protocol.md): two members' ids, given in either order; `expected` is their chat's thread id, the same from both sides: \"direct:\" and the two ids in order (by their UTF-16 code units, as every id is ASCII), joined by \":\". openingFrom (Unread lines and typing): the first line a chat lays out as it opens, from its `latest` line's seq and the reader's `read` mark (null for no reader): its latest page, back to the first unread line when that is earlier, at most chatRules.openMax lines (pageSize 50, openMax 200). firstComing (Unread lines and typing): when lines come in while the chat is open and following, the first of them it stops at under ここから新着 rather than going past: of the chat's `lines` (each a seq and who wrote it, as firstUnread counts them), the first after both the `latest` line it held before and the reader's `read` mark that others wrote; `expected` is its seq, null for none. Whether to stop there or go on to the foot is the screen's: when they fit, it goes on. readTo (Unread lines and typing): what the reader's `read` mark comes to as the chat's `lines` (each a seq and who wrote it, as firstUnread counts them) show: `shown` are the seqs of those whose foot is on the screen, in no particular order; `expected.read` is the mark after, the latest of them, never back (a line once on screen stays read), and `expected.unread` how many of others' lines are still unread past it, what ↓ counts. window (Unread lines and typing): the lines a chat lays out once it has opened, which stay as later lines come past a gap. The device `held` these runs of seqs (each its first and last), all others' lines but the reader's own (`mine`), the reader's `read` mark, and `from`, the first line laid out (null as the chat opens, openingFrom then choosing it). The lines laid out are those of the run holding the first line held at or after `from` (the latest run as the chat opens, laid out as openingFrom chooses, as with none held after it), from `from` to the run's last line; `expected.lines` are the first and last of them, `heldFrom` the run's first line, before which the server is asked for a page, `heldBefore` how many the device holds in the run before those laid out (laid out as the chat scrolls back without asking), `atEnd` whether they reach the latest line the device holds, and `unread` what ↓ counts: others' lines past the mark among them and after them, each line after them the device does not hold yet counted as unread. pageAfter (Unread lines and typing): while the lines laid out do not reach the latest the device holds, the page after them is asked as their foot nears, with the ChatPageRequest the earlier pages use: `before_seq` (`expected`) past the run's last line (`through`) by chatRules.pageSize and one, as a chat's seqs run without a gap on the server, so the page holds the lines straight after it, or near the latest the latest page, which reaches them too. draft (Drafts): what was being written in a chat, its `text` as it would be sent (mentions as <@id>), the line it answers (`replyTo`) or changes (`editing`) by seq, and the chat's `lines` the device holds then, each its `seq` and `kind`, `words` with its `text` or `unsent`; `expected` is the draft kept, or opened again, or null when there is none to keep. composer (Editing and unsending, Replies): what the composer holds as it switches between answering a line and changing one, from what it holds (`composer`: its `text` as it would be sent, mentions as <@id>, the line it answers (`replyTo`) or changes (`editing`) by seq, the `days` brought to share, how many `photos` are picked, and `withoutPreview` once × took its link's page off) and one `step`: 返信 on a line (`reply`), 編集 on one of one's own (`edit`, a line of words), × on the bar (`stop`), or days brought to share (`share`, from the shift table), with the chat's `lines` as in draft; `expected` is what it holds after, a key left out for none: an edit puts that line's words alone in place of all of it, and goes with its words as anything else begins. withdrawn (Notifications): the chat lines' notifications a device has shown, each its `id`, chat (`groupId`, `threadId`) and line `seq`, and a `read` of one chat: its `readTo`, or null when the chat has no unread lines left; `expected` are the ids of those it takes back, in the order shown: the chat's, at or before readTo, all of the chat's for null. Another chat's, or a group's of the same thread name, stay. albumRows (Albums): how many photos a line holds (`count`, 2 to chatRules.photosPerSend); `expected` is how many go in each of its rows, top first. order (Lines on their way): the lines the group holds (`sent`, in the order it took them, each its `id` and its time `at`) and the member's lines still waiting in the outbox (`waiting`, in the order written, each its `id`, the time it was written `at`, and whether it is `failed`, not sent); `expected` is the chat's lines in the order shown, by id: a line not sent where it was written, before the first line held whose time is later than its own and after the rest, the lines not sent keeping the order written among themselves, and the lines still being sent last, in the order written, as the newest. The chat list's latest line is the last of them.",
+  "about": "What a chat's lines become as people use them (spec/chat.md). pins (Pins, Polls, Editing and unsending): a chat's `lines` by id in order, its `pins` the latest first, then one `step`: pin or unpin a line, unsend one (送信取消), or settle the poll a line carries (日にちを決める). `expected` is the pins after it, the latest first, and the one that made room for the new pin (`dropped`, for the app to say so), if any. The most pinned at once is design/src/chat.ts's chatRules.maxPins, 5. edited (Editing and unsending): a line with words and its link's page is given new words; `expected` says whether it keeps its page (`kept`) or takes the new words' (`new`). firstUnread (Unread lines and typing): who wrote each line, oldest first (`others`, `me`, or `app` for the app's own lines such as someone joining), and how many are unread; `expected` is the index of the line the chat opens on under ここから新着, null with nothing unread. Only others' lines count. writer (Unread lines and typing): whose a line is to the reader `me`, which every count of unread lines and ここから新着 go by: from its `author` and its `kind` (spec/chat.md, What a line is): `words`, a `notice` from the app, or `hidden` (sent in a one-to-one chat by someone the reader blocked, never delivered); `expected` is `me`, `others` or `app`, the app's own and the undelivered ones never counted. directThread (One-to-one chats, spec/sync-protocol.md): two members' ids, given in either order; `expected` is their chat's thread id, the same from both sides: \"direct:\" and the two ids in order (by their UTF-16 code units, as every id is ASCII), joined by \":\". openingFrom (Unread lines and typing): the first line a chat lays out as it opens, from its `latest` line's seq and the reader's `read` mark (null for no reader): its latest page, back to the first unread line when that is earlier, at most chatRules.openMax lines (pageSize 50, openMax 200). firstComing (Unread lines and typing): when lines come in while the chat is open and following, the first of them it stops at under ここから新着 rather than going past: of the chat's `lines` (each a seq and who wrote it, as firstUnread counts them), the first after both the `latest` line it held before and the reader's `read` mark that others wrote; `expected` is its seq, null for none. Whether to stop there or go on to the foot is the screen's: when they fit, it goes on. readTo (Unread lines and typing): what the reader's `read` mark comes to as the chat's `lines` (each a seq and who wrote it, as firstUnread counts them) show: `shown` are the seqs of those whose foot is on the screen, in no particular order; `expected.read` is the mark after, the latest of them, never back (a line once on screen stays read), and `expected.unread` how many of others' lines are still unread past it, what ↓ counts. window (Unread lines and typing): the lines a chat lays out once it has opened, which stay as later lines come past a gap. The device `held` these runs of seqs (each its first and last), all others' lines but the reader's own (`mine`), the reader's `read` mark, and `from`, the first line laid out (null as the chat opens, openingFrom then choosing it). The lines laid out are those of the run holding the first line held at or after `from` (the latest run as the chat opens, laid out as openingFrom chooses, as with none held after it), from `from` to the run's last line; `expected.lines` are the first and last of them, `heldFrom` the run's first line, before which the server is asked for a page, `heldBefore` how many the device holds in the run before those laid out (laid out as the chat scrolls back without asking), `atEnd` whether they reach the latest line the device holds, and `unread` what ↓ counts: others' lines past the mark among them and after them, each line after them the device does not hold yet counted as unread. pageAfter (Unread lines and typing): while the lines laid out do not reach the latest the device holds, the page after them is asked as their foot nears, with the ChatPageRequest the earlier pages use: `before_seq` (`expected`) past the run's last line (`through`) by chatRules.pageSize and one, as a chat's seqs run without a gap on the server, so the page holds the lines straight after it, or near the latest the latest page, which reaches them too. draft (Drafts): what was being written in a chat, its `text` as it would be sent (mentions as <@id>), the line it answers (`replyTo`) or changes (`editing`) by seq, and the chat's `lines` the device holds then, each its `seq` and `kind`, `words` with its `text` or `unsent`; `expected` is the draft kept, or opened again, or null when there is none to keep. composer (Editing and unsending, Replies): what the composer holds as it switches between answering a line and changing one, from what it holds (`composer`: its `text` as it would be sent, mentions as <@id>, the line it answers (`replyTo`) or changes (`editing`) by seq, the `days` brought to share, how many `photos` are picked, and `withoutPreview` once × took its link's page off) and one `step`: 返信 on a line (`reply`), 編集 on one of one's own (`edit`, a line of words), × on the bar (`stop`), or days brought to share (`share`, from the shift table), with the chat's `lines` as in draft; `expected` is what it holds after, a key left out for none: an edit puts that line's words alone in place of all of it, and goes with its words as anything else begins. withdrawn (Notifications): the chat lines' notifications a device has shown, each its `id`, chat (`groupId`, `threadId`) and line `seq`, and a `read` of one chat: its `readTo`, or null when the chat has no unread lines left; `expected` are the ids of those it takes back, in the order shown: the chat's, at or before readTo, all of the chat's for null. Another chat's, or a group's of the same thread name, stay. albumRows (Albums): how many photos a line holds (`count`, 2 to chatRules.photosPerSend); `expected` is how many go in each of its rows, top first. order (Lines on their way): the lines the group holds (`sent`, in the order it took them, each its `id` and its time `at`) and the member's lines still waiting in the outbox (`waiting`, in the order written, each its `id`, the time it was written `at`, and whether it is `failed`, not sent); `expected` is the chat's lines in the order shown, by id: a line not sent where it was written, before the first line held whose time is later than its own and after the rest, the lines not sent keeping the order written among themselves, and the lines still being sent last, in the order written, as the newest. The chat list's latest line is the last of them. reactions (Reactions): a line's `reactions`, each emoji with who chose it in the order they did, the emoji in the order first chosen, and one member's `step`: their `emoji` put on (`on` true) or taken back; `expected` is the line's reactions after it: a new emoji goes last, a member choosing one goes last among its choosers, choosing one they hold already changes nothing, and an emoji nobody holds any more goes, as the group keeps them and as a device shows its member's own at once. votes (Polls): a poll's `days` in order, its `votes` (each day someone can come on, with who can in the order they said so), and one member's `step`: their `day` voted on (`on` true) or taken back; `expected` is the poll's votes after it: the member goes last among who can come that day, a vote they have already changes nothing, the days stay in the poll's order, and a day nobody can come on any more goes. folded (Reporting and blocking): whether a line shows folded to ブロック中のメンバーのメッセージ, by its `kind` (`words`, `photos`, `days`, `poll`, a `notice` from the app, `unsent` for one taken back, `hidden` for one never delivered to the reader), `ownChat` (the place's own chat, thread \"group\", not a one-to-one one) and `writerBlocked` (the reader has blocked its writer): someone's message in the place's own chat, as a blocked writer's one-to-one lines sent while blocked come hidden instead and those sent before stay as they were. reportable (Reporting and blocking): whether a line's menu offers 通報, by its `kind` as in folded, whether it is the reader's own (`mine`) and its `place` (`group`, or `support` for the chat with Pochical's people, whose rules take no reports, design/src/chat.ts chatPlaces): someone else's message where the place takes reports, never the app's notices or a line taken back, which the server does not take.",
   "pins": [
     {
       "name": "a pinned line comes first among the pins",
@@ -1687,6 +1687,413 @@
         }
       ],
       "expected": ["f", "s"]
+    }
+  ],
+  "reactions": [
+    {
+      "name": "a new emoji goes last",
+      "reactions": [
+        {
+          "emoji": "👍",
+          "userIds": ["u2"]
+        }
+      ],
+      "step": {
+        "user": "me",
+        "emoji": "❤️",
+        "on": true
+      },
+      "expected": [
+        {
+          "emoji": "👍",
+          "userIds": ["u2"]
+        },
+        {
+          "emoji": "❤️",
+          "userIds": ["me"]
+        }
+      ]
+    },
+    {
+      "name": "joining an emoji goes last among its choosers",
+      "reactions": [
+        {
+          "emoji": "👍",
+          "userIds": ["u2", "u3"]
+        }
+      ],
+      "step": {
+        "user": "me",
+        "emoji": "👍",
+        "on": true
+      },
+      "expected": [
+        {
+          "emoji": "👍",
+          "userIds": ["u2", "u3", "me"]
+        }
+      ]
+    },
+    {
+      "name": "choosing one again changes nothing",
+      "reactions": [
+        {
+          "emoji": "👍",
+          "userIds": ["me", "u2"]
+        }
+      ],
+      "step": {
+        "user": "me",
+        "emoji": "👍",
+        "on": true
+      },
+      "expected": [
+        {
+          "emoji": "👍",
+          "userIds": ["me", "u2"]
+        }
+      ]
+    },
+    {
+      "name": "taking one's own back leaves the others'",
+      "reactions": [
+        {
+          "emoji": "👍",
+          "userIds": ["u2", "me"]
+        },
+        {
+          "emoji": "❤️",
+          "userIds": ["me"]
+        }
+      ],
+      "step": {
+        "user": "me",
+        "emoji": "👍",
+        "on": false
+      },
+      "expected": [
+        {
+          "emoji": "👍",
+          "userIds": ["u2"]
+        },
+        {
+          "emoji": "❤️",
+          "userIds": ["me"]
+        }
+      ]
+    },
+    {
+      "name": "an emoji nobody holds any more goes",
+      "reactions": [
+        {
+          "emoji": "👍",
+          "userIds": ["u2"]
+        },
+        {
+          "emoji": "❤️",
+          "userIds": ["me"]
+        },
+        {
+          "emoji": "🎉",
+          "userIds": ["u2"]
+        }
+      ],
+      "step": {
+        "user": "me",
+        "emoji": "❤️",
+        "on": false
+      },
+      "expected": [
+        {
+          "emoji": "👍",
+          "userIds": ["u2"]
+        },
+        {
+          "emoji": "🎉",
+          "userIds": ["u2"]
+        }
+      ]
+    },
+    {
+      "name": "taking back one not chosen changes nothing",
+      "reactions": [
+        {
+          "emoji": "👍",
+          "userIds": ["u2"]
+        }
+      ],
+      "step": {
+        "user": "me",
+        "emoji": "❤️",
+        "on": false
+      },
+      "expected": [
+        {
+          "emoji": "👍",
+          "userIds": ["u2"]
+        }
+      ]
+    }
+  ],
+  "votes": [
+    {
+      "name": "a first vote on a day",
+      "days": ["2026-11-01", "2026-11-03", "2026-11-08"],
+      "votes": [],
+      "step": {
+        "user": "me",
+        "day": "2026-11-03",
+        "on": true
+      },
+      "expected": [
+        {
+          "day": "2026-11-03",
+          "userIds": ["me"]
+        }
+      ]
+    },
+    {
+      "name": "days stay in the poll's order",
+      "days": ["2026-11-01", "2026-11-03", "2026-11-08"],
+      "votes": [
+        {
+          "day": "2026-11-08",
+          "userIds": ["u2"]
+        }
+      ],
+      "step": {
+        "user": "me",
+        "day": "2026-11-01",
+        "on": true
+      },
+      "expected": [
+        {
+          "day": "2026-11-01",
+          "userIds": ["me"]
+        },
+        {
+          "day": "2026-11-08",
+          "userIds": ["u2"]
+        }
+      ]
+    },
+    {
+      "name": "a vote goes last among a day's",
+      "days": ["2026-11-01", "2026-11-03", "2026-11-08"],
+      "votes": [
+        {
+          "day": "2026-11-01",
+          "userIds": ["u2", "u3"]
+        }
+      ],
+      "step": {
+        "user": "me",
+        "day": "2026-11-01",
+        "on": true
+      },
+      "expected": [
+        {
+          "day": "2026-11-01",
+          "userIds": ["u2", "u3", "me"]
+        }
+      ]
+    },
+    {
+      "name": "voting again changes nothing",
+      "days": ["2026-11-01", "2026-11-03", "2026-11-08"],
+      "votes": [
+        {
+          "day": "2026-11-01",
+          "userIds": ["me", "u2"]
+        }
+      ],
+      "step": {
+        "user": "me",
+        "day": "2026-11-01",
+        "on": true
+      },
+      "expected": [
+        {
+          "day": "2026-11-01",
+          "userIds": ["me", "u2"]
+        }
+      ]
+    },
+    {
+      "name": "taking a vote back leaves the others'",
+      "days": ["2026-11-01", "2026-11-03", "2026-11-08"],
+      "votes": [
+        {
+          "day": "2026-11-01",
+          "userIds": ["me", "u2"]
+        }
+      ],
+      "step": {
+        "user": "me",
+        "day": "2026-11-01",
+        "on": false
+      },
+      "expected": [
+        {
+          "day": "2026-11-01",
+          "userIds": ["u2"]
+        }
+      ]
+    },
+    {
+      "name": "a day nobody can come on any more goes",
+      "days": ["2026-11-01", "2026-11-03", "2026-11-08"],
+      "votes": [
+        {
+          "day": "2026-11-01",
+          "userIds": ["me"]
+        },
+        {
+          "day": "2026-11-03",
+          "userIds": ["u2"]
+        }
+      ],
+      "step": {
+        "user": "me",
+        "day": "2026-11-01",
+        "on": false
+      },
+      "expected": [
+        {
+          "day": "2026-11-03",
+          "userIds": ["u2"]
+        }
+      ]
+    }
+  ],
+  "folded": [
+    {
+      "name": "a blocked writer's words in the place's own chat",
+      "kind": "words",
+      "ownChat": true,
+      "writerBlocked": true,
+      "expected": true
+    },
+    {
+      "name": "a blocked writer's photos in the place's own chat",
+      "kind": "photos",
+      "ownChat": true,
+      "writerBlocked": true,
+      "expected": true
+    },
+    {
+      "name": "a blocked writer's shared days",
+      "kind": "days",
+      "ownChat": true,
+      "writerBlocked": true,
+      "expected": true
+    },
+    {
+      "name": "a blocked writer's poll",
+      "kind": "poll",
+      "ownChat": true,
+      "writerBlocked": true,
+      "expected": true
+    },
+    {
+      "name": "the app's notice of a blocked member joining stays",
+      "kind": "notice",
+      "ownChat": true,
+      "writerBlocked": true,
+      "expected": false
+    },
+    {
+      "name": "a blocked writer's line taken back stays as one taken back",
+      "kind": "unsent",
+      "ownChat": true,
+      "writerBlocked": true,
+      "expected": false
+    },
+    {
+      "name": "someone not blocked",
+      "kind": "words",
+      "ownChat": true,
+      "writerBlocked": false,
+      "expected": false
+    },
+    {
+      "name": "a one-to-one line sent before the block stays as it was",
+      "kind": "words",
+      "ownChat": false,
+      "writerBlocked": true,
+      "expected": false
+    },
+    {
+      "name": "a one-to-one line sent while blocked comes hidden, not folded",
+      "kind": "hidden",
+      "ownChat": false,
+      "writerBlocked": true,
+      "expected": false
+    }
+  ],
+  "reportable": [
+    {
+      "name": "someone else's words in a group",
+      "kind": "words",
+      "mine": false,
+      "place": "group",
+      "expected": true
+    },
+    {
+      "name": "someone else's photos",
+      "kind": "photos",
+      "mine": false,
+      "place": "group",
+      "expected": true
+    },
+    {
+      "name": "someone else's shared days",
+      "kind": "days",
+      "mine": false,
+      "place": "group",
+      "expected": true
+    },
+    {
+      "name": "someone else's poll",
+      "kind": "poll",
+      "mine": false,
+      "place": "group",
+      "expected": true
+    },
+    {
+      "name": "one's own words",
+      "kind": "words",
+      "mine": true,
+      "place": "group",
+      "expected": false
+    },
+    {
+      "name": "the app's notice",
+      "kind": "notice",
+      "mine": false,
+      "place": "group",
+      "expected": false
+    },
+    {
+      "name": "a line taken back",
+      "kind": "unsent",
+      "mine": false,
+      "place": "group",
+      "expected": false
+    },
+    {
+      "name": "a line never delivered",
+      "kind": "hidden",
+      "mine": false,
+      "place": "group",
+      "expected": false
+    },
+    {
+      "name": "an answer in the chat with Pochical's people",
+      "kind": "words",
+      "mine": false,
+      "place": "support",
+      "expected": false
     }
   ]
 }

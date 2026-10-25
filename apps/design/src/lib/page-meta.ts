@@ -1,9 +1,5 @@
 import shareImage from "@pochical/prototype/assets/share.png?url";
-import { SHARE_IMAGE, site } from "@pochical/prototype/lib/brand";
-
-// Where the documents are served (wrangler.jsonc's route), for the share
-// card's picture, which chat apps read only at a full address.
-const origin = "https://design.pochical.app";
+import { designUrl, SHARE_IMAGE, site } from "@pochical/prototype/lib/brand";
 
 // A page's title and description, and the card a link to it shows where it
 // is shared: the site's picture (apps/web's too) under the page's own
@@ -20,7 +16,7 @@ export const pageMeta = (title: string, description: string) => {
       { content: "website", property: "og:type" },
       { content: "ja_JP", property: "og:locale" },
       { content: site.name, property: "og:site_name" },
-      { content: `${origin}${shareImage}`, property: "og:image" },
+      { content: `${designUrl}${shareImage}`, property: "og:image" },
       { content: String(SHARE_IMAGE.width), property: "og:image:width" },
       { content: String(SHARE_IMAGE.height), property: "og:image:height" },
       { content: SHARE_IMAGE.alt, property: "og:image:alt" },
