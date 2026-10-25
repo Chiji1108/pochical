@@ -18,8 +18,6 @@ import app.pochical.calendar.LocalOwnDays
 import app.pochical.calendar.OwnDays
 import android.content.Intent
 import app.pochical.groups.LocalGroupCalls
-import app.pochical.groups.LocalOpenedInvites
-import app.pochical.groups.OpenedInvites
 import app.pochical.groups.LocalValues
 import app.pochical.kit.DeviceSettings
 import app.pochical.kit.PochicalKit
@@ -44,17 +42,17 @@ class MainActivity(
   private var settings by mutableStateOf<DeviceSettings?>(null)
   private val appleSignIn = AppleSignIn(this, kit.appleSignIn)
   private var calendarRead by mutableStateOf(false)
-  private val invites = OpenedInvites()
+  private val links = OpenedLinks()
 
   override fun onCreate(savedInstanceState: Bundle?) {
     // The splash stays until the first frame can be drawn in the person's テーマ, with their days.
     installSplashScreen().setKeepOnScreenCondition { settings == null || !calendarRead }
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
-    // Made again, the activity's navigation keeps the join screen the first intent opened.
+    // Made again, the activity's navigation keeps the place the first intent opened.
     // From Recents, Android hands the intent the task began with again: no link was opened now.
-    if (savedInstanceState == null && intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY == 0) invites.take(intent)
-    addOnNewIntentListener(invites::take)
+    if (savedInstanceState == null && intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY == 0) links.take(intent)
+    addOnNewIntentListener(links::take)
     lifecycleScope.launch {
       // Not cancelled with the activity, so a sample is never left half put in; read after it, so
       // the first calendar drawn holds it.
@@ -76,7 +74,7 @@ class MainActivity(
         LocalAppleSignIn provides appleSignIn,
         LocalGroupCalls provides kit.groups,
         LocalValues provides kit.database.values(),
-        LocalOpenedInvites provides invites,
+        LocalOpenedLinks provides links,
       ) {
         PochicalTheme(device) { AccountRoot() }
       }
