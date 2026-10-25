@@ -9,6 +9,7 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Animatable
@@ -53,8 +54,10 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -84,6 +87,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.LocalDeviceSettings
 import app.pochical.LocalThemeColors
 import app.pochical.R
+import app.pochical.ReviewPrompt
 import app.pochical.RootPage
 import app.pochical.design.Metrics
 import app.pochical.design.PochicalTextStyles
@@ -203,16 +207,36 @@ fun CalendarScreen(
   var offeringReminders by rememberSaveable { mutableStateOf<String?>(null) }
   // A shift was entered since ポチポチ入力 opened, so its closing may offer the reminders.
   var entered by rememberSaveable { mutableStateOf(false) }
+  // From 完了 until its question about the blank days has closed too.
+  var finishing by rememberSaveable { mutableStateOf(false) }
+  // The edits of the days the review prompt has seen; one made since is asked about once done.
+  val dayEdits by days.dayEdits.collectAsState()
+  var reviewSeen by rememberSaveable { mutableIntStateOf(dayEdits) }
   fun offerReminders() {
     val time = settings.device.reminderOfferTime(asking.notAsked) ?: return
     settings.change { it.copy(reminderOffered = true) }
     offeringReminders = time
+    // Offered instead of the review, which waits for another time (spec/review.md).
+    reviewSeen = dayEdits
   }
   // ポチポチ入力 and 完了's question about the blank days have closed.
   fun closedEntering() {
+    finishing = false
     if (!entered) return
     entered = false
     offerReminders()
+  }
+  // Something put on the days, once entering, a day and 完了's question have all closed: the store's
+  // review prompt, if the person has used Pochical long enough (spec/review.md). A memo kept as its
+  // day closes comes after the day has gone.
+  val activity = LocalActivity.current
+  val done = opened == null && entering == null && !finishing && gaps.isEmpty() && offeringReminders == null
+  LaunchedEffect(done, dayEdits) {
+    // Counted from 0 again in a new process.
+    if (dayEdits < reviewSeen) reviewSeen = dayEdits
+    if (!done || dayEdits == reviewSeen || activity == null) return@LaunchedEffect
+    reviewSeen = dayEdits
+    ReviewPrompt.askIfDue(activity)
   }
   // A repeating order set up fills the days without ポチポチ入力: offered as the calendar shows.
   val offerWaiting = LocalDeviceSettings.current.device.reminderOfferWaiting
@@ -265,6 +289,7 @@ fun CalendarScreen(
   // asked about, when a pattern that counts as off could fill them.
   fun finish() {
     val day = enteringKey?.let(LocalDate::parse) ?: return
+    finishing = true
     enteringKey = null
     said = null
     if (calendar.patterns.daysOff().isEmpty()) return closedEntering()

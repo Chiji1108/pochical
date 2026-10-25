@@ -64,6 +64,7 @@ import androidx.compose.ui.unit.dp
 import app.pochical.ListSheet
 import app.pochical.LocalThemeColors
 import app.pochical.R
+import app.pochical.ReviewPrompt
 import app.pochical.SectionHeader
 import app.pochical.design.Chat
 import app.pochical.design.Radius
@@ -245,6 +246,7 @@ fun ReportSheet(target: ReportTarget, groupId: String, onDismiss: () -> Unit, on
             } catch (e: CancellationException) {
               throw e
             } catch (_: Exception) {
+              ReviewPrompt.troubled = true
               failed = true
             }
             sending = false

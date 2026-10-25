@@ -86,6 +86,12 @@ interface OwnDays {
   /** Returns once [calendar] holds what the device keeps, not the nothing it starts from. */
   suspend fun awaitRead()
 
+  /**
+   * How many times the person put something on their days (a shift, its hours or people, a memo)
+   * since the app started: the calendar asks for a review once they are done (spec/review.md).
+   */
+  val dayEdits: StateFlow<Int>
+
   /** Puts `entry` on `day`; none clears its shift with its hours and people, keeping the memo. */
   fun set(day: LocalDate, entry: DayEntry?)
 
