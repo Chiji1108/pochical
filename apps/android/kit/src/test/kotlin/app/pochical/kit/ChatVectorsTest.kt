@@ -18,7 +18,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 // The chat's cases every platform checks (spec/vectors/chat.json) that the chat's lines, its
-// scrolling and its composer's words use; pins, edited and composer come with the lines' parts
+// scrolling and its composer use; pins come with the pin bar
 // (#826), albumRows with photos (#827), withdrawn with notifications (#884).
 
 @Serializable
@@ -33,6 +33,8 @@ private data class ChatVectors(
   val pageAfter: List<PageAfter>,
   val order: List<Order>,
   val draft: List<Draft>,
+  val edited: List<Edited>,
+  val composer: List<Composer>,
 ) {
   @Serializable
   data class Writer(override val name: String, val author: String, val me: String, val kind: String, val expected: String) : VectorCase
@@ -82,6 +84,26 @@ private data class ChatVectors(
 
   @Serializable
   data class Draft(override val name: String, val draft: Kept, val lines: List<HeldLine>, val expected: Kept?) : VectorCase
+
+  @Serializable data class Edited(override val name: String, val text: String, val edit: String, val expected: String) : VectorCase
+
+  /** The composer as the vectors keep it: its words as sent, the line it answers or changes, its days, photos and ×. */
+  @Serializable
+  data class Held(
+    val text: String,
+    val replyTo: Long? = null,
+    val editing: Long? = null,
+    val days: List<String>? = null,
+    val photos: Int? = null,
+    val withoutPreview: Boolean? = null,
+  )
+
+  @Serializable
+  data class Step(val reply: Long? = null, val edit: Long? = null, val share: List<String>? = null, val stop: Boolean? = null)
+
+  @Serializable
+  data class Composer(override val name: String, val composer: Held, val step: Step, val lines: List<HeldLine>, val expected: Held) :
+    VectorCase
 }
 
 private val chat = vectors<ChatVectors>("chat")
@@ -138,6 +160,36 @@ class ChatVectorsTest {
       keptDraft(KeptDraft(case.draft.text, case.draft.replyTo, case.draft.editing), lines::get)?.let {
         ChatVectors.Kept(it.text, it.replyTo, it.editing)
       }
+    }
+
+  @Test
+  fun edited() = chat.edited.checkEach({ it.expected }) { if (keepsPreview(it.text, it.edit)) "kept" else "new" }
+
+  @Test
+  fun composer() =
+    chat.composer.checkEach({ it.expected }) { case ->
+      val nameOf = { id: String -> if (id == "u2") "ゆき" else id }
+      val held = case.composer
+      val before =
+        Writing.of<Int>(held.text, nameOf, held.replyTo, held.editing)
+          .copy(days = held.days, photos = List(held.photos ?: 0) { it }, previewRemoved = if (held.withoutPreview == true) previewLink(held.text) else null)
+      val step = case.step
+      val after =
+        when {
+          step.reply != null -> before.answer(step.reply)
+          step.edit != null -> before.change(step.edit, case.lines.first { it.seq == step.edit }.text, nameOf)
+          step.share != null -> before.share(step.share)
+          else -> before.stop()
+        }
+      val text = after.sent
+      ChatVectors.Held(
+        text = text,
+        replyTo = after.replyTo,
+        editing = after.editing,
+        days = after.days,
+        photos = after.photos.size.takeIf { it > 0 },
+        withoutPreview = after.previewRemoved?.takeIf { it == previewLink(text) }?.let { true },
+      )
     }
 }
 

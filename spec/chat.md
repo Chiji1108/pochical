@@ -37,7 +37,7 @@ What any line has besides is not its kind: who wrote it, when, its place, its re
 - ⋯ beside the title holds みんなのシフト for 全体チャット and 写真 for every chat (the chat with Pochical's people too, Photos), then the chat's notifications (Mentions).
 - The bar's buttons (back and ⋯) and the round ↓ draw their symbols in the label color (the system's on iOS), on the system's glass there, as every bar button in the app does (the calendar's heading, the group's hub's 招待 and 設定); the accent is kept for a page's one confirming action, which fills with it as iOS 26 draws a prominent bar button (保存, 作る, 追加, 完了, 送る), and for the send button. The menus they open (⋯, the composer's ＋) draw their items in the label color too, a destructive one in the danger color.
 - In the group's hub, under its chats, a group of one says メンバーを招待すると、1対1でも話せます。 Starting a one-to-one chat lists the members with 〇〇での名前とアイコンで話します。, as the chat belongs to the group.
-- コピー says コピーしました.
+- コピー says コピーしました; on Android 13 and later the system's own notice of what was copied says it, as Android asks of apps, and the app says nothing more.
 
 ## Opening a message's menu
 

@@ -48,4 +48,25 @@
   <string name="chat_blocked_line">ブロック中のメンバーのメッセージ</string>
   <string name="chat_sent_photos">写真を送りました</string>
   <string name="chat_shared">%1$sを共有しました</string>
+  <string name="chat_reply">返信</string>
+  <string name="chat_copy">コピー</string>
+  <string name="chat_copied">コピーしました</string>
+  <string name="chat_edit">編集</string>
+  <string name="chat_edited">編集済み</string>
+  <string name="chat_unsend">送信取消</string>
+  <string name="chat_unsend_ask">送信を取り消しますか？</string>
+  <string name="chat_unsend_body">メンバー全員のチャットから消えます。</string>
+  <string name="chat_unsend_waiting">まだ送られていないメッセージです。</string>
+  <string name="chat_unsend_confirm">取り消す</string>
+  <string name="chat_menu">メニューを開く</string>
+  <string name="chat_replying_to">%1$sに返信</string>
+  <string name="chat_replying">返信</string>
+  <string name="chat_stop_replying">返信をやめる</string>
+  <string name="chat_editing">メッセージを編集</string>
+  <string name="chat_stop_editing">編集をやめる</string>
+  <string name="chat_save">保存</string>
+  <string name="chat_quote_earlier">以前のメッセージ</string>
+  <string name="chat_quote_unsent">取り消されたメッセージ</string>
+  <string name="chat_reply_to_said">%1$s「%2$s」への返信</string>
+  <string name="chat_show_quoted">返信元を表示</string>
 </resources>

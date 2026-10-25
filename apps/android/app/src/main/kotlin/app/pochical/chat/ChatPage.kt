@@ -1,5 +1,15 @@
 package app.pochical.chat
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.lifecycle.compose.LifecycleEventEffect
+import app.pochical.calendar.rememberReducedMotion
+import app.pochical.kit.LineContent
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.flowOf
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -102,7 +112,9 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
   val account = LocalAccount.current
   val values = LocalValues.current
   val me = rememberMeId()
-  val members by remember(values, groupId) { values.members(groupId) }.collectAsState(emptyList())
+  // Null until read, so a draft's mentions are named once the names are known.
+  val memberRows by remember(values, groupId) { values.members(groupId) }.collectAsState(null)
+  val members = memberRows.orEmpty()
   val groups by remember(values) { values.groups() }.collectAsState(emptyList())
   val blocked by remember(values) { values.blocks() }.collectAsState(emptyList())
   val socket by remember(account, groupId) { account.chatSocket(groupId) }.collectAsState(null)
@@ -123,7 +135,7 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
       snapshotFlow { from to currentMe }.flatMapLatest { (from, me) -> chats.state(groupId, threadId, me, from) }
     }
       .collectAsState(null)
-  val chat = state ?: return ChatScaffold(groupId, threadId, members, groups, socket, onBack) {}
+  val chat = state ?: return ChatScaffold(groupId, threadId, members, groups, socket, remember { SnackbarHostState() }, onBack) {}
 
   // Others writing, shown for chatRules.typingShowMs unless said again; a blocked member's is not.
   val typers = rememberTypers(socket, threadId, me, blocked.map { it.userId }.toSet())
@@ -253,35 +265,128 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
   LaunchedEffect(typers.isNotEmpty()) { if (placed && following && typers.isNotEmpty()) list.animateScrollToItem(0) }
 
   var notKept by remember { mutableStateOf(false) }
-  ChatScaffold(groupId, threadId, members, groups, socket, onBack) {
-    Column(Modifier.fillMaxSize().imePadding()) {
-      Box(Modifier.weight(1f).fillMaxWidth()) {
-        ChatLines(items, list, chat, me, writers, threadId, { notKept = true }, Modifier.alpha(if (placed) 1f else 0f))
-        LatestButton(list, chat, me, items, Modifier.align(Alignment.BottomEnd)) { toUnread ->
-          when {
-            toUnread -> going = Going.ToUnread
-            // The latest lines laid out as the chat opens, and gone to.
-            !chat.atEnd -> {
-              from = null
-              going = Going.ToFoot
+  val composer = rememberComposerState()
+  val menu = rememberLineMenuState()
+  val snackbar = remember { SnackbarHostState() }
+  val reducedMotion = rememberReducedMotion()
+  val scope = rememberCoroutineScope()
+  val deleted = stringResource(R.string.deleted_account)
+  val nameOf = remember(writers, deleted) { { id: String -> writers[id]?.shownName(deleted) ?: deleted } }
+  val blockedIds = remember(blocked) { blocked.map { it.userId }.toSet() }
+
+  // A line gone to (a quote, later a pin): laid out from it when the device holds it, else earlier
+  // lines asked for a page at a time until they reach it; then put in the middle of the screen and
+  // lit once there (spec/chat.md, Replies; Pins).
+  var jumping by remember { mutableStateOf<Long?>(null) }
+  var lit by remember { mutableStateOf<Lit?>(null) }
+  LaunchedEffect(jumping, items, placed, chat.heldBefore) {
+    val seq = jumping ?: return@LaunchedEffect
+    if (!placed) return@LaunchedEffect
+    val index = items.indexOfFirst { it is ChatItem.Line && it.line.seq == seq }
+    val first = chat.lines.firstOrNull()?.seq
+    when {
+      index >= 0 -> {
+        following = false
+        list.showInMiddle(index, animated = !reducedMotion)
+        lit = Lit(seq, System.nanoTime())
+        jumping = null
+      }
+      // Held but not laid out: the lines are laid out from it.
+      from != seq && chat.line(seq) != null -> from = seq
+      // Earlier than the lines and not held: those the device holds laid out first, then the page
+      // before them waited for, which is asked as fewer than a page are held.
+      first != null && seq < first && !chat.atStart -> if (chat.heldBefore > 0) from = maxOf(first - Chat.pageSize, chat.heldFrom ?: 1)
+      else -> jumping = null
+    }
+  }
+
+  // The menu closes as its line goes from the chat (taken back) or becomes the group's (its menu
+  // was a line on its way's), as the app leaves the screen, at back, and as the member types.
+  val acting = menu.open
+  LaunchedEffect(acting, items) {
+    val line = acting ?: return@LaunchedEffect
+    val item = items.firstOrNull { it.key == line.key }
+    val stays =
+      when (item) {
+        is ChatItem.Line -> !line.waiting && item.line.content != LineContent.Unsent
+        is ChatItem.Waiting -> line.waiting
+        else -> false
+      }
+    if (!stays) menu.close()
+  }
+  LifecycleEventEffect(Lifecycle.Event.ON_STOP) { menu.close() }
+  BackHandler(enabled = acting != null) { menu.close() }
+  LaunchedEffect(composer) { snapshotFlow { composer.writing.text }.drop(1).collect { menu.close() } }
+
+  // The line the composer answers, held however far from the lines laid out.
+  val replying = composer.writing.replyTo
+  val answered by remember(chats, groupId, threadId, replying) { replying?.let { chats.line(groupId, threadId, it) } ?: flowOf(null) }.collectAsState(null)
+
+  var unsending by remember { mutableStateOf<Unsending?>(null) }
+  val actions = rememberLineActions(composer, nameOf, snackbar, onUnsend = { unsending = it }, onNotKept = { notKept = true })
+  val handlers =
+    MessageHandlers(
+      menu = menu,
+      items = actions,
+      reply = { composer.answer(it) },
+      jump = { jumping = it },
+      nameOf = nameOf,
+      notKept = { notKept = true },
+      reducedMotion = reducedMotion,
+      lit = lit,
+      litShown = { if (lit == it) lit = null },
+    )
+  Box {
+    ChatScaffold(groupId, threadId, members, groups, socket, snackbar, onBack) {
+      Column(Modifier.fillMaxSize().imePadding()) {
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+          ChatLines(items, list, chat, me, writers, threadId != GROUP_THREAD, handlers, { lineQuote(it, chat.line(it), nameOf, blockedIds) }, Modifier.alpha(if (placed) 1f else 0f))
+          LatestButton(list, chat, me, items, Modifier.align(Alignment.BottomEnd)) { toUnread ->
+            when {
+              toUnread -> going = Going.ToUnread
+              // The latest lines laid out as the chat opens, and gone to.
+              !chat.atEnd -> {
+                from = null
+                going = Going.ToFoot
+              }
+              else -> going = Going.ToFoot
             }
-            else -> going = Going.ToFoot
+          }
+        }
+        Composer(
+          composer,
+          groupId,
+          threadId,
+          quote = replying?.let { lineQuote(it, chat.line(it) ?: answered, nameOf, blockedIds) },
+          nameOf = nameOf,
+          namesKnown = memberRows != null,
+          onTyping = { on -> socket?.sendTyping(threadId, on) },
+          onSent = {
+            if (!chat.atEnd) from = null
+            going = Going.ToFoot
+          },
+          onNotKept = { notKept = true },
+        )
+      }
+    }
+    LineMenu(menu)
+  }
+  if (notKept) NotKeptDialog { notKept = false }
+  unsending?.let { asked ->
+    UnsendDialog(asked, onDismiss = { unsending = null }) {
+      unsending = null
+      scope.launch {
+        keeping({ notKept = true }) {
+          when (asked) {
+            is Unsending.Sent -> chats.unsend(groupId, threadId, asked.seq)
+            // Taken by the group while asked: taken back as its line now.
+            is Unsending.Waiting ->
+              chat.lines.firstOrNull { it.opId == asked.opId }?.let { chats.unsend(groupId, threadId, it.seq) } ?: chats.takeBack(asked.opId)
           }
         }
       }
-      Composer(
-        groupId,
-        threadId,
-        onTyping = { on -> socket?.sendTyping(threadId, on) },
-        onSent = {
-          if (!chat.atEnd) from = null
-          going = Going.ToFoot
-        },
-        onNotKept = { notKept = true },
-      )
     }
   }
-  if (notKept) NotKeptDialog { notKept = false }
 }
 
 /** The page around the chat: its title, and how the socket is under it while it is not current. */
@@ -293,6 +398,7 @@ private fun ChatScaffold(
   members: List<GroupMemberRow>,
   groups: List<GroupRow>,
   socket: ChatSocket?,
+  snackbar: SnackbarHostState,
   onBack: () -> Unit,
   content: @Composable () -> Unit,
 ) {
@@ -318,6 +424,7 @@ private fun ChatScaffold(
         },
       )
     },
+    snackbarHost = { SnackbarHost(snackbar) },
     // The composer takes the foot, rising with the keyboard (imePadding).
     contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
   ) { padding ->
@@ -358,8 +465,9 @@ private fun ChatLines(
   chat: ChatState,
   me: String?,
   writers: Map<String, GroupMemberRow>,
-  threadId: String,
-  onNotKept: () -> Unit,
+  direct: Boolean,
+  handlers: MessageHandlers,
+  quoteOf: @Composable (Long) -> LineQuote,
   modifier: Modifier = Modifier,
 ) {
   LazyColumn(
@@ -369,7 +477,8 @@ private fun ChatLines(
     contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
   ) {
     items(items, key = { it.key }, contentType = { it::class }) { item ->
-      ChatItemRow(item, me, writers, threadId != GROUP_THREAD, onNotKept, Modifier.animateItem())
+      val look = messageLook(item, me, writers, direct, quoteOf, handlers.nameOf)
+      ChatItemRow(item, look, writers, me, handlers, Modifier.animateItem())
     }
     if (!chat.atStart && chat.heldBefore == 0) {
       item(key = "earlier") {
@@ -472,6 +581,17 @@ private suspend fun LazyListState.showAtTop(index: Int): Boolean {
   val top = layoutInfo.viewportEndOffset - layoutInfo.afterContentPadding
   scrollBy(-(top - (item.offset + item.size)).toFloat())
   return !canScrollBackward
+}
+
+/** Puts the item at [index] in the middle of the screen, gliding there unless [animated] is off. */
+private suspend fun LazyListState.showInMiddle(index: Int, animated: Boolean) {
+  if (animated) animateScrollToItem(index) else scrollToItem(index)
+  val info = layoutInfo
+  val item = info.visibleItemsInfo.firstOrNull { it.index == index } ?: return
+  // Reversed, an item's offset is from the foot; it goes up by how far its middle is under the screen's.
+  val middle = (info.viewportEndOffset - info.viewportStartOffset) / 2
+  val by = -(middle - (item.offset + item.size / 2)).toFloat()
+  if (animated) animateScrollBy(by) else scrollBy(by)
 }
 
 /**

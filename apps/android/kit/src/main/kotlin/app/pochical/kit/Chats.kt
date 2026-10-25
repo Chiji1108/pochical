@@ -2,11 +2,13 @@ package app.pochical.kit
 
 import app.pochical.v1.ChatEdit
 import app.pochical.v1.ChatLine as WireLine
+import app.pochical.v1.chatChange
 import app.pochical.v1.chatRead
 import app.pochical.v1.chatRecall
 import app.pochical.v1.chatSend
 import app.pochical.v1.chatSendContent
 import app.pochical.v1.chatSendWords
+import app.pochical.v1.chatUnsend
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -48,6 +50,13 @@ class Chats internal constructor(
     }
 
   /**
+   * The line [seq] as the screen shows it, the member's waiting edits to it in place, however far
+   * from the lines laid out (the line the composer answers); null while the device does not hold it.
+   */
+  fun line(groupId: String, threadId: String, seq: Long): Flow<ChatLine?> =
+    observe("chatLines", "chatOutbox") { now -> Timed(shownLine(groupId, threadId, seq, waitingEdits(groupId, threadId, now)), null) }
+
+  /**
    * The group's chats that have a line, unread lines counted before their lines come, one of the
    * member's own on its way, or a draft: the one-to-one chats its list shows beside its own.
    */
@@ -61,15 +70,48 @@ class Chats internal constructor(
    * Sends [text] as a line of words in the chat, shown at once as the member's line on its way.
    * Throws when the device cannot keep it (保存できませんでした), the composer keeping the words.
    */
-  suspend fun send(groupId: String, threadId: String, text: String) {
+  suspend fun send(groupId: String, threadId: String, text: String, replyTo: Long? = null) {
     database.write {
       chatEdit(groupId, now()) {
         send = chatSend {
           this.threadId = threadId
           content = chatSendContent { words = chatSendWords { this.text = text } }
+          replyTo?.let { this.replyTo = it }
         }
       }
       deleteChatDraft(groupId, threadId)
+    }
+  }
+
+  /**
+   * 編集: new words for the member's line of words [seq], marked 編集済み for everyone. Its link's
+   * page stays while its first link does (spec/vectors/chat.json, edited); else the line goes
+   * without one. Throws when the device cannot keep it, the composer keeping the words.
+   */
+  suspend fun change(groupId: String, threadId: String, seq: Long, text: String) {
+    database.write {
+      val was = shownLine(groupId, threadId, seq, waitingEdits(groupId, threadId, now()))?.content as? LineContent.Words ?: return@write
+      chatEdit(groupId, now()) {
+        change = chatChange {
+          this.threadId = threadId
+          this.seq = seq
+          this.text = text
+          keepsPreview = keepsPreview(was.text, text)
+        }
+      }
+      deleteChatDraft(groupId, threadId)
+    }
+  }
+
+  /** 送信取消: the member's line [seq] taken back for everyone, its reactions, reply and pin with it. */
+  suspend fun unsend(groupId: String, threadId: String, seq: Long) {
+    database.write {
+      chatEdit(groupId, now()) {
+        unsend = chatUnsend {
+          this.threadId = threadId
+          this.seq = seq
+        }
+      }
     }
   }
 
@@ -266,7 +308,16 @@ internal suspend fun SyncDao.chatState(groupId: String, threadId: String, me: St
         else -> true
       }
     }
+  // The lines replies answer that are not laid out, held however far back (spec/chat.md, Replies).
+  val laid = lines.mapTo(HashSet()) { it.seq }
+  val quoted =
+    (lines.mapNotNull { it.replyTo } + waiting.lines.mapNotNull { it.replyTo })
+      .filter { it !in laid }
+      .distinct()
+      .mapNotNull { seq -> shownLine(groupId, threadId, seq, waiting)?.let { seq to it } }
+      .toMap()
   return ChatState(
+    quoted = quoted,
     lines = lines,
     waiting = shownWaiting,
     failsAt = waiting.failsAt,

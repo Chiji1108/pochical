@@ -36,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -69,62 +70,24 @@ import kotlinx.coroutines.launch
 // lines of words with their writer's face and name over a run, and what stands for the parts the
 // chat's lines draw later (#826, #827) in a line of words, as a quote reads them.
 
-/** The face's size beside others' lines. */
-private val FACE = 32.dp
-
-/** The room a bubble's tail reaches past its frame, kept beside every line of a run (`BubbleShape`). */
-private val TAIL = Radius.lg * BubbleShape.TAIL_REACH
-
-/** The room kept on the side away from the writer, so a bubble never runs the screen's width. */
-private val AWAY = 40.dp
-
+/** One of the chat's items as it is drawn, a message by its [look] and what the chat's [handlers] do with it. */
 @Composable
-fun ChatItemRow(
-  item: ChatItem,
-  me: String?,
-  writers: Map<String, GroupMemberRow>,
-  direct: Boolean,
-  onNotKept: () -> Unit,
-  modifier: Modifier = Modifier,
-) {
-  val deleted = stringResource(R.string.deleted_account)
-  val nameOf = { id: String -> writers[id]?.shownName(deleted) ?: deleted }
+fun ChatItemRow(item: ChatItem, look: MessageLook?, writers: Map<String, GroupMemberRow>, me: String?, handlers: MessageHandlers, modifier: Modifier = Modifier) {
   when (item) {
     is ChatItem.Typing -> TypingRow(item.userIds.mapNotNull { writers[it] }, modifier)
     is ChatItem.DayTitle -> DayTitle(item.day, modifier)
     ChatItem.Unread -> UnreadDivider(modifier)
     is ChatItem.Line -> {
       val line = item.line
-      val by = writers[line.authorId]?.shownName().orEmpty()
+      val by = handlers.nameOf(line.authorId)
       when (val content = line.content) {
-        is LineContent.Notice -> AppLine(noticeWords(content.notice, by, writers[content.notice.subjectId]?.shownName().orEmpty()), modifier)
+        is LineContent.Notice -> AppLine(noticeWords(content.notice, by, handlers.nameOf(content.notice.subjectId)), modifier)
         LineContent.Unsent ->
           AppLine(if (line.authorId == me) stringResource(R.string.chat_unsent_mine) else stringResource(R.string.chat_unsent, by), modifier)
-        else ->
-          Message(
-            mine = line.authorId == me,
-            words = lineWords(content, nameOf),
-            startsRun = item.startsRun,
-            writer = writers[line.authorId].takeIf { line.authorId != me },
-            showsName = !direct,
-            time = clock(line.sentAtMs).takeIf { item.showsTime },
-            status = null,
-            modifier = modifier,
-          )
+        else -> if (look != null) Message(look, handlers, modifier)
       }
     }
-    is ChatItem.Waiting ->
-      Message(
-        mine = true,
-        words = lineWords(item.line.content, nameOf),
-        startsRun = item.startsRun,
-        writer = null,
-        showsName = false,
-        time = null,
-        status = item.line,
-        onNotKept = onNotKept,
-        modifier = modifier,
-      )
+    is ChatItem.Waiting -> if (look != null) Message(look, handlers, modifier)
   }
 }
 
@@ -178,78 +141,27 @@ private fun AppLine(words: String, modifier: Modifier) {
 }
 
 /**
- * A message: others' on the start with their face and name over a run, one's own on the end. Its
- * time sits beside it, keeping its room when left to the next line, and a line on its way shows its
- * clock there, or a red ! once not sent, whose menu sends it again or deletes it.
+ * The room for a line's time, kept as wide when the time is left to the next line, so the bubble
+ * never widens as it comes: the time, the clock of a line on its way, or the ! of one not sent;
+ * 編集済み over it once the line's words were changed.
  */
 @Composable
-private fun Message(
-  mine: Boolean,
-  words: String,
-  startsRun: Boolean,
-  writer: GroupMemberRow?,
-  showsName: Boolean,
-  time: String?,
-  status: WaitingLine?,
-  modifier: Modifier,
-  onNotKept: () -> Unit = {},
-) {
+internal fun TimeRoom(time: String?, waiting: WaitingLine?, edited: Boolean, notSentItems: List<LineMenuItem>, modifier: Modifier) {
   val colors = LocalThemeColors.current
-  val shape = remember(mine, startsRun) { BubbleShape(mine, tail = startsRun) }
-  Row(
-    modifier.fillMaxWidth().padding(top = (if (startsRun) Chat.runGap else Chat.lineGap).dp).semantics(mergeDescendants = true) {},
-    horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start,
-  ) {
-    if (!mine) {
-      Box(Modifier.size(FACE)) {
-        if (startsRun && writer != null) MemberAvatar(writer.shownName(), writer.photoId, PhotoShelf.Group(writer.groupId), FACE)
-      }
-      Spacer(Modifier.width(TAIL))
-    } else {
-      Spacer(Modifier.width(AWAY))
-    }
-    Column(Modifier.weight(1f, fill = false), horizontalAlignment = if (mine) Alignment.End else Alignment.Start) {
-      if (!mine && startsRun && showsName && writer != null) {
-        Text(
-          writer.shownName(),
-          Modifier.padding(start = 4.dp, bottom = 2.dp),
-          style = MaterialTheme.typography.labelMedium,
-          color = colors.textSecondary,
-        )
-      }
-      Row(verticalAlignment = Alignment.Bottom) {
-        if (mine) TimeRoom(time, status, onNotKept, Modifier.padding(end = 4.dp))
-        Text(
-          words,
-          Modifier.weight(1f, fill = false)
-            .alpha(if (status != null && !status.failed) WAITING_ALPHA else 1f)
-            .background(if (mine) colors.accentFill else colors.fillTertiary, shape)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-          style = MaterialTheme.typography.bodyLarge,
-          color = if (mine) colors.accentOnFill else colors.textPrimary,
-        )
-        if (!mine) TimeRoom(time, null, onNotKept, Modifier.padding(start = 4.dp))
-      }
-      if (status?.failed == true) {
-        Text(stringResource(R.string.chat_not_sent), style = MaterialTheme.typography.labelSmall, color = colors.dangerDefault)
-      }
-    }
-    if (mine) Spacer(Modifier.width(TAIL)) else Spacer(Modifier.width(AWAY))
+  Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+    if (edited) Text(stringResource(R.string.chat_edited), style = MaterialTheme.typography.labelSmall, color = colors.textTertiary)
+    TimeOrMark(time, waiting, notSentItems)
   }
 }
 
-/**
- * The room for a line's time, kept as wide when the time is left to the next line, so the bubble
- * never widens as it comes: the time, the clock of a line on its way, or the ! of one not sent.
- */
 @Composable
-private fun TimeRoom(time: String?, waiting: WaitingLine?, onNotKept: () -> Unit, modifier: Modifier) {
+private fun TimeOrMark(time: String?, waiting: WaitingLine?, notSentItems: List<LineMenuItem>) {
   val colors = LocalThemeColors.current
-  Box(modifier, contentAlignment = Alignment.BottomCenter) {
+  Box(contentAlignment = Alignment.BottomCenter) {
     // The room a time takes, drawn only when the line shows its own.
     Text("00:00", Modifier.alpha(0f).clearAndSetSemantics {}, style = MaterialTheme.typography.labelSmall)
     when {
-      waiting?.failed == true -> NotSentMark(waiting, onNotKept)
+      waiting?.failed == true -> NotSentMark(notSentItems)
       waiting != null -> {
         val sending = stringResource(R.string.chat_sending)
         Icon(painterResource(R.drawable.ic_schedule), sending, Modifier.size(14.dp), tint = colors.textTertiary)
@@ -261,9 +173,7 @@ private fun TimeRoom(time: String?, waiting: WaitingLine?, onNotKept: () -> Unit
 
 /** The red ! of a line not sent: its menu, headed 送れなかったメッセージ, sends it again or deletes it. */
 @Composable
-private fun NotSentMark(line: WaitingLine, onNotKept: () -> Unit) {
-  val chats = LocalChats.current
-  val scope = rememberCoroutineScope()
+private fun NotSentMark(items: List<LineMenuItem>) {
   var open by remember { mutableStateOf(false) }
   val colors = LocalThemeColors.current
   Box {
@@ -280,20 +190,16 @@ private fun NotSentMark(line: WaitingLine, onNotKept: () -> Unit) {
         style = MaterialTheme.typography.labelMedium,
         color = colors.textSecondary,
       )
-      DropdownMenuItem(
-        text = { Text(stringResource(R.string.chat_send_again)) },
-        onClick = {
-          open = false
-          scope.launch { keeping(onNotKept) { chats.sendAgain(line.opId) } }
-        },
-      )
-      DropdownMenuItem(
-        text = { Text(stringResource(R.string.chat_delete), color = colors.dangerDefault) },
-        onClick = {
-          open = false
-          scope.launch { keeping(onNotKept) { chats.takeBack(line.opId) } }
-        },
-      )
+      // The same items as the line's long press, one list for both.
+      for (item in items) {
+        DropdownMenuItem(
+          text = { Text(item.label, color = if (item.destructive) colors.dangerDefault else Color.Unspecified) },
+          onClick = {
+            open = false
+            item.run()
+          },
+        )
+      }
     }
   }
 }
@@ -387,9 +293,6 @@ suspend fun keeping(notKept: () -> Unit, edit: suspend () -> Unit) {
     notKept()
   }
 }
-
-/** How dim a line on its way is, as it would be on the chat's ground. */
-private const val WAITING_ALPHA = 0.6f
 
 /** How long a typing dot takes to rise. */
 private const val DOT_MS = 600
