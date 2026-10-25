@@ -35,7 +35,7 @@ fun rememberChatNotifications(): ChatNotificationState? {
 class ChatSwitching(private val switches: ChatNotificationSwitches, private val asking: NotificationAsking) {
   fun setMuted(groupId: String, threadId: String, muted: Boolean, done: (kept: Boolean) -> Unit) {
     // Turned on, the system's question first, if never put (spec/chat.md, Notifications).
-    if (!muted && asking.notAsked) asking.ask()
+    if (!muted) asking.askOnce()
     switches.setMuted(groupId, threadId, muted, done)
   }
 

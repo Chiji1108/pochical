@@ -64,6 +64,7 @@ import app.pochical.kit.fitsText
 import app.pochical.kit.keepsPreview
 import app.pochical.kit.previewLink
 import app.pochical.kit.site
+import app.pochical.notifications.LocalNotificationAsking
 import app.pochical.v1.LinkPreview
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.NonCancellable
@@ -159,6 +160,7 @@ fun Composer(
   modifier: Modifier = Modifier,
 ) {
   val chats = LocalChats.current
+  val asking = LocalNotificationAsking.current
   val scope = rememberCoroutineScope()
   val context = LocalContext.current
   val resources = context.resources
@@ -307,6 +309,9 @@ fun Composer(
             // Gone from the composer as it is sent, so a second tap sends nothing and the chat left
             // meanwhile keeps no draft of words sent.
             val going = state.writing
+            // A line sent, not one changed, is when an answer is first wanted: the system's question
+            // then, if never answered, as iOS asks (spec/chat.md, Notifications).
+            if (going.editing == null) asking.askOnce()
             state.writing = Writing()
             scope.launch {
               // What has gone; on a failure the rest comes back, to send again.
