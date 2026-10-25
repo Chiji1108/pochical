@@ -66,8 +66,10 @@ import app.pochical.kit.previewLink
 import app.pochical.kit.site
 import app.pochical.v1.LinkPreview
 import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * What the chat's composer holds, kept across a rotation and the process's death: what is written
@@ -310,27 +312,31 @@ fun Composer(
               // What has gone; on a failure the rest comes back, to send again.
               var left = going
               try {
-                val seq = going.editing
-                val words = going.sent
-                // The photos first, as one line answering what the composer answers; the words after
-                // them as a line of their own.
-                if (seq == null && going.photos.isNotEmpty()) {
-                  val shrunk = shrunkPhotos(context, going.photos)
-                  // One the system let go of from the cache meanwhile is left out, as one the phone cannot read.
-                  if (shrunk.size < going.photos.size) onSay(resources.getString(R.string.chat_photo_unreadable))
-                  if (shrunk.isNotEmpty()) {
-                    chats.sendPhotos(groupId, threadId, going.photos.mapNotNull { shrunk[it] }, going.replyTo)
-                    dropPicked(context, going.photos)
+                // Kept though the chat is left meanwhile: what was written is no longer in the
+                // composer to be kept as its draft.
+                withContext(NonCancellable) {
+                  val seq = going.editing
+                  val words = going.sent
+                  // The photos first, as one line answering what the composer answers; the words after
+                  // them as a line of their own.
+                  if (seq == null && going.photos.isNotEmpty()) {
+                    val shrunk = shrunkPhotos(context, going.photos)
+                    // One the system let go of from the cache meanwhile is left out, as one the phone cannot read.
+                    if (shrunk.size < going.photos.size) onSay(resources.getString(R.string.chat_photo_unreadable))
+                    if (shrunk.isNotEmpty()) {
+                      chats.sendPhotos(groupId, threadId, going.photos.mapNotNull { shrunk[it] }, going.replyTo)
+                      dropPicked(context, going.photos)
+                    }
+                    left = going.copy(photos = emptyList(), replyTo = going.replyTo.takeIf { shrunk.isEmpty() })
                   }
-                  left = going.copy(photos = emptyList(), replyTo = going.replyTo.takeIf { shrunk.isEmpty() })
-                }
-                if (words.isNotBlank()) {
-                  // The page as it came for the words' first link, or none taken off with ×.
-                  val sentLink = previewLink(words)
-                  val removed = sentLink != null && sentLink == going.previewRemoved
-                  val sentPage = sentLink?.takeIf { !removed }?.let(pages::page)
-                  if (seq != null) chats.change(groupId, threadId, seq, words, sentPage)
-                  else chats.send(groupId, threadId, words, left.replyTo, sentPage, withoutPreview = removed)
+                  if (words.isNotBlank()) {
+                    // The page as it came for the words' first link, or none taken off with ×.
+                    val sentLink = previewLink(words)
+                    val removed = sentLink != null && sentLink == going.previewRemoved
+                    val sentPage = sentLink?.takeIf { !removed }?.let(pages::page)
+                    if (seq != null) chats.change(groupId, threadId, seq, words, sentPage)
+                    else chats.send(groupId, threadId, words, left.replyTo, sentPage, withoutPreview = removed)
+                  }
                 }
               } catch (e: CancellationException) {
                 throw e
