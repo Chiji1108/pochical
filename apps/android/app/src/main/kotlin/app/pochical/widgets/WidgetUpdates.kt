@@ -45,11 +45,15 @@ class WidgetSources(database: AppDatabase, settings: SyncedSettings) {
   /** What the database holds, for who a widget is set to. */
   val values = database.values()
 
+  // Read while a widget draws; once none does, what was read is forgotten, so the next session
+  // starts from the database as it is then, not from the last session's reading.
+  private val whileDrawn = SharingStarted.WhileSubscribed(replayExpirationMillis = 0)
+
   /** The person's own calendar. */
-  val calendar: Flow<OwnCalendar> = database.values().ownCalendar().shareIn(scope, SharingStarted.WhileSubscribed(), replay = 1)
+  val calendar: Flow<OwnCalendar> = database.values().ownCalendar().shareIn(scope, whileDrawn, replay = 1)
 
   /** The settings the widgets are drawn in. */
-  val settings: Flow<DeviceSettings> = settings.settings.shareIn(scope, SharingStarted.WhileSubscribed(), replay = 1)
+  val settings: Flow<DeviceSettings> = settings.settings.shareIn(scope, whileDrawn, replay = 1)
 
   /** Today, and the next day as the date turns at midnight, for a widget drawn across it. */
   val today: Flow<LocalDate> = flow {
