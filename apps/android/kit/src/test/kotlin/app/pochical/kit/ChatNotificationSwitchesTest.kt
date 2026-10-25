@@ -4,7 +4,6 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -20,12 +19,16 @@ class ChatNotificationSwitchesTest {
   /** What the device heard on the user's socket, as the test sends it. */
   private val heard = MutableStateFlow(ChatNotificationState())
 
+  /** The user the device is signed in as. */
+  private val user = MutableStateFlow<String?>("me")
+
   /** The server's answer to each call, as the test gives it. */
   private var answer = CompletableDeferred<Unit>()
 
   private fun TestScope.switches() =
     ChatNotificationSwitches(
       heard,
+      user,
       sendMuted = { _, _, _ -> answer.await() },
       sendMentionsWhenMuted = { answer.await() },
       scope = backgroundScope,
@@ -36,11 +39,12 @@ class ChatNotificationSwitchesTest {
   @Test
   fun aChangeShowsAtOnceAndAnotherDevicesAfterItShowsAsItComes() = runTest(UnconfinedTestDispatcher()) {
     val switches = switches()
-    val turning = launch { switches.setMuted(chat.groupId, chat.threadId, muted = true) }
+    var kept: Boolean? = null
+    switches.setMuted(chat.groupId, chat.threadId, muted = true) { kept = it }
     // Asked, not yet heard: shown as turned.
     assertTrue(switches.muted())
     answer.complete(Unit)
-    turning.join()
+    assertEquals(true, kept)
     // The server's change comes back on the socket.
     heard.value = ChatNotificationState(muted = setOf(chat))
     assertTrue(switches.muted())
@@ -55,10 +59,22 @@ class ChatNotificationSwitchesTest {
   @Test
   fun aChangeTheServerDoesNotKeepGoesBack() = runTest(UnconfinedTestDispatcher()) {
     val switches = switches()
-    val turning = launch { runCatching { switches.setMentionsWhenMuted(false) } }
+    var kept: Boolean? = null
+    switches.setMentionsWhenMuted(false) { kept = it }
     assertFalse(switches.state.first().mentionsWhenMuted)
     answer.completeExceptionally(IllegalStateException("offline"))
-    turning.join()
+    assertEquals(false, kept)
     assertEquals(true, switches.state.first().mentionsWhenMuted)
+  }
+
+  @Test
+  fun whatOneUserAskedIsNotLaidOverTheNext() = runTest(UnconfinedTestDispatcher()) {
+    val switches = switches()
+    switches.setMentionsWhenMuted(false)
+    assertFalse(switches.state.first().mentionsWhenMuted)
+    // Signed out before the server's word came, and in as someone else.
+    user.value = null
+    user.value = "someone"
+    assertTrue(switches.state.first().mentionsWhenMuted)
   }
 }

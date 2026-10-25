@@ -149,9 +149,6 @@ internal interface ChatDao {
 
   @Query("DELETE FROM chatMutes") suspend fun deleteChatMutes()
 
-  @Query("SELECT EXISTS(SELECT 1 FROM chatMutes WHERE groupId = :groupId AND threadId = :threadId)")
-  suspend fun muted(groupId: String, threadId: String): Boolean
-
   @Upsert suspend fun upsert(settings: ChatNotificationSettingsRow)
 
   @Query("DELETE FROM chatNotificationSettings") suspend fun deleteChatNotificationSettings()

@@ -64,7 +64,7 @@ class Chats internal constructor(
 
   /** The chat as the group's list of chats shows it, for [me]. */
   fun summary(groupId: String, threadId: String, me: String): Flow<ChatSummary> =
-    observe("chatLines", "readMarks", "chatOutbox", "unreadCounts", "chatDrafts", "chatMutes") { now ->
+    observe("chatLines", "readMarks", "chatOutbox", "unreadCounts", "chatDrafts") { now ->
       val summary = chatSummary(groupId, threadId, me, now)
       Timed(summary, summary.failsAt)
     }
@@ -598,7 +598,7 @@ internal suspend fun SyncDao.chatSummary(groupId: String, threadId: String, me: 
           line.writer(me) == LineWriter.Others && me in mentions((line.content as? LineContent.Words)?.text.orEmpty())
         }
       }
-  return ChatSummary(last, latest, waiting.failsAt, unread, keptDraft(groupId, threadId, waiting), mentioned, muted(groupId, threadId))
+  return ChatSummary(last, latest, waiting.failsAt, unread, keptDraft(groupId, threadId, waiting), mentioned)
 }
 
 /** How far [me] has read the chat, their read still waiting included. */

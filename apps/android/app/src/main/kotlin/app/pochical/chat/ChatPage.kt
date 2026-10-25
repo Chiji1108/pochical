@@ -690,7 +690,7 @@ private fun ChatScaffold(
   val title = other?.shownName() ?: if (support) stringResource(R.string.app_name) else groups.firstOrNull { it.id == groupId }?.name.orEmpty()
   val count = members.count { !it.left }
   val status = rememberSocketWords(socket)
-  val muted = rememberChatNotifications().isMuted(groupId, threadId)
+  val muted = rememberChatNotifications()?.isMuted(groupId, threadId)
   val setMuted = rememberChatMuting(groupId, threadId, say)
   Scaffold(
     topBar = {
@@ -701,7 +701,7 @@ private fun ChatScaffold(
             Row(verticalAlignment = Alignment.CenterVertically) {
               Text(title, Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis)
               // 通知オフ, after its name as in the chat list.
-              if (muted) {
+              if (muted == true) {
                 Icon(
                   painterResource(R.drawable.ic_notifications_off),
                   stringResource(R.string.chat_muted),
@@ -733,17 +733,19 @@ private fun ChatScaffold(
                   onPhotos()
                 },
               )
-              HorizontalDivider()
-              DropdownMenuItem(
-                text = { Text(stringResource(if (muted) R.string.chat_unmute else R.string.chat_mute)) },
-                leadingIcon = {
-                  Icon(painterResource(if (muted) R.drawable.ic_notifications else R.drawable.ic_notifications_off), contentDescription = null)
-                },
-                onClick = {
-                  more = false
-                  setMuted(!muted)
-                },
-              )
+              if (muted != null) {
+                HorizontalDivider()
+                DropdownMenuItem(
+                  text = { Text(stringResource(if (muted) R.string.chat_unmute else R.string.chat_mute)) },
+                  leadingIcon = {
+                    Icon(painterResource(if (muted) R.drawable.ic_notifications else R.drawable.ic_notifications_off), contentDescription = null)
+                  },
+                  onClick = {
+                    more = false
+                    setMuted(!muted)
+                  },
+                )
+              }
             }
           }
         },

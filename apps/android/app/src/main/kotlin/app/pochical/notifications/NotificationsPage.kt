@@ -56,7 +56,8 @@ import androidx.compose.material3.Switch
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.Saver
+import app.pochical.kit.ChatNotificationState
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import app.pochical.Footnote
@@ -83,13 +84,14 @@ fun ChatNotificationsRow(open: (RootPage) -> Unit) {
   val allowed by LocalNotificationPermission.current.allowed.collectAsStateWithLifecycle()
   val values = LocalValues.current
   val groups by remember(values) { values.groups() }.collectAsState(emptyList())
-  val notifications = rememberChatNotifications()
-  val summary = chatNotificationsSummary(groups.map { it.id }, notifications, allowed)
+  // Its value once the device has read the switches, never a guess before.
+  val summary = rememberChatNotifications()?.let { chatNotificationsSummary(groups.map { it.id }, it, allowed) }
   ListItem(
     headlineContent = { Text(stringResource(R.string.notifications_chat)) },
     supportingContent = {
       Text(
         when (summary) {
+          null -> ""
           ChatNotificationsSummary.On -> stringResource(R.string.notifications_on)
           ChatNotificationsSummary.Off -> stringResource(R.string.notifications_off)
           is ChatNotificationsSummary.Groups -> stringResource(R.string.notifications_groups, summary.count)
@@ -112,7 +114,8 @@ fun ChatNotificationsPage(onBack: () -> Unit) {
   val context = LocalContext.current
   val values = LocalValues.current
   val groups by remember(values) { values.groups() }.collectAsState(emptyList())
-  val notifications = rememberChatNotifications()
+  val members by remember(values) { values.allMembers() }.collectAsState(emptyList())
+  val read = rememberChatNotifications()
   val me = rememberMeId()
   val snackbar = remember { SnackbarHostState() }
   val scope = rememberCoroutineScope()
@@ -120,14 +123,14 @@ fun ChatNotificationsPage(onBack: () -> Unit) {
   val switching = rememberChatSwitching()
   // Shown as turned at once (ChatNotificationSwitches); said should the server not keep it.
   val done = { kept: Boolean -> if (!kept) scope.launch { snackbar.showSnackbar(failed) } }
-  // The one-to-one chats turned off as the page opened: one turned on again stays, to turn off
-  // again here. Read once the mutes have come, and kept while the page is.
+  // The one-to-one chats turned off as the page opened, as the switches show them: one turned on
+  // again stays, to turn off again here. Read once they are, and kept while the page is.
   var directOff by rememberSaveable(stateSaver = chatKeysSaver) { mutableStateOf<List<ChatKey>?>(null) }
-  val mutes by remember(values) { values.chatMutes() }.collectAsState(null)
-  LaunchedEffect(mutes) {
-    val read = mutes ?: return@LaunchedEffect
-    if (directOff == null) directOff = read.filter { it.threadId != GROUP_THREAD }.map { ChatKey(it.groupId, it.threadId) }.sortedBy { it.threadId }
+  LaunchedEffect(read) {
+    if (directOff == null && read != null) directOff = read.muted.filter { it.threadId != GROUP_THREAD }.sortedBy { it.threadId }
   }
+  // Nothing of the switches is shown until they are read, so none shows what it is not.
+  val notifications = read ?: ChatNotificationState()
   val chatSwitch = { groupId: String, threadId: String ->
     ChatSwitch(!notifications.isMuted(groupId, threadId)) { on -> switching.setMuted(groupId, threadId, !on) { done(it) } }
   }
@@ -138,18 +141,17 @@ fun ChatNotificationsPage(onBack: () -> Unit) {
       LazyColumn {
         item { PermissionCard() }
         item { SectionHeader(stringResource(R.string.notifications_group_chats)) }
-        items(groups, key = { "group-${it.id}" }) { group ->
+        items(if (read == null) emptyList() else groups, key = { "group-${it.id}" }) { group ->
           SwitchRow(chatSwitch(group.id, GROUP_THREAD), headline = group.name) {
             GroupMarkBadge(group.mark, shelf = PhotoShelf.Group(group.id))
           }
         }
-        if (notifications.mentionsWhenMuted) item { Footnote(stringResource(R.string.notifications_group_chats_note)) }
+        if (read?.mentionsWhenMuted == true) item { Footnote(stringResource(R.string.notifications_group_chats_note)) }
         item { SectionHeader(stringResource(R.string.notifications_direct_chats)) }
         items(directOff.orEmpty(), key = { "direct-${it.groupId}-${it.threadId}" }) { chat ->
           val group = groups.firstOrNull { it.id == chat.groupId }
           val other = me?.let { otherIn(chat.threadId, it) }
-          val members by remember(values, chat.groupId) { values.members(chat.groupId) }.collectAsState(emptyList())
-          val person = members.firstOrNull { it.userId == other }
+          val person = members.firstOrNull { it.groupId == chat.groupId && it.userId == other }
           val name = person?.shownName() ?: stringResource(R.string.blocked_someone)
           SwitchRow(chatSwitch(chat.groupId, chat.threadId), headline = name, supporting = group?.name) {
             MemberAvatar(name, person?.photoId.orEmpty(), PhotoShelf.Group(chat.groupId), 40.dp)
@@ -157,7 +159,7 @@ fun ChatNotificationsPage(onBack: () -> Unit) {
         }
         item { Footnote(stringResource(R.string.notifications_direct_chats_note)) }
         item { SectionHeader(stringResource(R.string.notifications_mentions)) }
-        item {
+        if (read != null) item {
           SwitchRow(
             ChatSwitch(notifications.mentionsWhenMuted) { on -> switching.setMentionsWhenMuted(on) { done(it) } },
             headline = stringResource(R.string.notifications_mentions_always),
@@ -194,10 +196,10 @@ private fun SwitchRow(switch: ChatSwitch, headline: String, supporting: String? 
   )
 }
 
-/** The one-to-one chats turned off as the page opened, kept across the process's death. */
+/** The one-to-one chats turned off as the page opened, kept across the process's death; none kept before they are read. */
 private val chatKeysSaver =
-  listSaver<List<ChatKey>?, String>(
-    save = { keys -> keys?.flatMap { listOf(it.groupId, it.threadId) } ?: emptyList() },
+  Saver<List<ChatKey>?, ArrayList<String>>(
+    save = { keys -> keys?.flatMapTo(ArrayList()) { listOf(it.groupId, it.threadId) } },
     restore = { saved -> saved.chunked(2).map { (groupId, threadId) -> ChatKey(groupId, threadId) } },
   )
 
