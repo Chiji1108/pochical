@@ -1,5 +1,6 @@
 package app.pochical.kit
 
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,9 +20,11 @@ import kotlinx.coroutines.launch
  */
 class ChatNotificationSwitches(
   heard: Flow<ChatNotificationState>,
+  /** The user the device is signed in as: what one asked is not laid over another's. */
+  user: Flow<String?>,
   private val sendMuted: suspend (groupId: String, threadId: String, muted: Boolean) -> Unit,
   private val sendMentionsWhenMuted: suspend (on: Boolean) -> Unit,
-  scope: CoroutineScope,
+  private val scope: CoroutineScope,
 ) {
   /** The changes asked for and not heard yet. */
   private data class Asked(val muted: Map<ChatKey, Boolean> = emptyMap(), val mentionsWhenMuted: Boolean? = null) {
@@ -45,6 +48,7 @@ class ChatNotificationSwitches(
   private val switches = MutableStateFlow(Switches())
 
   init {
+    scope.launch { user.distinctUntilChanged().collect { switches.update { it.copy(asked = Asked()) } } }
     scope.launch {
       heard.collect { now ->
         switches.update { switches -> Switches(now, switches.heard?.let { switches.asked.heard(it, now) } ?: switches.asked) }
@@ -55,26 +59,35 @@ class ChatNotificationSwitches(
   /** The chat notifications as the switches show them, once the device has read what it heard. */
   val state: Flow<ChatNotificationState> = switches.mapNotNull { it.heard?.let(it.asked::over) }.distinctUntilChanged()
 
-  /** Turns the chat off ([muted]) or on again: shown at once, and as heard again should the server not take it. */
-  suspend fun setMuted(groupId: String, threadId: String, muted: Boolean) {
+  /**
+   * Turns the chat off ([muted]) or on again: shown at once, sent though the screen that asked goes,
+   * and as heard again should the server not take it; [done] says whether it did.
+   */
+  fun setMuted(groupId: String, threadId: String, muted: Boolean, done: (kept: Boolean) -> Unit = {}) {
     val key = ChatKey(groupId, threadId)
     ask { it.copy(muted = it.muted + (key to muted)) }
-    try {
-      sendMuted(groupId, threadId, muted)
-    } catch (e: Throwable) {
-      ask { if (it.muted[key] == muted) it.copy(muted = it.muted - key) else it }
-      throw e
-    }
+    send({ sendMuted(groupId, threadId, muted) }, done) { ask { if (it.muted[key] == muted) it.copy(muted = it.muted - key) else it } }
   }
 
-  /** Sets メンションはいつも通知: shown at once, and as heard again should the server not take it. */
-  suspend fun setMentionsWhenMuted(on: Boolean) {
+  /** Sets メンションはいつも通知, as [setMuted] turns a chat. */
+  fun setMentionsWhenMuted(on: Boolean, done: (kept: Boolean) -> Unit = {}) {
     ask { it.copy(mentionsWhenMuted = on) }
-    try {
-      sendMentionsWhenMuted(on)
-    } catch (e: Throwable) {
-      ask { if (it.mentionsWhenMuted == on) it.copy(mentionsWhenMuted = null) else it }
-      throw e
+    send({ sendMentionsWhenMuted(on) }, done) { ask { if (it.mentionsWhenMuted == on) it.copy(mentionsWhenMuted = null) else it } }
+  }
+
+  private fun send(call: suspend () -> Unit, done: (Boolean) -> Unit, refused: () -> Unit) {
+    scope.launch {
+      val kept =
+        try {
+          call()
+          true
+        } catch (e: CancellationException) {
+          throw e
+        } catch (_: Exception) {
+          refused()
+          false
+        }
+      done(kept)
     }
   }
 

@@ -6,8 +6,13 @@ import type { ReactNode } from "react";
 import type { Schedule } from "../lib/design-days";
 import { useDevice } from "../lib/design-device";
 import { useAppFeatures } from "../lib/design-features";
-import { groupChat, isMuted, withMuted } from "../lib/design-group-data";
-import type { Group, Member } from "../lib/design-group-data";
+import {
+  chatNotificationsSummary,
+  groupChat,
+  isMuted,
+  withMuted,
+} from "../lib/design-group-data";
+import type { Member } from "../lib/design-group-data";
 import { sampleOthers } from "../lib/design-group-samples";
 import { OwnPatternsContext, usePatterns } from "../lib/design-patterns";
 import type { PatternBook, Shift } from "../lib/design-patterns";
@@ -253,20 +258,6 @@ function PermissionCard({ onAsk }: { onAsk: () => void }) {
 
 // The two rows of 設定's 通知, each saying what arrives: nothing at all
 // until the system allows it.
-// 設定 › 通知 › チャット's value: オン while every group's chat notifies, オフ
-// while none does or notifications are not allowed, else how many do
-// (spec/vectors/unread.json, notificationsSummary).
-export function chatNotificationsSummary(
-  groups: Pick<Group, "mutedChats">[],
-  allowed: boolean
-) {
-  const heard = groups.filter((group) => !isMuted(group, groupChat));
-  if (!allowed || heard.length === 0) {
-    return "オフ";
-  }
-  return heard.length === groups.length ? "オン" : `${heard.length}グループ`;
-}
-
 export function NotificationSection({
   onReminders,
   onChats,

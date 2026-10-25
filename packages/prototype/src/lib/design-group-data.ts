@@ -239,6 +239,20 @@ export function isMuted(group: Pick<Group, "mutedChats">, chatId: string) {
   return group.mutedChats?.includes(chatId) ?? false;
 }
 
+// 設定 › 通知 › チャット's value: オン while every group's chat notifies, オフ
+// while none does or notifications are not allowed, else how many do
+// (spec/vectors/unread.json, notificationsSummary).
+export function chatNotificationsSummary(
+  groups: Pick<Group, "mutedChats">[],
+  allowed: boolean
+) {
+  const heard = groups.filter((group) => !isMuted(group, groupChat));
+  if (!allowed || heard.length === 0) {
+    return "オフ";
+  }
+  return heard.length === groups.length ? "オン" : `${heard.length}グループ`;
+}
+
 // The group with one of its chats turned off or back on.
 export function withMuted<G extends Pick<Group, "mutedChats">>(
   group: G,

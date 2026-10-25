@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.pochical.LocalThemeColors
 import app.pochical.R
+import app.pochical.notifications.rememberChatNotifications
 import app.pochical.calendar.rememberToday
 import app.pochical.calendar.slashText
 import app.pochical.design.Radius
@@ -154,7 +155,7 @@ internal fun ChatRow(
     headlineContent = {
       Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(label, Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis)
-        if (summary.muted) {
+        if (rememberChatNotifications()?.isMuted(groupId, threadId) == true) {
           Icon(
             painterResource(R.drawable.ic_notifications_off),
             stringResource(R.string.chat_muted),
