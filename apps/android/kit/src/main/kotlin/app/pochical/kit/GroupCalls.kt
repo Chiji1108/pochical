@@ -12,9 +12,13 @@ import app.pochical.v1.joinGroupRequest
 import app.pochical.v1.leaveGroupRequest
 import app.pochical.v1.remakeInviteLinkRequest
 import app.pochical.v1.removeMemberRequest
+import app.pochical.v1.ReportReason
 import app.pochical.v1.renameGroupRequest
+import app.pochical.v1.reportRequest
+import app.pochical.v1.reportedLine
 import app.pochical.v1.setDisplayNameRequest
 import app.pochical.v1.setGroupPhotoRequest
+import app.pochical.v1.setBlockedRequest
 import app.pochical.v1.setProfileRequest
 import com.connectrpc.Code
 import com.connectrpc.ConnectException
@@ -134,6 +138,45 @@ class GroupCalls internal constructor(
    */
   suspend fun linkPreview(url: String): LinkPreview? = call { headers ->
     chats.getLinkPreview(getLinkPreviewRequest { this.url = url }, headers).answer().takeIf { it.hasPreview() }?.preview
+  }
+
+  /**
+   * 通報 (spec/chat.md, Reporting and blocking): someone else's line of the group [groupId], sent with
+   * the few around it as the group holds them, or a member, for [reason]. Nobody in the group is told.
+   */
+  suspend fun report(groupId: String, reason: ReportReason, what: Reported) = call { headers ->
+    chats
+      .report(
+        reportRequest {
+          this.groupId = groupId
+          this.reason = reason
+          when (what) {
+            is Reported.Line -> line = reportedLine {
+              threadId = what.threadId
+              seq = what.seq
+            }
+            is Reported.Member -> userId = what.userId
+          }
+        },
+        headers,
+      )
+      .answer()
+  }
+
+  /**
+   * ブロック, or ブロックを解除 (spec/chat.md, Reporting and blocking), in every group the user shares with
+   * [userId]: the device hears of it on the user's socket as a Block change, as their other devices do.
+   */
+  suspend fun setBlocked(userId: String, blocked: Boolean) = call { headers ->
+    users
+      .setBlocked(
+        setBlockedRequest {
+          this.userId = userId
+          this.blocked = blocked
+        },
+        headers,
+      )
+      .answer()
   }
 
   /** The group's live invitation code. */

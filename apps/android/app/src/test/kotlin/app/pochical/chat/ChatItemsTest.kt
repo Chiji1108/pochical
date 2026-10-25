@@ -84,4 +84,15 @@ class ChatItemsTest {
       )
     assertEquals(listOf("day 2026-10-25", "1 run time", "2 run time", "4 run time"), shape(chatItems(state, "me", null, zone)))
   }
+
+  @Test
+  fun aBlockedWritersLinesEachStandApartAndTheNextLineStartsARun() {
+    val state =
+      ChatState(lines = listOf(line(1, "u2", at(1)), line(2, "u2", at(1)), line(3, "u3", at(1)), line(4, "u3", at(1))), waiting = emptyList(), atStart = true)
+    // u2 blocked: each of their lines its own run, folded or shown this once, and u3's next starts one.
+    assertEquals(
+      listOf("day 2026-10-25", "1 run time", "2 run time", "3 run", "4 time"),
+      shape(chatItems(state, "me", null, zone, blocked = { it.authorId == "u2" })),
+    )
+  }
 }

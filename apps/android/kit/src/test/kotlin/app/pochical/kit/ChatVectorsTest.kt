@@ -1,5 +1,6 @@
 package app.pochical.kit
 
+import app.pochical.design.Chat
 import app.pochical.v1.ChatLine as WireLine
 import app.pochical.v1.ChatNotice
 import app.pochical.v1.change
@@ -19,7 +20,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 // The chat's cases every platform checks (spec/vectors/chat.json) that the chat's lines, its
-// scrolling, its composer, its reactions, its pins and its albums use;
+// scrolling, its composer, its reactions, its pins, its albums and its reporting and blocking use;
 // withdrawn with notifications (#884).
 
 @Serializable
@@ -40,7 +41,15 @@ private data class ChatVectors(
   val pins: List<Pins>,
   val votes: List<Votes>,
   val albumRows: List<AlbumRows>,
+  val folded: List<Folded>,
+  val reportable: List<Reportable>,
 ) {
+  @Serializable
+  data class Folded(override val name: String, val kind: String, val ownChat: Boolean, val writerBlocked: Boolean, val expected: Boolean) : VectorCase
+
+  @Serializable
+  data class Reportable(override val name: String, val kind: String, val mine: Boolean, val place: String, val expected: Boolean) : VectorCase
+
   @Serializable
   data class Writer(override val name: String, val author: String, val me: String, val kind: String, val expected: String) : VectorCase
 
@@ -139,6 +148,8 @@ private data class ChatVectors(
 
 private val chat = vectors<ChatVectors>("chat")
 
+private fun kind(key: String) = LineKind.entries.first { it.key == key }
+
 private fun writer(name: String) =
   when (name) {
     "others" -> LineWriter.Others
@@ -157,6 +168,15 @@ class ChatVectorsTest {
   fun firstUnread() = chat.firstUnread.checkEach({ it.expected }) { firstUnread(it.lines.map(::writer), it.unread) }
 
   @Test fun directThread() = chat.directThread.checkEach({ it.expected }) { directThread(it.a, it.b) }
+
+  @Test
+  fun folded() = chat.folded.checkEach({ it.expected }) { folds(kind(it.kind), it.ownChat, it.writerBlocked) }
+
+  @Test
+  fun reportable() =
+    chat.reportable.checkEach({ it.expected }) { case ->
+      reportable(kind(case.kind), case.mine, placeRules(if (case.place == "support") Chat.supportPlace else "group-1"))
+    }
 
   @Test fun albumRows() = chat.albumRows.checkEach({ it.expected }) { albumRows(it.count) }
 

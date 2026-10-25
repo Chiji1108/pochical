@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.pochical.R
 import app.pochical.kit.ChatLine
+import app.pochical.kit.folds
 import app.pochical.kit.LineContent
 
 // Replies (返信; spec/chat.md, Replies; /design's BubbleQuote and the composer's reply bar): a line
@@ -43,7 +44,7 @@ fun lineQuote(seq: Long, line: ChatLine?, nameOf: (String) -> String, blocked: S
     is LineContent.Notice,
     LineContent.Hidden -> LineQuote(seq, null, stringResource(R.string.chat_quote_earlier))
     else ->
-      if (line.authorId in blocked) LineQuote(seq, null, stringResource(R.string.chat_blocked_line))
+      if (line.folds(blocked)) LineQuote(seq, null, stringResource(R.string.chat_blocked_line))
       else LineQuote(seq, nameOf(line.authorId), lineWords(content, nameOf))
   }
 }

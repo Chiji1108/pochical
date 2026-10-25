@@ -4,6 +4,8 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -63,6 +65,7 @@ import app.pochical.R
 import app.pochical.design.Chat
 import app.pochical.design.Radius
 import app.pochical.groups.MemberAvatar
+import app.pochical.kit.ChatLine
 import app.pochical.kit.GroupMemberRow
 import app.pochical.kit.LineContent
 import app.pochical.kit.LineReaction
@@ -182,6 +185,12 @@ class MessageHandlers(
   val openPhoto: (seq: Long, index: Int) -> Unit,
   /** A photo of the member's line still on its way, opened large alone. */
   val openOwnPhoto: (line: WaitingLine, index: Int) -> Unit,
+  /** A writer's face tapped: their profile; null where faces open none. */
+  val openProfile: ((GroupMemberRow) -> Unit)? = null,
+  /** Whether a line shows folded to ブロック中のメンバーのメッセージ, its writer blocked, until shown this once. */
+  val folded: (ChatLine) -> Boolean = { false },
+  /** 表示 on a folded line: shown this once, while the chat is open. */
+  val showFolded: (seq: Long) -> Unit = {},
 )
 
 /**
@@ -221,8 +230,17 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
   val items = handlers.items(look)
   // Its menu's items, 返信 first, then what each of its parts offers (spec/chat.md, Screen readers).
   val partLine = PartLine(look.seq, handlers, openMenu = { openMenu() })
+  // The writer's profile, which a tap on their face opens.
+  val profiled = look.writer?.takeIf { !look.mine && !it.deleted }
+  val openProfile = handlers.openProfile
+  val profile =
+    if (profiled != null && openProfile != null) {
+      CustomAccessibilityAction(stringResource(R.string.chat_writer_profile, profiled.shownName())) { openProfile(profiled); true }
+    } else {
+      null
+    }
   val actions =
-    (items.map { item -> CustomAccessibilityAction(item.label) { item.run(); true } } + look.parts.flatMap { it.actions(partLine) })
+    (items.map { item -> CustomAccessibilityAction(item.label) { item.run(); true } } + look.parts.flatMap { it.actions(partLine) } + listOfNotNull(profile))
       // Android holds at most this many on one element; past them, the latest parts' go.
       .take(MOST_ACTIONS)
   // Activating a sent line of photos opens its first large; any other line opens its menu, as the long press does.
@@ -263,9 +281,11 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
       horizontalArrangement = if (look.mine) Arrangement.End else Arrangement.Start,
     ) {
       if (!look.mine) {
-        Box(Modifier.size(FACE).clearAndSetSemantics {}) {
-          val writer = look.writer
-          if (look.startsRun && writer != null) MemberAvatar(writer.shownName(), writer.photoId, PhotoShelf.Group(writer.groupId), FACE)
+        val writer = look.writer?.takeIf { look.startsRun }
+        // A tap on the face opens their profile (spec/chat.md, The chat's page).
+        val profile = handlers.openProfile?.takeIf { writer != null && !writer.deleted }
+        Box(Modifier.size(FACE).clip(CircleShape).then(if (profile != null && writer != null) Modifier.clickable { profile(writer) } else Modifier).clearAndSetSemantics {}) {
+          if (writer != null) MemberAvatar(writer.shownName(), writer.photoId, PhotoShelf.Group(writer.groupId), FACE)
         }
         Spacer(Modifier.width(TAIL))
       } else {

@@ -44,6 +44,7 @@ import app.pochical.R
 import app.pochical.design.Chat
 import app.pochical.design.Radius
 import app.pochical.kit.ChatLine
+import app.pochical.kit.folds
 
 // The pinned lines over a chat (spec/chat.md, Pins; /design's PinBar), as iOS's PinBar.swift: the
 // latest on a card under the header, a tap going to it; with more than one, ▾ opening all of them
@@ -99,7 +100,7 @@ fun PinBar(pins: List<ChatLine>, nameOf: (String) -> String, blocked: Set<String
             PinItem(line, Modifier.fillMaxWidth().padding(horizontal = 8.dp), onJump = { open = false; onJump(it) }, onUnpin) {
               Column {
                 // A blocked member's line folded, as its quote is: neither who nor what.
-                if (line.authorId !in blocked) {
+                if (!line.folds(blocked)) {
                   Text(nameOf(line.authorId), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = colors.accentDefault)
                 }
                 PinWords(line, nameOf, blocked)
@@ -145,7 +146,7 @@ private fun PinItem(line: ChatLine, modifier: Modifier, onJump: (Long) -> Unit, 
 @Composable
 private fun PinWords(line: ChatLine, nameOf: (String) -> String, blocked: Set<String>) {
   Text(
-    if (line.authorId in blocked) stringResource(R.string.chat_blocked_line) else lineWords(line.content, nameOf).replace('\n', ' '),
+    if (line.folds(blocked)) stringResource(R.string.chat_blocked_line) else lineWords(line.content, nameOf).replace('\n', ' '),
     style = MaterialTheme.typography.bodyMedium,
     color = LocalThemeColors.current.textPrimary,
     maxLines = 1,
