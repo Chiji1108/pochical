@@ -64,7 +64,7 @@ sealed interface AccountState {
    */
   data class Erasing(val why: Why, val failed: Boolean = false) : AccountState {
     enum class Why {
-      /** The person let the session go: はじめから使う, after the server ended it. */
+      /** The person let the session go: ログアウト, or はじめから使う after the server ended it. */
       SignedOut,
 
       /** The account is deleted on the server. */
@@ -329,6 +329,29 @@ class SyncAccount internal constructor(
       Outcome.Deleted(before.userId)
     }
     return true
+  }
+
+  /**
+   * ログアウト (spec/sync-protocol.md, Signing out): what waits in the outboxes goes first
+   * ([sendOutbox]), so signing in again finds it, the sockets open after as before; then the session
+   * ends on the server, and the device erases what it held and forgets its session
+   * ([AccountState.Erasing.Why.SignedOut]) and signs in as someone new. The account owns it from the
+   * moment it is asked, so a page left meanwhile never stops it half way. [NotSignedIn] before the
+   * device has a session, or once it ended while the outbox waited; [AccountChanged] when the device
+   * is not signed in as it was asked; the server's error otherwise, nothing changed. better-auth ends
+   * a session it no longer knows as it ends any, so that is let go of too.
+   */
+  suspend fun signOut() {
+    val asking = signedIn() ?: throw NotSignedIn()
+    scope
+      .async {
+        if (!sendOutbox()) throw NotSignedIn()
+        change(asking, ended = ::NotSignedIn, refused = ::AccountChanged, unknown = { false }) { before ->
+          signOutSession(http, server, before.token)
+          Outcome.SignedOut(before.userId)
+        }
+      }
+      .await()
   }
 
   /** 再試行: erasing is tried again now rather than after the wait. */
@@ -623,9 +646,7 @@ class SyncAccount internal constructor(
         if (state.value != AccountState.SessionEnded) return
         val kept =
           try {
-            // Kept as ended before anything is erased, so an app ended meanwhile goes on erasing as
-            // letting the session go, not as a deletion.
-            sessions.read()?.also { if (!it.ended) sessions.write(it.copy(ended = true)) }
+            sessions.read()
           } catch (e: StoreUnreachable) {
             Log.i(TAG, "The ended session could not be let go of: $e")
             return
@@ -693,9 +714,15 @@ class SyncAccount internal constructor(
     }
   }
 
-  /** Letting go of [userId] ([why]): nothing of theirs shows, and the device erases it ([erase]). */
-  private fun beginErasing(userId: String, why: AccountState.Erasing.Why) {
+  /**
+   * Letting go of [userId] ([why]): nothing of theirs shows, and the device erases it ([erase]). The
+   * database notes whom it lets go of and why before anything is erased, whatever the reason, so an
+   * app ended at any point from here goes on erasing as it starts (`signIn`), never showing their data
+   * or signing in as them.
+   */
+  private suspend fun beginErasing(userId: String, why: AccountState.Erasing.Why) {
     mutableState.value = AccountState.Erasing(why)
+    database.write { upsert(state().copy(erased = userId, erasedWhy = why.name)) }
     scope.launch { erase(userId, why) }
   }
 
@@ -742,6 +769,11 @@ class SyncAccount internal constructor(
         beginErasing(outcome.userId, AccountState.Erasing.Why.Deleted)
         command.settled.complete(Unit)
       }
+      is Outcome.SignedOut -> {
+        endStretch(current)
+        beginErasing(outcome.userId, AccountState.Erasing.Why.SignedOut)
+        command.settled.complete(Unit)
+      }
     }
   }
 
@@ -768,19 +800,16 @@ class SyncAccount internal constructor(
   }
 
   /**
-   * Letting go of [userId]: what the database holds of them erased, noting whose it was, then their
-   * session forgotten, tried again after a wait that doubles until both are. An app ended between
-   * the two finds the session it kept is of the user erased, and goes on erasing as it starts
+   * Letting go of [userId], noted already ([beginErasing]): what the database holds of them erased,
+   * then their session forgotten, tried again after a wait that doubles until both are. An app ended
+   * on the way finds the session it kept is of the user noted, and goes on erasing as it starts
    * (`signIn`), never signing in as them again.
    */
   private suspend fun erase(userId: String, why: AccountState.Erasing.Why) {
     var wait = ERASE_FIRST_WAIT_MS
     while (true) {
       try {
-        database.write {
-          eraseUserData()
-          upsert(state().copy(erased = userId))
-        }
+        database.write { eraseUserData() }
         // Their photos with the rest: the outbox that would send them is gone.
         linePhotos.eraseAll()
         sessions.forgetSession()
@@ -862,10 +891,10 @@ class SyncAccount internal constructor(
         Log.i(TAG, "The kept session cannot be reached, tried again in the foreground: $e")
         return
       }
-    if (kept != null && database.write { state().erased } == kept.userId) {
-      // Only a session let go of is kept as ended while it is erased; a deleted account's is not.
-      val why = if (kept.ended) AccountState.Erasing.Why.SignedOut else AccountState.Erasing.Why.Deleted
-      commands.send(Command.Erasing(kept.userId, why))
+    // Erasing cut off part way goes on, as the database noted it.
+    val noted = database.write { state() }
+    if (kept != null && noted.erased == kept.userId) {
+      commands.send(Command.Erasing(kept.userId, AccountState.Erasing.Why.valueOf(noted.erasedWhy)))
       return
     }
     if (kept?.ended == true) {
@@ -955,6 +984,9 @@ class SyncAccount internal constructor(
 
     /** [userId]'s account and everything of it deleted. */
     class Deleted(val userId: String) : Outcome
+
+    /** [userId]'s session ended on the server. */
+    class SignedOut(val userId: String) : Outcome
 
     /**
      * Nothing changed on the server: [cause], or [ended] should the session have ended, as when the

@@ -117,6 +117,8 @@ fun AccountPage(onBack: () -> Unit) {
           )
         }
         item { Footnote(stringResource(R.string.account_signed_in_note)) }
+        // Each asks first, on the spot, so no arrow as for a page.
+        item { SignOutRow(state) }
         item { DeleteRow(state) }
       } else {
         item { SignInSection(state) }
@@ -330,6 +332,65 @@ private fun DeleteRow(state: AccountState) {
       confirmButton = { TextButton(onClick = { failure = null }) { Text(stringResource(R.string.ok)) } },
       title = { Text(stringResource(R.string.account_not_deleted)) },
       text = { Text(stringResource(whatToDo(reason))) },
+    )
+  }
+}
+
+/**
+ * ログアウト (spec/sync-protocol.md, Signing out), asked first, on the spot, and offered only while
+ * the device has its session: what waits in the outbox goes, then the session ends on the server and
+ * the app shows the device erasing in place of every page (AccountRoot), then はじめの設定.
+ */
+@Composable
+private fun SignOutRow(state: AccountState) {
+  val account = LocalAccount.current
+  val scope = rememberCoroutineScope()
+  var confirming by remember { mutableStateOf(false) }
+  var failed by remember { mutableStateOf(false) }
+  var signingOut by remember { mutableStateOf(false) }
+  ListItem(
+    headlineContent = { Text(stringResource(R.string.account_sign_out), color = MaterialTheme.colorScheme.error) },
+    trailingContent = if (signingOut) ({ CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp) }) else null,
+    modifier = Modifier.clickable(enabled = state is AccountState.SignedIn && !signingOut) { confirming = true },
+  )
+  if (confirming) {
+    AlertDialog(
+      onDismissRequest = { confirming = false },
+      title = { Text(stringResource(R.string.account_sign_out_title)) },
+      text = { Text(stringResource(R.string.account_sign_out_body)) },
+      dismissButton = { TextButton(onClick = { confirming = false }) { Text(stringResource(R.string.cancel)) } },
+      confirmButton = {
+        TextButton(
+          onClick = {
+            confirming = false
+            signingOut = true
+            scope.launch {
+              try {
+                account.signOut()
+              } catch (e: CancellationException) {
+                throw e
+              } catch (_: NotSignedIn) {
+                // A session the server does not know is said in place of the app, not here.
+              } catch (_: Exception) {
+                failed = true
+              } finally {
+                signingOut = false
+              }
+            }
+          },
+          colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+        ) {
+          Text(stringResource(R.string.account_sign_out))
+        }
+      },
+    )
+  }
+  if (failed) {
+    AlertDialog(
+      onDismissRequest = { failed = false },
+      confirmButton = { TextButton(onClick = { failed = false }) { Text(stringResource(R.string.ok)) } },
+      title = { Text(stringResource(R.string.account_not_signed_out)) },
+      text = { Text(stringResource(R.string.account_not_deleted_later)) },
     )
   }
 }

@@ -108,11 +108,14 @@ data class SyncState(
   /** The user whose data the database holds, empty while it is no one's (`claim`). */
   val owner: String = "",
   /**
-   * The user the device let go of (its account deleted, or はじめから使う), whose data was erased
-   * here, until the next user claims the database: a session of theirs still kept, the app having
-   * ended before forgetting it, goes on erasing rather than signing in as them.
+   * The user the device lets go of (its account deleted, ログアウト or はじめから使う), noted before
+   * their data is erased, until the next user claims the database: a session of theirs still kept,
+   * the app having ended on the way, goes on erasing rather than showing their data or signing in as
+   * them.
    */
   val erased: String = "",
+  /** Why [erased] is let go of, as `AccountState.Erasing.Why` names it. */
+  val erasedWhy: String = "",
   /** The sync schema the values were taken under (`SYNC_SCHEMA`). */
   val schema: Int = SYNC_SCHEMA,
 ) {
