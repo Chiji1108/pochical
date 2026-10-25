@@ -3,6 +3,8 @@ plugins {
   alias(libs.plugins.kotlin.compose)
   alias(libs.plugins.kotlin.serialization)
   alias(libs.plugins.metro)
+  // The Firebase project the notifications come through, from app/google-services.json: Firebase's
+  // console gives it for app.pochical, it holds no secret, and it is checked in.
   alias(libs.plugins.google.services)
 }
 
@@ -77,20 +79,6 @@ android {
     // Robolectric sets up Android 16's shared memory through the JDK's
     // SharedSecrets, which java.base keeps to itself unless exported.
     unitTests.all { it.jvmArgs("--add-exports=java.base/jdk.internal.access=ALL-UNNAMED") }  }
-}
-
-// The Firebase project the app's notifications come through, from app/google-services.json, which
-// Firebase's console gives for app.pochical and holds no secret. A build without it, as on CI or
-// a computer without the file, makes an app with no Firebase project: it runs, and hears no
-// notifications (Push). A build signed with Play's upload key goes to testers, so it fails without
-// one rather than reach them deaf.
-googleServices {
-  missingGoogleServicesStrategy =
-    if (providers.gradleProperty("pochicalUploadStoreFile").isPresent) {
-      com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy.ERROR
-    } else {
-      com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy.WARN
-    }
 }
 
 dependencies {

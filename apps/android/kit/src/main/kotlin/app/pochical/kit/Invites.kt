@@ -32,7 +32,7 @@ fun openedInviteCode(url: String): String? {
   return inviteCode(url)
 }
 
-private fun parsed(url: String): URI? =
+internal fun parsed(url: String): URI? =
   try {
     URI(url)
   } catch (_: URISyntaxException) {
