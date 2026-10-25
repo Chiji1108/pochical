@@ -29,6 +29,9 @@ class PochicalKit(context: Context) {
 
   val database: AppDatabase = AppDatabase.open(context)
   val edits = OwnEdits(database)
+
+  /** The chats' lines as the screens show them, and the member's edits of them. */
+  val chats = Chats(database)
   val account =
     SyncAccount(
       database = database,

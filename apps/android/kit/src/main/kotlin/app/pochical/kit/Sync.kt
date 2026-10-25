@@ -22,10 +22,11 @@ import app.pochical.v1.RepeatOrdersEdits
  * after the update it takes everything again (`TakeAllAgainIfOlder`). 1: the user's own values,
  * their preferences and memberships, and the groups' members and their shared values. 2: a
  * preference's value as its key's message (`PreferenceValue.message`). 3: the user's `Profile`,
- * their usual name and photo. `mise run sync:check` fails when `Change`'s messages in proto/ change
- * while this stays.
+ * their usual name and photo. 4: the chats' lines and read marks, the unread counts, blocks, chats
+ * turned off and メンションはいつも通知. `mise run sync:check` fails when `Change`'s messages in
+ * proto/ change while this stays.
  */
-const val SYNC_SCHEMA = 3
+const val SYNC_SCHEMA = 4
 
 // What the user's socket brings into the device's database (spec/sync-protocol.md, Sockets; Change
 // log and cursor), each in one transaction with the cursor it moves.
@@ -61,6 +62,7 @@ internal suspend fun SyncDao.eraseUserData() {
   deleteAllMemberPatterns()
   deleteAllMemberOrders()
   deleteGroupCursors()
+  eraseChats()
   upsert(state().copy(cursor = 0, owner = ""))
 }
 
@@ -84,6 +86,7 @@ internal suspend fun SyncDao.take(changes: List<Change>) {
   for (change in changes) {
     takeOwn(change, floors)
     takeMembership(change)
+    takeUserChat(change)
     change.hlc?.let { last = last.receiving(HlcTime.of(it)) }
     cursor = maxOf(cursor, change.cursor)
   }
@@ -94,6 +97,7 @@ internal suspend fun SyncDao.take(changes: List<Change>) {
 internal suspend fun SyncDao.reset() {
   resetOwn()
   resetMemberships()
+  resetUserChats()
   upsert(state().copy(cursor = 0))
 }
 

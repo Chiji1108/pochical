@@ -67,4 +67,7 @@ interface Values {
 
   @Query("SELECT * FROM memberOrders WHERE groupId = :groupId ORDER BY userId, position")
   fun memberOrders(groupId: String): Flow<List<MemberOrderRow>>
+
+  /** Whom the user has blocked (spec/chat.md, Reporting and blocking). */
+  @Query("SELECT * FROM blocks") fun blocks(): Flow<List<BlockRow>>
 }

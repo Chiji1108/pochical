@@ -1,5 +1,6 @@
 package app.pochical.kit
 
+import app.pochical.design.Chat
 import app.pochical.design.SyncLimits
 import app.pochical.design.SyncSocket
 import app.pochical.v1.Change
@@ -17,7 +18,18 @@ import app.pochical.v1.deleteAccountResponse
 import app.pochical.v1.getMeResponse
 import app.pochical.v1.peekAccountResponse
 import app.pochical.v1.takeAccountResponse
+import app.pochical.v1.ChatEdit
+import app.pochical.v1.ChatLine
+import app.pochical.v1.RefusedSend
 import app.pochical.v1.acked
+import app.pochical.v1.chatContent
+import app.pochical.v1.chatLine
+import app.pochical.v1.chatPage
+import app.pochical.v1.chatTakenBack
+import app.pochical.v1.chatWords
+import app.pochical.v1.readMark
+import app.pochical.v1.refusedSend
+import app.pochical.v1.typing
 import app.pochical.v1.change
 import app.pochical.v1.changes
 import app.pochical.v1.dayValue
@@ -122,6 +134,14 @@ class FakeServer : AutoCloseable {
 
   /** The users `DeleteAccount` deleted, and the Apple code each was asked with. */
   val deleted = CopyOnWriteArrayList<Pair<String, DeleteAccountRequest>>()
+
+  /** Whether a group refuses the chat sends it is sent, as not fitting. */
+  @Volatile var refuseSends = false
+
+  /** Each group's log of chat changes, as its Group DO keeps them, the latest of each line or mark. */
+  private val groupLogs = HashMap<String, LinkedHashMap<String, Change>>()
+  private val groupCursors = HashMap<String, Long>()
+  private val groupSockets = HashMap<String, CopyOnWriteArrayList<WebSocket>>()
 
   private val values = HashMap<String, LinkedHashMap<String, Change>>()
   private val cursors = HashMap<String, Long>()
@@ -262,7 +282,12 @@ class FakeServer : AutoCloseable {
                 else -> MockResponse.Builder().webSocketUpgrade(Socket(user)).build()
               }
             else ->
-              if (request.method == "PUT" && request.url.encodedPath.startsWith("/v1/me/photos/")) {
+              if (request.url.encodedPath.matches(Regex("/v1/groups/[^/]+/socket"))) {
+                when (val user = userOf(request.headers["Authorization"])) {
+                  null -> MockResponse.Builder().code(401).build()
+                  else -> MockResponse.Builder().webSocketUpgrade(GroupSocket(user, request.url.pathSegments[2])).build()
+                }
+              } else if (request.method == "PUT" && request.url.encodedPath.startsWith("/v1/me/photos/")) {
                 ownPhotos += request.url.encodedPath.removePrefix("/v1/me/photos/")
                 MockResponse.Builder().code(204).build()
               } else {
@@ -297,6 +322,145 @@ class FakeServer : AutoCloseable {
 
   /** The value [user]'s DO holds for the day's field, as it would send it. */
   @Synchronized fun day(date: String, field: Int, user: String = userId): Change? = valuesOf(user)["day/$date/$field"]
+
+  /** The group's lines of [thread] as it holds them, oldest first. */
+  @Synchronized
+  fun lines(groupId: String, thread: String = "group"): List<ChatLine> =
+    logOf(groupId).values.filter { it.hasChatLine() && it.chatLine.threadId == thread }.map { it.chatLine }.sortedBy { it.seq }
+
+  /** Lines of words by [author] taken by the group, each sent to every socket open on it, as another member's would come. */
+  @Synchronized
+  fun write(groupId: String, author: String, texts: List<String>, thread: String = "group") {
+    for (text in texts) {
+      val line = chatLine {
+        threadId = thread
+        seq = (lines(groupId, thread).lastOrNull()?.seq ?: 0) + 1
+        authorId = author
+        sentAtMs = System.currentTimeMillis()
+        opId = "elsewhere-$seq"
+        content = chatContent { words = chatWords { this.text = text } }
+      }
+      broadcast(groupId, keep(groupId, line))
+    }
+  }
+
+  /** Someone writing in [thread], or no longer, as the group relays it to every socket open on it. */
+  @Synchronized
+  fun typing(groupId: String, author: String, thread: String = "group", on: Boolean = true) {
+    for (each in groupSocketsOf(groupId)) each.send(serverFrame { typing = typing { threadId = thread; userId = author; this.on = on } })
+  }
+
+  private fun logOf(groupId: String) = groupLogs.getOrPut(groupId) { LinkedHashMap() }
+
+  private fun groupSocketsOf(groupId: String) = groupSockets.getOrPut(groupId) { CopyOnWriteArrayList() }
+
+  /** [line] kept at the group's next cursor, as the change it is now. */
+  private fun keep(groupId: String, line: ChatLine): Change {
+    val cursor = ((groupCursors[groupId] ?: 0L) + 1).also { groupCursors[groupId] = it }
+    return change { this.cursor = cursor; chatLine = line }.also { logOf(groupId)["line/${line.threadId}/${line.seq}"] = it }
+  }
+
+  private fun broadcast(groupId: String, change: Change) {
+    for (each in groupSocketsOf(groupId)) each.send(serverFrame { changes = changes { changes += change } })
+  }
+
+  /**
+   * A frame on a group's socket, as its Group DO takes it: a catch-up after the Hello's cursor with
+   * each chat's latest page of lines alone, pages of earlier lines, and the member's chat edits.
+   */
+  private fun takeGroup(user: String, groupId: String, frame: ClientFrame, socket: WebSocket) {
+    val log = logOf(groupId)
+    when (frame.kindCase) {
+      ClientFrame.KindCase.HELLO -> {
+        socket.send(serverFrame { welcome = welcome { cursor = groupCursors[groupId] ?: 0L; serverMs = System.currentTimeMillis() } })
+        val latest = log.values.filter { it.hasChatLine() }.groupBy { it.chatLine.threadId }.mapValues { (_, lines) -> lines.maxOf { it.chatLine.seq } }
+        val after =
+          log.values
+            .filter { it.cursor > frame.hello.cursor }
+            .filter { !it.hasChatLine() || it.chatLine.seq > latest.getValue(it.chatLine.threadId) - Chat.pageSize }
+            .sortedBy { it.cursor }
+        if (after.isNotEmpty()) socket.send(serverFrame { changes = changes { changes += after } })
+        groupSocketsOf(groupId) += socket
+      }
+      ClientFrame.KindCase.PING -> socket.send(serverFrame { pong = pong { nonce = frame.ping.nonce } })
+      ClientFrame.KindCase.CHAT_PAGE_REQUEST -> {
+        val request = frame.chatPageRequest
+        val lines = lines(groupId, request.threadId).filter { request.beforeSeq == 0L || it.seq < request.beforeSeq }.takeLast(Chat.pageSize)
+        socket.send(
+          serverFrame {
+            chatPage = chatPage {
+              threadId = request.threadId
+              beforeSeq = request.beforeSeq
+              this.lines += lines
+              atStart = lines.firstOrNull()?.seq?.let { it <= 1 } ?: true
+            }
+          }
+        )
+      }
+      ClientFrame.KindCase.CHAT_EDITS -> {
+        val refused = mutableListOf<RefusedSend>()
+        for (edit in frame.chatEdits.editsList) {
+          when (edit.kindCase) {
+            ChatEdit.KindCase.SEND -> {
+              val send = edit.send
+              if (lines(groupId, send.threadId).any { it.opId == edit.opId }) continue
+              if (refuseSends) {
+                refused += refusedSend { opId = edit.opId; reason = RefusedSend.Reason.REASON_DOES_NOT_FIT }
+                continue
+              }
+              val line = chatLine {
+                threadId = send.threadId
+                seq = (lines(groupId, send.threadId).lastOrNull()?.seq ?: 0) + 1
+                authorId = user
+                sentAtMs = System.currentTimeMillis()
+                opId = edit.opId
+                content = chatContent { words = chatWords { text = send.content.words.text } }
+              }
+              broadcast(groupId, keep(groupId, line))
+            }
+            ChatEdit.KindCase.READ -> {
+              val cursor = ((groupCursors[groupId] ?: 0L) + 1).also { groupCursors[groupId] = it }
+              val mark = change {
+                this.cursor = cursor
+                readMark = readMark { userId = user; threadId = edit.read.threadId; lastReadSeq = edit.read.lastReadSeq }
+              }
+              log["mark/${edit.read.threadId}/$user"] = mark
+              broadcast(groupId, mark)
+            }
+            ChatEdit.KindCase.RECALL -> {
+              val line = lines(groupId, edit.recall.threadId).firstOrNull { it.opId == edit.recall.sendOpId } ?: continue
+              broadcast(groupId, keep(groupId, line.toBuilder().setContent(chatContent { unsent = chatTakenBack {} }).build()))
+            }
+            else -> {}
+          }
+        }
+        socket.send(serverFrame { acked = acked { opIds += frame.chatEdits.editsList.map { it.opId }; this.refused += refused } })
+      }
+      else -> {}
+    }
+  }
+
+  private inner class GroupSocket(private val user: String, private val groupId: String) : WebSocketListener() {
+    private val frames = mutableListOf<ClientFrame>().also { sockets += it }
+
+    override fun onMessage(webSocket: WebSocket, text: String) {
+      if (text == SyncSocket.keepaliveText) webSocket.send(SyncSocket.keepaliveReply)
+    }
+
+    override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
+      val frame = ClientFrame.parseFrom(bytes.toByteArray())
+      synchronized(frames) { frames += frame }
+      synchronized(this@FakeServer) { takeGroup(user, groupId, frame, webSocket) }
+    }
+
+    override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
+      synchronized(this@FakeServer) { groupSocketsOf(groupId) -= webSocket }
+    }
+
+    override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+      synchronized(this@FakeServer) { groupSocketsOf(groupId) -= webSocket }
+    }
+  }
 
   /** The anonymous user deleted: its session is no one's, and the next anonymous sign-in is someone new. */
   private fun nextAnonymous() {

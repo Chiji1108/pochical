@@ -5,9 +5,13 @@ import app.pochical.design.SyncSocket
 import app.pochical.v1.ClientFrame
 import app.pochical.v1.ServerError
 import app.pochical.v1.ServerFrame
+import app.pochical.v1.Typing
+import app.pochical.v1.chatEdits
+import app.pochical.v1.chatPageRequest
 import app.pochical.v1.clientFrame
 import app.pochical.v1.hello
 import app.pochical.v1.ping
+import app.pochical.v1.typing as typingFrame
 import kotlin.random.Random
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -16,8 +20,12 @@ import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
@@ -38,7 +46,7 @@ sealed interface Peer {
   /** The user's own: their values, their groups. */
   data object User : Peer
 
-  /** A group's: its members and their shared values. */
+  /** A group's: its members, their shared values and its chats. */
   data class Group(val id: String) : Peer
 }
 
@@ -66,7 +74,9 @@ internal class NotTheOwner : Exception()
  * change after it into the database, and sends the outbox's edits as they come, which the server's
  * Acked then ends (Outbox). It keeps the socket alive and reconnects as [SocketState] rules, and
  * sends and takes only while the database is its user's, checked in the same transaction as each
- * read it sends from and each write it takes into.
+ * read it sends from and each write it takes into. A group's also sends its chat outbox, takes the
+ * pages of earlier lines it asks for, and passes on others' typing (spec/sync-protocol.md, Chat;
+ * Typing).
  */
 class SyncClient internal constructor(
   private val database: AppDatabase,
@@ -79,9 +89,15 @@ class SyncClient internal constructor(
   private val random: Random = Random.Default,
   /** Told once the server does not know the session: the account alone decides what comes of it. */
   private val signedOut: () -> Unit = {},
-) {
+) : ChatSocket {
   private val mutableState = MutableStateFlow<SocketState>(SocketState.Closed)
-  val state: StateFlow<SocketState> = mutableState.asStateFlow()
+  override val state: StateFlow<SocketState> = mutableState.asStateFlow()
+
+  private val mutableTyping = MutableSharedFlow<Typing>(extraBufferCapacity = 16, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+  override val typing: SharedFlow<Typing> = mutableTyping.asSharedFlow()
+
+  /** The socket past its Welcome, null while there is none: what is asked now goes on it. */
+  @Volatile private var welcomed: WebSocket? = null
 
   /**
    * What the OS last said of the network, taken by the socket's loop: what it ends is the socket
@@ -222,6 +238,7 @@ class SyncClient internal constructor(
       log("Socket failed: $e")
       SocketEvent.Dropped
     } finally {
+      welcomed = null
       closing.cancel()
       keepalive.cancel()
       socket.cancel()
@@ -244,6 +261,22 @@ class SyncClient internal constructor(
         catchUpNonce += 1
         socket.send(clientFrame { ping = ping { nonce = catchUpNonce } })
         log("Welcome at cursor ${frame.welcome.cursor}")
+        welcomed = socket
+        if (peer is Peer.Group) {
+          launch {
+            try {
+              sendChatOutbox(socket, peer.id)
+            } catch (_: NotTheOwner) {
+              messages.send(SocketMessage.Ended(SocketEvent.Refused(Stop.NotTheOwner)))
+            } catch (e: CancellationException) {
+              throw e
+            } catch (e: Exception) {
+              // A write that failed, as a frame's would: the next socket sends them all again.
+              log("Sending the chat outbox failed: $e")
+              messages.send(SocketMessage.Ended(SocketEvent.Dropped))
+            }
+          }
+        }
         if (peer == Peer.User) {
           write { welcome(sentMs, receivedMs, frame.welcome.serverMs) }
           if (restampAfterWelcome) {
@@ -261,14 +294,22 @@ class SyncClient internal constructor(
       }
       ServerFrame.KindCase.CHANGES -> {
         val changes = frame.changes.changesList
-        write { if (peer is Peer.Group) take(changes, peer.id) else take(changes) }
+        if (peer is Peer.Group) takeInto(peer.id) { take(changes, peer.id) } else write { take(changes) }
         log("Took ${changes.size} changes")
       }
-      ServerFrame.KindCase.RESET -> write { if (peer is Peer.Group) resetGroup(peer.id) else reset() }
+      ServerFrame.KindCase.RESET -> if (peer is Peer.Group) takeInto(peer.id) { resetGroup(peer.id) } else write { reset() }
       ServerFrame.KindCase.ACKED -> {
-        if (peer == Peer.User) write { acknowledge(frame.acked.opIdsList) }
-        log("${frame.acked.opIdsCount} edits acknowledged")
+        val acked = frame.acked
+        if (peer is Peer.Group) {
+          takeInto(peer.id) { acknowledgeChat(acked.opIdsList, acked.refusedList.map { it.opId }) }
+        } else {
+          write { acknowledge(acked.opIdsList) }
+        }
+        for (refused in acked.refusedList) log("A send was refused: ${refused.opId} ${refused.reason}")
+        log("${acked.opIdsCount} edits acknowledged")
       }
+      ServerFrame.KindCase.CHAT_PAGE -> if (peer is Peer.Group) takeInto(peer.id) { take(frame.chatPage, peer.id) }
+      ServerFrame.KindCase.TYPING -> mutableTyping.tryEmit(frame.typing)
       ServerFrame.KindCase.PONG -> if (frame.pong.nonce == catchUpNonce) on(SocketEvent.CaughtUp)
       ServerFrame.KindCase.ERROR ->
         return when (frame.error.code) {
@@ -298,6 +339,32 @@ class SyncClient internal constructor(
     }
   }
 
+  /**
+   * Sends the group's chat outbox as [sendOutbox] sends the user's, but for the lines that waited
+   * too long, as after a long time offline, which wait for the member instead (spec/chat.md, Lines
+   * on their way). Each edit is marked as gone out as it goes, so one taken back after is taken
+   * back from the group too.
+   */
+  private suspend fun sendChatOutbox(socket: WebSocket, groupId: String) {
+    var sent = 0L
+    database.sync().lastChatWaiting(groupId).collect { last ->
+      if (last == null || last <= sent) return@collect
+      val (frames, through) = read { chatFrames(groupId, after = sent, now()) }
+      for (frame in frames) {
+        val going = write { goOut(frame.chatEdits.editsList, now()) }
+        if (going.isNotEmpty()) socket.send(clientFrame { chatEdits = chatEdits { edits += going } })
+      }
+      sent = through
+    }
+  }
+
+  override fun requestPage(threadId: String, beforeSeq: Long): Boolean =
+    welcomed?.send(clientFrame { chatPageRequest = chatPageRequest { this.threadId = threadId; this.beforeSeq = beforeSeq } }) ?: false
+
+  override fun sendTyping(threadId: String, on: Boolean) {
+    welcomed?.send(clientFrame { typing = typingFrame { this.threadId = threadId; this.on = on } })
+  }
+
   /** Sends the keepalive text every so often, and takes the socket for dead when no answer comes in time. */
   private suspend fun keepAlive(socket: WebSocket) {
     while (true) {
@@ -325,6 +392,9 @@ class SyncClient internal constructor(
     ownedBy(credentials)
     block()
   }
+
+  /** Takes what the group's socket brought, only while the user is in the group (`intoGroup`). */
+  private suspend fun takeInto(groupId: String, block: suspend SyncDao.() -> Unit) = write { intoGroup(groupId, block) }
 
   private suspend fun <T> read(block: suspend SyncDao.() -> T): T = database.read {
     ownedBy(credentials)
@@ -382,4 +452,23 @@ internal suspend fun SyncDao.ownedBy(credentials: Credentials) {
   if (!credentials.isCurrent || state().owner != credentials.userId) throw NotTheOwner()
 }
 
-private fun WebSocket.send(frame: ClientFrame) = send(frame.toByteArray().toByteString())
+private fun WebSocket.send(frame: ClientFrame): Boolean = send(frame.toByteArray().toByteString())
+
+/** What a chat's screen asks of its group's socket (spec/sync-protocol.md, Chat; Typing). */
+interface ChatSocket {
+  /** Where the socket is, for the chat's title to say 接続中… or 更新中… while it is not current. */
+  val state: StateFlow<SocketState>
+
+  /** Others writing in the group's chats, or no longer, as it comes; never kept. */
+  val typing: SharedFlow<Typing>
+
+  /**
+   * Asks the group for a page of a chat's lines before [beforeSeq] (the latest with 0) when the
+   * socket is open; the page comes into the database. False when it could not be asked, to ask
+   * again once it is open.
+   */
+  fun requestPage(threadId: String, beforeSeq: Long): Boolean
+
+  /** Says the member is writing in a chat, or stopped, when the socket is open; nothing waits, as typing is only now. */
+  fun sendTyping(threadId: String, on: Boolean)
+}
