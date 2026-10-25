@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The widgets' names and descriptions in the picker (spec/widgets.md, In the widget gallery). -->
+<resources>
+  <string name="widget_simple">シンプル</string>
+  <string name="widget_simple_description">今日のシフトを大きく。中は明日も。</string>
+  <string name="widget_next_off">次の休み</string>
+  <string name="widget_next_off_description">次の休みまであと何日か。一緒に休む人も選べます。</string>
+  <string name="widget_upcoming">これから</string>
+  <string name="widget_upcoming_description">今日からの数日のシフト。一緒に見る人も選べます。</string>
+  <string name="widget_calendar">カレンダー</string>
+  <string name="widget_calendar_description">2週間と、1か月のシフト。</string>
+  <!-- 次の休み's and これから's editing (WidgetWithActivity). -->
+  <string name="widget_with_off">一緒に休む人</string>
+  <string name="widget_with_upcoming">一緒に見る人</string>
+  <string name="widget_with_nobody">なし</string>
+  <string name="widget_with_everyone">みんな休み</string>
+</resources>
