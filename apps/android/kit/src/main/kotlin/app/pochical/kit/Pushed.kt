@@ -62,3 +62,22 @@ data class NotifiedLine(val id: String, val groupId: String, val threadId: Strin
  */
 fun withdrawn(shown: List<NotifiedLine>, groupId: String, threadId: String, readTo: Long?): List<String> =
   shown.filter { it.groupId == groupId && it.threadId == threadId && it.seq <= (readTo ?: Long.MAX_VALUE) }.map { it.id }
+
+/**
+ * What the device knows is read in each chat, for taking back the notifications of lines read
+ * elsewhere: the chats with nothing unread left ([cleared]), and how far the user read each
+ * ([marks]), their own reads still waiting included.
+ */
+data class ReadState(val cleared: Set<ChatKey> = emptySet(), val marks: Map<ChatKey, Long> = emptyMap())
+
+/**
+ * The ids of the notifications shown whose lines [read] says are read: the user's own read mark in
+ * the chat is at or past them, or the chat has nothing unread left, as another device's read says
+ * (spec/vectors/chat.json, readNotified).
+ */
+fun readNotified(shown: List<NotifiedLine>, read: ReadState): List<String> =
+  shown.map { ChatKey(it.groupId, it.threadId) }.distinct().flatMap { chat ->
+    val cleared = chat in read.cleared
+    val mark = read.marks[chat]
+    if (!cleared && mark == null) emptyList() else withdrawn(shown, chat.groupId, chat.threadId, if (cleared) null else mark)
+  }

@@ -63,8 +63,8 @@ interface AppGraph : MetroAppComponentProviders {
   /** The notifications from the server. */
   @Provides
   @SingleIn(AppScope::class)
-  fun push(application: Application, kit: PochicalKit, permission: NotificationPermission): Push =
-    Push(application, kit, permission, CoroutineScope(SupervisorJob() + Dispatchers.Default))
+  fun push(application: Application, kit: PochicalKit, permission: NotificationPermission, settings: SyncedSettings): Push =
+    Push(application, kit, permission, settings.settings, CoroutineScope(SupervisorJob() + Dispatchers.Default))
 
   /** Whether the system lets the app show notifications. */
   @Provides

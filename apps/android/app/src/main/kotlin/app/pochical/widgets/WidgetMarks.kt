@@ -6,6 +6,9 @@ import android.graphics.Canvas
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffColorFilter
+import android.graphics.RectF
 import android.graphics.Typeface
 import android.util.LruCache
 import androidx.compose.runtime.Composable
@@ -100,6 +103,37 @@ private fun markPicture(context: Context, icon: String, symbol: String, look: Lo
   }
   if (look.style != MarkStyle.Emoji) corners(canvas, px, change, paint)
   drawn.put(key, picture)
+  return picture
+}
+
+/**
+ * A group's mark in its own colors, as a picture filling [side] pixels, for the system to cut as it
+ * cuts a conversation's icon (an adaptive bitmap, whose middle two thirds always show): the mark's
+ * tint all over, its icon or letters in its color in the middle, else its emoji. A photo mark is
+ * drawn from the photo itself, by whoever has it; until then, as the group's initial.
+ */
+fun groupMarkPicture(context: Context, mark: GroupMarkValue, name: String, side: Int, color: Int, tint: Int): Bitmap {
+  val style =
+    when {
+      mark.photoId.isEmpty() && markLayers(mark.icon, filled = true) != null -> MarkStyle.Icon
+      mark.photoId.isEmpty() && mark.letter.isEmpty() && mark.emoji.isNotEmpty() -> MarkStyle.Emoji
+      else -> MarkStyle.Badge
+    }
+  val picture = createBitmap(side, side)
+  val canvas = Canvas(picture)
+  canvas.drawColor(tint)
+  // What shows of an adaptive icon is its middle two thirds; the mark takes half of the side.
+  val inner = side / 2
+  val at = (side - inner) / 2f
+  if (style == MarkStyle.Emoji) {
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textSize = inner * 0.85f; textAlign = Paint.Align.CENTER }
+    canvas.drawText(mark.emoji, side / 2f, side / 2f - (paint.fontMetrics.ascent + paint.fontMetrics.descent) / 2, paint)
+  } else {
+    val letter = mark.letter.takeIf { mark.photoId.isEmpty() }?.ifEmpty { null } ?: initialLetter(name)
+    val glyph = markPicture(context, mark.icon, letter, Look(style = style, fill = true), (inner / context.resources.displayMetrics.density).dp, null)
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply { colorFilter = PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN) }
+    canvas.drawBitmap(glyph, null, RectF(at, at, at + inner, at + inner), paint)
+  }
   return picture
 }
 

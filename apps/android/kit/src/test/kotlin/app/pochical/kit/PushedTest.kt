@@ -17,6 +17,17 @@ class PushedTest {
     }
 
   @Test
+  fun whatIsKnownReadTakesBackWhatTheVectorsSay() =
+    vectors<ChatVectors>("chat").readNotified.checkEach({ it.expected.sorted() }) { case ->
+      val read =
+        ReadState(
+          case.read.cleared.mapTo(HashSet()) { ChatKey(it.groupId, it.threadId) },
+          case.read.marks.associate { ChatKey(it.groupId, it.threadId) to (it.readTo ?: 0) },
+        )
+      readNotified(case.shown.map { NotifiedLine(it.id, it.groupId, it.threadId, it.seq) }, read).sorted()
+    }
+
+  @Test
   fun aNotificationIsReadAsTheServerWordsIt() {
     // As apps/server/src/fcm.ts puts it in the message's data.
     val data =

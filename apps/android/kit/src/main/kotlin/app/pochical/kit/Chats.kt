@@ -123,6 +123,32 @@ class Chats internal constructor(
   }
 
   /**
+   * 返信 on a line's notification (spec/chat.md, Notifications): [text] as a new line of [me]'s in
+   * the chat, quoting nothing, through the composer's outbox, and the chat read up to the line
+   * [answered], in one write. Throws when the device cannot keep it, reading nothing.
+   */
+  suspend fun reply(groupId: String, threadId: String, me: String, text: String, answered: Long) {
+    database.write {
+      chatEdit(groupId, now()) {
+        send = chatSend {
+          this.threadId = threadId
+          content = chatSendContent { words = chatSendWords { this.text = text } }
+          stamp(groupId)
+        }
+      }
+      readOn(groupId, threadId, me, answered)
+    }
+  }
+
+  /**
+   * What the device knows is read in each chat for [me], for the notifications of lines read
+   * elsewhere to go (spec/chat.md, Notifications): the chats the User DO counts nothing unread in,
+   * and how far [me] read each, their reads still waiting included. Read again as either changes.
+   */
+  fun readState(me: String): Flow<ReadState> =
+    observe("unreadCounts", "readMarks", "chatOutbox") { Timed(readStateOf(me), null) }
+
+  /**
    * Sends [photos], shrunk, as one line of the chat (spec/chat.md, Albums), kept on the device to
    * upload before the group's socket sends it, and shown at once as the member's line on its way.
    * Throws when the device cannot keep them (保存できませんでした), keeping nothing of them.
@@ -259,11 +285,14 @@ class Chats internal constructor(
    * (spec/vectors/chat.json, readTo); nothing when [me] has read that far already.
    */
   suspend fun read(groupId: String, threadId: String, me: String, seq: Long) {
-    database.write {
-      val before = lastRead(groupId, threadId, me, now())
-      if (readTo(listOf(seq), before) == before) return@write
-      chatEdit(groupId, now()) { read = chatRead { this.threadId = threadId; lastReadSeq = seq } }
-    }
+    database.write { readOn(groupId, threadId, me, seq) }
+  }
+
+  /** The chat read on to [seq] in the write it is in, never back; nothing when [me] has read that far already. */
+  private suspend fun SyncDao.readOn(groupId: String, threadId: String, me: String, seq: Long) {
+    val before = lastRead(groupId, threadId, me, now())
+    if (readTo(listOf(seq), before) == before) return
+    chatEdit(groupId, now()) { read = chatRead { this.threadId = threadId; lastReadSeq = seq } }
   }
 
   /**
@@ -627,6 +656,13 @@ internal suspend fun SyncDao.notifyingByPlace(me: String): Map<String, Int> {
     if (unread > 0) counts.merge(row.groupId, unread, Int::plus)
   }
   return counts
+}
+
+/** What the device knows is read for [me] (`Chats.readState`): their marks, with their reads still waiting. */
+internal suspend fun SyncDao.readStateOf(me: String): ReadState {
+  val marks = waitingReads().toMutableMap()
+  for (mark in readMarksOf(me)) marks.merge(ChatKey(mark.groupId, mark.threadId), mark.lastReadSeq, ::maxOf)
+  return ReadState(clearedCounts().mapTo(HashSet()) { ChatKey(it.groupId, it.threadId) }, marks)
 }
 
 /** The words of others' lines the device holds past [read], as they count unread (none for a line without words). */

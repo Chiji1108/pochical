@@ -536,6 +536,37 @@ class ChatValuesTest {
   }
 
   @Test
+  fun anAnswerFromANotificationIsALineAndAReadInOneWrite() = runTest {
+    val chats = Chats(database, testLinePhotos(), now = { 0 })
+    database.write { takeChanges(listOf(wordsLine(1, "u2", "今週どう？"), wordsLine(2, "u2", "土曜とか")), "g1") }
+    chats.reply("g1", GROUP_THREAD, "me", "行く！", answered = 2)
+    val state = database.read { chatState("g1", GROUP_THREAD, "me", null, now = 0) }
+    assertEquals(LineContent.Words("行く！"), state.waiting.single().content)
+    assertNull("quoting nothing", state.waiting.single().replyTo)
+    assertEquals(2L, state.ownRead)
+    // The device knows it read so far, for the notifications to go.
+    assertEquals(mapOf(ChatKey("g1", GROUP_THREAD) to 2L), chats.readState("me").first().marks)
+  }
+
+  @Test
+  fun whatIsReadIsTheUsersMarksAndTheChatsWithNothingUnread() = runTest {
+    val chats = Chats(database, testLinePhotos(), now = { 0 })
+    database.write {
+      take(
+        listOf(
+          change { unreadCount = unreadCount { groupId = "g1"; threadId = GROUP_THREAD; count = 0 } },
+          change { unreadCount = unreadCount { groupId = "g2"; threadId = GROUP_THREAD; count = 3 } },
+        )
+      )
+      upsert(ReadMarkRow("g2", GROUP_THREAD, "me", 4))
+      upsert(ReadMarkRow("g2", GROUP_THREAD, "u2", 9))
+    }
+    val read = chats.readState("me").first()
+    assertEquals(setOf(ChatKey("g1", GROUP_THREAD)), read.cleared)
+    assertEquals(mapOf(ChatKey("g2", GROUP_THREAD) to 4L), read.marks)
+  }
+
+  @Test
   fun theTabsCountWhatNotifiesInEachPlace() = runTest {
     val chats = Chats(database, testLinePhotos(), now = { 0 })
     database.write {

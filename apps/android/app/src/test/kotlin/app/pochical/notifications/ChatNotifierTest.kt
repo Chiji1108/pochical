@@ -8,6 +8,10 @@ import androidx.core.app.NotificationCompat
 import app.pochical.kit.AppLink
 import app.pochical.kit.ChatWithdrawal
 import app.pochical.kit.GroupMemberRow
+import app.pochical.kit.ChatKey
+import app.pochical.kit.GroupMarkValue
+import app.pochical.kit.GroupRow
+import app.pochical.kit.ReadState
 import app.pochical.kit.Localized
 import app.pochical.kit.PushedAlert
 import kotlinx.coroutines.test.runTest
@@ -26,8 +30,15 @@ class ChatNotifierTest {
   private val context: Application = RuntimeEnvironment.getApplication()
   private val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
   private var signedIn: String? = ME
+  private val conversations = TestConversations(context)
   private val notifier =
-    ChatNotifier(context, { signedIn }, { groupId -> if (groupId == GROUP) listOf(member(ME, "ゆうき"), member(WRITER, "さくら")) else emptyList() })
+    ChatNotifier(
+      context,
+      { signedIn },
+      { groupId -> if (groupId == GROUP) listOf(member(ME, "ゆうき"), member(WRITER, "さくら")) else emptyList() },
+      { groupId -> if (groupId == GROUP) GroupRow(GROUP, "いとこ会", 0, GroupMarkValue(emoji = "🍙")) else null },
+      conversations,
+    )
 
   @Before
   fun allow() {
@@ -99,20 +110,51 @@ class ChatNotifierTest {
   }
 
   @Test
-  fun anAnswerFromPochicalsPeopleIsAPlainNotification() = runTest {
-    notifier.show(
-      PushedAlert(
-        title = Localized("SUPPORT_TITLE", emptyList()),
-        body = Localized("CHAT_TEXT", listOf("ありがとうございます")),
-        groupId = "support",
-        threadId = "support:$ME",
-        recipientId = ME,
-      )
-    )
+  fun anAnswerFromPochicalsPeopleIsAConversationWithTheChatsName() = runTest {
+    notifier.show(support(5, "ありがとうございます"))
     val notification = shown().single().notification
     assertEquals(Channels.SUPPORT, notification.channelId)
-    assertEquals("作っている人とチャット", notification.extras.getCharSequence(NotificationCompat.EXTRA_TITLE))
-    assertEquals("ありがとうございます", notification.extras.getCharSequence(NotificationCompat.EXTRA_TEXT))
+    // From the chat, as 設定's row names it, with the app's icon, as the only one who writes there.
+    val message = messagesOf().messages.single()
+    assertEquals("作っている人とチャット", message.person?.name)
+    assertEquals("ありがとうございます", message.text)
+    assertEquals(false, messagesOf().isGroupConversation)
+    assertEquals("support/support:$ME" to "作っている人とチャット", conversations.published.single())
+  }
+
+  @Test
+  fun theReadAnAnswerKeepsLeavesItsNotificationToTheAnswer() = runTest {
+    notifier.show(groupLine(2, "今週どう？"))
+    notifier.answering(GROUP, "group")
+    // Its own read, kept with it, comes before the answer is shown.
+    notifier.withdrawRead(ReadState(marks = mapOf(ChatKey(GROUP, "group") to 2L)))
+    notifier.replied(GROUP, "group", "行く！")
+    assertEquals(listOf("今週どう？", "行く！"), messagesOf().messages.map { it.text.toString() })
+  }
+
+  @Test
+  fun anAnswerKeptAfterOneNotKeptSaysSoNoMore() = runTest {
+    notifier.show(groupLine(2, "今週どう？"))
+    notifier.notSent(GROUP, "group", "行く！")
+    notifier.replied(GROUP, "group", "行く！")
+    assertNull(shown().single().notification.extras.getCharSequence(NotificationCompat.EXTRA_SUB_TEXT))
+  }
+
+  @Test
+  fun aUserTheChatNamesNotYetIsYou() = runTest {
+    // As the chat with Pochical's people holds a user who set no name.
+    val unnamed = ChatNotifier(context, { ME }, { listOf(member(ME, "")) }, { null }, conversations)
+    unnamed.show(support(5, "ありがとうございます"))
+    assertEquals("あなた", messagesOf().user.name)
+  }
+
+  @Test
+  fun anAnswerFromPochicalsPeopleAnsweredShowsTheReply() = runTest {
+    notifier.show(support(5, "ありがとうございます"))
+    notifier.replied("support", "support:$ME", "助かりました")
+    assertEquals(listOf("ありがとうございます", "助かりました"), messagesOf().messages.map { it.text.toString() })
+    // Its lines read: nothing left to take back.
+    assertEquals(false, notifier.withdraw(ChatWithdrawal("support", "support:$ME", readTo = 9)))
   }
 
   @Test
@@ -167,8 +209,8 @@ class ChatNotifierTest {
     notifier.show(support(5, "ありがとうございます"))
     notifier.show(support(6, "直しました"))
     notifier.withdraw(ChatWithdrawal("support", "support:$ME", readTo = 5))
-    // The latest, which it shows, is still unread.
-    assertEquals("直しました", shown().single().notification.extras.getCharSequence(NotificationCompat.EXTRA_TEXT))
+    // The answer after it is still unread.
+    assertEquals(listOf("直しました"), messagesOf().messages.map { it.text.toString() })
     notifier.withdraw(ChatWithdrawal("support", "support:$ME", readTo = 6))
     assertEquals(emptyList<Any>(), shown())
   }
@@ -197,6 +239,60 @@ class ChatNotifierTest {
     notifier.show(groupLine(2, "今週どう？"))
     notifier.forgetAll()
     assertEquals(emptyList<Any>(), shown())
+    assertTrue("its conversations go too", conversations.forgotten)
+  }
+
+  @Test
+  fun aChatIsAConversationTheNotificationAnswers() = runTest {
+    notifier.show(groupLine(2, "今週どう？"))
+    val notification = shown().single().notification
+    // Among Android's conversations, under the group's name.
+    assertEquals(listOf("$GROUP/group" to "いとこ会"), conversations.published)
+    assertEquals("$GROUP/group", notification.shortcutId)
+    assertEquals("さくら", messagesOf().messages.single().person?.name)
+    assertTrue("the writer's face", messagesOf().messages.single().person?.icon != null)
+    // 返信, answering the line.
+    val reply = notification.actions.single()
+    assertEquals("返信", reply.title)
+    assertEquals(ChatNotifier.REPLY, reply.remoteInputs.single().resultKey)
+    val sent = shadowOf(reply.actionIntent).savedIntent
+    assertEquals(2L, sent.getLongExtra(ChatNotifier.EXTRA_SEQ, 0))
+  }
+
+  @Test
+  fun anAnswerKeptShowsAsTheUsersMessageWithNothingLeftToTakeBack() = runTest {
+    notifier.show(groupLine(2, "今週どう？"))
+    notifier.replied(GROUP, "group", "行く！")
+    val messages = messagesOf().messages
+    assertEquals(listOf("今週どう？", "行く！"), messages.map { it.text.toString() })
+    assertNull("from the user", messages.last().person)
+    // Its lines read: a withdrawal finds nothing of it.
+    assertEquals(false, notifier.withdraw(ChatWithdrawal(GROUP, "group", readTo = 9)))
+    // A line after it starts the chat's notification anew.
+    notifier.show(groupLine(3, "了解"))
+    assertEquals(listOf("了解"), messagesOf().messages.map { it.text.toString() })
+  }
+
+  @Test
+  fun anAnswerNotKeptBringsTheNotificationBackSayingSo() = runTest {
+    notifier.show(groupLine(2, "今週どう？"))
+    notifier.notSent(GROUP, "group", "行く！")
+    val notification = shown().single().notification
+    assertEquals("返信を送れませんでした：行く！", notification.extras.getCharSequence(NotificationCompat.EXTRA_SUB_TEXT))
+    assertEquals(listOf("今週どう？"), messagesOf().messages.map { it.text.toString() })
+  }
+
+  @Test
+  fun whatTheDeviceKnowsIsReadTakesItsNotificationsBack() = runTest {
+    notifier.show(groupLine(2, "今週どう？"))
+    notifier.show(groupLine(3, "土曜とか"))
+    notifier.show(groupLine(4, "まだ？", groupId = "g2"))
+    // The user's own mark, a read here or elsewhere.
+    notifier.withdrawRead(ReadState(marks = mapOf(ChatKey(GROUP, "group") to 2L)))
+    assertEquals(listOf("土曜とか"), messagesOf(shown().indexOfFirst { it.tag == "$GROUP/group" }).messages.map { it.text.toString() })
+    // A chat with nothing unread left.
+    notifier.withdrawRead(ReadState(cleared = setOf(ChatKey("g2", "group"))))
+    assertEquals(listOf("$GROUP/group"), shown().map { it.tag })
   }
 
   private fun support(seq: Long, words: String) =
