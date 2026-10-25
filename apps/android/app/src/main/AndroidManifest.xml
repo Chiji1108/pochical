@@ -7,6 +7,12 @@
   <uses-feature android:name="android.hardware.camera" android:required="false" />
   <!-- The chats' notifications, asked for from 設定 › 通知 (notifications/PermissionCard). -->
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+  <!-- The reminders go off at their minute (reminders/ReminderAlarms): the special access the
+       person grants, asked for from 設定 › 通知 › リマインド. USE_EXACT_ALARM is left to alarm
+       clocks and calendars whose core is their events' notifications, as Play's policy has it. -->
+  <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+  <!-- The reminders' alarm set again as the device starts, which takes the system's alarms away. -->
+  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
   <!-- The browsers that open Custom Tabs, which AppleSignIn asks of Auth Tab. -->
   <queries>
@@ -87,6 +93,20 @@
     <receiver
       android:name=".notifications.NotificationDismissed"
       android:exported="false" />
+    <!-- The reminders' alarm, and what takes the system's alarms away or moves their clock,
+         after which the next one is set again (reminders/ReminderReceiver). The system sends
+         these to a receiver not exported, as to WorkManager's. -->
+    <receiver
+      android:name=".reminders.ReminderReceiver"
+      android:exported="false">
+      <intent-filter>
+        <action android:name="android.intent.action.BOOT_COMPLETED" />
+        <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+        <action android:name="android.intent.action.TIME_SET" />
+        <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+        <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
+      </intent-filter>
+    </receiver>
     <!-- The camera app writes a photo taken for a face or a mark here (PhotoEditor). -->
     <provider
       android:name="androidx.core.content.FileProvider"

@@ -2,6 +2,8 @@
 <!-- Notifications (spec/chat.md, Notifications; spec/sync-protocol.md, Push). -->
 <resources>
   <!-- The channels, as the system's settings name them. -->
+  <string name="channel_reminder">リマインド</string>
+  <string name="channel_reminder_about">シフトの前日や開始前のお知らせ</string>
   <string name="channel_chat">チャット</string>
   <string name="channel_chat_about">グループのチャットと個人チャットのメッセージ</string>
   <string name="channel_support">作っている人とチャット</string>

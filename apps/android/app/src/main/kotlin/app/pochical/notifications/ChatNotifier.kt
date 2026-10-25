@@ -1,18 +1,14 @@
 package app.pochical.notifications
 
-import android.Manifest
 import android.app.Notification
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.Person
-import androidx.core.content.ContextCompat
 import app.pochical.MainActivity
 import app.pochical.R
 import app.pochical.design.Chat
@@ -221,15 +217,7 @@ class ChatNotifier(
 
   /** Shows [notification] as the chat [tag]'s, while the system lets the app notify. */
   private fun post(tag: String, notification: Notification) {
-    if (
-      !manager.areNotificationsEnabled() ||
-        (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-          ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
-    ) {
-      return
-    }
-    posted[tag] = notification
-    manager.notify(tag, ID, notification)
+    if (manager.postIfAllowed(context, tag, ID, notification)) posted[tag] = notification
   }
 
   private fun cancel(tag: String) {
