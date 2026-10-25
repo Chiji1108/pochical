@@ -120,5 +120,23 @@ internal suspend fun linkSocial(http: OkHttpClient, server: HttpUrl, token: Stri
     }
   }
 
+/** better-auth answered a sign-out with [status], ending nothing. */
+class SignOutRefused(val status: Int) : IOException("Sign-out answered $status")
+
+/**
+ * Ends the session [token] on the server (better-auth's `/sign-out`), which closes its sockets and
+ * drops its push token (spec/sync-protocol.md, Signing out). [SignOutRefused] when it ends nothing.
+ */
+internal suspend fun signOutSession(http: OkHttpClient, server: HttpUrl, token: String) =
+  withContext(Dispatchers.IO) {
+    val request =
+      Request.Builder()
+        .url(server.resolve("/api/auth/sign-out")!!)
+        .header("Authorization", "Bearer $token")
+        .post("{}".toRequestBody("application/json".toMediaType()))
+        .build()
+    http.answer(request).use { response -> if (!response.isSuccessful) throw SignOutRefused(response.code) }
+  }
+
 private val LinkedAccount.Provider.serialName
   get() = LinkedAccount.Provider.serializer().descriptor.getElementName(ordinal)

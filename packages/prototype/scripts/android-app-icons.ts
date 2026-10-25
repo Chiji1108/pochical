@@ -16,6 +16,7 @@ import {
   lightness,
   paint,
   peekingPoodle,
+  welcomePoodle,
   width,
 } from "./app-icon";
 
@@ -37,6 +38,8 @@ const NOTIFICATION_SHARE = 20 / 24;
 const PLAY_SIZE = 512;
 // 次の休み's 92dp dog peeking from the widget's corner, at xxxhdpi.
 const PEEKING_SIZE = 368;
+// はじめの設定's 200dp welcome dog, at xxxhdpi.
+const WELCOME_SIZE = 800;
 const GENERATED =
   "<!-- Written by packages/prototype/scripts/android-app-icons.ts (pnpm run icon:android). -->";
 
@@ -150,3 +153,12 @@ await Promise.all(
     await writeFile(`${RES}${folder}/widget_poodle.png`, picture);
   })
 );
+
+// はじめの設定's welcome dog (app-icon.ts's welcomePoodle), as
+// ios-app-icons.ts writes iOS's: the welcome picks light or dark as its
+// screen is drawn, which 外観 may set apart from the system's.
+const welcome = await welcomePoodle(WELCOME_SIZE);
+await Promise.all([
+  writeFile(`${RES}drawable-nodpi/welcome_poodle.png`, welcome.light),
+  writeFile(`${RES}drawable-nodpi/welcome_poodle_dark.png`, welcome.dark),
+]);

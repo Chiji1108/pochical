@@ -1,4 +1,5 @@
 import { create } from "@bufbuild/protobuf";
+import { chatPlaces } from "@pochical/design/chat";
 import { syncLimits } from "@pochical/design/limits";
 import { characterCount } from "@pochical/design/text";
 import { runInDurableObject } from "cloudflare:test";
@@ -17,8 +18,20 @@ import text from "../../../spec/vectors/text.json";
 import unread from "../../../spec/vectors/unread.json";
 import { inviteCodeOf, textParts } from "../src/chat-links";
 import { pinStep } from "../src/chat-pins";
-import { DayField, PatternSchema } from "../src/gen/pochical/v1/sync_pb";
-import { directThread, plainText, unreadCount } from "../src/group-chat";
+import {
+  ChatEditSchema,
+  DayField,
+  PatternSchema,
+} from "../src/gen/pochical/v1/sync_pb";
+import {
+  directThread,
+  GROUP_THREAD,
+  lineKey,
+  plainText,
+  reactionsOn,
+  takeChatEdit,
+  unreadCount,
+} from "../src/group-chat";
 import { chatLines, readMarks } from "../src/group-do-schema";
 import { compareClocks, isAhead } from "../src/hlc";
 import { givesWay, heldBackBy } from "../src/order-clears";
@@ -55,6 +68,68 @@ describe("spec/vectors/chat.json", () => {
   it.each(chat.pins)("pins: $name", ({ pins, step, expected }) => {
     expect(pinStep(pins, step)).toStrictEqual(expected);
   });
+
+  // A line's reactions as its group keeps them: those it starts with chosen
+  // in the order listed, then the steps, each taken as a member's edit.
+  it.each(chat.reactions)(
+    "reactions: $name",
+    async ({ reactions, steps, expected }) => {
+      const chosen = [
+        ...reactions.flatMap(({ emoji, userIds }) =>
+          userIds.map((user) => ({ emoji, on: true, user }))
+        ),
+        ...steps,
+      ];
+      const after = await runInDurableObject(
+        env.GROUPS.getByName(crypto.randomUUID()),
+        (_, state) => {
+          const db = drizzle(state.storage);
+          db.insert(chatLines)
+            .values({
+              authorId: "yuki",
+              content: {
+                edited: false,
+                kind: "words",
+                preview: null,
+                text: "21日どう？",
+              },
+              createdCursor: 1,
+              cursor: 1,
+              opId: "line",
+              sentAt: new Date(0),
+              seq: 1,
+              threadId: GROUP_THREAD,
+            })
+            .run();
+          let cursor = 1;
+          const nextCursor = () => {
+            cursor += 1;
+            return cursor;
+          };
+          for (const [at, { user, emoji, on }] of chosen.entries()) {
+            takeChatEdit(
+              db,
+              user,
+              create(ChatEditSchema, {
+                kind: {
+                  case: "react",
+                  value: { emoji, on, seq: 1n, threadId: GROUP_THREAD },
+                },
+                opId: `react-${at}`,
+              }),
+              nextCursor,
+              () => true,
+              chatPlaces.group
+            );
+          }
+          return reactionsOn(db, [{ seq: 1, threadId: GROUP_THREAD }]).get(
+            lineKey(GROUP_THREAD, 1)
+          );
+        }
+      );
+      expect(after ?? []).toStrictEqual(expected);
+    }
+  );
 });
 
 describe("spec/vectors/hlc.json", () => {

@@ -15,6 +15,8 @@ import {
   paintedPixels,
 } from "../lib/app-icon-paint";
 import type { IconColors } from "../lib/app-icon-paint";
+import { useDevice } from "../lib/design-device";
+import { useSettings } from "../lib/design-settings-store";
 import { Choice, ChoiceGrid } from "./design-choices";
 
 // The app icon as the pages paint it, on a canvas from the drawing.
@@ -134,6 +136,15 @@ export function useAppIcons() {
 
 // The icons someone can pick in settings, ダーク among them.
 export const pickableIcons = iconColorOptions;
+
+// The icon on the home screen: the one picked on iOS; Android's launcher
+// shows the app's own, as it has no アプリアイコン
+// (spec/sync-protocol.md, Preferences).
+export function useAppIconInUse() {
+  const platform = useDevice((state) => state.platform);
+  const picked = useSettings((state) => state.device.appIcon);
+  return platform === "ios" ? picked : (iconColorOptions[0]?.id ?? picked);
+}
 
 // An icon as the system shows it: cut to a rounded square, close to the
 // system's continuous corner at icon sizes.

@@ -39,6 +39,8 @@ import m0036 from './0036_unsend-emptied-photo-lines.sql';
 import m0037 from './0037_chat-line-content.sql';
 import m0038 from './0038_chat-line-content-fill.sql';
 import m0039 from './0039_chat-line-content-only.sql';
+import m0040 from './0040_reaction-places.sql';
+import m0041 from './0041_reaction-places-required.sql';
 
   export default {
     journal,
@@ -82,7 +84,9 @@ m0035,
 m0036,
 m0037,
 m0038,
-m0039
+m0039,
+m0040,
+m0041
     }
   }
   

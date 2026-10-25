@@ -105,3 +105,44 @@ export const peekingPoodle = async (size: number) => {
   );
   return { dark, light };
 };
+
+// /design's light welcome brightens the scan before multiplying it into
+// the ground (src/components/design-work-setup.tsx, onboarding.poodle).
+const WELCOME_BRIGHTNESS = 1.12;
+const WELCOME_CONTRAST = 1.2;
+
+// はじめの設定's welcome dog, the whole drawing as /design shows it,
+// `size` pixels square: in light its lines alone, the ground showing
+// through as /design's multiplied scan lets it; in dark the default icon's
+// dark twin without its ground. Each platform's script writes it where its
+// welcome reads it.
+export const welcomePoodle = async (size: number) => {
+  const lines = new Uint8ClampedArray(width * height * RGBA);
+  for (let index = 0; index < lightness.length; index += 1) {
+    const bright = ((lightness[index] ?? 255) / 255) * WELCOME_BRIGHTNESS;
+    const shown = Math.min(
+      1,
+      Math.max(0, (bright - 0.5) * WELCOME_CONTRAST + 0.5)
+    );
+    lines[index * RGBA + 3] = Math.round((1 - shown) * 255);
+  }
+  const darkLook = paintedPixels(
+    lightness,
+    width,
+    height,
+    colorsOf("moss-dark"),
+    true
+  );
+  const [light, dark] = await Promise.all(
+    [lines, darkLook].map(
+      async (pixels) =>
+        await sharp(Buffer.from(pixels.buffer), {
+          raw: { channels: RGBA, height, width },
+        })
+          .resize(size, size, { kernel: "lanczos3" })
+          .png({ compressionLevel: 9 })
+          .toBuffer()
+    )
+  );
+  return { dark, light };
+};

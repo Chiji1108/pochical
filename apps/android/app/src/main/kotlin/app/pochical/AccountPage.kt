@@ -117,6 +117,8 @@ fun AccountPage(onBack: () -> Unit) {
           )
         }
         item { Footnote(stringResource(R.string.account_signed_in_note)) }
+        // Each asks first, on the spot, so no arrow as for a page.
+        item { SignOutRow(state) }
         item { DeleteRow(state) }
       } else {
         item { SignInSection(state) }
@@ -125,14 +127,48 @@ fun AccountPage(onBack: () -> Unit) {
   }
 }
 
-/**
- * What signing in keeps, and the ways in, ready once the device has its session: one path for
- * Apple and Google (spec/sync-protocol.md, Signing in; Switching to an account in use). Either links
- * the provider's account to this user, or, when it is another user's already, keeps one side,
- * asking which only when both hold something.
- */
+/** What signing in keeps, and the ways in. */
 @Composable
 private fun SignInSection(state: AccountState) {
+  Column(
+    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 24.dp),
+    horizontalAlignment = Alignment.CenterHorizontally,
+    verticalArrangement = Arrangement.spacedBy(8.dp),
+  ) {
+    Text(
+      stringResource(R.string.account_sign_in_title),
+      style = MaterialTheme.typography.titleLarge,
+      textAlign = TextAlign.Center,
+    )
+    Text(
+      stringResource(R.string.account_sign_in_body),
+      style = MaterialTheme.typography.bodyMedium,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      textAlign = TextAlign.Center,
+    )
+    Spacer(Modifier.size(16.dp))
+    SignInButtons(state)
+  }
+  Footnote(
+    stringResource(
+      when (state) {
+        is AccountState.SignedIn, is AccountState.Changing -> R.string.account_sign_in_note
+        // Neither erasing nor an ended session shows this page (AccountRoot).
+        AccountState.SigningIn, is AccountState.Erasing, AccountState.SessionEnded -> R.string.account_sign_in_offline
+      }
+    )
+  )
+}
+
+/**
+ * Appleで続ける and Googleで続ける, as iOS's SignInButtons, for アカウント and はじめの設定's ログイン,
+ * ready once the device has its session: one path for Apple and Google (spec/sync-protocol.md,
+ * Signing in; Switching to an account in use). Either links the provider's account to this user, or,
+ * when it is another user's already, keeps one side, asking which only when both hold something;
+ * [onSignedIn] hears which, once done.
+ */
+@Composable
+fun SignInButtons(state: AccountState, onSignedIn: suspend (SignInResult) -> Unit = {}) {
   val signedIn = state is AccountState.SignedIn
   val account = LocalAccount.current
   val apple = LocalAppleSignIn.current
@@ -172,26 +208,13 @@ private fun SignInSection(state: AccountState) {
   }
   fun signIn(provider: LinkedAccount.Provider, providerToken: suspend () -> ProviderToken?) =
     run(provider) {
-      val result = providerToken()?.let { account.signIn(it) }
-      if (result is SignInResult.Choose) choosing = result.inUse
+      when (val result = providerToken()?.let { account.signIn(it) }) {
+        is SignInResult.Choose -> choosing = result.inUse
+        null -> Unit
+        else -> onSignedIn(result)
+      }
     }
-  Column(
-    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 24.dp),
-    horizontalAlignment = Alignment.CenterHorizontally,
-    verticalArrangement = Arrangement.spacedBy(8.dp),
-  ) {
-    Text(
-      stringResource(R.string.account_sign_in_title),
-      style = MaterialTheme.typography.titleLarge,
-      textAlign = TextAlign.Center,
-    )
-    Text(
-      stringResource(R.string.account_sign_in_body),
-      style = MaterialTheme.typography.bodyMedium,
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-      textAlign = TextAlign.Center,
-    )
-    Spacer(Modifier.size(16.dp))
+  Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
     AppleButton(enabled = signedIn, busy = busy == LinkedAccount.Provider.Apple) {
       signIn(LinkedAccount.Provider.Apple) { apple.signIn() }
     }
@@ -199,15 +222,6 @@ private fun SignInSection(state: AccountState) {
       signIn(LinkedAccount.Provider.Google) { signInWithGoogle(context) }
     }
   }
-  Footnote(
-    stringResource(
-      when (state) {
-        is AccountState.SignedIn, is AccountState.Changing -> R.string.account_sign_in_note
-        // Neither erasing nor an ended session shows this page (AccountRoot).
-        AccountState.SigningIn, is AccountState.Erasing, AccountState.SessionEnded -> R.string.account_sign_in_offline
-      }
-    )
-  )
   choosing?.let { inUse ->
     val provider = inUse.token.provider
     AlertDialog(
@@ -225,7 +239,10 @@ private fun SignInSection(state: AccountState) {
           TextButton(
             onClick = {
               choosing = null
-              run(provider) { account.useAccount(inUse) }
+              run(provider) {
+                account.useAccount(inUse)
+                onSignedIn(SignInResult.Switched)
+              }
             }
           ) {
             Text(stringResource(R.string.account_use_account))
@@ -233,7 +250,10 @@ private fun SignInSection(state: AccountState) {
           TextButton(
             onClick = {
               choosing = null
-              run(provider) { account.keepDevice(inUse) }
+              run(provider) {
+                account.keepDevice(inUse)
+                onSignedIn(SignInResult.Linked)
+              }
             }
           ) {
             Text(stringResource(R.string.account_keep_device))
@@ -330,6 +350,65 @@ private fun DeleteRow(state: AccountState) {
       confirmButton = { TextButton(onClick = { failure = null }) { Text(stringResource(R.string.ok)) } },
       title = { Text(stringResource(R.string.account_not_deleted)) },
       text = { Text(stringResource(whatToDo(reason))) },
+    )
+  }
+}
+
+/**
+ * ログアウト (spec/sync-protocol.md, Signing out), asked first, on the spot, and offered only while
+ * the device has its session: what waits in the outbox goes, then the session ends on the server and
+ * the app shows the device erasing in place of every page (AccountRoot), then はじめの設定.
+ */
+@Composable
+private fun SignOutRow(state: AccountState) {
+  val account = LocalAccount.current
+  val scope = rememberCoroutineScope()
+  var confirming by remember { mutableStateOf(false) }
+  var failed by remember { mutableStateOf(false) }
+  var signingOut by remember { mutableStateOf(false) }
+  ListItem(
+    headlineContent = { Text(stringResource(R.string.account_sign_out), color = MaterialTheme.colorScheme.error) },
+    trailingContent = if (signingOut) ({ CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp) }) else null,
+    modifier = Modifier.clickable(enabled = state is AccountState.SignedIn && !signingOut) { confirming = true },
+  )
+  if (confirming) {
+    AlertDialog(
+      onDismissRequest = { confirming = false },
+      title = { Text(stringResource(R.string.account_sign_out_title)) },
+      text = { Text(stringResource(R.string.account_sign_out_body)) },
+      dismissButton = { TextButton(onClick = { confirming = false }) { Text(stringResource(R.string.cancel)) } },
+      confirmButton = {
+        TextButton(
+          onClick = {
+            confirming = false
+            signingOut = true
+            scope.launch {
+              try {
+                account.signOut()
+              } catch (e: CancellationException) {
+                throw e
+              } catch (_: NotSignedIn) {
+                // A session the server does not know is said in place of the app, not here.
+              } catch (_: Exception) {
+                failed = true
+              } finally {
+                signingOut = false
+              }
+            }
+          },
+          colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+        ) {
+          Text(stringResource(R.string.account_sign_out))
+        }
+      },
+    )
+  }
+  if (failed) {
+    AlertDialog(
+      onDismissRequest = { failed = false },
+      confirmButton = { TextButton(onClick = { failed = false }) { Text(stringResource(R.string.ok)) } },
+      title = { Text(stringResource(R.string.account_not_signed_out)) },
+      text = { Text(stringResource(R.string.account_not_deleted_later)) },
     )
   }
 }

@@ -31,6 +31,8 @@ credentials = "1.6.0"
 googleid = "1.2.1"
 # Auth Tab, in which Sign in with Apple opens Apple's web page.
 browser = "1.10.0"
+# Google Play's own review prompt (spec/review.md).
+review = "2.0.2"
 # The system's emoji picker, for a group's mark beyond those offered first.
 emojipicker = "1.7.0"
 # ZXing's encoder, for an invitation's QR code.
@@ -90,6 +92,7 @@ kotlinx-coroutines-play-services = { module = "org.jetbrains.kotlinx:kotlinx-cor
 credentials = { module = "androidx.credentials:credentials", version.ref = "credentials" }
 credentials-play-services-auth = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "credentials" }
 browser = { module = "androidx.browser:browser", version.ref = "browser" }
+review = { module = "com.google.android.play:review", version.ref = "review" }
 emojipicker = { module = "androidx.emoji2:emoji2-emojipicker", version.ref = "emojipicker" }
 zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
 camerax-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "camerax" }

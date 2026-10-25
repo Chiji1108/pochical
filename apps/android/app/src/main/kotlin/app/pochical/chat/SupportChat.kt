@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -57,17 +58,21 @@ fun SupportRow(open: (RootPage) -> Unit) {
   // The place's members as it names them: the user, and ポチカル for Pochical's people.
   val values = LocalValues.current
   val members by remember(values) { values.members(Chat.supportPlace) }.collectAsState(emptyList())
-  ChatRow(
-    Chat.supportPlace,
-    GROUP_THREAD,
-    me,
-    stringResource(R.string.support_title),
-    names = members.associate { it.userId to it.shownName() },
-    blocked = emptySet(),
-    empty = stringResource(R.string.support_empty),
-    onOpen = { open(RootPage.Chat(Chat.supportPlace, GROUP_THREAD)) },
-  ) {
-    AppIcon(28.dp)
+  Column {
+    // Apart from the rows of settings above it, the line drawn only with the row.
+    HorizontalDivider(Modifier.padding(vertical = 8.dp))
+    ChatRow(
+      Chat.supportPlace,
+      GROUP_THREAD,
+      me,
+      stringResource(R.string.support_title),
+      names = members.associate { it.userId to it.shownName() },
+      blocked = emptySet(),
+      empty = stringResource(R.string.support_empty),
+      onOpen = { open(RootPage.Chat(Chat.supportPlace, GROUP_THREAD)) },
+    ) {
+      AppIcon(28.dp)
+    }
   }
 }
 
