@@ -269,9 +269,9 @@ class NotificationAsking(private val state: State<Asked>, private val put: () ->
   }
 
   /**
-   * Puts the question the first time a notification is wanted, if it never was (spec/chat.md,
-   * Notifications): as a line is sent, a chat's notifications are turned on, or reminders taken.
-   * Until it is answered yes the device does not hear the server's notifications at all.
+   * Puts the question the first time a notification is wanted, until it is answered (spec/chat.md,
+   * Notifications): as a line is sent, a chat's notifications are turned on, or a reminder is
+   * taken. Until it is answered yes the device does not hear the server's notifications at all.
    */
   fun askOnce() {
     if (notAsked) put()
@@ -296,9 +296,16 @@ fun rememberNotificationAsking(): NotificationAsking {
   // Whether the question was refused before it was put this time: refused again, it is refused for
   // good, as Android then puts it no more. Refused once, or dismissed unanswered, it is put again.
   var refusedBefore by rememberSaveable { mutableStateOf(false) }
+  // Put and not yet answered: a second call meanwhile (two taps in one frame) puts nothing.
+  var putting by remember { mutableStateOf(false) }
   val launcher =
     rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+      putting = false
       if (!granted && refusedBefore) settings.change { it.copy(notificationsRefused = true) }
+      // Asked once answered: allowed, or turned down (Android then gives its rationale). A dialog
+      // dismissed unanswered leaves it not asked, as iOS's not determined, to be put again.
+      val answered = granted || refusedBefore || activity?.shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS) == true
+      if (answered && !settings.device.notificationsAsked) settings.change { it.copy(notificationsAsked = true) }
       permission.read()
     }
   val state = rememberUpdatedState(
@@ -309,9 +316,9 @@ fun rememberNotificationAsking(): NotificationAsking {
   )
   return remember(launcher, activity) {
     NotificationAsking(state) put@{
-      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return@put
+      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || putting) return@put
+      putting = true
       refusedBefore = activity?.shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS) == true
-      if (!settings.device.notificationsAsked) settings.change { it.copy(notificationsAsked = true) }
       launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
     }
   }

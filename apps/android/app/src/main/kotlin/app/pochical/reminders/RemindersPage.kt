@@ -114,7 +114,7 @@ fun RemindersPage(navigation: PageNavigation) {
           onOpen = { navigation.open(RootPage.ReminderEditor(reminder.id)) },
           onSwitch = { on ->
             settings.change { device -> device.copy(reminders = device.reminders.map { if (it.id == reminder.id) it.copy(on = on) else it }) }
-            if (on) asking.ask()
+            if (on) asking.askOnce()
           },
         )
       }
@@ -227,7 +227,7 @@ fun ReminderEditorPage(id: String?, navigation: PageNavigation) {
             device.copy(reminders = if (kept.any { it.id == draft.id }) kept.map { if (it.id == draft.id) draft else it } else kept + draft)
           }
           // The moment a notification is first wanted.
-          asking.ask()
+          asking.askOnce()
           navigation.back()
         },
       ) {
