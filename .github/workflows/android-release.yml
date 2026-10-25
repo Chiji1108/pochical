@@ -61,8 +61,8 @@ jobs:
       # The commit released passed its own tests, not only its pull request's.
       - run: mise run android:test
       # Play takes each versionCode once and only ever a higher one; this
-      # workflow's run number only grows, as Xcode Cloud's build number does,
-      # while this file keeps its name.
+      # workflow's run number only grows, as ios-release.yml's does, while
+      # this file keeps its name.
       - env:
           ORG_GRADLE_PROJECT_pochicalVersionCode: ${{ github.run_number }}
           ORG_GRADLE_PROJECT_pochicalUploadStoreFile: ${{ runner.temp }}/upload.jks
