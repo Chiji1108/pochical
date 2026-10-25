@@ -148,10 +148,19 @@ dir = "{{config_root}}/apps/android"
 run = "./gradlew test lint"
 
 [tasks."android:db:check"]
-description = "Fail if building the Android app changed a database version's schema Room exports (its identity hash: a shape changed without its version raised) or wrote one not committed (run after a build)"
+description = "Fail if a database version's schema Room exports changed shape (its identity hash) since the branch's base, or as built and not committed, or wrote one not committed (run after a build; BASE: the commit to compare with, by default where the branch left origin/main)"
 run = """
 status=0
 hash() { grep -o '"identityHash": *"[^"]*"' | head -1; }
+# A version the base has already is out there (on main, or on the PR the branch stacks on): its
+# shape stays as it was, and a new shape takes a new version.
+base="${BASE:-$(git merge-base HEAD origin/main)}"
+for file in $(git ls-tree -r --name-only "$base" -- apps/android/kit/schemas); do
+  if [ "$(git show "$base:$file" | hash)" != "$(git show "HEAD:$file" 2>/dev/null | hash)" ]; then
+    echo "$file: the database's shape changed under a version $base has already. Raise AppDatabase.VERSION and leave this file as it was (AGENTS.md)."
+    status=1
+  fi
+done
 for file in $(git diff --name-only -- apps/android/kit/schemas); do
   if [ "$(git show "HEAD:$file" | hash)" != "$(hash < "$file")" ]; then
     echo "$file: the database's shape changed under the same version. Raise AppDatabase.VERSION, which erases the database until release, and commit kit/schemas (AGENTS.md)."

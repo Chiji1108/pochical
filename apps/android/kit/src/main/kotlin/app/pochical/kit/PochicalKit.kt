@@ -30,8 +30,17 @@ class PochicalKit(context: Context) {
   val database: AppDatabase = AppDatabase.open(context)
   val edits = OwnEdits(database)
 
+  private val photos = Photos(http, server, File(context.cacheDir, "held-photos"))
+
+  /** The member's own chat photos on the device, as sent and until they are up. */
+  val photoFiles = ChatPhotoFiles(context.cacheDir, context.filesDir)
+
+  /** How far each of the member's chat photos has gone up, and × to stop its line. */
+  val photoUploads = PhotoUploads()
+  private val linePhotos = LinePhotos(photos, photoFiles, photoUploads)
+
   /** The chats' lines as the screens show them, and the member's edits of them. */
-  val chats = Chats(database)
+  val chats = Chats(database, linePhotos)
   val account =
     SyncAccount(
       database = database,
@@ -40,10 +49,9 @@ class PochicalKit(context: Context) {
       http = http,
       scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
       network = DefaultNetworkWatch(context),
+      linePhotos = linePhotos,
       sendInBackground = { SendOutboxWorker.enqueue(context) },
     )
-
-  private val photos = Photos(http, server, File(context.cacheDir, "held-photos"))
 
   /** GroupService, the profile and the photos, as the user the device is signed in as. */
   val groups = GroupCalls(account, http, server, photos, CoroutineScope(SupervisorJob() + Dispatchers.Default))

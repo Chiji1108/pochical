@@ -63,7 +63,7 @@ abstract class AppDatabase : RoomDatabase() {
   internal suspend fun <T> read(block: suspend SyncDao.() -> T): T = withReadTransaction { sync().block() }
 
   companion object {
-    const val VERSION = 5
+    const val VERSION = 7
 
     /** The app's database in [context]'s files, or one in memory alone for tests. */
     fun open(context: Context, inMemory: Boolean = false): AppDatabase =

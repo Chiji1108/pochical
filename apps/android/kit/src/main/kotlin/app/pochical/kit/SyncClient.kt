@@ -2,6 +2,8 @@ package app.pochical.kit
 
 import android.util.Log
 import app.pochical.design.SyncSocket
+import app.pochical.v1.ChatEdit
+import app.pochical.v1.ChatSendContent
 import app.pochical.v1.ClientFrame
 import app.pochical.v1.ServerError
 import app.pochical.v1.ServerFrame
@@ -84,6 +86,8 @@ class SyncClient internal constructor(
   private val server: HttpUrl,
   private val http: OkHttpClient,
   private val credentials: Credentials,
+  /** What uploads a line's photos before it goes. */
+  private val linePhotos: LinePhotos,
   scope: CoroutineScope,
   private val now: () -> Long = System::currentTimeMillis,
   private val random: Random = Random.Default,
@@ -268,6 +272,9 @@ class SyncClient internal constructor(
               sendChatOutbox(socket, peer.id)
             } catch (_: NotTheOwner) {
               messages.send(SocketMessage.Ended(SocketEvent.Refused(Stop.NotTheOwner)))
+            } catch (_: SessionRefused) {
+              // A photo's upload found the session unknown, as the socket's own 401 would.
+              messages.send(SocketMessage.Ended(SocketEvent.Refused(Stop.SignedOut)))
             } catch (e: CancellationException) {
               throw e
             } catch (e: Exception) {
@@ -294,7 +301,19 @@ class SyncClient internal constructor(
       }
       ServerFrame.KindCase.CHANGES -> {
         val changes = frame.changes.changesList
-        if (peer is Peer.Group) takeInto(peer.id) { take(changes, peer.id) } else write { take(changes) }
+        if (peer is Peer.Group) {
+          // The photos of a line taken back go from the device as it does.
+          var letGo = emptyList<String>()
+          takeInto(peer.id) {
+            letGo = photosLetGo(changes, peer.id)
+            take(changes, peer.id)
+          }
+          linePhotos.files.forget(peer.id, letGo)
+          // A line of the member's the group took stops waiting, as its Acked would say.
+          linePhotos.uploads.forget(changes.filter { it.hasChatLine() && it.chatLine.opId.isNotEmpty() }.map { it.chatLine.opId })
+        } else {
+          write { take(changes) }
+        }
         log("Took ${changes.size} changes")
       }
       ServerFrame.KindCase.RESET -> if (peer is Peer.Group) takeInto(peer.id) { resetGroup(peer.id) } else write { reset() }
@@ -302,6 +321,8 @@ class SyncClient internal constructor(
         val acked = frame.acked
         if (peer is Peer.Group) {
           takeInto(peer.id) { acknowledgeChat(acked.opIdsList, acked.refusedList.map { it.opId }) }
+          // Done with, their photos' rings go with them.
+          linePhotos.uploads.forget(acked.opIdsList)
         } else {
           write { acknowledge(acked.opIdsList) }
         }
@@ -351,11 +372,65 @@ class SyncClient internal constructor(
       if (last == null || last <= sent) return@collect
       val (frames, through) = read { chatFrames(groupId, after = sent, now()) }
       for (frame in frames) {
-        val going = write { goOut(frame.chatEdits.editsList, now()) }
+        // A line of photos goes only once they are up, so the edits after it wait their turn.
+        val uploaded = frame.chatEdits.editsList.filter { edit -> photosUp(edit, groupId) }
+        val going = write { goOut(uploaded, now()) }
         if (going.isNotEmpty()) socket.send(clientFrame { chatEdits = chatEdits { edits += going } })
       }
       sent = through
     }
+  }
+
+  /**
+   * Whether the [edit] goes now: any but a line of photos, and one of photos once they are all up
+   * (spec/chat.md, Photos). One with a photo that cannot go is marked not sent, for the member to
+   * send again or delete, and the edits after it go on; one the member stopped or took back while its
+   * photos went up, or waited to, is left as they left it.
+   */
+  private suspend fun photosUp(edit: ChatEdit, groupId: String): Boolean {
+    if (edit.kindCase != ChatEdit.KindCase.SEND || edit.send.content.kindCase != ChatSendContent.KindCase.PHOTOS) return true
+    for (photoId in read { photosToUpload(edit.opId, now()) }) {
+      if (!upload(photoId, edit.opId, groupId)) return false
+    }
+    // Stopped as the last bytes went: left as the member left it. Past here × does nothing, so the
+    // line is sent as it shows.
+    return write { sendOnceUp(edit.opId, now()) }
+  }
+
+  /**
+   * Uploads one of a waiting line's photos, trying again after a wait that doubles, `PHOTO_TRIES`
+   * times in all, and keeps it as up; true once up with the line still going. A photo that cannot go
+   * (gone from the device, refused, or failing every try) marks the line not sent.
+   */
+  private suspend fun upload(photoId: String, opId: String, groupId: String): Boolean {
+    var waitMs = PHOTO_RETRY_FIRST_MS
+    repeat(PHOTO_TRIES) { tried ->
+      if (!read { stillGoing(opId, now()) }) return false
+      val began = now()
+      try {
+        linePhotos.upload(groupId, photoId, opId, credentials)
+      } catch (_: PhotoStopped) {
+        return false
+      } catch (e: PhotoCannotGo) {
+        log("A photo cannot go: $e")
+        write { failChatEdits(listOf(opId)) }
+        return false
+      } catch (e: PhotoFailure) {
+        log("A photo's upload failed: $e")
+        if (tried == PHOTO_TRIES - 1) {
+          write { failChatEdits(listOf(opId)) }
+          return false
+        }
+        delay(waitMs)
+        waitMs *= 2
+        return@repeat
+      }
+      // Kept outside the upload's tries: the photo is up, and a write that fails here (the device
+      // gone on as someone else) is no failed upload.
+      write { photoUp(opId, photoId, began) }
+      return read { stillGoing(opId, now()) }
+    }
+    return false
   }
 
   override fun requestPage(threadId: String, beforeSeq: Long): Boolean =
@@ -444,6 +519,12 @@ class SyncClient internal constructor(
     const val PROTOCOL_VERSION = 2
 
     private const val TAG = "PochicalSync"
+
+    /** How many times a photo is tried before its line is not sent (spec/chat.md, Photos). */
+    private const val PHOTO_TRIES = 5
+
+    /** The wait before a photo is tried again the first time, doubling each time after. */
+    private const val PHOTO_RETRY_FIRST_MS = 1_000L
   }
 }
 

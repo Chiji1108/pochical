@@ -201,6 +201,8 @@ data class WaitingLine(
   val replyTo: Long? = null,
   /** Not sent (the group refused it, or it waited too long): to send again or delete. */
   val failed: Boolean = false,
+  /** A line of photos all up, being sent: × (送信をやめる) no longer stops it. */
+  val sending: Boolean = false,
 )
 
 /**
@@ -284,6 +286,18 @@ fun pinning(pins: List<Long>, seq: Long, most: Int = Chat.maxPins): PinStep {
 
 /** Taking [seq]'s pin off, or taking the line back, its pin going with it. */
 fun unpinning(pins: List<Long>, seq: Long): PinStep = PinStep(pins.filter { it != seq })
+
+/**
+ * How many of a line's [count] photos go in each of its album's rows, top first: two side by side,
+ * three as one over two, and past that rows of two and three, as few as can be, the twos first
+ * (spec/vectors/chat.json, albumRows): an album, of two photos or more; a line of one is a photo alone.
+ */
+fun albumRows(count: Int): List<Int> {
+  if (count == 3) return listOf(1, 2)
+  val rows = (count + 2) / 3
+  val twos = 3 * rows - count
+  return List(twos) { 2 } + List(rows - twos) { 3 }
+}
 
 /** A line placed in a chat by its time: one the group holds, or one of the member's waiting. */
 data class TimedLine<Id>(val id: Id, val at: Long, val failed: Boolean = false)

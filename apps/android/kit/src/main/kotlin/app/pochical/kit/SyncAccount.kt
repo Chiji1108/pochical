@@ -102,7 +102,7 @@ class NotSignedIn : Exception()
  * was asked in, so an answer for a stretch already over changes nothing.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-class SyncAccount(
+class SyncAccount internal constructor(
   private val database: AppDatabase,
   private val sessions: SessionStore,
   private val server: HttpUrl,
@@ -111,6 +111,8 @@ class SyncAccount(
   network: NetworkWatch? = null,
   private val now: () -> Long = System::currentTimeMillis,
   private val random: Random = Random.Default,
+  /** What uploads a chat line's photos before its group's socket sends it. */
+  private val linePhotos: LinePhotos,
   /**
    * Asks the OS for time in the background to send what the outbox holds (WorkManager on Android,
    * spec/sync-protocol.md, Sockets), the app perhaps ended before it is sent: what runs then calls
@@ -779,6 +781,8 @@ class SyncAccount(
           eraseUserData()
           upsert(state().copy(erased = userId))
         }
+        // Their photos with the rest: the outbox that would send them is gone.
+        linePhotos.eraseAll()
         sessions.forgetSession()
         break
       } catch (e: CancellationException) {
@@ -885,12 +889,14 @@ class SyncAccount(
       }
     }
     val userId = session.userId
-    database.write {
-      if (!claim(userId)) {
+    val erased =
+      database.write {
+        if (claim(userId)) return@write false
         eraseUserData()
         claim(userId)
+        true
       }
-    }
+    if (erased) linePhotos.eraseAll()
     commands.send(Command.SignedIn(session, kept = kept != null))
   }
 
@@ -934,7 +940,7 @@ class SyncAccount(
     fun end() = scope.cancel()
 
     private fun client(peer: Peer) =
-      SyncClient(database, peer, server, http, credentials, scope, now, random) {
+      SyncClient(database, peer, server, http, credentials, linePhotos, scope, now, random) {
         commands.trySend(Command.SessionUnknown(credentials.generation))
       }
   }

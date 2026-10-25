@@ -10,8 +10,9 @@ import okhttp3.HttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.RequestBody
 import okhttp3.Response
+import okio.BufferedSink
 
 /** Where a photo is kept on the server, and read and sent there. */
 sealed interface PhotoShelf {
@@ -90,14 +91,31 @@ internal class Photos(private val http: OkHttpClient, private val server: HttpUr
 
   /** Sends [jpeg] to [shelf] as [photoId]: sending the same again stores nothing new. */
   suspend fun send(jpeg: ByteArray, photoId: String, shelf: PhotoShelf, credentials: Credentials) {
+    put(jpeg, photoId, shelf, credentials)
+    fetched.put(key(shelf, photoId, credentials), jpeg)
+  }
+
+  /**
+   * Puts [jpeg] on [shelf] as [photoId], or as its small version ([small]), telling [onSent] how many
+   * of its bytes have gone as they go: a chat's photo, which the app's image cache keeps once shown.
+   */
+  suspend fun put(jpeg: ByteArray, photoId: String, shelf: PhotoShelf, credentials: Credentials, small: Boolean = false, onSent: (Long) -> Unit = {}) {
     val request =
       Request.Builder()
-        .url(url(shelf, photoId))
+        .url(url(shelf, photoId, small))
         .header("Authorization", "Bearer ${credentials.token}")
-        .put(jpeg.toRequestBody(JPEG))
+        .put(CountedBody(jpeg, onSent))
         .build()
     answer(request) {}
-    fetched.put(key(shelf, photoId, credentials), jpeg)
+  }
+
+  /**
+   * One of a chat's photos from the server, or its small version ([small]), which is the photo itself
+   * while it has none: the app's image cache keeps it, so it is not kept here too.
+   */
+  suspend fun fetch(photoId: String, shelf: PhotoShelf, credentials: Credentials, small: Boolean): ByteArray {
+    val request = Request.Builder().url(url(shelf, photoId, small)).header("Authorization", "Bearer ${credentials.token}").build()
+    return answer(request) { it.body.bytes() }
   }
 
   /** The photo [photoId] of [shelf]: one held on the device, one fetched already, else the server's. */
@@ -122,16 +140,17 @@ internal class Photos(private val http: OkHttpClient, private val server: HttpUr
     withContext(Dispatchers.IO) { held.deleteRecursively() }
   }
 
-  private fun url(shelf: PhotoShelf, photoId: String): HttpUrl =
-    server.newBuilder().addEncodedPathSegments(shelf.path.trimEnd('/')).addPathSegment(photoId).build()
+  private fun url(shelf: PhotoShelf, photoId: String, small: Boolean = false): HttpUrl =
+    server.newBuilder().addEncodedPathSegments(shelf.path.trimEnd('/')).addPathSegment(photoId).apply { if (small) addQueryParameter("size", "small") }.build()
 
   /** The user's own and an invitation's are read alike by every user, so the user is part of the key. */
   private fun key(shelf: PhotoShelf, photoId: String, credentials: Credentials) = "${credentials.userId}/${shelf.path}$photoId"
 
+  /** The server's answer to [request], read by [read]; cancelling the caller cancels the call, its upload with it (×). */
   private suspend fun <T> answer(request: Request, read: (Response) -> T): T =
     withContext(Dispatchers.IO) {
       try {
-        http.newCall(request).execute().use {
+        http.answer(request).use {
           when {
             it.code == 401 -> throw SessionRefused()
             !it.isSuccessful -> throw PhotoFailure(it.code)
@@ -145,9 +164,30 @@ internal class Photos(private val http: OkHttpClient, private val server: HttpUr
     }
 
   private companion object {
-    val JPEG = "image/jpeg".toMediaType()
-
     /** Faces and marks are small (chatRules.pictureMaxEdge): a screen's worth many times over. */
     const val FETCHED_BYTES = 16_000_000
+  }
+}
+
+/** A JPEG to put, telling [onSent] how many of its bytes have gone, a chunk at a time, each time it is written. */
+private class CountedBody(private val jpeg: ByteArray, private val onSent: (Long) -> Unit) : RequestBody() {
+  override fun contentType() = JPEG
+
+  override fun contentLength() = jpeg.size.toLong()
+
+  override fun writeTo(sink: BufferedSink) {
+    var sent = 0
+    while (sent < jpeg.size) {
+      val chunk = minOf(CHUNK, jpeg.size - sent)
+      sink.write(jpeg, sent, chunk)
+      sink.flush()
+      sent += chunk
+      onSent(sent.toLong())
+    }
+  }
+
+  private companion object {
+    val JPEG = "image/jpeg".toMediaType()
+    const val CHUNK = 16 * 1024
   }
 }

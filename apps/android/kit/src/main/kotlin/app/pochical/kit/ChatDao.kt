@@ -101,6 +101,15 @@ internal interface ChatDao {
 
   @Query("UPDATE chatOutbox SET wentOut = 1 WHERE opId IN (:opIds)") suspend fun wentOut(opIds: List<String>)
 
+  @Query("UPDATE chatOutbox SET upIds = :upIds, upAtMs = :upAtMs WHERE opId = :opId")
+  suspend fun photosUp(opId: String, upIds: String, upAtMs: Long)
+
+  /** × on a line of photos: not sent, unless it is being sent already; how many it marked. */
+  @Query("UPDATE chatOutbox SET failed = 1, wentOut = 0 WHERE opId = :opId AND sending = 0")
+  suspend fun stopGoingUp(opId: String): Int
+
+  @Query("UPDATE chatOutbox SET sending = 1 WHERE opId = :opId") suspend fun markSending(opId: String)
+
   @Query("DELETE FROM chatOutbox WHERE groupId = :groupId") suspend fun deleteChatOutbox(groupId: String)
 
   @Query("DELETE FROM chatOutbox") suspend fun deleteAllChatOutbox()
