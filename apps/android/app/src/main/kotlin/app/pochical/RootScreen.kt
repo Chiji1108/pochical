@@ -183,6 +183,7 @@ private fun TabsScreen(navigator: RootNavigator, navigation: PageNavigation) {
       if (barHidden) NavigationSuiteScaffoldValue.Hidden else NavigationSuiteScaffoldValue.Visible
     )
   LaunchedEffect(barHidden) { if (barHidden) suite.hide() else suite.show() }
+  val badges = rememberTabBadges()
   NavigationSuiteScaffold(
     state = suite,
     navigationSuiteItems = {
@@ -195,6 +196,7 @@ private fun TabsScreen(navigator: RootNavigator, navigation: PageNavigation) {
             Icon(painterResource(if (selected) tab.selectedIcon else tab.icon), contentDescription = null)
           },
           label = { Text(stringResource(tab.title)) },
+          badge = tabBadge(badges[tab] ?: 0),
         )
       }
     },

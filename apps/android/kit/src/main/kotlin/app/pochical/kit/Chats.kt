@@ -77,6 +77,16 @@ class Chats internal constructor(
     observe("chatLines", "chatOutbox") { now -> Timed(shownLine(groupId, threadId, seq, waitingEdits(groupId, threadId, now)), null) }
 
   /**
+   * Each place's unread lines that notify [me], its chats' together (spec/sync-protocol.md, Unread
+   * summary), for the tabs' badges: the groups' under グループ, Pochical's people's under 設定. A
+   * place with none is left out.
+   */
+  fun notifyingUnread(me: String): Flow<Map<String, Int>> =
+    observe("unreadCounts", "chatLines", "readMarks", "chatOutbox", "chatMutes", "chatNotificationSettings") { now ->
+      Timed(notifyingByPlace(me, now), null)
+    }
+
+  /**
    * The group's chats that have a line, unread lines counted before their lines come, one of the
    * member's own on its way, or a draft: the one-to-one chats its list shows beside its own.
    */
@@ -599,6 +609,34 @@ internal suspend fun SyncDao.chatSummary(groupId: String, threadId: String, me: 
         }
       }
   return ChatSummary(last, latest, waiting.failsAt, unread, keptDraft(groupId, threadId, waiting), mentioned, muted(groupId, threadId))
+}
+
+/**
+ * Each place's unread lines that notify [me] (`Chats.notifyingUnread`): as the group counted them,
+ * or, in a chat where a read of theirs still waits, others' lines the device holds past it, so
+ * reading clears the badge at once; in a chat turned off only those that notify all the same.
+ */
+internal suspend fun SyncDao.notifyingByPlace(me: String, now: Long): Map<String, Int> {
+  val notifications = ChatNotificationState.of(mutedChats(), notificationSettings())
+  val counts = mutableMapOf<String, Int>()
+  for (row in unreadCounts()) {
+    val muted = notifications.isMuted(row.groupId, row.threadId)
+    val waiting = waitingEdits(row.groupId, row.threadId, now)
+    val unread =
+      if (waiting.ownRead == 0L) {
+        notifyingCount(row.count, row.mentions, muted, notifications.mentionsWhenMuted)
+      } else {
+        val read = lastRead(readMarks(row.groupId, row.threadId), me, waiting)
+        val words =
+          lines(row.groupId, row.threadId, read + 1, Long.MAX_VALUE)
+            .map { ChatLine.of(WireLine.parseFrom(it.line)) }
+            .filter { it.writer(me) == LineWriter.Others }
+            .map { (it.content as? LineContent.Words)?.text.orEmpty() }
+        notifyingUnread(words, muted, notifications.mentionsWhenMuted, me)
+      }
+    if (unread > 0) counts.merge(row.groupId, unread, Int::plus)
+  }
+  return counts
 }
 
 /** How far [me] has read the chat, their read still waiting included. */

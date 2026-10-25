@@ -31,6 +31,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.Badge
+import app.pochical.rememberNotifyingUnread
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -163,12 +165,16 @@ private fun GroupRail(groups: List<GroupRow>, openId: String, onOpen: (String) -
     verticalArrangement = Arrangement.spacedBy(12.dp),
     horizontalAlignment = Alignment.CenterHorizontally,
   ) {
+    // Each group's chats' unread lines that notify, as the グループ tab adds them up.
+    val unread = rememberNotifyingUnread()
     groups.forEach { group ->
       val isOpen = group.id == openId
+      val count = unread[group.id] ?: 0
+      val label = if (count > 0) stringResource(R.string.group_unread_label, group.name, count) else group.name
       val shape = RoundedCornerShape(if (isOpen) Radius.md else Radius.lg)
       Box(
         Modifier.fillMaxWidth().height(48.dp).clickable { onOpen(group.id) }.semantics {
-          contentDescription = group.name
+          contentDescription = label
           selected = isOpen
         },
         contentAlignment = Alignment.Center,
@@ -188,6 +194,7 @@ private fun GroupRail(groups: List<GroupRow>, openId: String, onOpen: (String) -
             .then(if (isOpen) Modifier.border(2.dp, colors.secondary, shape) else Modifier),
           shelf = PhotoShelf.Group(group.id),
         )
+        if (count > 0) Badge(Modifier.align(Alignment.BottomEnd).padding(end = 6.dp)) { Text(count.toString()) }
       }
     }
     Box(Modifier.size(28.dp, 2.dp).background(colors.outlineVariant, CircleShape))

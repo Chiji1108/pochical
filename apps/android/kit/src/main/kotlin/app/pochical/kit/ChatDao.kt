@@ -126,6 +126,9 @@ internal interface ChatDao {
   @Query("SELECT threadId FROM unreadCounts WHERE groupId = :groupId AND count > 0")
   suspend fun unreadThreads(groupId: String): List<String>
 
+  /** Every chat with unread lines, as the user's socket counted them. */
+  @Query("SELECT * FROM unreadCounts WHERE count > 0") suspend fun unreadCounts(): List<UnreadCountRow>
+
   @Query("DELETE FROM unreadCounts WHERE groupId = :groupId") suspend fun deleteUnreadCounts(groupId: String)
 
   @Query("DELETE FROM unreadCounts") suspend fun deleteAllUnreadCounts()
@@ -151,6 +154,10 @@ internal interface ChatDao {
 
   @Query("SELECT EXISTS(SELECT 1 FROM chatMutes WHERE groupId = :groupId AND threadId = :threadId)")
   suspend fun muted(groupId: String, threadId: String): Boolean
+
+  @Query("SELECT * FROM chatMutes") suspend fun mutedChats(): List<ChatMuteRow>
+
+  @Query("SELECT * FROM chatNotificationSettings WHERE id = 1") suspend fun notificationSettings(): ChatNotificationSettingsRow?
 
   @Upsert suspend fun upsert(settings: ChatNotificationSettingsRow)
 

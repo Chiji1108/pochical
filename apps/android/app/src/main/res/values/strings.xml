@@ -176,6 +176,8 @@
   <string name="mark_photo_failed">写真を使えませんでした</string>
   <string name="mark_photo_gone">写真をもう一度選んでください</string>
   <string name="mark_photo_gone_body">選んだ写真がこの端末から消えていたため、アイコンを元に戻しました。</string>
+  <!-- A group in グループ's rail, its chats' unread lines that notify said after its name. -->
+  <string name="group_unread_label">%1$s、未読%2$d件</string>
   <string name="group_mark">アイコン</string>
   <string name="group_mark_note">メンバー全員に、このアイコンがそのまま表示されます。スタイルの「シフトの見た目」には左右されません。</string>
   <string name="group_name">グループ名</string>

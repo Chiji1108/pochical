@@ -17,6 +17,22 @@ data class ChatNotificationState(val muted: Set<ChatKey> = emptySet(), val menti
   }
 }
 
+/**
+ * How many of a chat's unread lines notify, from the count of them and of their mentions of the
+ * reader: all of them in a chat that is on; in one turned off only the mentions, and those only
+ * while メンションはいつも通知 is on (spec/chat.md, Unread lines; spec/vectors/unread.json, notifying).
+ */
+fun notifyingCount(count: Int, mentions: Int, muted: Boolean, mentionsWhenMuted: Boolean): Int =
+  when {
+    !muted -> count
+    mentionsWhenMuted -> mentions
+    else -> 0
+  }
+
+/** How many of others' unread lines, by their [words], notify [me] (`notifyingCount`). */
+fun notifyingUnread(words: List<String>, muted: Boolean, mentionsWhenMuted: Boolean, me: String): Int =
+  notifyingCount(words.size, words.count { me in mentions(it) }, muted, mentionsWhenMuted)
+
 /** 設定 › 通知 › チャット's value. */
 sealed interface ChatNotificationsSummary {
   /** Every group's chat notifies. */
