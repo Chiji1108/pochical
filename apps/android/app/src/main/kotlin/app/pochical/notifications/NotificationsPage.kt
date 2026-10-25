@@ -267,6 +267,15 @@ class NotificationAsking(private val state: State<Asked>, private val put: () ->
   fun ask() {
     if (mayAsk) put()
   }
+
+  /**
+   * Puts the question the first time a notification is wanted, if it never was (spec/chat.md,
+   * Notifications): as a line is sent, a chat's notifications are turned on, or reminders taken.
+   * Until it is answered yes the device does not hear the server's notifications at all.
+   */
+  fun askOnce() {
+    if (notAsked) put()
+  }
 }
 
 /** The question whether the app may notify, for the screens: [rememberNotificationAsking]'s, at the root. */

@@ -51,6 +51,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import app.pochical.notifications.LocalNotificationAsking
 import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.design.Chat
@@ -159,6 +160,7 @@ fun Composer(
   modifier: Modifier = Modifier,
 ) {
   val chats = LocalChats.current
+  val asking = LocalNotificationAsking.current
   val scope = rememberCoroutineScope()
   val context = LocalContext.current
   val resources = context.resources
@@ -304,6 +306,9 @@ fun Composer(
         )
         FilledIconButton(
           onClick = {
+            // The first line sent is when an answer is first wanted: the system's question then, if
+            // never put, as iOS asks (spec/chat.md, Notifications).
+            asking.askOnce()
             // Gone from the composer as it is sent, so a second tap sends nothing and the chat left
             // meanwhile keeps no draft of words sent.
             val going = state.writing
