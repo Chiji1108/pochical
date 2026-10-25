@@ -36,6 +36,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.Serializable
 import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 
@@ -63,6 +64,7 @@ sealed interface AccountState {
    * anonymous user, as a new install does.
    */
   data class Erasing(val why: Why, val failed: Boolean = false) : AccountState {
+    @Serializable
     enum class Why {
       /** The person let the session go: ログアウト, or はじめから使う after the server ended it. */
       SignedOut,
@@ -650,9 +652,7 @@ class SyncAccount internal constructor(
         if (state.value != AccountState.SessionEnded) return
         val kept =
           try {
-            // Kept as ended before anything is erased, so an app ended meanwhile goes on erasing as
-            // letting the session go, not as a deletion.
-            sessions.read()?.also { if (!it.ended) sessions.write(it.copy(ended = true)) }
+            sessions.read()
           } catch (e: StoreUnreachable) {
             Log.i(TAG, "The ended session could not be let go of: $e")
             return
@@ -720,9 +720,20 @@ class SyncAccount internal constructor(
     }
   }
 
-  /** Letting go of [userId] ([why]): nothing of theirs shows, and the device erases it ([erase]). */
-  private fun beginErasing(userId: String, why: AccountState.Erasing.Why) {
+  /**
+   * Letting go of [userId] ([why]): nothing of theirs shows, and the device erases it ([erase]). Why
+   * is kept with the session before anything is erased, whatever the reason, so an app ended at any
+   * point from here goes on erasing as it starts (`signIn`), never showing or signing in as them.
+   */
+  private suspend fun beginErasing(userId: String, why: AccountState.Erasing.Why) {
     mutableState.value = AccountState.Erasing(why)
+    try {
+      sessions.read()?.takeIf { it.userId == userId && it.erasing != why }?.let { sessions.write(it.copy(erasing = why)) }
+    } catch (e: StoreUnreachable) {
+      // The session is forgotten only once the store is reached again; until then a relaunch finds
+      // the database erased for them (SyncState.erased) and goes on erasing all the same.
+      Log.i(TAG, "The erasing could not be noted: $e")
+    }
     scope.launch { erase(userId, why) }
   }
 
@@ -771,13 +782,6 @@ class SyncAccount internal constructor(
       }
       is Outcome.SignedOut -> {
         endStretch(current)
-        try {
-          // Kept as ended before anything is erased, so an app ended meanwhile goes on erasing as
-          // signed out, not as a deletion.
-          sessions.read()?.let { sessions.write(it.copy(ended = true)) }
-        } catch (e: StoreUnreachable) {
-          Log.i(TAG, "The signed-out session could not be noted: $e")
-        }
         beginErasing(outcome.userId, AccountState.Erasing.Why.SignedOut)
         command.settled.complete(Unit)
       }
@@ -901,10 +905,15 @@ class SyncAccount internal constructor(
         Log.i(TAG, "The kept session cannot be reached, tried again in the foreground: $e")
         return
       }
-    if (kept != null && database.write { state().erased } == kept.userId) {
-      // Only a session let go of is kept as ended while it is erased; a deleted account's is not.
-      val why = if (kept.ended) AccountState.Erasing.Why.SignedOut else AccountState.Erasing.Why.Deleted
-      commands.send(Command.Erasing(kept.userId, why))
+    // Erasing cut off part way goes on: as noted with the session, or, should that note not have been
+    // kept, as the database says it was erased for this user, an ended session's let go of.
+    val erasing =
+      kept?.erasing
+        ?: kept?.takeIf { database.write { state().erased } == it.userId }?.let {
+          if (it.ended) AccountState.Erasing.Why.SignedOut else AccountState.Erasing.Why.Deleted
+        }
+    if (kept != null && erasing != null) {
+      commands.send(Command.Erasing(kept.userId, erasing))
       return
     }
     if (kept?.ended == true) {

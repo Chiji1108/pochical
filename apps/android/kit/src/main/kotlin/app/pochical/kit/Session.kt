@@ -24,6 +24,8 @@ data class StoredSession(
   val ended: Boolean = false,
   /** Null while the user is anonymous. */
   val linked: LinkedAccount? = null,
+  /** The device is letting go of this user, for this reason: it goes on erasing until it forgets the session. */
+  val erasing: AccountState.Erasing.Why? = null,
 )
 
 /**
