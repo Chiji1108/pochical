@@ -868,6 +868,39 @@ struct PinVectors: Decodable, Sendable {
   let pins: [Case]
 }
 
+struct ReactionVectors: Decodable, Sendable {
+  struct Step: Decodable, Sendable {
+    let user: String
+    let emoji: String
+    let on: Bool
+  }
+
+  /// One emoji and who chose it, as the vectors keep it.
+  struct Reaction: Decodable, Sendable {
+    let emoji: String
+    let userIds: [String]
+
+    var line: LineReaction { LineReaction(emoji: emoji, userIDs: userIds) }
+  }
+
+  struct Case: VectorCase {
+    let name: String
+    let reactions: [Reaction]
+    let step: Step
+    let expected: [Reaction]
+  }
+
+  let reactions: [Case]
+}
+
+@Test(arguments: try vectors("chat", as: ReactionVectors.self).reactions)
+func reactionsAfterAStep(_ vector: ReactionVectors.Case) {
+  let step = vector.step
+  #expect(
+    vector.reactions.map(\.line).toggling(step.emoji, by: step.user, on: step.on)
+      == vector.expected.map(\.line))
+}
+
 @Test(arguments: try vectors("chat", as: PinVectors.self).pins)
 func pinsAfterAStep(_ vector: PinVectors.Case) {
   let step = vector.step

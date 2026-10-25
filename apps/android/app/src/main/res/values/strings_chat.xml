@@ -69,4 +69,10 @@
   <string name="chat_quote_unsent">取り消されたメッセージ</string>
   <string name="chat_reply_to_said">%1$s「%2$s」への返信</string>
   <string name="chat_show_quoted">返信元を表示</string>
+  <string name="chat_reaction">リアクション</string>
+  <string name="chat_reaction_choosers">%1$sをリアクションした人</string>
+  <string name="chat_reaction_on">%1$sを付ける</string>
+  <string name="chat_reaction_off">%1$sを外す</string>
+  <string name="chat_reaction_more">ほかの絵文字でリアクション</string>
+  <string name="chat_reaction_with_me">（自分も）</string>
 </resources>

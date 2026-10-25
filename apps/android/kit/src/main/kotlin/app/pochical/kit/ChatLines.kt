@@ -141,6 +141,18 @@ fun writerOf(kind: LineKind, authorId: String, me: String): LineWriter =
 /** One emoji on a line and the members who chose it, in the order they did. */
 data class LineReaction(val emoji: String, val userIds: List<String>)
 
+/**
+ * The reactions with [userId]'s [emoji] put on ([on]) or taken off, as the group takes it: a new
+ * emoji goes last, a member choosing one goes last among its choosers, one they hold already
+ * changes nothing, and one nobody holds any more goes (spec/vectors/chat.json, reactions).
+ */
+fun List<LineReaction>.toggling(emoji: String, userId: String, on: Boolean): List<LineReaction> {
+  if (any { it.emoji == emoji && userId in it.userIds } == on) return this
+  val reactions = map { if (it.emoji == emoji) it.copy(userIds = it.userIds - userId + listOfNotNull(userId.takeIf { on })) else it }
+  val added = if (on && none { it.emoji == emoji }) listOf(LineReaction(emoji, listOf(userId))) else emptyList()
+  return (reactions + added).filter { it.userIds.isNotEmpty() }
+}
+
 /** A line of a chat as the group holds it. */
 data class ChatLine(
   val threadId: String,

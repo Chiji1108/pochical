@@ -310,6 +310,17 @@ class ChatValuesTest {
   }
 
   @Test
+  fun theMembersReactionShowsAtOnceAsTheirs() = runTest {
+    database.write { upsert(state().copy(owner = "me")) }
+    val chats = Chats(database, now = { 0 })
+    database.write { takeChanges(listOf(wordsLine(1, "u2")), "g1") }
+    chats.react("g1", GROUP_THREAD, 1, "❤️", on = true)
+    assertEquals(listOf(LineReaction("❤️", listOf("me"))), database.read { chatState("g1", GROUP_THREAD, "me", null, now = 0) }.lines.single().reactions)
+    chats.react("g1", GROUP_THREAD, 1, "❤️", on = false)
+    assertTrue(database.read { chatState("g1", GROUP_THREAD, "me", null, now = 0) }.lines.single().reactions.isEmpty())
+  }
+
+  @Test
   fun theListHasTheChatsWithALineALineOnItsWayOrADraft() = runTest {
     val chats = Chats(database)
     database.write { takeChanges(listOf(wordsLine(1, "u2", thread = directThread("me", "u2"))), "g1") }

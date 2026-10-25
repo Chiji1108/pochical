@@ -8,6 +8,19 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.layoutId
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.sp
+import app.pochical.R
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -76,8 +89,13 @@ class MenuLine(
   /** One of the member's lines on its way: its menu is not that of the group's line it becomes. */
   val waiting: Boolean,
   val items: List<LineMenuItem>,
+  /** The reactions' bar over the line; none for a line that takes no reactions (one on its way). */
+  val bar: ReactionBar?,
   val bubble: @Composable () -> Unit,
 )
+
+/** The reactions' bar: the first emoji offered, the reader's own [chosen] among them lit, and + for any other. */
+class ReactionBar(val chosen: Set<String>, val onReact: (String) -> Unit, val onMore: () -> Unit)
 
 /**
  * The menu open over the chat, if any, and the bubble's place in the window, which follows the line
@@ -91,18 +109,19 @@ class LineMenuState {
   /** The lifted line's bubble in the window, where its place in the chat is. */
   var bounds by mutableStateOf(Rect.Zero)
 
-  /** The item lit under the finger, by index. */
-  var lit by mutableStateOf<Int?>(null)
+  /** What is lit under the finger: an item (`item0`…), a reaction (`react👍`) or + (`more`). */
+  var lit by mutableStateOf<String?>(null)
     private set
 
-  internal val items = mutableStateMapOf<Int, Rect>()
+  /** Where each of the menu's items and the bar's reactions is in the window, by the key [lit] names them by. */
+  internal val targets = mutableStateMapOf<String, Rect>()
   private val shown = MutableTransitionState(false)
 
   internal val visible
     get() = shown
 
   fun open(line: MenuLine, at: Rect) {
-    items.clear()
+    targets.clear()
     lit = null
     bounds = at
     open = line
@@ -121,7 +140,7 @@ class LineMenuState {
 
   /** The finger that opened the menu is at [at]: the item under it lights, with a tick each time one does. */
   fun slide(at: Offset, haptics: HapticFeedback) {
-    val under = items.entries.firstOrNull { it.value.contains(at) }?.key
+    val under = targets.entries.firstOrNull { it.value.contains(at) }?.key
     if (under != lit && under != null) haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
     lit = under
   }
@@ -130,9 +149,26 @@ class LineMenuState {
   fun lift(at: Offset, slid: Boolean) {
     val line = open ?: return
     if (!slid) return
-    val under = items.entries.firstOrNull { it.value.contains(at) }?.key
     lit = null
-    if (under != null) pick(line.items[under])
+    val under = targets.entries.firstOrNull { it.value.contains(at) }?.key ?: return
+    val bar = line.bar
+    when {
+      under.startsWith(ITEM) -> pick(line.items[under.removePrefix(ITEM).toInt()])
+      under == MORE -> bar?.let(::more)
+      under.startsWith(REACT) -> bar?.let { react(it, under.removePrefix(REACT)) }
+    }
+  }
+
+  /** + in the bar: the system's emoji picker, as the menu closes. */
+  fun more(bar: ReactionBar) {
+    close()
+    bar.onMore()
+  }
+
+  /** A reaction picked from the bar, as the menu closes: the reader's own taken back, else put on. */
+  fun react(bar: ReactionBar, emoji: String) {
+    close()
+    bar.onReact(emoji)
   }
 
   /** A pick acts as the menu closes, as the system's context menu does. */
@@ -174,52 +210,68 @@ fun LineMenu(state: LineMenuState) {
       )
     }
     val bubble = state.bounds.translate(-origin)
-    // The menu's height kept as it fades out, so the line does not move as it goes.
-    val menuHeightShown = remember { intArrayOf(0) }
+    // The menu's and the bar's heights kept as they fade out, so the line does not move as they go.
+    val shownHeights = remember { intArrayOf(0, 0) }
     val corner = TransformOrigin(if (line.mine) 1f else 0f, 0f)
     Layout(
       content = {
         // Drawn whole at its size; a line too tall for the room is cut short at its end.
-        Box(Modifier.clipToBounds().wrapContentHeight(Alignment.Top, unbounded = true)) { line.bubble() }
+        Box(Modifier.layoutId(BUBBLE).clipToBounds().wrapContentHeight(Alignment.Top, unbounded = true)) { line.bubble() }
         AnimatedVisibility(
           state.visible,
+          Modifier.layoutId(MENU),
           enter = fadeIn() + scaleIn(initialScale = 0.8f, transformOrigin = corner),
           exit = fadeOut() + scaleOut(targetScale = 0.8f, transformOrigin = corner),
         ) {
           MenuSurface(line, state)
         }
+        line.bar?.let { bar ->
+          AnimatedVisibility(
+            state.visible,
+            Modifier.layoutId(BAR),
+            enter = fadeIn() + scaleIn(initialScale = 0.8f, transformOrigin = TransformOrigin(if (line.mine) 1f else 0f, 1f)),
+            exit = fadeOut() + scaleOut(targetScale = 0.8f, transformOrigin = TransformOrigin(if (line.mine) 1f else 0f, 1f)),
+          ) {
+            BarSurface(bar, state)
+          }
+        }
       },
       modifier = Modifier.fillMaxSize(),
     ) { measurables, constraints ->
-      // Gone once it has faded out, while the lifted line goes back.
-      val menu = measurables.getOrNull(1)?.measure(constraints.copy(minWidth = 0, minHeight = 0))
-      if (menu != null) menuHeightShown[0] = menu.height
-      val menuHeight = menuHeightShown[0]
+      val loose = constraints.copy(minWidth = 0, minHeight = 0)
+      // Each gone once it has faded out, while the lifted line goes back.
+      val menu = measurables.firstOrNull { it.layoutId == MENU }?.measure(loose)
+      val bar = measurables.firstOrNull { it.layoutId == BAR }?.measure(loose)
+      if (menu != null) shownHeights[0] = menu.height
+      if (bar != null) shownHeights[1] = bar.height
+      val menuHeight = shownHeights[0]
+      val barHeight = if (line.bar != null) shownHeights[1] else 0
+      val barRoom = if (barHeight > 0) barHeight + margin else 0
       val height = constraints.maxHeight
       val floor = height - bottom - margin
       val ceiling = top + margin
       val width = bubble.width.roundToInt().coerceAtLeast(0)
       val tall = bubble.height.roundToInt().coerceAtLeast(0)
-      // The room the line has beside the menu: a line taller than it is drawn smaller about its top
-      // corner by the writer, as the system's context menu draws a tall preview, down to half its
-      // size, and past that cut short at its end, so the menu is always whole on the screen.
-      val room = (floor - ceiling - menuHeight - margin).coerceAtLeast(0)
+      // The room the line has beside its bar and menu: a line taller than it is drawn smaller about
+      // its top corner by the writer, as the system's context menu draws a tall preview, down to half
+      // its size, and past that cut short at its end, so the bar and menu are always whole on the screen.
+      val room = (floor - ceiling - menuHeight - margin - barRoom).coerceAtLeast(0)
       val scale = if (tall <= room || tall == 0) 1f else maxOf(room.toFloat() / tall, MOST_SHRUNK)
       val kept = minOf(tall, (room / scale).roundToInt())
-      val lifted = measurables[0].measure(Constraints.fixed(width, kept))
+      val lifted = measurables.first { it.layoutId == BUBBLE }.measure(Constraints.fixed(width, kept))
       val shown = (kept * scale).roundToInt()
       var bubbleY = bubble.top.roundToInt()
       val below = bubbleY + shown + margin
       val menuY =
         when {
-          // Under it, where the line is.
-          bubbleY >= ceiling && below + menuHeight <= floor -> below
-          // Over it.
-          bubbleY + shown <= floor && bubbleY - margin - menuHeight >= ceiling -> bubbleY - margin - menuHeight
+          // Under it, where the line is, the bar over it.
+          bubbleY - barRoom >= ceiling && below + menuHeight <= floor -> below
+          // Over the bar.
+          bubbleY + shown <= floor && bubbleY - barRoom - margin - menuHeight >= ceiling -> bubbleY - barRoom - margin - menuHeight
           else -> {
             // Neither fits: the keyboard goes down for the room, and all move together to stay on the screen.
             if (imeBottom > 0) crowded = true
-            bubbleY = bubbleY.coerceIn(ceiling, (floor - menuHeight - margin - shown).coerceAtLeast(ceiling))
+            bubbleY = bubbleY.coerceIn(ceiling + barRoom, (floor - menuHeight - margin - shown).coerceAtLeast(ceiling + barRoom))
             bubbleY + shown + margin
           }
         }
@@ -231,10 +283,62 @@ fun LineMenu(state: LineMenuState) {
           scaleY = scale
           transformOrigin = corner
         }
-        if (menu != null) {
-          val menuX = if (line.mine) (bubble.right.roundToInt() - menu.width) else left
-          menu.place(menuX.coerceIn(margin, (constraints.maxWidth - menu.width - margin).coerceAtLeast(margin)), menuY)
+        // By the writer's side, within the screen.
+        fun x(of: Int) = (if (line.mine) bubble.right.roundToInt() - of else left).coerceIn(margin, (constraints.maxWidth - of - margin).coerceAtLeast(margin))
+        menu?.place(x(menu.width), menuY)
+        bar?.place(x(bar.width), bubbleY - barRoom)
+      }
+    }
+  }
+}
+
+/**
+ * The reactions' bar on Material's menu surface: the first emoji offered, the reader's own on the
+ * accent's container, and + for the system's emoji picker; each lit while the finger is over it.
+ */
+@Composable
+private fun BarSurface(bar: ReactionBar, state: LineMenuState) {
+  val colors = LocalThemeColors.current
+  Surface(
+    shape = RoundedCornerShape(50),
+    color = MenuDefaults.containerColor,
+    tonalElevation = MenuDefaults.TonalElevation,
+    shadowElevation = MenuDefaults.ShadowElevation,
+  ) {
+    Row(Modifier.padding(4.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+      for (emoji in reactionChoices) {
+        val key = REACT + emoji
+        val chosen = emoji in bar.chosen
+        val label = stringResource(if (chosen) R.string.chat_reaction_off else R.string.chat_reaction_on, emoji)
+        Box(
+          Modifier.size(REACTION)
+            .onGloballyPositioned { state.targets[key] = it.boundsInWindow() }
+            .clip(CircleShape)
+            .background(
+              when {
+                state.lit == key -> MaterialTheme.colorScheme.onSurface.copy(alpha = LIT)
+                chosen -> colors.accentContainer
+                else -> Color.Transparent
+              }
+            )
+            .clickable(onClickLabel = label) { state.react(bar, emoji) }
+            .semantics { contentDescription = label },
+          contentAlignment = Alignment.Center,
+        ) {
+          Text(emoji, fontSize = 22.sp)
         }
+      }
+      val more = stringResource(R.string.chat_reaction_more)
+      Box(
+        Modifier.size(REACTION)
+          .onGloballyPositioned { state.targets[MORE] = it.boundsInWindow() }
+          .clip(CircleShape)
+          .background(if (state.lit == MORE) MaterialTheme.colorScheme.onSurface.copy(alpha = LIT) else Color.Transparent)
+          .clickable { state.more(bar) }
+          .semantics { contentDescription = more },
+        contentAlignment = Alignment.Center,
+      ) {
+        Icon(painterResource(R.drawable.ic_add_reaction), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
       }
     }
   }
@@ -260,8 +364,8 @@ private fun MenuSurface(line: MenuLine, state: LineMenuState) {
           leadingIcon = { Icon(painterResource(item.icon), contentDescription = null, tint = tint) },
           onClick = { state.pick(item) },
           modifier =
-            Modifier.onGloballyPositioned { state.items[index] = it.boundsInWindow() }
-              .background(if (state.lit == index) MaterialTheme.colorScheme.onSurface.copy(alpha = LIT) else Color.Transparent),
+            Modifier.onGloballyPositioned { state.targets[ITEM + index] = it.boundsInWindow() }
+              .background(if (state.lit == ITEM + index) MaterialTheme.colorScheme.onSurface.copy(alpha = LIT) else Color.Transparent),
         )
       }
     }
@@ -269,6 +373,19 @@ private fun MenuSurface(line: MenuLine, state: LineMenuState) {
 }
 
 private const val SCRIM = 0.32f
+
+/** The keys the menu's items and the bar's reactions are lit and picked by. */
+private const val ITEM = "item"
+private const val REACT = "react"
+private const val MORE = "more"
+
+/** What the overlay lays out, by its id. */
+private const val BUBBLE = "bubble"
+private const val MENU = "menu"
+private const val BAR = "bar"
+
+/** A reaction's round in the bar. */
+private val REACTION = 40.dp
 
 /** The least a line too tall for the room is drawn, before it is cut short instead. */
 private const val MOST_SHRUNK = 0.5f

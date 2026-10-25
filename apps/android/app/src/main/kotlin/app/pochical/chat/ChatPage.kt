@@ -7,7 +7,11 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.compose.LifecycleEventEffect
 import app.pochical.calendar.rememberReducedMotion
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import app.pochical.EmojiPickerSheet
 import app.pochical.kit.LineContent
+import app.pochical.kit.LineReaction
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flowOf
 import androidx.compose.animation.AnimatedVisibility
@@ -322,6 +326,32 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
   val replying = composer.writing.replyTo
   val answered by remember(chats, groupId, threadId, replying) { replying?.let { chats.line(groupId, threadId, it) } ?: flowOf(null) }.collectAsState(null)
 
+  // Reactions (spec/chat.md, Reactions): the member's own put on sprays from its pill, with its
+  // haptic (spec/haptics.md), but with animations off; + opens the system's emoji picker, and a
+  // long press on a pill lists who chose it.
+  var spray by remember { mutableStateOf<Spray?>(null) }
+  // Played once: gone once its time is over, so a line scrolled back does not spray again.
+  LaunchedEffect(spray) {
+    if (spray == null) return@LaunchedEffect
+    delay(SPRAY_MS.toLong())
+    spray = null
+  }
+  var picking by remember { mutableStateOf<Long?>(null) }
+  var choosers by remember { mutableStateOf<LineReaction?>(null) }
+  val haptics = LocalHapticFeedback.current
+  val react = { seq: Long, emoji: String, on: Boolean ->
+    scope.launch {
+      keeping({ notKept = true }) {
+        chats.react(groupId, threadId, seq, emoji, on)
+        if (on && !reducedMotion) {
+          spray = Spray(seq, emoji, System.nanoTime())
+          haptics.performHapticFeedback(HapticFeedbackType.ToggleOn)
+        }
+      }
+    }
+    Unit
+  }
+
   var unsending by remember { mutableStateOf<Unsending?>(null) }
   val actions = rememberLineActions(composer, nameOf, snackbar, onUnsend = { unsending = it }, onNotKept = { notKept = true })
   val handlers =
@@ -335,6 +365,12 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
       reducedMotion = reducedMotion,
       lit = lit,
       litShown = { if (lit == it) lit = null },
+      me = me,
+      writers = writers,
+      react = react,
+      moreReactions = { picking = it },
+      choosers = { choosers = it },
+      spray = spray,
     )
   Box {
     ChatScaffold(groupId, threadId, members, groups, socket, snackbar, onBack) {
@@ -372,6 +408,17 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
     LineMenu(menu)
   }
   if (notKept) NotKeptDialog { notKept = false }
+  picking?.let { seq ->
+    EmojiPickerSheet(
+      onPick = { emoji ->
+        picking = null
+        val own = chat.line(seq)?.reactions?.any { it.emoji == emoji && me in it.userIds } == true
+        react(seq, emoji, !own)
+      },
+      onDismiss = { picking = null },
+    )
+  }
+  choosers?.let { ChoosersSheet(it, writers, nameOf) { choosers = null } }
   unsending?.let { asked ->
     UnsendDialog(asked, onDismiss = { unsending = null }) {
       unsending = null
