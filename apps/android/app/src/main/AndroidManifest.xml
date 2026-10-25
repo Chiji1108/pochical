@@ -93,6 +93,10 @@
     <receiver
       android:name=".notifications.NotificationDismissed"
       android:exported="false" />
+    <!-- 返信 written on a chat's notification, sent without opening the app (ChatReply). -->
+    <receiver
+      android:name=".notifications.ChatReply"
+      android:exported="false" />
     <!-- The reminders' alarm, and what takes the system's alarms away or moves their clock,
          after which the next one is set again (reminders/ReminderReceiver). The system sends
          these to a receiver not exported, as to WorkManager's. -->

@@ -178,6 +178,22 @@ struct ChatVectors: Decodable, Sendable {
     let expected: [String]
   }
   let withdrawn: [Withdrawn]
+
+  struct ReadNotified: VectorCase {
+    struct Chat: Decodable, Sendable {
+      let groupId: String
+      let threadId: String
+    }
+    struct Known: Decodable, Sendable {
+      let cleared: [Chat]
+      let marks: [Withdrawn.Read]
+    }
+    let name: String
+    let shown: [Withdrawn.Shown]
+    let read: Known
+    let expected: [String]
+  }
+  let readNotified: [ReadNotified]
   let draft: [Draft]
 
   struct Composer: VectorCase {
@@ -249,6 +265,19 @@ func aReadTakesBackItsNotifications(_ vector: ChatVectors.Withdrawn) {
   #expect(
     withdrawn(shown, groupID: read.groupId, threadID: read.threadId, readTo: read.readTo)
       == vector.expected)
+}
+
+@Test(arguments: try vectors("chat", as: ChatVectors.self).readNotified)
+func whatIsKnownReadTakesBackItsNotifications(_ vector: ChatVectors.ReadNotified) {
+  let shown = vector.shown.map {
+    NotifiedLine(id: $0.id, groupID: $0.groupId, threadID: $0.threadId, seq: $0.seq)
+  }
+  var read = ReadState()
+  read.cleared = Set(vector.read.cleared.map { ChatKey(groupID: $0.groupId, threadID: $0.threadId) })
+  for mark in vector.read.marks {
+    read.marks[ChatKey(groupID: mark.groupId, threadID: mark.threadId)] = mark.readTo ?? 0
+  }
+  #expect(readNotified(shown, read).sorted() == vector.expected.sorted())
 }
 
 @Test func aNotificationShowsOnlyForTheUserSignedIn() {

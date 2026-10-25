@@ -44,7 +44,15 @@ internal data class ChatVectors(
   val folded: List<Folded>,
   val reportable: List<Reportable>,
   val withdrawn: List<Withdrawn>,
+  val readNotified: List<ReadNotified>,
 ) {
+  @Serializable
+  data class ReadNotified(override val name: String, val shown: List<Shown>, val read: KnownRead, val expected: List<String>) : VectorCase
+
+  @Serializable data class Chat(val groupId: String, val threadId: String)
+
+  @Serializable data class KnownRead(val cleared: List<Chat>, val marks: List<WithdrawnRead>)
+
   @Serializable
   data class Withdrawn(override val name: String, val shown: List<Shown>, val read: WithdrawnRead, val expected: List<String>) : VectorCase
 

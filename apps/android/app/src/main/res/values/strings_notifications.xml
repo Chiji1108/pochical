@@ -23,6 +23,11 @@
   <string name="push_chat_poll">日にちの投票を始めました</string>
   <!-- An answer in the chat with Pochical's people: the chat, as 設定's row names it. -->
   <string name="push_support_title">作っている人とチャット</string>
+  <!-- 返信 on a line's notification, as iOS's action words it. -->
+  <string name="push_reply">返信</string>
+  <string name="push_reply_hint">メッセージ</string>
+  <!-- Over the line's notification, brought back as an answer could not be kept. -->
+  <string name="push_reply_not_sent">返信を送れませんでした：%1$s</string>
   <!-- The user in a conversation's notification, before the group knows their name. -->
   <string name="push_me">あなた</string>
 

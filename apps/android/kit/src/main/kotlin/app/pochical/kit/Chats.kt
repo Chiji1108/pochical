@@ -123,6 +123,35 @@ class Chats internal constructor(
   }
 
   /**
+   * 返信 on a line's notification (spec/chat.md, Notifications): [text] as a new line of [me]'s in
+   * the chat, quoting nothing, through the composer's outbox, and the chat read up to the line
+   * [answered], in one write. Throws when the device cannot keep it, reading nothing.
+   */
+  suspend fun reply(groupId: String, threadId: String, me: String, text: String, answered: Long) {
+    database.write {
+      chatEdit(groupId, now()) {
+        send = chatSend {
+          this.threadId = threadId
+          content = chatSendContent { words = chatSendWords { this.text = text } }
+          stamp(groupId)
+        }
+      }
+      val before = lastRead(groupId, threadId, me, now())
+      if (readTo(listOf(answered), before) != before) {
+        chatEdit(groupId, now()) { read = chatRead { this.threadId = threadId; lastReadSeq = answered } }
+      }
+    }
+  }
+
+  /**
+   * What the device knows is read in each chat for [me], for the notifications of lines read
+   * elsewhere to go (spec/chat.md, Notifications): the chats the User DO counts nothing unread in,
+   * and how far [me] read each, their reads still waiting included. Read again as either changes.
+   */
+  fun readState(me: String): Flow<ReadState> =
+    observe("unreadCounts", "readMarks", "chatOutbox") { Timed(readStateOf(me), null) }
+
+  /**
    * Sends [photos], shrunk, as one line of the chat (spec/chat.md, Albums), kept on the device to
    * upload before the group's socket sends it, and shown at once as the member's line on its way.
    * Throws when the device cannot keep them (保存できませんでした), keeping nothing of them.
@@ -637,6 +666,17 @@ internal suspend fun SyncDao.notifyingByPlace(me: String, now: Long): Map<String
     if (unread > 0) counts.merge(row.groupId, unread, Int::plus)
   }
   return counts
+}
+
+/** What the device knows is read for [me] (`Chats.readState`). */
+internal suspend fun SyncDao.readStateOf(me: String): ReadState {
+  val marks = mutableMapOf<ChatKey, Long>()
+  for (mark in readMarksOf(me)) marks.merge(ChatKey(mark.groupId, mark.threadId), mark.lastReadSeq, ::maxOf)
+  for (row in chatOutbox()) {
+    val edit = row.chatEdit
+    if (edit.kindCase == ChatEdit.KindCase.READ) marks.merge(ChatKey(row.groupId, edit.read.threadId), edit.read.lastReadSeq, ::maxOf)
+  }
+  return ReadState(clearedCounts().mapTo(HashSet()) { ChatKey(it.groupId, it.threadId) }, marks)
 }
 
 /** How far [me] has read the chat, their read still waiting included. */

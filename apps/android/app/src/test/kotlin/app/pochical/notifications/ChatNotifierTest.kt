@@ -8,6 +8,10 @@ import androidx.core.app.NotificationCompat
 import app.pochical.kit.AppLink
 import app.pochical.kit.ChatWithdrawal
 import app.pochical.kit.GroupMemberRow
+import app.pochical.kit.ChatKey
+import app.pochical.kit.GroupMarkValue
+import app.pochical.kit.GroupRow
+import app.pochical.kit.ReadState
 import app.pochical.kit.Localized
 import app.pochical.kit.PushedAlert
 import kotlinx.coroutines.test.runTest
@@ -26,8 +30,15 @@ class ChatNotifierTest {
   private val context: Application = RuntimeEnvironment.getApplication()
   private val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
   private var signedIn: String? = ME
+  private val conversations = TestConversations(context)
   private val notifier =
-    ChatNotifier(context, { signedIn }, { groupId -> if (groupId == GROUP) listOf(member(ME, "ゆうき"), member(WRITER, "さくら")) else emptyList() })
+    ChatNotifier(
+      context,
+      { signedIn },
+      { groupId -> if (groupId == GROUP) listOf(member(ME, "ゆうき"), member(WRITER, "さくら")) else emptyList() },
+      { groupId -> if (groupId == GROUP) GroupRow(GROUP, "いとこ会", 0, GroupMarkValue(emoji = "🍙")) else null },
+      conversations,
+    )
 
   @Before
   fun allow() {
@@ -197,6 +208,60 @@ class ChatNotifierTest {
     notifier.show(groupLine(2, "今週どう？"))
     notifier.forgetAll()
     assertEquals(emptyList<Any>(), shown())
+    assertTrue("its conversations go too", conversations.forgotten)
+  }
+
+  @Test
+  fun aChatIsAConversationTheNotificationAnswers() = runTest {
+    notifier.show(groupLine(2, "今週どう？"))
+    val notification = shown().single().notification
+    // Among Android's conversations, under the group's name.
+    assertEquals(listOf("$GROUP/group" to "いとこ会"), conversations.published)
+    assertEquals("$GROUP/group", notification.shortcutId)
+    assertEquals("さくら", messagesOf().messages.single().person?.name)
+    assertTrue("the writer's face", messagesOf().messages.single().person?.icon != null)
+    // 返信, answering the line.
+    val reply = notification.actions.single()
+    assertEquals("返信", reply.title)
+    assertEquals(ChatNotifier.REPLY, reply.remoteInputs.single().resultKey)
+    val sent = shadowOf(reply.actionIntent).savedIntent
+    assertEquals(2L, sent.getLongExtra(ChatNotifier.EXTRA_SEQ, 0))
+  }
+
+  @Test
+  fun anAnswerKeptShowsAsTheUsersMessageWithNothingLeftToTakeBack() = runTest {
+    notifier.show(groupLine(2, "今週どう？"))
+    notifier.replied(GROUP, "group", "行く！")
+    val messages = messagesOf().messages
+    assertEquals(listOf("今週どう？", "行く！"), messages.map { it.text.toString() })
+    assertNull("from the user", messages.last().person)
+    // Its lines read: a withdrawal finds nothing of it.
+    assertEquals(false, notifier.withdraw(ChatWithdrawal(GROUP, "group", readTo = 9)))
+    // A line after it starts the chat's notification anew.
+    notifier.show(groupLine(3, "了解"))
+    assertEquals(listOf("了解"), messagesOf().messages.map { it.text.toString() })
+  }
+
+  @Test
+  fun anAnswerNotKeptBringsTheNotificationBackSayingSo() = runTest {
+    notifier.show(groupLine(2, "今週どう？"))
+    notifier.notSent(GROUP, "group", "行く！")
+    val notification = shown().single().notification
+    assertEquals("返信を送れませんでした：行く！", notification.extras.getCharSequence(NotificationCompat.EXTRA_SUB_TEXT))
+    assertEquals(listOf("今週どう？"), messagesOf().messages.map { it.text.toString() })
+  }
+
+  @Test
+  fun whatTheDeviceKnowsIsReadTakesItsNotificationsBack() = runTest {
+    notifier.show(groupLine(2, "今週どう？"))
+    notifier.show(groupLine(3, "土曜とか"))
+    notifier.show(groupLine(4, "まだ？", groupId = "g2"))
+    // The user's own mark, a read here or elsewhere.
+    notifier.withdrawRead(ReadState(marks = mapOf(ChatKey(GROUP, "group") to 2L)))
+    assertEquals(listOf("土曜とか"), messagesOf(shown().indexOfFirst { it.tag == "$GROUP/group" }).messages.map { it.text.toString() })
+    // A chat with nothing unread left.
+    notifier.withdrawRead(ReadState(cleared = setOf(ChatKey("g2", "group"))))
+    assertEquals(listOf("$GROUP/group"), shown().map { it.tag })
   }
 
   private fun support(seq: Long, words: String) =

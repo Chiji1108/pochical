@@ -30,7 +30,7 @@ class ShowingChatTest {
 
   private val context: Application = RuntimeEnvironment.getApplication()
   private val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-  private val notifier = ChatNotifier(context, { "me" }, { emptyList() })
+  private val notifier = ChatNotifier(context, { "me" }, { emptyList() }, { null }, TestConversations(context))
 
   /** The window's focus as the test sets it. */
   private class Window : WindowInfo {

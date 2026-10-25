@@ -6,6 +6,13 @@ import app.pochical.kit.AccountState
 import app.pochical.kit.PochicalKit
 import app.pochical.kit.Pushed
 import app.pochical.kit.pushedOf
+import app.pochical.kit.DeviceSettings
+import app.pochical.kit.ReadState
+import app.pochical.kit.SendOutboxWorker
+import app.pochical.limitText
+import app.pochical.design.TextLimits
+import coil3.SingletonImageLoader
+import kotlinx.coroutines.flow.collectLatest
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -23,8 +30,10 @@ import kotlinx.coroutines.tasks.await
  */
 class Push(
   private val application: Application,
-  kit: PochicalKit,
+  private val kit: PochicalKit,
   private val permission: NotificationPermission,
+  /** The device settings, for the テーマ the conversations' marks and faces are drawn in. */
+  settings: Flow<DeviceSettings>,
   private val scope: CoroutineScope,
 ) {
   /** The app, which holds the one Push for what runs without its screens, as the FCM service. */
@@ -37,7 +46,13 @@ class Push(
   private val tokens = PushTokens(scope, users, kit.groups::registerPushToken)
 
   val notifier =
-    ChatNotifier(application, kit.database::owner, { groupId -> kit.database.values().members(groupId).first() })
+    ChatNotifier(
+      application,
+      kit.database::owner,
+      { groupId -> kit.database.values().members(groupId).first() },
+      { groupId -> kit.database.values().groups().first().find { it.id == groupId } },
+      DrawnConversations(application, { settings.first().theme }) { SingletonImageLoader.get(application) },
+    )
 
   /** Sets everything up, as the app starts. */
   fun start() {
@@ -48,6 +63,20 @@ class Push(
     // The device letting go of a user (spec/sync-protocol.md, Sockets): the notifications of the
     // user before go with their data.
     scope.launch { lettingGo(states).collect { notifier.forgetAll() } }
+    // The notifications of lines read go as the device learns of the reads, should no withdrawal
+    // reach it (spec/chat.md, Notifications): the user's own reads, here or elsewhere, at once,
+    // and a chat whose count comes to nothing unread once it does. The first counts read may be
+    // older than the notifications since, so only a chat cleared after them counts.
+    scope.launch {
+      users.collectLatest { me ->
+        me ?: return@collectLatest
+        var before: ReadState? = null
+        kit.chats.readState(me).collect { read ->
+          notifier.withdrawRead(read.copy(cleared = before?.let { read.cleared - it.cleared }.orEmpty()))
+          before = read
+        }
+      }
+    }
   }
 
   /** Asks FCM for the device's token; one not given is asked for again as the app comes to the front. */
@@ -69,6 +98,38 @@ class Push(
       is Pushed.Alert -> notifier.show(pushed.alert)
       is Pushed.Withdraw -> notifier.withdraw(pushed.withdrawal)
       null -> Log.i(TAG, "A message of nothing the app knows: ${data.keys}")
+    }
+  }
+
+  /**
+   * 返信 written on the chat's notification answering its line [seq] (spec/chat.md, Notifications):
+   * the words as a line of the user's in the chat, which is read up to that line, kept in its outbox
+   * and sent by the outbox's worker, in the time WorkManager gives it. Nothing is sent for empty
+   * words; words the device cannot keep bring the notification back, saying so. [done] once kept.
+   */
+  fun reply(groupId: String, threadId: String, seq: Long, written: String, done: () -> Unit) {
+    scope.launch {
+      try {
+        val me = kit.database.owner() ?: return@launch
+        val words = limitText(written.trim(), TextLimits.chatMessage)
+        if (words.isEmpty()) {
+          notifier.restore(groupId, threadId)
+          return@launch
+        }
+        try {
+          kit.chats.reply(groupId, threadId, me, words, seq)
+        } catch (e: CancellationException) {
+          throw e
+        } catch (e: Exception) {
+          Log.w(TAG, "An answer from a notification could not be kept", e)
+          notifier.notSent(groupId, threadId, words)
+          return@launch
+        }
+        SendOutboxWorker.enqueue(application)
+        notifier.replied(groupId, threadId, words)
+      } finally {
+        done()
+      }
     }
   }
 
