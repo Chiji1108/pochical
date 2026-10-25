@@ -37,15 +37,11 @@ import app.pochical.PageNavigation
 import app.pochical.R
 import app.pochical.SettingsPage
 import app.pochical.calendar.LocalOwnDays
-import app.pochical.calendar.holidayCountry
 import app.pochical.calendar.pattern
 import app.pochical.calendar.slashText
-import app.pochical.calendar.weekday
 import app.pochical.design.JobTemplate
 import app.pochical.design.Metrics
 import app.pochical.design.ReadyPatterns
-import app.pochical.kit.holidayShift
-import app.pochical.kit.holidaysOffByDefault
 import app.pochical.kit.readyCopies
 import app.pochical.patterns.ReadyPatternChips
 import app.pochical.patterns.chosenPatterns
@@ -72,10 +68,10 @@ private sealed interface JobStep {
 
 private val templates = ReadyPatterns.rosterTemplates + ReadyPatterns.rotationTemplates
 
-private fun template(id: String): JobTemplate = templates.first { it.id == id }
+internal fun jobTemplate(id: String): JobTemplate = templates.first { it.id == id }
 
 /** The ready-made patterns by id, as the questions show them. */
-private val readyById = readyCopies(ReadyPatterns.all.map { it.id }).associate { it.id to it.pattern }
+internal val readyById = readyCopies(ReadyPatterns.all.map { it.id }).associate { it.id to it.pattern }
 
 /**
  * 設定 › シフトパターン › 新しい仕事にする (/design's JobChangePage; spec/shift-patterns.md, Changing
@@ -113,41 +109,25 @@ fun JobChangePage(navigation: PageNavigation) {
     }
   }
 
-  // The patterns chosen: a weekly order ends the questions, an order goes on to typing it, and a
-  // roster's work ends with its patterns.
-  fun choose(template: JobTemplate, ids: List<String>) {
-    val sequence = template.sequence
-    when {
-      sequence != null && template.weekly -> finish(ids, sequence, first.minusDays(first.weekday.toLong()))
-      sequence != null -> {
-        typing = OrderTyping(sequence, first)
-        go(JobStep.Order(template.id, ids))
-      }
-      else -> finish(ids, emptyList(), first)
+  fun choose(template: JobTemplate, ids: List<String>) =
+    chooseJob(template, ids, first, ::finish) { sequence ->
+      typing = OrderTyping(sequence, first)
+      go(JobStep.Order(template.id, ids))
     }
-  }
 
   if (step is JobStep.Order) {
-    val template = template(step.template)
-    val firstName = template.sequence?.firstOrNull()?.let { readyById[it]?.name }
     SettingsPage(
-      if (template.custom || firstName == null) stringResource(R.string.job_order_title) else stringResource(R.string.job_order_title_first, firstName),
+      jobOrderTitle(jobTemplate(step.template)),
       onBack = back,
       actions = { TextButton(onClick = { confirming = true }, enabled = typing.sequence.isNotEmpty()) { Text(stringResource(R.string.entering_done)) } },
     ) { padding ->
-      val keys = step.patterns.mapNotNull(readyById::get)
-      // Holidays as changeJob sets them: off when the order reads as office hours.
-      val offShift = holidayShift(keys.filter { it.countsAsOff }.map { it.id })
-      val holidaysOff = offShift != null && holidaysOffByDefault(typing.sequence, typing.anchor) { readyById[it]?.countsAsOff == true }
-      RepeatCalendar(
+      JobOrderCalendar(
         typing,
         { typing = it },
+        step.patterns,
         cover = OrderCover.From(first),
-        patterns = keys,
-        modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
         before = calendar,
-        holidayShift = offShift.takeIf { holidaysOff },
-        holidayCountry = holidayCountry(),
+        modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
       )
     }
     if (confirming) {
@@ -203,21 +183,15 @@ fun JobChangePage(navigation: PageNavigation) {
           }
         }
         is JobStep.Patterns -> {
-          val template = template(step.template)
-          // Those in the kind of work's order stay picked, as the order needs them.
-          val needed = if (template.custom) emptySet() else template.sequence.orEmpty().toSet()
+          val template = jobTemplate(step.template)
           item {
-            Question(
-              stringResource(if (template.custom) R.string.job_patterns_custom_title else R.string.job_patterns_title),
-              stringResource(if (template.custom) R.string.job_patterns_custom_note else R.string.job_patterns_note),
-            )
+            val (title, note) = patternsQuestion(template)
+            Question(title, note)
           }
-          item { ReadyPatternChips(picked, { picked = it }, Modifier.fillMaxWidth().padding(16.dp), needed = needed) }
-          if (needed.isNotEmpty()) item { Footnote(stringResource(R.string.job_patterns_needed)) }
+          item { ReadyPatternChips(picked, { picked = it }, Modifier.fillMaxWidth().padding(16.dp), needed = template.needed) }
+          if (template.needed.isNotEmpty()) item { Footnote(stringResource(R.string.job_patterns_needed)) }
           item {
-            // Only a weekly order or a roster's work has nothing more to ask.
-            val asksMore = template.sequence != null && !template.weekly
-            Next(stringResource(if (asksMore) R.string.job_next else R.string.job_done), enabled = picked.isNotEmpty()) {
+            Next(stringResource(if (template.asksMore) R.string.job_next else R.string.job_done), enabled = picked.isNotEmpty()) {
               choose(template, chosenPatterns(picked))
             }
           }

@@ -187,6 +187,28 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
     anchor: LocalDate,
     holidayCountry: String,
   ) = database.write {
+    val job = takePatterns(incoming, sequence, start)
+    repeatFrom(job, start, anchor, holidayCountry)
+  }
+
+  /**
+   * はじめの設定 (spec/shift-patterns.md, The first run), as iOS's `OwnValues.begin`: [incoming]
+   * become the person's patterns, and [sequence], when there is one, repeats counted from [anchor],
+   * from the month before [today]'s or from [anchor] when that is earlier, so the days just past
+   * show it too. A roster's work, with no sequence, sets no order.
+   */
+  suspend fun begin(incoming: List<PatternRow>, sequence: List<String>, anchor: LocalDate, today: LocalDate, holidayCountry: String) =
+    database.write {
+      val start = minOf(anchor, today.withDayOfMonth(1).minusMonths(1))
+      val job = takePatterns(incoming, sequence, start)
+      if (sequence.isNotEmpty()) repeatFrom(job, start, anchor, holidayCountry)
+    }
+
+  /**
+   * [incoming] take over the patterns from [start], a pattern of the person's still on a day before
+   * it staying after them; the job's patterns and its [sequence] under their ids.
+   */
+  private suspend fun SyncDao.takePatterns(incoming: List<PatternRow>, sequence: List<String>, start: LocalDate): NewJob {
     val shownBefore = shownSoFar(through = start.minusDays(1)).mapTo(HashSet()) { it.shift }
     val job = patternsForJob(patterns(), incoming, sequence, usedBefore = shownBefore::contains, newId = ::newId)
     val own = patterns()
@@ -194,6 +216,11 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
     for (pattern in own) if (pattern.id !in kept) putPattern(pattern.id, null)
     for (pattern in job.patterns) if (pattern !in own) putPattern(pattern.id, pattern.wire)
     orderPatterns(job.patterns.map { it.id })
+    return job
+  }
+
+  /** The job's sequence repeats from [start] counted from [anchor]; an empty one ends repeating there. */
+  private suspend fun SyncDao.repeatFrom(job: NewJob, start: LocalDate, anchor: LocalDate, holidayCountry: String) {
     val byId = job.patterns.associateBy { it.id }
     val offShift = holidayShift(job.patterns.filter { it.countsAsOff && !it.archived }.map { it.id })
     val holidaysOff = offShift != null && holidaysOffByDefault(job.sequence, anchor) { byId[it]?.countsAsOff == true }

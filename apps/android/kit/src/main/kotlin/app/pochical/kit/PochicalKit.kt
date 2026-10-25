@@ -31,6 +31,9 @@ class PochicalKit(context: Context) {
   val database: AppDatabase = AppDatabase.open(context)
   val edits = OwnEdits(database)
 
+  /** はじめの設定, asked while it is not done for the user the database holds. */
+  val firstRun = FirstRun(database)
+
   private val photos = Photos(http, server, File(context.cacheDir, "held-photos"))
 
   /** The member's own chat photos on the device, as sent and until they are up. */

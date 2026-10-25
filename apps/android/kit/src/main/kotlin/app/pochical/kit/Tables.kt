@@ -118,6 +118,12 @@ data class SyncState(
   val erasedWhy: String = "",
   /** The sync schema the values were taken under (`SYNC_SCHEMA`). */
   val schema: Int = SYNC_SCHEMA,
+  /**
+   * はじめの設定 is done on the device, or patterns came: not asked again, even once every pattern is
+   * deleted, nor after a switch to an account in use. Cleared as the device lets go of its user, so
+   * whoever it is next starts with it.
+   */
+  val firstRunDone: Boolean = false,
 ) {
   val last: HlcTime
     get() = HlcTime(lastMs, lastCounter.toUInt())

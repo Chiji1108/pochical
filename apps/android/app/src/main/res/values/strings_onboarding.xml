@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="welcome_about">シフトをポチッと入れて、\n家族や友達と見せ合えるカレンダーです。</string>
+  <string name="welcome_start">はじめる</string>
+  <string name="welcome_sign_in">アカウントをお持ちの方はログイン</string>
+  <string name="first_run_sign_in_title">アカウントでログイン</string>
+  <string name="first_run_sign_in_note">前の端末で使っていたシフトとグループを、そのまま戻します。</string>
+  <string name="first_run_sign_in_footnote">はじめて使うときは、戻って「はじめる」から始めてください。</string>
+  <string name="first_run_repeats_title">シフトに繰り返しはありますか？</string>
+  <string name="first_run_repeats_note">繰り返しがあっても、違う日だけあとから変えられます。</string>
+  <string name="first_run_later">あとから設定で変えられます。</string>
+</resources>
