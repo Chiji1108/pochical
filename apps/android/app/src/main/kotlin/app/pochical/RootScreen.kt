@@ -34,6 +34,7 @@ import app.pochical.groups.GroupShiftsPage
 import app.pochical.groups.GroupsActions
 import app.pochical.groups.InvitePage
 import app.pochical.groups.JoinScreen
+import app.pochical.notifications.ChatNotificationsPage
 import app.pochical.groups.LocalValues
 import app.pochical.kit.AppLink
 import app.pochical.groups.ScanScreen
@@ -91,6 +92,8 @@ fun RootScreen(navigator: RootNavigator) {
       RootPage.Appearance ->
         NavEntry(route) { AppearancePage(onBack = rememberPageNavigation(navigator)::back) }
       RootPage.Style -> NavEntry(route) { StylePage(onBack = rememberPageNavigation(navigator)::back) }
+      RootPage.ChatNotifications ->
+        NavEntry(route) { ChatNotificationsPage(onBack = rememberPageNavigation(navigator)::back) }
       RootPage.CalendarSettings -> NavEntry(route) { CalendarSettingsPage(onBack = rememberPageNavigation(navigator)::back) }
       is RootPage.MonthPicture ->
         NavEntry(route) { MonthPicturePage(java.time.YearMonth.parse(route.month), onBack = rememberPageNavigation(navigator)::back) }

@@ -62,6 +62,12 @@ abstract class AppDatabase : RoomDatabase() {
   /** Runs [block] in one read transaction, as what a socket sends is read. */
   internal suspend fun <T> read(block: suspend SyncDao.() -> T): T = withReadTransaction { sync().block() }
 
+  /**
+   * The user whose data the database holds, the one the device is signed in as, known without the
+   * network or a session as the app wakes in the background; null while it is no one's.
+   */
+  suspend fun owner(): String? = read { state().owner }.ifEmpty { null }
+
   companion object {
     const val VERSION = 7
 

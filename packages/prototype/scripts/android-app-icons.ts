@@ -30,6 +30,10 @@ const SHOWN_DP = 72;
 // The drawing takes the same share of what is shown as of iOS's icon.
 const LAYER_SHARE = (DRAWING_SHARE * SHOWN_DP) / LAYER_DP;
 const DENSITIES = { hdpi: 1.5, mdpi: 1, xhdpi: 2, xxhdpi: 3, xxxhdpi: 4 };
+// A notification's small icon is a 24dp square, its glyph in the middle
+// 20dp, drawn by the system in one color from the opacity alone.
+const NOTIFICATION_DP = 24;
+const NOTIFICATION_SHARE = 20 / 24;
 const PLAY_SIZE = 512;
 // 次の休み's 92dp dog peeking from the widget's corner, at xxxhdpi.
 const PEEKING_SIZE = 368;
@@ -55,12 +59,19 @@ for (let offset = 3; offset < monochrome.length; offset += RGBA) {
   monochrome[offset] = dogShare[offset - 3] ?? 0;
 }
 
-// The mipmaps hold the launcher icon alone, so a density or layer dropped
-// here leaves nothing behind.
+// The mipmaps hold the launcher icon alone, and the drawables of a density
+// the notifications' icon alone, so a density or layer dropped here leaves
+// nothing behind.
 const folders = await readdir(RES);
 await Promise.all(
   folders
-    .filter((folder) => folder.startsWith("mipmap-"))
+    .filter(
+      (folder) =>
+        folder.startsWith("mipmap-") ||
+        Object.keys(DENSITIES).some(
+          (density) => folder === `drawable-${density}`
+        )
+    )
     .map(async (folder) => {
       await rm(`${RES}${folder}`, { force: true, recursive: true });
     })
@@ -80,6 +91,16 @@ await Promise.all(
       writeFile(`${folder}ic_launcher_foreground.png`, front),
       writeFile(`${folder}ic_launcher_monochrome.png`, mask),
     ]);
+    // The notifications' small icon: the themed icon's mask, as large as
+    // the glyph's square takes it.
+    const drawables = `${RES}drawable-${density}/`;
+    await mkdir(drawables, { recursive: true });
+    await writeFile(
+      `${drawables}ic_notification.png`,
+      await cutIcon(monochrome, NOTIFICATION_DP * scale, {
+        share: NOTIFICATION_SHARE,
+      })
+    );
   })
 );
 

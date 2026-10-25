@@ -21,10 +21,10 @@ import org.robolectric.RobolectricTestRunner
 
 // The chat's cases every platform checks (spec/vectors/chat.json) that the chat's lines, its
 // scrolling, its composer, its reactions, its pins, its albums and its reporting and blocking use;
-// withdrawn with notifications (#884).
+// and withdrawn, which the notifications read (PushedTest).
 
 @Serializable
-private data class ChatVectors(
+internal data class ChatVectors(
   val writer: List<Writer>,
   val firstUnread: List<FirstUnread>,
   val directThread: List<DirectThread>,
@@ -43,7 +43,15 @@ private data class ChatVectors(
   val albumRows: List<AlbumRows>,
   val folded: List<Folded>,
   val reportable: List<Reportable>,
+  val withdrawn: List<Withdrawn>,
 ) {
+  @Serializable
+  data class Withdrawn(override val name: String, val shown: List<Shown>, val read: WithdrawnRead, val expected: List<String>) : VectorCase
+
+  @Serializable data class Shown(val id: String, val groupId: String, val threadId: String, val seq: Long)
+
+  @Serializable data class WithdrawnRead(val groupId: String, val threadId: String, val readTo: Long?)
+
   @Serializable
   data class Folded(override val name: String, val kind: String, val ownChat: Boolean, val writerBlocked: Boolean, val expected: Boolean) : VectorCase
 

@@ -49,6 +49,10 @@ reorderable = "3.0.0"
 telephoto = "0.19.0"
 # Coil, the chats' photos fetched, read at the size they show and kept in memory and on the disk (Apache 2.0).
 coil = "3.6.3"
+# Firebase Cloud Messaging, through which the server's notifications reach the
+# app, and the plugin that reads the Firebase project from google-services.json.
+firebase-bom = "35.1.0"
+google-services = "4.5.0"
 
 [libraries]
 protobuf-javalite = { module = "com.google.protobuf:protobuf-javalite", version.ref = "protobuf" }
@@ -102,6 +106,8 @@ glance-appwidget = { module = "androidx.glance:glance-appwidget", version.ref = 
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 telephoto-zoomable-image-coil3 = { module = "me.saket.telephoto:zoomable-image-coil3", version.ref = "telephoto" }
 telephoto-flick = { module = "me.saket.telephoto:flick", version.ref = "telephoto" }
+firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebase-bom" }
+firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -112,3 +118,4 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 metro = { id = "dev.zacsweers.metro", version.ref = "metro" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 room = { id = "androidx.room3", version.ref = "room" }
+google-services = { id = "com.google.gms.google-services", version.ref = "google-services" }

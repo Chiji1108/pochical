@@ -26,6 +26,9 @@ import app.pochical.kit.DeviceSettings
 import app.pochical.kit.PochicalKit
 import app.pochical.kit.SyncedSettings
 import app.pochical.widgets.followForWidgetPreviews
+import app.pochical.notifications.ChatNotifier
+import app.pochical.notifications.LocalPush
+import app.pochical.notifications.Push
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoMap
 import dev.zacsweers.metro.Inject
@@ -42,6 +45,7 @@ class MainActivity(
   private val deviceSettings: SyncedSettings,
   private val ownDays: OwnDays,
   private val kit: PochicalKit,
+  private val push: Push,
 ) : ComponentActivity() {
   private var settings by mutableStateOf<DeviceSettings?>(null)
   private val appleSignIn = AppleSignIn(this, kit.appleSignIn)
@@ -55,8 +59,8 @@ class MainActivity(
     super.onCreate(savedInstanceState)
     // Made again, the activity's navigation keeps the place the first intent opened.
     // From Recents, Android hands the intent the task began with again: no link was opened now.
-    if (savedInstanceState == null && intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY == 0) links.take(intent)
-    addOnNewIntentListener(links::take)
+    if (savedInstanceState == null && intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY == 0) take(intent)
+    addOnNewIntentListener(::take)
     lifecycleScope.launch {
       // Not cancelled with the activity, so a sample is never left half put in; read after it, so
       // the first calendar drawn holds it.
@@ -84,9 +88,21 @@ class MainActivity(
         LocalPhotoUploads provides kit.photoUploads,
         LocalPhotoFiles provides kit.photoFiles,
         LocalOpenedLinks provides links,
+        LocalPush provides push,
       ) {
         PochicalTheme(device) { AccountRoot() }
       }
     }
+  }
+
+  /** Where [intent] opens the app at, for the screens; a chat's notification tapped goes, as it is read. */
+  private fun take(intent: Intent) {
+    if (intent.action == ChatNotifier.ACTION_OPEN_CHAT) {
+      push.notifier.opened(
+        intent.getStringExtra(ChatNotifier.EXTRA_GROUP_ID).orEmpty(),
+        intent.getStringExtra(ChatNotifier.EXTRA_THREAD_ID).orEmpty(),
+      )
+    }
+    links.take(intent)
   }
 }

@@ -4,12 +4,14 @@ import app.pochical.v1.ChatServiceClient
 import app.pochical.v1.GroupServiceClient
 import app.pochical.v1.LinkPreview
 import app.pochical.v1.getLinkPreviewRequest
+import app.pochical.v1.PushPlatform
 import app.pochical.v1.UserServiceClient
 import app.pochical.v1.createGroupRequest
 import app.pochical.v1.getInviteLinkRequest
 import app.pochical.v1.getInviteRequest
 import app.pochical.v1.joinGroupRequest
 import app.pochical.v1.leaveGroupRequest
+import app.pochical.v1.registerPushTokenRequest
 import app.pochical.v1.remakeInviteLinkRequest
 import app.pochical.v1.removeMemberRequest
 import app.pochical.v1.ReportReason
@@ -293,6 +295,23 @@ class GroupCalls internal constructor(
         setProfileRequest {
           name?.let { this.name = it }
           photoId?.let { this.photoId = it }
+        },
+        headers,
+      )
+      .answer()
+    Unit
+  }
+
+  /**
+   * Keeps this device's FCM registration [token] with the server, under the session the device has
+   * now, for the user's notifications to reach it (spec/sync-protocol.md, Push).
+   */
+  suspend fun registerPushToken(token: String) = call { headers ->
+    users
+      .registerPushToken(
+        registerPushTokenRequest {
+          this.token = token
+          platform = PushPlatform.PUSH_PLATFORM_FCM
         },
         headers,
       )

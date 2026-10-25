@@ -3,6 +3,9 @@ plugins {
   alias(libs.plugins.kotlin.compose)
   alias(libs.plugins.kotlin.serialization)
   alias(libs.plugins.metro)
+  // The Firebase project the notifications come through, from app/google-services.json: Firebase's
+  // console gives it for app.pochical, it holds no secret, and it is checked in.
+  alias(libs.plugins.google.services)
 }
 
 // The version people see is the iOS app's: one MARKETING_VERSION for the
@@ -43,6 +46,7 @@ android {
     versionCode = providers.gradleProperty("pochicalVersionCode").orElse("1").get().toInt()
     versionName = marketingVersion.get()
     buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${googleWebClientId.get()}\"")
+    testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
   buildFeatures {
     buildConfig = true
@@ -92,6 +96,7 @@ dependencies {
   implementation(libs.datastore)
   implementation(libs.splashscreen)
   implementation(libs.lifecycle.runtime.compose)
+  implementation(libs.lifecycle.process)
   implementation(libs.credentials)
   implementation(libs.credentials.play.services.auth)
   implementation(libs.googleid)
@@ -109,12 +114,17 @@ dependencies {
   implementation(libs.mlkit.barcode)
   implementation(libs.kotlinx.coroutines.play.services)
   implementation(libs.glance.appwidget)
+  implementation(platform(libs.firebase.bom))
+  implementation(libs.firebase.messaging)
 
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)
   testImplementation(libs.robolectric)
   testImplementation(libs.compose.ui.test.junit4)
   debugImplementation(libs.compose.ui.test.manifest)
+
+  androidTestImplementation(libs.androidx.test.runner)
+  androidTestImplementation(libs.androidx.test.junit)
 }
 
 kotlin {
