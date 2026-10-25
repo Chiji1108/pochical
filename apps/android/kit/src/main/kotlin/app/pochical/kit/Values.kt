@@ -48,6 +48,9 @@ interface Values {
   /** The user's usual name and photo, null before they set either. */
   @Query("SELECT * FROM profile WHERE id = 1") fun profile(): Flow<ProfileRow?>
 
+  /** The user whose data the database holds, as their groups know them; empty while it is no one's. */
+  @Query("SELECT owner FROM syncState WHERE id = 1") fun owner(): Flow<String?>
+
   /** The user's groups in the order they joined them. */
   @Query("SELECT * FROM groups ORDER BY joinedAtMs") fun groups(): Flow<List<GroupRow>>
 
@@ -64,4 +67,11 @@ interface Values {
 
   @Query("SELECT * FROM memberOrders WHERE groupId = :groupId ORDER BY userId, position")
   fun memberOrders(groupId: String): Flow<List<MemberOrderRow>>
+
+  /** Whom the user has blocked (spec/chat.md, Reporting and blocking). */
+  @Query("SELECT * FROM blocks") fun blocks(): Flow<List<BlockRow>>
+
+  /** Those the user has blocked as each group they were in with them knows them, for their names and faces. */
+  @Query("SELECT * FROM groupMembers WHERE userId IN (SELECT userId FROM blocks) ORDER BY joinedAtMs")
+  fun blockedMembers(): Flow<List<GroupMemberRow>>
 }

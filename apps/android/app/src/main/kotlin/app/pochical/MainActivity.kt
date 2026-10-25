@@ -19,9 +19,13 @@ import app.pochical.calendar.LocalOwnDays
 import app.pochical.calendar.OwnDays
 import app.pochical.groups.LocalGroupCalls
 import app.pochical.groups.LocalValues
+import app.pochical.chat.LocalChats
+import app.pochical.chat.LocalPhotoFiles
+import app.pochical.chat.LocalPhotoUploads
 import app.pochical.kit.DeviceSettings
 import app.pochical.kit.PochicalKit
 import app.pochical.kit.SyncedSettings
+import app.pochical.widgets.followForWidgetPreviews
 import app.pochical.notifications.LocalNotificationAsking
 import app.pochical.notifications.LocalNotificationPermission
 import app.pochical.notifications.rememberNotificationAsking
@@ -74,6 +78,8 @@ class MainActivity(
     lifecycleScope.launch {
       repeatOnLifecycle(Lifecycle.State.STARTED) { deviceSettings.settings.collect { settings = it } }
     }
+    // The widgets' previews in the picker follow the settings the screens change.
+    lifecycleScope.launch { followForWidgetPreviews(this@MainActivity, deviceSettings.settings) }
     setContent {
       val device = settings ?: return@setContent
       if (!calendarRead) return@setContent
@@ -85,6 +91,9 @@ class MainActivity(
         LocalAppleSignIn provides appleSignIn,
         LocalGroupCalls provides kit.groups,
         LocalValues provides kit.database.values(),
+        LocalChats provides kit.chats,
+        LocalPhotoUploads provides kit.photoUploads,
+        LocalPhotoFiles provides kit.photoFiles,
         LocalOpenedLinks provides links,
         LocalNotificationPermission provides notificationPermission,
         LocalReminderAlarms provides reminderAlarms,

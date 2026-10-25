@@ -1,7 +1,5 @@
 package app.pochical.groups
 
-import android.graphics.BitmapFactory
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
@@ -9,15 +7,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -25,6 +19,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.pochical.IconLayers
+import app.pochical.chat.Picture
+import coil3.compose.AsyncImage
+import androidx.compose.ui.graphics.painter.ColorPainter
 import app.pochical.LocalThemeColors
 import app.pochical.design.Radius
 import app.pochical.kit.GroupCalls
@@ -35,9 +32,6 @@ import app.pochical.kit.Values
 import app.pochical.mark
 import app.pochical.markLayers
 import app.pochical.markShape
-import kotlin.coroutines.cancellation.CancellationException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 /** GroupService, the profile and the photos, as the user the device is signed in as. */
 val LocalGroupCalls = staticCompositionLocalOf<GroupCalls> { error("No group calls provided") }
@@ -119,23 +113,8 @@ fun GroupMarkBadge(mark: GroupMarkValue, modifier: Modifier = Modifier, size: Dp
  */
 @Composable
 fun PhotoPicture(photoId: String, shelf: PhotoShelf?, modifier: Modifier = Modifier) {
-  val calls = LocalGroupCalls.current
-  val picture by
-    produceState<ImageBitmap?>(null, photoId, shelf) {
-      value =
-        try {
-          val bytes = calls.photo(photoId, shelf ?: PhotoShelf.Mine)
-          withContext(Dispatchers.Default) { BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap() }
-        } catch (e: CancellationException) {
-          throw e
-        } catch (_: Exception) {
-          null
-        }
-    }
-  val shown = picture
-  if (shown == null) {
-    Box(modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest))
-  } else {
-    Image(shown, contentDescription = null, modifier, contentScale = ContentScale.Crop)
-  }
+  // Through the app's one image loader, read at the size it shows and kept drawn in memory, so a
+  // face drawn again (a line scrolled back) shows at once (spec/chat.md, Photos).
+  val ground = ColorPainter(MaterialTheme.colorScheme.surfaceContainerHighest)
+  AsyncImage(Picture(photoId, shelf), contentDescription = null, modifier, placeholder = ground, error = ground, contentScale = ContentScale.Crop)
 }

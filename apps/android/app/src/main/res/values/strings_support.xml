@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The chat with the people who make Pochical (spec/chat.md, The chat with Pochical's people). -->
+<resources>
+  <string name="support_title">作っている人とチャット</string>
+  <string name="support_empty">ほしい機能や不具合のこと、気軽にどうぞ</string>
+  <string name="support_head_title">ポチカルを作っている人に届きます</string>
+  <string name="support_head_body">使いにくいところ、ほしい機能、不具合のこと。ちょっとしたことでも、気軽に書いてください。返事は数日のうちに、ここに届きます。</string>
+  <string name="support_head_note">書いたことや写真と一緒に、アプリと端末の情報が届きます。\n%1$s</string>
+  <string name="support_unsend_body">ポチカルを作っている人のチャットからも消えます。</string>
+</resources>

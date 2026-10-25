@@ -7,9 +7,16 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import app.pochical.calendar.OwnDays
 import app.pochical.calendar.SyncedDays
+import app.pochical.chat.chatImageLoader
+import app.pochical.chat.followForgotten
 import app.pochical.kit.PochicalKit
+import coil3.ImageLoader
+import coil3.PlatformContext
+import coil3.SingletonImageLoader
 import app.pochical.kit.SyncedSettings
 import app.pochical.kit.deviceSettingsStore
+import app.pochical.widgets.WidgetSources
+import app.pochical.widgets.followForWidgets
 import app.pochical.kit.ownCalendar
 import app.pochical.notifications.NotificationPermission
 import app.pochical.notifications.Push
@@ -22,8 +29,10 @@ import dev.zacsweers.metro.createGraphFactory
 import dev.zacsweers.metrox.android.MetroAppComponentProviders
 import dev.zacsweers.metrox.android.MetroApplication
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
@@ -81,6 +90,9 @@ interface AppGraph : MetroAppComponentProviders {
 
   val kit: PochicalKit
 
+  /** The settings, as the widgets read them too. */
+  val settings: SyncedSettings
+
   val push: Push
 
   val reminderAlarms: ReminderAlarms
@@ -91,7 +103,7 @@ interface AppGraph : MetroAppComponentProviders {
   }
 }
 
-class PochicalApplication : Application(), MetroApplication, PochicalKit.Holder, Push.Holder, ReminderAlarms.Holder {
+class PochicalApplication : Application(), MetroApplication, PochicalKit.Holder, Push.Holder, ReminderAlarms.Holder, SingletonImageLoader.Factory {
   private val graph by lazy { createGraphFactory<AppGraph.Factory>().create(this) }
 
   override val appComponentProviders: MetroAppComponentProviders
@@ -99,6 +111,9 @@ class PochicalApplication : Application(), MetroApplication, PochicalKit.Holder,
 
   override val pochicalKit: PochicalKit
     get() = graph.kit
+
+  /** What the widgets draw from: the kit's database and the settings. */
+  val widgetSources by lazy { WidgetSources(graph.kit.database, graph.settings) }
 
   override val push: Push
     get() = graph.push
@@ -108,7 +123,12 @@ class PochicalApplication : Application(), MetroApplication, PochicalKit.Holder,
 
   override fun onCreate() {
     super.onCreate()
+    // Listening before anything syncs, so a photo let go of is never missed (`followForgotten`).
+    CoroutineScope(SupervisorJob() + Dispatchers.Default).launch(start = CoroutineStart.UNDISPATCHED) {
+      followForgotten(graph.kit.photoFiles) { SingletonImageLoader.get(this@PochicalApplication) }
+    }
     graph.kit.followProcess()
+    followForWidgets(this, graph.kit.database, graph.settings)
     graph.push.start()
     graph.reminderAlarms.start()
     ProcessLifecycleOwner.get()
@@ -122,4 +142,7 @@ class PochicalApplication : Application(), MetroApplication, PochicalKit.Holder,
         }
       )
   }
+
+  /** The one image loader every picture the app shows comes through (`chatImageLoader`). */
+  override fun newImageLoader(context: PlatformContext): ImageLoader = chatImageLoader(context, graph.kit.groups, graph.kit.photoFiles)
 }
