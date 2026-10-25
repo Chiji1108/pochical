@@ -462,7 +462,9 @@ private fun partsOf(content: LineContent, quote: LineQuote?, reactions: Reaction
     reactions,
     quote?.let(::QuotePart),
     LinksPart(links).takeIf { links.isNotEmpty() },
-    words?.preview?.let { PagePart(it, inWords = it.url in links) },
+    // A line's page is its first link's (firstLink), already offered with the words' links; its URL
+    // is the one the group fetched, written as the server writes it, not as in the words.
+    words?.preview?.let { PagePart(it, inWords = links.isNotEmpty()) },
   )
 }
 
