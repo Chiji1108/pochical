@@ -71,7 +71,7 @@ fun RepeatRow(open: (RootPage) -> Unit) {
   val current = calendar.orders.current()
   ListItem(
     headlineContent = { Text(stringResource(R.string.repeat)) },
-    trailingContent = { Text(current?.let { stringResource(R.string.repeat_every, it.sequence.size) } ?: stringResource(R.string.none)) },
+    supportingContent = { Text(current?.let { stringResource(R.string.repeat_every, it.sequence.size) } ?: stringResource(R.string.none)) },
     modifier = Modifier.clickable { open(RootPage.Repeat) },
   )
 }

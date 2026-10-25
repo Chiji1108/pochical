@@ -100,6 +100,7 @@ export function DesignSettings({
   initialPage?: Page;
 }) {
   const coworkers = useCoworkerList();
+  const platform = useDevice((state) => state.platform);
   const [page, setPage] = useState<Page>(initialPage);
   // A new job's order on the calendar takes the screen, its keys at the
   // foot, as typing an order does.
@@ -280,7 +281,7 @@ export function DesignSettings({
             preview={weekPreview}
           />
         )}
-        {page === "appIcon" && (
+        {page === "appIcon" && platform === "ios" && (
           <AppIconPage
             onBack={() => {
               setPage("top");
@@ -355,6 +356,7 @@ function SettingsTop({
   profile: Profile;
   onOpen: (page: Page) => void;
 }) {
+  const platform = useDevice((state) => state.platform);
   return (
     <>
       <PageHeader title="設定" />
@@ -416,12 +418,15 @@ function SettingsTop({
             onOpen("week");
           }}
         />
-        {/* Outside the app, and changed least, so last. */}
-        <AppIconRow
-          onOpen={() => {
-            onOpen("appIcon");
-          }}
-        />
+        {/* Outside the app, and changed least, so last. iOS's alone: an
+            Android launcher takes one icon, tinted by its themed icons. */}
+        {platform === "ios" && (
+          <AppIconRow
+            onOpen={() => {
+              onOpen("appIcon");
+            }}
+          />
+        )}
       </ListSection>
       <ListSection title="アカウント">
         <ListRow

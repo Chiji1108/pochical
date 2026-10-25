@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="settings_about">ポチカルについて</string>
+  <string name="settings_help">ヘルプ</string>
+  <string name="settings_write_review">Google Playでレビューを書く</string>
+  <string name="settings_review_after_release">公開後はレビューを書く画面が開きます</string>
+  <string name="settings_terms">利用規約</string>
+  <string name="settings_privacy">プライバシーポリシー</string>
+  <string name="settings_opens_browser">ブラウザで開きます</string>
+  <string name="settings_version">ポチカル %1$s</string>
+</resources>
