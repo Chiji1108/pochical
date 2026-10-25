@@ -24,6 +24,8 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import app.pochical.calendar.CalendarScreen
 import app.pochical.calendar.ShiftChoicePage
+import app.pochical.chat.ChatPage
+import app.pochical.chat.ChatPhotosPage
 import app.pochical.groups.GroupButtons
 import app.pochical.groups.GroupEditPage
 import app.pochical.groups.GroupProfilePage
@@ -119,10 +121,17 @@ fun RootScreen(navigator: RootNavigator) {
             onProfile = { navigation.open(RootPage.GroupProfile(route.groupId)) },
             onInvite = { navigation.open(RootPage.GroupInvite(route.groupId)) },
             onLeft = navigator::closePages,
+            onMessage = { thread -> navigation.open(RootPage.Chat(route.groupId, thread)) },
           )
         }
       is RootPage.GroupShifts ->
         NavEntry(route) { GroupShiftsPage(route.groupId, route.date?.let(LocalDate::parse), onBack = rememberPageNavigation(navigator)::back) }
+      is RootPage.Chat ->
+        NavEntry(route) {
+          val navigation = rememberPageNavigation(navigator)
+          ChatPage(route.groupId, route.threadId, onBack = navigation::back, open = navigation::open)
+        }
+      is RootPage.ChatPhotos -> NavEntry(route) { ChatPhotosPage(route.groupId, route.threadId, onBack = rememberPageNavigation(navigator)::back) }
       is RootPage.GroupEdit ->NavEntry(route) { GroupEditPage(route.groupId, onBack = rememberPageNavigation(navigator)::back) }
       is RootPage.GroupProfile -> NavEntry(route) { GroupProfilePage(route.groupId, onBack = rememberPageNavigation(navigator)::back) }
       is RootPage.ShiftChoice ->
@@ -183,7 +192,7 @@ private fun TabsScreen(navigator: RootNavigator, navigation: PageNavigation) {
             onOpening = { navigator.openingDay = null },
           )
         RootTab.Groups ->
-          GroupsScreen(navigator.openGroup, { navigator.openGroup = it }, GroupsActions(onNew = { navigation.open(RootPage.NewGroup) }, onScan = { navigation.open(RootPage.Scan) }, onShifts = { id, day -> navigation.open(RootPage.GroupShifts(id, day?.toString())) }) { group -> GroupButtons(group.id, navigation::open) })
+          GroupsScreen(navigator.openGroup, { navigator.openGroup = it }, GroupsActions(onNew = { navigation.open(RootPage.NewGroup) }, onScan = { navigation.open(RootPage.Scan) }, onShifts = { id, day -> navigation.open(RootPage.GroupShifts(id, day?.toString())) }, onChat = { id, thread -> navigation.open(RootPage.Chat(id, thread)) }) { group -> GroupButtons(group.id, navigation::open) })
         RootTab.Settings -> SettingsScreen(open = navigation::open)
       }
     }

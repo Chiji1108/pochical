@@ -10,11 +10,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -50,7 +48,11 @@ import app.pochical.kit.GroupMemberRow
 import app.pochical.kit.GroupRow
 import app.pochical.kit.MarkPhotoGone
 import app.pochical.kit.PhotoShelf
+import app.pochical.kit.directThread
 import app.pochical.kit.nextGroupColor
+import app.pochical.chat.ProfileOf
+import app.pochical.chat.ReportAndBlock
+import app.pochical.chat.ReportAndBlockState
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.launch
 
@@ -67,6 +69,8 @@ fun GroupSettingsPage(
   onProfile: () -> Unit,
   onInvite: () -> Unit,
   onLeft: () -> Unit,
+  /** メッセージを送る on a member's profile: the one-to-one chat with them. */
+  onMessage: (threadId: String) -> Unit,
 ) {
   val calls = LocalGroupCalls.current
   val resources = LocalResources.current
@@ -78,7 +82,10 @@ fun GroupSettingsPage(
   var confirmingLeave by remember { mutableStateOf(false) }
   var leaving by remember { mutableStateOf(false) }
   var failed by remember { mutableStateOf<String?>(null) }
-  var profileOf by remember { mutableStateOf<GroupMemberRow?>(null) }
+  val reportAndBlock = remember { ReportAndBlockState() }
+  val values = LocalValues.current
+  val blockRows by remember(values) { values.blocks() }.collectAsState(emptyList())
+  val blocked = remember(blockRows) { blockRows.map { it.userId }.toSet() }
   var confirmingRemove by remember { mutableStateOf<GroupMemberRow?>(null) }
 
   GroupPage(groupId, stringResource(R.string.group_settings), onBack) { group ->
@@ -108,7 +115,12 @@ fun GroupSettingsPage(
       item { SectionHeader(stringResource(R.string.group_members)) }
       items(members, key = { it.userId }) { member ->
         val mine = member.userId == meId
-        MemberRow(member, groupId, if (mine) Modifier else Modifier.clickable { profileOf = member }, me = mine)
+        MemberRow(
+          member,
+          groupId,
+          if (mine) Modifier else Modifier.clickable { reportAndBlock.profileOf = ProfileOf.of(member) },
+          me = mine,
+        )
       }
       item {
         ListItem(
@@ -129,12 +141,16 @@ fun GroupSettingsPage(
     }
     }
 
-    profileOf?.let { person ->
-      MemberSheet(person, groupId, onDismiss = { profileOf = null }) {
-        profileOf = null
-        confirmingRemove = person
-      }
-    }
+    ReportAndBlock(
+      reportAndBlock,
+      blocked,
+      groupId,
+      group.name,
+      group.mark,
+      snackbar,
+      messaging = { person -> meId?.let { me -> { onMessage(directThread(me, person.id)) } } },
+      onRemove = { person -> confirmingRemove = members.firstOrNull { it.userId == person.id } },
+    )
     confirmingRemove?.let { person ->
       AlertDialog(
         onDismissRequest = { confirmingRemove = null },
@@ -192,22 +208,6 @@ fun GroupSettingsPage(
       )
     }
     failed?.let { FailedDialog(it) { failed = null } }
-  }
-}
-
-/** Someone else in the group (/design's member sheet): their face large, and このグループから外す. */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun MemberSheet(person: GroupMemberRow, groupId: String, onDismiss: () -> Unit, onRemove: () -> Unit) {
-  ModalBottomSheet(onDismissRequest = onDismiss) {
-    Column(Modifier.fillMaxWidth().padding(bottom = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-      MemberAvatar(person.displayName, person.photoId, PhotoShelf.Group(groupId), 88.dp)
-      Text(person.displayName, Modifier.padding(top = 12.dp, bottom = 16.dp), style = MaterialTheme.typography.titleLarge)
-      ListItem(
-        headlineContent = { Text(stringResource(R.string.member_remove), color = MaterialTheme.colorScheme.error) },
-        modifier = Modifier.clickable(onClick = onRemove),
-      )
-    }
   }
 }
 

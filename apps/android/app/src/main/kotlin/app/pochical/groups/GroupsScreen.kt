@@ -56,6 +56,7 @@ import app.pochical.R
 import app.pochical.RootPage
 import app.pochical.SectionHeader
 import app.pochical.calendar.rememberToday
+import app.pochical.chat.ChatList
 import app.pochical.design.Metrics
 import app.pochical.design.Radius
 import app.pochical.kit.AccountState
@@ -72,6 +73,8 @@ class GroupsActions(
   val onScan: () -> Unit,
   /** みんなのシフト of a group, on a day when one is given. */
   val onShifts: (String, LocalDate?) -> Unit,
+  /** One of a group's chats, by its thread. */
+  val onChat: (String, String) -> Unit = { _, _ -> },
   /** The group's own buttons in the bar, over its page; none for a group not shown. */
   val groupActions: @Composable (GroupRow) -> Unit = {},
 )
@@ -203,6 +206,7 @@ private fun GroupRail(groups: List<GroupRow>, openId: String, onOpen: (String) -
 private fun GroupHub(group: GroupRow, actions: GroupsActions) {
   val today = rememberToday()
   val members = rememberGroupMembers(group.id, today, today.plusDays(NEXT_TOGETHER_DAYS - 1))
+  val me = rememberMeId()
   Scaffold(
     topBar = {
       TopAppBar(
@@ -228,6 +232,11 @@ private fun GroupHub(group: GroupRow, actions: GroupsActions) {
       }
       if (members != null) {
         item { MemberWeek(members, group.id, today, onOpen = { actions.onShifts(group.id, it) }, Modifier.padding(horizontal = 16.dp)) }
+      }
+      val me = me
+      if (me != null) {
+        item { SectionHeader(stringResource(R.string.chat_heading)) }
+        item { ChatList(group.id, group.name, me, onOpen = { actions.onChat(group.id, it) }) }
       }
       item { Spacer(Modifier.height(24.dp)) }
     }

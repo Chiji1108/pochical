@@ -868,6 +868,72 @@ struct PinVectors: Decodable, Sendable {
   let pins: [Case]
 }
 
+struct ReactionVectors: Decodable, Sendable {
+  struct Step: Decodable, Sendable {
+    let user: String
+    let emoji: String
+    let on: Bool
+  }
+
+  /// One emoji and who chose it, as the vectors keep it.
+  struct Reaction: Decodable, Sendable {
+    let emoji: String
+    let userIds: [String]
+
+    var line: LineReaction { LineReaction(emoji: emoji, userIDs: userIds) }
+  }
+
+  struct Case: VectorCase {
+    let name: String
+    let reactions: [Reaction]
+    let step: Step
+    let expected: [Reaction]
+  }
+
+  let reactions: [Case]
+}
+
+@Test(arguments: try vectors("chat", as: ReactionVectors.self).reactions)
+func reactionsAfterAStep(_ vector: ReactionVectors.Case) {
+  let step = vector.step
+  #expect(
+    vector.reactions.map(\.line).toggling(step.emoji, by: step.user, on: step.on)
+      == vector.expected.map(\.line))
+}
+
+struct VoteVectors: Decodable, Sendable {
+  struct Votes: Decodable, Sendable {
+    let day: String
+    let userIds: [String]
+  }
+
+  struct Step: Decodable, Sendable {
+    let user: String
+    let day: String
+    let on: Bool
+  }
+
+  struct Case: VectorCase {
+    let name: String
+    let days: [String]
+    let votes: [Votes]
+    let step: Step
+    let expected: [Votes]
+  }
+
+  let votes: [Case]
+}
+
+@Test(arguments: try vectors("chat", as: VoteVectors.self).votes)
+func votesAfterAStep(_ vector: VoteVectors.Case) throws {
+  let days = vector.days.compactMap(Day.init)
+  let votes = vector.votes.compactMap { v in Day(v.day).map { DayVotes(day: $0, userIDs: v.userIds) } }
+  let step = vector.step
+  let after = votes.voting(try #require(Day(step.day)), by: step.user, on: step.on, order: days)
+  #expect(after.map(\.day.key) == vector.expected.map(\.day))
+  #expect(after.map(\.userIDs) == vector.expected.map(\.userIds))
+}
+
 @Test(arguments: try vectors("chat", as: PinVectors.self).pins)
 func pinsAfterAStep(_ vector: PinVectors.Case) {
   let step = vector.step

@@ -94,7 +94,7 @@ class AppleWebSignIn(private val server: HttpUrl, private val http: OkHttpClient
             .url(server.resolve("/apple/redeem")!!)
             .post(body.toRequestBody("application/json".toMediaType()))
             .build()
-        http.newCall(request).execute().use { response ->
+        http.answer(request).use { response ->
           if (!response.isSuccessful) throw AppleSignInFailed("Redeeming answered ${response.code}")
           try {
             answers.decodeFromString(Redeemed.serializer(), response.body.string())

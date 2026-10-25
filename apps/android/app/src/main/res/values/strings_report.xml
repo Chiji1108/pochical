@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A member's profile, reporting and blocking (spec/chat.md, The chat's page; Reporting and blocking). -->
+<resources>
+  <string name="report">通報</string>
+  <string name="report_line_of">%1$sのメッセージ</string>
+  <string name="report_why">%1$sを通報する理由</string>
+  <string name="report_spam">迷惑・スパム</string>
+  <string name="report_harassment">嫌がらせ・いじめ</string>
+  <string name="report_explicit">性的・暴力的な内容</string>
+  <string name="report_impersonation">なりすまし</string>
+  <string name="report_other">その他</string>
+  <string name="report_sends_line">このメッセージと前後の数件</string>
+  <string name="report_sends_member">%1$sの名前とアイコン</string>
+  <string name="report_note">通報すると、%1$sがポチカルに送られます。相手には知らされません。</string>
+  <string name="report_send">送信</string>
+  <string name="report_failed">送れませんでした</string>
+  <string name="report_failed_body">通信できるところで、もう一度送ってください。</string>
+  <string name="reported">通報しました</string>
+  <string name="block">ブロック</string>
+  <string name="unblock">ブロックを解除</string>
+  <string name="unblock_confirm">解除</string>
+  <string name="block_dont">しない</string>
+  <string name="block_ask">%1$sをブロックしますか？</string>
+  <string name="unblock_ask">%1$sのブロックを解除しますか？</string>
+  <string name="block_body">メッセージが表示されなくなり、個人チャットも届かなくなります。ブロックしたことは相手に知らされません。</string>
+  <string name="block_after_report_body">%1$sをブロックしますか？メッセージが表示されなくなり、個人チャットも届かなくなります。相手には知らされません。</string>
+  <string name="unblock_body">メッセージがまた表示され、個人チャットも届くようになります。</string>
+  <string name="blocked_done">%1$sをブロックしました</string>
+  <string name="unblocked_done">%1$sのブロックを解除しました</string>
+  <string name="block_failed">できませんでした。通信できるところでもう一度どうぞ</string>
+  <string name="blocked_badge">ブロック中</string>
+  <string name="blocked_members">ブロック中のメンバー</string>
+  <string name="blocked_someone">メンバー</string>
+  <string name="profile_in_group">%1$sでのプロフィール</string>
+  <string name="profile_message">メッセージを送る</string>
+  <string name="profile_menu">%1$sのメニュー</string>
+  <string name="chat_writer_profile">%1$sのプロフィール</string>
+  <string name="blocked_line_show">表示</string>
+  <string name="blocked_line_hint">押すと表示</string>
+</resources>

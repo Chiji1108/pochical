@@ -1,6 +1,7 @@
 package app.pochical.kit
 
 import android.content.Context
+import android.os.Build
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
@@ -29,6 +30,21 @@ class PochicalKit(context: Context) {
 
   val database: AppDatabase = AppDatabase.open(context)
   val edits = OwnEdits(database)
+
+  private val photos = Photos(http, server, File(context.cacheDir, "held-photos"))
+
+  /** The member's own chat photos on the device, as sent and until they are up. */
+  val photoFiles = ChatPhotoFiles(context.cacheDir, context.filesDir)
+
+  /** How far each of the member's chat photos has gone up, and × to stop its line. */
+  val photoUploads = PhotoUploads()
+  private val linePhotos = LinePhotos(photos, photoFiles, photoUploads)
+
+  /** The app's version and the device (`appDevice`), read once a line first needs them. */
+  val device: String by lazy { appDevice(context) }
+
+  /** The chats' lines as the screens show them, and the member's edits of them. */
+  val chats = Chats(database, linePhotos, deviceWords = { device })
   val account =
     SyncAccount(
       database = database,
@@ -37,10 +53,9 @@ class PochicalKit(context: Context) {
       http = http,
       scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
       network = DefaultNetworkWatch(context),
+      linePhotos = linePhotos,
       sendInBackground = { SendOutboxWorker.enqueue(context) },
     )
-
-  private val photos = Photos(http, server, File(context.cacheDir, "held-photos"))
 
   /** GroupService, the profile and the photos, as the user the device is signed in as. */
   val groups = GroupCalls(account, http, server, photos, CoroutineScope(SupervisorJob() + Dispatchers.Default))
@@ -70,4 +85,13 @@ class PochicalKit(context: Context) {
         }
       )
   }
+}
+
+/**
+ * The app's version and the device, as they reach Pochical's people with each line of the chat with
+ * them, and as its head says so: ポチカル 1.0・Pixel 10a・Android 17.
+ */
+fun appDevice(context: Context): String {
+  val version = context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty()
+  return "ポチカル $version・${Build.MODEL}・Android ${Build.VERSION.RELEASE}"
 }

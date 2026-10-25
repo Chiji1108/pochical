@@ -24,6 +24,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
@@ -93,13 +95,14 @@ class NotSignedIn : Exception()
 /**
  * The one owner on the device of who it is and of every socket (iOS: AccountSession): it signs in
  * anonymously on the first launch, keeps the session, claims the database for its user, and opens
- * the user's socket while the app is in the foreground and each group's while something holds it.
+ * the user's socket while the app is in the foreground and each group's while something holds it,
+ * or while its chat outbox has edits to send (spec/sync-protocol.md, Sockets).
  * Commands go through one queue, in the order they were given, and [state] changes only there: a
  * switch or a deletion begins there and its server's answer settles it there, each for the stretch it
  * was asked in, so an answer for a stretch already over changes nothing.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-class SyncAccount(
+class SyncAccount internal constructor(
   private val database: AppDatabase,
   private val sessions: SessionStore,
   private val server: HttpUrl,
@@ -108,6 +111,8 @@ class SyncAccount(
   network: NetworkWatch? = null,
   private val now: () -> Long = System::currentTimeMillis,
   private val random: Random = Random.Default,
+  /** What uploads a chat line's photos before its group's socket sends it. */
+  private val linePhotos: LinePhotos,
   /**
    * Asks the OS for time in the background to send what the outbox holds (WorkManager on Android,
    * spec/sync-protocol.md, Sockets), the app perhaps ended before it is sent: what runs then calls
@@ -133,6 +138,33 @@ class SyncAccount(
   /** The user's own socket, for the screens to say 接続中… while it is not current. */
   val userSocket: Flow<SocketState> = stretch.flatMapLatest { it?.user?.state ?: flowOf(SocketState.Closed) }
 
+  /**
+   * The groups whose chat outbox has edits still to send: their sockets stay open until it is sent,
+   * the page that held them gone or the app in the background (spec/sync-protocol.md, Sockets).
+   */
+  private val chatsToSend: Flow<Set<String>> = database.observe("chatOutbox", now = now) { now -> chatsToSend(now) }
+
+  /** The groups whose sockets stopped trying, as the stretch signed in now has them. */
+  private val stoppedGroups: Flow<Set<String>> =
+    stretch.flatMapLatest { stretch ->
+      stretch?.groups?.flatMapLatest { groups ->
+        if (groups.isEmpty()) {
+          flowOf(emptySet())
+        } else {
+          combine(groups.map { (id, client) -> client.state.map { id to it } }) { states ->
+            states.filter { (_, state) -> state is SocketState.Stopped }.map { it.first }.toSet()
+          }
+        }
+      } ?: flowOf(emptySet())
+    }
+
+  /**
+   * The socket of the group [groupId] as the stretch signed in now has it, for a chat's screen:
+   * null while the device is not signed in or nothing has opened it.
+   */
+  fun chatSocket(groupId: String): Flow<ChatSocket?> =
+    stretch.flatMapLatest { it?.groups?.map { groups -> groups[groupId] } ?: flowOf(null) }.distinctUntilChanged()
+
   private val generation = AtomicLong(0)
   private val commands = Channel<Command>(Channel.UNLIMITED)
   /** [eraseAgain]'s, cutting short the wait before erasing is tried again. */
@@ -141,6 +173,8 @@ class SyncAccount(
   // Only the queue's coroutine reads and writes these.
   private var foreground = false
   private val holds = mutableMapOf<String, Int>()
+  /** The groups whose chat outbox has edits still to send. */
+  private var chatWaiting = emptySet<String>()
   private var signingIn: Job? = null
   private var closingUser: Job? = null
   private var deletingLeftBehind: Job? = null
@@ -153,6 +187,7 @@ class SyncAccount(
 
   init {
     scope.launch { for (command in commands) handle(command) }
+    scope.launch { chatsToSend.collect { commands.send(Command.ChatWaiting(it)) } }
     network?.watch(lost = { commands.trySend(Command.NetworkLost) }, changed = { commands.trySend(Command.NetworkChanged) })
   }
 
@@ -178,7 +213,10 @@ class SyncAccount(
     commands.send(Command.Send(waiting = true))
     try {
       return merge(
-          database.sync().lastWaiting().filter { it == null }.map { true },
+          // A group whose socket stopped (left, or taken out) sends nothing more: nothing to wait for.
+          combine(database.sync().lastWaiting(), chatsToSend, stoppedGroups) { own, chats, stopped -> own == null && (chats - stopped).isEmpty() }
+            .filter { it }
+            .map { true },
           state.filter { it == AccountState.SessionEnded }.map { false },
         )
         .first()
@@ -482,7 +520,7 @@ class SyncAccount(
         closingUser?.cancel()
         if (current != null) {
           current.user.start()
-          holds.keys.forEach { current.group(it).start() }
+          current.openGroups()
           if (state.value is AccountState.SignedIn) deleteLeftBehind(current)
         } else {
           startSigningIn()
@@ -490,14 +528,17 @@ class SyncAccount(
       }
       Command.Background -> {
         foreground = false
-        current?.groups?.values?.forEach { it.close() }
-        if (database.sync().lastWaiting().first() != null) {
-          sendInBackground()
-          closingUser = scope.launch { sendOutbox() }
+        // Read now, not as last heard: a line written just before may not have been heard of yet.
+        chatWaiting = database.read { chatsToSend(now()) }.value
+        val waits = database.sync().lastWaiting().first() != null || chatWaiting.isNotEmpty()
+        if (waits) {
+          sendBeforeClosing()
         } else if (sending == 0) {
           signingIn?.cancel()
           current?.user?.close()
         }
+        // The groups with lines to send stay open while the outbox is sent.
+        current?.openGroups(sendingSoon = waits)
       }
       is Command.Send -> {
         sending += if (command.waiting) 1 else -1
@@ -506,19 +547,24 @@ class SyncAccount(
           command.waiting -> startSigningIn()
           sending == 0 && !foreground -> current?.user?.close()
         }
+        current?.openGroups()
       }
       is Command.Hold -> {
         holds[command.groupId] = (holds[command.groupId] ?: 0) + 1
-        if (foreground) current?.group(command.groupId)?.start()
+        current?.openGroups()
       }
       is Command.Release -> {
         val left = (holds[command.groupId] ?: return) - 1
-        if (left > 0) {
-          holds[command.groupId] = left
-        } else {
-          holds.remove(command.groupId)
-          current?.groups?.get(command.groupId)?.close()
-        }
+        if (left > 0) holds[command.groupId] = left else holds.remove(command.groupId)
+        current?.openGroups()
+      }
+      is Command.ChatWaiting -> {
+        chatWaiting = command.groups
+        // Written after the app left (Background read before it), or from outside it: sent in the
+        // time the OS gives.
+        val sendsNow = !foreground && chatWaiting.isNotEmpty() && closingUser?.isActive != true
+        if (sendsNow) sendBeforeClosing()
+        current?.openGroups(sendingSoon = sendsNow)
       }
       is Command.SignedIn -> {
         if (state.value != AccountState.SigningIn) return
@@ -526,7 +572,7 @@ class SyncAccount(
         this.stretch.value = stretch
         mutableState.value = AccountState.SignedIn(command.session.userId, command.session.linked)
         if (foreground || sending > 0) stretch.user.start()
-        if (foreground) holds.keys.forEach { stretch.group(it).start() }
+        stretch.openGroups()
         if (command.kept) keepAgain()
         val asOf = links
         stretch.scope.launch { askLinked(stretch.credentials, asOf) }
@@ -625,6 +671,15 @@ class SyncAccount(
       Command.NetworkLost -> current?.clients()?.forEach { it.networkLost() }
       Command.NetworkChanged -> current?.clients()?.forEach { it.networkChanged() }
     }
+  }
+
+  /**
+   * In the background, asks the OS for time to send what the outboxes hold, the app perhaps ended
+   * before it is sent, and sends it now meanwhile, the sockets staying open until it is.
+   */
+  private fun sendBeforeClosing() {
+    sendInBackground()
+    closingUser = scope.launch { sendOutbox() }
   }
 
   /** Keeps [account] with the session the device has. */
@@ -726,6 +781,8 @@ class SyncAccount(
           eraseUserData()
           upsert(state().copy(erased = userId))
         }
+        // Their photos with the rest: the outbox that would send them is gone.
+        linePhotos.eraseAll()
         sessions.forgetSession()
         break
       } catch (e: CancellationException) {
@@ -832,12 +889,14 @@ class SyncAccount(
       }
     }
     val userId = session.userId
-    database.write {
-      if (!claim(userId)) {
+    val erased =
+      database.write {
+        if (claim(userId)) return@write false
         eraseUserData()
         claim(userId)
+        true
       }
-    }
+    if (erased) linePhotos.eraseAll()
     commands.send(Command.SignedIn(session, kept = kept != null))
   }
 
@@ -858,16 +917,30 @@ class SyncAccount(
   private inner class Stretch(val credentials: Credentials) {
     val scope = CoroutineScope(this@SyncAccount.scope.coroutineContext + SupervisorJob(this@SyncAccount.scope.coroutineContext[Job]))
     val user = client(Peer.User)
-    val groups = mutableMapOf<String, SyncClient>()
+    /** Each group's socket once opened, its client kept for the stretch; only the queue adds to it. */
+    val groups = MutableStateFlow<Map<String, SyncClient>>(emptyMap())
 
-    fun group(groupId: String) = groups.getOrPut(groupId) { client(Peer.Group(groupId)) }
+    fun clients() = listOf(user) + groups.value.values
 
-    fun clients() = listOf(user) + groups.values
+    /**
+     * Opens the groups' sockets that should be open and closes the rest: those held while the app
+     * is in the foreground, and those with chat edits to send while it is or while the outbox is
+     * being sent in the background ([sendingSoon] as that begins).
+     */
+    fun openGroups(sendingSoon: Boolean = false) {
+      for (groupId in holds.keys + chatWaiting + groups.value.keys) {
+        val open = (foreground && groupId in holds) || (groupId in chatWaiting && (foreground || sending > 0 || sendingSoon))
+        if (open) group(groupId).start() else groups.value[groupId]?.close()
+      }
+    }
+
+    private fun group(groupId: String): SyncClient =
+      groups.value[groupId] ?: client(Peer.place(groupId)).also { client -> groups.value += groupId to client }
 
     fun end() = scope.cancel()
 
     private fun client(peer: Peer) =
-      SyncClient(database, peer, server, http, credentials, scope, now, random) {
+      SyncClient(database, peer, server, http, credentials, linePhotos, scope, now, random) {
         commands.trySend(Command.SessionUnknown(credentials.generation))
       }
   }
@@ -901,6 +974,9 @@ class SyncAccount(
     data class Hold(val groupId: String) : Command
 
     data class Release(val groupId: String) : Command
+
+    /** The groups whose chat outbox has edits still to send changed to [groups]. */
+    data class ChatWaiting(val groups: Set<String>) : Command
 
     /** Signed in as [session], [kept] from before rather than made now. */
     data class SignedIn(val session: StoredSession, val kept: Boolean) : Command
