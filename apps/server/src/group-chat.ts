@@ -217,9 +217,9 @@ const grouped = <Row extends { userId: string }>(
 };
 
 /**
- * Each of the lines' reactions, by line (lineKey): each emoji, in the
- * order first chosen, with who chose it in the order they did. Read a run
- * of lines at a time, not a query a line.
+ * Each of the lines' reactions, by line (lineKey): each emoji where it was
+ * first chosen on the line, with who chose it in the order they did. Read
+ * a run of lines at a time, not a query a line.
  */
 export const reactionsOn = (
   db: DrizzleSqliteDODatabase,
@@ -235,7 +235,7 @@ export const reactionsOn = (
           inArray(chatReactions.seq, seqs)
         )
       )
-      .orderBy(asc(chatReactions.madeCursor))
+      .orderBy(asc(chatReactions.placedCursor), asc(chatReactions.madeCursor))
       .all()
   );
   return new Map(
@@ -889,19 +889,32 @@ const takeReaction = (
   if (line === undefined || line.content.kind === "unsent" || !isEmoji(emoji)) {
     return {};
   }
-  const mine = and(
+  const chosen = and(
     eq(chatReactions.threadId, threadId),
     eq(chatReactions.seq, line.seq),
-    eq(chatReactions.userId, userId),
     eq(chatReactions.emoji, emoji)
   );
+  const mine = and(chosen, eq(chatReactions.userId, userId));
   const had = db.select().from(chatReactions).where(mine).get() !== undefined;
   if (had === on) {
     return {};
   }
   if (on) {
+    // An emoji someone holds keeps its place; one nobody does is new.
+    const held = db
+      .select({ placedCursor: chatReactions.placedCursor })
+      .from(chatReactions)
+      .where(chosen)
+      .get();
     db.insert(chatReactions)
-      .values({ emoji, madeCursor: cursor, seq: line.seq, threadId, userId })
+      .values({
+        emoji,
+        madeCursor: cursor,
+        placedCursor: held?.placedCursor ?? cursor,
+        seq: line.seq,
+        threadId,
+        userId,
+      })
       .run();
   } else {
     db.delete(chatReactions).where(mine).run();
