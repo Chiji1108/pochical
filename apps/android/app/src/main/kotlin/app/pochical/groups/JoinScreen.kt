@@ -66,6 +66,7 @@ import app.pochical.ListSheet
 import app.pochical.MarkFrame
 import app.pochical.MarkFrameSize
 import app.pochical.R
+import app.pochical.ReviewPrompt
 import app.pochical.SectionHeader
 import app.pochical.characterCount
 import app.pochical.design.GROUP_MAX_MEMBERS
@@ -178,11 +179,13 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
         val faced = if (usualName.isEmpty()) keepAsUsual(calls, myName, face) else setFace(calls, face, groupId)
         (face as? JoinFace.Held)?.let { calls.releasePhoto(it.photoId) }
         if (!faced) {
+          ReviewPrompt.troubled = true
           // Said past this screen, which gives way to the group at once.
           Toast.makeText(context, resources.getString(R.string.join_face_failed), Toast.LENGTH_LONG).show()
         }
         onGroup(groupId)
       } catch (e: InviteFailure) {
+        ReviewPrompt.troubled = true
         joinError = e.reason
       }
       joining = false
@@ -425,6 +428,7 @@ private fun JoinProfileDialog(
             try {
               onFace(JoinFace.Held(calls.holdPhoto(it)))
             } catch (_: IOException) {
+              ReviewPrompt.troubled = true
               photoFailed = true
             }
           },

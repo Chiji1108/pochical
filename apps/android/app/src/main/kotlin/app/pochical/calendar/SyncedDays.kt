@@ -1,5 +1,7 @@
 package app.pochical.calendar
 
+import android.util.Log
+import app.pochical.ReviewPrompt
 import app.pochical.kit.AppDatabase
 import app.pochical.kit.CoworkerRow
 import app.pochical.kit.OwnCalendar as KitCalendar
@@ -20,14 +22,18 @@ import app.pochical.kit.time
 import app.pochical.v1.DayField
 import app.pochical.v1.pattern
 import java.time.LocalDate
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
@@ -53,21 +59,39 @@ class SyncedDays(private val database: AppDatabase, private val edits: OwnEdits,
   private val writes = Channel<suspend () -> Unit>(Channel.UNLIMITED)
 
   init {
-    scope.launch { for (write in writes) write() }
+    scope.launch {
+      for (write in writes) {
+        try {
+          write()
+        } catch (e: CancellationException) {
+          throw e
+        } catch (e: Exception) {
+          // Not kept: said to the review prompt, which waits (spec/review.md), and the next goes on.
+          Log.w("PochicalDays", "A day's edit was not kept: $e")
+          ReviewPrompt.troubled = true
+        }
+      }
+    }
   }
+
+  private val edited = MutableStateFlow(0)
+  override val dayEdits: StateFlow<Int> = edited.asStateFlow()
 
   override fun set(day: LocalDate, entry: DayEntry?) {
     // No memo in the entry keeps the day's.
     val shown = entry?.let { ShownDay(it.shift, it.start, it.end, people = it.people) }
     writes.trySend { edits.setDays(mapOf(day to shown)) }
+    edited.update { it + 1 }
   }
 
   override fun enter(day: LocalDate, shift: String?) {
     writes.trySend { edits.enter(shift, day) }
+    edited.update { it + 1 }
   }
 
   override fun fill(days: List<LocalDate>, shift: String) {
     writes.trySend { edits.fill(days, shift) }
+    edited.update { it + 1 }
   }
 
   override suspend fun shownOnceWritten(from: LocalDate, through: LocalDate): Set<LocalDate> =
@@ -98,12 +122,21 @@ class SyncedDays(private val database: AppDatabase, private val edits: OwnEdits,
   /** What [work] gives once every write before it is done, in the writes' turn. */
   private suspend fun <T> inTurn(work: suspend () -> T): T {
     val done = CompletableDeferred<T>()
-    writes.send { done.complete(work()) }
+    writes.send {
+      // One not done is the caller's to hear too, never left waiting.
+      try {
+        done.complete(work())
+      } catch (e: Throwable) {
+        done.completeExceptionally(e)
+        throw e
+      }
+    }
     return done.await()
   }
 
   override fun setNote(day: LocalDate, note: String) {
     writes.trySend { edits.setDay(day.toString(), DayField.DAY_FIELD_NOTE, note.ifEmpty { null }) }
+    edited.update { it + 1 }
   }
 
   override fun addCoworker(name: String): Coworker {
