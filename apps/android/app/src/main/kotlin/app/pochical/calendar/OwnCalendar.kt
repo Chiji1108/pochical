@@ -1,12 +1,13 @@
 package app.pochical.calendar
 
 import androidx.compose.runtime.staticCompositionLocalOf
-import app.pochical.kit.PatternRefusal
 import app.pochical.kit.PageSummary
+import app.pochical.kit.PatternRefusal
 import app.pochical.kit.RepeatOrder
-import kotlinx.serialization.Serializable
+import app.pochical.kit.ShiftTime
 import java.time.LocalDate
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.serialization.Serializable
 
 /** A pattern as the calendar draws it and offers it for a day. */
 @Serializable
@@ -26,10 +27,6 @@ data class Pattern(
   /** Kept for the days that show it, offered nowhere a pattern is picked (spec/vectors/patterns.json, newJob). */
   val archived: Boolean = false,
 )
-
-/** Start and end, "HH:MM"; an end at or before the start is the next day's. */
-@Serializable
-data class ShiftTime(val start: String, val end: String)
 
 /**
  * A day's shift as it shows: its pattern, the day's own hours where they

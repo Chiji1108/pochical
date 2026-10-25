@@ -1,0 +1,182 @@
+{
+  "about": "The reminders of the person's own shifts (spec/calendar.md, Reminders). A reminder is `dayBefore` at a `time` (前日) or `beforeStart` some `minutes` (開始前), and skips the patterns in `skip`. `firings` gives the days as they show, by date, each its pattern's and its own hours (`start`, `end`), and expects, for the shifts from `from` through `through` in order, each notification it sends: the day of the shift (`shiftDay`), the day and time it arrives on the device's clock, its title and its body (the shift's hours, or null for a pattern without a time). 前日 goes off the evening before every day with a shift it does not skip, days off too; 開始前 only for a shift with a time, the day before when its start is less than that after midnight. The title says the shift by name with the day's own 早出 or 残業 (spec/vectors/time-change.json), its hours written as spec/vectors/widgets.json writes them. `names` is what a reminder's row says, `remindable` the patterns its editor offers.",
+  "patterns": [
+    { "id": "day", "name": "日勤", "time": ["08:30", "17:30"] },
+    { "id": "night", "name": "夜勤", "time": ["16:30", "09:30"] },
+    { "id": "late", "name": "深夜", "time": ["00:30", "09:00"] },
+    { "id": "off", "name": "休み" }
+  ],
+  "firings": [
+    {
+      "name": "the evening before every shift, days off too",
+      "reminder": { "kind": "dayBefore", "time": "21:00", "skip": [] },
+      "days": {
+        "2026-11-02": { "shift": "day" },
+        "2026-11-03": { "shift": "off" }
+      },
+      "from": "2026-11-02",
+      "through": "2026-11-03",
+      "expected": [
+        {
+          "shiftDay": "2026-11-02",
+          "day": "2026-11-01",
+          "time": "21:00",
+          "title": "明日は日勤",
+          "body": "8:30 – 17:30"
+        },
+        {
+          "shiftDay": "2026-11-03",
+          "day": "2026-11-02",
+          "time": "21:00",
+          "title": "明日は休み",
+          "body": null
+        }
+      ]
+    },
+    {
+      "name": "a shift it skips sends nothing",
+      "reminder": { "kind": "dayBefore", "time": "21:00", "skip": ["off"] },
+      "days": {
+        "2026-11-02": { "shift": "day" },
+        "2026-11-03": { "shift": "off" }
+      },
+      "from": "2026-11-02",
+      "through": "2026-11-03",
+      "expected": [
+        {
+          "shiftDay": "2026-11-02",
+          "day": "2026-11-01",
+          "time": "21:00",
+          "title": "明日は日勤",
+          "body": "8:30 – 17:30"
+        }
+      ]
+    },
+    {
+      "name": "a night shift's hours end the next day",
+      "reminder": { "kind": "dayBefore", "time": "07:30", "skip": [] },
+      "days": { "2026-11-02": { "shift": "night" } },
+      "from": "2026-11-02",
+      "through": "2026-11-02",
+      "expected": [
+        {
+          "shiftDay": "2026-11-02",
+          "day": "2026-11-01",
+          "time": "07:30",
+          "title": "明日は夜勤",
+          "body": "16:30 – 翌9:30"
+        }
+      ]
+    },
+    {
+      "name": "before the start the day's own hours say, their moves too",
+      "reminder": { "kind": "beforeStart", "minutes": 90, "skip": [] },
+      "days": {
+        "2026-11-02": { "shift": "day", "start": "07:00", "end": "20:00" }
+      },
+      "from": "2026-11-02",
+      "through": "2026-11-02",
+      "expected": [
+        {
+          "shiftDay": "2026-11-02",
+          "day": "2026-11-02",
+          "time": "05:30",
+          "title": "あと1時間30分で日勤（早出・残業）",
+          "body": "7:00 – 20:00"
+        }
+      ]
+    },
+    {
+      "name": "a later end alone is 残業",
+      "reminder": { "kind": "beforeStart", "minutes": 15, "skip": [] },
+      "days": { "2026-11-02": { "shift": "night", "end": "11:00" } },
+      "from": "2026-11-02",
+      "through": "2026-11-02",
+      "expected": [
+        {
+          "shiftDay": "2026-11-02",
+          "day": "2026-11-02",
+          "time": "16:15",
+          "title": "あと15分で夜勤（残業）",
+          "body": "16:30 – 翌11:00"
+        }
+      ]
+    },
+    {
+      "name": "before a shift just after midnight comes the day before",
+      "reminder": { "kind": "beforeStart", "minutes": 60, "skip": [] },
+      "days": { "2026-11-02": { "shift": "late" } },
+      "from": "2026-11-02",
+      "through": "2026-11-02",
+      "expected": [
+        {
+          "shiftDay": "2026-11-02",
+          "day": "2026-11-01",
+          "time": "23:30",
+          "title": "あと1時間で深夜",
+          "body": "0:30 – 9:00"
+        }
+      ]
+    },
+    {
+      "name": "before the start sends nothing for a shift without a time",
+      "reminder": { "kind": "beforeStart", "minutes": 60, "skip": [] },
+      "days": { "2026-11-02": { "shift": "off" } },
+      "from": "2026-11-02",
+      "through": "2026-11-02",
+      "expected": []
+    },
+    {
+      "name": "days with no shift send nothing",
+      "reminder": { "kind": "dayBefore", "time": "21:00", "skip": [] },
+      "days": {},
+      "from": "2026-11-02",
+      "through": "2026-11-08",
+      "expected": []
+    }
+  ],
+  "names": [
+    {
+      "name": "the evening before at its time",
+      "reminder": { "kind": "dayBefore", "time": "21:00", "skip": [] },
+      "expected": "前日 21:00"
+    },
+    {
+      "name": "a morning time without its leading zero",
+      "reminder": { "kind": "dayBefore", "time": "09:00", "skip": [] },
+      "expected": "前日 9:00"
+    },
+    {
+      "name": "minutes alone",
+      "reminder": { "kind": "beforeStart", "minutes": 15, "skip": [] },
+      "expected": "開始の15分前"
+    },
+    {
+      "name": "an hour",
+      "reminder": { "kind": "beforeStart", "minutes": 60, "skip": [] },
+      "expected": "開始の1時間前"
+    },
+    {
+      "name": "hours and minutes",
+      "reminder": { "kind": "beforeStart", "minutes": 90, "skip": [] },
+      "expected": "開始の1時間30分前"
+    },
+    {
+      "name": "hours",
+      "reminder": { "kind": "beforeStart", "minutes": 180, "skip": [] },
+      "expected": "開始の3時間前"
+    }
+  ],
+  "remindable": [
+    {
+      "name": "the evening before, every pattern",
+      "reminder": { "kind": "dayBefore", "time": "21:00", "skip": [] },
+      "expected": ["day", "night", "late", "off"]
+    },
+    {
+      "name": "before the start, only those with a time",
+      "reminder": { "kind": "beforeStart", "minutes": 60, "skip": [] },
+      "expected": ["day", "night", "late"]
+    }
+  ]
+}

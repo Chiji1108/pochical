@@ -20,8 +20,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.TextStyle
@@ -38,6 +38,8 @@ import app.pochical.kit.Look
 import app.pochical.kit.MarkStyle
 import app.pochical.kit.OffLook
 import app.pochical.kit.dayName
+import app.pochical.kit.hoursText
+import app.pochical.kit.timeChange
 import app.pochical.mark
 import java.time.LocalDate
 

@@ -6,16 +6,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import app.pochical.LocalDeviceSettings
-import app.pochical.kit.Look
-import app.pochical.kit.MarkStyle
 import app.pochical.ShiftMark
 import app.pochical.calendar.Pattern
-import app.pochical.calendar.TimeChange
 import app.pochical.calendar.pattern
-import app.pochical.calendar.timeChange
 import app.pochical.kit.GroupMember
+import app.pochical.kit.Look
+import app.pochical.kit.MarkStyle
+import app.pochical.kit.TimeChange
 import app.pochical.kit.Together
 import app.pochical.kit.groupMembers
+import app.pochical.kit.timeChange
 import app.pochical.kit.together
 import java.time.LocalDate
 

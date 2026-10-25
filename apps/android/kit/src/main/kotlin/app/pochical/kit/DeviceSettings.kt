@@ -26,7 +26,7 @@ import kotlinx.serialization.json.encodeToStream
 /**
  * What the person set for their own screens, kept on the device, as iOS's DeviceSettings and
  * /design's device settings are. The parts that are the person's own liking are kept with the
- * account too (Preferences.kt); 外観 and a picture's light or dark stay with the device.
+ * account too (Preferences.kt); 外観, the reminders and a picture's light or dark stay with the device.
  */
 @Serializable
 data class DeviceSettings(
@@ -42,6 +42,11 @@ data class DeviceSettings(
   val picture: PictureLook = PictureLook(),
   /** What 端末カレンダーに追加 puts in besides the shifts, as last left. */
   val calendarAdd: CalendarAdd = CalendarAdd(),
+  /**
+   * Reminders of the person's shifts, sent by this device on its own, so kept with it rather than
+   * the account: on every device they would go off on each (spec/sync-protocol.md).
+   */
+  @Serializable(with = KeptReminders::class) val reminders: List<Reminder> = Reminder.defaults,
   /**
    * Android 13's question whether the app may notify was turned down for good, refused once more
    * after being refused before: only the system's settings turn notifications on now.

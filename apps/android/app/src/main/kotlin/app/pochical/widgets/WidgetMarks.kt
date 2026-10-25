@@ -28,7 +28,7 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import app.pochical.calendar.Pattern
-import app.pochical.calendar.TimeChange
+import app.pochical.kit.TimeChange
 import app.pochical.kit.GroupMarkValue
 import app.pochical.kit.Look
 import app.pochical.kit.MarkStyle

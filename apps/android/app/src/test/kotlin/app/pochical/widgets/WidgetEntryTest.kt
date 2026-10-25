@@ -1,7 +1,7 @@
 package app.pochical.widgets
 
 import app.pochical.calendar.Pattern
-import app.pochical.calendar.ShiftTime
+import app.pochical.kit.ShiftTime
 import app.pochical.kit.ShownDay
 import app.pochical.kit.Week
 import app.pochical.name

@@ -1,11 +1,11 @@
 package app.pochical.widgets
 
 import app.pochical.calendar.Pattern
-import app.pochical.calendar.TimeChange
-import app.pochical.calendar.hoursText
+import app.pochical.kit.TimeChange
+import app.pochical.kit.hoursText
 import app.pochical.calendar.monthWeeks
 import app.pochical.calendar.pattern
-import app.pochical.calendar.timeChange
+import app.pochical.kit.timeChange
 import app.pochical.calendar.weekStartingOn
 import app.pochical.calendar.weekday
 import app.pochical.design.Widgets
