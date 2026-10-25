@@ -178,6 +178,10 @@ class MessageHandlers(
   val groupId: String,
   /** 送信をやめる: the member's line of photos [opId] stops going up, not sent. */
   val stopSending: (opId: String) -> Unit,
+  /** A line's photo, by its place in the line, opened large. */
+  val openPhoto: (seq: Long, index: Int) -> Unit,
+  /** A photo of the member's line still on its way, opened large alone. */
+  val openOwnPhoto: (line: WaitingLine, index: Int) -> Unit,
 )
 
 /**
@@ -221,7 +225,10 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
     (items.map { item -> CustomAccessibilityAction(item.label) { item.run(); true } } + look.parts.flatMap { it.actions(partLine) })
       // Android holds at most this many on one element; past them, the latest parts' go.
       .take(MOST_ACTIONS)
-  val menuLabel = stringResource(R.string.chat_menu)
+  // Activating a sent line of photos opens its first large; any other line opens its menu, as the long press does.
+  val photoSeq = look.seq?.takeIf { look.content is LineContent.Photos }
+  val menuLabel = stringResource(if (photoSeq != null) R.string.chat_photo_open else R.string.chat_menu)
+  val activate = { if (photoSeq != null) handlers.openPhoto(photoSeq, 0) else openMenu() }
   Box(
     modifier
       .zIndex(if (handlers.spray?.seq == look.seq && look.seq != null) 1f else 0f)
@@ -230,8 +237,8 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
       .then(
         // A poll's days and 行ける are gone through one by one after its line (spec/chat.md, Screen
         // readers); any other line is one element.
-        if (look.poll != null) Modifier.semantics { lineSemantics(look.said, actions, menuLabel) { openMenu() } }
-        else Modifier.clearAndSetSemantics { lineSemantics(look.said, actions, menuLabel) { openMenu() } }
+        if (look.poll != null) Modifier.semantics { lineSemantics(look.said, actions, menuLabel) { activate() } }
+        else Modifier.clearAndSetSemantics { lineSemantics(look.said, actions, menuLabel) { activate() } }
       )
   ) {
     // The reply arrow, in the room the line leaves as it is dragged.
@@ -340,7 +347,8 @@ private fun PhotoBody(look: MessageLook, photos: LineContent.Photos, handlers: M
       handlers.groupId,
       waiting,
       onStop = waiting?.takeIf { live }?.let { { handlers.stopSending(it.opId) } },
-      onOpen = null,
+      // One of the member's own still on its way opens alone; a sent one among the chat's.
+      onOpen = if (!live) null else look.seq?.let { seq -> { index -> handlers.openPhoto(seq, index) } } ?: waiting?.let { { index -> handlers.openOwnPhoto(it, index) } },
     )
   }
   val quote = look.quote
@@ -539,14 +547,32 @@ fun messageLook(
   }
 }
 
-/** What a screen reader reads of a line's content: its words, or its photos as how many (3枚の写真, spec/chat.md, Albums). */
+/**
+ * What a screen reader reads of a line's content (spec/chat.md, Screen readers): its words, a photo
+ * by its shape, as nothing sent with it says more, and photos sent together as how many (3枚の写真).
+ */
 @Composable
 private fun saidWords(content: LineContent, nameOf: (String) -> String): String =
   when {
     content !is LineContent.Photos -> lineWords(content, nameOf)
     content.photos.size > 1 -> stringResource(R.string.chat_photo_count, content.photos.size)
-    else -> stringResource(R.string.chat_photo)
+    else -> photoWords(content.photos.single())
   }
+
+/** A photo as a screen reader says it: its shape, as the eye sees first (パノラマ past 1.8:1, as iOS's). */
+@Composable
+fun photoWords(photo: app.pochical.v1.ChatPhoto): String {
+  if (photo.width <= 0 || photo.height <= 0) return stringResource(R.string.chat_photo)
+  val aspect = photo.width.toDouble() / photo.height
+  return stringResource(
+    when {
+      aspect > 1.8 -> R.string.chat_photo_panorama
+      aspect > 1.1 -> R.string.chat_photo_wide
+      aspect < 0.9 -> R.string.chat_photo_tall
+      else -> R.string.chat_photo_square
+    }
+  )
+}
 
 /** A line as a screen reader has it: what it reads, its actions, and its menu opened by activating it, as the long press opens it. */
 private fun androidx.compose.ui.semantics.SemanticsPropertyReceiver.lineSemantics(

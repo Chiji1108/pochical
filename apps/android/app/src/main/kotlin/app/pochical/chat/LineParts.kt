@@ -47,15 +47,19 @@ data class ReactionsPart(val reactions: List<LineReaction>, val counted: Boolean
 }
 
 /**
- * A line's photos, [count] of them: while they go up ([waiting] still being sent and not yet past
- * stopping), 送信をやめる, which × in their rings offers.
+ * A line's photos, [count] of them: once sent, 写真を開く (the first of several); while they go up ([waiting] still being sent and not yet past stopping), 送信をやめる, which × in their rings
+ * offers.
  */
 data class PhotosPart(val count: Int, val waiting: WaitingLine?) : LinePart {
   @Composable
   override fun actions(line: PartLine): List<CustomAccessibilityAction> {
-    val waiting = waiting?.takeIf { !it.failed && !it.sending } ?: return emptyList()
     val stop = stringResource(R.string.chat_photo_stop)
-    return listOf(CustomAccessibilityAction(stop) { line.handlers.stopSending(waiting.opId); true })
+    val open = stringResource(R.string.chat_photo_open)
+    val seq = line.seq
+    // A sent line's photos open large, the first of several, from where it swipes on to the rest.
+    if (seq != null) return listOf(CustomAccessibilityAction(open) { line.handlers.openPhoto(seq, 0); true })
+    val going = waiting?.takeIf { !it.failed && !it.sending } ?: return emptyList()
+    return listOf(CustomAccessibilityAction(stop) { line.handlers.stopSending(going.opId); true })
   }
 }
 

@@ -132,6 +132,12 @@ internal interface ChatDao {
 
   @Upsert suspend fun upsert(block: BlockRow)
 
+  @Query("SELECT userId FROM blocks") suspend fun blockedIds(): List<String>
+
+  /** A chat's lines of [kinds], in order. */
+  @Query("SELECT * FROM chatLines WHERE groupId = :groupId AND threadId = :threadId AND kind IN (:kinds) ORDER BY seq")
+  suspend fun linesOfKinds(groupId: String, threadId: String, kinds: List<String>): List<ChatLineRow>
+
   @Query("DELETE FROM blocks WHERE userId = :userId") suspend fun deleteBlock(userId: String)
 
   @Query("DELETE FROM blocks") suspend fun deleteBlocks()

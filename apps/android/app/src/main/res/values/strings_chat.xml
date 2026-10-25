@@ -116,4 +116,21 @@
   <string name="chat_photo_some_not_saved">一部の写真を保存できませんでした</string>
   <string name="chat_photo_not_saved">保存できませんでした</string>
   <string name="chat_photo_not_sent_menu">送れなかった写真</string>
+  <string name="chat_photo_open">写真を開く</string>
+  <string name="chat_photo_panorama">パノラマの写真</string>
+  <string name="chat_photo_wide">横長の写真</string>
+  <string name="chat_photo_tall">縦長の写真</string>
+  <string name="chat_photo_square">正方形の写真</string>
+  <string name="chat_photo_whose">%1$sの%2$s</string>
+  <string name="chat_photo_zoom_in">拡大</string>
+  <string name="chat_photo_zoom_out">元の大きさに戻す</string>
+  <string name="chat_photo_close">閉じる</string>
+  <string name="chat_photo_share">共有</string>
+  <string name="chat_photo_not_shared">共有できませんでした</string>
+  <string name="chat_photo_place">%1$d / %2$d</string>
+  <string name="chat_photo_place_said">%2$d枚中%1$d枚目</string>
+  <string name="chat_photos_title">写真</string>
+  <string name="chat_photos_none">写真はまだありません</string>
+  <string name="chat_photo_by">%1$sが送った写真、%2$s</string>
+  <string name="chat_more">その他</string>
 </resources>

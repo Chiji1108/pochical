@@ -10,6 +10,7 @@ import app.pochical.v1.ServerFrame
 import app.pochical.v1.Typing
 import app.pochical.v1.chatEdits
 import app.pochical.v1.chatPageRequest
+import app.pochical.v1.chatPhotosRequest
 import app.pochical.v1.clientFrame
 import app.pochical.v1.hello
 import app.pochical.v1.ping
@@ -99,6 +100,9 @@ class SyncClient internal constructor(
 
   private val mutableTyping = MutableSharedFlow<Typing>(extraBufferCapacity = 16, onBufferOverflow = BufferOverflow.DROP_OLDEST)
   override val typing: SharedFlow<Typing> = mutableTyping.asSharedFlow()
+
+  private val mutablePhotoPages = MutableSharedFlow<ChatPhotosPage>(extraBufferCapacity = 16, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+  override val photoPages: SharedFlow<ChatPhotosPage> = mutablePhotoPages.asSharedFlow()
 
   /** The socket past its Welcome, null while there is none: what is asked now goes on it. */
   @Volatile private var welcomed: WebSocket? = null
@@ -331,6 +335,7 @@ class SyncClient internal constructor(
       }
       ServerFrame.KindCase.CHAT_PAGE -> if (peer is Peer.Group) takeInto(peer.id) { take(frame.chatPage, peer.id) }
       ServerFrame.KindCase.TYPING -> mutableTyping.tryEmit(frame.typing)
+      ServerFrame.KindCase.CHAT_PHOTOS -> mutablePhotoPages.tryEmit(ChatPhotosPage.of(frame.chatPhotos))
       ServerFrame.KindCase.PONG -> if (frame.pong.nonce == catchUpNonce) on(SocketEvent.CaughtUp)
       ServerFrame.KindCase.ERROR ->
         return when (frame.error.code) {
@@ -432,6 +437,9 @@ class SyncClient internal constructor(
     }
     return false
   }
+
+  override fun requestPhotos(threadId: String, seq: Long, after: Boolean): Boolean =
+    welcomed?.send(clientFrame { chatPhotosRequest = chatPhotosRequest { this.threadId = threadId; this.seq = seq; this.after = after } }) ?: false
 
   override fun requestPage(threadId: String, beforeSeq: Long): Boolean =
     welcomed?.send(clientFrame { chatPageRequest = chatPageRequest { this.threadId = threadId; this.beforeSeq = beforeSeq } }) ?: false
@@ -549,6 +557,16 @@ interface ChatSocket {
    * again once it is open.
    */
   fun requestPage(threadId: String, beforeSeq: Long): Boolean
+
+  /**
+   * Asks the group for a page of a chat's photos alone, before the line [seq] or [after] it (0 for
+   * the latest, or after, from the first), when the socket is open; the page comes to [photoPages].
+   * False when it could not be asked.
+   */
+  fun requestPhotos(threadId: String, seq: Long, after: Boolean): Boolean
+
+  /** The pages of a chat's photos as they come, never kept (spec/sync-protocol.md, Chat). */
+  val photoPages: SharedFlow<ChatPhotosPage>
 
   /** Says the member is writing in a chat, or stopped, when the socket is open; nothing waits, as typing is only now. */
   fun sendTyping(threadId: String, on: Boolean)

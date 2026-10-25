@@ -134,7 +134,9 @@ fun PhotoLine(photos: List<ChatPhoto>, groupId: String, waiting: WaitingLine?, o
   @Composable
   fun Cell(index: Int, modifier: Modifier) {
     Box(modifier) {
-      ChatPhotoImage(photos[index], groupId, retries = waiting == null, onOpen = onOpen?.takeIf { waiting == null }?.let { open -> { open(index) } }, Modifier.matchParentSize())
+      // Not while it goes up; one of the member's own once up, or not sent, opens alone.
+      val opens = waiting == null || waiting.failed || waiting.sending
+      ChatPhotoImage(photos[index], groupId, retries = waiting == null, onOpen = onOpen?.takeIf { opens }?.let { open -> { open(index) } }, Modifier.matchParentSize())
       if (waiting != null && !waiting.failed) PhotoGoingUp(photos[index].id, waiting.sending, onStop.takeIf { !waiting.sending }, Modifier.matchParentSize())
     }
   }
