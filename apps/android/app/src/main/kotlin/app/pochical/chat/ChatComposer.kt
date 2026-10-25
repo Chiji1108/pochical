@@ -61,8 +61,10 @@ import app.pochical.kit.previewLink
 import app.pochical.kit.site
 import app.pochical.v1.LinkPreview
 import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * What the chat's composer holds, kept across a rotation and the process's death: what is written
@@ -255,14 +257,18 @@ fun Composer(
             state.writing = Writing()
             scope.launch {
               try {
-                val seq = going.editing
-                val words = going.sent
-                // The page as it came for the words' first link, or none taken off with ×.
-                val sentLink = previewLink(words)
-                val removed = sentLink != null && sentLink == going.previewRemoved
-                val sentPage = sentLink?.takeIf { !removed }?.let(pages::page)
-                if (seq != null) chats.change(groupId, threadId, seq, words, sentPage)
-                else chats.send(groupId, threadId, words, going.replyTo, sentPage, withoutPreview = removed)
+                // Kept though the chat is left meanwhile: what was written is no longer in the
+                // composer to be kept as its draft.
+                withContext(NonCancellable) {
+                  val seq = going.editing
+                  val words = going.sent
+                  // The page as it came for the words' first link, or none taken off with ×.
+                  val sentLink = previewLink(words)
+                  val removed = sentLink != null && sentLink == going.previewRemoved
+                  val sentPage = sentLink?.takeIf { !removed }?.let(pages::page)
+                  if (seq != null) chats.change(groupId, threadId, seq, words, sentPage)
+                  else chats.send(groupId, threadId, words, going.replyTo, sentPage, withoutPreview = removed)
+                }
               } catch (e: CancellationException) {
                 throw e
               } catch (_: Exception) {

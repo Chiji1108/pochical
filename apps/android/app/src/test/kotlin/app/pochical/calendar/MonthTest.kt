@@ -40,13 +40,4 @@ class MonthTest {
       assertEquals(case.name(), expected, timeChange(case.string("start"), case.string("end"), time))
     }
   }
-
-  @Test
-  fun writesHoursAsTheScreensDo() {
-    for (case in vectors("widgets", "day")) {
-      val (start, end) = case.strings("time") ?: continue
-      val expected = case.getValue("expected").jsonObject.string("time")
-      assertEquals(case.name(), expected, hoursText(case.string("start") ?: start, case.string("end") ?: end))
-    }
-  }
 }

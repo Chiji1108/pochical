@@ -37,6 +37,7 @@ class MessageSemanticsTest {
       notKept = {},
       reducedMotion = true,
       lit = null,
+      litShown = {},
       me = "me",
       writers = emptyMap(),
       react = { _, _, _ -> },
@@ -119,7 +120,7 @@ class MessageSemanticsTest {
     val handlers =
       MessageHandlers(
         menu = LineMenuState(), items = { emptyList() }, reply = {}, jump = {}, nameOf = { it }, notKept = {}, reducedMotion = true,
-        lit = null, me = "me", writers = emptyMap(), react = { _, _, _ -> }, moreReactions = {}, choosers = {}, spray = null,
+        lit = null, litShown = {}, me = "me", writers = emptyMap(), react = { _, _, _ -> }, moreReactions = {}, choosers = {}, spray = null,
         openLink = {}, together = { _, _ -> emptySet() }, vote = { seq, day, on -> voted = Triple(seq, day, on) }, decide = { deciding = it },
         voters = { _, _ -> },
       )
