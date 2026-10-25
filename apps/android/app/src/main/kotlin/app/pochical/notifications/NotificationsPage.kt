@@ -66,12 +66,10 @@ import app.pochical.chat.rememberBlockedPeople
 import app.pochical.chat.rememberUnblocking
 import app.pochical.chat.shownName
 import app.pochical.groups.GroupMarkBadge
-import app.pochical.groups.LocalGroupCalls
 import app.pochical.groups.LocalValues
 import app.pochical.groups.MemberAvatar
 import app.pochical.groups.rememberMeId
 import app.pochical.kit.ChatKey
-import app.pochical.kit.ChatNotificationState
 import app.pochical.kit.ChatNotificationsSummary
 import app.pochical.kit.GROUP_THREAD
 import app.pochical.kit.PhotoShelf
@@ -102,15 +100,6 @@ fun ChatNotificationsRow(open: (RootPage) -> Unit) {
   )
 }
 
-/** The user's chat notifications as the device last heard them, read again as they change. */
-@Composable
-fun rememberChatNotifications(): ChatNotificationState {
-  val values = LocalValues.current
-  val mutes by remember(values) { values.chatMutes() }.collectAsState(emptyList())
-  val settings by remember(values) { values.chatNotificationSettings() }.collectAsState(null)
-  return remember(mutes, settings) { ChatNotificationState.of(mutes, settings) }
-}
-
 /**
  * 設定 › 通知 › チャット (spec/chat.md, Notifications; /design's and iOS's ChatNotificationsPage): the
  * card that asks for notifications while the app may not show them; each group's chat's switch;
@@ -122,15 +111,15 @@ fun rememberChatNotifications(): ChatNotificationState {
 fun ChatNotificationsPage(onBack: () -> Unit) {
   val context = LocalContext.current
   val values = LocalValues.current
-  val calls = LocalGroupCalls.current
-  val asking = LocalNotificationAsking.current
   val groups by remember(values) { values.groups() }.collectAsState(emptyList())
   val notifications = rememberChatNotifications()
   val me = rememberMeId()
   val snackbar = remember { SnackbarHostState() }
   val scope = rememberCoroutineScope()
   val failed = stringResource(R.string.notifications_change_failed)
-  val switches = rememberServerSwitches { scope.launch { snackbar.showSnackbar(failed) } }
+  val switching = rememberChatSwitching()
+  // Shown as turned at once (ChatNotificationSwitches); said should the server not keep it.
+  val done = { kept: Boolean -> if (!kept) scope.launch { snackbar.showSnackbar(failed) } }
   // The one-to-one chats turned off as the page opened: one turned on again stays, to turn off
   // again here. Read once the mutes have come, and kept while the page is.
   var directOff by rememberSaveable(stateSaver = chatKeysSaver) { mutableStateOf<List<ChatKey>?>(null) }
@@ -140,13 +129,7 @@ fun ChatNotificationsPage(onBack: () -> Unit) {
     if (directOff == null) directOff = read.filter { it.threadId != GROUP_THREAD }.map { ChatKey(it.groupId, it.threadId) }.sortedBy { it.threadId }
   }
   val chatSwitch = { groupId: String, threadId: String ->
-    val key = ChatKey(groupId, threadId)
-    val heard = !notifications.isMuted(groupId, threadId)
-    ChatSwitch(switches.on(key, heard)) { on ->
-      // Turned on, the system's question first, if never put (spec/chat.md, Notifications).
-      if (on && asking.notAsked) asking.ask()
-      switches.turn(key, on, heard) { calls.setChatMuted(groupId, threadId, muted = !on) }
-    }
+    ChatSwitch(!notifications.isMuted(groupId, threadId)) { on -> switching.setMuted(groupId, threadId, !on) { done(it) } }
   }
   val blocked = rememberBlockedPeople()
   val unblock = rememberUnblocking(snackbar)
@@ -175,9 +158,8 @@ fun ChatNotificationsPage(onBack: () -> Unit) {
         item { Footnote(stringResource(R.string.notifications_direct_chats_note)) }
         item { SectionHeader(stringResource(R.string.notifications_mentions)) }
         item {
-          val heard = notifications.mentionsWhenMuted
           SwitchRow(
-            ChatSwitch(switches.on(MENTIONS, heard)) { on -> switches.turn(MENTIONS, on, heard) { calls.setMentionsWhenMuted(on) } },
+            ChatSwitch(notifications.mentionsWhenMuted) { on -> switching.setMentionsWhenMuted(on) { done(it) } },
             headline = stringResource(R.string.notifications_mentions_always),
             supporting = stringResource(R.string.notifications_mentions_always_about),
           )
@@ -211,9 +193,6 @@ private fun SwitchRow(switch: ChatSwitch, headline: String, supporting: String? 
     modifier = Modifier.toggleable(value = switch.on, role = Role.Switch, onValueChange = switch.turn),
   )
 }
-
-/** メンションはいつも通知's switch's key. */
-private const val MENTIONS = "mentionsWhenMuted"
 
 /** The one-to-one chats turned off as the page opened, kept across the process's death. */
 private val chatKeysSaver =
