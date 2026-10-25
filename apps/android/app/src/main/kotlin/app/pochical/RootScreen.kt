@@ -10,6 +10,7 @@ import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffo
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldValue
 import androidx.compose.material3.adaptive.navigationsuite.rememberNavigationSuiteScaffoldState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
@@ -181,6 +182,9 @@ private fun TabsScreen(navigator: RootNavigator, navigation: PageNavigation) {
       if (barHidden) NavigationSuiteScaffoldValue.Hidden else NavigationSuiteScaffoldValue.Visible
     )
   LaunchedEffect(barHidden) { if (barHidden) suite.hide() else suite.show() }
+  // Read once over the tabs, for their badges and the group rail's.
+  val unread = rememberNotifyingUnread()
+  val badges = tabBadges(unread)
   NavigationSuiteScaffold(
     state = suite,
     navigationSuiteItems = {
@@ -193,22 +197,25 @@ private fun TabsScreen(navigator: RootNavigator, navigation: PageNavigation) {
             Icon(painterResource(if (selected) tab.selectedIcon else tab.icon), contentDescription = null)
           },
           label = { Text(stringResource(tab.title)) },
+          badge = tabBadge(badges[tab] ?: 0),
         )
       }
     },
   ) {
-    tabStates.SaveableStateProvider(navigation.tab) {
-      when (navigation.tab) {
-        RootTab.Calendar ->
-          CalendarScreen(
-            open = navigation::open,
-            hidesTabBar = { barHidden = it },
-            opening = navigator.openingDay,
-            onOpening = { navigator.openingDay = null },
-          )
-        RootTab.Groups ->
-          GroupsScreen(navigator.openGroup, { navigator.openGroup = it }, GroupsActions(onNew = { navigation.open(RootPage.NewGroup) }, onScan = { navigation.open(RootPage.Scan) }, onShifts = { id, day -> navigation.open(RootPage.GroupShifts(id, day?.toString())) }, onChat = { id, thread -> navigation.open(RootPage.Chat(id, thread)) }) { group -> GroupButtons(group.id, navigation::open) })
-        RootTab.Settings -> SettingsScreen(open = navigation::open)
+    CompositionLocalProvider(LocalNotifyingUnread provides unread) {
+      tabStates.SaveableStateProvider(navigation.tab) {
+        when (navigation.tab) {
+          RootTab.Calendar ->
+            CalendarScreen(
+              open = navigation::open,
+              hidesTabBar = { barHidden = it },
+              opening = navigator.openingDay,
+              onOpening = { navigator.openingDay = null },
+            )
+          RootTab.Groups ->
+            GroupsScreen(navigator.openGroup, { navigator.openGroup = it }, GroupsActions(onNew = { navigation.open(RootPage.NewGroup) }, onScan = { navigation.open(RootPage.Scan) }, onShifts = { id, day -> navigation.open(RootPage.GroupShifts(id, day?.toString())) }, onChat = { id, thread -> navigation.open(RootPage.Chat(id, thread)) }) { group -> GroupButtons(group.id, navigation::open) })
+          RootTab.Settings -> SettingsScreen(open = navigation::open)
+        }
       }
     }
   }

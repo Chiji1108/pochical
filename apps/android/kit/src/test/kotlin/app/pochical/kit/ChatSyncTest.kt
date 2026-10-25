@@ -534,4 +534,31 @@ class ChatValuesTest {
     assertEquals(1, read.unread)
     assertFalse(read.mentioned)
   }
+
+  @Test
+  fun theTabsCountWhatNotifiesInEachPlace() = runTest {
+    val chats = Chats(database, testLinePhotos(), now = { 0 })
+    database.write {
+      take(
+        listOf(
+          change { unreadCount = unreadCount { groupId = "g1"; threadId = GROUP_THREAD; count = 2; mentions = 1 } },
+          change { unreadCount = unreadCount { groupId = "g1"; threadId = "direct:me:u2"; count = 1 } },
+          change { unreadCount = unreadCount { groupId = "support"; threadId = GROUP_THREAD; count = 1 } },
+        )
+      )
+      takeChanges(listOf(wordsLine(1, "u2", "<@me> 見て"), wordsLine(2, "u2", "ね")), "g1")
+    }
+    assertEquals(mapOf("g1" to 3, "support" to 1), chats.notifyingUnread("me").first())
+
+    // Turned off, the group's chat counts its mention alone; with メンションはいつも通知 off, nothing.
+    database.write { take(listOf(change { chatMute = chatMute { groupId = "g1"; threadId = GROUP_THREAD; muted = true } })) }
+    assertEquals(mapOf("g1" to 2, "support" to 1), chats.notifyingUnread("me").first())
+    database.write { take(listOf(change { chatNotifications = chatNotifications { mentionsWhenMuted = false } })) }
+    assertEquals(mapOf("g1" to 1, "support" to 1), chats.notifyingUnread("me").first())
+
+    // A read of the member's still waiting clears its chat at once.
+    chats.read("support", GROUP_THREAD, "me", 9)
+    chats.read("g1", "direct:me:u2", "me", 9)
+    assertEquals(emptyMap<String, Int>(), chats.notifyingUnread("me").first())
+  }
 }

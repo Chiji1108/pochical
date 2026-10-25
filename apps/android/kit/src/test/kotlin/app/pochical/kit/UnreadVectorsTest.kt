@@ -6,7 +6,14 @@ import org.junit.Test
 /** spec/vectors/unread.json: what notifies, and how 設定 › 通知 › チャット says so. */
 class UnreadVectorsTest {
   @Serializable
-  data class UnreadVectors(val notificationsSummary: List<Summary>) {
+  data class UnreadVectors(val notifying: List<Notifying>, val notificationsSummary: List<Summary>) {
+    @Serializable data class Chat(val muted: Boolean, val read: List<String>, val unread: List<String>)
+
+    @Serializable data class Group(val chats: List<Chat>)
+
+    @Serializable
+    data class Notifying(override val name: String, val mentionsWhenMuted: Boolean, val groups: List<Group>, val expected: Int) : VectorCase
+
     @Serializable data class SummaryGroup(val muted: Boolean, val directMuted: Boolean)
 
     @Serializable
@@ -15,6 +22,12 @@ class UnreadVectorsTest {
   }
 
   private val unread = vectors<UnreadVectors>("unread")
+
+  @Test
+  fun unreadLinesNotifyAsTheVectorsSay() =
+    unread.notifying.checkEach({ it.expected }) { case ->
+      case.groups.flatMap { it.chats }.sumOf { chat -> notifyingUnread(chat.unread, chat.muted, case.mentionsWhenMuted, "me") }
+    }
 
   @Test
   fun theChatNotificationsRowSaysWhatTheVectorsSay() =
