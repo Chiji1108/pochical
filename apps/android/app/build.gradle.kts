@@ -101,7 +101,7 @@ dependencies {
   implementation(libs.credentials.play.services.auth)
   implementation(libs.googleid)
   implementation(libs.browser)
-  implementation(libs.review.ktx)
+  implementation(libs.review)
   implementation(libs.emojipicker)
   implementation(libs.reorderable)
   implementation(libs.coil.compose)

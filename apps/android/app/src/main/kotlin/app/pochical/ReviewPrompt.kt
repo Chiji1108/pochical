@@ -6,10 +6,9 @@ import android.util.Log
 import androidx.core.content.edit
 import app.pochical.kit.ReviewHistory
 import com.google.android.play.core.review.ReviewManagerFactory
-import com.google.android.play.core.ktx.launchReview
-import com.google.android.play.core.ktx.requestReview
 import java.time.LocalDate
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.tasks.await
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 
@@ -40,7 +39,7 @@ object ReviewPrompt {
     save(activity, history.asked(LocalDate.now(), version))
     val manager = ReviewManagerFactory.create(activity)
     try {
-      manager.launchReview(activity, manager.requestReview())
+      manager.launchReviewFlow(activity, manager.requestReviewFlow().await()).await()
     } catch (e: CancellationException) {
       throw e
     } catch (e: Exception) {
