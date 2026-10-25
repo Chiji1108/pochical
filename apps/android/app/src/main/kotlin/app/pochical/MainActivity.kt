@@ -30,7 +30,7 @@ import app.pochical.notifications.LocalNotificationAsking
 import app.pochical.notifications.LocalNotificationPermission
 import app.pochical.notifications.rememberNotificationAsking
 import app.pochical.notifications.NotificationPermission
-import app.pochical.notifications.ChatNotifier
+import app.pochical.kit.AppLink
 import app.pochical.notifications.LocalChatNotifier
 import app.pochical.notifications.LocalChatNotificationSwitches
 import app.pochical.notifications.Push
@@ -112,7 +112,7 @@ class MainActivity(
 
   /** Where [intent] opens the app at, for the screens; a chat's notification tapped goes, as it is read. */
   private fun take(intent: Intent) {
-    ChatNotifier.openedChat(intent)?.let { push.notifier.opened(it.groupId, it.threadId) }
-    links.take(intent)
+    val link = links.take(intent)
+    if (link is AppLink.Chat) push.notifier.opened(link.groupId, link.threadId)
   }
 }
