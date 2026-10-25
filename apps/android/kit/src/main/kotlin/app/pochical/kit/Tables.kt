@@ -115,6 +115,11 @@ data class SyncState(
   val erased: String = "",
   /** The sync schema the values were taken under (`SYNC_SCHEMA`). */
   val schema: Int = SYNC_SCHEMA,
+  /**
+   * はじめの設定 is done for the user the database holds, or their patterns came: not asked again,
+   * even once every pattern is deleted. Erased with their data, so the next user starts with it.
+   */
+  val firstRunDone: Boolean = false,
 ) {
   val last: HlcTime
     get() = HlcTime(lastMs, lastCounter.toUInt())

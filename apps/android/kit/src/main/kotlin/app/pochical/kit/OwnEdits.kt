@@ -186,7 +186,29 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
     start: LocalDate,
     anchor: LocalDate,
     holidayCountry: String,
-  ) = database.write {
+  ) = database.write { takeJob(incoming, sequence, start, anchor, holidayCountry) }
+
+  /**
+   * はじめの設定 (spec/shift-patterns.md, The first run), as iOS's `OwnValues.begin`: [incoming]
+   * become the person's patterns, and [sequence], when there is one, repeats counted from [anchor],
+   * from the month before [today]'s or from [anchor] when that is earlier, so the days just past
+   * show it too. A roster's work, with no sequence, sets no order.
+   */
+  suspend fun begin(incoming: List<PatternRow>, sequence: List<String>, anchor: LocalDate, today: LocalDate, holidayCountry: String) =
+    database.write {
+      val start = minOf(anchor, today.withDayOfMonth(1).minusMonths(1))
+      takeJob(incoming, sequence, start, anchor, holidayCountry, repeats = sequence.isNotEmpty())
+    }
+
+  /** A job's patterns taken over from [start], and its order with them unless it [repeats] not. */
+  private suspend fun SyncDao.takeJob(
+    incoming: List<PatternRow>,
+    sequence: List<String>,
+    start: LocalDate,
+    anchor: LocalDate,
+    holidayCountry: String,
+    repeats: Boolean = true,
+  ) {
     val shownBefore = shownSoFar(through = start.minusDays(1)).mapTo(HashSet()) { it.shift }
     val job = patternsForJob(patterns(), incoming, sequence, usedBefore = shownBefore::contains, newId = ::newId)
     val own = patterns()
@@ -194,6 +216,7 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
     for (pattern in own) if (pattern.id !in kept) putPattern(pattern.id, null)
     for (pattern in job.patterns) if (pattern !in own) putPattern(pattern.id, pattern.wire)
     orderPatterns(job.patterns.map { it.id })
+    if (!repeats) return
     val byId = job.patterns.associateBy { it.id }
     val offShift = holidayShift(job.patterns.filter { it.countsAsOff && !it.archived }.map { it.id })
     val holidaysOff = offShift != null && holidaysOffByDefault(job.sequence, anchor) { byId[it]?.countsAsOff == true }

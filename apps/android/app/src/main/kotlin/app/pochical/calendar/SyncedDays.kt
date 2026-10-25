@@ -100,6 +100,10 @@ class SyncedDays(private val database: AppDatabase, private val edits: OwnEdits,
 
   override suspend fun setHolidaysOff(on: Boolean, picked: String?, start: LocalDate) = inTurn { edits.setHolidaysOff(on, picked, start) }
 
+  override suspend fun begin(ids: List<String>, sequence: List<String>, anchor: LocalDate) = inTurn {
+    edits.begin(readyCopies(ids), sequence, anchor, LocalDate.now(), holidayCountry())
+  }
+
   override suspend fun changeJob(ids: List<String>, sequence: List<String>, start: LocalDate, anchor: LocalDate) = inTurn {
     edits.changeJob(readyCopies(ids), sequence, start, anchor, holidayCountry())
   }

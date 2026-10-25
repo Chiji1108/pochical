@@ -127,14 +127,48 @@ fun AccountPage(onBack: () -> Unit) {
   }
 }
 
-/**
- * What signing in keeps, and the ways in, ready once the device has its session: one path for
- * Apple and Google (spec/sync-protocol.md, Signing in; Switching to an account in use). Either links
- * the provider's account to this user, or, when it is another user's already, keeps one side,
- * asking which only when both hold something.
- */
+/** What signing in keeps, and the ways in. */
 @Composable
 private fun SignInSection(state: AccountState) {
+  Column(
+    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 24.dp),
+    horizontalAlignment = Alignment.CenterHorizontally,
+    verticalArrangement = Arrangement.spacedBy(8.dp),
+  ) {
+    Text(
+      stringResource(R.string.account_sign_in_title),
+      style = MaterialTheme.typography.titleLarge,
+      textAlign = TextAlign.Center,
+    )
+    Text(
+      stringResource(R.string.account_sign_in_body),
+      style = MaterialTheme.typography.bodyMedium,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      textAlign = TextAlign.Center,
+    )
+    Spacer(Modifier.size(16.dp))
+    SignInButtons(state)
+  }
+  Footnote(
+    stringResource(
+      when (state) {
+        is AccountState.SignedIn, is AccountState.Changing -> R.string.account_sign_in_note
+        // Neither erasing nor an ended session shows this page (AccountRoot).
+        AccountState.SigningIn, is AccountState.Erasing, AccountState.SessionEnded -> R.string.account_sign_in_offline
+      }
+    )
+  )
+}
+
+/**
+ * Appleで続ける and Googleで続ける, as iOS's SignInButtons, for アカウント and はじめの設定's ログイン,
+ * ready once the device has its session: one path for Apple and Google (spec/sync-protocol.md,
+ * Signing in; Switching to an account in use). Either links the provider's account to this user, or,
+ * when it is another user's already, keeps one side, asking which only when both hold something;
+ * [onSignedIn] hears which, once done.
+ */
+@Composable
+fun SignInButtons(state: AccountState, onSignedIn: suspend (SignInResult) -> Unit = {}) {
   val signedIn = state is AccountState.SignedIn
   val account = LocalAccount.current
   val apple = LocalAppleSignIn.current
@@ -174,26 +208,13 @@ private fun SignInSection(state: AccountState) {
   }
   fun signIn(provider: LinkedAccount.Provider, providerToken: suspend () -> ProviderToken?) =
     run(provider) {
-      val result = providerToken()?.let { account.signIn(it) }
-      if (result is SignInResult.Choose) choosing = result.inUse
+      when (val result = providerToken()?.let { account.signIn(it) }) {
+        is SignInResult.Choose -> choosing = result.inUse
+        null -> Unit
+        else -> onSignedIn(result)
+      }
     }
-  Column(
-    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 24.dp),
-    horizontalAlignment = Alignment.CenterHorizontally,
-    verticalArrangement = Arrangement.spacedBy(8.dp),
-  ) {
-    Text(
-      stringResource(R.string.account_sign_in_title),
-      style = MaterialTheme.typography.titleLarge,
-      textAlign = TextAlign.Center,
-    )
-    Text(
-      stringResource(R.string.account_sign_in_body),
-      style = MaterialTheme.typography.bodyMedium,
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-      textAlign = TextAlign.Center,
-    )
-    Spacer(Modifier.size(16.dp))
+  Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
     AppleButton(enabled = signedIn, busy = busy == LinkedAccount.Provider.Apple) {
       signIn(LinkedAccount.Provider.Apple) { apple.signIn() }
     }
@@ -201,15 +222,6 @@ private fun SignInSection(state: AccountState) {
       signIn(LinkedAccount.Provider.Google) { signInWithGoogle(context) }
     }
   }
-  Footnote(
-    stringResource(
-      when (state) {
-        is AccountState.SignedIn, is AccountState.Changing -> R.string.account_sign_in_note
-        // Neither erasing nor an ended session shows this page (AccountRoot).
-        AccountState.SigningIn, is AccountState.Erasing, AccountState.SessionEnded -> R.string.account_sign_in_offline
-      }
-    )
-  )
   choosing?.let { inUse ->
     val provider = inUse.token.provider
     AlertDialog(
@@ -227,7 +239,10 @@ private fun SignInSection(state: AccountState) {
           TextButton(
             onClick = {
               choosing = null
-              run(provider) { account.useAccount(inUse) }
+              run(provider) {
+                account.useAccount(inUse)
+                onSignedIn(SignInResult.Switched)
+              }
             }
           ) {
             Text(stringResource(R.string.account_use_account))
@@ -235,7 +250,10 @@ private fun SignInSection(state: AccountState) {
           TextButton(
             onClick = {
               choosing = null
-              run(provider) { account.keepDevice(inUse) }
+              run(provider) {
+                account.keepDevice(inUse)
+                onSignedIn(SignInResult.Linked)
+              }
             }
           ) {
             Text(stringResource(R.string.account_keep_device))

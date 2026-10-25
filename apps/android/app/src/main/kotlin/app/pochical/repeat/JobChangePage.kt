@@ -72,10 +72,10 @@ private sealed interface JobStep {
 
 private val templates = ReadyPatterns.rosterTemplates + ReadyPatterns.rotationTemplates
 
-private fun template(id: String): JobTemplate = templates.first { it.id == id }
+internal fun jobTemplate(id: String): JobTemplate = templates.first { it.id == id }
 
 /** The ready-made patterns by id, as the questions show them. */
-private val readyById = readyCopies(ReadyPatterns.all.map { it.id }).associate { it.id to it.pattern }
+internal val readyById = readyCopies(ReadyPatterns.all.map { it.id }).associate { it.id to it.pattern }
 
 /**
  * 設定 › シフトパターン › 新しい仕事にする (/design's JobChangePage; spec/shift-patterns.md, Changing
@@ -128,7 +128,7 @@ fun JobChangePage(navigation: PageNavigation) {
   }
 
   if (step is JobStep.Order) {
-    val template = template(step.template)
+    val template = jobTemplate(step.template)
     val firstName = template.sequence?.firstOrNull()?.let { readyById[it]?.name }
     SettingsPage(
       if (template.custom || firstName == null) stringResource(R.string.job_order_title) else stringResource(R.string.job_order_title_first, firstName),
@@ -203,7 +203,7 @@ fun JobChangePage(navigation: PageNavigation) {
           }
         }
         is JobStep.Patterns -> {
-          val template = template(step.template)
+          val template = jobTemplate(step.template)
           // Those in the kind of work's order stay picked, as the order needs them.
           val needed = if (template.custom) emptySet() else template.sequence.orEmpty().toSet()
           item {

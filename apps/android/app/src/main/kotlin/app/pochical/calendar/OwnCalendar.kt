@@ -146,6 +146,12 @@ interface OwnDays {
    */
   suspend fun changeJob(ids: List<String>, sequence: List<String>, start: LocalDate, anchor: LocalDate)
 
+  /**
+   * はじめの設定: the ready-made patterns `ids` become the person's, and `sequence`, when there is
+   * one, repeats counted from `anchor`, the days just past showing it too.
+   */
+  suspend fun begin(ids: List<String>, sequence: List<String>, anchor: LocalDate)
+
   /** Keeps `note` as the day's memo; "" clears it, leaving the shift. */
   fun setNote(day: LocalDate, note: String)
 
