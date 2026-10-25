@@ -6,13 +6,11 @@ import org.junit.Test
 
 /** When the apps may ask for a review (spec/review.md), as spec/vectors/review.json pins it. */
 class ReviewTest {
-  @Serializable private data class Asked(val day: String, val version: String)
-
   @Serializable
   private data class Case(
     override val name: String,
     val opened: List<String>,
-    val lastAsked: Asked? = null,
+    val lastAsked: ReviewHistory.Ask? = null,
     val version: String,
     val troubled: Boolean,
     val expected: Boolean,
@@ -26,7 +24,7 @@ class ReviewTest {
       var history: ReviewHistory? = null
       for (day in case.opened) history = ReviewHistory.opened(history, LocalDate.parse(day))
       val today = LocalDate.parse(case.opened.last())
-      val kept = case.lastAsked?.let { history!!.copy(lastAsked = ReviewHistory.Ask(it.day, it.version)) } ?: history!!
+      val kept = history!!.copy(lastAsked = case.lastAsked)
       kept.mayAsk(today, case.version, case.troubled)
     }
   }

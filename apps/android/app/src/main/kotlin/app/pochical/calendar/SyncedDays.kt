@@ -1,5 +1,7 @@
 package app.pochical.calendar
 
+import android.util.Log
+import app.pochical.ReviewPrompt
 import app.pochical.kit.AppDatabase
 import app.pochical.kit.CoworkerRow
 import app.pochical.kit.OwnCalendar as KitCalendar
@@ -20,6 +22,7 @@ import app.pochical.kit.time
 import app.pochical.v1.DayField
 import app.pochical.v1.pattern
 import java.time.LocalDate
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
@@ -56,7 +59,19 @@ class SyncedDays(private val database: AppDatabase, private val edits: OwnEdits,
   private val writes = Channel<suspend () -> Unit>(Channel.UNLIMITED)
 
   init {
-    scope.launch { for (write in writes) write() }
+    scope.launch {
+      for (write in writes) {
+        try {
+          write()
+        } catch (e: CancellationException) {
+          throw e
+        } catch (e: Exception) {
+          // Not kept: said to the review prompt, which waits (spec/review.md), and the next goes on.
+          Log.w("PochicalDays", "A day's edit was not kept: $e")
+          ReviewPrompt.troubled = true
+        }
+      }
+    }
   }
 
   private val edited = MutableStateFlow(0)

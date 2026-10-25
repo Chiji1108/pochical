@@ -23,7 +23,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import app.pochical.R
-import app.pochical.ReviewPrompt
 import app.pochical.kit.GroupMemberRow
 import app.pochical.kit.GroupRow
 
@@ -80,8 +79,6 @@ fun members(groupId: String): List<GroupMemberRow> {
 /** Something the person asked for did not go through: [title], and to try again online. */
 @Composable
 fun FailedDialog(title: String, onDismiss: () -> Unit) {
-  // Something went wrong: no review is asked for until the app next comes to the front.
-  LaunchedEffect(Unit) { ReviewPrompt.troubled = true }
   AlertDialog(
     onDismissRequest = onDismiss,
     title = { Text(title) },
