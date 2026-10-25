@@ -129,9 +129,16 @@ private val SCREEN_EDGE = 16.dp
  * day opened from it under its week, and ポチポチ入力 under the month
  * (spec/calendar.md, The month, A day's detail and ポチポチ入力).
  * `hidesTabBar` says when a day or the tray takes the tab bar's place.
+ * `opening` is a day a link asks to open, as a tap on it does (spec/widgets.md,
+ * Opening the app), taken with `onOpening`.
  */
 @Composable
-fun CalendarScreen(open: (RootPage) -> Unit, hidesTabBar: (Boolean) -> Unit) {
+fun CalendarScreen(
+  open: (RootPage) -> Unit,
+  hidesTabBar: (Boolean) -> Unit,
+  opening: LocalDate? = null,
+  onOpening: () -> Unit = {},
+) {
   val days = LocalOwnDays.current
   val calendar by days.calendar.collectAsStateWithLifecycle()
   val week = LocalDeviceSettings.current.device.week
@@ -221,9 +228,9 @@ fun CalendarScreen(open: (RootPage) -> Unit, hidesTabBar: (Boolean) -> Unit) {
 
   // Only a day the pages show opens, so no week is asked for past them.
   val reachable = range.days(week.start)
-  fun openDay(day: LocalDate) {
+  fun openDay(day: LocalDate, from: YearMonth = folded) {
     if (day !in reachable) return
-    foldedKey = monthShowing(day, folded).toString()
+    foldedKey = monthShowing(day, from).toString()
     openedKey = day.toString()
     scope.launch { if (reduceMotion) fold.snapTo(1f) else fold.animateTo(1f, Springs.standard()) }
   }
@@ -269,6 +276,21 @@ fun CalendarScreen(open: (RootPage) -> Unit, hidesTabBar: (Boolean) -> Unit) {
     }
   }
   BackHandler(enabled = entering != null, onBack = ::finish)
+
+  // A day a link opens: on its month, opened as a tap opens it, or entered next while entering.
+  LaunchedEffect(opening) {
+    val day = opening ?: return@LaunchedEffect
+    if (entering != null) {
+      selectDay(day)
+    } else if (day in reachable) {
+      // The month is asked of the pages, which take it as they are next laid out: with a day open,
+      // its week shows in their place, and they are not laid out until it folds back.
+      pager.requestScrollToPage(range.pageOf(YearMonth.from(day)))
+      openDay(day, from = YearMonth.from(day))
+    }
+    // Taken once the day is picked, nothing above waiting on the pages.
+    onOpening()
+  }
 
   // A month swiped to while entering starts on its first blank day.
   LaunchedEffect(pager.settledPage, entering != null) {

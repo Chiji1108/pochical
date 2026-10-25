@@ -2,7 +2,9 @@ package app.pochical.calendar
 
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
@@ -10,6 +12,7 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -74,6 +77,34 @@ class CalendarScreenTest {
   }
 
   private fun heading(month: YearMonth) = month.yearMonthText
+
+  @Test
+  fun aLinkedDayOpensOverADayRestoredOpen() {
+    val settings = DeviceSettings()
+    val restoration = StateRestorationTester(compose)
+    var opening by mutableStateOf<LocalDate?>(null)
+    restoration.setContent {
+      CompositionLocalProvider(
+        LocalDeviceSettings provides DeviceSettingsState(settings) {},
+        LocalOwnDays provides days,
+        LocalNotificationAsking provides asking,
+      ) {
+        PochicalTheme(settings) {
+          CalendarScreen(open = { opened += it }, hidesTabBar = { tabBarHidden = it }, opening = opening, onOpening = { opening = null })
+        }
+      }
+    }
+    tap(today.withDayOfMonth(8))
+    // Made again with the day open: its week shows, and the month's pages are not laid out.
+    restoration.emulateSavedInstanceStateRestore()
+    val linked = today.plusMonths(2).withDayOfMonth(3)
+    opening = linked
+    compose.waitForIdle()
+    assertNull("the link is taken", opening)
+    compose.onNodeWithText(linked.fullText).assertIsDisplayed()
+    back()
+    compose.onNodeWithContentDescription(heading(YearMonth.from(linked))).assertIsDisplayed()
+  }
 
   /** Taps `day`'s cell on the month shown. */
   private fun tap(day: LocalDate) {

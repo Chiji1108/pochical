@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -179,13 +180,16 @@ class ChatNotifier(
       .build()
   }
 
-  /** What a tap opens: the app at the notification's chat (OpenedLinks), one intent a chat. */
+  /** What a tap opens: the app at the notification's chat (OpenedLinks), one intent a chat, telling it to let the notification go. */
   private fun opening(alert: PushedAlert): PendingIntent =
     PendingIntent.getActivity(
       context,
       0,
       Intent(context, MainActivity::class.java)
         .setAction(ACTION_OPEN_CHAT)
+        // Until Android has the chats, a group's opens the group (AppLink.Group), and Pochical's
+        // people's the app as it was.
+        .setData(if (alert.groupId == Chat.supportPlace) null else Uri.parse("pochical://group/${Uri.encode(alert.groupId)}"))
         .setIdentifier(tagOf(alert.groupId, alert.threadId))
         .putExtra(EXTRA_GROUP_ID, alert.groupId)
         .putExtra(EXTRA_THREAD_ID, alert.threadId),

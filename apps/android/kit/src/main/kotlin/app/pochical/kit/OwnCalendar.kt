@@ -1,5 +1,6 @@
 package app.pochical.kit
 
+import app.pochical.design.Days
 import java.time.LocalDate
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -29,6 +30,13 @@ class OwnCalendar(
 
   /** Whether the person set the day's shift themselves, a cleared one too, which stays over any order. */
   fun hasOwnShift(day: LocalDate): Boolean = own[day]?.shift != null
+
+  /**
+   * Whether the person has entered any day yet, of their own or by a repeating order: the widgets
+   * say where their days will come from until then (spec/widgets.md, Entry).
+   */
+  val hasEnteredDays: Boolean
+    get() = own.values.any { it.shift != null && it.shift != Days.noShift } || orders.any { it.sequence.isNotEmpty() }
 
   /** The day's memo, its own whether it has a shift or not. */
   fun note(day: LocalDate): String? = own[day]?.note

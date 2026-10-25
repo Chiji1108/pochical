@@ -6,7 +6,6 @@ import app.pochical.kit.AccountState
 import app.pochical.kit.PochicalKit
 import app.pochical.kit.Pushed
 import app.pochical.kit.pushedOf
-import com.google.firebase.FirebaseApp
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -20,8 +19,7 @@ import kotlinx.coroutines.tasks.await
 /**
  * The app's notifications from the server (spec/sync-protocol.md, Push), through Firebase Cloud
  * Messaging: the channels, the device's token kept by the server, what the system lets the app
- * show, and the notifications shown. A build with no Firebase project (no google-services.json, as
- * on CI) runs the same, and hears nothing.
+ * show, and the notifications shown.
  */
 class Push(
   private val application: Application,
@@ -46,14 +44,11 @@ class Push(
     Channels.create(application)
     // The server sends to the device's token only while the app may show what it sends.
     scope.launch { permission.allowed.collect(tokens::allowed) }
-    if (hasFirebase) askToken() else Log.i(TAG, "No Firebase project in this build: no notifications from the server")
+    askToken()
     // The device letting go of a user (spec/sync-protocol.md, Sockets): the notifications of the
     // user before go with their data.
     scope.launch { lettingGo(states).collect { notifier.forgetAll() } }
   }
-
-  private val hasFirebase
-    get() = FirebaseApp.getApps(application).isNotEmpty()
 
   /** Asks FCM for the device's token; one not given is asked for again as the app comes to the front. */
   private fun askToken() {
@@ -83,7 +78,7 @@ class Push(
   /** The app came to the front. */
   fun foreground() {
     permission.read()
-    if (hasFirebase && !tokens.hasToken) askToken()
+    if (!tokens.hasToken) askToken()
     tokens.foreground()
   }
 
