@@ -41,6 +41,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.HorizontalDivider
 import app.pochical.notifications.rememberChatMuting
+import app.pochical.notifications.rememberChatNotifications
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -689,9 +690,7 @@ private fun ChatScaffold(
   val title = other?.shownName() ?: if (support) stringResource(R.string.app_name) else groups.firstOrNull { it.id == groupId }?.name.orEmpty()
   val count = members.count { !it.left }
   val status = rememberSocketWords(socket)
-  val values = LocalValues.current
-  val mutes by remember(values) { values.chatMutes() }.collectAsState(emptyList())
-  val muted = mutes.any { it.groupId == groupId && it.threadId == threadId }
+  val muted = rememberChatNotifications().isMuted(groupId, threadId)
   val setMuted = rememberChatMuting(groupId, threadId, say)
   Scaffold(
     topBar = {

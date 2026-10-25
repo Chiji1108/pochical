@@ -7,6 +7,7 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -295,15 +296,17 @@ class ChatNotifier(
 val LocalChatNotifier = staticCompositionLocalOf<ChatNotifier?> { null }
 
 /**
- * Tells the notifications that the chat is on the screen while this page is in front (resumed), so
- * its lines are not notified as the person sees them come: not while a page over it, the system's
- * shade or another app is.
+ * Tells the notifications that the chat is on the screen while this page is in front, so its lines
+ * are not notified as the person sees them come: resumed, and its window focused. A page over it or
+ * another app pauses it; the system's shade, or a window over it, leaves it resumed but takes the
+ * focus.
  */
 @Composable
 fun ShowingChat(groupId: String, threadId: String) {
   val notifier = LocalChatNotifier.current ?: return
-  LifecycleResumeEffect(notifier, groupId, threadId) {
-    notifier.onScreen(groupId, threadId)
+  val focused = LocalWindowInfo.current.isWindowFocused
+  LifecycleResumeEffect(notifier, groupId, threadId, focused) {
+    if (focused) notifier.onScreen(groupId, threadId)
     onPauseOrDispose { notifier.offScreen(groupId, threadId) }
   }
 }

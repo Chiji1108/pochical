@@ -32,6 +32,7 @@ import app.pochical.notifications.rememberNotificationAsking
 import app.pochical.notifications.NotificationPermission
 import app.pochical.notifications.ChatNotifier
 import app.pochical.notifications.LocalChatNotifier
+import app.pochical.notifications.LocalChatNotificationSwitches
 import app.pochical.notifications.Push
 import app.pochical.reminders.LocalReminderAlarms
 import app.pochical.reminders.ReminderAlarms
@@ -99,6 +100,7 @@ class MainActivity(
         LocalNotificationPermission provides notificationPermission,
         LocalReminderAlarms provides reminderAlarms,
         LocalChatNotifier provides push.notifier,
+        LocalChatNotificationSwitches provides kit.chatNotifications,
       ) {
         // Asked from here, under every page, so an answer reaches the app after its page closed.
         CompositionLocalProvider(LocalNotificationAsking provides rememberNotificationAsking()) {

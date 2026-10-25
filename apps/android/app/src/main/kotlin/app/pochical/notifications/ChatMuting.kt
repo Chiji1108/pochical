@@ -1,87 +1,98 @@
 package app.pochical.notifications
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Stable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalResources
 import app.pochical.R
-import app.pochical.groups.LocalGroupCalls
+import app.pochical.kit.ChatNotificationState
+import app.pochical.kit.ChatNotificationSwitches
 import kotlin.coroutines.cancellation.CancellationException
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 // A chat's notifications turned off and on (spec/chat.md, Notifications), kept by the server: the
-// device hears of each as a ChatMute change on the user's socket, as their other devices do.
+// device hears of each as a ChatMute change on the user's socket, as their other devices do, and
+// shows what the user asked for until it does (ChatNotificationSwitches).
+
+/** The chats' notifications as their switches show them, for the screens: the kit's, at the root. */
+val LocalChatNotificationSwitches =
+  staticCompositionLocalOf<ChatNotificationSwitches> { error("No chat notifications above this screen") }
+
+/** The user's chat notifications as the switches show them, read again as they change. */
+@Composable
+fun rememberChatNotifications(): ChatNotificationState {
+  val switches = LocalChatNotificationSwitches.current
+  val state by remember(switches) { switches.state }.collectAsState(ChatNotificationState())
+  return state
+}
 
 /**
- * Turns the chat's notifications off or on from its ⋯, and [say]s how it went. Turned on, it asks
- * for the system's permission first, if never asked.
+ * Turning a chat's notifications off and on, and メンションはいつも通知, for a screen: shown at once,
+ * the system's permission asked first as a chat is turned on if never asked, and [failed] told
+ * should the server not keep it.
  */
+class ChatSwitching(
+  /** Turns the chat off ([muted]) or on, then says how it went: whether the server kept it. */
+  val setMuted: (groupId: String, threadId: String, muted: Boolean, done: (kept: Boolean) -> Unit) -> Unit,
+  /** Sets メンションはいつも通知, then says whether the server kept it. */
+  val setMentionsWhenMuted: (on: Boolean, done: (kept: Boolean) -> Unit) -> Unit,
+)
+
+/** [ChatSwitching] for the screen it is in, its calls outliving a recomposition but not the screen. */
 @Composable
-fun rememberChatMuting(groupId: String, threadId: String, say: (String) -> Unit): (muted: Boolean) -> Unit {
-  val calls = LocalGroupCalls.current
+fun rememberChatSwitching(): ChatSwitching {
+  val switches = LocalChatNotificationSwitches.current
   val asking = LocalNotificationAsking.current
-  val resources = LocalResources.current
   val scope = rememberCoroutineScope()
-  val saying by rememberUpdatedState(say)
-  return remember(calls, asking, resources, scope, groupId, threadId) {
-    { muted ->
-      if (!muted && asking.notAsked) asking.ask()
+  return remember(switches, asking, scope) {
+    fun launch(send: suspend () -> Unit, done: (Boolean) -> Unit) {
       scope.launch {
-        val said =
+        val kept =
           try {
-            calls.setChatMuted(groupId, threadId, muted)
-            resources.getString(if (muted) R.string.chat_muted_said else R.string.chat_unmuted_said)
+            send()
+            true
           } catch (e: CancellationException) {
             throw e
           } catch (_: Exception) {
-            resources.getString(R.string.block_failed)
+            false
           }
-        saying(said)
+        done(kept)
       }
     }
+    ChatSwitching(
+      setMuted = { groupId, threadId, muted, done ->
+        // Turned on, the system's question first, if never put (spec/chat.md, Notifications).
+        if (!muted && asking.notAsked) asking.ask()
+        launch({ switches.setMuted(groupId, threadId, muted) }, done)
+      },
+      setMentionsWhenMuted = { on, done -> launch({ switches.setMentionsWhenMuted(on) }, done) },
+    )
   }
 }
 
-/**
- * Switches the server keeps, as 設定 › 通知 › チャット turns them, as iOS's ServerToggle: each shows as
- * turned at once, until the device hears otherwise than it had (the server's word coming back on
- * the user's socket, or another device's), and goes back should the server not keep it.
- */
-@Stable
-class ServerSwitches internal constructor(private val scope: CoroutineScope, private val failed: () -> Unit) {
-  /** A switch as turned, and what the device had heard as it was. */
-  private data class Turned(val on: Boolean, val heard: Boolean)
-
-  private val turned = mutableStateMapOf<Any, Turned>()
-
-  /** Whether [key]'s switch shows on, the device having heard [heard]. */
-  fun on(key: Any, heard: Boolean): Boolean = turned[key]?.takeIf { it.heard == heard }?.on ?: heard
-
-  /** Turns [key]'s switch [on] from [heard], [send]ing it to the server. */
-  fun turn(key: Any, on: Boolean, heard: Boolean, send: suspend () -> Unit) {
-    turned[key] = Turned(on, heard)
-    scope.launch {
-      try {
-        send()
-      } catch (e: CancellationException) {
-        throw e
-      } catch (_: Exception) {
-        turned.remove(key)
-        failed()
-      }
-    }
-  }
-}
-
-/** [ServerSwitches] for a page, [failed] told of a switch the server did not keep. */
+/** Turns the chat's notifications off or on from its ⋯, and [say]s how it went. */
 @Composable
-fun rememberServerSwitches(failed: () -> Unit): ServerSwitches {
-  val scope = rememberCoroutineScope()
-  val failing by rememberUpdatedState(failed)
-  return remember(scope) { ServerSwitches(scope) { failing() } }
+fun rememberChatMuting(groupId: String, threadId: String, say: (String) -> Unit): (muted: Boolean) -> Unit {
+  val switching = rememberChatSwitching()
+  val resources = LocalResources.current
+  val saying by rememberUpdatedState(say)
+  return remember(switching, resources, groupId, threadId) {
+    { muted ->
+      switching.setMuted(groupId, threadId, muted) { kept ->
+        saying(
+          resources.getString(
+            when {
+              !kept -> R.string.block_failed
+              muted -> R.string.chat_muted_said
+              else -> R.string.chat_unmuted_said
+            }
+          )
+        )
+      }
+    }
+  }
 }
