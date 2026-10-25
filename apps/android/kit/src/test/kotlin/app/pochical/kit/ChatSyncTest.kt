@@ -527,15 +527,11 @@ class ChatValuesTest {
     }
     val counted = chats.summary("g1", GROUP_THREAD, "me").first()
     assertTrue(counted.mentioned)
-    assertFalse(counted.muted)
 
     // Read past the mention, the read still waiting: counted on the device, with no mention left.
     chats.read("g1", GROUP_THREAD, "me", 1)
     val read = chats.summary("g1", GROUP_THREAD, "me").first()
     assertEquals(1, read.unread)
     assertFalse(read.mentioned)
-
-    database.write { take(listOf(change { chatMute = chatMute { groupId = "g1"; threadId = GROUP_THREAD; muted = true } })) }
-    assertTrue(chats.summary("g1", GROUP_THREAD, "me").first().muted)
   }
 }

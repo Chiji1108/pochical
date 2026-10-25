@@ -46,39 +46,162 @@ import app.pochical.LocalDeviceSettings
 import app.pochical.R
 import app.pochical.RootPage
 import app.pochical.SettingsPage
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.Saver
+import app.pochical.kit.ChatNotificationState
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
+import app.pochical.Footnote
+import app.pochical.SectionHeader
+import app.pochical.chat.blockedMembers
+import app.pochical.chat.rememberBlockedPeople
+import app.pochical.chat.rememberUnblocking
+import app.pochical.chat.shownName
+import app.pochical.groups.GroupMarkBadge
+import app.pochical.groups.LocalValues
+import app.pochical.groups.MemberAvatar
+import app.pochical.groups.rememberMeId
+import app.pochical.kit.ChatKey
+import app.pochical.kit.ChatNotificationsSummary
+import app.pochical.kit.GROUP_THREAD
+import app.pochical.kit.PhotoShelf
+import app.pochical.kit.chatNotificationsSummary
+import app.pochical.kit.otherIn
+import kotlinx.coroutines.launch
 
-/** 設定 › 通知 › チャット's row: オン while the app may notify, オフ otherwise. */
+/** 設定 › 通知 › チャット's row, its value as iOS's (spec/vectors/unread.json, notificationsSummary). */
 @Composable
 fun ChatNotificationsRow(open: (RootPage) -> Unit) {
   val allowed by LocalNotificationPermission.current.allowed.collectAsStateWithLifecycle()
+  val values = LocalValues.current
+  val groups by remember(values) { values.groups() }.collectAsState(emptyList())
+  // Its value once the device has read the switches, never a guess before.
+  val summary = rememberChatNotifications()?.let { chatNotificationsSummary(groups.map { it.id }, it, allowed) }
   ListItem(
     headlineContent = { Text(stringResource(R.string.notifications_chat)) },
-    supportingContent = { Text(stringResource(if (allowed) R.string.notifications_on else R.string.notifications_off)) },
+    supportingContent = {
+      Text(
+        when (summary) {
+          null -> ""
+          ChatNotificationsSummary.On -> stringResource(R.string.notifications_on)
+          ChatNotificationsSummary.Off -> stringResource(R.string.notifications_off)
+          is ChatNotificationsSummary.Groups -> stringResource(R.string.notifications_groups, summary.count)
+        }
+      )
+    },
     modifier = Modifier.clickable { open(RootPage.ChatNotifications) },
   )
 }
 
 /**
- * 設定 › 通知 › チャット (spec/chat.md, Notifications; /design's ChatNotificationsPage): the card
- * that asks for notifications while the app may not show them, and the system's settings, where
- * Android keeps each channel's sound and look.
+ * 設定 › 通知 › チャット (spec/chat.md, Notifications; /design's and iOS's ChatNotificationsPage): the
+ * card that asks for notifications while the app may not show them; each group's chat's switch;
+ * the one-to-one chats turned off as the page opened, to turn back on; メンションはいつも通知; whom the
+ * user has blocked, to unblock; and the system's settings, where Android keeps each channel's sound
+ * and look.
  */
 @Composable
 fun ChatNotificationsPage(onBack: () -> Unit) {
   val context = LocalContext.current
+  val values = LocalValues.current
+  val groups by remember(values) { values.groups() }.collectAsState(emptyList())
+  val members by remember(values) { values.allMembers() }.collectAsState(emptyList())
+  val read = rememberChatNotifications()
+  val me = rememberMeId()
+  val snackbar = remember { SnackbarHostState() }
+  val scope = rememberCoroutineScope()
+  val failed = stringResource(R.string.notifications_change_failed)
+  val switching = rememberChatSwitching()
+  // Shown as turned at once (ChatNotificationSwitches); said should the server not keep it.
+  val done = { kept: Boolean -> if (!kept) scope.launch { snackbar.showSnackbar(failed) } }
+  // The one-to-one chats turned off as the page opened, as the switches show them: one turned on
+  // again stays, to turn off again here. Read once they are, and kept while the page is.
+  var directOff by rememberSaveable(stateSaver = chatKeysSaver) { mutableStateOf<List<ChatKey>?>(null) }
+  LaunchedEffect(read) {
+    if (directOff == null && read != null) directOff = read.muted.filter { it.threadId != GROUP_THREAD }.sortedBy { it.threadId }
+  }
+  // Nothing of the switches is shown until they are read, so none shows what it is not.
+  val notifications = read ?: ChatNotificationState()
+  val chatSwitch = { groupId: String, threadId: String ->
+    ChatSwitch(!notifications.isMuted(groupId, threadId)) { on -> switching.setMuted(groupId, threadId, !on) { done(it) } }
+  }
+  val blocked = rememberBlockedPeople()
+  val unblock = rememberUnblocking(snackbar)
   SettingsPage(title = stringResource(R.string.notifications_chat), onBack = onBack) { padding ->
-    LazyColumn(contentPadding = padding) {
-      item { PermissionCard() }
-      item {
-        ListItem(
-          headlineContent = { Text(stringResource(R.string.notifications_system)) },
-          supportingContent = { Text(stringResource(R.string.notifications_system_about)) },
-          modifier = Modifier.clickable { context.startActivity(systemSettings(context.packageName)) },
-        )
+    Box(Modifier.padding(padding).fillMaxSize()) {
+      LazyColumn {
+        item { PermissionCard() }
+        item { SectionHeader(stringResource(R.string.notifications_group_chats)) }
+        items(if (read == null) emptyList() else groups, key = { "group-${it.id}" }) { group ->
+          SwitchRow(chatSwitch(group.id, GROUP_THREAD), headline = group.name) {
+            GroupMarkBadge(group.mark, shelf = PhotoShelf.Group(group.id))
+          }
+        }
+        if (read?.mentionsWhenMuted == true) item { Footnote(stringResource(R.string.notifications_group_chats_note)) }
+        item { SectionHeader(stringResource(R.string.notifications_direct_chats)) }
+        items(directOff.orEmpty(), key = { "direct-${it.groupId}-${it.threadId}" }) { chat ->
+          val group = groups.firstOrNull { it.id == chat.groupId }
+          val other = me?.let { otherIn(chat.threadId, it) }
+          val person = members.firstOrNull { it.groupId == chat.groupId && it.userId == other }
+          val name = person?.shownName() ?: stringResource(R.string.blocked_someone)
+          SwitchRow(chatSwitch(chat.groupId, chat.threadId), headline = name, supporting = group?.name) {
+            MemberAvatar(name, person?.photoId.orEmpty(), PhotoShelf.Group(chat.groupId), 40.dp)
+          }
+        }
+        item { Footnote(stringResource(R.string.notifications_direct_chats_note)) }
+        item { SectionHeader(stringResource(R.string.notifications_mentions)) }
+        if (read != null) item {
+          SwitchRow(
+            ChatSwitch(notifications.mentionsWhenMuted) { on -> switching.setMentionsWhenMuted(on) { done(it) } },
+            headline = stringResource(R.string.notifications_mentions_always),
+            supporting = stringResource(R.string.notifications_mentions_always_about),
+          )
+        }
+        blockedMembers(blocked, unblock)
+        item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
+        item {
+          ListItem(
+            headlineContent = { Text(stringResource(R.string.notifications_system)) },
+            supportingContent = { Text(stringResource(R.string.notifications_system_about)) },
+            modifier = Modifier.clickable { context.startActivity(systemSettings(context.packageName)) },
+          )
+        }
       }
+      SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
     }
   }
 }
+
+/** A switch as shown, and what turning it does. */
+private class ChatSwitch(val on: Boolean, val turn: (Boolean) -> Unit)
+
+/** A row its switch turns on and off, the whole row toggling it as Material's lists do. */
+@Composable
+private fun SwitchRow(switch: ChatSwitch, headline: String, supporting: String? = null, leading: (@Composable () -> Unit)? = null) {
+  ListItem(
+    headlineContent = { Text(headline, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+    supportingContent = supporting?.takeIf { it.isNotEmpty() }?.let { { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
+    leadingContent = leading,
+    trailingContent = { Switch(checked = switch.on, onCheckedChange = null) },
+    modifier = Modifier.toggleable(value = switch.on, role = Role.Switch, onValueChange = switch.turn),
+  )
+}
+
+/** The one-to-one chats turned off as the page opened, kept across the process's death; none kept before they are read. */
+private val chatKeysSaver =
+  Saver<List<ChatKey>?, ArrayList<String>>(
+    save = { keys -> keys?.flatMapTo(ArrayList()) { listOf(it.groupId, it.threadId) } },
+    restore = { saved -> saved.chunked(2).map { (groupId, threadId) -> ChatKey(groupId, threadId) } },
+  )
 
 /**
  * Over the notification settings while Pochical may not notify (/design's PermissionCard): a way

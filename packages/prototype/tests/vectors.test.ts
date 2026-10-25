@@ -120,6 +120,8 @@ import {
 import type { OwnDays, Period, Schedule } from "../src/lib/design-days";
 import {
   chatKey,
+  chatNotificationsSummary,
+  groupChat,
   groupsUnread,
   togetherIn,
 } from "../src/lib/design-group-data";
@@ -903,6 +905,23 @@ describe("spec/vectors/unread.json", () => {
         return { id, mutedChats };
       });
       expect(groupsUnread(chats, summaries, mentionsWhenMuted)).toBe(expected);
+    });
+  }
+
+  for (const {
+    name,
+    allowed,
+    groups,
+    expected,
+  } of unread.notificationsSummary) {
+    test(name, () => {
+      const summaries = groups.map((group) => ({
+        mutedChats: [
+          ...(group.muted ? [groupChat] : []),
+          ...(group.directMuted ? ["yuki"] : []),
+        ],
+      }));
+      expect(chatNotificationsSummary(summaries, allowed)).toBe(expected);
     });
   }
 });

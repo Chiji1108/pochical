@@ -37,6 +37,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.HorizontalDivider
+import app.pochical.notifications.rememberChatMuting
+import app.pochical.notifications.rememberChatNotifications
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -218,7 +223,11 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit, open: (RootP
       else -> null
     }
   // While the chat is read, its title opens nothing yet: the sheets come with the chat.
-  val chat = state ?: return ChatScaffold(groupId, threadId, support, members, groups, socket, onBack, onPhotos, onTitle = null) {}
+  // Said over the chat: what a menu's choice did, from its ⋯ too.
+  val snackbar = remember { SnackbarHostState() }
+  val scope = rememberCoroutineScope()
+  val say = remember(snackbar, scope) { { said: String -> scope.launch { snackbar.showSnackbar(said) }; Unit } }
+  val chat = state ?: return ChatScaffold(groupId, threadId, support, members, groups, socket, onBack, onPhotos, say, onTitle = null) {}
 
   val blockedIds = remember(blocked) { blocked.map { it.userId }.toSet() }
   // Blocked members' lines in the place's own chat, folded but those shown this once, by seq.
@@ -355,9 +364,7 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit, open: (RootP
   var notKept by remember { mutableStateOf(false) }
   val composer = rememberComposerState()
   val menu = rememberLineMenuState()
-  val snackbar = remember { SnackbarHostState() }
   val reducedMotion = rememberReducedMotion()
-  val scope = rememberCoroutineScope()
   val deleted = stringResource(R.string.deleted_account)
   val nameOf = remember(writers, deleted) { { id: String -> writers[id]?.shownName(deleted) ?: deleted } }
 
@@ -532,7 +539,7 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit, open: (RootP
       showFolded = { seq -> shownBlocked = shownBlocked + seq },
     )
   Box {
-    ChatScaffold(groupId, threadId, support, members, groups, socket, onBack, onPhotos, onTitle) {
+    ChatScaffold(groupId, threadId, support, members, groups, socket, onBack, onPhotos, say, onTitle) {
       Column(Modifier.fillMaxSize().imePadding()) {
         Box(Modifier.weight(1f).fillMaxWidth()) {
           // What floats over the lines' top keeps its room there, so the first of them scrolls out from under it.
@@ -671,6 +678,8 @@ private fun ChatScaffold(
   onBack: () -> Unit,
   /** 写真 in its ⋯: the chat's photos alone. */
   onPhotos: () -> Unit,
+  /** Says what its ⋯ did, over the chat. */
+  say: (String) -> Unit,
   /** A tap on the title: what the chat is of; null while it opens nothing. */
   onTitle: (() -> Unit)?,
   content: @Composable () -> Unit,
@@ -681,13 +690,26 @@ private fun ChatScaffold(
   val title = other?.shownName() ?: if (support) stringResource(R.string.app_name) else groups.firstOrNull { it.id == groupId }?.name.orEmpty()
   val count = members.count { !it.left }
   val status = rememberSocketWords(socket)
+  val muted = rememberChatNotifications()?.isMuted(groupId, threadId)
+  val setMuted = rememberChatMuting(groupId, threadId, say)
   Scaffold(
     topBar = {
       TopAppBar(
         title = {
           val opens = onTitle?.let { stringResource(if (other != null) R.string.profile else R.string.group_settings) }
           Column(if (onTitle != null) Modifier.clickable(onClickLabel = opens, onClick = onTitle) else Modifier) {
-            Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Text(title, Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis)
+              // 通知オフ, after its name as in the chat list.
+              if (muted == true) {
+                Icon(
+                  painterResource(R.drawable.ic_notifications_off),
+                  stringResource(R.string.chat_muted),
+                  Modifier.padding(start = 4.dp).size(18.dp),
+                  tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+              }
+            }
             val under = status ?: if (threadId == GROUP_THREAD && !support) stringResource(R.string.chat_members, count) else null
             if (under != null) {
               Text(under, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -711,6 +733,19 @@ private fun ChatScaffold(
                   onPhotos()
                 },
               )
+              if (muted != null) {
+                HorizontalDivider()
+                DropdownMenuItem(
+                  text = { Text(stringResource(if (muted) R.string.chat_unmute else R.string.chat_mute)) },
+                  leadingIcon = {
+                    Icon(painterResource(if (muted) R.drawable.ic_notifications else R.drawable.ic_notifications_off), contentDescription = null)
+                  },
+                  onClick = {
+                    more = false
+                    setMuted(!muted)
+                  },
+                )
+              }
             }
           }
         },

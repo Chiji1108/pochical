@@ -1,5 +1,5 @@
 {
-  "about": "Which unread lines a count stands for (spec/chat.md, Unread lines): what notifies. A chat that is on counts every unread line; a chat turned off counts only its unread lines that mention the reader, and those only while メンションはいつも通知 (`mentionsWhenMuted`) is on. A group's count adds up its chats', and the グループ tab's adds up its groups'. Each chat lists its lines oldest first: `read` ones, then `unread` ones, as their words; a mention is kept as <@id>, and the reader is `me`. A line mentions the reader when the chat's words, cut as spec/vectors/chat-text.json cuts them, hold a mention of them: a link never holds one, as < ends an address.",
+  "about": "Which unread lines a count stands for (spec/chat.md, Unread lines): what notifies. A chat that is on counts every unread line; a chat turned off counts only its unread lines that mention the reader, and those only while メンションはいつも通知 (`mentionsWhenMuted`) is on. A group's count adds up its chats', and the グループ tab's adds up its groups'. Each chat lists its lines oldest first: `read` ones, then `unread` ones, as their words; a mention is kept as <@id>, and the reader is `me`. A line mentions the reader when the chat's words, cut as spec/vectors/chat-text.json cuts them, hold a mention of them: a link never holds one, as < ends an address. notificationsSummary (spec/chat.md, Notifications): the value 設定 › 通知 › チャット's row shows, from whether the app may notify (`allowed`) and the user's `groups`, each with whether its group chat (全体チャット) is turned off (`muted`) and whether one of its one-to-one chats is (`directMuted`, which never counts): オン while every group's chat notifies, オフ while none does or the app may not notify, else how many groups' do (Nグループ).",
   "notifying": [
     {
       "name": "a chat that is on counts every unread line",
@@ -131,6 +131,89 @@
         }
       ],
       "expected": 2
+    }
+  ],
+  "notificationsSummary": [
+    {
+      "name": "every group's chat on",
+      "allowed": true,
+      "groups": [
+        {
+          "muted": false,
+          "directMuted": false
+        },
+        {
+          "muted": false,
+          "directMuted": false
+        }
+      ],
+      "expected": "オン"
+    },
+    {
+      "name": "some groups' chats on",
+      "allowed": true,
+      "groups": [
+        {
+          "muted": false,
+          "directMuted": false
+        },
+        {
+          "muted": true,
+          "directMuted": false
+        },
+        {
+          "muted": false,
+          "directMuted": false
+        }
+      ],
+      "expected": "2グループ"
+    },
+    {
+      "name": "every group's chat off",
+      "allowed": true,
+      "groups": [
+        {
+          "muted": true,
+          "directMuted": false
+        },
+        {
+          "muted": true,
+          "directMuted": false
+        }
+      ],
+      "expected": "オフ"
+    },
+    {
+      "name": "a one-to-one chat turned off leaves its group's on",
+      "allowed": true,
+      "groups": [
+        {
+          "muted": false,
+          "directMuted": true
+        },
+        {
+          "muted": false,
+          "directMuted": false
+        }
+      ],
+      "expected": "オン"
+    },
+    {
+      "name": "the app not allowed to notify",
+      "allowed": false,
+      "groups": [
+        {
+          "muted": false,
+          "directMuted": false
+        }
+      ],
+      "expected": "オフ"
+    },
+    {
+      "name": "no groups",
+      "allowed": true,
+      "groups": [],
+      "expected": "オフ"
     }
   ]
 }

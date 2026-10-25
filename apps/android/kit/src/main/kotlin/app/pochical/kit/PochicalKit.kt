@@ -8,6 +8,7 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -62,6 +63,16 @@ class PochicalKit(context: Context) {
 
   /** GroupService, the profile and the photos, as the user the device is signed in as. */
   val groups = GroupCalls(account, http, server, photos, CoroutineScope(SupervisorJob() + Dispatchers.Default))
+
+  /** The chats' notifications as their switches show them, the user's changes laid over what the device heard. */
+  val chatNotifications =
+    ChatNotificationSwitches(
+      combine(database.values().chatMutes(), database.values().chatNotificationSettings(), ChatNotificationState::of),
+      account.state.map { (it as? AccountState.SignedIn)?.userId },
+      groups::setChatMuted,
+      groups::setMentionsWhenMuted,
+      CoroutineScope(SupervisorJob() + Dispatchers.Default),
+    )
 
   init {
     // What was fetched as a user goes with them, as the rest of their data does.

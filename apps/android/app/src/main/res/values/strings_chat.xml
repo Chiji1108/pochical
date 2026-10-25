@@ -44,6 +44,11 @@
   <string name="chat_start_note">%1$sでの名前とアイコンで話します。</string>
   <string name="chat_invite_to_talk">メンバーを招待すると、1対1でも話せます。</string>
   <string name="chat_muted">通知オフ</string>
+  <!-- A chat's ⋯, and what it says once done (spec/chat.md, Notifications). -->
+  <string name="chat_mute">通知をオフにする</string>
+  <string name="chat_unmute">通知をオンにする</string>
+  <string name="chat_muted_said">通知をオフにしました</string>
+  <string name="chat_unmuted_said">通知をオンにしました</string>
   <string name="chat_mentioned">自分へのメンションあり</string>
   <string name="chat_blocked_line">ブロック中のメンバーのメッセージ</string>
   <string name="chat_sent_photos">写真を送りました</string>

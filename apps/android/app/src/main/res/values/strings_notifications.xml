@@ -31,6 +31,16 @@
   <string name="notifications_chat">チャット</string>
   <string name="notifications_on">オン</string>
   <string name="notifications_off">オフ</string>
+  <!-- 設定 › 通知 › チャット's value while some groups' chats notify. -->
+  <string name="notifications_groups">%1$dグループ</string>
+  <string name="notifications_group_chats">全体チャット</string>
+  <string name="notifications_group_chats_note">オフにしても、自分へのメンションは通知されます。</string>
+  <string name="notifications_direct_chats">個人チャット</string>
+  <string name="notifications_direct_chats_note">個人チャットの通知は、それぞれのチャットの右上のメニューでオフにできます。</string>
+  <string name="notifications_mentions">メンション</string>
+  <string name="notifications_mentions_always">メンションはいつも通知</string>
+  <string name="notifications_mentions_always_about">通知をオフにしたチャットでも</string>
+  <string name="notifications_change_failed">変更できませんでした。通信できる場所で、もう一度お試しください。</string>
   <string name="notifications_system">スマホの通知の設定</string>
   <string name="notifications_system_about">通知の種類ごとの音や表示を変えられます。</string>
 

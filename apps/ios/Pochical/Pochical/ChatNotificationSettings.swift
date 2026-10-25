@@ -8,16 +8,6 @@ import SwiftUINavigation
 // ChatNotificationsPage): each group chat's switch, the one-to-one chats
 // turned off, メンションはいつも通知, and whom the user has blocked.
 
-/// 設定 › 通知 › チャット's value: オン while every group's chat notifies,
-/// オフ while none does or notifications are not allowed, else how many do.
-func chatNotificationsSummary(
-  groups: [GroupRow], notifications: ChatNotificationState, allowed: Bool
-) -> String {
-  let heard = groups.count { !notifications.isMuted(groupThread, in: $0.id) }
-  if !allowed || heard == 0 { return "オフ" }
-  return heard == groups.count ? "オン" : "\(heard)グループ"
-}
-
 /// 設定 › 通知 › チャット.
 struct ChatNotificationsPage: View {
   @Environment(\.themeColors) private var colors

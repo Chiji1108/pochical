@@ -21,6 +21,8 @@ import app.pochical.v1.reportedLine
 import app.pochical.v1.setDisplayNameRequest
 import app.pochical.v1.setGroupPhotoRequest
 import app.pochical.v1.setBlockedRequest
+import app.pochical.v1.setChatMutedRequest
+import app.pochical.v1.setChatNotificationsRequest
 import app.pochical.v1.setProfileRequest
 import com.connectrpc.Code
 import com.connectrpc.ConnectException
@@ -179,6 +181,28 @@ class GroupCalls internal constructor(
         headers,
       )
       .answer()
+  }
+
+  /**
+   * Turns the chat [threadId] of [groupId] off ([muted]) or on again (spec/chat.md, Notifications):
+   * the device hears of it on the user's socket as a ChatMute change, as their other devices do.
+   */
+  suspend fun setChatMuted(groupId: String, threadId: String, muted: Boolean) = call { headers ->
+    users
+      .setChatMuted(
+        setChatMutedRequest {
+          this.groupId = groupId
+          this.threadId = threadId
+          this.muted = muted
+        },
+        headers,
+      )
+      .answer()
+  }
+
+  /** Sets メンションはいつも通知 for the account, heard of as a ChatNotifications change. */
+  suspend fun setMentionsWhenMuted(on: Boolean) = call { headers ->
+    users.setChatNotifications(setChatNotificationsRequest { mentionsWhenMuted = on }, headers).answer()
   }
 
   /** The group's live invitation code. */
