@@ -272,7 +272,7 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
   // lit once there (spec/chat.md, Replies; Pins).
   var jumping by remember { mutableStateOf<Long?>(null) }
   var lit by remember { mutableStateOf<Lit?>(null) }
-  LaunchedEffect(jumping, items, placed, chat.heldBefore, current) {
+  LaunchedEffect(jumping, items, placed, chat.heldBefore) {
     val seq = jumping ?: return@LaunchedEffect
     if (!placed) return@LaunchedEffect
     val index = items.indexOfFirst { it is ChatItem.Line && it.line.seq == seq }
@@ -286,10 +286,9 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
       }
       // Held but not laid out: the lines are laid out from it.
       from != seq && chat.line(seq) != null -> from = seq
-      // Earlier than the lines and not held: those the device holds laid out first, then the page before them asked.
-      first != null && seq < first && !chat.atStart ->
-        if (chat.heldBefore > 0) from = maxOf(first - Chat.pageSize, chat.heldFrom ?: 1)
-        else if (current) chat.heldFrom?.let { socket?.requestPage(threadId, it) }
+      // Earlier than the lines and not held: those the device holds laid out first, then the page
+      // before them waited for, which is asked as fewer than a page are held.
+      first != null && seq < first && !chat.atStart -> if (chat.heldBefore > 0) from = maxOf(first - Chat.pageSize, chat.heldFrom ?: 1)
       else -> jumping = null
     }
   }
@@ -328,6 +327,7 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
       notKept = { notKept = true },
       reducedMotion = reducedMotion,
       lit = lit,
+      litShown = { if (lit == it) lit = null },
     )
   Box {
     ChatScaffold(groupId, threadId, members, groups, socket, snackbar, onBack) {
