@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -13,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import app.pochical.chat.SupportRow
 import app.pochical.kit.DeviceSettings
 import app.pochical.notifications.ChatNotificationsRow
 import app.pochical.patterns.PatternsRow
@@ -45,6 +47,9 @@ fun SettingsScreen(open: (RootPage) -> Unit) {
         )
       }
       item { CalendarSettingsRow(open) }
+      // The chat with the people who make Pochical, apart from the rows of settings.
+      item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
+      item { SupportRow(open) }
     }
   }
 }

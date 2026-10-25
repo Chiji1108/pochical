@@ -170,7 +170,7 @@ class DatabaseTest {
   @Test
   fun aGroupsFrameAfterTheUserLeftItIsDropped() = runTest {
     database.write {
-      take(listOf(change { member = member { userId = "u"; displayName = "母" } }), groupId = "gone")
+      intoGroup("gone") { take(listOf(change { member = member { userId = "u"; displayName = "母" } }), groupId = "gone") }
       assertEquals(0L, cursorOf("gone"))
     }
     assertEquals(emptyList<GroupMemberRow>(), database.values().members("gone").first())

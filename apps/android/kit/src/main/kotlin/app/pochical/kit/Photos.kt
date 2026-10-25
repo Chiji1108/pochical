@@ -1,6 +1,6 @@
 package app.pochical.kit
 
-import android.util.LruCache
+import app.pochical.design.Chat
 import java.io.File
 import java.io.IOException
 import java.util.UUID
@@ -10,8 +10,9 @@ import okhttp3.HttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.RequestBody
 import okhttp3.Response
+import okio.BufferedSink
 
 /** Where a photo is kept on the server, and read and sent there. */
 sealed interface PhotoShelf {
@@ -28,9 +29,33 @@ sealed interface PhotoShelf {
     override val path = "v1/groups/$groupId/photos/"
   }
 
+  /** The photos of the user's chat with Pochical's people (/v1/support/photos/{id}). */
+  data object Support : PhotoShelf {
+    override val path = "v1/support/photos/"
+  }
+
+  /** Links' pages' pictures, kept by the server with the preview, read by signed-in users (/v1/previews/{id}). */
+  data object Previews : PhotoShelf {
+    override val path = "v1/previews/"
+  }
+
   /** The faces of a group a live invitation opens, read by its holder (/v1/invites/{code}/photos/{id}). */
   data class Invitation(val code: String) : PhotoShelf {
     override val path = "v1/invites/$code/photos/"
+  }
+
+  /** The chats' place the shelf keeps the photos of, by the id the device keeps its chats by; null for none. */
+  val placeId: String?
+    get() =
+      when (this) {
+        is Group -> groupId
+        Support -> Chat.supportPlace
+        else -> null
+      }
+
+  companion object {
+    /** Where the chats of the place the device keeps by [placeId] keep their photos: a group's, or the chat with Pochical's people's. */
+    fun place(placeId: String): PhotoShelf = if (placeId == Chat.supportPlace) Support else Group(placeId)
   }
 }
 
@@ -55,17 +80,12 @@ class MarkPhotoGone : Exception()
 class PhotoFailure(val status: Int?, cause: Throwable? = null) : IOException("Photo failed: $status", cause)
 
 /**
- * The photos the screens show and send (spec/sync-protocol.md, Profile; Groups): fetched as the
- * signed-in user and kept in memory alone, never in a URL cache, so nothing of a user outlives the
- * process on the device; a photo never changes once stored, so a kept one is never stale. A photo
- * picked for a group's mark is held in the app's cache until the group is saved with it.
+ * The photos the screens show and send (spec/sync-protocol.md, Profile; Groups; spec/chat.md,
+ * Photos): fetched as the signed-in user for the app's image loader, which keeps them (a photo never
+ * changes once stored, so a kept one is never stale). A photo picked for a group's mark is held in
+ * the app's cache until the group is saved with it.
  */
 internal class Photos(private val http: OkHttpClient, private val server: HttpUrl, private val held: File) {
-  private val fetched =
-    object : LruCache<String, ByteArray>(FETCHED_BYTES) {
-      override fun sizeOf(key: String, value: ByteArray) = value.size
-    }
-
   private fun heldFile(photoId: String) = File(held, "$photoId.jpg")
 
   /** Keeps [jpeg] on the device under a new id, to send only as the group is saved with it. */
@@ -85,25 +105,36 @@ internal class Photos(private val http: OkHttpClient, private val server: HttpUr
 
   /** Sends [jpeg] to [shelf] as [photoId]: sending the same again stores nothing new. */
   suspend fun send(jpeg: ByteArray, photoId: String, shelf: PhotoShelf, credentials: Credentials) {
-    val request =
-      Request.Builder()
-        .url(url(shelf, photoId))
-        .header("Authorization", "Bearer ${credentials.token}")
-        .put(jpeg.toRequestBody(JPEG))
-        .build()
-    answer(request) {}
-    fetched.put(key(shelf, photoId, credentials), jpeg)
+    put(jpeg, photoId, shelf, credentials)
   }
 
-  /** The photo [photoId] of [shelf]: one held on the device, one fetched already, else the server's. */
+  /**
+   * Puts [jpeg] on [shelf] as [photoId], or as its small version ([small]), telling [onSent] how many
+   * of its bytes have gone as they go: a chat's photo, which the app's image cache keeps once shown.
+   */
+  suspend fun put(jpeg: ByteArray, photoId: String, shelf: PhotoShelf, credentials: Credentials, small: Boolean = false, onSent: (Long) -> Unit = {}) {
+    val request =
+      Request.Builder()
+        .url(url(shelf, photoId, small))
+        .header("Authorization", "Bearer ${credentials.token}")
+        .put(CountedBody(jpeg, onSent))
+        .build()
+    answer(request) {}
+  }
+
+  /**
+   * A photo from the server, or a chat photo's small version ([small]), which is the photo itself
+   * while it has none: the app's image cache keeps it, so it is not kept here too.
+   */
+  suspend fun fetch(photoId: String, shelf: PhotoShelf, credentials: Credentials, small: Boolean): ByteArray {
+    val request = Request.Builder().url(url(shelf, photoId, small)).header("Authorization", "Bearer ${credentials.token}").build()
+    return answer(request) { it.body.bytes() }
+  }
+
+  /** The photo [photoId] of [shelf]: one held on the device, else the server's. */
   suspend fun photo(photoId: String, shelf: PhotoShelf, credentials: Credentials): ByteArray {
     withContext(Dispatchers.IO) { heldFile(photoId).takeIf { it.exists() }?.readBytes() }?.let { return it }
-    val key = key(shelf, photoId, credentials)
-    fetched.get(key)?.let { return it }
-    val request = Request.Builder().url(url(shelf, photoId)).header("Authorization", "Bearer ${credentials.token}").build()
-    val bytes = answer(request) { it.body.bytes() }
-    fetched.put(key, bytes)
-    return bytes
+    return fetch(photoId, shelf, credentials, small = false)
   }
 
   /** Lets go of the held photo [photoId], the group now holding its copy. */
@@ -111,22 +142,19 @@ internal class Photos(private val http: OkHttpClient, private val server: HttpUr
     withContext(Dispatchers.IO) { heldFile(photoId).delete() }
   }
 
-  /** Drops what was fetched or held as any user, as the device goes on as another. */
+  /** Drops what was held as any user, as the device goes on as another. */
   suspend fun forget() {
-    fetched.evictAll()
     withContext(Dispatchers.IO) { held.deleteRecursively() }
   }
 
-  private fun url(shelf: PhotoShelf, photoId: String): HttpUrl =
-    server.newBuilder().addEncodedPathSegments(shelf.path.trimEnd('/')).addPathSegment(photoId).build()
+  private fun url(shelf: PhotoShelf, photoId: String, small: Boolean = false): HttpUrl =
+    server.newBuilder().addEncodedPathSegments(shelf.path.trimEnd('/')).addPathSegment(photoId).apply { if (small) addQueryParameter("size", "small") }.build()
 
-  /** The user's own and an invitation's are read alike by every user, so the user is part of the key. */
-  private fun key(shelf: PhotoShelf, photoId: String, credentials: Credentials) = "${credentials.userId}/${shelf.path}$photoId"
-
+  /** The server's answer to [request], read by [read]; cancelling the caller cancels the call, its upload with it (×). */
   private suspend fun <T> answer(request: Request, read: (Response) -> T): T =
     withContext(Dispatchers.IO) {
       try {
-        http.newCall(request).execute().use {
+        http.answer(request).use {
           when {
             it.code == 401 -> throw SessionRefused()
             !it.isSuccessful -> throw PhotoFailure(it.code)
@@ -138,11 +166,27 @@ internal class Photos(private val http: OkHttpClient, private val server: HttpUr
         throw PhotoFailure(null, e)
       }
     }
+}
+
+/** A JPEG to put, telling [onSent] how many of its bytes have gone, a chunk at a time, each time it is written. */
+private class CountedBody(private val jpeg: ByteArray, private val onSent: (Long) -> Unit) : RequestBody() {
+  override fun contentType() = JPEG
+
+  override fun contentLength() = jpeg.size.toLong()
+
+  override fun writeTo(sink: BufferedSink) {
+    var sent = 0
+    while (sent < jpeg.size) {
+      val chunk = minOf(CHUNK, jpeg.size - sent)
+      sink.write(jpeg, sent, chunk)
+      sink.flush()
+      sent += chunk
+      onSent(sent.toLong())
+    }
+  }
 
   private companion object {
     val JPEG = "image/jpeg".toMediaType()
-
-    /** Faces and marks are small (chatRules.pictureMaxEdge): a screen's worth many times over. */
-    const val FETCHED_BYTES = 16_000_000
+    const val CHUNK = 16 * 1024
   }
 }

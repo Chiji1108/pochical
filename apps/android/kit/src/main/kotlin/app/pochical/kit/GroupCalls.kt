@@ -1,6 +1,9 @@
 package app.pochical.kit
 
+import app.pochical.v1.ChatServiceClient
 import app.pochical.v1.GroupServiceClient
+import app.pochical.v1.LinkPreview
+import app.pochical.v1.getLinkPreviewRequest
 import app.pochical.v1.PushPlatform
 import app.pochical.v1.UserServiceClient
 import app.pochical.v1.createGroupRequest
@@ -11,9 +14,13 @@ import app.pochical.v1.leaveGroupRequest
 import app.pochical.v1.registerPushTokenRequest
 import app.pochical.v1.remakeInviteLinkRequest
 import app.pochical.v1.removeMemberRequest
+import app.pochical.v1.ReportReason
 import app.pochical.v1.renameGroupRequest
+import app.pochical.v1.reportRequest
+import app.pochical.v1.reportedLine
 import app.pochical.v1.setDisplayNameRequest
 import app.pochical.v1.setGroupPhotoRequest
+import app.pochical.v1.setBlockedRequest
 import app.pochical.v1.setProfileRequest
 import com.connectrpc.Code
 import com.connectrpc.ConnectException
@@ -53,6 +60,7 @@ class GroupCalls internal constructor(
     )
   private val groups = GroupServiceClient(client)
   private val users = UserServiceClient(client)
+  private val chats = ChatServiceClient(client)
 
   /** The names and profiles kept, sent one at a time in the order they were kept. */
   private val kept = Channel<Kept>(Channel.UNLIMITED)
@@ -124,6 +132,53 @@ class GroupCalls internal constructor(
     }
     releaseMark(request.mark)
     return groupId
+  }
+
+  /**
+   * The page of [url], as the server reads it for a message being written (spec/chat.md, Previews);
+   * null when it finds none.
+   */
+  suspend fun linkPreview(url: String): LinkPreview? = call { headers ->
+    chats.getLinkPreview(getLinkPreviewRequest { this.url = url }, headers).answer().takeIf { it.hasPreview() }?.preview
+  }
+
+  /**
+   * 通報 (spec/chat.md, Reporting and blocking): someone else's line of the group [groupId], sent with
+   * the few around it as the group holds them, or a member, for [reason]. Nobody in the group is told.
+   */
+  suspend fun report(groupId: String, reason: ReportReason, what: Reported) = call { headers ->
+    chats
+      .report(
+        reportRequest {
+          this.groupId = groupId
+          this.reason = reason
+          when (what) {
+            is Reported.Line -> line = reportedLine {
+              threadId = what.threadId
+              seq = what.seq
+            }
+            is Reported.Member -> userId = what.userId
+          }
+        },
+        headers,
+      )
+      .answer()
+  }
+
+  /**
+   * ブロック, or ブロックを解除 (spec/chat.md, Reporting and blocking), in every group the user shares with
+   * [userId]: the device hears of it on the user's socket as a Block change, as their other devices do.
+   */
+  suspend fun setBlocked(userId: String, blocked: Boolean) = call { headers ->
+    users
+      .setBlocked(
+        setBlockedRequest {
+          this.userId = userId
+          this.blocked = blocked
+        },
+        headers,
+      )
+      .answer()
   }
 
   /** The group's live invitation code. */
@@ -290,6 +345,12 @@ class GroupCalls internal constructor(
 
   /** The photo [photoId] of [shelf], from the device or else the server. */
   suspend fun photo(photoId: String, shelf: PhotoShelf): ByteArray = account.asSignedIn { photos.photo(photoId, shelf, it) }
+
+  /**
+   * One of a chat's photos from the server, or its small version ([small]), for the app's image
+   * cache, which keeps it: as the lines and quotes show it, or opened large and saved.
+   */
+  suspend fun chatPhoto(photoId: String, shelf: PhotoShelf, small: Boolean): ByteArray = account.asSignedIn { photos.fetch(photoId, shelf, it, small) }
 
   /** A photo mark the group has taken a copy of is let go of on the device, which held it until now. */
   private suspend fun releaseMark(mark: GroupMarkValue) {

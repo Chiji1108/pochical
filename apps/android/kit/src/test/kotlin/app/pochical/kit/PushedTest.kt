@@ -1,20 +1,8 @@
 package app.pochical.kit
 
-import kotlinx.serialization.Serializable
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
-
-// chat.json's withdrawn: the notifications a read takes back.
-@Serializable
-private data class ChatVectors(val withdrawn: List<Withdrawn>) {
-  @Serializable
-  data class Withdrawn(override val name: String, val shown: List<Shown>, val read: Read, val expected: List<String>) : VectorCase
-
-  @Serializable data class Shown(val id: String, val groupId: String, val threadId: String, val seq: Long)
-
-  @Serializable data class Read(val groupId: String, val threadId: String, val readTo: Long?)
-}
 
 class PushedTest {
   @Test
