@@ -1,6 +1,7 @@
 package app.pochical.kit
 
 import android.content.Context
+import android.os.Build
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
@@ -39,8 +40,11 @@ class PochicalKit(context: Context) {
   val photoUploads = PhotoUploads()
   private val linePhotos = LinePhotos(photos, photoFiles, photoUploads)
 
+  /** The app's version and the device (`appDevice`), read once a line first needs them. */
+  val device: String by lazy { appDevice(context) }
+
   /** The chats' lines as the screens show them, and the member's edits of them. */
-  val chats = Chats(database, linePhotos)
+  val chats = Chats(database, linePhotos, device = { device })
   val account =
     SyncAccount(
       database = database,
@@ -81,4 +85,13 @@ class PochicalKit(context: Context) {
         }
       )
   }
+}
+
+/**
+ * The app's version and the device, as they reach Pochical's people with each line of the chat with
+ * them, and as its head says so: ポチカル 1.0・Pixel 10a・Android 17.
+ */
+fun appDevice(context: Context): String {
+  val version = context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty()
+  return "ポチカル $version・${Build.MODEL}・Android ${Build.VERSION.RELEASE}"
 }

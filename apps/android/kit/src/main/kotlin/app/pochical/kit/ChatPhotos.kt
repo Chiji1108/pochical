@@ -172,7 +172,7 @@ class ChatPhotoFiles internal constructor(private val caches: File, private val 
         pendingSmall(groupId, id).delete()
       }
     }
-    for (id in photoIds) mutableForgotten.emit(ForgottenPhoto(PhotoShelf.Group(groupId), id))
+    for (id in photoIds) mutableForgotten.emit(ForgottenPhoto(PhotoShelf.place(groupId), id))
   }
 
   /** Every photo kept, to send or to show, gone with the user. */

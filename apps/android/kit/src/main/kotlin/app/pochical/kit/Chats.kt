@@ -1,6 +1,7 @@
 package app.pochical.kit
 
 import app.pochical.v1.ChatEdit
+import app.pochical.v1.ChatSendKt
 import app.pochical.v1.LinkPreview
 import app.pochical.v1.ChatLine as WireLine
 import app.pochical.v1.chatChange
@@ -38,6 +39,11 @@ class Chats internal constructor(
   private val now: () -> Long = System::currentTimeMillis,
   /** Where what outlives the screen that asked runs: a draft kept as its chat is left. */
   private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+  /**
+   * The app's version and the device (ポチカル 1.0・Pixel 10a・Android 17), sent with each line where the
+   * place's rules ask for it (`sendsDevice`: the chat with Pochical's people, whose head says so).
+   */
+  private val device: () -> String = { "" },
 ) {
   /**
    * The chat as its screen shows it, for [me]: the lines of the run without a gap holding the first
@@ -95,6 +101,7 @@ class Chats internal constructor(
             }
           }
           replyTo?.let { this.replyTo = it }
+          stamp(groupId)
         }
       }
       deleteChatDraft(groupId, threadId)
@@ -116,6 +123,7 @@ class Chats internal constructor(
             this.threadId = threadId
             content = chatSendContent { this.photos = chatAlbum { this.photos += lined.map { (id, photo) -> photo.line(id) } } }
             replyTo?.let { this.replyTo = it }
+            stamp(groupId)
           }
         }
       }
@@ -335,6 +343,11 @@ class Chats internal constructor(
 
   /** The chat's draft as it opens, with its lines as they are now; null for none. */
   suspend fun draft(groupId: String, threadId: String): KeptDraft? = database.read { keptDraft(groupId, threadId, now()) }
+
+  /** The app and the device on a line sent where the place [placeId] keeps them. */
+  private fun ChatSendKt.Dsl.stamp(placeId: String) {
+    if (placeRules(placeId).sendsDevice) device = this@Chats.device()
+  }
 
   private fun <T> observe(vararg tables: String, read: suspend SyncDao.(now: Long) -> Timed<T>): Flow<T> =
     database.observe(*tables, now = now, read = read)

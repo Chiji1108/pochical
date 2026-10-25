@@ -1,5 +1,6 @@
 package app.pochical.kit
 
+import app.pochical.design.Chat
 import java.io.File
 import java.io.IOException
 import java.util.UUID
@@ -28,6 +29,11 @@ sealed interface PhotoShelf {
     override val path = "v1/groups/$groupId/photos/"
   }
 
+  /** The photos of the user's chat with Pochical's people (/v1/support/photos/{id}). */
+  data object Support : PhotoShelf {
+    override val path = "v1/support/photos/"
+  }
+
   /** Links' pages' pictures, kept by the server with the preview, read by signed-in users (/v1/previews/{id}). */
   data object Previews : PhotoShelf {
     override val path = "v1/previews/"
@@ -36,6 +42,20 @@ sealed interface PhotoShelf {
   /** The faces of a group a live invitation opens, read by its holder (/v1/invites/{code}/photos/{id}). */
   data class Invitation(val code: String) : PhotoShelf {
     override val path = "v1/invites/$code/photos/"
+  }
+
+  /** The chats' place the shelf keeps the photos of, by the id the device keeps its chats by; null for none. */
+  val placeId: String?
+    get() =
+      when (this) {
+        is Group -> groupId
+        Support -> Chat.supportPlace
+        else -> null
+      }
+
+  companion object {
+    /** Where the chats of the place the device keeps by [placeId] keep their photos: a group's, or the chat with Pochical's people's. */
+    fun place(placeId: String): PhotoShelf = if (placeId == Chat.supportPlace) Support else Group(placeId)
   }
 }
 

@@ -74,7 +74,7 @@ suspend fun followForgotten(files: ChatPhotoFiles, loader: () -> ImageLoader) {
   files.forgotten.collect { gone ->
     val disk = loader().diskCache
     val memory = loader().memoryCache
-    val groupId = (gone.shelf as? PhotoShelf.Group)?.groupId
+    val groupId = gone.shelf?.placeId
     val photoId = gone.photoId
     if (groupId == null || photoId == null) {
       memory?.clear()
@@ -108,7 +108,7 @@ private suspend fun photoSource(data: ChatPhotoData, loader: ImageLoader, calls:
   disk?.openSnapshot(data.key)?.let { snapshot ->
     return SourceFetchResult(ImageSource(snapshot.data, fileSystem, data.key, snapshot), JPEG, DataSource.DISK)
   }
-  val bytes = calls.chatPhoto(data.photoId, PhotoShelf.Group(data.groupId), data.small)
+  val bytes = calls.chatPhoto(data.photoId, PhotoShelf.place(data.groupId), data.small)
   val editor = disk?.openEditor(data.key)
   if (editor != null) {
     try {

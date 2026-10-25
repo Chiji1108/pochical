@@ -1,6 +1,7 @@
 package app.pochical.kit
 
 import android.util.Log
+import app.pochical.design.Chat
 import app.pochical.design.SyncSocket
 import app.pochical.v1.ChatEdit
 import app.pochical.v1.ChatSendContent
@@ -51,6 +52,23 @@ sealed interface Peer {
 
   /** A group's: its members, their shared values and its chats. */
   data class Group(val id: String) : Peer
+
+  /** The user's chat with Pochical's people, kept as a group's chats are (spec/chat.md, Where a chat is kept). */
+  data object Support : Peer
+
+  /** The chats' place the socket reaches, by the id the device keeps its chats by; null for the user's own. */
+  val placeId: String?
+    get() =
+      when (this) {
+        User -> null
+        is Group -> id
+        Support -> Chat.supportPlace
+      }
+
+  companion object {
+    /** The socket of the chats' place the device keeps by [placeId]: a group's, or the chat with Pochical's people's. */
+    fun place(placeId: String): Peer = if (placeId == Chat.supportPlace) Support else Group(placeId)
+  }
 }
 
 /**
@@ -95,6 +113,9 @@ class SyncClient internal constructor(
   /** Told once the server does not know the session: the account alone decides what comes of it. */
   private val signedOut: () -> Unit = {},
 ) : ChatSocket {
+  /** The chats' place it reaches, null for the user's own DO. */
+  private val place = peer.placeId
+
   private val mutableState = MutableStateFlow<SocketState>(SocketState.Closed)
   override val state: StateFlow<SocketState> = mutableState.asStateFlow()
 
@@ -190,7 +211,7 @@ class SyncClient internal constructor(
     val closedBefore = closes.value
     val cursor =
       try {
-        read { if (peer is Peer.Group) cursorOf(peer.id) else state().cursor }
+        read { if (place != null) cursorOf(place) else state().cursor }
       } catch (_: NotTheOwner) {
         return@coroutineScope SocketEvent.Refused(Stop.NotTheOwner)
       }
@@ -270,10 +291,10 @@ class SyncClient internal constructor(
         socket.send(clientFrame { ping = ping { nonce = catchUpNonce } })
         log("Welcome at cursor ${frame.welcome.cursor}")
         welcomed = socket
-        if (peer is Peer.Group) {
+        if (place != null) {
           launch {
             try {
-              sendChatOutbox(socket, peer.id)
+              sendChatOutbox(socket, place)
             } catch (_: NotTheOwner) {
               messages.send(SocketMessage.Ended(SocketEvent.Refused(Stop.NotTheOwner)))
             } catch (_: SessionRefused) {
@@ -305,14 +326,14 @@ class SyncClient internal constructor(
       }
       ServerFrame.KindCase.CHANGES -> {
         val changes = frame.changes.changesList
-        if (peer is Peer.Group) {
+        if (place != null) {
           // The photos of a line taken back go from the device as it does.
           var letGo = emptyList<String>()
-          takeInto(peer.id) {
-            letGo = photosLetGo(changes, peer.id)
-            take(changes, peer.id)
+          takeInto(place) {
+            letGo = photosLetGo(changes, place)
+            take(changes, place)
           }
-          linePhotos.files.forget(peer.id, letGo)
+          linePhotos.files.forget(place, letGo)
           // A line of the member's the group took stops waiting, as its Acked would say.
           linePhotos.uploads.forget(changes.filter { it.hasChatLine() && it.chatLine.opId.isNotEmpty() }.map { it.chatLine.opId })
         } else {
@@ -320,11 +341,11 @@ class SyncClient internal constructor(
         }
         log("Took ${changes.size} changes")
       }
-      ServerFrame.KindCase.RESET -> if (peer is Peer.Group) takeInto(peer.id) { resetGroup(peer.id) } else write { reset() }
+      ServerFrame.KindCase.RESET -> if (place != null) takeInto(place) { resetGroup(place) } else write { reset() }
       ServerFrame.KindCase.ACKED -> {
         val acked = frame.acked
-        if (peer is Peer.Group) {
-          takeInto(peer.id) { acknowledgeChat(acked.opIdsList, acked.refusedList.map { it.opId }) }
+        if (place != null) {
+          takeInto(place) { acknowledgeChat(acked.opIdsList, acked.refusedList.map { it.opId }) }
           // Done with, their photos' rings go with them.
           linePhotos.uploads.forget(acked.opIdsList)
         } else {
@@ -333,7 +354,7 @@ class SyncClient internal constructor(
         for (refused in acked.refusedList) log("A send was refused: ${refused.opId} ${refused.reason}")
         log("${acked.opIdsCount} edits acknowledged")
       }
-      ServerFrame.KindCase.CHAT_PAGE -> if (peer is Peer.Group) takeInto(peer.id) { take(frame.chatPage, peer.id) }
+      ServerFrame.KindCase.CHAT_PAGE -> if (place != null) takeInto(place) { take(frame.chatPage, place) }
       ServerFrame.KindCase.TYPING -> mutableTyping.tryEmit(frame.typing)
       ServerFrame.KindCase.CHAT_PHOTOS -> mutablePhotoPages.tryEmit(ChatPhotosPage.of(frame.chatPhotos))
       ServerFrame.KindCase.PONG -> if (frame.pong.nonce == catchUpNonce) on(SocketEvent.CaughtUp)
@@ -467,6 +488,8 @@ class SyncClient internal constructor(
       when (peer) {
         Peer.User -> "/v1/me/socket"
         is Peer.Group -> "/v1/groups/${peer.id}/socket"
+        // The Worker sets the user's chat with Pochical's people up as it is first reached.
+        Peer.Support -> "/v1/me/support/socket"
       }
     return server.resolve(path)!!
   }

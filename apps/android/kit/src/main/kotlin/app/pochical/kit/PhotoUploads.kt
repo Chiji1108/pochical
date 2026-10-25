@@ -143,7 +143,7 @@ internal class LinePhotos(val photos: Photos, val files: ChatPhotoFiles, val upl
     val (jpeg, small) = files.toUpload(groupId, photoId) ?: throw PhotoCannotGo()
     val total = ((small?.size ?: 0) + jpeg.size).toFloat()
     val attempt = Any()
-    val shelf = PhotoShelf.Group(groupId)
+    val shelf = PhotoShelf.place(groupId)
     supervisorScope {
       val going =
         async {

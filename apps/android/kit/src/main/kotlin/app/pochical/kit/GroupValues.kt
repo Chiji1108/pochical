@@ -1,5 +1,6 @@
 package app.pochical.kit
 
+import app.pochical.design.Chat
 import app.pochical.v1.Change
 import app.pochical.v1.Change.KindCase
 import app.pochical.v1.DayField
@@ -43,10 +44,11 @@ internal suspend fun SyncDao.cursorOf(groupId: String): Long = groupCursor(group
 /**
  * Takes what a group's socket brought, only while the user is in the group: a frame on its way as
  * they left it (a catch-up, a page asked for, an Acked) would otherwise bring back what leaving it
- * dropped. Everything a group's socket writes goes through here, in the transaction it is taken in.
+ * dropped. The chat with Pochical's people is always the user's. Everything a place's socket writes
+ * goes through here, in the transaction it is taken in.
  */
 internal suspend fun SyncDao.intoGroup(groupId: String, block: suspend SyncDao.() -> Unit) {
-  if (isListed(groupId)) block()
+  if (groupId == Chat.supportPlace || isListed(groupId)) block()
 }
 
 /** Changes of a group, in cursor order: each the group's value from now on. */
