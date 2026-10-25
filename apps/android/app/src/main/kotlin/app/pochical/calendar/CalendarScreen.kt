@@ -54,7 +54,6 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -207,10 +206,10 @@ fun CalendarScreen(
   var offeringReminders by rememberSaveable { mutableStateOf<String?>(null) }
   // A shift was entered since ポチポチ入力 opened, so its closing may offer the reminders.
   var entered by rememberSaveable { mutableStateOf(false) }
-  // From 完了 until its question about the blank days has closed too.
-  var finishing by rememberSaveable { mutableStateOf(false) }
+  // From 完了 until its question about the blank days has closed too, as long as the work that asks it.
+  var finishing by remember { mutableStateOf(false) }
   // The edits of the days the review prompt has seen; one made since is asked about once done.
-  val dayEdits by days.dayEdits.collectAsState()
+  val dayEdits by days.dayEdits.collectAsStateWithLifecycle()
   var reviewSeen by rememberSaveable { mutableIntStateOf(dayEdits) }
   fun offerReminders() {
     val time = settings.device.reminderOfferTime(asking.notAsked) ?: return
@@ -232,7 +231,7 @@ fun CalendarScreen(
   val activity = LocalActivity.current
   val done = opened == null && entering == null && !finishing && gaps.isEmpty() && offeringReminders == null
   LaunchedEffect(done, dayEdits) {
-    // Counted from 0 again in a new process.
+    // The count starts from 0 in each process, so one kept from an ended process is taken as seen.
     if (dayEdits < reviewSeen) reviewSeen = dayEdits
     if (!done || dayEdits == reviewSeen || activity == null) return@LaunchedEffect
     reviewSeen = dayEdits
