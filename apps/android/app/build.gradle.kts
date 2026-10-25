@@ -106,6 +106,7 @@ dependencies {
   implementation(libs.camerax.mlkit)
   implementation(libs.mlkit.barcode)
   implementation(libs.kotlinx.coroutines.play.services)
+  implementation(libs.glance.appwidget)
 
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)

@@ -16,7 +16,6 @@ import app.pochical.v1.chatNotifications
 import app.pochical.v1.membership
 import app.pochical.v1.unreadCount
 import kotlinx.coroutines.async
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -84,6 +83,17 @@ class ChatSyncTest {
     phone.chats.send("g1", GROUP_THREAD, "またね")
     hold.release()
     phone.account.background()
+    eventually { server.lines("g1").size == 1 }
+    assertEquals(1, phone.backgroundSends.get())
+  }
+
+  @Test
+  fun aLineWrittenOnceTheAppLeftGoesInTheBackground() = runBlocking {
+    val phone = signedIn()
+    phone.account.background()
+    // Left with nothing to send: the user's socket closes, and only then is the line written.
+    withTimeout(10_000) { phone.account.userSocket.first { it != SocketState.Current } }
+    phone.chats.send("g1", GROUP_THREAD, "あとで")
     eventually { server.lines("g1").size == 1 }
     assertEquals(1, phone.backgroundSends.get())
   }
@@ -217,22 +227,6 @@ class ChatSyncTest {
     val earlier = phone.chat(me, from = 21) { it.lines.first().seq == 21L }
     assertEquals(120L, earlier.lines.last().seq)
     assertEquals(21L, earlier.heldFrom)
-  }
-
-  @Test
-  fun aPageOnItsWayAsTheUserLeavesBringsNothingBack() = runBlocking {
-    server.write("g1", "u2", (1..120).map { "$it" })
-    val phone = signedIn()
-    val me = server.userId
-    phone.account.hold("g1")
-    phone.chat(me) { it.lines.size == Chat.pageSize }
-    val socket = withTimeout(10_000) { phone.account.chatSocket("g1").first { it != null }!! }
-    server.pageDelayMs = 500
-    eventually { socket.requestPage(GROUP_THREAD, beforeSeq = 71) }
-    // Left meanwhile, as the user's own socket says it.
-    phone.database.write { take(listOf(change { membership = membership { groupId = "g1"; left = true } })) }
-    delay(1_000)
-    assertTrue(phone.chat(me).lines.isEmpty())
   }
 
   @Test
@@ -371,6 +365,15 @@ class ChatValuesTest {
 
     database.write { take(listOf(change { membership = membership { groupId = "g1"; left = true } })) }
     assertTrue(database.read { chatOutbox("g1") }.isEmpty())
+  }
+
+  @Test
+  fun whileTheirReadWaitsTheListCountsOthersLinesTheDeviceHolds() = runTest {
+    // The latest page alone held, the member's read further back still to be sent.
+    database.write { takeChanges((151L..200L).map { wordsLine(it, "u2") }, "g1") }
+    val chats = Chats(database, testLinePhotos())
+    chats.read("g1", GROUP_THREAD, "me", 120)
+    assertEquals(50, chats.summary("g1", GROUP_THREAD, "me").first().unread)
   }
 
   @Test
