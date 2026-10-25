@@ -126,7 +126,15 @@ class SyncedDays(private val database: AppDatabase, private val edits: OwnEdits,
   /** What [work] gives once every write before it is done, in the writes' turn. */
   private suspend fun <T> inTurn(work: suspend () -> T): T {
     val done = CompletableDeferred<T>()
-    writes.send { done.complete(work()) }
+    writes.send {
+      // One not done is the caller's to hear too, never left waiting.
+      try {
+        done.complete(work())
+      } catch (e: Throwable) {
+        done.completeExceptionally(e)
+        throw e
+      }
+    }
     return done.await()
   }
 
