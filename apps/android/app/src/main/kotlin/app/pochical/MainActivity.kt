@@ -19,6 +19,7 @@ import app.pochical.calendar.OwnDays
 import android.content.Intent
 import app.pochical.groups.LocalGroupCalls
 import app.pochical.groups.LocalValues
+import app.pochical.chat.LocalChats
 import app.pochical.kit.DeviceSettings
 import app.pochical.kit.PochicalKit
 import app.pochical.kit.SyncedSettings
@@ -77,6 +78,7 @@ class MainActivity(
         LocalAppleSignIn provides appleSignIn,
         LocalGroupCalls provides kit.groups,
         LocalValues provides kit.database.values(),
+        LocalChats provides kit.chats,
         LocalOpenedLinks provides links,
       ) {
         PochicalTheme(device) { AccountRoot() }
