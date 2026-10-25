@@ -53,7 +53,7 @@ class NetworkSwitchTest {
     val database = AppDatabase.open(context, inMemory = true)
     val sessions = SessionStore(BlockStoreBytes(context, "e2e-switch").also { it.forget() })
     val http = OkHttpClient()
-    val account = SyncAccount(database, sessions, server, http, scope, DefaultNetworkWatch(context))
+    val account = SyncAccount(database, sessions, server, http, scope, DefaultNetworkWatch(context), linePhotos = linePhotos(context, http, server, "switch"))
     val edits = OwnEdits(database)
 
     shell("svc wifi disable")

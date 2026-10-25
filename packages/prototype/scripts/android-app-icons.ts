@@ -9,7 +9,15 @@ import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
 import sharp from "sharp";
 
 import { DRAWING_SHARE, paintedPixels } from "../src/lib/app-icon-paint";
-import { colorsOf, cutIcon, height, lightness, paint, width } from "./app-icon";
+import {
+  colorsOf,
+  cutIcon,
+  height,
+  lightness,
+  paint,
+  peekingPoodle,
+  width,
+} from "./app-icon";
 
 const MAIN = new URL("../../../apps/android/app/src/main/", import.meta.url)
   .pathname;
@@ -23,6 +31,8 @@ const SHOWN_DP = 72;
 const LAYER_SHARE = (DRAWING_SHARE * SHOWN_DP) / LAYER_DP;
 const DENSITIES = { hdpi: 1.5, mdpi: 1, xhdpi: 2, xxhdpi: 3, xxxhdpi: 4 };
 const PLAY_SIZE = 512;
+// 次の休み's 92dp dog peeking from the widget's corner, at xxxhdpi.
+const PEEKING_SIZE = 368;
 const GENERATED =
   "<!-- Written by packages/prototype/scripts/android-app-icons.ts (pnpm run icon:android). -->";
 
@@ -105,3 +115,17 @@ ${GENERATED}
       .toBuffer()
   ),
 ]);
+
+// 次の休み's peeking dog (app-icon.ts's peekingPoodle), as ios-app-icons.ts
+// writes iOS's: Glance shows the one the launcher's light or dark picks.
+const { light, dark } = await peekingPoodle(PEEKING_SIZE);
+const peeking: [string, Buffer][] = [
+  ["drawable-nodpi", light],
+  ["drawable-night-nodpi", dark],
+];
+await Promise.all(
+  peeking.map(async ([folder, picture]) => {
+    await mkdir(`${RES}${folder}/`, { recursive: true });
+    await writeFile(`${RES}${folder}/widget_poodle.png`, picture);
+  })
+);

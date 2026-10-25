@@ -9,6 +9,7 @@ import {
   DRAWING_SHARE,
   iconColorOptions,
   inkBounds,
+  lightDrawing,
   paintedPixels,
   rgbOf,
 } from "../src/lib/app-icon-paint";
@@ -82,3 +83,25 @@ export const paint = async (colors: IconColors, size: number) =>
   await cutIcon(paintedPixels(lightness, width, height, colors), size, {
     ground: colors.ground,
   });
+
+// The dog 次の休み's widget peeks from its corner with on a day off, as
+// /design draws it, `size` pixels square: the whole drawing, white in dark
+// lines for light and the default icon's dark look for dark, each without
+// its ground. Each platform's script writes it where its widgets read it.
+export const peekingPoodle = async (size: number) => {
+  const [light, dark] = await Promise.all(
+    [lightDrawing, colorsOf("moss-dark")].map(
+      async (colors) =>
+        await sharp(
+          Buffer.from(
+            paintedPixels(lightness, width, height, colors, true).buffer
+          ),
+          { raw: { channels: RGBA, height, width } }
+        )
+          .resize(size, size, { kernel: "lanczos3" })
+          .png({ compressionLevel: 9 })
+          .toBuffer()
+    )
+  );
+  return { dark, light };
+};

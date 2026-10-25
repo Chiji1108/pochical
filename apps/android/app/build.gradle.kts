@@ -98,6 +98,9 @@ dependencies {
   implementation(libs.browser)
   implementation(libs.emojipicker)
   implementation(libs.reorderable)
+  implementation(libs.coil.compose)
+  implementation(libs.telephoto.zoomable.image.coil3)
+  implementation(libs.telephoto.flick)
   implementation(libs.zxing.core)
   implementation(libs.camerax.camera2)
   implementation(libs.camerax.lifecycle)
@@ -105,6 +108,7 @@ dependencies {
   implementation(libs.camerax.mlkit)
   implementation(libs.mlkit.barcode)
   implementation(libs.kotlinx.coroutines.play.services)
+  implementation(libs.glance.appwidget)
 
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)

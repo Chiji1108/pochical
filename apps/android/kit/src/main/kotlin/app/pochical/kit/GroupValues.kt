@@ -1,5 +1,6 @@
 package app.pochical.kit
 
+import app.pochical.design.Chat
 import app.pochical.v1.Change
 import app.pochical.v1.Change.KindCase
 import app.pochical.v1.DayField
@@ -25,6 +26,7 @@ internal suspend fun SyncDao.takeMembership(change: Change) {
   if (membership.left) {
     deleteGroup(membership.groupId)
     resetGroup(membership.groupId)
+    dropChats(membership.groupId)
     return
   }
   upsert(GroupRow(membership.groupId, membership.name, membership.joinedAtMs, membership.mark.value))
@@ -39,10 +41,18 @@ internal suspend fun SyncDao.resetMemberships() {
 /** The cursor to say in the group's Hello: 0 before any. */
 internal suspend fun SyncDao.cursorOf(groupId: String): Long = groupCursor(groupId) ?: 0
 
+/**
+ * Takes what a group's socket brought, only while the user is in the group: a frame on its way as
+ * they left it (a catch-up, a page asked for, an Acked) would otherwise bring back what leaving it
+ * dropped. The chat with Pochical's people is always the user's. Everything a place's socket writes
+ * goes through here, in the transaction it is taken in.
+ */
+internal suspend fun SyncDao.intoGroup(groupId: String, block: suspend SyncDao.() -> Unit) {
+  if (groupId == Chat.supportPlace || isListed(groupId)) block()
+}
+
 /** Changes of a group, in cursor order: each the group's value from now on. */
 internal suspend fun SyncDao.take(changes: List<Change>, groupId: String) {
-  // A group's frame already on its way as the user left it, after the leaving dropped the group.
-  if (!isListed(groupId)) return
   var cursor = cursorOf(groupId)
   for (change in changes) {
     take(change, groupId)
@@ -58,9 +68,11 @@ internal suspend fun SyncDao.resetGroup(groupId: String) {
   deleteGroupPatterns(groupId)
   deleteGroupOrders(groupId)
   deleteGroupCursor(groupId)
+  resetChats(groupId)
 }
 
 private suspend fun SyncDao.take(change: Change, groupId: String) {
+  if (takeChat(change, groupId)) return
   when (change.kindCase) {
     KindCase.GROUP_PROFILE -> {
       // The list of groups shows the name and mark the group last said.

@@ -59,8 +59,8 @@ suspend fun signInSocial(http: OkHttpClient, server: HttpUrl, token: String, acc
 @Serializable private data class Refusal(val code: String? = null)
 
 /** The session a sign-in answered with: its token in `set-auth-token`, its user's id in the body. */
-private fun signedIn(http: OkHttpClient, request: Request): StoredSession =
-  http.newCall(request).execute().use { response ->
+private suspend fun signedIn(http: OkHttpClient, request: Request): StoredSession =
+  http.answer(request).use { response ->
     val token = response.header("set-auth-token")
     val body = response.body.string()
     if (response.code == 403 && refusalCode(body) == SUSPENDED) throw AccountSuspended()
@@ -111,7 +111,7 @@ internal suspend fun linkSocial(http: OkHttpClient, server: HttpUrl, token: Stri
         .header("Authorization", "Bearer $token")
         .post(account.socialBody().toRequestBody("application/json".toMediaType()))
         .build()
-    http.newCall(request).execute().use { response ->
+    http.answer(request).use { response ->
       when (response.code) {
         200 -> LinkResult.Linked
         409 -> LinkResult.InUse

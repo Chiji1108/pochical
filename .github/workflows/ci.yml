@@ -180,7 +180,16 @@ jobs:
       # its rules are checked before main releases it.
       - run: mise run android:release
       - run: mise run android:test
-      - run: mise run android:db:check
+      # Against the PR's base, main or the PR it stacks on, so a version that base has keeps its shape.
+      - if: github.event_name == 'pull_request'
+        run: |
+          git fetch --no-tags --depth=1 origin "$GITHUB_BASE_REF"
+          BASE="origin/$GITHUB_BASE_REF" mise run android:db:check
+      # On main, against the commit before the push.
+      - if: github.event_name == 'push'
+        run: |
+          git fetch --no-tags --depth=1 origin "${{ github.event.before }}"
+          BASE="${{ github.event.before }}" mise run android:db:check
 
   # apps/ios: the app with its extensions, built for devices with the
   # scheme's Debug configuration, unsigned; and the packages' tests,

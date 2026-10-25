@@ -34,6 +34,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import app.pochical.ListSheet
 import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.calendar.Pattern
@@ -124,17 +125,14 @@ fun TogetherSummary(label: String, together: Together, onOpen: () -> Unit, modif
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TogetherSheet(title: String, days: List<LocalDate>, country: String, onPick: (LocalDate) -> Unit, onDismiss: () -> Unit) {
-  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-    Text(title, Modifier.padding(horizontal = 24.dp, vertical = 8.dp).semantics { heading() }, style = PochicalTextStyles.headline)
-    LazyColumn {
-      items(days, key = { it.toString() }) { day ->
-        ListItem(
-          headlineContent = { Text(day.fullText) },
-          trailingContent = day.holidayName(country)?.let { { Text(it) } },
-          colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
-          modifier = Modifier.clickable { onPick(day) },
-        )
-      }
+  ListSheet(onDismiss, title, titleStyle = PochicalTextStyles.headline, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    items(days, key = { it.toString() }) { day ->
+      ListItem(
+        headlineContent = { Text(day.fullText) },
+        trailingContent = day.holidayName(country)?.let { { Text(it) } },
+        colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+        modifier = Modifier.clickable { onPick(day) },
+      )
     }
   }
 }
