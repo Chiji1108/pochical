@@ -558,7 +558,11 @@ class SyncAccount(
       }
       is Command.ChatWaiting -> {
         chatWaiting = command.groups
-        current?.openGroups()
+        // Written after the app left (Background read before it), or from outside it: sent in the
+        // time the OS gives.
+        val sendsNow = !foreground && chatWaiting.isNotEmpty() && closingUser?.isActive != true
+        if (sendsNow) sendBeforeClosing()
+        current?.openGroups(sendingSoon = sendsNow)
       }
       is Command.SignedIn -> {
         if (state.value != AccountState.SigningIn) return

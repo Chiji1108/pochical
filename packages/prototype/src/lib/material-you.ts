@@ -50,15 +50,17 @@ export function palettesOf(hue: number) {
 // (#f6fbf9 on the Pixel 9a). A shift calendar reads best on it: the
 // tinted widgetBackground, secondary 95, muddied the shift colors and
 // the Sunday red on some wallpapers. Words are onSurface and
-// onSurfaceVariant, then outline and outlineVariant.
+// onSurfaceVariant, then outline, which a dash for a day with nothing
+// entered takes too; lines are surfaceVariant, as Glance's roles have
+// no outlineVariant.
 export function widgetColors(hue: number, scheme: ColorScheme) {
   const palettes = palettesOf(hue);
   const dark = scheme === "dark";
   return {
     "--background-base": palettes.neutral(dark ? 10 : 99),
-    "--separator": palettes.neutralVariant(dark ? 30 : 80),
+    "--separator": palettes.neutralVariant(dark ? 30 : 90),
     "--text-primary": palettes.neutral(dark ? 90 : 10),
-    "--text-quaternary": palettes.neutralVariant(dark ? 40 : 70),
+    "--text-quaternary": palettes.neutralVariant(dark ? 60 : 50),
     "--text-secondary": palettes.neutralVariant(dark ? 80 : 30),
     "--text-tertiary": palettes.neutralVariant(dark ? 60 : 50),
   };
