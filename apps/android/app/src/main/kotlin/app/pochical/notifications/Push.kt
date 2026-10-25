@@ -13,6 +13,7 @@ import app.pochical.limitText
 import app.pochical.design.TextLimits
 import coil3.SingletonImageLoader
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -42,7 +43,7 @@ class Push(
   }
 
   private val states = kit.account.state
-  private val users = states.map { (it as? AccountState.SignedIn)?.userId }
+  private val users = states.map { (it as? AccountState.SignedIn)?.userId }.distinctUntilChanged()
   private val tokens = PushTokens(scope, users, kit.groups::registerPushToken)
 
   val notifier =
@@ -71,7 +72,7 @@ class Push(
       users.collectLatest { me ->
         me ?: return@collectLatest
         var before: ReadState? = null
-        kit.chats.readState(me).collect { read ->
+        kit.chats.readState(me).distinctUntilChanged().collect { read ->
           notifier.withdrawRead(read.copy(cleared = before?.let { read.cleared - it.cleared }.orEmpty()))
           before = read
         }
@@ -110,12 +111,14 @@ class Push(
   fun reply(groupId: String, threadId: String, seq: Long, written: String, done: () -> Unit) {
     scope.launch {
       try {
-        val me = kit.database.owner() ?: return@launch
+        val me = kit.database.owner()
         val words = limitText(written.trim(), TextLimits.chatMessage)
-        if (words.isEmpty()) {
+        if (me == null || words.isEmpty()) {
           notifier.restore(groupId, threadId)
           return@launch
         }
+        // Its own read, kept with it, is not to take the notification back before it shows the answer.
+        notifier.answering(groupId, threadId)
         try {
           kit.chats.reply(groupId, threadId, me, words, seq)
         } catch (e: CancellationException) {

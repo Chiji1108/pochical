@@ -136,10 +136,7 @@ class Chats internal constructor(
           stamp(groupId)
         }
       }
-      val before = lastRead(groupId, threadId, me, now())
-      if (readTo(listOf(answered), before) != before) {
-        chatEdit(groupId, now()) { read = chatRead { this.threadId = threadId; lastReadSeq = answered } }
-      }
+      readOn(groupId, threadId, me, answered)
     }
   }
 
@@ -288,11 +285,14 @@ class Chats internal constructor(
    * (spec/vectors/chat.json, readTo); nothing when [me] has read that far already.
    */
   suspend fun read(groupId: String, threadId: String, me: String, seq: Long) {
-    database.write {
-      val before = lastRead(groupId, threadId, me, now())
-      if (readTo(listOf(seq), before) == before) return@write
-      chatEdit(groupId, now()) { read = chatRead { this.threadId = threadId; lastReadSeq = seq } }
-    }
+    database.write { readOn(groupId, threadId, me, seq) }
+  }
+
+  /** The chat read on to [seq] in the write it is in, never back; nothing when [me] has read that far already. */
+  private suspend fun SyncDao.readOn(groupId: String, threadId: String, me: String, seq: Long) {
+    val before = lastRead(groupId, threadId, me, now())
+    if (readTo(listOf(seq), before) == before) return
+    chatEdit(groupId, now()) { read = chatRead { this.threadId = threadId; lastReadSeq = seq } }
   }
 
   /**

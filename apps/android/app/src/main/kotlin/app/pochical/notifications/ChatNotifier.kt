@@ -29,6 +29,9 @@ import app.pochical.kit.GroupRow
 import app.pochical.kit.ReadState
 import app.pochical.kit.readNotified
 import androidx.core.app.RemoteInput
+import androidx.core.content.pm.ShortcutInfoCompat
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import java.util.MissingFormatArgumentException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
@@ -65,6 +68,16 @@ class ChatNotifier(
   private val onScreen = AtomicReference<String?>(null)
 
   /**
+   * What changes the notifications shown, one at a time: each reads the chat's notification as it
+   * is and posts what follows from it, so a line, a withdrawal and an answer coming together never
+   * post over one another.
+   */
+  private val lock = Any()
+
+  /** The chats with an answer written on their notification being kept, which a read of it does not take back. */
+  private val answering = mutableSetOf<String>()
+
+  /**
    * Shows [alert], unless it is for someone else, its chat is on the screen (spec/sync-protocol.md,
    * Push), or notifications may not be shown.
    */
@@ -73,36 +86,38 @@ class ChatNotifier(
     if (alert.recipientId != me) return
     val tag = tagOf(alert.groupId, alert.threadId)
     if (tag == onScreen.get()) return
-    val notification = line(alert, tag, me)
-    post(tag, notification)
+    // Who and where, faces and marks among them, before the chat's notification is read.
+    val line = line(alert, tag, me)
+    synchronized(lock) { post(tag, line.after(shownOf(tag))) }
   }
 
   /**
    * Takes back the notifications of [withdrawal]'s chat's lines read (spec/vectors/chat.json,
-   * withdrawn): the chat's notification goes once none of its lines is left unread. One that shows
-   * its latest line alone, an answer from Pochical's people, stays while that line is unread.
+   * withdrawn): the chat's notification goes once none of its lines is left unread.
    */
-  fun withdraw(withdrawal: ChatWithdrawal): Boolean {
-    val tag = tagOf(withdrawal.groupId, withdrawal.threadId)
-    val shown = shownOf(tag) ?: return false
-    val lines = shown.seqs.mapIndexed { index, seq -> NotifiedLine(index.toString(), withdrawal.groupId, withdrawal.threadId, seq) }
-    return takeBack(tag, shown, withdrawn(lines, withdrawal.groupId, withdrawal.threadId, withdrawal.readTo).map(String::toInt).toSet())
-  }
+  fun withdraw(withdrawal: ChatWithdrawal): Boolean =
+    synchronized(lock) {
+      val tag = tagOf(withdrawal.groupId, withdrawal.threadId)
+      val shown = shownOf(tag) ?: return false
+      val lines = shown.seqs.mapIndexed { index, seq -> NotifiedLine(index.toString(), withdrawal.groupId, withdrawal.threadId, seq) }
+      takeBack(tag, shown, withdrawn(lines, withdrawal.groupId, withdrawal.threadId, withdrawal.readTo).map(String::toInt).toSet())
+    }
 
   /**
    * Takes back the notifications of lines [read] says are read, should no withdrawal have reached
    * the device (spec/vectors/chat.json, readNotified): at or before the user's own read mark, or
-   * all of a chat with nothing unread left.
+   * all of a chat with nothing unread left. One being answered is left to its answer.
    */
-  fun withdrawRead(read: ReadState) {
-    val tags = (posted.keys + manager.activeNotifications.filter { it.id == ID }.mapNotNull { it.tag }).distinct()
-    val shown = tags.mapNotNull { tag -> shownOf(tag)?.let { tag to it } }.toMap()
-    val lines =
-      shown.flatMap { (tag, chat) -> chat.seqs.mapIndexed { index, seq -> NotifiedLine("$tag$LINE$index", chat.groupId, chat.threadId, seq) } }
-    readNotified(lines, read)
-      .groupBy({ it.substringBefore(LINE) }, { it.substringAfter(LINE).toInt() })
-      .forEach { (tag, gone) -> takeBack(tag, shown.getValue(tag), gone.toSet()) }
-  }
+  fun withdrawRead(read: ReadState) =
+    synchronized(lock) {
+      val tags = (posted.keys + manager.activeNotifications.filter { it.id == ID }.mapNotNull { it.tag }).distinct() - answering
+      val shown = tags.mapNotNull { tag -> shownOf(tag)?.let { tag to it } }.toMap()
+      val lines =
+        shown.flatMap { (tag, chat) -> chat.seqs.mapIndexed { index, seq -> NotifiedLine("$tag$LINE$index", chat.groupId, chat.threadId, seq) } }
+      readNotified(lines, read)
+        .groupBy({ it.substringBefore(LINE) }, { it.substringAfter(LINE).toInt() })
+        .forEach { (tag, gone) -> takeBack(tag, shown.getValue(tag), gone.toSet()) }
+    }
 
   /** Takes the lines [gone], by their place in it, out of the chat [tag]'s notification [shown]; whether any went. */
   private fun takeBack(tag: String, shown: Shown, gone: Set<Int>): Boolean {
@@ -111,20 +126,16 @@ class ChatNotifier(
       cancel(tag)
       return true
     }
-    val leftSeqs = shown.seqs.filterIndexed { index, _ -> index !in gone }
-    val style = shown.style
-    val builder = NotificationCompat.Builder(context, shown.notification).addExtras(seqsOf(leftSeqs))
-    if (style != null) {
-      val after =
-        NotificationCompat.MessagingStyle(style.user)
-          .setConversationTitle(style.conversationTitle)
-          .setGroupConversation(style.isGroupConversation)
-      shown.messages.filterIndexed { index, _ -> index !in gone }.forEach(after::addMessage)
-      builder.setStyle(after)
-    }
-    // What is left as it was, not as a line come in.
-    post(tag, builder.setOnlyAlertOnce(true).build())
+    post(tag, again(shown, shown.seqs.indices.filter { it !in gone }))
     return true
+  }
+
+  /**
+   * An answer is being written to the chat's notification and kept: until [replied], [notSent] or
+   * [restore] says how it went, a read of it does not take the notification back.
+   */
+  fun answering(groupId: String, threadId: String) {
+    synchronized(lock) { answering += tagOf(groupId, threadId) }
   }
 
   /**
@@ -135,17 +146,12 @@ class ChatNotifier(
    */
   fun replied(groupId: String, threadId: String, words: String) {
     val tag = tagOf(groupId, threadId)
-    val shown = shownOf(tag) ?: return
-    val builder = NotificationCompat.Builder(context, shown.notification).addExtras(seqsOf(emptyList())).setOnlyAlertOnce(true)
-    val style = shown.style
-    if (style != null) {
-      val after = NotificationCompat.MessagingStyle(style.user).setConversationTitle(style.conversationTitle).setGroupConversation(style.isGroupConversation)
-      shown.messages.forEach(after::addMessage)
+    synchronized(lock) {
+      answering -= tag
+      val shown = shownOf(tag) ?: return
       // From the user, whom the style names.
-      after.addMessage(words, now(), null as Person?)
-      builder.setStyle(after)
+      post(tag, again(shown, shown.seqs.indices.toList(), NotificationCompat.MessagingStyle.Message(words, now(), null as Person?)))
     }
-    post(tag, builder.build())
   }
 
   /**
@@ -154,8 +160,11 @@ class ChatNotifier(
    */
   fun restore(groupId: String, threadId: String) {
     val tag = tagOf(groupId, threadId)
-    val shown = shownOf(tag) ?: return
-    post(tag, NotificationCompat.Builder(context, shown.notification).setOnlyAlertOnce(true).build())
+    synchronized(lock) {
+      answering -= tag
+      val shown = shownOf(tag) ?: return
+      post(tag, again(shown, shown.seqs.indices.toList()))
+    }
   }
 
   /**
@@ -164,14 +173,32 @@ class ChatNotifier(
    */
   fun notSent(groupId: String, threadId: String, words: String) {
     val tag = tagOf(groupId, threadId)
-    val shown = shownOf(tag) ?: return
-    post(
-      tag,
+    synchronized(lock) {
+      answering -= tag
+      val shown = shownOf(tag) ?: return
+      post(tag, again(shown, shown.seqs.indices.toList(), saying = context.getString(R.string.push_reply_not_sent, words)))
+    }
+  }
+
+  /**
+   * The chat's notification [shown] again, as it was rather than as a line come in: the lines
+   * [kept], by their place in it, then [added] (the user's answer, which takes nothing back), and
+   * [saying] over them, or nothing a notification shown before said there.
+   */
+  private fun again(shown: Shown, kept: List<Int>, added: NotificationCompat.MessagingStyle.Message? = null, saying: String? = null): Notification {
+    val builder =
       NotificationCompat.Builder(context, shown.notification)
-        .setSubText(context.getString(R.string.push_reply_not_sent, words))
+        .addExtras(seqsOf(if (added == null) kept.map(shown.seqs::get) else emptyList()))
+        .setSubText(saying)
         .setOnlyAlertOnce(true)
-        .build(),
-    )
+    shown.style?.let { style ->
+      val after =
+        NotificationCompat.MessagingStyle(style.user).setConversationTitle(style.conversationTitle).setGroupConversation(style.isGroupConversation)
+      kept.map(shown.messages::get).forEach(after::addMessage)
+      added?.let(after::addMessage)
+      builder.setStyle(after)
+    }
+    return builder.build()
   }
 
   /** The chat is on the screen, in front, until [offScreen]: its lines are not notified. */
@@ -185,17 +212,20 @@ class ChatNotifier(
   }
 
   /** The chat's notification was tapped, opening it: it goes, as the system's auto cancel would. */
-  fun opened(groupId: String, threadId: String) = cancel(tagOf(groupId, threadId))
+  fun opened(groupId: String, threadId: String) = synchronized(lock) { cancel(tagOf(groupId, threadId)) }
 
   /** The person dismissed the chat [tag]'s notification. */
   fun dismissed(tag: String) {
-    posted.remove(tag)
+    synchronized(lock) { posted.remove(tag) }
   }
 
   /** Takes away every notification shown, as the device lets go of the user they were for. */
   fun forgetAll() {
-    posted.clear()
-    manager.cancelAll()
+    synchronized(lock) {
+      posted.clear()
+      answering.clear()
+      manager.cancelAll()
+    }
     conversations.forgetAll()
   }
 
@@ -238,11 +268,11 @@ class ChatNotifier(
   private fun seqsOf(seqs: List<Long>) = Bundle().apply { putLongArray(SEQS, seqs.toLongArray()) }
 
   /**
-   * A chat line's notification, its message added to those the chat's shows already: from its
-   * writer as the group shows them, and for the group's chat in the group's name, its words then
-   * worded as a one-to-one chat's, as the system shows who wrote them.
+   * A chat line's notification as it follows the one the chat shows ([Line.after]): from its writer
+   * as the group shows them, and for the group's chat in the group's name, its words then worded as
+   * a one-to-one chat's, as the system shows who wrote them.
    */
-  private suspend fun line(alert: PushedAlert, tag: String, me: String): Notification {
+  private suspend fun line(alert: PushedAlert, tag: String, me: String): Line = coroutineScope {
     // The chat with Pochical's people is a conversation of two, with them under the chat's own
     // name, as 設定's row names it, and the app's icon (spec/chat.md, The chat with Pochical's people).
     val support = alert.groupId == Chat.supportPlace
@@ -260,35 +290,55 @@ class ChatNotifier(
     val mine = held.find { it.userId == me }
     // The style takes no user without a name: one the group does not name yet is あなた.
     val userName = mine?.displayName?.takeIf { it.isNotBlank() } ?: context.getString(R.string.push_me)
-    val user = Person.Builder().setKey(me).setName(userName).setIcon(conversations.face(userName, mine?.photoId.orEmpty(), alert.groupId)).build()
-    val writerFace = if (support) conversations.appFace() else conversations.face(writerName, writerRow?.photoId.orEmpty(), alert.groupId)
-    val writer = Person.Builder().setKey(authorId).setName(writerName).setIcon(writerFace).build()
-    val before = shownOf(tag)
+    val heldGroup = if (inGroup) group(alert.groupId) else null
+    // The faces and the mark together, each within the time a photo may take, so one wait bounds them all.
+    val userFace = async { conversations.face(userName, mine?.photoId.orEmpty(), alert.groupId) }
+    val writerFace = async { if (support) conversations.appFace() else conversations.face(writerName, writerRow?.photoId.orEmpty(), alert.groupId) }
+    val mark = async { heldGroup?.let { conversations.mark(it.mark, it.name, it.id) } }
+    val user = Person.Builder().setKey(me).setName(userName).setIcon(userFace.await()).build()
+    val writer = Person.Builder().setKey(authorId).setName(writerName).setIcon(writerFace.await()).build()
     val title = if (inGroup) worded(alert.title) else null
-    val style = NotificationCompat.MessagingStyle(user).setGroupConversation(inGroup).setConversationTitle(title)
-    before?.messages?.forEach(style::addMessage)
-    style.addMessage(NotificationCompat.MessagingStyle.Message(words, now(), writer))
     // The chat as one of Android's conversations: the group's chat under the group's mark, a
     // one-to-one chat, and Pochical's people's, under the other's face.
-    val heldGroup = if (inGroup) group(alert.groupId) else null
     val shortcut =
       conversations.publish(
         tag,
         title ?: writerName,
-        heldGroup?.let { conversations.mark(it.mark, it.name, it.id) } ?: writerFace,
+        mark.await() ?: writerFace.await(),
         if (inGroup) emptyList() else listOf(writer),
         openingIntent(alert.groupId, alert.threadId),
       )
-    return NotificationCompat.Builder(context, if (support) Channels.SUPPORT else Channels.CHAT)
-      .setSmallIcon(R.drawable.ic_notification)
-      .setStyle(style)
-      .setShortcutInfo(shortcut)
-      .addExtras(extrasOf(alert.groupId, alert.threadId, before?.seqs.orEmpty() + (alert.line?.seq ?: 0)))
-      .setCategory(NotificationCompat.CATEGORY_MESSAGE)
-      .setContentIntent(opening(alert))
-      .setDeleteIntent(dismissing(tag))
-      .apply { alert.line?.let { addAction(replying(alert.groupId, alert.threadId, it.seq)) } }
-      .build()
+    Line(alert, tag, if (support) Channels.SUPPORT else Channels.CHAT, user, writer, words, title, inGroup, shortcut)
+  }
+
+  /** A line come in, ready to show after what the chat's notification shows. */
+  private inner class Line(
+    val alert: PushedAlert,
+    val tag: String,
+    val channel: String,
+    val user: Person,
+    val writer: Person,
+    val words: String,
+    val title: String?,
+    val inGroup: Boolean,
+    val shortcut: ShortcutInfoCompat,
+  ) {
+    /** The chat's notification with this line's message added to those [before] shows. */
+    fun after(before: Shown?): Notification {
+      val style = NotificationCompat.MessagingStyle(user).setGroupConversation(inGroup).setConversationTitle(title)
+      before?.messages?.forEach(style::addMessage)
+      style.addMessage(NotificationCompat.MessagingStyle.Message(words, now(), writer))
+      return NotificationCompat.Builder(context, channel)
+        .setSmallIcon(R.drawable.ic_notification)
+        .setStyle(style)
+        .setShortcutInfo(shortcut)
+        .addExtras(extrasOf(alert.groupId, alert.threadId, before?.seqs.orEmpty() + (alert.line?.seq ?: 0)))
+        .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+        .setContentIntent(opening(alert))
+        .setDeleteIntent(dismissing(tag))
+        .apply { alert.line?.let { addAction(replying(alert.groupId, alert.threadId, it.seq)) } }
+        .build()
+    }
   }
 
   /**

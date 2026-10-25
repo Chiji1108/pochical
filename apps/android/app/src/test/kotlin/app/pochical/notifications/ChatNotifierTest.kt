@@ -123,6 +123,24 @@ class ChatNotifierTest {
   }
 
   @Test
+  fun theReadAnAnswerKeepsLeavesItsNotificationToTheAnswer() = runTest {
+    notifier.show(groupLine(2, "今週どう？"))
+    notifier.answering(GROUP, "group")
+    // Its own read, kept with it, comes before the answer is shown.
+    notifier.withdrawRead(ReadState(marks = mapOf(ChatKey(GROUP, "group") to 2L)))
+    notifier.replied(GROUP, "group", "行く！")
+    assertEquals(listOf("今週どう？", "行く！"), messagesOf().messages.map { it.text.toString() })
+  }
+
+  @Test
+  fun anAnswerKeptAfterOneNotKeptSaysSoNoMore() = runTest {
+    notifier.show(groupLine(2, "今週どう？"))
+    notifier.notSent(GROUP, "group", "行く！")
+    notifier.replied(GROUP, "group", "行く！")
+    assertNull(shown().single().notification.extras.getCharSequence(NotificationCompat.EXTRA_SUB_TEXT))
+  }
+
+  @Test
   fun aUserTheChatNamesNotYetIsYou() = runTest {
     // As the chat with Pochical's people holds a user who set no name.
     val unnamed = ChatNotifier(context, { ME }, { listOf(member(ME, "")) }, { null }, conversations)
