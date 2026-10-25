@@ -73,7 +73,7 @@ class ChatNotifier(
     if (alert.recipientId != me) return
     val tag = tagOf(alert.groupId, alert.threadId)
     if (tag == onScreen.get()) return
-    val notification = if (alert.groupId == Chat.supportPlace) answer(alert, tag) else line(alert, tag, me)
+    val notification = line(alert, tag, me)
     post(tag, notification)
   }
 
@@ -243,17 +243,25 @@ class ChatNotifier(
    * worded as a one-to-one chat's, as the system shows who wrote them.
    */
   private suspend fun line(alert: PushedAlert, tag: String, me: String): Notification {
-    val inGroup = alert.body.key.startsWith(GROUP_KEY)
+    // The chat with Pochical's people is a conversation of two, with them under the chat's own
+    // name, as 設定's row names it, and the app's icon (spec/chat.md, The chat with Pochical's people).
+    val support = alert.groupId == Chat.supportPlace
+    val inGroup = !support && alert.body.key.startsWith(GROUP_KEY)
     val kind = alert.body.key.removePrefix(GROUP_KEY).removePrefix(KEY)
     val held = members(alert.groupId)
     val authorId = alert.line?.authorId.orEmpty()
     val writerRow = held.find { it.userId == authorId }
-    val writerName = writerRow?.displayName ?: (if (inGroup) alert.body.args else alert.title.args).firstOrNull().orEmpty()
+    val writerName =
+      when {
+        support -> worded(alert.title)
+        else -> writerRow?.displayName ?: (if (inGroup) alert.body.args else alert.title.args).firstOrNull().orEmpty()
+      }
     val words = worded(Localized(KEY + kind, if (inGroup) alert.body.args.drop(1) else alert.body.args))
     val mine = held.find { it.userId == me }
-    val userName = mine?.displayName ?: context.getString(R.string.push_me)
+    // The style takes no user without a name: one the group does not name yet is あなた.
+    val userName = mine?.displayName?.takeIf { it.isNotBlank() } ?: context.getString(R.string.push_me)
     val user = Person.Builder().setKey(me).setName(userName).setIcon(conversations.face(userName, mine?.photoId.orEmpty(), alert.groupId)).build()
-    val writerFace = conversations.face(writerName, writerRow?.photoId.orEmpty(), alert.groupId)
+    val writerFace = if (support) conversations.appFace() else conversations.face(writerName, writerRow?.photoId.orEmpty(), alert.groupId)
     val writer = Person.Builder().setKey(authorId).setName(writerName).setIcon(writerFace).build()
     val before = shownOf(tag)
     val title = if (inGroup) worded(alert.title) else null
@@ -261,7 +269,7 @@ class ChatNotifier(
     before?.messages?.forEach(style::addMessage)
     style.addMessage(NotificationCompat.MessagingStyle.Message(words, now(), writer))
     // The chat as one of Android's conversations: the group's chat under the group's mark, a
-    // one-to-one chat under its other member's face.
+    // one-to-one chat, and Pochical's people's, under the other's face.
     val heldGroup = if (inGroup) group(alert.groupId) else null
     val shortcut =
       conversations.publish(
@@ -271,31 +279,11 @@ class ChatNotifier(
         if (inGroup) emptyList() else listOf(writer),
         openingIntent(alert.groupId, alert.threadId),
       )
-    return NotificationCompat.Builder(context, Channels.CHAT)
+    return NotificationCompat.Builder(context, if (support) Channels.SUPPORT else Channels.CHAT)
       .setSmallIcon(R.drawable.ic_notification)
       .setStyle(style)
       .setShortcutInfo(shortcut)
       .addExtras(extrasOf(alert.groupId, alert.threadId, before?.seqs.orEmpty() + (alert.line?.seq ?: 0)))
-      .setCategory(NotificationCompat.CATEGORY_MESSAGE)
-      .setContentIntent(opening(alert))
-      .setDeleteIntent(dismissing(tag))
-      .apply { alert.line?.let { addAction(replying(alert.groupId, alert.threadId, it.seq)) } }
-      .build()
-  }
-
-  /**
-   * An answer from Pochical's people: a plain notification of the latest, titled with the chat as
-   * 設定's row names it, as only they write there (spec/chat.md, The chat with Pochical's people).
-   * It keeps every answer's line it stands for, for a read to take it back.
-   */
-  private fun answer(alert: PushedAlert, tag: String): Notification {
-    val words = worded(alert.body)
-    return NotificationCompat.Builder(context, Channels.SUPPORT)
-      .setSmallIcon(R.drawable.ic_notification)
-      .setContentTitle(worded(alert.title))
-      .setContentText(words)
-      .setStyle(NotificationCompat.BigTextStyle().bigText(words))
-      .addExtras(extrasOf(alert.groupId, alert.threadId, shownOf(tag)?.seqs.orEmpty() + listOfNotNull(alert.line?.seq)))
       .setCategory(NotificationCompat.CATEGORY_MESSAGE)
       .setContentIntent(opening(alert))
       .setDeleteIntent(dismissing(tag))

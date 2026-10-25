@@ -14,6 +14,7 @@ import androidx.core.graphics.createBitmap
 import androidx.core.graphics.drawable.IconCompat
 import androidx.core.content.LocusIdCompat
 import app.pochical.MainActivity
+import app.pochical.R
 import app.pochical.chat.Picture
 import app.pochical.kit.GroupMarkValue
 import app.pochical.kit.PhotoShelf
@@ -36,6 +37,9 @@ import kotlinx.coroutines.withTimeoutOrNull
 interface Conversations {
   /** Someone's face: their photo once the device has it in time, else their first letter, as everywhere. */
   suspend fun face(name: String, photoId: String, groupId: String): IconCompat
+
+  /** The app's icon, Pochical's people's face, as the app draws it (AppIcon). */
+  fun appFace(): IconCompat
 
   /** A group's mark, as its screens draw it. */
   suspend fun mark(mark: GroupMarkValue, name: String, groupId: String): IconCompat
@@ -60,6 +64,8 @@ class DrawnConversations(
 
   override suspend fun face(name: String, photoId: String, groupId: String): IconCompat =
     photo(photoId, PhotoShelf.place(groupId))?.let(IconCompat::createWithAdaptiveBitmap) ?: letter(name)
+
+  override fun appFace(): IconCompat = IconCompat.createWithResource(context, R.mipmap.ic_launcher)
 
   override suspend fun mark(mark: GroupMarkValue, name: String, groupId: String): IconCompat {
     if (mark.photoId.isNotEmpty()) photo(mark.photoId, PhotoShelf.place(groupId))?.let { return IconCompat.createWithAdaptiveBitmap(it) }

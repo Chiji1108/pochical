@@ -16,6 +16,8 @@ class TestConversations(private val context: Context) : Conversations {
 
   override suspend fun face(name: String, photoId: String, groupId: String): IconCompat = IconCompat.createWithBitmap(createBitmap(1, 1))
 
+  override fun appFace(): IconCompat = IconCompat.createWithBitmap(createBitmap(1, 1))
+
   override suspend fun mark(mark: GroupMarkValue, name: String, groupId: String): IconCompat = IconCompat.createWithBitmap(createBitmap(1, 1))
 
   override fun publish(id: String, title: String, icon: IconCompat, persons: List<Person>, opening: Intent): ShortcutInfoCompat {

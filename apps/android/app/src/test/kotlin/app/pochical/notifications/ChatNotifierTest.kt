@@ -110,20 +110,33 @@ class ChatNotifierTest {
   }
 
   @Test
-  fun anAnswerFromPochicalsPeopleIsAPlainNotification() = runTest {
-    notifier.show(
-      PushedAlert(
-        title = Localized("SUPPORT_TITLE", emptyList()),
-        body = Localized("CHAT_TEXT", listOf("ありがとうございます")),
-        groupId = "support",
-        threadId = "support:$ME",
-        recipientId = ME,
-      )
-    )
+  fun anAnswerFromPochicalsPeopleIsAConversationWithTheChatsName() = runTest {
+    notifier.show(support(5, "ありがとうございます"))
     val notification = shown().single().notification
     assertEquals(Channels.SUPPORT, notification.channelId)
-    assertEquals("作っている人とチャット", notification.extras.getCharSequence(NotificationCompat.EXTRA_TITLE))
-    assertEquals("ありがとうございます", notification.extras.getCharSequence(NotificationCompat.EXTRA_TEXT))
+    // From the chat, as 設定's row names it, with the app's icon, as the only one who writes there.
+    val message = messagesOf().messages.single()
+    assertEquals("作っている人とチャット", message.person?.name)
+    assertEquals("ありがとうございます", message.text)
+    assertEquals(false, messagesOf().isGroupConversation)
+    assertEquals("support/support:$ME" to "作っている人とチャット", conversations.published.single())
+  }
+
+  @Test
+  fun aUserTheChatNamesNotYetIsYou() = runTest {
+    // As the chat with Pochical's people holds a user who set no name.
+    val unnamed = ChatNotifier(context, { ME }, { listOf(member(ME, "")) }, { null }, conversations)
+    unnamed.show(support(5, "ありがとうございます"))
+    assertEquals("あなた", messagesOf().user.name)
+  }
+
+  @Test
+  fun anAnswerFromPochicalsPeopleAnsweredShowsTheReply() = runTest {
+    notifier.show(support(5, "ありがとうございます"))
+    notifier.replied("support", "support:$ME", "助かりました")
+    assertEquals(listOf("ありがとうございます", "助かりました"), messagesOf().messages.map { it.text.toString() })
+    // Its lines read: nothing left to take back.
+    assertEquals(false, notifier.withdraw(ChatWithdrawal("support", "support:$ME", readTo = 9)))
   }
 
   @Test
@@ -178,8 +191,8 @@ class ChatNotifierTest {
     notifier.show(support(5, "ありがとうございます"))
     notifier.show(support(6, "直しました"))
     notifier.withdraw(ChatWithdrawal("support", "support:$ME", readTo = 5))
-    // The latest, which it shows, is still unread.
-    assertEquals("直しました", shown().single().notification.extras.getCharSequence(NotificationCompat.EXTRA_TEXT))
+    // The answer after it is still unread.
+    assertEquals(listOf("直しました"), messagesOf().messages.map { it.text.toString() })
     notifier.withdraw(ChatWithdrawal("support", "support:$ME", readTo = 6))
     assertEquals(emptyList<Any>(), shown())
   }
