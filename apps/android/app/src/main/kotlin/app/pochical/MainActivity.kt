@@ -31,6 +31,7 @@ import app.pochical.notifications.LocalNotificationPermission
 import app.pochical.notifications.rememberNotificationAsking
 import app.pochical.notifications.NotificationPermission
 import app.pochical.notifications.ChatNotifier
+import app.pochical.notifications.LocalChatNotifier
 import app.pochical.notifications.Push
 import app.pochical.reminders.LocalReminderAlarms
 import app.pochical.reminders.ReminderAlarms
@@ -97,6 +98,7 @@ class MainActivity(
         LocalOpenedLinks provides links,
         LocalNotificationPermission provides notificationPermission,
         LocalReminderAlarms provides reminderAlarms,
+        LocalChatNotifier provides push.notifier,
       ) {
         // Asked from here, under every page, so an answer reaches the app after its page closed.
         CompositionLocalProvider(LocalNotificationAsking provides rememberNotificationAsking()) {
@@ -108,12 +110,7 @@ class MainActivity(
 
   /** Where [intent] opens the app at, for the screens; a chat's notification tapped goes, as it is read. */
   private fun take(intent: Intent) {
-    if (intent.action == ChatNotifier.ACTION_OPEN_CHAT) {
-      push.notifier.opened(
-        intent.getStringExtra(ChatNotifier.EXTRA_GROUP_ID).orEmpty(),
-        intent.getStringExtra(ChatNotifier.EXTRA_THREAD_ID).orEmpty(),
-      )
-    }
+    ChatNotifier.openedChat(intent)?.let { push.notifier.opened(it.groupId, it.threadId) }
     links.take(intent)
   }
 }

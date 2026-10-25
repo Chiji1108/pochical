@@ -4,14 +4,17 @@ import android.app.Notification
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.Person
 import app.pochical.MainActivity
 import app.pochical.R
 import app.pochical.design.Chat
+import app.pochical.kit.AppLink
 import app.pochical.kit.ChatWithdrawal
 import app.pochical.kit.GroupMemberRow
 import app.pochical.kit.Localized
@@ -20,12 +23,13 @@ import app.pochical.kit.PushedAlert
 import app.pochical.kit.withdrawn
 import java.util.MissingFormatArgumentException
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * The chats' notifications (spec/chat.md, Notifications), as the server pushes them: shown as
  * Android shows a conversation, one notification a chat whose messages stack in it, each from its
- * writer; a tap opening the chat's place; and those of lines read taken back. One for anyone but
- * the user the device is signed in as shows nothing.
+ * writer; a tap opening the chat; and those of lines read taken back. One for anyone but the user
+ * the device is signed in as shows nothing, and neither does one of the chat on the screen.
  */
 class ChatNotifier(
   private val context: Context,
@@ -45,11 +49,18 @@ class ChatNotifier(
    */
   private val posted = ConcurrentHashMap<String, Notification>()
 
-  /** Shows [alert], unless it is for someone else or notifications may not be shown. */
+  /** The tag of the chat on the screen, in front, whose lines the person sees come there. */
+  private val onScreen = AtomicReference<String?>(null)
+
+  /**
+   * Shows [alert], unless it is for someone else, its chat is on the screen (spec/sync-protocol.md,
+   * Push), or notifications may not be shown.
+   */
   suspend fun show(alert: PushedAlert) {
     val me = me() ?: return
     if (alert.recipientId != me) return
     val tag = tagOf(alert.groupId, alert.threadId)
+    if (tag == onScreen.get()) return
     val notification = if (alert.groupId == Chat.supportPlace) answer(alert, tag) else line(alert, tag, me)
     post(tag, notification)
   }
@@ -82,6 +93,16 @@ class ChatNotifier(
     }
     // What is left as it was, not as a line come in.
     post(tag, builder.setOnlyAlertOnce(true).build())
+  }
+
+  /** The chat is on the screen, in front, until [offScreen]: its lines are not notified. */
+  fun onScreen(groupId: String, threadId: String) = onScreen.set(tagOf(groupId, threadId))
+
+  /** The chat left the screen, or the app the front. */
+  fun offScreen(groupId: String, threadId: String) {
+    val tag = tagOf(groupId, threadId)
+    // By its words, not its reference, which compareAndSet would go by.
+    onScreen.updateAndGet { if (it == tag) null else it }
   }
 
   /** The chat's notification was tapped, opening it: it goes, as the system's auto cancel would. */
@@ -180,16 +201,16 @@ class ChatNotifier(
       .build()
   }
 
-  /** What a tap opens: the app at the notification's chat (OpenedLinks), one intent a chat, telling it to let the notification go. */
+  /**
+   * What a tap opens: the app at the notification's chat ([openedChat]), at ここから新着 as from the
+   * chat list, one intent a chat, telling it to let the notification go.
+   */
   private fun opening(alert: PushedAlert): PendingIntent =
     PendingIntent.getActivity(
       context,
       0,
       Intent(context, MainActivity::class.java)
         .setAction(ACTION_OPEN_CHAT)
-        // Until Android has the chats, a group's opens the group (AppLink.Group), and Pochical's
-        // people's the app as it was.
-        .setData(if (alert.groupId == Chat.supportPlace) null else Uri.parse("pochical://group/${Uri.encode(alert.groupId)}"))
         .setIdentifier(tagOf(alert.groupId, alert.threadId))
         .putExtra(EXTRA_GROUP_ID, alert.groupId)
         .putExtra(EXTRA_THREAD_ID, alert.threadId),
@@ -246,6 +267,13 @@ class ChatNotifier(
     /** A chat's notification's tag. */
     fun tagOf(groupId: String, threadId: String) = "$groupId/$threadId"
 
+    /** The chat a notification's tap opens the app at, if [intent] is one's. */
+    fun openedChat(intent: Intent): AppLink.Chat? {
+      if (intent.action != ACTION_OPEN_CHAT) return null
+      val groupId = intent.getStringExtra(EXTRA_GROUP_ID)?.takeIf { it.isNotEmpty() } ?: return null
+      return AppLink.Chat(groupId, intent.getStringExtra(EXTRA_THREAD_ID) ?: return null)
+    }
+
     /** The strings each key the server sends is worded with (spec/sync-protocol.md, Push). */
     private val WORDS =
       mapOf(
@@ -260,5 +288,22 @@ class ChatNotifier(
         "CHAT_GROUP_POLL" to R.string.push_chat_group_poll,
         "SUPPORT_TITLE" to R.string.push_support_title,
       )
+  }
+}
+
+/** The chats' notifications, for a chat's screen to say it is on the screen; none in previews. */
+val LocalChatNotifier = staticCompositionLocalOf<ChatNotifier?> { null }
+
+/**
+ * Tells the notifications that the chat is on the screen while this page is in front (resumed), so
+ * its lines are not notified as the person sees them come: not while a page over it, the system's
+ * shade or another app is.
+ */
+@Composable
+fun ShowingChat(groupId: String, threadId: String) {
+  val notifier = LocalChatNotifier.current ?: return
+  LifecycleResumeEffect(notifier, groupId, threadId) {
+    notifier.onScreen(groupId, threadId)
+    onPauseOrDispose { notifier.offScreen(groupId, threadId) }
   }
 }

@@ -66,7 +66,8 @@ fun RootScreen(navigator: RootNavigator) {
   val values = LocalValues.current
   val groups by remember(values) { values.groups() }.collectAsState(null)
   // What a link opens: an invitation over whatever shows; a day in the calendar; a group, at a
-  // day in its table, or once the person has left it, グループ on the first of their groups.
+  // day in its table, or once the person has left it, グループ on the first of their groups; a
+  // chat's notification, the chat over its group in グループ, or Pochical's people's over 設定.
   LaunchedEffect(links.pending, groups) {
     when (val link = links.pending) {
       is AppLink.Invite -> navigator.openOnce(RootPage.Join(link.code))
@@ -79,6 +80,17 @@ fun RootScreen(navigator: RootNavigator) {
           navigator.showGroup(link.groupId)
         }
       }
+      is AppLink.Chat ->
+        if (link.groupId == Chat.supportPlace) {
+          navigator.showOver(RootTab.Settings, RootPage.Chat(link.groupId, link.threadId))
+        } else {
+          val known = groups ?: return@LaunchedEffect
+          if (known.any { it.id == link.groupId }) {
+            navigator.showGroup(link.groupId, RootPage.Chat(link.groupId, link.threadId))
+          } else {
+            navigator.showGroup(link.groupId)
+          }
+        }
       null -> return@LaunchedEffect
     }
     links.consume()

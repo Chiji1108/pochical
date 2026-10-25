@@ -10,7 +10,6 @@ import app.pochical.kit.ChatWithdrawal
 import app.pochical.kit.GroupMemberRow
 import app.pochical.kit.Localized
 import app.pochical.kit.PushedAlert
-import app.pochical.kit.appLink
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -123,8 +122,31 @@ class ChatNotifierTest {
     assertEquals(ChatNotifier.ACTION_OPEN_CHAT, opened.action)
     assertEquals(GROUP, opened.getStringExtra(ChatNotifier.EXTRA_GROUP_ID))
     assertEquals("group", opened.getStringExtra(ChatNotifier.EXTRA_THREAD_ID))
-    // Until Android has the chats, the group's place.
-    assertEquals(AppLink.Group(GROUP), appLink(opened.dataString.orEmpty()))
+    assertEquals(AppLink.Chat(GROUP, "group"), ChatNotifier.openedChat(opened))
+  }
+
+  @Test
+  fun anAnswerFromPochicalsPeopleOpensTheirChat() = runTest {
+    notifier.show(support(5, "ありがとうございます"))
+    val opened = shadowOf(shown().single().notification.contentIntent).savedIntent
+    assertEquals(AppLink.Chat("support", "support:$ME"), ChatNotifier.openedChat(opened))
+  }
+
+  @Test
+  fun theChatOnTheScreenIsNotNotified() = runTest {
+    notifier.onScreen(GROUP, "group")
+    notifier.show(groupLine(2, "今週どう？"))
+    // Another chat's lines are.
+    notifier.show(groupLine(3, "まだ？", groupId = "g2"))
+    assertEquals(listOf("g2/group"), shown().map { it.tag })
+    // Another chat going on the screen, then leaving it, changes nothing; once it leaves, its lines are notified again.
+    notifier.onScreen(GROUP, "group")
+    notifier.offScreen(GROUP, "direct:$ME:$WRITER")
+    notifier.show(groupLine(4, "土曜とか"))
+    assertEquals(1, shown().size)
+    notifier.offScreen(GROUP, "group")
+    notifier.show(groupLine(5, "土曜とか"))
+    assertEquals(setOf("g2/group", "$GROUP/group"), shown().map { it.tag }.toSet())
   }
 
   @Test

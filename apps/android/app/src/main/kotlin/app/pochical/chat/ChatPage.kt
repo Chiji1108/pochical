@@ -6,6 +6,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.compose.LifecycleEventEffect
+import app.pochical.notifications.ShowingChat
 import app.pochical.calendar.fullText
 import app.pochical.calendar.rememberReducedMotion
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -172,6 +173,8 @@ val LocalChats = staticCompositionLocalOf<Chats> { error("No chats provided") }
 @Composable
 fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit, open: (RootPage) -> Unit) {
   HoldSocket(groupId)
+  // Its lines are not notified while the person sees them come here.
+  ShowingChat(groupId, threadId)
   val onPhotos = { open(RootPage.ChatPhotos(groupId, threadId)) }
   val chats = LocalChats.current
   val account = LocalAccount.current

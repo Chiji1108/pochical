@@ -189,6 +189,13 @@ class RootNavigator(
     openGroup = groupId
   }
 
+  /** Shows [page] over [tab] alone, in place of the pages open, as a notification's chat opens. */
+  fun showOver(tab: RootTab, page: RootPage) {
+    pages.clear()
+    pages.add(page)
+    this.tab = tab
+  }
+
   /** The day a link asks the calendar to open, until it has. */
   var openingDay by mutableStateOf<LocalDate?>(null)
 

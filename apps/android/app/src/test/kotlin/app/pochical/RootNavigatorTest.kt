@@ -38,4 +38,17 @@ class RootNavigatorTest {
     assertEquals(RootTab.Calendar, navigator.tab)
     assertFalse(navigator.backGoesToFirstTab)
   }
+
+  @Test
+  fun aChatOpenedFromANotificationShowsOverItsTabAlone() {
+    navigator.open(RootPage.Appearance)
+    navigator.showOver(RootTab.Settings, RootPage.Chat("support", "group"))
+    assertEquals(listOf(Tabs, RootPage.Chat("support", "group")), navigator.routes)
+    assertEquals(RootTab.Settings, navigator.tab)
+
+    navigator.showGroup("g1", RootPage.Chat("g1", "group"))
+    assertEquals(listOf(Tabs, RootPage.Chat("g1", "group")), navigator.routes)
+    assertEquals(RootTab.Groups, navigator.tab)
+    assertEquals("g1", navigator.openGroup)
+  }
 }

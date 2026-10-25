@@ -17,6 +17,12 @@ sealed interface AppLink {
 
   /** A group's table at a day, or its top: pochical://group/{groupId}, with /day/{yyyy-mm-dd} after it. */
   data class Group(val groupId: String, val day: LocalDate? = null) : AppLink
+
+  /**
+   * A chat, at ここから新着, as its notification's tap opens it (spec/chat.md, Notifications): a
+   * group's, or the chat with Pochical's people. No link names one; the notification's intent does.
+   */
+  data class Chat(val groupId: String, val threadId: String) : AppLink
 }
 
 /**

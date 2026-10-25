@@ -55,4 +55,32 @@ class PushDeliveryTest {
     assertEquals(group.name, style.conversationTitle)
     assertEquals(listOf("土曜とか", "写真を送りました"), style.messages.map { it.text.toString() })
   }
+
+  /**
+   * A line of the first group's chat from another member, and an answer from Pochical's people,
+   * left in the shade for a tap to open each chat (spec/chat.md, Notifications).
+   */
+  @Test
+  fun aGroupChatsLineAndAnAnswerToTap() = runBlocking {
+    val me = kit.database.owner() ?: error("Sign the app in first")
+    val group = kit.database.values().groups().first().firstOrNull() ?: error("Join a group first")
+    val writer = kit.database.values().members(group.id).first().first { it.userId != me }
+    val manager = app.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    manager.cancelAll()
+    push.handle(
+      mapOf(
+        "alert" to
+          """{"title":{"key":"CHAT_TITLE","args":["${group.name}"]},"body":{"key":"CHAT_GROUP_TEXT","args":["${writer.displayName}","今週どう？"]},""" +
+            """"groupId":"${group.id}","threadId":"group","line":{"authorId":"${writer.userId}","seq":2},"badge":1,"recipientId":"$me"}"""
+      )
+    )
+    push.handle(
+      mapOf(
+        "alert" to
+          """{"title":{"key":"SUPPORT_TITLE","args":[]},"body":{"key":"CHAT_TEXT","args":["ありがとうございます。直しました"]},""" +
+            """"groupId":"support","threadId":"group","line":{"authorId":"pochical","seq":2},"badge":2,"recipientId":"$me"}"""
+      )
+    )
+    assertEquals(setOf("${group.id}/group", "support/group"), manager.activeNotifications.map { it.tag }.toSet())
+  }
 }

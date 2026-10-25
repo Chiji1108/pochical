@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import app.pochical.kit.AppLink
 import app.pochical.kit.appLink
+import app.pochical.notifications.ChatNotifier
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -29,6 +30,20 @@ class OpenedLinksTest {
     links.take(opening("pochical://apple-sign-in?code=x"))
     links.take(Intent(Intent.ACTION_MAIN))
     links.take(null)
+    assertNull(links.consume())
+  }
+
+  @Test
+  fun aChatsNotificationOpensTheChat() {
+    val links = OpenedLinks()
+    links.take(
+      Intent(ChatNotifier.ACTION_OPEN_CHAT)
+        .putExtra(ChatNotifier.EXTRA_GROUP_ID, "g1")
+        .putExtra(ChatNotifier.EXTRA_THREAD_ID, "direct:u1:u2")
+    )
+    assertEquals(AppLink.Chat("g1", "direct:u1:u2"), links.consume())
+    // One naming no chat opens nothing.
+    links.take(Intent(ChatNotifier.ACTION_OPEN_CHAT))
     assertNull(links.consume())
   }
 
