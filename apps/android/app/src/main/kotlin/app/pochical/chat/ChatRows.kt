@@ -167,7 +167,7 @@ private fun TimeOrMark(time: String?, waiting: WaitingLine?, notSentItems: List<
     // The room a time takes, drawn only when the line shows its own.
     Text("00:00", Modifier.alpha(0f).clearAndSetSemantics {}, style = MaterialTheme.typography.labelSmall)
     when {
-      waiting?.failed == true -> NotSentMark(notSentItems)
+      waiting?.failed == true -> NotSentMark(notSentItems, photos = waiting.content is LineContent.Photos)
       waiting != null -> {
         val sending = stringResource(R.string.chat_sending)
         Icon(painterResource(R.drawable.ic_schedule), sending, Modifier.size(14.dp), tint = colors.textTertiary)
@@ -177,9 +177,9 @@ private fun TimeOrMark(time: String?, waiting: WaitingLine?, notSentItems: List<
   }
 }
 
-/** The red ! of a line not sent: its menu, headed 送れなかったメッセージ, sends it again or deletes it. */
+/** The red ! of a line not sent: its menu, headed 送れなかったメッセージ (送れなかった写真 for photos), sends it again or deletes it. */
 @Composable
-private fun NotSentMark(items: List<LineMenuItem>) {
+private fun NotSentMark(items: List<LineMenuItem>, photos: Boolean) {
   var open by remember { mutableStateOf(false) }
   val colors = LocalThemeColors.current
   Box {
@@ -191,7 +191,7 @@ private fun NotSentMark(items: List<LineMenuItem>) {
     )
     DropdownMenu(open, onDismissRequest = { open = false }) {
       Text(
-        stringResource(R.string.chat_not_sent_menu),
+        stringResource(if (photos) R.string.chat_photo_not_sent_menu else R.string.chat_not_sent_menu),
         Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
         style = MaterialTheme.typography.labelMedium,
         color = colors.textSecondary,

@@ -17,6 +17,7 @@ import androidx.compose.ui.res.stringResource
 import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.design.ChatPlaceRules
+import app.pochical.groups.LocalGroupCalls
 import app.pochical.kit.LineContent
 import app.pochical.kit.plainText
 import kotlinx.coroutines.launch
@@ -38,6 +39,7 @@ sealed interface Unsending {
  */
 @Composable
 fun rememberLineActions(
+  groupId: String,
   composer: ComposerState,
   nameOf: (String) -> String,
   snackbar: SnackbarHostState,
@@ -52,7 +54,10 @@ fun rememberLineActions(
   val scope = rememberCoroutineScope()
   val clipboard = LocalClipboard.current
   val haptics = LocalHapticFeedback.current
-  val resources = LocalContext.current.resources
+  val context = LocalContext.current
+  val resources = context.resources
+  val calls = LocalGroupCalls.current
+  val files = LocalPhotoFiles.current
   val rules = ChatPlaceRules.group
   fun copy(words: String) =
     LineMenuItem(resources.getString(R.string.chat_copy), R.drawable.ic_content_copy) {
@@ -83,6 +88,11 @@ fun rememberLineActions(
         seq != null -> {
           add(LineMenuItem(resources.getString(R.string.chat_reply), R.drawable.ic_reply) { composer.answer(seq) })
           if (words != null) add(copy(words))
+          // A line of photos saves them all (spec/chat.md, Photos).
+          val photos = (look.content as? LineContent.Photos)?.photos
+          if (photos != null) {
+            add(LineMenuItem(resources.getString(R.string.chat_save), R.drawable.ic_download) { scope.launch { snackbar.showSnackbar(savePhotos(context, calls, files, groupId, photos)) } })
+          }
           // Anyone's line, for everyone in the chat (spec/chat.md, Pins).
           if (rules.pins) {
             val pinned = look.pinned

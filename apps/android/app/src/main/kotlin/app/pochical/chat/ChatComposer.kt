@@ -1,5 +1,9 @@
 package app.pochical.chat
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Column
@@ -35,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -68,11 +73,11 @@ import kotlinx.coroutines.withContext
 
 /**
  * What the chat's composer holds, kept across a rotation and the process's death: what is written
- * and the line it answers or changes (`Writing`), and the field's focus, which 返信 and 編集 take.
- * Photos and days come with #827 and the day sheet.
+ * and the line it answers or changes (`Writing`), the photos picked (kept in the cache, by id), and
+ * the field's focus, which 返信 and 編集 take. Days come with the day sheet.
  */
 @Stable
-class ComposerState(writing: Writing<Nothing>, tookDraft: Boolean) {
+class ComposerState(writing: Writing<PickedPhoto>, tookDraft: Boolean) {
   var writing by mutableStateOf(writing)
 
   /** Only once the chat's draft was read is what the composer holds the draft. */
@@ -100,19 +105,20 @@ class ComposerState(writing: Writing<Nothing>, tookDraft: Boolean) {
       Saver(
         save = { state ->
           val w = state.writing
-          listOf(w.text, w.replyTo ?: -1L, w.editing ?: -1L, w.picked.flatMap { listOf(it.id, it.name) }, state.tookDraft, w.previewRemoved.orEmpty())
+          listOf(w.text, w.replyTo ?: -1L, w.editing ?: -1L, w.picked.flatMap { listOf(it.id, it.name) }, state.tookDraft, w.previewRemoved.orEmpty(), w.photos.map { it.saved() })
         },
         restore = { saved ->
           val list = saved as List<*>
           val picked = (list[3] as List<*>).chunked(2).map { PickedMember(it[0] as String, it[1] as String) }
           val writing =
-            Writing<Nothing>(
+            Writing(
               text = list[0] as String,
               picked = picked,
               replyTo = (list[1] as Long).takeIf { it >= 0 },
               editing = (list[2] as Long).takeIf { it >= 0 },
               // × holds until the line is sent, across a rotation too.
               previewRemoved = (list[5] as String).takeIf { it.isNotEmpty() },
+              photos = (list[6] as List<*>).map { PickedPhoto.restored(it as List<*>) },
             )
           ComposerState(writing, list[4] as Boolean)
         },
@@ -129,7 +135,10 @@ fun rememberComposerState(): ComposerState = rememberSaveable(saver = ComposerSt
  * (〇〇に返信) or changes (メッセージを編集), whose × stops it; while changing a line the send is ✓.
  * What is written is the chat's draft, kept on the device as the writing pauses, as the composer
  * empties and as the chat is left; while it holds words, the others hear the member is writing, at
- * most every `chatRules.typingSendMs`. Mentions' list, photos and days (＋) come with #827 and later.
+ * most every `chatRules.typingSendMs`. 写真を送る opens the system's photo picker (no storage
+ * permission), its photos waiting above the field until sent, before the words, as a line of their
+ * own; it stands in ＋'s place until ＋'s menu has more than it (日にちを共有, #910). Mentions' list and
+ * days come later.
  */
 @Composable
 fun Composer(
@@ -145,10 +154,40 @@ fun Composer(
   onTyping: (Boolean) -> Unit,
   onSent: () -> Unit,
   onNotKept: () -> Unit,
+  /** Says what picking photos came to (past the most, one that cannot be read). */
+  onSay: (String) -> Unit,
   modifier: Modifier = Modifier,
 ) {
   val chats = LocalChats.current
   val scope = rememberCoroutineScope()
+  val context = LocalContext.current
+  val resources = context.resources
+  // Picked photos join those waiting, as many as there is room for under chatRules.photosPerSend.
+  val took = { uris: List<Uri> ->
+    scope.launch {
+      val room = Chat.photosPerSend - state.writing.photos.size
+      if (uris.size > room) onSay(resources.getString(R.string.chat_photo_limit, Chat.photosPerSend))
+      val picked = pickPhotos(context, uris.take(maxOf(room, 0)))
+      if (picked.unreadable) onSay(resources.getString(R.string.chat_photo_unreadable))
+      state.writing = state.writing.copy(photos = state.writing.photos + picked.photos)
+    }
+    Unit
+  }
+  // The picker stops at the room left; it takes two at least, one alone picked as one.
+  val most = maxOf(Chat.photosPerSend - state.writing.photos.size, 2)
+  // Picked photos the composer no longer holds (taken out by 編集, or left with a chat) go as it opens.
+  LaunchedEffect(Unit) { sweepPicked(context, state.writing.photos) }
+  val pickMany =rememberLauncherForActivityResult(remember(most) { ActivityResultContracts.PickMultipleVisualMedia(most) }) { took(it) }
+  val pickOne = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> took(listOfNotNull(uri)) }
+  val pickPhotos = {
+    val room = Chat.photosPerSend - state.writing.photos.size
+    val images = PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+    when {
+      room <= 0 -> onSay(resources.getString(R.string.chat_photo_limit, Chat.photosPerSend))
+      room == 1 -> pickOne.launch(images)
+      else -> pickMany.launch(images)
+    }
+  }
   val writing = state.writing
   val currentNameOf by rememberUpdatedState(nameOf)
   val keyboard = LocalSoftwareKeyboardController.current
@@ -201,7 +240,9 @@ fun Composer(
   DisposableEffect(Unit) { onDispose { if (typingSaidAt != 0L) typing(false) } }
 
   val editing = writing.editing
-  val sendable = fitsText(writing.sent, TextLimits.chatMessage)
+  val photos = writing.photos
+  // Photos go with no words too; words that do not fit go with none.
+  val sendable = if (photos.isNotEmpty()) writing.sent.isBlank() || fitsText(writing.sent, TextLimits.chatMessage) else fitsText(writing.sent, TextLimits.chatMessage)
 
   // The page of the first link written, asked for once the link has stayed the same for
   // chatRules.linkPreviewSettleMs, and shown over the composer until × takes it off; none while an
@@ -240,7 +281,19 @@ fun Composer(
           ComposerPreview(shownPage?.site ?: site(url), shownPage) { state.writing = state.writing.copy(previewRemoved = url) }
         }
       }
+      AnimatedVisibility(photos.isNotEmpty() && editing == null) {
+        PhotoTray(context, photos) { photo ->
+          state.writing = state.writing.copy(photos = state.writing.photos - photo)
+          scope.launch { dropPicked(context, listOf(photo)) }
+        }
+      }
       Row(Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.Bottom) {
+        // Hidden while a line is changed, which takes words alone.
+        if (editing == null) {
+          IconButton(onClick = pickPhotos, Modifier.padding(bottom = 4.dp)) {
+            Icon(painterResource(R.drawable.ic_image), stringResource(R.string.chat_photo_send))
+          }
+        }
         OutlinedTextField(
           value = text,
           onValueChange = { state.writing = state.writing.copy(text = it) },
@@ -256,24 +309,40 @@ fun Composer(
             val going = state.writing
             state.writing = Writing()
             scope.launch {
+              // What has gone; on a failure the rest comes back, to send again.
+              var left = going
               try {
                 // Kept though the chat is left meanwhile: what was written is no longer in the
                 // composer to be kept as its draft.
                 withContext(NonCancellable) {
                   val seq = going.editing
                   val words = going.sent
-                  // The page as it came for the words' first link, or none taken off with ×.
-                  val sentLink = previewLink(words)
-                  val removed = sentLink != null && sentLink == going.previewRemoved
-                  val sentPage = sentLink?.takeIf { !removed }?.let(pages::page)
-                  if (seq != null) chats.change(groupId, threadId, seq, words, sentPage)
-                  else chats.send(groupId, threadId, words, going.replyTo, sentPage, withoutPreview = removed)
+                  // The photos first, as one line answering what the composer answers; the words after
+                  // them as a line of their own.
+                  if (seq == null && going.photos.isNotEmpty()) {
+                    val shrunk = shrunkPhotos(context, going.photos)
+                    // One the system let go of from the cache meanwhile is left out, as one the phone cannot read.
+                    if (shrunk.size < going.photos.size) onSay(resources.getString(R.string.chat_photo_unreadable))
+                    if (shrunk.isNotEmpty()) {
+                      chats.sendPhotos(groupId, threadId, going.photos.mapNotNull { shrunk[it] }, going.replyTo)
+                      dropPicked(context, going.photos)
+                    }
+                    left = going.copy(photos = emptyList(), replyTo = going.replyTo.takeIf { shrunk.isEmpty() })
+                  }
+                  if (words.isNotBlank()) {
+                    // The page as it came for the words' first link, or none taken off with ×.
+                    val sentLink = previewLink(words)
+                    val removed = sentLink != null && sentLink == going.previewRemoved
+                    val sentPage = sentLink?.takeIf { !removed }?.let(pages::page)
+                    if (seq != null) chats.change(groupId, threadId, seq, words, sentPage)
+                    else chats.send(groupId, threadId, words, left.replyTo, sentPage, withoutPreview = removed)
+                  }
                 }
               } catch (e: CancellationException) {
                 throw e
               } catch (_: Exception) {
                 // Not kept: what was written comes back, to send again.
-                if (state.writing.text.isEmpty()) state.writing = going
+                if (state.writing.text.isEmpty() && state.writing.photos.isEmpty()) state.writing = left
                 onNotKept()
                 return@launch
               }

@@ -103,4 +103,17 @@
   <string name="chat_poll_redecide">決め直す</string>
   <string name="chat_poll_settle">決める</string>
   <string name="chat_poll_decided_said">%1$sに決めました</string>
+  <string name="chat_photo">写真</string>
+  <string name="chat_photo_count">%1$d枚の写真</string>
+  <string name="chat_photo_retry">写真をもう一度読み込む</string>
+  <string name="chat_photo_stop">送信をやめる</string>
+  <string name="chat_photo_send">写真を送る</string>
+  <string name="chat_photo_tray">送る写真</string>
+  <string name="chat_photo_remove">%1$d枚目の写真を外す</string>
+  <string name="chat_photo_limit">写真は一度に%1$d枚まで送れます</string>
+  <string name="chat_photo_unreadable">開けない写真がありました</string>
+  <string name="chat_photo_saved">写真を保存しました</string>
+  <string name="chat_photo_some_not_saved">一部の写真を保存できませんでした</string>
+  <string name="chat_photo_not_saved">保存できませんでした</string>
+  <string name="chat_photo_not_sent_menu">送れなかった写真</string>
 </resources>
