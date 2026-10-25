@@ -37,7 +37,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.pochical.LocalThemeColors
 import app.pochical.R
-import app.pochical.groups.MemberAvatar
 import app.pochical.kit.GroupMemberRow
 import app.pochical.kit.LineReaction
 import app.pochical.kit.PhotoShelf
@@ -144,7 +143,7 @@ private fun ReactionPill(
         Row(horizontalArrangement = Arrangement.spacedBy((-4).dp)) {
           for (id in faces) {
             val writer = writers[id]
-            MemberAvatar(writer?.shownName().orEmpty(), writer?.photoId.orEmpty(), writer?.let { PhotoShelf.Group(it.groupId) }, FACE_SIZE)
+            Face(id, writer?.shownName().orEmpty(), writer?.photoId.orEmpty(), writer?.let { PhotoShelf.place(it.groupId) }, FACE_SIZE)
           }
         }
         if (count > 3) Text("+${count - 2}", style = MaterialTheme.typography.labelMedium, color = colors.textSecondary)
@@ -191,7 +190,7 @@ fun ChoosersSheet(reaction: LineReaction, writers: Map<String, GroupMemberRow>, 
     reaction.emoji,
     reaction.userIds.map { id ->
       val writer = writers[id]
-      SheetMember(id, nameOf(id), writer?.photoId.orEmpty(), writer?.let { PhotoShelf.Group(it.groupId) })
+      SheetMember(id, nameOf(id), writer?.photoId.orEmpty(), writer?.let { PhotoShelf.place(it.groupId) })
     },
     onDismiss,
   )

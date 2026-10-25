@@ -131,13 +131,26 @@ fun rememberLineActions(
   }
 }
 
-/** 送信を取り消しますか？, asked in a centered alert; a line still on its way says it has not gone yet. */
+/**
+ * 送信を取り消しますか？, asked in a centered alert; a line still on its way says it has not gone yet,
+ * and one in the chat with Pochical's people ([support]) whose chat it leaves.
+ */
 @Composable
-fun UnsendDialog(asked: Unsending, onDismiss: () -> Unit, onUnsend: () -> Unit) {
+fun UnsendDialog(asked: Unsending, support: Boolean, onDismiss: () -> Unit, onUnsend: () -> Unit) {
   AlertDialog(
     onDismissRequest = onDismiss,
     title = { Text(stringResource(R.string.chat_unsend_ask)) },
-    text = { Text(stringResource(if (asked is Unsending.Waiting) R.string.chat_unsend_waiting else R.string.chat_unsend_body)) },
+    text = {
+      Text(
+        stringResource(
+          when {
+            asked is Unsending.Waiting -> R.string.chat_unsend_waiting
+            support -> R.string.support_unsend_body
+            else -> R.string.chat_unsend_body
+          }
+        )
+      )
+    },
     confirmButton = { TextButton(onClick = onUnsend) { Text(stringResource(R.string.chat_unsend_confirm), color = LocalThemeColors.current.dangerDefault) } },
     dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
   )

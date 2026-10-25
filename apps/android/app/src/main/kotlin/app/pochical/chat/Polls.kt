@@ -177,7 +177,7 @@ private fun PollRow(day: LocalDate, poll: ChatPoll, decided: LocalDate?, togethe
       val shown = if (people.size > MOST_FACES) people.take(MOST_FACES - 1) else people
       for (id in shown) {
         val writer = handlers.writers[id]
-        MemberAvatar(handlers.nameOf(id), writer?.photoId.orEmpty(), writer?.let { PhotoShelf.Group(it.groupId) }, FACE_SIZE)
+        MemberAvatar(handlers.nameOf(id), writer?.photoId.orEmpty(), writer?.let { PhotoShelf.place(it.groupId) }, FACE_SIZE)
       }
       if (people.isNotEmpty()) {
         Text(
@@ -254,7 +254,7 @@ fun VotersSheet(day: LocalDate, people: List<String>, writers: Map<String, Group
     stringResource(R.string.chat_poll_who, day.fullText),
     people.map { id ->
       val writer = writers[id]
-      SheetMember(id, nameOf(id), writer?.photoId.orEmpty(), writer?.let { PhotoShelf.Group(it.groupId) })
+      SheetMember(id, nameOf(id), writer?.photoId.orEmpty(), writer?.let { PhotoShelf.place(it.groupId) })
     },
     onDismiss,
   )

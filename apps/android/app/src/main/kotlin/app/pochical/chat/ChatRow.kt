@@ -79,7 +79,7 @@ fun ChatList(groupId: String, groupName: String, me: String, onOpen: (threadId: 
   var starting by rememberSaveable { mutableStateOf(false) }
   Column(modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
     Column(Modifier.clip(RoundedCornerShape(Radius.xxl)).background(colors.fillQuaternary)) {
-      ChatRow(groupId, GROUP_THREAD, me, stringResource(R.string.group_chat), names, blockedIds, today, onOpen = { onOpen(GROUP_THREAD) }) {
+      ChatRow(groupId, GROUP_THREAD, me, stringResource(R.string.group_chat), names, blockedIds, onOpen = { onOpen(GROUP_THREAD) }, today = today, onCard = true) {
         Box(Modifier.size(28.dp).background(colors.accentContainer, RoundedCornerShape(Radius.sm)), contentAlignment = Alignment.Center) {
           Icon(painterResource(R.drawable.ic_forum), contentDescription = null, Modifier.size(16.dp), tint = colors.accentDefault)
         }
@@ -87,7 +87,7 @@ fun ChatList(groupId: String, groupName: String, me: String, onOpen: (threadId: 
       for (member in talking) {
         RowRule()
         val thread = directThread(me, member.userId)
-        ChatRow(groupId, thread, me, member.shownName(), names, blockedIds, today, onOpen = { onOpen(thread) }) {
+        ChatRow(groupId, thread, me, member.shownName(), names, blockedIds, onOpen = { onOpen(thread) }, today = today, onCard = true) {
           MemberAvatar(member.shownName(), if (member.deleted) "" else member.photoId, PhotoShelf.Group(groupId), 28.dp)
         }
       }
@@ -126,21 +126,24 @@ private fun RowRule() {
 }
 
 /**
- * A chat in the hub's list (/design's ChatRow): its mark, its name with a crossed-out bell while its
- * notifications are off, its latest line, or 下書き： and the draft left in it, or the red ! of a
+ * A chat in a list of chats (/design's ChatRow): the hub's, on its card ([onCard]), and 設定's chat
+ * with Pochical's people. Its mark, its name with a crossed-out bell while its notifications are off,
+ * its latest line ([empty] while it has none), or 下書き： and the draft left in it, or the red ! of a
  * line of the member's not sent; its time, and how many of its lines are unread, @ before them when
  * one mentions the reader.
  */
 @Composable
-private fun ChatRow(
+internal fun ChatRow(
   groupId: String,
   threadId: String,
   me: String,
   label: String,
   names: Map<String, String>,
   blocked: Set<String>,
-  today: LocalDate,
   onOpen: () -> Unit,
+  today: LocalDate = rememberToday(),
+  empty: String = stringResource(R.string.chat_none),
+  onCard: Boolean = false,
   icon: @Composable () -> Unit,
 ) {
   val chats = LocalChats.current
@@ -161,7 +164,7 @@ private fun ChatRow(
         }
       }
     },
-    supportingContent = { RowWords(summary, me, names, blocked) },
+    supportingContent = { RowWords(summary, me, names, blocked, empty) },
     leadingContent = icon,
     trailingContent =
       if (time == null && summary.unread == 0) null
@@ -186,7 +189,7 @@ private fun ChatRow(
           }
         }
       },
-    colors = ListItemDefaults.colors(containerColor = colors.fillQuaternary),
+    colors = if (onCard) ListItemDefaults.colors(containerColor = colors.fillQuaternary) else ListItemDefaults.colors(),
     modifier = Modifier.clickable(onClick = onOpen),
   )
 }
@@ -197,7 +200,7 @@ private fun ChatRow(
  * way; Reporting and blocking).
  */
 @Composable
-private fun RowWords(summary: ChatSummary, me: String, names: Map<String, String>, blocked: Set<String>) {
+private fun RowWords(summary: ChatSummary, me: String, names: Map<String, String>, blocked: Set<String>, empty: String) {
   val colors = LocalThemeColors.current
   val deleted = stringResource(R.string.deleted_account)
   val nameOf = { id: String -> names[id] ?: deleted }
@@ -220,7 +223,7 @@ private fun RowWords(summary: ChatSummary, me: String, names: Map<String, String
       val words =
         when {
           waiting != null -> "$mine：${listWords(waiting.content, nameOf)}"
-          last == null -> stringResource(R.string.chat_none)
+          last == null -> empty
           else ->
             when (val content = last.content) {
               is LineContent.Notice -> noticeWords(content.notice, nameOf(last.authorId), nameOf(content.notice.subjectId))

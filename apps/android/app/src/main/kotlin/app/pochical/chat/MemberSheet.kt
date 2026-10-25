@@ -16,7 +16,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.pochical.ListSheet
 import app.pochical.LocalThemeColors
-import app.pochical.groups.MemberAvatar
 import app.pochical.kit.PhotoShelf
 
 /** Someone a sheet lists: their id, their name and face as the group shows them. */
@@ -36,7 +35,7 @@ fun MemberSheet(title: String, members: List<SheetMember>, onDismiss: () -> Unit
     items(members, key = { it.id }) { member ->
       ListItem(
         headlineContent = { Text(member.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        leadingContent = { MemberAvatar(member.name, member.photoId, member.shelf, 40.dp) },
+        leadingContent = { Face(member.id, member.name, member.photoId, member.shelf, 40.dp) },
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
         modifier = Modifier.fillMaxWidth().then(if (onPick != null) Modifier.clickable { onPick(member) } else Modifier),
       )

@@ -80,7 +80,7 @@ class ChatSyncTest {
   fun theChatWithPochicalsPeopleGoesOnItsOwnSocketWithTheAppAndTheDeviceOnEachLine() = runBlocking {
     val phone = signedIn()
     val me = server.userId
-    val chats = Chats(phone.database, phone.linePhotos, device = { "ポチカル 1.0・Pixel・Android 17" })
+    val chats = Chats(phone.database, phone.linePhotos, deviceWords = { "ポチカル 1.0・Pixel・Android 17" })
     val hold = phone.account.hold(Chat.supportPlace)
     try {
       chats.send(Chat.supportPlace, GROUP_THREAD, "使いにくいところ")

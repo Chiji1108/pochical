@@ -44,7 +44,7 @@ class PochicalKit(context: Context) {
   val device: String by lazy { appDevice(context) }
 
   /** The chats' lines as the screens show them, and the member's edits of them. */
-  val chats = Chats(database, linePhotos, device = { device })
+  val chats = Chats(database, linePhotos, deviceWords = { device })
   val account =
     SyncAccount(
       database = database,
