@@ -614,6 +614,20 @@ struct UnreadVectors: Decodable, Sendable {
   }
 
   let notifying: [Notifying]
+
+  struct SummaryGroup: Decodable, Sendable {
+    let muted: Bool
+    let directMuted: Bool
+  }
+
+  struct Summary: VectorCase {
+    let name: String
+    let allowed: Bool
+    let groups: [SummaryGroup]
+    let expected: String
+  }
+
+  let notificationsSummary: [Summary]
 }
 
 @Test(arguments: try vectors("unread", as: UnreadVectors.self).notifying)
@@ -624,6 +638,23 @@ func unreadThatNotifies(_ vector: UnreadVectors.Notifying) {
         chat.unread, muted: chat.muted, mentionsWhenMuted: vector.mentionsWhenMuted, me: "me")
   }
   #expect(total == vector.expected)
+}
+
+@Test(arguments: try vectors("unread", as: UnreadVectors.self).notificationsSummary)
+func chatNotificationsSummaryOfTheGroups(_ vector: UnreadVectors.Summary) {
+  var notifications = ChatNotificationState()
+  for (index, group) in vector.groups.enumerated() {
+    if group.muted {
+      notifications.muted.insert(ChatKey(groupID: "g\(index)", threadID: groupThread))
+    }
+    if group.directMuted {
+      notifications.muted.insert(ChatKey(groupID: "g\(index)", threadID: "direct:a:b"))
+    }
+  }
+  let summary = chatNotificationsSummary(
+    groupIDs: vector.groups.indices.map { "g\($0)" }, notifications: notifications,
+    allowed: vector.allowed)
+  #expect(summary == vector.expected)
 }
 
 private func unreadCount(_ cursor: UInt64, _ count: UInt32, in groupID: String = "g")

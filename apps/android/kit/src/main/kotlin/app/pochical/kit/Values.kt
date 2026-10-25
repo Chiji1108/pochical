@@ -74,4 +74,11 @@ interface Values {
   /** Those the user has blocked as each group they were in with them knows them, for their names and faces. */
   @Query("SELECT * FROM groupMembers WHERE userId IN (SELECT userId FROM blocks) ORDER BY joinedAtMs")
   fun blockedMembers(): Flow<List<GroupMemberRow>>
+
+  /** The chats whose notifications the user turned off (spec/chat.md, Notifications). */
+  @Query("SELECT * FROM chatMutes") fun chatMutes(): Flow<List<ChatMuteRow>>
+
+  /** メンションはいつも通知, once the user has set it; null before, when it is on. */
+  @Query("SELECT * FROM chatNotificationSettings WHERE id = 1")
+  fun chatNotificationSettings(): Flow<ChatNotificationSettingsRow?>
 }

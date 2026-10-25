@@ -116,6 +116,18 @@ public struct ChatNotificationsRequest: FetchKeyRequest, Hashable {
   }
 }
 
+/// 設定 › 通知 › チャット's value, for the user's groups `groupIDs`: オン while
+/// every group's chat notifies, オフ while none does or notifications are
+/// not allowed, else how many do (spec/vectors/unread.json,
+/// notificationsSummary).
+public func chatNotificationsSummary(
+  groupIDs: [String], notifications: ChatNotificationState, allowed: Bool
+) -> String {
+  let heard = groupIDs.count { !notifications.isMuted(groupThread, in: $0) }
+  if !allowed || heard == 0 { return "オフ" }
+  return heard == groupIDs.count ? "オン" : "\(heard)グループ"
+}
+
 /// How many of a chat's unread lines count, as what notifies, from the
 /// count of them and of their mentions of the reader: all of them in a
 /// chat that is on; in one turned off only the mentions, and those only

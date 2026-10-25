@@ -68,7 +68,7 @@ struct SettingsScreen: View {
           LabeledContent(
             "チャット",
             value: chatNotificationsSummary(
-              groups: groups, notifications: notifications,
+              groupIDs: groups.map(\.id), notifications: notifications,
               allowed: Notifications.shared.permission == .allowed))
         }
       }
