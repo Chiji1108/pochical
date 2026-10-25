@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 8,
-    "identityHash": "8ec7b43ef9ce186f38ec16edfc8146a3",
+    "identityHash": "dacfe8b9bcbe20061c6242175c366a92",
     "entities": [
       {
         "tableName": "days",
@@ -357,7 +357,7 @@
       },
       {
         "tableName": "syncState",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `deviceId` TEXT NOT NULL, `lastMs` INTEGER NOT NULL, `lastCounter` INTEGER NOT NULL, `offsetMs` INTEGER NOT NULL, `cursor` INTEGER NOT NULL, `owner` TEXT NOT NULL, `erased` TEXT NOT NULL, `schema` INTEGER NOT NULL, `firstRunDone` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `deviceId` TEXT NOT NULL, `lastMs` INTEGER NOT NULL, `lastCounter` INTEGER NOT NULL, `offsetMs` INTEGER NOT NULL, `cursor` INTEGER NOT NULL, `owner` TEXT NOT NULL, `erased` TEXT NOT NULL, `erasedWhy` TEXT NOT NULL, `schema` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -408,14 +408,14 @@
             "notNull": true
           },
           {
-            "fieldPath": "schema",
-            "columnName": "schema",
-            "affinity": "INTEGER",
+            "fieldPath": "erasedWhy",
+            "columnName": "erasedWhy",
+            "affinity": "TEXT",
             "notNull": true
           },
           {
-            "fieldPath": "firstRunDone",
-            "columnName": "firstRunDone",
+            "fieldPath": "schema",
+            "columnName": "schema",
             "affinity": "INTEGER",
             "notNull": true
           }
@@ -1168,7 +1168,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '8ec7b43ef9ce186f38ec16edfc8146a3')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'dacfe8b9bcbe20061c6242175c366a92')"
     ]
   }
 }
