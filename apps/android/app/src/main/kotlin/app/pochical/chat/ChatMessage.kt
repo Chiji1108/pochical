@@ -228,8 +228,17 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
   val items = handlers.items(look)
   // Its menu's items, 返信 first, then what each of its parts offers (spec/chat.md, Screen readers).
   val partLine = PartLine(look.seq, handlers, openMenu = { openMenu() })
+  // The writer's profile, which a tap on their face opens.
+  val profiled = look.writer?.takeIf { !look.mine && !it.deleted }
+  val openProfile = handlers.openProfile
+  val profile =
+    if (profiled != null && openProfile != null) {
+      CustomAccessibilityAction(stringResource(R.string.chat_writer_profile, profiled.shownName())) { openProfile(profiled); true }
+    } else {
+      null
+    }
   val actions =
-    (items.map { item -> CustomAccessibilityAction(item.label) { item.run(); true } } + look.parts.flatMap { it.actions(partLine) })
+    (items.map { item -> CustomAccessibilityAction(item.label) { item.run(); true } } + look.parts.flatMap { it.actions(partLine) } + listOfNotNull(profile))
       // Android holds at most this many on one element; past them, the latest parts' go.
       .take(MOST_ACTIONS)
   // Activating a sent line of photos opens its first large; any other line opens its menu, as the long press does.
