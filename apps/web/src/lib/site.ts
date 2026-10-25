@@ -38,7 +38,3 @@ export const appStoreUrl = (): string | undefined =>
 
 export const googlePlayUrl = (): string | undefined =>
   storeLink(import.meta.env.VITE_GOOGLE_PLAY_URL, "play.google.com");
-
-// Where the app's source and its design documents are open to read.
-export const sourceUrl = "https://github.com/Chiji1108/pochical";
-export const designUrl = "https://design.pochical.app";
