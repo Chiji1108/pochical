@@ -397,6 +397,4 @@ data class ChatSummary(
   val draft: KeptDraft? = null,
   /** One of its unread lines mentions the reader, marked @ in the list. */
   val mentioned: Boolean = false,
-  /** Its notifications are turned off, marked by a crossed-out bell after its name. */
-  val muted: Boolean = false,
 )

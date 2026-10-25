@@ -65,6 +65,7 @@ class PochicalKit(context: Context) {
   val chatNotifications =
     ChatNotificationSwitches(
       combine(database.values().chatMutes(), database.values().chatNotificationSettings(), ChatNotificationState::of),
+      account.state.map { (it as? AccountState.SignedIn)?.userId },
       groups::setChatMuted,
       groups::setMentionsWhenMuted,
       CoroutineScope(SupervisorJob() + Dispatchers.Default),

@@ -31,8 +31,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.Badge
-import app.pochical.rememberNotifyingUnread
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -54,9 +52,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.pochical.LocalAccount
+import app.pochical.LocalNotifyingUnread
 import app.pochical.R
 import app.pochical.RootPage
 import app.pochical.SectionHeader
+import app.pochical.UnreadBadge
 import app.pochical.calendar.rememberToday
 import app.pochical.chat.ChatList
 import app.pochical.design.Metrics
@@ -166,7 +166,7 @@ private fun GroupRail(groups: List<GroupRow>, openId: String, onOpen: (String) -
     horizontalAlignment = Alignment.CenterHorizontally,
   ) {
     // Each group's chats' unread lines that notify, as the グループ tab adds them up.
-    val unread = rememberNotifyingUnread()
+    val unread = LocalNotifyingUnread.current
     groups.forEach { group ->
       val isOpen = group.id == openId
       val count = unread[group.id] ?: 0
@@ -194,7 +194,7 @@ private fun GroupRail(groups: List<GroupRow>, openId: String, onOpen: (String) -
             .then(if (isOpen) Modifier.border(2.dp, colors.secondary, shape) else Modifier),
           shelf = PhotoShelf.Group(group.id),
         )
-        if (count > 0) Badge(Modifier.align(Alignment.BottomEnd).padding(end = 6.dp)) { Text(count.toString()) }
+        if (count > 0) UnreadBadge(count, Modifier.align(Alignment.BottomEnd).padding(end = 6.dp))
       }
     }
     Box(Modifier.size(28.dp, 2.dp).background(colors.outlineVariant, CircleShape))

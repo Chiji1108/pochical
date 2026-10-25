@@ -183,16 +183,14 @@ class RootNavigator(
    * place of the pages open, or none.
    */
   fun showGroup(groupId: String, page: RootPage? = null) {
-    pages.clear()
-    page?.let(pages::add)
-    tab = RootTab.Groups
+    showOver(RootTab.Groups, page)
     openGroup = groupId
   }
 
-  /** Shows [page] over [tab] alone, in place of the pages open, as a notification's chat opens. */
-  fun showOver(tab: RootTab, page: RootPage) {
+  /** Shows [page], or none, over [tab] alone, in place of the pages open, as a notification's chat opens. */
+  fun showOver(tab: RootTab, page: RootPage?) {
     pages.clear()
-    pages.add(page)
+    page?.let(pages::add)
     this.tab = tab
   }
 

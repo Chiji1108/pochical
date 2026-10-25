@@ -17,10 +17,10 @@ class OpenedLinks {
   var pending by mutableStateOf<AppLink?>(null)
     private set
 
-  /** Notes the place [intent] opens the app on, if it names one: a chat's notification tapped, or a link. */
-  fun take(intent: Intent?) {
-    intent ?: return
-    (ChatNotifier.openedChat(intent) ?: intent.dataString?.let(::appLink))?.let { pending = it }
+  /** Notes the place [intent] opens the app on, if it names one: a chat's notification tapped, or a link; the place. */
+  fun take(intent: Intent?): AppLink? {
+    intent ?: return null
+    return (ChatNotifier.openedChat(intent) ?: intent.dataString?.let(::appLink))?.also { pending = it }
   }
 
   /** The place waiting, taken once. */

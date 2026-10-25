@@ -44,7 +44,6 @@ import {
   periodTitleOf,
   shortMonthOf,
 } from "../src/components/design-month-name";
-import { chatNotificationsSummary } from "../src/components/design-notifications";
 import {
   sampleSequence,
   styleSamplesOf,
@@ -121,6 +120,7 @@ import {
 import type { OwnDays, Period, Schedule } from "../src/lib/design-days";
 import {
   chatKey,
+  chatNotificationsSummary,
   groupChat,
   groupsUnread,
   togetherIn,

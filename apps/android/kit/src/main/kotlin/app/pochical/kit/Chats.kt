@@ -64,7 +64,7 @@ class Chats internal constructor(
 
   /** The chat as the group's list of chats shows it, for [me]. */
   fun summary(groupId: String, threadId: String, me: String): Flow<ChatSummary> =
-    observe("chatLines", "readMarks", "chatOutbox", "unreadCounts", "chatDrafts", "chatMutes") { now ->
+    observe("chatLines", "readMarks", "chatOutbox", "unreadCounts", "chatDrafts") { now ->
       val summary = chatSummary(groupId, threadId, me, now)
       Timed(summary, summary.failsAt)
     }
@@ -82,8 +82,8 @@ class Chats internal constructor(
    * place with none is left out.
    */
   fun notifyingUnread(me: String): Flow<Map<String, Int>> =
-    observe("unreadCounts", "chatLines", "readMarks", "chatOutbox", "chatMutes", "chatNotificationSettings") { now ->
-      Timed(notifyingByPlace(me, now), null)
+    observe("unreadCounts", "chatLines", "readMarks", "chatOutbox", "chatMutes", "chatNotificationSettings") {
+      Timed(notifyingByPlace(me), null)
     }
 
   /**
@@ -624,20 +624,12 @@ internal suspend fun SyncDao.chatSummary(groupId: String, threadId: String, me: 
       .lastOrNull()
   val counted = unreadCount(groupId, threadId)
   val read = lastRead(readMarks(groupId, threadId), me, waiting)
-  val unread = if (waiting.ownRead == 0L) counted?.count ?: 0 else othersAfter(groupId, threadId, read, me)
-  // An unread line mentions the reader: as the group counted them, or, while a read of theirs
-  // waits, among others' lines the device holds past it.
-  val mentioned =
-    unread > 0 &&
-      if (waiting.ownRead == 0L) {
-        (counted?.mentions ?: 0) > 0
-      } else {
-        lines(groupId, threadId, read + 1, Long.MAX_VALUE).any { row ->
-          val line = ChatLine.of(WireLine.parseFrom(row.line))
-          line.writer(me) == LineWriter.Others && me in mentions((line.content as? LineContent.Words)?.text.orEmpty())
-        }
-      }
-  return ChatSummary(last, latest, waiting.failsAt, unread, keptDraft(groupId, threadId, waiting), mentioned, muted(groupId, threadId))
+  // As the group counted them, or, while a read of theirs waits, others' lines the device holds
+  // past it; an unread line mentions the reader among them.
+  val past = if (waiting.ownRead == 0L) null else othersPast(groupId, threadId, read, me)
+  val unread = past?.size ?: counted?.count ?: 0
+  val mentioned = unread > 0 && if (past == null) (counted?.mentions ?: 0) > 0 else past.any { me in mentions(it) }
+  return ChatSummary(last, latest, waiting.failsAt, unread, keptDraft(groupId, threadId, waiting), mentioned)
 }
 
 /**
@@ -645,38 +637,49 @@ internal suspend fun SyncDao.chatSummary(groupId: String, threadId: String, me: 
  * or, in a chat where a read of theirs still waits, others' lines the device holds past it, so
  * reading clears the badge at once; in a chat turned off only those that notify all the same.
  */
-internal suspend fun SyncDao.notifyingByPlace(me: String, now: Long): Map<String, Int> {
+internal suspend fun SyncDao.notifyingByPlace(me: String): Map<String, Int> {
   val notifications = ChatNotificationState.of(mutedChats(), notificationSettings())
+  // The outbox read once for every chat's read still waiting.
+  val waitingReads = waitingReads()
   val counts = mutableMapOf<String, Int>()
   for (row in unreadCounts()) {
+    val chat = ChatKey(row.groupId, row.threadId)
     val muted = notifications.isMuted(row.groupId, row.threadId)
-    val waiting = waitingEdits(row.groupId, row.threadId, now)
+    val ownRead = waitingReads[chat]
     val unread =
-      if (waiting.ownRead == 0L) {
+      if (ownRead == null) {
         notifyingCount(row.count, row.mentions, muted, notifications.mentionsWhenMuted)
       } else {
-        val read = lastRead(readMarks(row.groupId, row.threadId), me, waiting)
-        val words =
-          lines(row.groupId, row.threadId, read + 1, Long.MAX_VALUE)
-            .map { ChatLine.of(WireLine.parseFrom(it.line)) }
-            .filter { it.writer(me) == LineWriter.Others }
-            .map { (it.content as? LineContent.Words)?.text.orEmpty() }
-        notifyingUnread(words, muted, notifications.mentionsWhenMuted, me)
+        val mark = readMarks(row.groupId, row.threadId).firstOrNull { it.userId == me }?.lastReadSeq ?: 0
+        notifyingUnread(othersPast(row.groupId, row.threadId, maxOf(mark, ownRead), me), muted, notifications.mentionsWhenMuted, me)
       }
     if (unread > 0) counts.merge(row.groupId, unread, Int::plus)
   }
   return counts
 }
 
-/** What the device knows is read for [me] (`Chats.readState`). */
+/** What the device knows is read for [me] (`Chats.readState`): their marks, with their reads still waiting. */
 internal suspend fun SyncDao.readStateOf(me: String): ReadState {
-  val marks = mutableMapOf<ChatKey, Long>()
+  val marks = waitingReads().toMutableMap()
   for (mark in readMarksOf(me)) marks.merge(ChatKey(mark.groupId, mark.threadId), mark.lastReadSeq, ::maxOf)
+  return ReadState(clearedCounts().mapTo(HashSet()) { ChatKey(it.groupId, it.threadId) }, marks)
+}
+
+/** The words of others' lines the device holds past [read], as they count unread (none for a line without words). */
+private suspend fun SyncDao.othersPast(groupId: String, threadId: String, read: Long, me: String): List<String> =
+  lines(groupId, threadId, read + 1, Long.MAX_VALUE)
+    .map { ChatLine.of(WireLine.parseFrom(it.line)) }
+    .filter { it.writer(me) == LineWriter.Others }
+    .map { (it.content as? LineContent.Words)?.text.orEmpty() }
+
+/** The member's newest read waiting to be sent in each chat, from the whole outbox read once. */
+private suspend fun SyncDao.waitingReads(): Map<ChatKey, Long> {
+  val reads = mutableMapOf<ChatKey, Long>()
   for (row in chatOutbox()) {
     val edit = row.chatEdit
-    if (edit.kindCase == ChatEdit.KindCase.READ) marks.merge(ChatKey(row.groupId, edit.read.threadId), edit.read.lastReadSeq, ::maxOf)
+    if (edit.kindCase == ChatEdit.KindCase.READ) reads.merge(ChatKey(row.groupId, edit.read.threadId), edit.read.lastReadSeq, ::maxOf)
   }
-  return ReadState(clearedCounts().mapTo(HashSet()) { ChatKey(it.groupId, it.threadId) }, marks)
+  return reads
 }
 
 /** How far [me] has read the chat, their read still waiting included. */

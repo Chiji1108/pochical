@@ -75,6 +75,9 @@ interface Values {
   @Query("SELECT * FROM groupMembers WHERE userId IN (SELECT userId FROM blocks) ORDER BY joinedAtMs")
   fun blockedMembers(): Flow<List<GroupMemberRow>>
 
+  /** Everyone in each of the user's groups, those who left too, for their names and faces wherever a chat is listed. */
+  @Query("SELECT * FROM groupMembers ORDER BY joinedAtMs") fun allMembers(): Flow<List<GroupMemberRow>>
+
   /** The chats whose notifications the user turned off (spec/chat.md, Notifications). */
   @Query("SELECT * FROM chatMutes") fun chatMutes(): Flow<List<ChatMuteRow>>
 

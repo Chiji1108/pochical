@@ -10,6 +10,7 @@ import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffo
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldValue
 import androidx.compose.material3.adaptive.navigationsuite.rememberNavigationSuiteScaffoldState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
@@ -67,7 +68,8 @@ fun RootScreen(navigator: RootNavigator) {
   val groups by remember(values) { values.groups() }.collectAsState(null)
   // What a link opens: an invitation over whatever shows; a day in the calendar; a group, at a
   // day in its table, or once the person has left it, グループ on the first of their groups; a
-  // chat's notification, the chat over its group in グループ, or Pochical's people's over 設定.
+  // chat's notification, the chat over its group in グループ once the device holds the group, or
+  // Pochical's people's over 設定.
   LaunchedEffect(links.pending, groups) {
     when (val link = links.pending) {
       is AppLink.Invite -> navigator.openOnce(RootPage.Join(link.code))
@@ -84,12 +86,9 @@ fun RootScreen(navigator: RootNavigator) {
         if (link.groupId == Chat.supportPlace) {
           navigator.showOver(RootTab.Settings, RootPage.Chat(link.groupId, link.threadId))
         } else {
-          val known = groups ?: return@LaunchedEffect
-          if (known.any { it.id == link.groupId }) {
-            navigator.showGroup(link.groupId, RootPage.Chat(link.groupId, link.threadId))
-          } else {
-            navigator.showGroup(link.groupId)
-          }
+          // Once the device holds the group, which may come after the notification, as iOS waits.
+          if (groups.orEmpty().none { it.id == link.groupId }) return@LaunchedEffect
+          navigator.showGroup(link.groupId, RootPage.Chat(link.groupId, link.threadId))
         }
       null -> return@LaunchedEffect
     }
@@ -183,7 +182,9 @@ private fun TabsScreen(navigator: RootNavigator, navigation: PageNavigation) {
       if (barHidden) NavigationSuiteScaffoldValue.Hidden else NavigationSuiteScaffoldValue.Visible
     )
   LaunchedEffect(barHidden) { if (barHidden) suite.hide() else suite.show() }
-  val badges = rememberTabBadges()
+  // Read once over the tabs, for their badges and the group rail's.
+  val unread = rememberNotifyingUnread()
+  val badges = tabBadges(unread)
   NavigationSuiteScaffold(
     state = suite,
     navigationSuiteItems = {
@@ -201,18 +202,20 @@ private fun TabsScreen(navigator: RootNavigator, navigation: PageNavigation) {
       }
     },
   ) {
-    tabStates.SaveableStateProvider(navigation.tab) {
-      when (navigation.tab) {
-        RootTab.Calendar ->
-          CalendarScreen(
-            open = navigation::open,
-            hidesTabBar = { barHidden = it },
-            opening = navigator.openingDay,
-            onOpening = { navigator.openingDay = null },
-          )
-        RootTab.Groups ->
-          GroupsScreen(navigator.openGroup, { navigator.openGroup = it }, GroupsActions(onNew = { navigation.open(RootPage.NewGroup) }, onScan = { navigation.open(RootPage.Scan) }, onShifts = { id, day -> navigation.open(RootPage.GroupShifts(id, day?.toString())) }, onChat = { id, thread -> navigation.open(RootPage.Chat(id, thread)) }) { group -> GroupButtons(group.id, navigation::open) })
-        RootTab.Settings -> SettingsScreen(open = navigation::open)
+    CompositionLocalProvider(LocalNotifyingUnread provides unread) {
+      tabStates.SaveableStateProvider(navigation.tab) {
+        when (navigation.tab) {
+          RootTab.Calendar ->
+            CalendarScreen(
+              open = navigation::open,
+              hidesTabBar = { barHidden = it },
+              opening = navigator.openingDay,
+              onOpening = { navigator.openingDay = null },
+            )
+          RootTab.Groups ->
+            GroupsScreen(navigator.openGroup, { navigator.openGroup = it }, GroupsActions(onNew = { navigation.open(RootPage.NewGroup) }, onScan = { navigation.open(RootPage.Scan) }, onShifts = { id, day -> navigation.open(RootPage.GroupShifts(id, day?.toString())) }, onChat = { id, thread -> navigation.open(RootPage.Chat(id, thread)) }) { group -> GroupButtons(group.id, navigation::open) })
+          RootTab.Settings -> SettingsScreen(open = navigation::open)
+        }
       }
     }
   }
