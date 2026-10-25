@@ -1,3 +1,4 @@
+import { sourceUrl } from "@pochical/prototype/lib/brand";
 import { tryUrl } from "@pochical/prototype/lib/try-url";
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
@@ -111,6 +112,7 @@ function DocumentPage() {
   const { path, pageTree } = useFumadocsLoader(Route.useLoaderData());
   return (
     <DocsLayout
+      githubUrl={sourceUrl}
       links={[...apps]}
       nav={{ title: "デザイン資料", url: "/" }}
       slots={{ themeSwitch: DocsThemeSwitch }}
