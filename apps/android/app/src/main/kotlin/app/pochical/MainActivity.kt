@@ -58,11 +58,12 @@ class MainActivity(
   private var settings by mutableStateOf<DeviceSettings?>(null)
   private val appleSignIn = AppleSignIn(this, kit.appleSignIn)
   private var calendarRead by mutableStateOf(false)
+  private var firstRunDone by mutableStateOf<Boolean?>(null)
   private val links = OpenedLinks()
 
   override fun onCreate(savedInstanceState: Bundle?) {
     // The splash stays until the first frame can be drawn in the person's テーマ, with their days.
-    installSplashScreen().setKeepOnScreenCondition { settings == null || !calendarRead }
+    installSplashScreen().setKeepOnScreenCondition { settings == null || !calendarRead || firstRunDone == null }
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
     // Made again, the activity's navigation keeps the place the first intent opened.
@@ -79,11 +80,16 @@ class MainActivity(
     lifecycleScope.launch {
       repeatOnLifecycle(Lifecycle.State.STARTED) { deviceSettings.settings.collect { settings = it } }
     }
+    lifecycleScope.launch {
+      repeatOnLifecycle(Lifecycle.State.STARTED) { kit.firstRun.done.collect { firstRunDone = it } }
+    }
     // The widgets' previews in the picker follow the settings the screens change.
     lifecycleScope.launch { followForWidgetPreviews(this@MainActivity, deviceSettings.settings) }
     setContent {
       val device = settings ?: return@setContent
       if (!calendarRead) return@setContent
+      val done = firstRunDone ?: return@setContent
+      val firstRun = remember(done) { FirstRunState(done, kit.firstRun) }
       val state = remember(device) { DeviceSettingsState(device, deviceSettings::change) }
       CompositionLocalProvider(
         LocalDeviceSettings provides state,
@@ -99,6 +105,7 @@ class MainActivity(
         LocalNotificationPermission provides notificationPermission,
         LocalReminderAlarms provides reminderAlarms,
         LocalChatNotifier provides push.notifier,
+        LocalFirstRun provides firstRun,
       ) {
         // Asked from here, under every page, so an answer reaches the app after its page closed.
         CompositionLocalProvider(LocalNotificationAsking provides rememberNotificationAsking()) {

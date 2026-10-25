@@ -1,0 +1,1 @@
+ALTER TABLE `chat_reactions` ADD `placed_cursor` integer DEFAULT 0 NOT NULL;

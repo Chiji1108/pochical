@@ -17,6 +17,12 @@ const OLD_CHAT_LINES = [
   'CREATE INDEX chat_lines_photos ON chat_lines (thread_id, seq) WHERE "chat_lines"."photos" is not null',
 ];
 
+// chat_reactions as it was until 0040 gave each emoji its place.
+const OLD_CHAT_REACTIONS = `CREATE TABLE chat_reactions (
+  emoji text NOT NULL, made_cursor integer NOT NULL, seq integer NOT NULL,
+  thread_id text NOT NULL, user_id text NOT NULL,
+  PRIMARY KEY(thread_id, seq, user_id, emoji))`;
+
 /** A line of 全体チャット as those columns kept it; its writer, cursor and op_id by its seq unless given. */
 export type OldLine = {
   seq: number;
@@ -42,8 +48,8 @@ const jsonOr = (value: object | undefined): string | null =>
 
 /**
  * Puts chat_lines back as migration `idx` (36 or 37) found it, holding
- * `lines`, with the migrations from `idx` on forgotten, for the Group DO
- * to run them again over those rows.
+ * `lines`, and chat_reactions with it, empty, with the migrations from
+ * `idx` on forgotten, for the Group DO to run them again over those rows.
  */
 export const chatLinesBefore = (
   sql: SqlStorage,
@@ -57,6 +63,8 @@ export const chatLinesBefore = (
   for (const statement of OLD_CHAT_LINES) {
     sql.exec(statement);
   }
+  sql.exec("DROP TABLE chat_reactions");
+  sql.exec(OLD_CHAT_REACTIONS);
   sql.exec("DELETE FROM __drizzle_migrations WHERE created_at >= ?", from);
   for (const line of lines) {
     sql.exec(

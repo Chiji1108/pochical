@@ -1,8 +1,5 @@
 package app.pochical.chat
 
-import android.content.ActivityNotFoundException
-import android.content.Context
-import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -34,26 +31,17 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
 import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.design.Chat
 import app.pochical.design.Radius
 import app.pochical.groups.PhotoPicture
 import app.pochical.kit.PhotoShelf
+import app.pochical.openLink
 import app.pochical.v1.LinkPreview
 
 // A link's page (spec/chat.md, Previews; /design's LinkPreview): inside a message's bubble under its
 // words, and over the composer while it is written, as iOS's LinkPreviewViews.swift draws them.
-
-/** A link opened in the system's browser sheet over the chat (Custom Tabs, spec/chat.md, In a message). */
-fun openLink(context: Context, url: String) {
-  try {
-    CustomTabsIntent.Builder().setShowTitle(true).build().launchUrl(context, url.toUri())
-  } catch (_: ActivityNotFoundException) {
-    // No browser on the device to open it (a work profile with every one turned off): nothing opens.
-  }
-}
 
 /**
  * A line's page inside its bubble, under its words: the picture cropped to

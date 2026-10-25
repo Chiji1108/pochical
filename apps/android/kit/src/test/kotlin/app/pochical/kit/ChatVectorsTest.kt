@@ -147,7 +147,7 @@ internal data class ChatVectors(
   @Serializable data class React(val user: String, val emoji: String, val on: Boolean)
 
   @Serializable
-  data class Reactions(override val name: String, val reactions: List<Reaction>, val step: React, val expected: List<Reaction>) : VectorCase
+  data class Reactions(override val name: String, val reactions: List<Reaction>, val steps: List<React>, val expected: List<Reaction>) : VectorCase
 
   @Serializable
   data class Composer(override val name: String, val composer: Held, val step: Step, val lines: List<HeldLine>, val expected: Held) :
@@ -247,7 +247,9 @@ class ChatVectorsTest {
   @Test
   fun reactions() =
     chat.reactions.checkEach({ case -> case.expected.map { LineReaction(it.emoji, it.userIds) } }) { case ->
-      case.reactions.map { LineReaction(it.emoji, it.userIds) }.toggling(case.step.emoji, case.step.user, case.step.on)
+      case.steps.fold(case.reactions.map { LineReaction(it.emoji, it.userIds) }) { reactions, step ->
+        reactions.toggling(step.emoji, step.user, step.on)
+      }
     }
 
   @Test

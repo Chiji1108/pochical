@@ -184,7 +184,10 @@ fun MonthPicturePage(month: YearMonth, onBack: () -> Unit) {
           onClick = {
             scope.launch {
               val shared = picture(layer)?.let { sharePicture(context, it, "month", title) } ?: false
-              if (!shared) say(R.string.picture_not_shared)
+              if (!shared) {
+                ReviewPrompt.troubled = true
+                say(R.string.picture_not_shared)
+              }
             }
           },
           modifier = Modifier.weight(1f).heightIn(min = Metrics.control),
@@ -201,6 +204,7 @@ fun MonthPicturePage(month: YearMonth, onBack: () -> Unit) {
                 haptics.performHapticFeedback(HapticFeedbackType.Confirm)
                 say(R.string.picture_saved)
               } else {
+                ReviewPrompt.troubled = true
                 say(R.string.picture_not_saved)
               }
             }

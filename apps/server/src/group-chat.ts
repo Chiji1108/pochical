@@ -204,7 +204,7 @@ const byLine = <Row extends LinePlace>(rows: Row[]): Map<string, Row[]> => {
   return found;
 };
 
-/** Who chose what, grouped by `pick` in the order first chosen. */
+/** Who chose what, grouped by `pick` in the order the rows first give it. */
 const grouped = <Row extends { userId: string }>(
   rows: Row[],
   pick: (row: Row) => string
@@ -217,9 +217,9 @@ const grouped = <Row extends { userId: string }>(
 };
 
 /**
- * Each of the lines' reactions, by line (lineKey): each emoji, in the
- * order first chosen, with who chose it in the order they did. Read a run
- * of lines at a time, not a query a line.
+ * Each of the lines' reactions, by line (lineKey): each emoji where it was
+ * first chosen on the line, with who chose it in the order they did. Read
+ * a run of lines at a time, not a query a line.
  */
 export const reactionsOn = (
   db: DrizzleSqliteDODatabase,
@@ -235,7 +235,7 @@ export const reactionsOn = (
           inArray(chatReactions.seq, seqs)
         )
       )
-      .orderBy(asc(chatReactions.madeCursor))
+      .orderBy(asc(chatReactions.placedCursor), asc(chatReactions.madeCursor))
       .all()
   );
   return new Map(
@@ -889,22 +889,31 @@ const takeReaction = (
   if (line === undefined || line.content.kind === "unsent" || !isEmoji(emoji)) {
     return {};
   }
-  const mine = and(
+  const chosen = and(
     eq(chatReactions.threadId, threadId),
     eq(chatReactions.seq, line.seq),
-    eq(chatReactions.userId, userId),
     eq(chatReactions.emoji, emoji)
   );
-  const had = db.select().from(chatReactions).where(mine).get() !== undefined;
-  if (had === on) {
+  const choosers = db.select().from(chatReactions).where(chosen).all();
+  if (choosers.some((row) => row.userId === userId) === on) {
     return {};
   }
   if (on) {
     db.insert(chatReactions)
-      .values({ emoji, madeCursor: cursor, seq: line.seq, threadId, userId })
+      .values({
+        emoji,
+        madeCursor: cursor,
+        // An emoji someone holds keeps its place; one nobody does is new.
+        placedCursor: choosers[0]?.placedCursor ?? cursor,
+        seq: line.seq,
+        threadId,
+        userId,
+      })
       .run();
   } else {
-    db.delete(chatReactions).where(mine).run();
+    db.delete(chatReactions)
+      .where(and(chosen, eq(chatReactions.userId, userId)))
+      .run();
   }
   return moveLine(db, line, cursor);
 };

@@ -122,7 +122,7 @@ fun UsualProfileRow(open: (RootPage) -> Unit) {
   val saved = usualProfile()
   ListItem(
     headlineContent = { Text(stringResource(R.string.profile)) },
-    trailingContent = {
+    supportingContent = {
       if (saved == null || saved.name.isEmpty()) {
         Text(stringResource(R.string.profile_unset))
       } else {

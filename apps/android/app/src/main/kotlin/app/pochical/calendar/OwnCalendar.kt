@@ -86,6 +86,12 @@ interface OwnDays {
   /** Returns once [calendar] holds what the device keeps, not the nothing it starts from. */
   suspend fun awaitRead()
 
+  /**
+   * How many times the person put something on their days (a shift, its hours or people, a memo)
+   * since the app started: the calendar asks for a review once they are done (spec/review.md).
+   */
+  val dayEdits: StateFlow<Int>
+
   /** Puts `entry` on `day`; none clears its shift with its hours and people, keeping the memo. */
   fun set(day: LocalDate, entry: DayEntry?)
 
@@ -139,6 +145,12 @@ interface OwnDays {
    * from there counted from `anchor`; an empty one ends repeating.
    */
   suspend fun changeJob(ids: List<String>, sequence: List<String>, start: LocalDate, anchor: LocalDate)
+
+  /**
+   * はじめの設定: the ready-made patterns `ids` become the person's, and `sequence`, when there is
+   * one, repeats counted from `anchor`, the days just past showing it too.
+   */
+  suspend fun begin(ids: List<String>, sequence: List<String>, anchor: LocalDate)
 
   /** Keeps `note` as the day's memo; "" clears it, leaving the shift. */
   fun setNote(day: LocalDate, note: String)

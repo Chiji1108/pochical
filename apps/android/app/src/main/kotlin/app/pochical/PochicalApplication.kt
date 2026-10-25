@@ -138,6 +138,7 @@ class PochicalApplication : Application(), MetroApplication, PochicalKit.Holder,
           override fun onStart(owner: LifecycleOwner) {
             graph.push.foreground()
             graph.reminderAlarms.readExact()
+            ReviewPrompt.opened(this@PochicalApplication)
           }
         }
       )

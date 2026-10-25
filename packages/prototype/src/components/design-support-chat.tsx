@@ -6,9 +6,8 @@ import { site } from "../lib/brand";
 import { keptDraft } from "../lib/chat-messages";
 import { APP_VERSION, deviceNames, useDevice } from "../lib/design-device";
 import type { Member, Profile } from "../lib/design-group-data";
-import { useSettings } from "../lib/design-settings-store";
 import { useUser } from "../lib/design-user-store";
-import { AppIcon, useAppIcons } from "./design-app-icon";
+import { AppIcon, useAppIconInUse, useAppIcons } from "./design-app-icon";
 import { nameless } from "./design-chat-composer";
 import { ChatListRow } from "./design-chat-parts";
 import { ChatScreen } from "./design-chat-screen";
@@ -50,7 +49,7 @@ function membersOf(profile: Profile, icon?: string): Member[] {
 // The home screen icon in use, which stands for Pochical's people here.
 function useOwnIcon() {
   const icons = useAppIcons();
-  return icons[useSettings((state) => state.device.appIcon)];
+  return icons[useAppIconInUse()];
 }
 
 // The way into the chat from the settings, drawn as a chat in the group

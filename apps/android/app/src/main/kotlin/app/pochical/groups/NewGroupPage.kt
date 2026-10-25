@@ -29,6 +29,7 @@ import app.pochical.Footnote
 import app.pochical.LimitedTextField
 import app.pochical.LocalThemeColors
 import app.pochical.R
+import app.pochical.ReviewPrompt
 import app.pochical.characterCount
 import app.pochical.design.TextLimits
 import app.pochical.kit.GroupMarkValue
@@ -101,6 +102,7 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
         sent = null
         photoGone = true
       } catch (_: Exception) {
+        ReviewPrompt.troubled = true
         failed = true
       }
       making = false
