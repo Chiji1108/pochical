@@ -363,7 +363,6 @@ private fun SignOutRow(state: AccountState) {
         TextButton(
           onClick = {
             confirming = false
-            if (signingOut) return@TextButton
             signingOut = true
             scope.launch {
               try {

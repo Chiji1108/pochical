@@ -11,4 +11,5 @@
   <string name="account_sign_out">ログアウト</string>
   <string name="account_sign_out_title">ログアウトしますか？</string>
   <string name="account_sign_out_body">この端末からデータが消えます。もう一度ログインすれば、同じデータを使えます。</string>
-  <string name="account_not_signed_out">ログアウトできませんでした</string></resources>
+  <string name="account_not_signed_out">ログアウトできませんでした</string>
+</resources>

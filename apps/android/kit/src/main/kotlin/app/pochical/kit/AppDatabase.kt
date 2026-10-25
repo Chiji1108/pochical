@@ -69,7 +69,7 @@ abstract class AppDatabase : RoomDatabase() {
   suspend fun owner(): String? = read { state().owner }.ifEmpty { null }
 
   companion object {
-    const val VERSION = 7
+    const val VERSION = 8
 
     /** The app's database in [context]'s files, or one in memory alone for tests. */
     fun open(context: Context, inMemory: Boolean = false): AppDatabase =
