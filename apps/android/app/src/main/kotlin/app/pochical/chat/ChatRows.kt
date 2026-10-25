@@ -57,6 +57,7 @@ import app.pochical.kit.GroupMemberRow
 import app.pochical.kit.LineContent
 import app.pochical.kit.PhotoShelf
 import app.pochical.kit.WaitingLine
+import app.pochical.kit.plainText
 import app.pochical.v1.ChatNotice
 import java.time.Instant
 import java.time.LocalDate
@@ -86,6 +87,8 @@ fun ChatItemRow(
   onNotKept: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
+  val deleted = stringResource(R.string.deleted_account)
+  val nameOf = { id: String -> writers[id]?.shownName(deleted) ?: deleted }
   when (item) {
     is ChatItem.Typing -> TypingRow(item.userIds.mapNotNull { writers[it] }, modifier)
     is ChatItem.DayTitle -> DayTitle(item.day, modifier)
@@ -100,7 +103,7 @@ fun ChatItemRow(
         else ->
           Message(
             mine = line.authorId == me,
-            words = lineWords(content),
+            words = lineWords(content, nameOf),
             startsRun = item.startsRun,
             writer = writers[line.authorId].takeIf { line.authorId != me },
             showsName = !direct,
@@ -113,7 +116,7 @@ fun ChatItemRow(
     is ChatItem.Waiting ->
       Message(
         mine = true,
-        words = lineWords(item.line.content),
+        words = lineWords(item.line.content, nameOf),
         startsRun = item.startsRun,
         writer = null,
         showsName = false,
@@ -324,11 +327,14 @@ fun TypingRow(typers: List<GroupMemberRow>, modifier: Modifier = Modifier) {
   }
 }
 
-/** A line as a line of words reads it, as a quote and the chat list read it (spec/chat.md). */
+/**
+ * A line as a line of words reads it, as a quote and the chat list read it, each mention as @ and
+ * the member's name ([nameOf]) (spec/chat.md).
+ */
 @Composable
-fun lineWords(content: LineContent): String =
+fun lineWords(content: LineContent, nameOf: (String) -> String): String =
   when (content) {
-    is LineContent.Words -> content.text
+    is LineContent.Words -> plainText(content.text, nameOf)
     is LineContent.Photos ->
       if (content.photos.size > 1) stringResource(R.string.chat_photos_count, content.photos.size) else stringResource(R.string.chat_photos)
     is LineContent.Days -> {

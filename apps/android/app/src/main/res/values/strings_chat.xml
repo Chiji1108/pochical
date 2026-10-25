@@ -26,7 +26,7 @@
   <string name="chat_days_more">📅 %1$sほか</string>
   <string name="chat_poll">📅 日にちの投票：%1$sほか</string>
   <string name="chat_poll_decided">📅 %1$sに決定</string>
-  <string name="chat_none">メッセージはまだありません</string>
+  <string name="chat_none">まだメッセージはありません</string>
   <string name="chat_me">自分</string>
   <string name="chat_draft">下書き：</string>
   <string name="chat_not_kept">保存できませんでした</string>
@@ -40,4 +40,12 @@
   <string name="chat_notice_mark">%1$sがグループのアイコンを変更しました</string>
   <string name="chat_notice_renamed_and_mark">%1$sがグループ名を「%2$s」にして、アイコンを変更しました</string>
   <string name="deleted_account">削除されたアカウント</string>
+  <string name="chat_start">個人チャットを始める</string>
+  <string name="chat_start_note">%1$sでの名前とアイコンで話します。</string>
+  <string name="chat_invite_to_talk">メンバーを招待すると、1対1でも話せます。</string>
+  <string name="chat_muted">通知オフ</string>
+  <string name="chat_mentioned">自分へのメンションあり</string>
+  <string name="chat_blocked_line">ブロック中のメンバーのメッセージ</string>
+  <string name="chat_sent_photos">写真を送りました</string>
+  <string name="chat_shared">%1$sを共有しました</string>
 </resources>

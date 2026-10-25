@@ -42,9 +42,19 @@ class Chats internal constructor(
 
   /** The chat as the group's list of chats shows it, for [me]. */
   fun summary(groupId: String, threadId: String, me: String): Flow<ChatSummary> =
-    observe("chatLines", "readMarks", "chatOutbox", "unreadCounts", "chatDrafts") { now ->
+    observe("chatLines", "readMarks", "chatOutbox", "unreadCounts", "chatDrafts", "chatMutes") { now ->
       val summary = chatSummary(groupId, threadId, me, now)
       Timed(summary, summary.failsAt)
+    }
+
+  /**
+   * The group's chats that have a line, unread lines counted before their lines come, one of the
+   * member's own on its way, or a draft: the one-to-one chats its list shows beside its own.
+   */
+  fun threads(groupId: String): Flow<Set<String>> =
+    observe("chatLines", "unreadCounts", "chatOutbox", "chatDrafts") {
+      val sending = chatOutbox(groupId).map { it.chatEdit }.filter { it.kindCase == ChatEdit.KindCase.SEND }.map { it.send.threadId }
+      Timed(lineThreads(groupId).toSet() + unreadThreads(groupId) + sending + draftThreads(groupId), null)
     }
 
   /**
@@ -301,10 +311,22 @@ internal suspend fun SyncDao.chatSummary(groupId: String, threadId: String, me: 
         waiting = waiting.lines.map { TimedLine<WaitingLine?>(it, it.madeAtMs, it.failed) },
       )
       .lastOrNull()
-  val unread =
-    if (waiting.ownRead == 0L) unreadCount(groupId, threadId)?.count ?: 0
-    else othersAfter(groupId, threadId, lastRead(readMarks(groupId, threadId), me, waiting), me)
-  return ChatSummary(last, latest, waiting.failsAt, unread, keptDraft(groupId, threadId, waiting))
+  val counted = unreadCount(groupId, threadId)
+  val read = lastRead(readMarks(groupId, threadId), me, waiting)
+  val unread = if (waiting.ownRead == 0L) counted?.count ?: 0 else othersAfter(groupId, threadId, read, me)
+  // An unread line mentions the reader: as the group counted them, or, while a read of theirs
+  // waits, among others' lines the device holds past it.
+  val mentioned =
+    unread > 0 &&
+      if (waiting.ownRead == 0L) {
+        (counted?.mentions ?: 0) > 0
+      } else {
+        lines(groupId, threadId, read + 1, Long.MAX_VALUE).any { row ->
+          val line = ChatLine.of(WireLine.parseFrom(row.line))
+          line.writer(me) == LineWriter.Others && me in mentions((line.content as? LineContent.Words)?.text.orEmpty())
+        }
+      }
+  return ChatSummary(last, latest, waiting.failsAt, unread, keptDraft(groupId, threadId, waiting), mentioned, muted(groupId, threadId))
 }
 
 /** How far [me] has read the chat, their read still waiting included. */

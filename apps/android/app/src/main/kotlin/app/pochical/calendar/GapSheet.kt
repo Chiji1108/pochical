@@ -13,29 +13,29 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.pochical.ListSheet
+import app.pochical.LocalDeviceSettings
 import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.ShiftMark
-import app.pochical.LocalDeviceSettings
 import app.pochical.design.Metrics
+import app.pochical.design.Radius
 import app.pochical.kit.OffLook
 import app.pochical.patterns.SwitchRow
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import app.pochical.design.Radius
 import java.time.LocalDate
 import kotlinx.coroutines.launch
 
@@ -68,61 +68,63 @@ fun GapSheet(
   val offersBlank = picked.id !in blankAtOpen
   val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
   val scope = rememberCoroutineScope()
-  ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-      Text(
-        if (days.size == 1) stringResource(R.string.gaps_title_one) else stringResource(R.string.gaps_title, days.size),
-        style = MaterialTheme.typography.titleLarge,
-        modifier = Modifier.semantics { heading() },
-      )
-      // The days, as /design's tags: words to read, not to press.
-      FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        for (day in days) {
-          Text(
-            day.dayWeekdayText,
-            style = MaterialTheme.typography.bodySmall,
-            color = colors.textSecondary,
-            modifier =
-              Modifier.background(colors.fillQuaternary, RoundedCornerShape(Radius.sm)).padding(horizontal = 12.dp, vertical = 4.dp),
-          )
-        }
-      }
-      if (offPatterns.size > 1) {
-        val label = stringResource(R.string.gaps_patterns)
-        FlowRow(
-          Modifier.semantics { contentDescription = label },
-          horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-          for (pattern in offPatterns) {
-            FilterChip(
-              selected = pattern.id == picked.id,
-              onClick = { onPick(pattern) },
-              label = { Text(pattern.name) },
-              leadingIcon = { ShiftMark(pattern.icon, pattern.emoji, pattern.symbol, pattern.color, size = 16.dp) },
+  ListSheet(onDismiss, sheetState = sheet) {
+    item {
+      Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text(
+          if (days.size == 1) stringResource(R.string.gaps_title_one) else stringResource(R.string.gaps_title, days.size),
+          style = MaterialTheme.typography.titleLarge,
+          modifier = Modifier.semantics { heading() },
+        )
+        // The days, as /design's tags: words to read, not to press.
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+          for (day in days) {
+            Text(
+              day.dayWeekdayText,
+              style = MaterialTheme.typography.bodySmall,
+              color = colors.textSecondary,
+              modifier =
+                Modifier.background(colors.fillQuaternary, RoundedCornerShape(Radius.sm)).padding(horizontal = 12.dp, vertical = 4.dp),
             )
           }
         }
-      }
-      if (offersBlank) {
-        SwitchRow(
-          title = stringResource(R.string.gaps_blank),
-          note = stringResource(R.string.gaps_blank_note),
-          on = blank,
-          onChange = { blank = it },
-        )
-      }
-      Button(
-        onClick = {
-          // The look first, so the days never show highlighted on their way to blank.
-          if (blank && offersBlank) {
-            settings.change { it.copy(look = it.look.withOffLook(OffLook.Blank, picked.id, offPatterns.map(Pattern::id))) }
+        if (offPatterns.size > 1) {
+          val label = stringResource(R.string.gaps_patterns)
+          FlowRow(
+            Modifier.semantics { contentDescription = label },
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+          ) {
+            for (pattern in offPatterns) {
+              FilterChip(
+                selected = pattern.id == picked.id,
+                onClick = { onPick(pattern) },
+                label = { Text(pattern.name) },
+                leadingIcon = { ShiftMark(pattern.icon, pattern.emoji, pattern.symbol, pattern.color, size = 16.dp) },
+              )
+            }
           }
-          onFill(picked)
-          scope.launch { sheet.hide() }.invokeOnCompletion { onDismiss() }
-        },
-        modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control).padding(bottom = 8.dp),
-      ) {
-        Text(stringResource(R.string.gaps_fill, picked.name), style = MaterialTheme.typography.titleMedium)
+        }
+        if (offersBlank) {
+          SwitchRow(
+            title = stringResource(R.string.gaps_blank),
+            note = stringResource(R.string.gaps_blank_note),
+            on = blank,
+            onChange = { blank = it },
+          )
+        }
+        Button(
+          onClick = {
+            // The look first, so the days never show highlighted on their way to blank.
+            if (blank && offersBlank) {
+              settings.change { it.copy(look = it.look.withOffLook(OffLook.Blank, picked.id, offPatterns.map(Pattern::id))) }
+            }
+            onFill(picked)
+            scope.launch { sheet.hide() }.invokeOnCompletion { onDismiss() }
+          },
+          modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control).padding(bottom = 8.dp),
+        ) {
+          Text(stringResource(R.string.gaps_fill, picked.name), style = MaterialTheme.typography.titleMedium)
+        }
       }
     }
   }

@@ -1,0 +1,57 @@
+package app.pochical.kit
+
+// A chat message's words as spec/chat.md has them: its links, and the members it mentions
+// (spec/vectors/chat-text.json), as iOS's ChatText.swift and the prototype's chat-text.ts cut them.
+// Ids and the characters a URL is written in are ASCII, so every platform cuts a message alike.
+
+/** One piece of a message: words, a link ([url]), or a mention kept as `<@id>` ([mention]). */
+data class TextPart(val text: String, val url: String? = null, val mention: String? = null)
+
+/** A link (http:// or https://, any case, over the characters a URL is written in) or a mention. */
+private val LINK_OR_MENTION = Regex("""<@([A-Za-z0-9_-]+)>|((?i:https?)://[A-Za-z0-9_\-.~:/?#\[\]@!$&'()*+,;=%]+)""")
+
+/** What closes a sentence rather than the address when it comes last. */
+private const val TRAILING = ".,!?:;'*"
+
+/** The address without what closes the sentence around it: a full stop, a comma, or a bracket opened before it. */
+private fun trimLink(found: String): String {
+  var link = found.trimEnd { it in TRAILING }
+  for ((open, close) in listOf('(' to ')', '[' to ']')) {
+    while (link.lastOrNull() == close && link.count { it == close } > link.count { it == open }) {
+      link = link.dropLast(1).trimEnd { it in TRAILING }
+    }
+  }
+  return link
+}
+
+/** Whether the link has a host: `https://` alone is not one. */
+private fun hasHost(link: String): Boolean {
+  val scheme = link.indexOf("://").takeIf { it >= 0 } ?: return false
+  val authority = link.substring(scheme + 3).takeWhile { it !in "/?#" }
+  return authority.substringAfterLast('@').isNotEmpty()
+}
+
+/** The message cut into its words, links and mentions, in order (spec/vectors/chat-text.json, textParts). */
+fun textParts(text: String): List<TextPart> {
+  val parts = mutableListOf<TextPart>()
+  var at = 0
+  for (match in LINK_OR_MENTION.findAll(text)) {
+    val start = match.range.first
+    val part =
+      match.groups[1]?.let { TextPart(match.value, mention = it.value) }
+        ?: trimLink(match.value).takeIf(::hasHost)?.let { TextPart(it, url = it) }
+        ?: continue
+    if (start > at) parts += TextPart(text.substring(at, start))
+    parts += part
+    at = start + part.text.length
+  }
+  if (at < text.length) parts += TextPart(text.substring(at))
+  return parts
+}
+
+/** The members a message mentions, by their id, in order. */
+fun mentions(text: String): List<String> = textParts(text).mapNotNull { it.mention }
+
+/** The message as words alone, each mention as @ and the member's name: for コピー, the chat list, a quote. */
+fun plainText(text: String, nameOf: (String) -> String): String =
+  textParts(text).joinToString("") { part -> part.mention?.let { "@${nameOf(it)}" } ?: part.text }

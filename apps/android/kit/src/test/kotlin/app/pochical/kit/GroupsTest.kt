@@ -38,9 +38,6 @@ private data class GroupsVectors(
   }
 }
 
-@Serializable
-private data class ChatTextVectors(val inviteCode: List<GroupsVectors.Opened>)
-
 class GroupsVectorsTest {
   private val groups = vectors<GroupsVectors>("groups")
 
@@ -66,9 +63,6 @@ class GroupsVectorsTest {
     }
 
   @Test fun openedInviteCode() = groups.openedInviteCode.checkEach({ it.expected }) { openedInviteCode(it.url) }
-
-  @Test
-  fun inviteCode() = vectors<ChatTextVectors>("chat-text").inviteCode.checkEach({ it.expected }) { inviteCode(it.url) }
 
   @Test
   fun anInviteLinkOpensItsOwnCode() {
