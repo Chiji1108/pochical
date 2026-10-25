@@ -59,6 +59,9 @@ sealed interface OrderCover {
 
   /** From a day of its own: an order corrected keeps its start, and a new job's starts on its first day. */
   data class From(val day: LocalDate) : OrderCover
+
+  /** Every day shown, as a first run's. */
+  data object Always : OrderCover
 }
 
 /** How far the months reach either side of the order's 1st day. */
@@ -174,6 +177,7 @@ private fun MonthOfOrder(
   val start = when (cover) {
     OrderCover.Anchor -> typing.anchor
     is OrderCover.From -> cover.day
+    OrderCover.Always -> first
   }
   val planned =
     remember(typing.sequence, typing.anchor, start, first, holidayShift) {

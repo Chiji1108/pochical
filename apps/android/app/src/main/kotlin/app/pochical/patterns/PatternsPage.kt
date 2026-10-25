@@ -20,6 +20,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -133,11 +134,14 @@ fun PatternsRow(open: (RootPage) -> Unit) {
   ListItem(
     headlineContent = { Text(stringResource(R.string.patterns)) },
     supportingContent = {
+      // The count first in the room, so however many marks there are it stays whole; the marks take what is left.
       Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-        for (pattern in inUse) ShiftMark(pattern.icon, pattern.emoji, pattern.symbol, pattern.color, size = 14.dp)
+        Row(Modifier.weight(1f, fill = false).clipToBounds(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+          for (pattern in inUse) ShiftMark(pattern.icon, pattern.emoji, pattern.symbol, pattern.color, size = 14.dp)
+        }
+        Text(stringResource(R.string.patterns_count, inUse.size), maxLines = 1)
       }
     },
-    trailingContent = { Text(stringResource(R.string.patterns_count, inUse.size)) },
     modifier = Modifier.clickable { open(RootPage.Patterns) },
   )
 }

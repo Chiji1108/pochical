@@ -16,6 +16,8 @@ internal interface SyncDao : ChatDao {
 
   @Upsert suspend fun upsert(state: SyncState)
 
+  @Query("SELECT COALESCE((SELECT firstRunDone FROM syncState WHERE id = 1), 0)") fun firstRunDone(): Flow<Boolean>
+
   @Query("SELECT * FROM days WHERE date = :date") suspend fun day(date: String): DayRow?
 
   @Query("SELECT * FROM days WHERE date >= :from AND date <= :through")

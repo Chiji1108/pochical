@@ -216,14 +216,20 @@ export const readMarks = sqliteTable(
   ]
 );
 
-// Who chose which emoji on which line, in the order chosen. A line's
+// Who chose which emoji on which line: the emoji in their places on the
+// line, each one's choosers in the order they chose it. A line's
 // reactions change its cursor, as its words do, so they travel with it.
 export const chatReactions = sqliteTable(
   "chat_reactions",
   {
     emoji: text().notNull(),
-    // When it was chosen, for the order: the group's cursor then.
+    // When they chose it, for the order among its choosers: the group's
+    // cursor then.
     madeCursor: integer("made_cursor").notNull(),
+    // When the emoji was first chosen on the line, for its place among the
+    // line's emoji: the same on each of its rows and kept while anyone
+    // holds it, so it stays put as its first chooser takes theirs back.
+    placedCursor: integer("placed_cursor").notNull(),
     seq: integer().notNull(),
     threadId: text("thread_id").notNull(),
     userId: text("user_id").notNull(),

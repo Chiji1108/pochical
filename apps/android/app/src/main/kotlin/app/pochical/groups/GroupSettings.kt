@@ -39,6 +39,7 @@ import app.pochical.Footnote
 import app.pochical.LimitedTextField
 import app.pochical.LocalThemeColors
 import app.pochical.R
+import app.pochical.ReviewPrompt
 import app.pochical.SectionHeader
 import app.pochical.characterCount
 import app.pochical.rememberKeptField
@@ -167,6 +168,7 @@ fun GroupSettingsPage(
                 } catch (e: CancellationException) {
                   throw e
                 } catch (_: Exception) {
+                  ReviewPrompt.troubled = true
                   failed = resources.getString(R.string.member_not_removed, person.displayName)
                 }
               }
@@ -195,6 +197,7 @@ fun GroupSettingsPage(
                 } catch (e: CancellationException) {
                   throw e
                 } catch (_: Exception) {
+                  ReviewPrompt.troubled = true
                   failed = resources.getString(R.string.group_not_left)
                 }
                 leaving = false
@@ -255,6 +258,7 @@ private fun EditForm(group: GroupRow, onBack: () -> Unit) {
         mark = group.mark
         photoGone = true
       } catch (_: Exception) {
+        ReviewPrompt.troubled = true
         failed = true
       }
       saving = false
@@ -315,7 +319,10 @@ fun GroupProfilePage(groupId: String, onBack: () -> Unit) {
       if (me == null) {
         CircularProgressIndicator(Modifier.padding(padding).padding(24.dp))
       } else {
-        ProfileForm(group.name, me, Modifier.padding(padding)) { failed = true }
+        ProfileForm(group.name, me, Modifier.padding(padding)) {
+          ReviewPrompt.troubled = true
+          failed = true
+        }
       }
     }
   }

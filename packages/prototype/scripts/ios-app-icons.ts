@@ -6,23 +6,13 @@
 // Run again after changing the drawing or the colors: pnpm run icon:ios
 import { mkdir, rm, writeFile } from "node:fs/promises";
 
-import sharp from "sharp";
-
 import {
   darkTwinOf,
   ICON_SIZE,
   iconColorOptions,
-  paintedPixels,
 } from "../src/lib/app-icon-paint";
 import type { IconColors } from "../src/lib/app-icon-paint";
-import {
-  colorsOf,
-  height,
-  lightness,
-  paint,
-  peekingPoodle,
-  width,
-} from "./app-icon";
+import { colorsOf, paint, peekingPoodle, welcomePoodle } from "./app-icon";
 
 const ASSETS = new URL(
   "../../../apps/ios/Pochical/Pochical/Assets.xcassets/",
@@ -32,17 +22,12 @@ const WIDGET_ASSETS = new URL(
   "../../../apps/ios/Pochical/PochicalWidgets/Assets.xcassets/",
   import.meta.url
 ).pathname;
-const RGBA = 4;
 // Big enough for 設定's two-across grid on a 3x screen.
 const PREVIEW_SIZE = 312;
 // The welcome's 200-point dog on a 3x screen.
 const WELCOME_SIZE = 600;
 // 次の休み's 92-point dog peeking from the corner, on a 3x screen.
 const PEEKING_SIZE = 276;
-// /design's light welcome brightens the scan before multiplying it into
-// the ground (src/components/design-work-setup.tsx, onboarding.poodle).
-const WELCOME_BRIGHTNESS = 1.12;
-const WELCOME_CONTRAST = 1.2;
 // The app's own icon set; the others are named after it.
 const PRIMARY = "moss";
 
@@ -103,40 +88,12 @@ const writeIconSet = async (option: IconColors) => {
 
 await Promise.all(iconColorOptions.map(writeIconSet));
 
-// The welcome's dog, the whole drawing as /design shows it: in light its
-// lines alone, the ground showing through as /design's multiplied scan
-// lets it; in dark the default icon's dark twin without its ground.
+// The welcome's dog (app-icon.ts's welcomePoodle), light and dark.
 const writeWelcome = async () => {
   const folder = `${ASSETS}WelcomePoodle.imageset/`;
   await rm(folder, { force: true, recursive: true });
   await mkdir(folder, { recursive: true });
-  const lines = new Uint8ClampedArray(width * height * RGBA);
-  for (let index = 0; index < lightness.length; index += 1) {
-    const bright = ((lightness[index] ?? 255) / 255) * WELCOME_BRIGHTNESS;
-    const shown = Math.min(
-      1,
-      Math.max(0, (bright - 0.5) * WELCOME_CONTRAST + 0.5)
-    );
-    lines[index * RGBA + 3] = Math.round((1 - shown) * 255);
-  }
-  const darkLook = paintedPixels(
-    lightness,
-    width,
-    height,
-    colorsOf("moss-dark"),
-    true
-  );
-  const [light, dark] = await Promise.all(
-    [lines, darkLook].map(
-      async (pixels) =>
-        await sharp(Buffer.from(pixels.buffer), {
-          raw: { channels: RGBA, height, width },
-        })
-          .resize(WELCOME_SIZE, WELCOME_SIZE, { kernel: "lanczos3" })
-          .png({ compressionLevel: 9 })
-          .toBuffer()
-    )
-  );
+  const { light, dark } = await welcomePoodle(WELCOME_SIZE);
   await Promise.all([
     writeFile(`${folder}light.png`, light),
     writeFile(`${folder}dark.png`, dark),
