@@ -30,7 +30,8 @@ import app.pochical.notifications.LocalNotificationAsking
 import app.pochical.notifications.LocalNotificationPermission
 import app.pochical.notifications.rememberNotificationAsking
 import app.pochical.notifications.NotificationPermission
-import app.pochical.notifications.ChatNotifier
+import app.pochical.kit.AppLink
+import app.pochical.notifications.LocalChatNotifier
 import app.pochical.notifications.Push
 import app.pochical.reminders.LocalReminderAlarms
 import app.pochical.reminders.ReminderAlarms
@@ -103,6 +104,7 @@ class MainActivity(
         LocalOpenedLinks provides links,
         LocalNotificationPermission provides notificationPermission,
         LocalReminderAlarms provides reminderAlarms,
+        LocalChatNotifier provides push.notifier,
         LocalFirstRun provides firstRun,
       ) {
         // Asked from here, under every page, so an answer reaches the app after its page closed.
@@ -115,12 +117,7 @@ class MainActivity(
 
   /** Where [intent] opens the app at, for the screens; a chat's notification tapped goes, as it is read. */
   private fun take(intent: Intent) {
-    if (intent.action == ChatNotifier.ACTION_OPEN_CHAT) {
-      push.notifier.opened(
-        intent.getStringExtra(ChatNotifier.EXTRA_GROUP_ID).orEmpty(),
-        intent.getStringExtra(ChatNotifier.EXTRA_THREAD_ID).orEmpty(),
-      )
-    }
-    links.take(intent)
+    val link = links.take(intent)
+    if (link is AppLink.Chat) push.notifier.opened(link.groupId, link.threadId)
   }
 }

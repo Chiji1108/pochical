@@ -183,10 +183,15 @@ class RootNavigator(
    * place of the pages open, or none.
    */
   fun showGroup(groupId: String, page: RootPage? = null) {
+    showOver(RootTab.Groups, page)
+    openGroup = groupId
+  }
+
+  /** Shows [page], or none, over [tab] alone, in place of the pages open, as a notification's chat opens. */
+  fun showOver(tab: RootTab, page: RootPage?) {
     pages.clear()
     page?.let(pages::add)
-    tab = RootTab.Groups
-    openGroup = groupId
+    this.tab = tab
   }
 
   /** The day a link asks the calendar to open, until it has. */
