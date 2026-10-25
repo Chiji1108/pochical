@@ -54,11 +54,13 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.serialization.NavBackStackSerializer
 import androidx.navigation3.ui.NavDisplay
 import app.pochical.calendar.LocalOwnDays
+import app.pochical.calendar.OwnDays
 import app.pochical.calendar.holidayCountry
 import app.pochical.calendar.weekday
 import app.pochical.design.JobTemplate
 import app.pochical.design.Metrics
 import app.pochical.design.ReadyPatterns
+import app.pochical.kit.DeviceSettings
 import app.pochical.kit.FirstRun
 import app.pochical.kit.SignInResult
 import app.pochical.kit.SocketState
@@ -122,13 +124,8 @@ fun Onboarding() {
       NavBackStack<FirstRunStep>(FirstRunStep.Welcome)
     }
 
-  /** The patterns chosen become the person's, and the order repeats; the tabs come as they are kept. */
   fun begin(ids: List<String>, sequence: List<String>, anchor: LocalDate) {
-    scope.launch {
-      days.begin(ids, sequence, anchor)
-      // The order fills the days without ポチポチ入力: the calendar offers the reminders as it shows.
-      if (sequence.isNotEmpty()) settings.change { it.copy(reminderOfferWaiting = true) }
-    }
+    scope.launch { beginFirstRun(days, settings.change, ids, sequence, anchor) }
   }
 
   // The patterns chosen: a weekly order ends the questions from the Sunday the month starts in, an
@@ -402,4 +399,20 @@ private fun OptionCard(title: String, note: String, icon: String? = null, onClic
       Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = null, tint = colors.textQuaternary)
     }
   }
+}
+
+/**
+ * はじめの設定 ends: the patterns chosen become the person's, and the order repeats. Keeping them
+ * ends the page that asked, its scope with it, so all else is settled before: an order fills the days
+ * without ポチポチ入力, so the calendar is to offer the reminders as it shows.
+ */
+internal suspend fun beginFirstRun(
+  days: OwnDays,
+  changeSettings: ((DeviceSettings) -> DeviceSettings) -> Unit,
+  ids: List<String>,
+  sequence: List<String>,
+  anchor: LocalDate,
+) {
+  if (sequence.isNotEmpty()) changeSettings { it.copy(reminderOfferWaiting = true) }
+  days.begin(ids, sequence, anchor)
 }
