@@ -216,7 +216,8 @@ export const readMarks = sqliteTable(
   ]
 );
 
-// Who chose which emoji on which line, in the order chosen. A line's
+// Who chose which emoji on which line: the emoji in their places on the
+// line, each one's choosers in the order they chose it. A line's
 // reactions change its cursor, as its words do, so they travel with it.
 export const chatReactions = sqliteTable(
   "chat_reactions",

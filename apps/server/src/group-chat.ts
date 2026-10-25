@@ -204,7 +204,7 @@ const byLine = <Row extends LinePlace>(rows: Row[]): Map<string, Row[]> => {
   return found;
 };
 
-/** Who chose what, grouped by `pick` in the order first chosen. */
+/** Who chose what, grouped by `pick` in the order the rows first give it. */
 const grouped = <Row extends { userId: string }>(
   rows: Row[],
   pick: (row: Row) => string
@@ -894,30 +894,26 @@ const takeReaction = (
     eq(chatReactions.seq, line.seq),
     eq(chatReactions.emoji, emoji)
   );
-  const mine = and(chosen, eq(chatReactions.userId, userId));
-  const had = db.select().from(chatReactions).where(mine).get() !== undefined;
-  if (had === on) {
+  const choosers = db.select().from(chatReactions).where(chosen).all();
+  if (choosers.some((row) => row.userId === userId) === on) {
     return {};
   }
   if (on) {
-    // An emoji someone holds keeps its place; one nobody does is new.
-    const held = db
-      .select({ placedCursor: chatReactions.placedCursor })
-      .from(chatReactions)
-      .where(chosen)
-      .get();
     db.insert(chatReactions)
       .values({
         emoji,
         madeCursor: cursor,
-        placedCursor: held?.placedCursor ?? cursor,
+        // An emoji someone holds keeps its place; one nobody does is new.
+        placedCursor: choosers[0]?.placedCursor ?? cursor,
         seq: line.seq,
         threadId,
         userId,
       })
       .run();
   } else {
-    db.delete(chatReactions).where(mine).run();
+    db.delete(chatReactions)
+      .where(and(chosen, eq(chatReactions.userId, userId)))
+      .run();
   }
   return moveLine(db, line, cursor);
 };
