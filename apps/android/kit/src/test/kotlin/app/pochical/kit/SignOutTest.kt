@@ -1,9 +1,11 @@
 package app.pochical.kit
 
 import app.pochical.v1.DayField
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import okhttp3.OkHttpClient
@@ -62,7 +64,7 @@ class SignOutTest {
     withTimeout(10_000) { phone.outboxEmptied() }
     // Ended just after the server ended the session and the erasing was noted, nothing erased yet.
     phone.scope.coroutineContext[Job]!!.cancelChildren()
-    phone.sessions.write(phone.sessions.read()!!.copy(erasing = AccountState.Erasing.Why.SignedOut))
+    phone.database.write { upsert(state().copy(erased = "user-1", erasedWhy = AccountState.Erasing.Why.SignedOut.name)) }
     assertEquals("night", phone.pattern("2026-11-02"))
 
     val again = SyncAccount(phone.database, phone.sessions, server.url, OkHttpClient(), phone.scope, linePhotos = phone.linePhotos)
@@ -77,13 +79,13 @@ class SignOutTest {
   @Test
   fun signingOutNotesTheErasingBeforeErasing() = runBlocking<Unit> {
     val phone = signedInDevice()
-    // The session can be noted but not forgotten, so erasing stops with the note kept.
-    phone.kept.failWritesAfter(1)
+    // The session cannot be forgotten, so erasing stops with the note kept.
+    phone.kept.writable = false
 
     phone.account.signOut()
 
     withTimeout(10_000) { phone.account.state.first { it == AccountState.Erasing(AccountState.Erasing.Why.SignedOut, failed = true) } }
-    assertEquals(AccountState.Erasing.Why.SignedOut, phone.sessions.read()?.erasing)
+    assertEquals("user-1" to "SignedOut", phone.database.write { state().let { it.erased to it.erasedWhy } })
   }
 
   @Test
@@ -100,15 +102,25 @@ class SignOutTest {
   }
 
   @Test
-  fun signingOutASessionTheServerDoesNotKnowEndsIt() = runBlocking<Unit> {
+  fun aSessionTheServerForgotIsLetGoOfAsAnyIs() = runBlocking<Unit> {
     val phone = signedInDevice()
     phone.edits.setDay("2026-11-02", DayField.DAY_FIELD_PATTERN, "night")
     withTimeout(10_000) { phone.outboxEmptied() }
     server.token = "gone"
 
-    assertThrows(NotSignedIn::class.java) { runBlocking { phone.account.signOut() } }
+    phone.account.signOut()
 
-    assertEquals(AccountState.SessionEnded, phone.account.state.value)
-    assertEquals("night", phone.pattern("2026-11-02"))
+    withTimeout(10_000) { phone.account.state.first { it is AccountState.SignedIn && it.userId != "user-1" } }
+    assertNull(phone.pattern("2026-11-02"))
+  }
+
+  @Test
+  fun leavingThePageWhileTheOutboxGoesDoesNotStopTheSignOut() = runBlocking<Unit> {
+    val phone = signedInDevice()
+    val caller = launch(start = CoroutineStart.UNDISPATCHED) { phone.account.signOut() }
+    caller.cancel()
+
+    withTimeout(10_000) { phone.account.state.first { it is AccountState.SignedIn && it.userId != "user-1" } }
+    assertEquals(listOf("/api/auth/sign-out" to "Bearer token-1"), server.calls.toList())
   }
 }

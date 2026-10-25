@@ -36,7 +36,6 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.serialization.Serializable
 import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 
@@ -64,7 +63,6 @@ sealed interface AccountState {
    * anonymous user, as a new install does.
    */
   data class Erasing(val why: Why, val failed: Boolean = false) : AccountState {
-    @Serializable
     enum class Why {
       /** The person let the session go: ログアウト, or はじめから使う after the server ended it. */
       SignedOut,
@@ -334,30 +332,26 @@ class SyncAccount internal constructor(
   }
 
   /**
-   * ログアウト (spec/sync-protocol.md, Signing out): what waits in the user's outbox goes first, so
-   * signing in again finds it, the socket open after as before; then the session ends on the server,
-   * and the device erases what it held and forgets its session ([AccountState.Erasing.Why.SignedOut])
-   * and signs in as someone new. [NotSignedIn] before the device has a session or once the server
-   * says it does not know it; [AccountChanged] when the device is not signed in as it was asked; the
-   * server's error otherwise, nothing changed.
+   * ログアウト (spec/sync-protocol.md, Signing out): what waits in the outboxes goes first
+   * ([sendOutbox]), so signing in again finds it, the sockets open after as before; then the session
+   * ends on the server, and the device erases what it held and forgets its session
+   * ([AccountState.Erasing.Why.SignedOut]) and signs in as someone new. The account owns it from the
+   * moment it is asked, so a page left meanwhile never stops it half way. [NotSignedIn] before the
+   * device has a session, or once it ended while the outbox waited; [AccountChanged] when the device
+   * is not signed in as it was asked; the server's error otherwise, nothing changed. better-auth ends
+   * a session it no longer knows as it ends any, so that is let go of too.
    */
   suspend fun signOut() {
     val asking = signedIn() ?: throw NotSignedIn()
-    commands.send(Command.Send(waiting = true))
-    try {
-      database.sync().lastWaiting().first { it == null }
-    } finally {
-      commands.trySend(Command.Send(waiting = false))
-    }
-    change(
-      asking,
-      ended = ::NotSignedIn,
-      refused = ::AccountChanged,
-      unknown = { it is SignOutRefused && it.status == 401 },
-    ) { before ->
-      signOutSession(http, server, before.token)
-      Outcome.SignedOut(before.userId)
-    }
+    scope
+      .async {
+        if (!sendOutbox()) throw NotSignedIn()
+        change(asking, ended = ::NotSignedIn, refused = ::AccountChanged, unknown = { false }) { before ->
+          signOutSession(http, server, before.token)
+          Outcome.SignedOut(before.userId)
+        }
+      }
+      .await()
   }
 
   /** 再試行: erasing is tried again now rather than after the wait. */
@@ -721,19 +715,14 @@ class SyncAccount internal constructor(
   }
 
   /**
-   * Letting go of [userId] ([why]): nothing of theirs shows, and the device erases it ([erase]). Why
-   * is kept with the session before anything is erased, whatever the reason, so an app ended at any
-   * point from here goes on erasing as it starts (`signIn`), never showing or signing in as them.
+   * Letting go of [userId] ([why]): nothing of theirs shows, and the device erases it ([erase]). The
+   * database notes whom it lets go of and why before anything is erased, whatever the reason, so an
+   * app ended at any point from here goes on erasing as it starts (`signIn`), never showing their data
+   * or signing in as them.
    */
   private suspend fun beginErasing(userId: String, why: AccountState.Erasing.Why) {
     mutableState.value = AccountState.Erasing(why)
-    try {
-      sessions.read()?.takeIf { it.userId == userId && it.erasing != why }?.let { sessions.write(it.copy(erasing = why)) }
-    } catch (e: StoreUnreachable) {
-      // The session is forgotten only once the store is reached again; until then a relaunch finds
-      // the database erased for them (SyncState.erased) and goes on erasing all the same.
-      Log.i(TAG, "The erasing could not be noted: $e")
-    }
+    database.write { upsert(state().copy(erased = userId, erasedWhy = why.name)) }
     scope.launch { erase(userId, why) }
   }
 
@@ -811,19 +800,16 @@ class SyncAccount internal constructor(
   }
 
   /**
-   * Letting go of [userId]: what the database holds of them erased, noting whose it was, then their
-   * session forgotten, tried again after a wait that doubles until both are. An app ended between
-   * the two finds the session it kept is of the user erased, and goes on erasing as it starts
+   * Letting go of [userId], noted already ([beginErasing]): what the database holds of them erased,
+   * then their session forgotten, tried again after a wait that doubles until both are. An app ended
+   * on the way finds the session it kept is of the user noted, and goes on erasing as it starts
    * (`signIn`), never signing in as them again.
    */
   private suspend fun erase(userId: String, why: AccountState.Erasing.Why) {
     var wait = ERASE_FIRST_WAIT_MS
     while (true) {
       try {
-        database.write {
-          eraseUserData()
-          upsert(state().copy(erased = userId))
-        }
+        database.write { eraseUserData() }
         // Their photos with the rest: the outbox that would send them is gone.
         linePhotos.eraseAll()
         sessions.forgetSession()
@@ -905,15 +891,10 @@ class SyncAccount internal constructor(
         Log.i(TAG, "The kept session cannot be reached, tried again in the foreground: $e")
         return
       }
-    // Erasing cut off part way goes on: as noted with the session, or, should that note not have been
-    // kept, as the database says it was erased for this user, an ended session's let go of.
-    val erasing =
-      kept?.erasing
-        ?: kept?.takeIf { database.write { state().erased } == it.userId }?.let {
-          if (it.ended) AccountState.Erasing.Why.SignedOut else AccountState.Erasing.Why.Deleted
-        }
-    if (kept != null && erasing != null) {
-      commands.send(Command.Erasing(kept.userId, erasing))
+    // Erasing cut off part way goes on, as the database noted it.
+    val noted = database.write { state() }
+    if (kept != null && noted.erased == kept.userId) {
+      commands.send(Command.Erasing(kept.userId, AccountState.Erasing.Why.valueOf(noted.erasedWhy)))
       return
     }
     if (kept?.ended == true) {
