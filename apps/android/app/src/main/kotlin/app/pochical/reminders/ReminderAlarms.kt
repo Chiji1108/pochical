@@ -129,8 +129,12 @@ class ReminderAlarms(
     val now = clock()
     val zone = now.zone
     val setFor = kept.getLong(KEY_SET_FOR, 0)
-    val from = searchFrom(setFor, now.toInstant().toEpochMilli())
-    if (scheduled.allowed && from < setFor && !cleared) return
+    val nowMs = now.toInstant().toEpochMilli()
+    val from = searchFrom(setFor, nowMs)
+    // Due and not brought yet: left with the system. One set for later is worked out again, as the
+    // days or the reminders may have changed since.
+    val due = from < nowMs
+    if (scheduled.allowed && due && !cleared) return
     val after = Instant.ofEpochMilli(from).atZone(zone)
     // The nearest days first: most reminders go off within them, and these run on every change.
     val next =

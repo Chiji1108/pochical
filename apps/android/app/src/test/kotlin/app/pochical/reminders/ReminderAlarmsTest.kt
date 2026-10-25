@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -103,6 +104,21 @@ class ReminderAlarmsTest {
     wake(alarms, firedAt = at(2026, 11, 1, 21, 0))
     assertEquals(listOf("明日は日勤"), shown)
     assertEquals(at(2026, 11, 2, 21, 0), nextAlarm)
+  }
+
+  @Test
+  fun aReminderChangedBeforeItsAlarmMovesTheAlarm() = runTest {
+    val reminders = MutableStateFlow(listOf(Reminder("evening", kind = Reminder.Kind.DayBefore("21:00"))))
+    val alarms = ReminderAlarms(application, flowOf(calendar), reminders, MutableStateFlow(true), backgroundScope, clock = { now })
+    alarms.start()
+    runCurrent()
+    assertEquals(at(2026, 11, 1, 21, 0), nextAlarm)
+
+    // Set for 21:00, the reminder is moved to 20:30 at 20:05: the alarm goes with it.
+    now = at(2026, 11, 1, 20, 5)
+    reminders.value = listOf(Reminder("evening", kind = Reminder.Kind.DayBefore("20:30")))
+    runCurrent()
+    assertEquals(at(2026, 11, 1, 20, 30), nextAlarm)
   }
 
   @Test
