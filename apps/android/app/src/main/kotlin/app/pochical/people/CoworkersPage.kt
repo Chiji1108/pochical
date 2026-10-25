@@ -273,7 +273,7 @@ fun CoworkersRow(open: (RootPage) -> Unit) {
   val calendar by LocalOwnDays.current.calendar.collectAsStateWithLifecycle()
   ListItem(
     headlineContent = { Text(stringResource(R.string.coworkers)) },
-    trailingContent = { Text(stringResource(R.string.coworkers_count, calendar.coworkers.size)) },
+    supportingContent = { Text(stringResource(R.string.coworkers_count, calendar.coworkers.size)) },
     modifier = Modifier.clickable { open(RootPage.Coworkers) },
   )
 }

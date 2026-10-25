@@ -1,18 +1,29 @@
 package app.pochical
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.pochical.chat.SupportRow
 import app.pochical.kit.DeviceSettings
@@ -22,16 +33,23 @@ import app.pochical.people.CoworkersRow
 import app.pochical.people.UsualProfileRow
 import app.pochical.reminders.RemindersRow
 import app.pochical.repeat.RepeatRow
+import kotlinx.coroutines.launch
 
-/** 設定: each row's page pushed over the tabs. */
+/**
+ * 設定: what the person sets, sorted as /design's settings are, each row's page pushed over the
+ * tabs; the chat with Pochical's people under them, and Pochical itself at the foot.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(open: (RootPage) -> Unit) {
   val device = LocalDeviceSettings.current.device
-  Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.tab_settings)) }) }) { padding ->
+  val snackbar = remember { SnackbarHostState() }
+  Scaffold(
+    topBar = { TopAppBar(title = { Text(stringResource(R.string.tab_settings)) }) },
+    snackbarHost = { SnackbarHost(snackbar) },
+  ) { padding ->
     LazyColumn(contentPadding = padding) {
-      item { AccountRow(open) }
-      item { UsualProfileRow(open) }
+      // The patterns first: every way of working has them, and the repeating order is made of them.
       item { SectionHeader(stringResource(R.string.settings_shifts)) }
       item { PatternsRow(open) }
       item { RepeatRow(open) }
@@ -49,11 +67,62 @@ fun SettingsScreen(open: (RootPage) -> Unit) {
         )
       }
       item { CalendarSettingsRow(open) }
+      item { SectionHeader(stringResource(R.string.account)) }
+      item { UsualProfileRow(open) }
+      item { AccountRow(open) }
       // The chat with the people who make Pochical, apart from the rows of settings.
       item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
       item { SupportRow(open) }
+      item { About(snackbar) }
     }
   }
+}
+
+/**
+ * Pochical itself, at the foot (/design's AboutSection), its version under it: rows that leave the
+ * app end in ↗, opening the site's pages in Custom Tabs. The store's own review prompt comes by
+ * itself only now and then (spec/review.md); the review row is there whenever someone wants to
+ * write one.
+ */
+@Composable
+private fun About(snackbar: SnackbarHostState) {
+  val context = LocalContext.current
+  val scope = rememberCoroutineScope()
+  val afterRelease = stringResource(R.string.settings_review_after_release)
+  Column {
+    SectionHeader(stringResource(R.string.settings_about))
+    OutsideRow(stringResource(R.string.settings_help)) { openLink(context, Site.page("support")) }
+    OutsideRow(stringResource(R.string.settings_write_review)) {
+      val review = Site.writeReview
+      if (review != null) openLink(context, review) else scope.launch { snackbar.showSnackbar(afterRelease) }
+    }
+    OutsideRow(stringResource(R.string.settings_terms)) { openLink(context, Site.page("terms")) }
+    OutsideRow(stringResource(R.string.settings_privacy)) { openLink(context, Site.page("privacy")) }
+    Text(
+      stringResource(R.string.settings_version, BuildConfig.VERSION_NAME),
+      style = MaterialTheme.typography.bodySmall,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      textAlign = TextAlign.Center,
+      modifier = Modifier.fillMaxWidth().padding(16.dp),
+    )
+  }
+}
+
+/** A row that leaves the app, ending in ↗ rather than going on inside it. */
+@Composable
+private fun OutsideRow(title: String, onClick: () -> Unit) {
+  ListItem(
+    headlineContent = { Text(title) },
+    trailingContent = {
+      Icon(
+        painterResource(R.drawable.ic_arrow_outward),
+        contentDescription = null,
+        Modifier.size(20.dp),
+        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+      )
+    },
+    modifier = Modifier.clickable(onClickLabel = stringResource(R.string.settings_opens_browser), onClick = onClick),
+  )
 }
 
 /** 外観 as the screens are drawn: a テーマ drawn dark says so, whatever 外観 keeps for after it. */

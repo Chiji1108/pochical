@@ -135,9 +135,9 @@ fun PatternsRow(open: (RootPage) -> Unit) {
     supportingContent = {
       Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
         for (pattern in inUse) ShiftMark(pattern.icon, pattern.emoji, pattern.symbol, pattern.color, size = 14.dp)
+        Text(stringResource(R.string.patterns_count, inUse.size))
       }
     },
-    trailingContent = { Text(stringResource(R.string.patterns_count, inUse.size)) },
     modifier = Modifier.clickable { open(RootPage.Patterns) },
   )
 }
