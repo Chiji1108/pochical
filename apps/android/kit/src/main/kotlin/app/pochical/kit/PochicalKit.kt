@@ -94,7 +94,7 @@ class PochicalKit(context: Context) {
  * The app's version and the device, as they reach Pochical's people with each line of the chat with
  * them, and as its head says so: ポチカル 1.0・Pixel 10a・Android 17.
  */
-fun appDevice(context: Context): String {
-  val version = context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty()
-  return "ポチカル $version・${Build.MODEL}・Android ${Build.VERSION.RELEASE}"
-}
+fun appDevice(context: Context): String = "ポチカル ${appVersion(context)}・${Build.MODEL}・Android ${Build.VERSION.RELEASE}"
+
+/** The app's version, as Google Play shows it: 1.0. */
+fun appVersion(context: Context): String = context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty()
