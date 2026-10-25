@@ -28,6 +28,7 @@ class MessageSemanticsTest {
       notKept = {},
       reducedMotion = true,
       lit = null,
+      litShown = {},
       me = "me",
       writers = emptyMap(),
       react = { _, _, _ -> },
