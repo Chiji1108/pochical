@@ -17,9 +17,15 @@ fun together(members: List<Map<LocalDate, Boolean>>, from: LocalDate, through: L
   for (day in daysFrom(from, through)) {
     val offs = members.map { it[day] }
     when {
-      offs.all { it == true } -> days += day
-      offs.none { it == false } -> unsure = true
+      allOff(offs) -> days += day
+      mayAllBeOff(offs) -> unsure = true
     }
   }
   return Together(days, unsure)
 }
+
+/** Whether a day is one everyone is off, from each one's day: off, at work, or not entered (null). */
+fun allOff(offs: List<Boolean?>): Boolean = offs.all { it == true }
+
+/** Whether a day may yet be one everyone is off: no one who has entered it works. */
+fun mayAllBeOff(offs: List<Boolean?>): Boolean = offs.none { it == false }

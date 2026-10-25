@@ -57,9 +57,12 @@ fun rememberGroupDays(members: List<GroupMember>, from: LocalDate, through: Loca
  * The look a member's marks are drawn in: their shape and fill, the rest the viewer's own
  * (spec/sync-protocol.md, Profile); the app's own default, filled icons, before theirs is known.
  */
-fun Look.drawing(member: GroupMember): Look {
-  val style = MarkStyle.entries.firstOrNull { it.id == member.markStyle }
-  return copy(style = style ?: MarkStyle.Icon, fill = if (style == null) true else member.markFill)
+fun Look.drawing(member: GroupMember): Look = drawing(member.markStyle, member.markFill)
+
+/** The look marks are drawn in by someone whose shape is [markStyle] (empty before it is known) and fill [markFill]. */
+fun Look.drawing(markStyle: String, markFill: Boolean): Look {
+  val style = MarkStyle.entries.firstOrNull { it.id == markStyle }
+  return copy(style = style ?: MarkStyle.Icon, fill = if (style == null) true else markFill)
 }
 
 /** A member's pattern's mark, in their own shape and the viewer's colors. */

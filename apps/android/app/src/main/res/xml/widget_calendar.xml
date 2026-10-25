@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- カレンダー (spec/widgets.md, Views): 4×2 to 4×4. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+  android:description="@string/widget_calendar_description"
+  android:initialLayout="@layout/glance_default_loading_layout"
+  android:minWidth="276dp"
+  android:minHeight="130dp"
+  android:minResizeWidth="276dp"
+  android:minResizeHeight="130dp"
+  android:maxResizeWidth="460dp"
+  android:maxResizeHeight="460dp"
+  android:targetCellWidth="4"
+  android:targetCellHeight="2"
+  android:resizeMode="vertical"
+  android:updatePeriodMillis="0"
+  android:widgetCategory="home_screen" />
