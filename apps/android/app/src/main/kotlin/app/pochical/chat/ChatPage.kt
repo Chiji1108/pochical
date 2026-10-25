@@ -352,6 +352,7 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
     Unit
   }
 
+  val openLink = rememberLinkOpener()
   var unsending by remember { mutableStateOf<Unsending?>(null) }
   val actions = rememberLineActions(composer, nameOf, snackbar, onUnsend = { unsending = it }, onNotKept = { notKept = true })
   val handlers =
@@ -371,6 +372,7 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
       moreReactions = { picking = it },
       choosers = { choosers = it },
       spray = spray,
+      openLink = openLink,
     )
   Box {
     ChatScaffold(groupId, threadId, members, groups, socket, snackbar, onBack) {
@@ -396,6 +398,8 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
           quote = replying?.let { lineQuote(it, chat.line(it) ?: answered, nameOf, blockedIds) },
           nameOf = nameOf,
           namesKnown = memberRows != null,
+          // The words of the line being changed, whose page stays while their first link does.
+          editedWords = composer.writing.editing?.let { (chat.line(it)?.content as? LineContent.Words)?.text },
           onTyping = { on -> socket?.sendTyping(threadId, on) },
           onSent = {
             if (!chat.atEnd) from = null

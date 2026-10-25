@@ -22,6 +22,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,7 +54,12 @@ import app.pochical.design.TextLimits
 import app.pochical.kit.KeptDraft
 import app.pochical.kit.PickedMember
 import app.pochical.kit.Writing
+import app.pochical.groups.LocalGroupCalls
 import app.pochical.kit.fitsText
+import app.pochical.kit.keepsPreview
+import app.pochical.kit.previewLink
+import app.pochical.kit.site
+import app.pochical.v1.LinkPreview
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
@@ -94,7 +100,7 @@ class ComposerState(writing: Writing<Nothing>, tookDraft: Boolean) {
       Saver(
         save = { state ->
           val w = state.writing
-          listOf(w.text, w.replyTo ?: -1L, w.editing ?: -1L, w.picked.flatMap { listOf(it.id, it.name) }, state.tookDraft)
+          listOf(w.text, w.replyTo ?: -1L, w.editing ?: -1L, w.picked.flatMap { listOf(it.id, it.name) }, state.tookDraft, w.previewRemoved.orEmpty())
         },
         restore = { saved ->
           val list = saved as List<*>
@@ -105,6 +111,8 @@ class ComposerState(writing: Writing<Nothing>, tookDraft: Boolean) {
               picked = picked,
               replyTo = (list[1] as Long).takeIf { it >= 0 },
               editing = (list[2] as Long).takeIf { it >= 0 },
+              // × holds until the line is sent, across a rotation too.
+              previewRemoved = (list[5] as String).takeIf { it.isNotEmpty() },
             )
           ComposerState(writing, list[4] as Boolean)
         },
@@ -132,6 +140,8 @@ fun Composer(
   nameOf: (String) -> String,
   /** The members' names are read, for a draft's mentions to be named. */
   namesKnown: Boolean,
+  /** The words of the line being changed, as sent; null while answering or writing anew. */
+  editedWords: String?,
   onTyping: (Boolean) -> Unit,
   onSent: () -> Unit,
   onNotKept: () -> Unit,
@@ -192,6 +202,23 @@ fun Composer(
 
   val editing = writing.editing
   val sendable = fitsText(writing.sent, TextLimits.chatMessage)
+
+  // The page of the first link written, asked for once the link has stayed the same for
+  // chatRules.linkPreviewSettleMs, and shown over the composer until × takes it off; none while an
+  // edit keeps its line's first link, whose page stays (spec/chat.md, Previews).
+  val calls = LocalGroupCalls.current
+  val link = previewLink(writing.sent)?.takeIf { editedWords == null || !keepsPreview(editedWords, writing.sent) }
+  val pages = remember { LinkPages() }
+  LaunchedEffect(link) {
+    if (link == null || pages.answered(link)) return@LaunchedEffect
+    delay(Chat.linkPreviewSettleMs.toLong())
+    pages.ask(link, calls::linkPreview)
+  }
+  val page = link?.takeIf { it != writing.previewRemoved }?.let(pages::page)
+  // Shown while asked (読み込み中…), and once a page came; kept as it goes, so it leaves whole.
+  val showsPage = link != null && link != writing.previewRemoved && (pages.asking == link || page != null)
+  var pageShown by remember { mutableStateOf<Pair<String, LinkPreview?>?>(null) }
+  if (showsPage && link != null) pageShown = link to page
   Surface(modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surfaceContainer) {
     Column(Modifier.navigationBarsPadding()) {
       val editingWords = stringResource(R.string.chat_editing)
@@ -206,6 +233,12 @@ fun Composer(
       if (bar != null) shown = bar
       AnimatedVisibility(bar != null) {
         shown?.let { ComposerBar(it.title, it.words, stringResource(it.stop)) { state.writing = state.writing.stop() } }
+      }
+      AnimatedVisibility(showsPage) {
+        pageShown?.let { (url, shownPage) ->
+          // The page's own site's name once it came, as the line will show it.
+          ComposerPreview(shownPage?.site ?: site(url), shownPage) { state.writing = state.writing.copy(previewRemoved = url) }
+        }
       }
       Row(Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.Bottom) {
         OutlinedTextField(
@@ -228,8 +261,13 @@ fun Composer(
                 // composer to be kept as its draft.
                 withContext(NonCancellable) {
                   val seq = going.editing
-                  if (seq != null) chats.change(groupId, threadId, seq, going.sent)
-                  else chats.send(groupId, threadId, going.sent, going.replyTo)
+                  val words = going.sent
+                  // The page as it came for the words' first link, or none taken off with ×.
+                  val sentLink = previewLink(words)
+                  val removed = sentLink != null && sentLink == going.previewRemoved
+                  val sentPage = sentLink?.takeIf { !removed }?.let(pages::page)
+                  if (seq != null) chats.change(groupId, threadId, seq, words, sentPage)
+                  else chats.send(groupId, threadId, words, going.replyTo, sentPage, withoutPreview = removed)
                 }
               } catch (e: CancellationException) {
                 throw e
@@ -270,6 +308,41 @@ private fun ComposerBar(title: String, words: String?, stop: String, onStop: () 
     }
     IconButton(onClick = onStop, Modifier.semantics { contentDescription = stop }) {
       Icon(painterResource(R.drawable.ic_close), contentDescription = null, Modifier.size(20.dp))
+    }
+  }
+}
+
+/**
+ * The pages of the links written, as the server answered for them (a page, or none), and the link
+ * asked for now. Only an answer is kept: a request cut short (the link changed meanwhile) leaves
+ * nothing behind, and is asked again should the link come back.
+ */
+@Stable
+class LinkPages {
+  private val answers = mutableStateMapOf<String, LinkPreview?>()
+
+  /** The link being asked for now, its page shown as 読み込み中… meanwhile. */
+  var asking by mutableStateOf<String?>(null)
+    private set
+
+  fun answered(link: String): Boolean = link in answers
+
+  fun page(link: String): LinkPreview? = answers[link]
+
+  /** Asks [fetch] for [link]'s page; a failure is an answer of none, as the server reads the page itself once it has the line. */
+  suspend fun ask(link: String, fetch: suspend (String) -> LinkPreview?) {
+    asking = link
+    try {
+      answers[link] =
+        try {
+          fetch(link)
+        } catch (e: CancellationException) {
+          throw e
+        } catch (_: Exception) {
+          null
+        }
+    } finally {
+      if (asking == link) asking = null
     }
   }
 }

@@ -1,6 +1,7 @@
 package app.pochical.kit
 
 import app.pochical.v1.ChatEdit
+import app.pochical.v1.LinkPreview
 import app.pochical.v1.ChatLine as WireLine
 import app.pochical.v1.chatChange
 import app.pochical.v1.chatReact
@@ -71,12 +72,20 @@ class Chats internal constructor(
    * Sends [text] as a line of words in the chat, shown at once as the member's line on its way.
    * Throws when the device cannot keep it (保存できませんでした), the composer keeping the words.
    */
-  suspend fun send(groupId: String, threadId: String, text: String, replyTo: Long? = null) {
+  suspend fun send(groupId: String, threadId: String, text: String, replyTo: Long? = null, preview: LinkPreview? = null, withoutPreview: Boolean = false) {
     database.write {
       chatEdit(groupId, now()) {
         send = chatSend {
           this.threadId = threadId
-          content = chatSendContent { words = chatSendWords { this.text = text } }
+          content = chatSendContent {
+            words = chatSendWords {
+              this.text = text
+              // Its first link's page as it came while writing; none taken off with ×, or the
+              // server reads the page itself once it has the line (spec/chat.md, Previews).
+              preview?.let { this.preview = it }
+              this.withoutPreview = withoutPreview
+            }
+          }
           replyTo?.let { this.replyTo = it }
         }
       }
@@ -89,7 +98,7 @@ class Chats internal constructor(
    * page stays while its first link does (spec/vectors/chat.json, edited); else the line goes
    * without one. Throws when the device cannot keep it, the composer keeping the words.
    */
-  suspend fun change(groupId: String, threadId: String, seq: Long, text: String) {
+  suspend fun change(groupId: String, threadId: String, seq: Long, text: String, preview: LinkPreview? = null) {
     database.write {
       val was = shownLine(groupId, threadId, seq, waitingEdits(groupId, threadId, now()))?.content as? LineContent.Words ?: return@write
       chatEdit(groupId, now()) {
@@ -98,6 +107,8 @@ class Chats internal constructor(
           this.seq = seq
           this.text = text
           keepsPreview = keepsPreview(was.text, text)
+          // Else the new first link's page, if it has come.
+          if (!keepsPreview) preview?.let { this.preview = it }
         }
       }
       deleteChatDraft(groupId, threadId)

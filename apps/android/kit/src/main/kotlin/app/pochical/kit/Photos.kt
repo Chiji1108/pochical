@@ -28,6 +28,11 @@ sealed interface PhotoShelf {
     override val path = "v1/groups/$groupId/photos/"
   }
 
+  /** Links' pages' pictures, kept by the server with the preview, read by signed-in users (/v1/previews/{id}). */
+  data object Previews : PhotoShelf {
+    override val path = "v1/previews/"
+  }
+
   /** The faces of a group a live invitation opens, read by its holder (/v1/invites/{code}/photos/{id}). */
   data class Invitation(val code: String) : PhotoShelf {
     override val path = "v1/invites/$code/photos/"

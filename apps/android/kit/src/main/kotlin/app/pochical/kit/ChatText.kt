@@ -1,5 +1,8 @@
 package app.pochical.kit
 
+import java.net.URI
+import java.net.URISyntaxException
+
 // A chat message's words as spec/chat.md has them: its links, and the members it mentions
 // (spec/vectors/chat-text.json), as iOS's ChatText.swift and the prototype's chat-text.ts cut them.
 // Ids and the characters a URL is written in are ASCII, so every platform cuts a message alike.
@@ -64,6 +67,18 @@ fun keepsPreview(text: String, editedTo: String): Boolean = firstLink(text) == f
 
 /** The link a page is asked for while writing: the words' first, unless it is one of Pochical's invitations. */
 fun previewLink(text: String): String? = firstLink(text)?.takeIf { inviteCode(it) == null }
+
+/** A link's host without a leading www., as a page's site is named without the server's (spec/vectors/chat-text.json, site). */
+fun site(url: String): String {
+  val host =
+    try {
+      URI(url).host
+    } catch (_: URISyntaxException) {
+      null
+    } ?: return url
+  // A host is named in lowercase, whatever case it was written in.
+  return host.lowercase().removePrefix("www.")
+}
 
 /** A member picked from the composer's list of names, or still picked in words put back in it. */
 data class PickedMember(val id: String, val name: String)

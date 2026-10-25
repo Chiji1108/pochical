@@ -75,4 +75,7 @@
   <string name="chat_reaction_off">%1$sを外す</string>
   <string name="chat_reaction_more">ほかの絵文字でリアクション</string>
   <string name="chat_reaction_with_me">（自分も）</string>
+  <string name="chat_preview_loading">読み込み中…</string>
+  <string name="chat_preview_remove">プレビューを外す</string>
+  <string name="chat_open_link">リンクを開く（%1$s）</string>
 </resources>
