@@ -21,8 +21,17 @@ internal class MemoryBytes : KeptBytes {
     return bytes
   }
 
+  /** How many writes go before every later one fails, null for no end. */
+  @Volatile private var writesLeft: Int? = null
+
+  /** The next [count] writes go, and every one after fails. */
+  fun failWritesAfter(count: Int) {
+    writesLeft = count
+  }
+
   override suspend fun write(bytes: ByteArray) {
-    if (!reachable || !writable) throw StoreUnreachable(IllegalStateException("Play services unavailable"))
+    if (!reachable || !writable || writesLeft == 0) throw StoreUnreachable(IllegalStateException("Play services unavailable"))
+    writesLeft = writesLeft?.minus(1)
     this.bytes = bytes
   }
 }

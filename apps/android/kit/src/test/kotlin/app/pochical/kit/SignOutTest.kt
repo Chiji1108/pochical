@@ -1,9 +1,12 @@
 package app.pochical.kit
 
 import app.pochical.v1.DayField
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import okhttp3.OkHttpClient
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -50,6 +53,37 @@ class SignOutTest {
     assertEquals("user-2", phone.sessions.read()?.userId)
     // Not a deletion: nothing says アカウントを削除しました.
     assertEquals(0, phone.account.deleted.value)
+  }
+
+  @Test
+  fun anAppEndedAfterSigningOutBeforeAnythingIsErasedGoesOnErasingAsItStarts() = runBlocking<Unit> {
+    val phone = signedInDevice()
+    phone.edits.setDay("2026-11-02", DayField.DAY_FIELD_PATTERN, "night")
+    withTimeout(10_000) { phone.outboxEmptied() }
+    // Ended just after the server ended the session and the erasing was noted, nothing erased yet.
+    phone.scope.coroutineContext[Job]!!.cancelChildren()
+    phone.sessions.write(phone.sessions.read()!!.copy(erasing = AccountState.Erasing.Why.SignedOut))
+    assertEquals("night", phone.pattern("2026-11-02"))
+
+    val again = SyncAccount(phone.database, phone.sessions, server.url, OkHttpClient(), phone.scope, linePhotos = phone.linePhotos)
+    again.foreground()
+
+    withTimeout(10_000) { again.state.first { it is AccountState.SignedIn } }
+    assertEquals("user-2", (again.state.value as AccountState.SignedIn).userId)
+    assertNull(phone.pattern("2026-11-02"))
+    assertEquals(0, again.deleted.value)
+  }
+
+  @Test
+  fun signingOutNotesTheErasingBeforeErasing() = runBlocking<Unit> {
+    val phone = signedInDevice()
+    // The session can be noted but not forgotten, so erasing stops with the note kept.
+    phone.kept.failWritesAfter(1)
+
+    phone.account.signOut()
+
+    withTimeout(10_000) { phone.account.state.first { it == AccountState.Erasing(AccountState.Erasing.Why.SignedOut, failed = true) } }
+    assertEquals(AccountState.Erasing.Why.SignedOut, phone.sessions.read()?.erasing)
   }
 
   @Test
