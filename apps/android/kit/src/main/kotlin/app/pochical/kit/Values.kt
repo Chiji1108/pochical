@@ -48,6 +48,9 @@ interface Values {
   /** The user's usual name and photo, null before they set either. */
   @Query("SELECT * FROM profile WHERE id = 1") fun profile(): Flow<ProfileRow?>
 
+  /** The user whose data the database holds, as their groups know them; empty while it is no one's. */
+  @Query("SELECT owner FROM syncState WHERE id = 1") fun owner(): Flow<String?>
+
   /** The user's groups in the order they joined them. */
   @Query("SELECT * FROM groups ORDER BY joinedAtMs") fun groups(): Flow<List<GroupRow>>
 

@@ -153,9 +153,6 @@ class FakeServer : AutoCloseable {
   /** The users `DeleteAccount` deleted, and the Apple code each was asked with. */
   val deleted = CopyOnWriteArrayList<Pair<String, DeleteAccountRequest>>()
 
-  /** How long a group takes to answer a page of its chat's lines, in milliseconds. */
-  @Volatile var pageDelayMs = 0L
-
   /** Whether a group refuses the chat sends it is sent, as not fitting. */
   @Volatile var refuseSends = false
 
@@ -418,7 +415,6 @@ class FakeServer : AutoCloseable {
       }
       ClientFrame.KindCase.PING -> socket.send(serverFrame { pong = pong { nonce = frame.ping.nonce } })
       ClientFrame.KindCase.CHAT_PAGE_REQUEST -> {
-        Thread.sleep(pageDelayMs)
         val request = frame.chatPageRequest
         val lines = lines(groupId, request.threadId).filter { request.beforeSeq == 0L || it.seq < request.beforeSeq }.takeLast(Chat.pageSize)
         socket.send(

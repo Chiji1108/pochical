@@ -83,25 +83,31 @@ import me.saket.telephoto.zoomable.rememberZoomableState
 
 /**
  * The chat's photos open large or listed, as [run] follows them; [version] tells the screen each
- * change of what it shows. [follows] false for photos of the member's own line still on its way,
- * which open alone, the group holding none of them yet.
+ * change of what it shows, and [changes] each change of the run, which may change what it asks of
+ * the group (the first photos followed, the socket opened again) though it shows the same.
+ * [follows] false for photos of the member's own line still on its way, which open alone, the
+ * group holding none of them yet.
  */
 @Stable
 class OpenPhotos(val run: PhotoRun, val follows: Boolean = true) {
   var version by mutableIntStateOf(0)
     private set
 
+  var changes by mutableIntStateOf(0)
+    private set
+
   /** Changes the run, the screen following only when what it shows changed. */
   fun change(step: PhotoRun.() -> Unit) {
     val before = shows()
     run.step()
+    changes++
     if (shows() != before) version++
   }
 
   /** The socket opened again: the pages not yet answered are asked again. */
   fun reconnected() {
     run.reconnected()
-    version++
+    changes++
   }
 
   private fun shows() = listOf(run.photos, run.shown, run.total, run.place)
@@ -249,7 +255,7 @@ fun FollowPhotos(groupId: String, threadId: String, open: OpenPhotos) {
   }
   val current = socket?.state?.collectAsState()?.value == SocketState.Current
   LaunchedEffect(current) { if (current) open.reconnected() }
-  LaunchedEffect(open.version, socket, current) {
+  LaunchedEffect(open.changes, socket, current) {
     val socket = socket ?: return@LaunchedEffect
     for (ask in open.run.asks()) if (!current || !socket.requestPhotos(threadId, ask.seq, ask.after)) open.run.unasked(ask)
   }

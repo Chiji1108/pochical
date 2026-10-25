@@ -155,6 +155,8 @@ class MessageHandlers(
   val reducedMotion: Boolean,
   /** The line lit as it is gone to, each time it is. */
   val lit: Lit?,
+  /** [lit] has shone, so the line is not lit again as it is drawn again (scrolled back to, lifted for its menu). */
+  val litShown: (Lit) -> Unit,
   val me: String?,
   val writers: Map<String, GroupMemberRow>,
   /** The member's reaction on a line put on or taken back. */
@@ -228,8 +230,17 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
   val items = handlers.items(look)
   // Its menu's items, 返信 first, then what each of its parts offers (spec/chat.md, Screen readers).
   val partLine = PartLine(look.seq, handlers, openMenu = { openMenu() })
+  // The writer's profile, which a tap on their face opens.
+  val profiled = look.writer?.takeIf { !look.mine && !it.deleted }
+  val openProfile = handlers.openProfile
+  val profile =
+    if (profiled != null && openProfile != null) {
+      CustomAccessibilityAction(stringResource(R.string.chat_writer_profile, profiled.shownName())) { openProfile(profiled); true }
+    } else {
+      null
+    }
   val actions =
-    (items.map { item -> CustomAccessibilityAction(item.label) { item.run(); true } } + look.parts.flatMap { it.actions(partLine) })
+    (items.map { item -> CustomAccessibilityAction(item.label) { item.run(); true } } + look.parts.flatMap { it.actions(partLine) } + listOfNotNull(profile))
       // Android holds at most this many on one element; past them, the latest parts' go.
       .take(MOST_ACTIONS)
   // Activating a sent line of photos opens its first large; any other line opens its menu, as the long press does.
@@ -364,7 +375,7 @@ private fun PhotoBody(look: MessageLook, photos: LineContent.Photos, handlers: M
   if (quote == null) {
     // Lit in its own rounded outline as it is gone to, as a bubble is.
     val shape = RoundedCornerShape(Radius.lg)
-    return Box(Modifier.litWhenGoneTo(handlers.lit?.takeIf { it.seq == look.seq }, shape, handlers.reducedMotion)) { line() }
+    return Box(Modifier.litWhenGoneTo(handlers.lit?.takeIf { it.seq == look.seq }, shape, handlers.reducedMotion, handlers.litShown)) { line() }
   }
   val colors = LocalThemeColors.current
   val shape = remember(look.mine, look.startsRun) { BubbleShape(look.mine, tail = look.startsRun) }
@@ -372,7 +383,7 @@ private fun PhotoBody(look: MessageLook, photos: LineContent.Photos, handlers: M
   Column(
     Modifier.width(IntrinsicSize.Max)
       .background(if (look.mine) colors.accentFill else colors.fillTertiary, shape)
-      .litWhenGoneTo(handlers.lit?.takeIf { it.seq == look.seq }, shape, handlers.reducedMotion)
+      .litWhenGoneTo(handlers.lit?.takeIf { it.seq == look.seq }, shape, handlers.reducedMotion, handlers.litShown)
       .padding(top = 8.dp, bottom = PHOTO_INSET, start = PHOTO_INSET, end = PHOTO_INSET)
   ) {
     BubbleQuote(quote, ink, inset = 12.dp - PHOTO_INSET, onOpen = onQuote)
@@ -396,7 +407,7 @@ fun Bubble(look: MessageLook, handlers: MessageHandlers, onQuote: () -> Unit) {
   Column(
     Modifier.alpha(if (look.waiting != null && !look.waiting.failed) WAITING_ALPHA else 1f)
       .background(if (look.mine) colors.accentFill else colors.fillTertiary, shape)
-      .litWhenGoneTo(handlers.lit?.takeIf { it.seq == look.seq }, shape, handlers.reducedMotion)
+      .litWhenGoneTo(handlers.lit?.takeIf { it.seq == look.seq }, shape, handlers.reducedMotion, handlers.litShown)
       // A page's picture is cut to the bubble's outline.
       .then(if (preview != null) Modifier.clip(shape) else Modifier)
       .padding(top = 8.dp, bottom = if (preview != null) 0.dp else 8.dp)
@@ -427,10 +438,11 @@ fun Bubble(look: MessageLook, handlers: MessageHandlers, onQuote: () -> Unit) {
 /**
  * Lit when its line is gone to (a quote, a pin): the accent over it inside its [shape]'s outline,
  * coming and going once over `chatRules.jumpFlashMs` with a band of shine sweeping across, still
- * with motion reduced (spec/chat.md, Pins). A bubble's and a card's alike.
+ * with motion reduced (spec/chat.md, Pins). A bubble's and a card's alike; [onShown] once it has
+ * shone, so it is not lit again as it is drawn again.
  */
 @Composable
-fun Modifier.litWhenGoneTo(lit: Lit?, shape: Shape, reducedMotion: Boolean): Modifier {
+fun Modifier.litWhenGoneTo(lit: Lit?, shape: Shape, reducedMotion: Boolean, onShown: (Lit) -> Unit): Modifier {
   val light = remember { Animatable(0f) }
   val shine = remember { Animatable(0f) }
   LaunchedEffect(lit) {
@@ -439,15 +451,16 @@ fun Modifier.litWhenGoneTo(lit: Lit?, shape: Shape, reducedMotion: Boolean): Mod
       light.snapTo(1f)
       delay(Chat.jumpFlashMs.toLong())
       light.snapTo(0f)
-      return@LaunchedEffect
+    } else {
+      val half = Chat.jumpFlashMs / 2
+      shine.snapTo(0f)
+      coroutineScope {
+        launch { shine.animateTo(1f, tween(Chat.jumpFlashMs, easing = LinearEasing)) }
+        light.animateTo(1f, tween(half))
+        light.animateTo(0f, tween(half))
+      }
     }
-    val half = Chat.jumpFlashMs / 2
-    shine.snapTo(0f)
-    coroutineScope {
-      launch { shine.animateTo(1f, tween(Chat.jumpFlashMs, easing = LinearEasing)) }
-      light.animateTo(1f, tween(half))
-      light.animateTo(0f, tween(half))
-    }
+    onShown(lit)
   }
   val accent = LocalThemeColors.current.accentDefault
   return drawWithContent {
@@ -616,7 +629,9 @@ private fun partsOf(content: LineContent, quote: LineQuote?, reactions: Reaction
     reactions,
     quote?.let(::QuotePart),
     LinksPart(links).takeIf { links.isNotEmpty() },
-    words?.preview?.let { PagePart(it, inWords = it.url in links) },
+    // A line's page is its first link's (firstLink), already offered with the words' links; its URL
+    // is the one the group fetched, written as the server writes it, not as in the words.
+    words?.preview?.let { PagePart(it, inWords = links.isNotEmpty()) },
   )
 }
 

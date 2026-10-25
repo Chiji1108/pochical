@@ -34,6 +34,7 @@
   <string name="profile_in_group">%1$sでのプロフィール</string>
   <string name="profile_message">メッセージを送る</string>
   <string name="profile_menu">%1$sのメニュー</string>
+  <string name="chat_writer_profile">%1$sのプロフィール</string>
   <string name="blocked_line_show">表示</string>
   <string name="blocked_line_hint">押すと表示</string>
 </resources>

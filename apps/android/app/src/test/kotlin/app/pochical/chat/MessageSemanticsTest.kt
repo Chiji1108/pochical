@@ -11,6 +11,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import app.pochical.DeviceSettingsState
 import app.pochical.LocalDeviceSettings
 import app.pochical.kit.DeviceSettings
+import app.pochical.kit.GroupMemberRow
 import app.pochical.kit.LineContent
 import app.pochical.kit.LineReaction
 import app.pochical.v1.chatPoll
@@ -27,7 +28,12 @@ import org.robolectric.RobolectricTestRunner
 class MessageSemanticsTest {
   @get:Rule val compose = createComposeRule()
 
-  private fun handlers(choosers: (LineReaction) -> Unit = {}, jump: (Long) -> Unit = {}, openLink: (String) -> Unit = {}) =
+  private fun handlers(
+    choosers: (LineReaction) -> Unit = {},
+    jump: (Long) -> Unit = {},
+    openLink: (String) -> Unit = {},
+    openProfile: ((GroupMemberRow) -> Unit)? = null,
+  ) =
     MessageHandlers(
       menu = LineMenuState(),
       items = { emptyList() },
@@ -37,6 +43,7 @@ class MessageSemanticsTest {
       notKept = {},
       reducedMotion = true,
       lit = null,
+      litShown = {},
       me = "me",
       writers = emptyMap(),
       react = { _, _, _ -> },
@@ -51,6 +58,7 @@ class MessageSemanticsTest {
       groupId = "g1",
       stopSending = {},
       openPhoto = { _, _ -> }, openOwnPhoto = { _, _ -> },
+      openProfile = openProfile,
     )
 
   private fun look(content: LineContent, parts: List<LinePart>, said: String) =
@@ -59,6 +67,17 @@ class MessageSemanticsTest {
   /** The line's actions, by their labels, as TalkBack offers them. */
   private fun actionsOf(said: String) =
     compose.onNode(SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription, listOf(said))).fetchSemanticsNode().config[SemanticsActions.CustomActions]
+
+  @Test
+  fun theWritersProfileIsAnActionOfTheirLine() {
+    var opened: GroupMemberRow? = null
+    val aya = GroupMemberRow("g1", "u2", "あや", 0, left = false, deleted = false, ownName = false, photoId = "", ownPhoto = false, markStyle = "", markFill = true)
+    val line = MessageLook("line-1", false, LineContent.Words("明日休み？"), false, aya, false, "9:41", null, 1, ReplySwipe.Rightward, "あや、明日休み？")
+    compose.setContent { Message(line, handlers(openProfile = { opened = it })) }
+    val profile = actionsOf(line.said).single { it.label == "あやのプロフィール" }
+    profile.action()
+    assertEquals(aya, opened)
+  }
 
   @Test
   fun whoChoseAReactionIsAnActionOfItsLine() {
@@ -122,7 +141,7 @@ class MessageSemanticsTest {
     val handlers =
       MessageHandlers(
         menu = LineMenuState(), items = { emptyList() }, reply = {}, jump = {}, nameOf = { it }, notKept = {}, reducedMotion = true,
-        lit = null, me = "me", writers = emptyMap(), react = { _, _, _ -> }, moreReactions = {}, choosers = {}, spray = null,
+        lit = null, litShown = {}, me = "me", writers = emptyMap(), react = { _, _, _ -> }, moreReactions = {}, choosers = {}, spray = null,
         openLink = {}, together = { _, _ -> emptySet() }, vote = { seq, day, on -> voted = Triple(seq, day, on) }, decide = { deciding = it },
         voters = { _, _ -> }, groupId = "g1", stopSending = {}, openPhoto = { _, _ -> }, openOwnPhoto = { _, _ -> },
       )
