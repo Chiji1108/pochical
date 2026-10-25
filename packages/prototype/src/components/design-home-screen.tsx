@@ -15,7 +15,7 @@ import { designToday } from "../lib/design-today";
 import { useShownDays, useUser } from "../lib/design-user-store";
 import { groupCompanion } from "../lib/design-widget-companions";
 import { widgetEntry } from "../lib/design-widgets";
-import { AppIcon, useAppIcons } from "./design-app-icon";
+import { AppIcon, useAppIconInUse, useAppIcons } from "./design-app-icon";
 import { NotificationBanner } from "./design-notifications";
 import { Phone } from "./design-phone";
 import { DeviceSchemeContext, useThemeStyle } from "./design-theme";
@@ -170,7 +170,7 @@ function Neighbor({ index, round }: { index: number; round: boolean }) {
 // ポチカル among the others, in the icon the person picked.
 function Apps({ round }: { round: boolean }) {
   const icons = useAppIcons();
-  const iconId = useSettings((state) => state.device.appIcon);
+  const iconId = useAppIconInUse();
   const src = icons[iconId];
   return (
     <div className={home.apps}>

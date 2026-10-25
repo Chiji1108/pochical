@@ -27,7 +27,7 @@ import {
 import type { Firing, Reminder, ReminderKind } from "../lib/design-reminders";
 import { useSettings } from "../lib/design-settings-store";
 import { useUser } from "../lib/design-user-store";
-import { AppIcon, useAppIcons } from "./design-app-icon";
+import { AppIcon, useAppIconInUse, useAppIcons } from "./design-app-icon";
 import { Segment, SegmentedControl } from "./design-choices";
 import { TimeField } from "./design-fields";
 import { Avatar, GroupIcon } from "./design-group-parts";
@@ -762,7 +762,7 @@ export function NotificationBanner({
   body?: string;
 }) {
   const icons = useAppIcons();
-  const icon = useSettings((state) => state.device.appIcon);
+  const icon = useAppIconInUse();
   return (
     <div aria-label={`通知：${title}`} className={banner.root} role="img">
       <AppIcon size={38} src={icons[icon]} />
