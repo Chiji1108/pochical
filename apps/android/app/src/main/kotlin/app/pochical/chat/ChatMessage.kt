@@ -142,6 +142,8 @@ class MessageHandlers(
   val reducedMotion: Boolean,
   /** The line lit as it is gone to, each time it is. */
   val lit: Lit?,
+  /** [lit] has shone, so the line is not lit again as it is drawn again (scrolled back to, lifted for its menu). */
+  val litShown: (Lit) -> Unit,
   val me: String?,
   val writers: Map<String, GroupMemberRow>,
   /** The member's reaction on a line put on or taken back. */
@@ -311,15 +313,16 @@ fun Bubble(look: MessageLook, handlers: MessageHandlers, onQuote: () -> Unit) {
       light.snapTo(1f)
       delay(Chat.jumpFlashMs.toLong())
       light.snapTo(0f)
-      return@LaunchedEffect
+    } else {
+      val half = Chat.jumpFlashMs / 2
+      shine.snapTo(0f)
+      coroutineScope {
+        launch { shine.animateTo(1f, tween(Chat.jumpFlashMs, easing = LinearEasing)) }
+        light.animateTo(1f, tween(half))
+        light.animateTo(0f, tween(half))
+      }
     }
-    val half = Chat.jumpFlashMs / 2
-    shine.snapTo(0f)
-    coroutineScope {
-      launch { shine.animateTo(1f, tween(Chat.jumpFlashMs, easing = LinearEasing)) }
-      light.animateTo(1f, tween(half))
-      light.animateTo(0f, tween(half))
-    }
+    handlers.litShown(lit)
   }
   val accent = colors.accentDefault
   Column(
