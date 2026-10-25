@@ -5,10 +5,12 @@ import android.app.Application
 import android.app.NotificationManager
 import android.content.Context
 import androidx.core.app.NotificationCompat
+import app.pochical.kit.AppLink
 import app.pochical.kit.ChatWithdrawal
 import app.pochical.kit.GroupMemberRow
 import app.pochical.kit.Localized
 import app.pochical.kit.PushedAlert
+import app.pochical.kit.appLink
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -121,6 +123,8 @@ class ChatNotifierTest {
     assertEquals(ChatNotifier.ACTION_OPEN_CHAT, opened.action)
     assertEquals(GROUP, opened.getStringExtra(ChatNotifier.EXTRA_GROUP_ID))
     assertEquals("group", opened.getStringExtra(ChatNotifier.EXTRA_THREAD_ID))
+    // Until Android has the chats, the group's place.
+    assertEquals(AppLink.Group(GROUP), appLink(opened.dataString.orEmpty()))
   }
 
   @Test

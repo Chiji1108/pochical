@@ -47,12 +47,22 @@
         <category android:name="android.intent.category.BROWSABLE" />
         <data android:scheme="pochical" android:host="apple-sign-in" />
       </intent-filter>
-      <!-- An invitation (OpenedInvites): the site's アプリで開く, as iOS's. -->
+      <!-- An invitation (OpenedLinks): the site's アプリで開く, as iOS's. -->
       <intent-filter>
         <action android:name="android.intent.action.VIEW" />
         <category android:name="android.intent.category.DEFAULT" />
         <category android:name="android.intent.category.BROWSABLE" />
         <data android:scheme="pochical" android:host="invite" />
+      </intent-filter>
+      <!-- A day, or a group's table, a widget opens (OpenedLinks; spec/widgets.md, Opening the
+           app), as iOS's. -->
+      <intent-filter>
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <data android:scheme="pochical" />
+        <data android:host="day" />
+        <data android:host="group" />
       </intent-filter>
       <!-- An invitation's own link, an App Link once Android has verified the site's
            /.well-known/assetlinks.json names this app (apps/web). -->

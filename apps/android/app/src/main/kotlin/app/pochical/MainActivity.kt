@@ -22,6 +22,7 @@ import app.pochical.groups.LocalValues
 import app.pochical.kit.DeviceSettings
 import app.pochical.kit.PochicalKit
 import app.pochical.kit.SyncedSettings
+import app.pochical.notifications.ChatNotifier
 import app.pochical.notifications.LocalPush
 import app.pochical.notifications.Push
 import dev.zacsweers.metro.AppScope
@@ -52,7 +53,7 @@ class MainActivity(
     installSplashScreen().setKeepOnScreenCondition { settings == null || !calendarRead }
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
-    // Made again, the activity's navigation keeps the join screen the first intent opened.
+    // Made again, the activity's navigation keeps the place the first intent opened.
     // From Recents, Android hands the intent the task began with again: no link was opened now.
     if (savedInstanceState == null && intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY == 0) take(intent)
     addOnNewIntentListener(::take)
@@ -87,8 +88,12 @@ class MainActivity(
 
   /** Where [intent] opens the app at, for the screens; a chat's notification tapped goes, as it is read. */
   private fun take(intent: Intent) {
-    val opened = openedOf(intent) ?: return
-    if (opened is Opened.Chat) push.notifier.opened(opened.groupId, opened.threadId)
+    if (intent.action == ChatNotifier.ACTION_OPEN_CHAT) {
+      push.notifier.opened(
+        intent.getStringExtra(ChatNotifier.EXTRA_GROUP_ID).orEmpty(),
+        intent.getStringExtra(ChatNotifier.EXTRA_THREAD_ID).orEmpty(),
+      )
+    }
     links.take(intent)
   }
 }
