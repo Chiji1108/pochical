@@ -117,6 +117,9 @@ class FakeServer : AutoCloseable {
   /** What `DeleteAccount` answers, as Connect's code, null for done. */
   @Volatile var deleteRefusal: String? = null
 
+  /** What `/sign-out` answers a session it knows: 200 ends it. */
+  @Volatile var signOutStatus = 200
+
   /** Each UserService and better-auth call past the sign-in and GetMe, as its path and Authorization header. */
   val calls = CopyOnWriteArrayList<Pair<String, String?>>()
 
@@ -269,6 +272,20 @@ class FakeServer : AutoCloseable {
                     else -> earlier.values.remove(user)
                   }
                   proto(deleteAccountResponse {})
+                }
+              }
+            }
+            "/api/auth/sign-out" -> {
+              val user = userOf(request.headers["Authorization"])
+              calls += request.url.encodedPath to request.headers["Authorization"]
+              val status = signOutStatus
+              when {
+                user == null -> MockResponse.Builder().code(401).body("{}").build()
+                status != 200 -> MockResponse.Builder().code(status).body("{}").build()
+                else -> {
+                  // The session is no one's from here; the user and what they keep stay.
+                  if (user == userId) nextAnonymous() else earlier.values.remove(user)
+                  MockResponse.Builder().body("""{"success":true}""").build()
                 }
               }
             }

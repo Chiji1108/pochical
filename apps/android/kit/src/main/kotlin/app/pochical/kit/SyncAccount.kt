@@ -64,7 +64,7 @@ sealed interface AccountState {
    */
   data class Erasing(val why: Why, val failed: Boolean = false) : AccountState {
     enum class Why {
-      /** The person let the session go: はじめから使う, after the server ended it. */
+      /** The person let the session go: ログアウト, or はじめから使う after the server ended it. */
       SignedOut,
 
       /** The account is deleted on the server. */
@@ -329,6 +329,33 @@ class SyncAccount internal constructor(
       Outcome.Deleted(before.userId)
     }
     return true
+  }
+
+  /**
+   * ログアウト (spec/sync-protocol.md, Signing out): what waits in the user's outbox goes first, so
+   * signing in again finds it, the socket open after as before; then the session ends on the server,
+   * and the device erases what it held and forgets its session ([AccountState.Erasing.Why.SignedOut])
+   * and signs in as someone new. [NotSignedIn] before the device has a session or once the server
+   * says it does not know it; [AccountChanged] when the device is not signed in as it was asked; the
+   * server's error otherwise, nothing changed.
+   */
+  suspend fun signOut() {
+    val asking = signedIn() ?: throw NotSignedIn()
+    commands.send(Command.Send(waiting = true))
+    try {
+      database.sync().lastWaiting().first { it == null }
+    } finally {
+      commands.trySend(Command.Send(waiting = false))
+    }
+    change(
+      asking,
+      ended = ::NotSignedIn,
+      refused = ::AccountChanged,
+      unknown = { it is SignOutRefused && it.status == 401 },
+    ) { before ->
+      signOutSession(http, server, before.token)
+      Outcome.SignedOut(before.userId)
+    }
   }
 
   /** 再試行: erasing is tried again now rather than after the wait. */
@@ -742,6 +769,18 @@ class SyncAccount internal constructor(
         beginErasing(outcome.userId, AccountState.Erasing.Why.Deleted)
         command.settled.complete(Unit)
       }
+      is Outcome.SignedOut -> {
+        endStretch(current)
+        try {
+          // Kept as ended before anything is erased, so an app ended meanwhile goes on erasing as
+          // signed out, not as a deletion.
+          sessions.read()?.let { sessions.write(it.copy(ended = true)) }
+        } catch (e: StoreUnreachable) {
+          Log.i(TAG, "The signed-out session could not be noted: $e")
+        }
+        beginErasing(outcome.userId, AccountState.Erasing.Why.SignedOut)
+        command.settled.complete(Unit)
+      }
     }
   }
 
@@ -955,6 +994,9 @@ class SyncAccount internal constructor(
 
     /** [userId]'s account and everything of it deleted. */
     class Deleted(val userId: String) : Outcome
+
+    /** [userId]'s session ended on the server. */
+    class SignedOut(val userId: String) : Outcome
 
     /**
      * Nothing changed on the server: [cause], or [ended] should the session have ended, as when the
