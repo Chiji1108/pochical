@@ -111,7 +111,7 @@ fun PollCard(look: PollLook, handlers: MessageHandlers, seq: Long?, live: Boolea
       .alpha(if (look.waiting) WAITING else 1f)
       .background(MaterialTheme.colorScheme.surfaceContainerLow, shape)
       .border(1.dp, colors.borderDefault, shape)
-      .litWhenGoneTo(handlers.lit?.takeIf { it.seq == seq && seq != null }, shape, handlers.reducedMotion)
+      .litWhenGoneTo(handlers.lit?.takeIf { it.seq == seq && seq != null }, shape, handlers.reducedMotion, handlers.litShown)
   ) {
     Row(Modifier.padding(12.dp).clearAndSetSemantics {}, verticalAlignment = Alignment.CenterVertically) {
       Icon(painterResource(R.drawable.ic_event_available), contentDescription = null, Modifier.size(20.dp), tint = colors.accentDefault)
