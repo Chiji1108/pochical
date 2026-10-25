@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
@@ -23,10 +22,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.pochical.chat.SupportRow
 import app.pochical.kit.DeviceSettings
+import app.pochical.kit.appVersion
 import app.pochical.notifications.ChatNotificationsRow
 import app.pochical.patterns.PatternsRow
 import app.pochical.people.CoworkersRow
@@ -71,7 +72,6 @@ fun SettingsScreen(open: (RootPage) -> Unit) {
       item { UsualProfileRow(open) }
       item { AccountRow(open) }
       // The chat with the people who make Pochical, apart from the rows of settings.
-      item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
       item { SupportRow(open) }
       item { About(snackbar) }
     }
@@ -92,14 +92,19 @@ private fun About(snackbar: SnackbarHostState) {
   Column {
     SectionHeader(stringResource(R.string.settings_about))
     OutsideRow(stringResource(R.string.settings_help)) { openLink(context, Site.page("support")) }
-    OutsideRow(stringResource(R.string.settings_write_review)) {
-      val review = Site.writeReview
-      if (review != null) openLink(context, review) else scope.launch { snackbar.showSnackbar(afterRelease) }
+    // Before release it says so, once however often it is pressed.
+    val review = Site.writeReview
+    OutsideRow(stringResource(R.string.settings_write_review), opensBrowser = review != null) {
+      if (review != null) {
+        openLink(context, review)
+      } else if (snackbar.currentSnackbarData == null) {
+        scope.launch { snackbar.showSnackbar(afterRelease) }
+      }
     }
     OutsideRow(stringResource(R.string.settings_terms)) { openLink(context, Site.page("terms")) }
     OutsideRow(stringResource(R.string.settings_privacy)) { openLink(context, Site.page("privacy")) }
     Text(
-      stringResource(R.string.settings_version, BuildConfig.VERSION_NAME),
+      stringResource(R.string.settings_version, appVersion(context)),
       style = MaterialTheme.typography.bodySmall,
       color = MaterialTheme.colorScheme.onSurfaceVariant,
       textAlign = TextAlign.Center,
@@ -108,9 +113,9 @@ private fun About(snackbar: SnackbarHostState) {
   }
 }
 
-/** A row that leaves the app, ending in ↗ rather than going on inside it. */
+/** A row that leaves the app, ending in ↗ rather than going on inside it, and saying so while it [opensBrowser]. */
 @Composable
-private fun OutsideRow(title: String, onClick: () -> Unit) {
+private fun OutsideRow(title: String, opensBrowser: Boolean = true, onClick: () -> Unit) {
   ListItem(
     headlineContent = { Text(title) },
     trailingContent = {
@@ -121,7 +126,12 @@ private fun OutsideRow(title: String, onClick: () -> Unit) {
         tint = MaterialTheme.colorScheme.onSurfaceVariant,
       )
     },
-    modifier = Modifier.clickable(onClickLabel = stringResource(R.string.settings_opens_browser), onClick = onClick),
+    modifier =
+      Modifier.clickable(
+        onClickLabel = if (opensBrowser) stringResource(R.string.settings_opens_browser) else null,
+        role = Role.Button,
+        onClick = onClick,
+      ),
   )
 }
 

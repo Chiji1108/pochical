@@ -100,6 +100,7 @@ export function DesignSettings({
   initialPage?: Page;
 }) {
   const coworkers = useCoworkerList();
+  const platform = useDevice((state) => state.platform);
   const [page, setPage] = useState<Page>(initialPage);
   // A new job's order on the calendar takes the screen, its keys at the
   // foot, as typing an order does.
@@ -280,7 +281,7 @@ export function DesignSettings({
             preview={weekPreview}
           />
         )}
-        {page === "appIcon" && (
+        {page === "appIcon" && platform === "ios" && (
           <AppIconPage
             onBack={() => {
               setPage("top");
