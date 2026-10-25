@@ -82,6 +82,9 @@ public struct DayVotes: Hashable, Sendable, Codable {
 extension [DayVotes] {
   /// `user` can come on `day`, or takes it back, the days kept in `order`.
   public func voting(_ day: Day, by user: String, on: Bool, order: [Day]) -> [DayVotes] {
+    // A vote the member has already, or one they do not have taken back,
+    // changes nothing, as the group takes it (spec/vectors/chat.json, votes).
+    if voters(on: day).contains(user) == on { return self }
     var byDay = Dictionary(map { ($0.day, $0.userIDs) }, uniquingKeysWith: { first, _ in first })
     var users = byDay[day, default: []].filter { $0 != user }
     if on { users.append(user) }

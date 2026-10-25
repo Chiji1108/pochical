@@ -3,9 +3,18 @@ package app.pochical.chat
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.performClick
+import androidx.compose.runtime.CompositionLocalProvider
+import app.pochical.DeviceSettingsState
+import app.pochical.LocalDeviceSettings
+import app.pochical.kit.DeviceSettings
 import app.pochical.kit.LineContent
 import app.pochical.kit.LineReaction
+import app.pochical.v1.chatPoll
+import app.pochical.v1.chatVotes
 import app.pochical.v1.linkPreview
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -36,6 +45,10 @@ class MessageSemanticsTest {
       choosers = choosers,
       spray = null,
       openLink = openLink,
+      together = { _, _ -> emptySet() },
+      vote = { _, _, _ -> },
+      decide = {},
+      voters = { _, _ -> },
     )
 
   private fun look(content: LineContent, parts: List<LinePart>, said: String) =
@@ -91,5 +104,33 @@ class MessageSemanticsTest {
     compose.setContent { Message(line, handlers(openLink = { opened = it })) }
     actionsOf(line.said).single().action()
     assertEquals("https://cafe.example/menu", opened)
+  }
+
+  @Test
+  fun aPollsDaysAreGoneThroughOneByOneAndTheLineSettlesIt() {
+    var voted: Triple<Long, String, Boolean>? = null
+    var deciding: Long? = null
+    // As many days as a month: more than one element holds actions (Android's 32).
+    val days = (1..31).map { "2026-12-%02d".format(it) }
+    val poll = chatPoll {
+      this.days += days
+      votes += chatVotes { day = "2026-12-03"; userIds += "me" }
+    }
+    val line = look(LineContent.Poll(poll), listOf(PollPart(PollLook(poll, canDecide = true, waiting = false))), "自分、日にちの投票")
+    val handlers =
+      MessageHandlers(
+        menu = LineMenuState(), items = { emptyList() }, reply = {}, jump = {}, nameOf = { it }, notKept = {}, reducedMotion = true,
+        lit = null, litShown = {}, me = "me", writers = emptyMap(), react = { _, _, _ -> }, moreReactions = {}, choosers = {}, spray = null,
+        openLink = {}, together = { _, _ -> emptySet() }, vote = { seq, day, on -> voted = Triple(seq, day, on) }, decide = { deciding = it },
+        voters = { _, _ -> },
+      )
+    compose.setContent { CompositionLocalProvider(LocalDeviceSettings provides DeviceSettingsState(DeviceSettings()) {}) { Message(line, handlers) } }
+    val actions = actionsOf(line.said)
+    assertEquals(listOf("日にちを決める"), actions.map { it.label })
+    actions.single().action()
+    assertEquals(1L, deciding)
+    // Each day its own element, its 行ける among them.
+    compose.onAllNodes(hasText("行ける") and hasClickAction())[0].performClick()
+    assertEquals(Triple(1L, "2026-12-01", true), voted)
   }
 }

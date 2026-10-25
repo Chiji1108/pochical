@@ -32,6 +32,7 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.LayoutCoordinates
@@ -48,6 +49,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -67,6 +69,7 @@ import app.pochical.kit.PhotoShelf
 import app.pochical.kit.WaitingLine
 import app.pochical.kit.textParts
 import app.pochical.v1.LinkPreview
+import java.time.LocalDate
 import kotlin.math.abs
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -127,6 +130,10 @@ class MessageLook(
   /** Its first link's page. */
   val page: LinkPreview?
     get() = parts.firstNotNullOfOrNull { (it as? PagePart)?.preview }
+
+  /** The days it puts to the vote. */
+  val poll: PollLook?
+    get() = parts.firstNotNullOfOrNull { (it as? PollPart)?.look }
 }
 
 /** A line gone to, lit once there: [time] tells one going to the same line again. */
@@ -158,6 +165,14 @@ class MessageHandlers(
   val spray: Spray?,
   /** A link opened in the system's browser sheet. */
   val openLink: (String) -> Unit,
+  /** The days everyone in the group is off (みんな休み) from one day through another, by their shifts. */
+  val together: @Composable (from: LocalDate, through: LocalDate) -> Set<LocalDate>,
+  /** 行ける on a poll's day, or taken back. */
+  val vote: (seq: Long, day: String, on: Boolean) -> Unit,
+  /** 日にちを決める or 決め直す: the sheet a poll is settled with. */
+  val decide: (seq: Long) -> Unit,
+  /** Who can come on a poll's day, by name. */
+  val voters: (day: LocalDate, people: List<String>) -> Unit,
 )
 
 /**
@@ -184,7 +199,7 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
           val chosen = look.reactions.filter { handlers.me in it.userIds }.map { it.emoji }.toSet()
           ReactionBar(chosen, onReact = { emoji -> handlers.react(seq, emoji, emoji !in chosen) }, onMore = { handlers.moreReactions(seq) })
         }
-      menu.open(MenuLine(look.key, look.mine, look.waiting != null, items, bar) { Bubble(look, handlers, onQuote = {}) }, at.unclipped())
+      menu.open(MenuLine(look.key, look.mine, look.waiting != null, items, bar) { LineBody(look, handlers, live = false, onQuote = {}) }, at.unclipped())
     }
   }
   val gestures =
@@ -197,22 +212,22 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
   val items = handlers.items(look)
   // Its menu's items, 返信 first, then what each of its parts offers (spec/chat.md, Screen readers).
   val partLine = PartLine(look.seq, handlers, openMenu = { openMenu() })
-  val actions = items.map { item -> CustomAccessibilityAction(item.label) { item.run(); true } } + look.parts.flatMap { it.actions(partLine) }
+  val actions =
+    (items.map { item -> CustomAccessibilityAction(item.label) { item.run(); true } } + look.parts.flatMap { it.actions(partLine) })
+      // Android holds at most this many on one element; past them, the latest parts' go.
+      .take(MOST_ACTIONS)
   val menuLabel = stringResource(R.string.chat_menu)
   Box(
     modifier
       .zIndex(if (handlers.spray?.seq == look.seq && look.seq != null) 1f else 0f)
       .fillMaxWidth()
       .padding(top = (if (look.startsRun) Chat.runGap else Chat.lineGap).dp)
-      .clearAndSetSemantics {
-      contentDescription = look.said
-      customActions = actions
-      // Activating it opens its menu, as the long press does.
-      onClick(menuLabel) {
-        openMenu()
-        true
-      }
-    }
+      .then(
+        // A poll's days and 行ける are gone through one by one after its line (spec/chat.md, Screen
+        // readers); any other line is one element.
+        if (look.poll != null) Modifier.semantics { lineSemantics(look.said, actions, menuLabel) { openMenu() } }
+        else Modifier.clearAndSetSemantics { lineSemantics(look.said, actions, menuLabel) { openMenu() } }
+      )
   ) {
     // The reply arrow, in the room the line leaves as it is dragged.
     val pulled = (abs(drag.offset.value) / swipeWidth).coerceIn(0f, 1f)
@@ -236,7 +251,7 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
       horizontalArrangement = if (look.mine) Arrangement.End else Arrangement.Start,
     ) {
       if (!look.mine) {
-        Box(Modifier.size(FACE)) {
+        Box(Modifier.size(FACE).clearAndSetSemantics {}) {
           val writer = look.writer
           if (look.startsRun && writer != null) MemberAvatar(writer.shownName(), writer.photoId, PhotoShelf.Group(writer.groupId), FACE)
         }
@@ -249,14 +264,14 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
         if (!look.mine && look.startsRun && look.showsName && writer != null) {
           Text(
             writer.shownName(),
-            Modifier.padding(start = 4.dp, bottom = 2.dp),
+            Modifier.padding(start = 4.dp, bottom = 2.dp).clearAndSetSemantics {},
             style = MaterialTheme.typography.labelMedium,
             color = colors.textSecondary,
           )
         }
         Row(verticalAlignment = Alignment.Bottom) {
           val edited = (look.content as? LineContent.Words)?.edited == true
-          if (look.mine) TimeRoom(look.time, look.waiting, edited, look.pinned, items, Modifier.padding(end = 4.dp))
+          if (look.mine) TimeRoom(look.time, look.waiting, edited, look.pinned, items, Modifier.padding(end = 4.dp).clearAndSetSemantics {})
           Box(
             Modifier.weight(1f, fill = false)
               .onGloballyPositioned { at ->
@@ -266,9 +281,9 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
               .alpha(if (lifted) 0f else 1f)
               .lineGestures(gestures.takeIf { look.seq != null || look.waiting != null }, look.swipe, drag, { coordinates }, handlers.reducedMotion)
           ) {
-            Bubble(look, handlers, onQuote = { look.quote?.let { handlers.jump(it.seq) } })
+            LineBody(look, handlers, onQuote = { look.quote?.let { handlers.jump(it.seq) } })
           }
-          if (!look.mine) TimeRoom(look.time, null, edited, look.pinned, items, Modifier.padding(start = 4.dp))
+          if (!look.mine) TimeRoom(look.time, null, edited, look.pinned, items, Modifier.padding(start = 4.dp).clearAndSetSemantics {})
         }
         if (look.waiting?.failed == true) {
           Text(stringResource(R.string.chat_not_sent), style = MaterialTheme.typography.labelSmall, color = colors.dangerDefault)
@@ -294,6 +309,13 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
   }
 }
 
+/** What the line is drawn as: a poll's card, or a bubble; [live] false for the copy lifted over the menu, on which nothing acts. */
+@Composable
+private fun LineBody(look: MessageLook, handlers: MessageHandlers, live: Boolean = true, onQuote: () -> Unit) {
+  val poll = look.poll
+  if (poll != null) PollCard(poll, handlers, look.seq.takeIf { live }, live) else Bubble(look, handlers, onQuote)
+}
+
 /**
  * The bubble and what it holds: the quote of the line it answers over a thin rule, then its words,
  * mentions in the name's weight (in the accent in others'). Lit when the line is gone to: the accent
@@ -306,46 +328,10 @@ fun Bubble(look: MessageLook, handlers: MessageHandlers, onQuote: () -> Unit) {
   val shape = remember(look.mine, look.startsRun) { BubbleShape(look.mine, tail = look.startsRun) }
   val ink = if (look.mine) colors.accentOnFill else colors.textPrimary
   val preview = look.page
-  val light = remember { Animatable(0f) }
-  val shine = remember { Animatable(0f) }
-  val lit = handlers.lit?.takeIf { it.seq == look.seq }
-  LaunchedEffect(lit) {
-    if (lit == null) return@LaunchedEffect
-    if (handlers.reducedMotion) {
-      light.snapTo(1f)
-      delay(Chat.jumpFlashMs.toLong())
-      light.snapTo(0f)
-    } else {
-      val half = Chat.jumpFlashMs / 2
-      shine.snapTo(0f)
-      coroutineScope {
-        launch { shine.animateTo(1f, tween(Chat.jumpFlashMs, easing = LinearEasing)) }
-        light.animateTo(1f, tween(half))
-        light.animateTo(0f, tween(half))
-      }
-    }
-    handlers.litShown(lit)
-  }
-  val accent = colors.accentDefault
   Column(
     Modifier.alpha(if (look.waiting != null && !look.waiting.failed) WAITING_ALPHA else 1f)
       .background(if (look.mine) colors.accentFill else colors.fillTertiary, shape)
-      .drawWithContent {
-        drawContent()
-        if (light.value > 0f) {
-          val outline = shape.createOutline(size, layoutDirection, this)
-          drawOutline(outline, accent.copy(alpha = LIGHT * light.value))
-          val x = size.width * (shine.value * 1.6f - 0.3f)
-          drawOutline(
-            outline,
-            Brush.linearGradient(
-              listOf(Color.Transparent, Color.White.copy(alpha = 0.25f * light.value), Color.Transparent),
-              start = Offset(x - BAND, 0f),
-              end = Offset(x + BAND, size.height),
-            ),
-          )
-        }
-      }
+      .litWhenGoneTo(handlers.lit?.takeIf { it.seq == look.seq }, shape, handlers.reducedMotion, handlers.litShown)
       // A page's picture is cut to the bubble's outline.
       .then(if (preview != null) Modifier.clip(shape) else Modifier)
       .padding(top = 8.dp, bottom = if (preview != null) 0.dp else 8.dp)
@@ -369,6 +355,52 @@ fun Bubble(look: MessageLook, handlers: MessageHandlers, onQuote: () -> Unit) {
     if (preview != null) {
       Spacer(Modifier.height(8.dp))
       PreviewCard(preview, ink) { handlers.openLink(preview.url) }
+    }
+  }
+}
+
+/**
+ * Lit when its line is gone to (a quote, a pin): the accent over it inside its [shape]'s outline,
+ * coming and going once over `chatRules.jumpFlashMs` with a band of shine sweeping across, still
+ * with motion reduced (spec/chat.md, Pins). A bubble's and a card's alike; [onShown] once it has
+ * shone, so it is not lit again as it is drawn again.
+ */
+@Composable
+fun Modifier.litWhenGoneTo(lit: Lit?, shape: Shape, reducedMotion: Boolean, onShown: (Lit) -> Unit): Modifier {
+  val light = remember { Animatable(0f) }
+  val shine = remember { Animatable(0f) }
+  LaunchedEffect(lit) {
+    if (lit == null) return@LaunchedEffect
+    if (reducedMotion) {
+      light.snapTo(1f)
+      delay(Chat.jumpFlashMs.toLong())
+      light.snapTo(0f)
+    } else {
+      val half = Chat.jumpFlashMs / 2
+      shine.snapTo(0f)
+      coroutineScope {
+        launch { shine.animateTo(1f, tween(Chat.jumpFlashMs, easing = LinearEasing)) }
+        light.animateTo(1f, tween(half))
+        light.animateTo(0f, tween(half))
+      }
+    }
+    onShown(lit)
+  }
+  val accent = LocalThemeColors.current.accentDefault
+  return drawWithContent {
+    drawContent()
+    if (light.value > 0f) {
+      val outline = shape.createOutline(size, layoutDirection, this)
+      drawOutline(outline, accent.copy(alpha = LIGHT * light.value))
+      val x = size.width * (shine.value * 1.6f - 0.3f)
+      drawOutline(
+        outline,
+        Brush.linearGradient(
+          listOf(Color.Transparent, Color.White.copy(alpha = 0.25f * light.value), Color.Transparent),
+          start = Offset(x - BAND, 0f),
+          end = Offset(x + BAND, size.height),
+        ),
+      )
     }
   }
 }
@@ -443,7 +475,7 @@ fun messageLook(
         seq = line.seq,
         swipe = if (own) ReplySwipe.Leftward else ReplySwipe.Rightward,
         said = said,
-        parts = partsOf(line.content, quote, ReactionsPart(line.reactions, counted = direct)),
+        parts = partsOf(line.content, quote, ReactionsPart(line.reactions, counted = direct), poll = pollLook(line.content, own || writers[line.authorId]?.left == true, waiting = false)),
         pinned = pinned,
       )
     }
@@ -453,11 +485,29 @@ fun messageLook(
       val replying = quote?.let { stringResource(R.string.chat_reply_to_said, it.writer.orEmpty(), it.words) }
       val page = (line.content as? LineContent.Words)?.preview?.title
       val said = listOfNotNull(mine, replying, lineWords(line.content, nameOf), page, if (line.failed) notSent else sending).joinToString("、")
-      MessageLook(item.key, true, line.content, item.startsRun, null, false, null, line, null, null, said, partsOf(line.content, quote, reactions = null))
+      MessageLook(item.key, true, line.content, item.startsRun, null, false, null, line, null, null, said, partsOf(line.content, quote, reactions = null, poll = pollLook(line.content, canDecide = true, waiting = !line.failed)))
     }
     else -> null
   }
 }
+
+/** A line as a screen reader has it: what it reads, its actions, and its menu opened by activating it, as the long press opens it. */
+private fun androidx.compose.ui.semantics.SemanticsPropertyReceiver.lineSemantics(
+  said: String,
+  actions: List<CustomAccessibilityAction>,
+  menuLabel: String,
+  openMenu: () -> Unit,
+) {
+  contentDescription = said
+  customActions = actions
+  onClick(menuLabel) {
+    openMenu()
+    true
+  }
+}
+
+/** The most custom actions Android takes on one element (its accessibility node's limit). */
+private const val MOST_ACTIONS = 32
 
 /** Where the bubble is in the window, whole: the list's clip would cut one scrolled partly out of sight. */
 private fun LayoutCoordinates.unclipped(): Rect = Rect(positionInWindow(), size.toSize())
@@ -466,10 +516,11 @@ private fun LayoutCoordinates.unclipped(): Rect = Rect(positionInWindow(), size.
  * What a line shows besides its words, in the order a screen reader offers their actions: its
  * reactions (none on a line on its way), the line it answers, the links of its words and its page.
  */
-private fun partsOf(content: LineContent, quote: LineQuote?, reactions: ReactionsPart?): List<LinePart> {
+private fun partsOf(content: LineContent, quote: LineQuote?, reactions: ReactionsPart?, poll: PollPart?): List<LinePart> {
   val words = content as? LineContent.Words
   val links = words?.let { textParts(it.text).mapNotNull { part -> part.url } }.orEmpty()
   return listOfNotNull(
+    poll,
     reactions,
     quote?.let(::QuotePart),
     LinksPart(links).takeIf { links.isNotEmpty() },
@@ -477,6 +528,12 @@ private fun partsOf(content: LineContent, quote: LineQuote?, reactions: Reaction
     // is the one the group fetched, written as the server writes it, not as in the words.
     words?.preview?.let { PagePart(it, inWords = links.isNotEmpty()) },
   )
+}
+
+/** A poll's part, for a line of days put to the vote; [canDecide] for its writer, or anyone once they left. */
+private fun pollLook(content: LineContent, canDecide: Boolean, waiting: Boolean): PollPart? {
+  val poll = content as? LineContent.Poll ?: return null
+  return PollPart(PollLook(poll.poll, canDecide, waiting))
 }
 
 /** How wide a line with a link's page is (spec/chat.md, Albums: as wide as an album). */

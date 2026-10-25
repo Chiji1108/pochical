@@ -3,6 +3,7 @@ package app.pochical.kit
 import app.pochical.v1.ChatLine as WireLine
 import app.pochical.v1.ChatNotice
 import app.pochical.v1.change
+import app.pochical.v1.chatVotes
 import app.pochical.v1.chatContent
 import app.pochical.v1.chatHidden
 import app.pochical.v1.chatLine
@@ -37,6 +38,7 @@ private data class ChatVectors(
   val composer: List<Composer>,
   val reactions: List<Reactions>,
   val pins: List<Pins>,
+  val votes: List<Votes>,
 ) {
   @Serializable
   data class Writer(override val name: String, val author: String, val me: String, val kind: String, val expected: String) : VectorCase
@@ -112,6 +114,13 @@ private data class ChatVectors(
     /** The named line's seq, the first at 1. */
     fun seq(line: String): Long = lines.indexOf(line).toLong() + 1
   }
+
+  @Serializable data class DayVotes(val day: String, val userIds: List<String>)
+
+  @Serializable data class Vote(val user: String, val day: String, val on: Boolean)
+
+  @Serializable
+  data class Votes(override val name: String, val days: List<String>, val votes: List<DayVotes>, val step: Vote, val expected: List<DayVotes>) : VectorCase
 
   @Serializable data class Reaction(val emoji: String, val userIds: List<String>)
 
@@ -193,6 +202,13 @@ class ChatVectorsTest {
         step.unpin != null -> unpinning(pins, case.seq(step.unpin))
         else -> unpinning(pins, case.seq(step.unsend!!))
       }
+    }
+
+  @Test
+  fun votes() =
+    chat.votes.checkEach({ it.expected }) { case ->
+      val votes = case.votes.map { v -> chatVotes { day = v.day; userIds += v.userIds } }
+      voting(votes, case.step.day, case.step.user, case.step.on, case.days).map { ChatVectors.DayVotes(it.day, it.userIdsList) }
     }
 
   @Test

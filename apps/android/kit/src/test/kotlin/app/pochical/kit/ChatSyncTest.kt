@@ -4,6 +4,8 @@ import app.pochical.design.Chat
 import app.pochical.v1.ChatEdit
 import app.pochical.v1.block
 import app.pochical.v1.change
+import app.pochical.v1.chatContent
+import app.pochical.v1.chatPoll
 import app.pochical.v1.copy
 import app.pochical.v1.linkPreview
 import app.pochical.v1.chatMute
@@ -342,6 +344,25 @@ class ChatValuesTest {
     // Taking a line back takes its pin with it.
     chats.unsend("g1", GROUP_THREAD, 6)
     assertTrue(pins().isEmpty())
+  }
+
+  @Test
+  fun aVoteShowsWhileThePollIsOpenAndSettlingPinsIt() = runTest {
+    database.write { upsert(state().copy(owner = "me")) }
+    val chats = Chats(database, now = { 0 })
+    val poll = wordsLine(1, "u2").copy { content = chatContent { this.poll = chatPoll { days += listOf("2026-11-01", "2026-11-03") } } }
+    database.write { takeChanges(listOf(poll), "g1") }
+    suspend fun shown() = database.read { chatState("g1", GROUP_THREAD, "me", null, now = 0) }
+    chats.vote("g1", GROUP_THREAD, 1, "2026-11-03", on = true)
+    assertEquals(listOf("me"), voters((shown().lines.single().content as LineContent.Poll).poll, "2026-11-03"))
+
+    chats.decide("g1", GROUP_THREAD, 1, "2026-11-03")
+    val settled = shown()
+    assertEquals("2026-11-03", (settled.lines.single().content as LineContent.Poll).poll.decided)
+    assertEquals(listOf(1L), settled.pins.map { it.seq })
+    // A settled poll takes no more votes.
+    chats.vote("g1", GROUP_THREAD, 1, "2026-11-01", on = true)
+    assertTrue(voters((shown().lines.single().content as LineContent.Poll).poll, "2026-11-01").isEmpty())
   }
 
   @Test

@@ -89,4 +89,18 @@
   <string name="chat_pinned_done">ピン留めしました</string>
   <string name="chat_unpinned_done">ピン留めを外しました</string>
   <string name="chat_pin_dropped">ピン留めは%1$d件までです。いちばん古いものを外しました</string>
+  <string name="chat_poll_title">日にちの投票</string>
+  <string name="chat_poll_voters">%1$d人が投票</string>
+  <string name="chat_poll_decided_on">%1$sに決定</string>
+  <string name="chat_poll_together">みんな休み</string>
+  <string name="chat_poll_people">%1$d人</string>
+  <string name="chat_poll_chosen">決定</string>
+  <string name="chat_poll_can_come">行ける</string>
+  <string name="chat_poll_come">%1$sに行ける</string>
+  <string name="chat_poll_not_come">%1$sに行けるを取り消す</string>
+  <string name="chat_poll_who">%1$sに行ける人</string>
+  <string name="chat_poll_decide">日にちを決める</string>
+  <string name="chat_poll_redecide">決め直す</string>
+  <string name="chat_poll_settle">決める</string>
+  <string name="chat_poll_decided_said">%1$sに決めました</string>
 </resources>
