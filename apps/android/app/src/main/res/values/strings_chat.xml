@@ -78,4 +78,15 @@
   <string name="chat_preview_loading">読み込み中…</string>
   <string name="chat_preview_remove">プレビューを外す</string>
   <string name="chat_open_link">リンクを開く（%1$s）</string>
+  <string name="chat_pin">ピン留め</string>
+  <string name="chat_unpin">ピン留めを外す</string>
+  <string name="chat_pinned">ピン留め</string>
+  <string name="chat_pinned_line">ピン留め中</string>
+  <string name="chat_pins_many">ピン留め・%1$d件</string>
+  <string name="chat_pins_open">ピン留めをすべて表示</string>
+  <string name="chat_pins_close">ピン留めを閉じる</string>
+  <string name="chat_pin_hint">メッセージへ</string>
+  <string name="chat_pinned_done">ピン留めしました</string>
+  <string name="chat_unpinned_done">ピン留めを外しました</string>
+  <string name="chat_pin_dropped">ピン留めは%1$d件までです。いちばん古いものを外しました</string>
 </resources>

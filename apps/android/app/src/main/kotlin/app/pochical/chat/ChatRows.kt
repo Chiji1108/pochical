@@ -146,10 +146,16 @@ private fun AppLine(words: String, modifier: Modifier) {
  * 編集済み over it once the line's words were changed.
  */
 @Composable
-internal fun TimeRoom(time: String?, waiting: WaitingLine?, edited: Boolean, notSentItems: List<LineMenuItem>, modifier: Modifier) {
+internal fun TimeRoom(time: String?, waiting: WaitingLine?, edited: Boolean, pinned: Boolean, notSentItems: List<LineMenuItem>, modifier: Modifier) {
   val colors = LocalThemeColors.current
   Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-    if (edited) Text(stringResource(R.string.chat_edited), style = MaterialTheme.typography.labelSmall, color = colors.textTertiary)
+    // 編集済み and the pin on one line, over the time.
+    if (edited || pinned) {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        if (pinned) Icon(painterResource(R.drawable.ic_push_pin), stringResource(R.string.chat_pinned_line), Modifier.size(12.dp), tint = colors.textTertiary)
+        if (edited) Text(stringResource(R.string.chat_edited), style = MaterialTheme.typography.labelSmall, color = colors.textTertiary)
+      }
+    }
     TimeOrMark(time, waiting, notSentItems)
   }
 }

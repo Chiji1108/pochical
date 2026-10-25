@@ -10,6 +10,10 @@ import app.pochical.calendar.rememberReducedMotion
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import app.pochical.EmojiPickerSheet
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import app.pochical.kit.LineContent
 import app.pochical.kit.LineReaction
 import kotlinx.coroutines.flow.drop
@@ -48,6 +52,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -99,6 +106,42 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 
+/**
+ * What floats over the top of a chat's lines and stays there (the pins' card), each by its key with
+ * its height: the lines keep the room of them all at their top, so their first scrolls out from under
+ * them. Every such piece over the lines measures itself here, in one place.
+ */
+@Stable
+class OverTheLines {
+  private val heights = mutableStateMapOf<String, Int>()
+
+  /** The room kept at the lines' top, in pixels. */
+  val topPx: Int
+    get() = heights.values.sum()
+
+  /** The room kept at the lines' top. */
+  val top: Dp
+    @Composable get() = with(LocalDensity.current) { topPx.toDp() }
+
+  internal fun cover(key: String, height: Int) {
+    heights[key] = height
+  }
+
+  internal fun uncover(key: String) {
+    heights.remove(key)
+  }
+}
+
+/** This piece floats over the lines' top as [key], its height kept as room there while it is drawn. */
+@Composable
+fun Modifier.covering(over: OverTheLines, key: String): Modifier {
+  DisposableEffect(over, key) { onDispose { over.uncover(key) } }
+  return onSizeChanged { over.cover(key, it.height) }
+}
+
+/** The pins' card's key over the lines. */
+private const val PINS = "pins"
+
 /** The chats as the screens read and write them. */
 val LocalChats = staticCompositionLocalOf<Chats> { error("No chats provided") }
 
@@ -139,7 +182,7 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
       snapshotFlow { from to currentMe }.flatMapLatest { (from, me) -> chats.state(groupId, threadId, me, from) }
     }
       .collectAsState(null)
-  val chat = state ?: return ChatScaffold(groupId, threadId, members, groups, socket, remember { SnackbarHostState() }, onBack) {}
+  val chat = state ?: return ChatScaffold(groupId, threadId, members, groups, socket, onBack) {}
 
   // Others writing, shown for chatRules.typingShowMs unless said again; a blocked member's is not.
   val typers = rememberTypers(socket, threadId, me, blocked.map { it.userId }.toSet())
@@ -353,8 +396,25 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
   }
 
   val openLink = rememberLinkOpener()
+  // Pinning says what happened, the oldest pin making room for a new one.
+  val resources = LocalContext.current.resources
+  val pin = { seq: Long, on: Boolean ->
+    scope.launch {
+      keeping({ notKept = true }) {
+        val step = chats.pin(groupId, threadId, seq, on)
+        val said =
+          when {
+            step.dropped != null -> resources.getString(R.string.chat_pin_dropped, Chat.maxPins)
+            on -> resources.getString(R.string.chat_pinned_done)
+            else -> resources.getString(R.string.chat_unpinned_done)
+          }
+        snackbar.showSnackbar(said)
+      }
+    }
+    Unit
+  }
   var unsending by remember { mutableStateOf<Unsending?>(null) }
-  val actions = rememberLineActions(composer, nameOf, snackbar, onUnsend = { unsending = it }, onNotKept = { notKept = true })
+  val actions = rememberLineActions(composer, nameOf, snackbar, onUnsend = { unsending = it }, onNotKept = { notKept = true }, onPin = pin)
   val handlers =
     MessageHandlers(
       menu = menu,
@@ -375,10 +435,34 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
       openLink = openLink,
     )
   Box {
-    ChatScaffold(groupId, threadId, members, groups, socket, snackbar, onBack) {
+    ChatScaffold(groupId, threadId, members, groups, socket, onBack) {
       Column(Modifier.fillMaxSize().imePadding()) {
         Box(Modifier.weight(1f).fillMaxWidth()) {
-          ChatLines(items, list, chat, me, writers, threadId != GROUP_THREAD, handlers, { lineQuote(it, chat.line(it), nameOf, blockedIds) }, Modifier.alpha(if (placed) 1f else 0f))
+          // What floats over the lines' top keeps its room there, so the first of them scrolls out from under it.
+          val over = remember { OverTheLines() }
+          ChatLines(
+            items,
+            list,
+            chat,
+            me,
+            writers,
+            threadId != GROUP_THREAD,
+            handlers,
+            { lineQuote(it, chat.line(it), nameOf, blockedIds) },
+            over.top,
+            Modifier.alpha(if (placed) 1f else 0f),
+          )
+          // Drawn while there are pins, keeping its room over the lines only then.
+          if (chat.pins.isNotEmpty()) {
+            PinBar(
+              chat.pins,
+              nameOf,
+              blockedIds,
+              onJump = { jumping = it },
+              onUnpin = { pin(it, false) },
+              Modifier.align(Alignment.TopCenter).covering(over, PINS),
+            )
+          }
           LatestButton(list, chat, me, items, Modifier.align(Alignment.BottomEnd)) { toUnread ->
             when {
               toUnread -> going = Going.ToUnread
@@ -390,6 +474,8 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit) {
               else -> going = Going.ToFoot
             }
           }
+          // What a pick says, over the lines' foot rather than the composer, and over ↓.
+          SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
         }
         Composer(
           composer,
@@ -449,7 +535,6 @@ private fun ChatScaffold(
   members: List<GroupMemberRow>,
   groups: List<GroupRow>,
   socket: ChatSocket?,
-  snackbar: SnackbarHostState,
   onBack: () -> Unit,
   content: @Composable () -> Unit,
 ) {
@@ -475,7 +560,6 @@ private fun ChatScaffold(
         },
       )
     },
-    snackbarHost = { SnackbarHost(snackbar) },
     // The composer takes the foot, rising with the keyboard (imePadding).
     contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
   ) { padding ->
@@ -519,16 +603,18 @@ private fun ChatLines(
   direct: Boolean,
   handlers: MessageHandlers,
   quoteOf: @Composable (Long) -> LineQuote,
+  topRoom: Dp,
   modifier: Modifier = Modifier,
 ) {
+  val pinned = remember(chat.pins) { chat.pins.mapTo(HashSet()) { it.seq } }
   LazyColumn(
     modifier.fillMaxSize(),
     state = list,
     reverseLayout = true,
-    contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+    contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 8.dp + topRoom, bottom = 8.dp),
   ) {
     items(items, key = { it.key }, contentType = { it::class }) { item ->
-      val look = messageLook(item, me, writers, direct, quoteOf, handlers.nameOf)
+      val look = messageLook(item, me, writers, direct, pinned, quoteOf, handlers.nameOf)
       ChatItemRow(item, look, writers, me, handlers, Modifier.animateItem())
     }
     if (!chat.atStart && chat.heldBefore == 0) {

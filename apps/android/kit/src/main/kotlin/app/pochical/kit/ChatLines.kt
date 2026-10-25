@@ -255,6 +255,18 @@ fun readTo(shown: Collection<Long>, read: Long): Long = maxOf(read, shown.maxOrN
 fun unreadCount(lines: List<Pair<Long, LineWriter>>, read: Long): Int =
   lines.count { (seq, writer) -> seq > read && writer == LineWriter.Others }
 
+/** The pins of a chat after a step, the latest first, and the one that made room for a new one, if any (spec/vectors/chat.json, pins). */
+data class PinStep(val pins: List<Long>, val dropped: Long? = null)
+
+/** Pinning [seq], or settling the poll it is: a pinned line only moves up; one past `chatRules.maxPins` takes the place of the oldest. */
+fun pinning(pins: List<Long>, seq: Long, most: Int = Chat.maxPins): PinStep {
+  val next = listOf(seq) + pins.filter { it != seq }
+  return PinStep(next.take(most), next.getOrNull(most))
+}
+
+/** Taking [seq]'s pin off, or taking the line back, its pin going with it. */
+fun unpinning(pins: List<Long>, seq: Long): PinStep = PinStep(pins.filter { it != seq })
+
 /** A line placed in a chat by its time: one the group holds, or one of the member's waiting. */
 data class TimedLine<Id>(val id: Id, val at: Long, val failed: Boolean = false)
 
@@ -326,9 +338,11 @@ data class ChatState(
   val ownRead: Long = 0,
   /** The lines replies answer that are not among [lines], by seq, as the device holds them. */
   val quoted: Map<Long, ChatLine> = emptyMap(),
+  /** The pinned lines, the latest first, however far back, the member's own pins on their way in place. */
+  val pins: List<ChatLine> = emptyList(),
 ) {
   /** The line [seq] as the screen shows it, laid out or quoted; null while the device does not hold it. */
-  fun line(seq: Long): ChatLine? = quoted[seq] ?: lines.firstOrNull { it.seq == seq }
+  fun line(seq: Long): ChatLine? = quoted[seq] ?: lines.firstOrNull { it.seq == seq } ?: pins.firstOrNull { it.seq == seq }
 
   /** How far [me] has read: their mark, or on to their read still waiting. */
   fun lastRead(me: String): Long = maxOf(marks[me] ?: 0, ownRead)

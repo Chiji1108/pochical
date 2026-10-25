@@ -18,8 +18,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 // The chat's cases every platform checks (spec/vectors/chat.json) that the chat's lines, its
-// scrolling and its composer use; pins come with the pin bar
-// (#826), albumRows with photos (#827), withdrawn with notifications (#884).
+// scrolling, its composer, its reactions and its pins use; albumRows comes with photos (#827),
+// withdrawn with notifications (#884).
 
 @Serializable
 private data class ChatVectors(
@@ -36,6 +36,7 @@ private data class ChatVectors(
   val edited: List<Edited>,
   val composer: List<Composer>,
   val reactions: List<Reactions>,
+  val pins: List<Pins>,
 ) {
   @Serializable
   data class Writer(override val name: String, val author: String, val me: String, val kind: String, val expected: String) : VectorCase
@@ -102,6 +103,16 @@ private data class ChatVectors(
   @Serializable
   data class Step(val reply: Long? = null, val edit: Long? = null, val share: List<String>? = null, val stop: Boolean? = null)
 
+  @Serializable data class PinsStep(val pin: String? = null, val unpin: String? = null, val unsend: String? = null, val settle: String? = null)
+
+  @Serializable data class PinsAfter(val pins: List<String>, val dropped: String?)
+
+  @Serializable
+  data class Pins(override val name: String, val lines: List<String>, val pins: List<String>, val step: PinsStep, val expected: PinsAfter) : VectorCase {
+    /** The named line's seq, the first at 1. */
+    fun seq(line: String): Long = lines.indexOf(line).toLong() + 1
+  }
+
   @Serializable data class Reaction(val emoji: String, val userIds: List<String>)
 
   @Serializable data class React(val user: String, val emoji: String, val on: Boolean)
@@ -167,6 +178,20 @@ class ChatVectorsTest {
         }
       keptDraft(KeptDraft(case.draft.text, case.draft.replyTo, case.draft.editing), lines::get)?.let {
         ChatVectors.Kept(it.text, it.replyTo, it.editing)
+      }
+    }
+
+  @Test
+  fun pins() =
+    chat.pins.checkEach({ case -> PinStep(case.expected.pins.map(case::seq), case.expected.dropped?.let(case::seq)) }) { case ->
+      val pins = case.pins.map(case::seq)
+      val step = case.step
+      when {
+        step.pin != null -> pinning(pins, case.seq(step.pin))
+        // Settling a poll pins it.
+        step.settle != null -> pinning(pins, case.seq(step.settle))
+        step.unpin != null -> unpinning(pins, case.seq(step.unpin))
+        else -> unpinning(pins, case.seq(step.unsend!!))
       }
     }
 

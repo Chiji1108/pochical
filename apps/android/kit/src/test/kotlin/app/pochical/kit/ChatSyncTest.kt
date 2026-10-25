@@ -327,6 +327,24 @@ class ChatValuesTest {
   }
 
   @Test
+  fun aChatsPinsHoldLinesFarBackAndTheMembersShowAtOnce() = runTest {
+    val chats = Chats(database, now = { 0 })
+    val old = wordsLine(1, "u2", "ずっと前").copy { pinnedOrder = 9 }
+    database.write { takeChanges(listOf(old, wordsLine(5, "u2", "e"), wordsLine(6, "me", "f")), "g1") }
+    suspend fun pins() = database.read { chatState("g1", GROUP_THREAD, "me", from = 5, now = 0) }.pins.map { it.seq }
+    // 1 is held for its pin, apart from the lines laid out.
+    assertEquals(listOf(1L), pins())
+    // Pinning says what it did, by the pins the device has as it writes.
+    assertEquals(PinStep(listOf(6L, 1L)), chats.pin("g1", GROUP_THREAD, 6, on = true))
+    assertEquals(listOf(6L, 1L), pins())
+    chats.pin("g1", GROUP_THREAD, 1, on = false)
+    assertEquals(listOf(6L), pins())
+    // Taking a line back takes its pin with it.
+    chats.unsend("g1", GROUP_THREAD, 6)
+    assertTrue(pins().isEmpty())
+  }
+
+  @Test
   fun theMembersReactionShowsAtOnceAsTheirs() = runTest {
     database.write { upsert(state().copy(owner = "me")) }
     val chats = Chats(database, now = { 0 })
