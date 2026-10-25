@@ -11,6 +11,8 @@ import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffo
 import androidx.compose.material3.adaptive.navigationsuite.rememberNavigationSuiteScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -32,7 +34,8 @@ import app.pochical.groups.GroupShiftsPage
 import app.pochical.groups.GroupsActions
 import app.pochical.groups.InvitePage
 import app.pochical.groups.JoinScreen
-import app.pochical.groups.LocalOpenedInvites
+import app.pochical.groups.LocalValues
+import app.pochical.kit.AppLink
 import app.pochical.groups.ScanScreen
 import app.pochical.groups.GroupsScreen
 import app.pochical.groups.NewGroupPage
@@ -55,9 +58,27 @@ import java.time.LocalDate
  */
 @Composable
 fun RootScreen(navigator: RootNavigator) {
-  // An invitation opened from a link comes over whatever shows.
-  val invites = LocalOpenedInvites.current
-  LaunchedEffect(invites.pending) { invites.consume()?.let { navigator.openOnce(RootPage.Join(it)) } }
+  val links = LocalOpenedLinks.current
+  val values = LocalValues.current
+  val groups by remember(values) { values.groups() }.collectAsState(null)
+  // What a link opens: an invitation over whatever shows; a day in the calendar; a group, at a
+  // day in its table, or once the person has left it, グループ on the first of their groups.
+  LaunchedEffect(links.pending, groups) {
+    when (val link = links.pending) {
+      is AppLink.Invite -> navigator.openOnce(RootPage.Join(link.code))
+      is AppLink.Day -> navigator.showDay(link.day)
+      is AppLink.Group -> {
+        val known = groups ?: return@LaunchedEffect
+        if (link.day != null && known.any { it.id == link.groupId }) {
+          navigator.showGroup(link.groupId, RootPage.GroupShifts(link.groupId, link.day.toString()))
+        } else {
+          navigator.showGroup(link.groupId)
+        }
+      }
+      null -> return@LaunchedEffect
+    }
+    links.consume()
+  }
   NavDisplay(
     backStack = navigator.routes,
     onBack = navigator::back,
@@ -159,7 +180,13 @@ private fun TabsScreen(navigator: RootNavigator, navigation: PageNavigation) {
   ) {
     tabStates.SaveableStateProvider(navigation.tab) {
       when (navigation.tab) {
-        RootTab.Calendar -> CalendarScreen(open = navigation::open, hidesTabBar = { barHidden = it })
+        RootTab.Calendar ->
+          CalendarScreen(
+            open = navigation::open,
+            hidesTabBar = { barHidden = it },
+            opening = navigator.openingDay,
+            onOpening = { navigator.openingDay = null },
+          )
         RootTab.Groups ->
           GroupsScreen(navigator.openGroup, { navigator.openGroup = it }, GroupsActions(onNew = { navigation.open(RootPage.NewGroup) }, onScan = { navigation.open(RootPage.Scan) }, onShifts = { id, day -> navigation.open(RootPage.GroupShifts(id, day?.toString())) }, onChat = { id, thread -> navigation.open(RootPage.Chat(id, thread)) }) { group -> GroupButtons(group.id, navigation::open) })
         RootTab.Settings -> SettingsScreen(open = navigation::open)

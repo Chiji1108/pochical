@@ -12,6 +12,8 @@ import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import app.pochical.kit.SyncedSettings
 import app.pochical.kit.deviceSettingsStore
+import app.pochical.widgets.WidgetSources
+import app.pochical.widgets.followForWidgets
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.DependencyGraph
 import dev.zacsweers.metro.Provides
@@ -51,6 +53,9 @@ interface AppGraph : MetroAppComponentProviders {
 
   val kit: PochicalKit
 
+  /** The settings, as the widgets read them too. */
+  val settings: SyncedSettings
+
   @DependencyGraph.Factory
   fun interface Factory {
     fun create(@Provides application: Application): AppGraph
@@ -66,6 +71,9 @@ class PochicalApplication : Application(), MetroApplication, PochicalKit.Holder,
   override val pochicalKit: PochicalKit
     get() = graph.kit
 
+  /** What the widgets draw from: the kit's database and the settings. */
+  val widgetSources by lazy { WidgetSources(graph.kit.database, graph.settings) }
+
   override fun onCreate() {
     super.onCreate()
     // Listening before anything syncs, so a photo let go of is never missed (`followForgotten`).
@@ -73,6 +81,7 @@ class PochicalApplication : Application(), MetroApplication, PochicalKit.Holder,
       followForgotten(graph.kit.photoFiles) { SingletonImageLoader.get(this@PochicalApplication) }
     }
     graph.kit.followProcess()
+    followForWidgets(this, graph.kit.database, graph.settings)
   }
 
   /** The one image loader every picture the app shows comes through (`chatImageLoader`). */
