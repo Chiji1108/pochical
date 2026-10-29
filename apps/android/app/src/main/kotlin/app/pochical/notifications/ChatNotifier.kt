@@ -74,6 +74,9 @@ class ChatNotifier(
    */
   private val lock = Any()
 
+  /** How many times this process let go of each group, as the user left it ([forgetPlace]). */
+  private val leftCount = mutableMapOf<String, Int>()
+
   /** The chats with an answer written on their notification being kept, which a read of it does not take back. */
   private val answering = mutableSetOf<String>()
 
@@ -86,17 +89,13 @@ class ChatNotifier(
     if (alert.recipientId != me) return
     val tag = tagOf(alert.groupId, alert.threadId)
     if (tag == onScreen.get()) return
-    // A group the device holds that it lets go of meanwhile (left, [forgetPlace]) shows nothing: one
-    // not held yet shows as the server words it.
-    val held = group(alert.groupId) != null
-    val gone = suspend { held && group(alert.groupId) == null }
+    // A group left while the line is made ready ([forgetPlace]) shows nothing of it: its leaving
+    // is counted under the lock the post takes, so it comes either before the post, which then
+    // shows nothing, or after it, taking it away.
+    val leaves = leftCount[alert.groupId]
     // Who and where, faces and marks among them, before the chat's notification is read.
     val line = line(alert, tag, me)
-    if (gone()) return
-    synchronized(lock) { post(tag, line.after(shownOf(tag))) }
-    // Left as it was posted: its letting go ran before the post, so it is let go of here; one after
-    // it finds the post.
-    if (gone()) forgetPlace(alert.groupId)
+    synchronized(lock) { if (leftCount[alert.groupId] == leaves) post(tag, line.after(shownOf(tag))) }
   }
 
   /**
@@ -244,6 +243,7 @@ class ChatNotifier(
   fun forgetPlace(groupId: String) {
     val ofGroup = { tag: String -> tag.startsWith(tagOf(groupId, "")) }
     synchronized(lock) {
+      leftCount[groupId] = (leftCount[groupId] ?: 0) + 1
       shownTags().filter(ofGroup).forEach(::cancel)
       answering.removeAll(ofGroup)
     }

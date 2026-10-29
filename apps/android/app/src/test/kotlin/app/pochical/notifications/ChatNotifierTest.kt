@@ -318,20 +318,14 @@ class ChatNotifierTest {
   }
 
   @Test
-  fun aGroupLeftJustAfterItsLineIsCheckedTakesWhatWasPosted() = runTest {
-    // Left after the check before posting, its letting go already run: the line lets go of itself.
-    var checks = 0
-    val racing =
-      ChatNotifier(
-        context,
-        { ME },
-        { listOf(member(ME, "ゆうき"), member(WRITER, "さくら")) },
-        { if (++checks <= 3) GroupRow(GROUP, "いとこ会", 0, GroupMarkValue(emoji = "🍙")) else null },
-        conversations,
-      )
-    racing.show(groupLine(2, "今週どう？"))
-    assertTrue(shown().isEmpty())
-    assertTrue(conversations.published.isEmpty())
+  fun aResetWhileItsLinesFacesLoadStillShowsIt() = runTest {
+    // A Reset empties the groups until its catch-up brings them again: nobody left.
+    conversations.loading = {
+      conversations.loading = {}
+      inGroup = false
+    }
+    notifier.show(groupLine(2, "今週どう？"))
+    assertEquals(listOf("$GROUP/group"), shown().map { it.tag })
   }
 
   private fun support(seq: Long, words: String) =
