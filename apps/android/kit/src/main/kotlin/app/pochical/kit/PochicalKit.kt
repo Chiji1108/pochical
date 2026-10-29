@@ -36,11 +36,19 @@ class PochicalKit(context: Context) {
   val edits = OwnEdits(database)
 
   /**
-   * The person's own calendar, read once for all that follows it, the screens and the reminders'
-   * alarms: again whenever sync or an edit changes it, from when it is first asked for.
+   * The person's own calendar, one reading for all that follow it (the screens, the reminders'
+   * alarms, the widgets), again whenever sync or an edit changes it. Once none follows it, what was
+   * read is forgotten, so the next to ask reads the database as it is then.
    */
   val ownCalendar: SharedFlow<OwnCalendar> =
-    database.values().ownCalendar().shareIn(CoroutineScope(SupervisorJob() + Dispatchers.Default), SharingStarted.Lazily, replay = 1)
+    database
+      .values()
+      .ownCalendar()
+      .shareIn(
+        CoroutineScope(SupervisorJob() + Dispatchers.Default),
+        SharingStarted.WhileSubscribed(replayExpirationMillis = 0),
+        replay = 1,
+      )
 
   /** はじめの設定, asked while it is not done for the user the database holds. */
   val firstRun = FirstRun(database)

@@ -112,7 +112,7 @@ class PochicalApplication : Application(), MetroApplication, PochicalKit.Holder,
     get() = graph.kit
 
   /** What the widgets draw from: the kit's database and the settings. */
-  val widgetSources by lazy { WidgetSources(graph.kit.database, graph.settings) }
+  val widgetSources by lazy { WidgetSources(graph.kit.database, graph.kit.ownCalendar, graph.settings) }
 
   override val push: Push
     get() = graph.push
