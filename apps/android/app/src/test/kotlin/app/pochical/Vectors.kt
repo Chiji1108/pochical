@@ -10,12 +10,12 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * The cases of a spec/vectors file under `key`, read from the repository
- * this module is in: the cases every platform checks its own code against.
+ * The cases of a spec/vectors file under `key`, the cases every platform checks its own code
+ * against, read from the repository this project is in (apps/android/build.gradle.kts names where).
  */
 fun vectors(file: String, key: String): List<JsonObject> {
-  // Gradle runs a module's unit tests from apps/android/<module>.
-  val json = File("../../../spec/vectors/$file.json").readText()
+  val directory = System.getProperty("pochical.vectors") ?: error("The vectors directory is not set")
+  val json = File(directory, "$file.json").readText()
   return Json.parseToJsonElement(json).jsonObject.getValue(key).jsonArray.map { it.jsonObject }
 }
 
