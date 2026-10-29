@@ -19,7 +19,7 @@ import app.pochical.chat.Picture
 import app.pochical.kit.GroupMarkValue
 import app.pochical.kit.PhotoShelf
 import app.pochical.design.Theme
-import app.pochical.limitText
+import app.pochical.kit.limitText
 import app.pochical.mark
 import app.pochical.widgets.groupMarkPicture
 import coil3.ImageLoader

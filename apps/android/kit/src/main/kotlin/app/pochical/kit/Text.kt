@@ -14,6 +14,12 @@ fun characterEnds(text: String): Sequence<Int> {
   return generateSequence { characters.next().takeIf { it != BreakIterator.DONE } }
 }
 
+/** How many characters [text] holds as a reader sees them, grapheme clusters (spec/text-limits.md). */
+fun characterCount(text: String): Int = characterEnds(text).count()
+
+/** The first [limit] characters of [text], as a reader counts them (spec/vectors/text.json, limitText). */
+fun limitText(text: String, limit: Int): String = characterEnds(text).elementAtOrNull(limit - 1)?.let { text.substring(0, it) } ?: text
+
 /** The first character as a reader sees it, an emoji with its joiners whole. */
 fun firstCharacter(text: String): String = characterEnds(text).firstOrNull()?.let { text.substring(0, it) }.orEmpty()
 

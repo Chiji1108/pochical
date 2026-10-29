@@ -13,7 +13,7 @@ import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.size
-import app.pochical.limitText
+import app.pochical.kit.limitText
 import app.pochical.design.Widgets
 import app.pochical.kit.GroupRow
 import app.pochical.kit.Values
