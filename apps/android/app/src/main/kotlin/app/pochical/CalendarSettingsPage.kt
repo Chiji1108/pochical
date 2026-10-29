@@ -8,7 +8,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -26,18 +34,28 @@ import app.pochical.calendar.rememberToday
 import app.pochical.calendar.shortMonth
 import app.pochical.calendar.weekdayLetter
 import app.pochical.calendar.weekdayName
+import app.pochical.kit.ShiftPeriod
 import app.pochical.kit.Week
+import app.pochical.kit.byPeriod
 import app.pochical.patterns.SwitchRow
 import java.time.YearMonth
 
-/** 設定's カレンダー row: the day the week starts on, and the month as small text writes it, 10月 or Oct. */
+/**
+ * 設定's カレンダー row: the day the week starts on, the month as small text writes it, 10月 or Oct,
+ * and a シフトの期間's first day, 15日〜.
+ */
 @Composable
 fun CalendarSettingsRow(open: (RootPage) -> Unit) {
   val device = LocalDeviceSettings.current.device
   val month = YearMonth.from(rememberToday()).shortMonth(device.heading.english)
+  val summary =
+    listOfNotNull(
+      stringResource(R.string.calendar_settings_summary, weekdayLetter(device.week.start), month),
+      device.period.takeIf { it.byPeriod }?.let { stringResource(R.string.period_short, it.start) },
+    )
   ListItem(
     headlineContent = { Text(stringResource(R.string.calendar_settings)) },
-    supportingContent = { Text(stringResource(R.string.calendar_settings_summary, weekdayLetter(device.week.start), month)) },
+    supportingContent = { Text(summary.joinToString("・")) },
     modifier = Modifier.clickable { open(RootPage.CalendarSettings) },
   )
 }
@@ -45,8 +63,9 @@ fun CalendarSettingsRow(open: (RootPage) -> Unit) {
 /**
  * 設定 > カレンダー (/design's カレンダー page, iOS's CalendarSettings): this week under the month's
  * heading, as the settings below draw it; 月と曜日, what a tap on the month's name does, the day the
- * week starts on, and the days that take a color of their own. Only this person's screens change,
- * and each change is kept as it is picked. Material's segmented buttons pick among a few words.
+ * week starts on, the days that take a color of their own, and シフトの期間, what each page holds.
+ * Only this person's screens change, and each change is kept as it is picked. Material's segmented
+ * buttons pick among a few words; the period, one of many, is picked in a dialog's list.
  */
 @Composable
 fun CalendarSettingsPage(onBack: () -> Unit) {
@@ -55,6 +74,7 @@ fun CalendarSettingsPage(onBack: () -> Unit) {
   val today = rememberToday()
   val scheme = rememberPreviewScheme()
   val colors = LocalThemeColors.current
+  var pickingPeriod by rememberSaveable { mutableStateOf(false) }
   fun changeWeek(change: (Week) -> Week) = settings.change { it.copy(week = change(it.week)) }
   SettingsPage(stringResource(R.string.calendar_settings), onBack) { padding ->
     LazyColumn(contentPadding = padding) {
@@ -99,7 +119,36 @@ fun CalendarSettingsPage(onBack: () -> Unit) {
       item { ColoredDay(R.string.calendar_sunday, colors.calendarHoliday, device.week.sunday) { on -> changeWeek { it.copy(sunday = on) } } }
       item { ColoredDay(R.string.calendar_holiday, colors.calendarHoliday, device.week.holiday) { on -> changeWeek { it.copy(holiday = on) } } }
       item { Footnote(stringResource(R.string.calendar_colored_days_note)) }
+      // Most people's shifts come by the month, so it starts as the month; a workplace closing on its
+      // own day picks the day its shifts start (spec/calendar.md, The shift period).
+      item { SectionHeader(stringResource(R.string.period)) }
+      item {
+        ListItem(
+          headlineContent = { Text(stringResource(R.string.period_page)) },
+          supportingContent = { Text(periodName(device.period.start)) },
+          modifier = Modifier.clickable { pickingPeriod = true },
+        )
+      }
+      item { Footnote(stringResource(R.string.period_note)) }
     }
+  }
+  if (pickingPeriod) {
+    AlertDialog(
+      onDismissRequest = { pickingPeriod = false },
+      title = { Text(stringResource(R.string.period_page)) },
+      text = {
+        PeriodChoices(
+          device.period.start,
+          onPick = { start ->
+            settings.change { it.copy(period = ShiftPeriod(start)) }
+            pickingPeriod = false
+          },
+          modifier = Modifier.verticalScroll(rememberScrollState()),
+        )
+      },
+      confirmButton = {},
+      dismissButton = { TextButton(onClick = { pickingPeriod = false }) { Text(stringResource(R.string.cancel)) } },
+    )
   }
 }
 

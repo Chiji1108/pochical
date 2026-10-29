@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -240,7 +241,7 @@ private fun ShiftsPage(group: GroupRow, opening: LocalDate?, onBack: () -> Unit,
       return@BottomSheetScaffold
     }
     Column(Modifier.padding(padding).fillMaxSize()) {
-      MonthRow(monthInSight, todayInSight, onChoose = { choosingMonth = true }, onToday = { go(today) })
+      MonthRow(monthInSight, back = if (todayInSight) null else stringResource(R.string.today), onChoose = { choosingMonth = true }, onBack = { go(today) })
       when (layout) {
         ShiftsLayout.Days ->
           GroupDayHeader(tableMembers, group.id, meId, sideways, onFace = { legendOf = it.userId }, Modifier.padding(horizontal = 16.dp))
@@ -313,17 +314,22 @@ private fun ShiftsPage(group: GroupRow, opening: LocalDate?, onBack: () -> Unit,
 fun togetherTitle(month: YearMonth, thisMonth: YearMonth): String =
   stringResource(R.string.together_of, if (month == thisMonth) stringResource(R.string.calendar_this_month) else month.shortText(thisMonth))
 
-/** The month in sight, pinned over the list, which opens 月を選ぶ, and 今日 while today is out of sight (/design's MonthRow). */
+/**
+ * The month in sight, which opens 月を選ぶ, its chevron saying so, and the way back ([back], 今日 or
+ * 今月) while what it goes back to is out of sight (/design's MonthRow): over みんなのシフト's list and
+ * over one person's month.
+ */
 @Composable
-private fun MonthRow(month: YearMonth, todayInSight: Boolean, onChoose: () -> Unit, onToday: () -> Unit) {
+fun MonthRow(month: YearMonth, back: String?, onChoose: () -> Unit, onBack: () -> Unit) {
   val colors = LocalThemeColors.current
   Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(start = 8.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
     TextButton(onClick = onChoose) {
       Text(month.yearMonthText, style = PochicalTextStyles.headline, color = colors.textPrimary)
+      Icon(painterResource(R.drawable.ic_expand_more), contentDescription = null, Modifier.padding(start = 4.dp).size(18.dp), tint = colors.textTertiary)
     }
     Box(Modifier.weight(1f))
-    if (!todayInSight) {
-      OutlinedButton(onClick = onToday) { Text(stringResource(R.string.today)) }
+    if (back != null) {
+      OutlinedButton(onClick = onBack) { Text(back) }
     }
   }
 }

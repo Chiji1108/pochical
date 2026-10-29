@@ -1,16 +1,19 @@
 package app.pochical.calendar
 
+import app.pochical.kit.ShiftPeriod
+import app.pochical.kit.page
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.temporal.ChronoUnit
 
 /**
  * The months the calendar reaches: `around` either side of the month it
- * opened on, as iOS's monthsAround, and the weeks and days their pages show.
- * The month pages, 月を選ぶ and an opened day's weeks all take their bounds
- * and page numbers from here, so none is asked for a page outside.
+ * opened on, as iOS's monthsAround, and the weeks and days their pages show,
+ * each page the month or the シフトの期間 [period] starting in it. The pages,
+ * 月を選ぶ and an opened day's weeks all take their bounds and page numbers
+ * from here, so none is asked for a page outside.
  */
-class CalendarRange(opened: YearMonth, around: Int) {
+class CalendarRange(opened: YearMonth, around: Int, private val period: ShiftPeriod = ShiftPeriod()) {
   val months: ClosedRange<YearMonth> = opened.minusMonths(around.toLong())..opened.plusMonths(around.toLong())
 
   /** How many month pages there are. */
@@ -21,9 +24,9 @@ class CalendarRange(opened: YearMonth, around: Int) {
   /** The page of `month`, or of the nearest month the calendar reaches. */
   fun pageOf(month: YearMonth): Int = ChronoUnit.MONTHS.between(months.start, month.coerceIn(months)).toInt()
 
-  /** Every day the month pages show, the first month's lead days and the last's trailing ones among them. */
+  /** Every day the pages show, the first page's lead days and the last's trailing ones among them. */
   fun days(weekStart: Int): ClosedRange<LocalDate> =
-    firstWeek(weekStart)..months.endInclusive.atEndOfMonth().weekStartingOn(weekStart).plusDays(6)
+    firstWeek(weekStart)..period.page(months.endInclusive).last.weekStartingOn(weekStart).plusDays(6)
 
   /** How many week pages there are, a week starting on `weekStart`. */
   fun weekPages(weekStart: Int): Int = weekPageOf(days(weekStart).endInclusive, weekStart) + 1
@@ -35,5 +38,5 @@ class CalendarRange(opened: YearMonth, around: Int) {
   fun weekPageOf(day: LocalDate, weekStart: Int): Int =
     ChronoUnit.WEEKS.between(firstWeek(weekStart), day.coerceIn(days(weekStart)).weekStartingOn(weekStart)).toInt()
 
-  private fun firstWeek(weekStart: Int) = months.start.atDay(1).weekStartingOn(weekStart)
+  private fun firstWeek(weekStart: Int) = period.page(months.start).first.weekStartingOn(weekStart)
 }

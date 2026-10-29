@@ -77,6 +77,8 @@ data class DayLook(
   val faint: Boolean = false,
   /** How a day off the look leaves blank (休みの見せ方 空白) shows here. */
   val offShown: OffShown = OffShown.Hidden,
+  /** Dated with its month, 11/1, as a シフトの期間's page dates the 1st of a month inside it. */
+  val withMonth: Boolean = false,
 )
 
 /**
@@ -168,7 +170,7 @@ fun DayCell(
         )
       }
       Text(
-        look.day.dayOfMonth.toString(),
+        if (look.withMonth) look.day.periodDayText else look.day.dayOfMonth.toString(),
         style = dateStyle,
         fontWeight =
           when {
