@@ -170,12 +170,17 @@ fun Onboarding() {
   fun startRoster(ids: List<String>, period: ShiftPeriod) = begin(ids, emptyList(), first(), period)
 
   val motion = rememberPageMotion()
+  val push = remember(motion) { motion.push<FirstRunStep>() }
+  val pop = remember(motion) { motion.pop<FirstRunStep>() }
+  val predictivePop = remember(motion) { motion.predictivePop<FirstRunStep>() }
   NavDisplay(
     backStack = steps,
     onBack = { steps.removeAt(steps.lastIndex) },
-    transitionSpec = motion.push(),
-    popTransitionSpec = motion.pop(),
-    predictivePopTransitionSpec = motion.predictivePop(),
+    // On the theme's ground, so what shows through as a page fades is the テーマ's, not the window's.
+    modifier = Modifier.background(MaterialTheme.colorScheme.background),
+    transitionSpec = push,
+    popTransitionSpec = pop,
+    predictivePopTransitionSpec = predictivePop,
   ) { step ->
     NavEntry(step) {
       val back: () -> Unit = { steps.removeAt(steps.lastIndex) }
