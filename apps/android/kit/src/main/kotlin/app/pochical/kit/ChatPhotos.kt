@@ -1,6 +1,8 @@
 package app.pochical.kit
 
 import android.graphics.Bitmap
+import android.graphics.Color
+import android.graphics.Canvas
 import android.graphics.ColorSpace
 import android.graphics.ImageDecoder
 import app.pochical.design.Chat
@@ -75,7 +77,22 @@ object PhotoShrinking {
    * [maxEdge], straight at that size rather than decoded whole and shrunk, in sRGB as a JPEG is
    * shown; null for what is not a photo the device can read.
    */
-  fun upright(source: ImageDecoder.Source, maxEdge: Int): Bitmap? = decode(source, maxEdge) { _, _ -> }
+  fun upright(source: ImageDecoder.Source, maxEdge: Int): Bitmap? = decode(source, maxEdge) { _, _ -> }?.let(::onWhite)
+
+  /**
+   * An image with see-through parts (a sticker a keyboard put in, a PNG) laid on white, as a JPEG
+   * has none: drawn as it is, they would turn black.
+   */
+  private fun onWhite(image: Bitmap): Bitmap {
+    if (!image.hasAlpha()) return image
+    val flat = Bitmap.createBitmap(image.width, image.height, Bitmap.Config.ARGB_8888)
+    Canvas(flat).apply {
+      drawColor(Color.WHITE)
+      drawBitmap(image, 0f, 0f, null)
+    }
+    flat.setHasAlpha(false)
+    return flat
+  }
 
   private fun decode(source: ImageDecoder.Source, maxEdge: Int, sized: (Int, Int) -> Unit): Bitmap? =
     try {
