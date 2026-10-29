@@ -3,12 +3,12 @@ package app.pochical
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.chat.LocalChats
 import app.pochical.design.Chat
 import app.pochical.groups.rememberMeId
@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.flowOf
 fun rememberNotifyingUnread(): Map<String, Int> {
   val me = rememberMeId()
   val chats = LocalChats.current
-  val unread by remember(chats, me) { me?.let(chats::notifyingUnread) ?: flowOf(emptyMap()) }.collectAsState(emptyMap())
+  val unread by remember(chats, me) { me?.let(chats::notifyingUnread) ?: flowOf(emptyMap()) }.collectAsStateWithLifecycle(emptyMap())
   return unread
 }
 

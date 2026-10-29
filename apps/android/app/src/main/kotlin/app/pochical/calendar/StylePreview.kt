@@ -30,7 +30,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
@@ -63,6 +62,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.LocalDeviceSettings
 import app.pochical.LocalThemeColors
 import app.pochical.R
@@ -143,7 +143,7 @@ data class StylePreviewInput(val today: LocalDate, val patterns: List<Pattern>, 
  */
 @Composable
 fun StylePreview(scheme: PreviewScheme, today: LocalDate, modifier: Modifier = Modifier, withHeading: Boolean = false) {
-  val calendar by LocalOwnDays.current.calendar.collectAsState()
+  val calendar by LocalOwnDays.current.calendar.collectAsStateWithLifecycle()
   val patterns = calendar.patterns.filterNot { it.archived }
   val device = LocalDeviceSettings.current.device
   val theme = device.theme

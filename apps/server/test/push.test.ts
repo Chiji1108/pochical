@@ -400,6 +400,7 @@ describe("a device's push token", () => {
     say(mine.socket, "a", "今週どう？");
     await expect.poll(() => warned.mock.calls.length).toBe(2);
     expect(warned).toHaveBeenCalledWith({
+      message: "Push not sent",
       push: {
         kind: "alert",
         platform: "apns",
@@ -410,6 +411,7 @@ describe("a device's push token", () => {
       },
     });
     expect(warned).toHaveBeenCalledWith({
+      message: "Push not sent",
       push: {
         kind: "alert",
         platform: "apns",
@@ -449,6 +451,7 @@ describe("a device's push token", () => {
     say(mine.socket, "a", "今週どう？");
     await expect.poll(() => warned.mock.calls.length).toBe(1);
     expect(warned).toHaveBeenCalledWith({
+      message: "Push not sent",
       push: {
         kind: "alert",
         platform: "apns",
@@ -694,6 +697,7 @@ describe("an Android phone's notifications", () => {
       await expect.poll(() => sends.length).toBe(1);
       await expect.poll(() => warned.mock.calls.length).toBe(1);
       expect(warned).toHaveBeenCalledWith({
+        message: "Push not sent",
         push: {
           kind: "alert",
           platform: "fcm",

@@ -27,8 +27,8 @@ jobs:
       android: ${{ steps.filter.outputs.android }}
       ios: ${{ steps.filter.outputs.ios }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: dorny/paths-filter@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
         with:
           filters: |
@@ -90,8 +90,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
-      - uses: jdx/mise-action@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5.2.4
         with:
           install_args: node pnpm
       - run: pnpm install --frozen-lockfile
@@ -129,10 +129,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: jdx/mise-action@v5
+      - uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5.2.4
         with:
           install_args: buf node pnpm
       - run: mise run proto:lint
@@ -165,14 +165,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7
-      - uses: jdx/mise-action@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5.2.4
         with:
           install_args: java
       # basic is the MIT-licensed cache over actions/cache; the default,
       # enhanced, is a proprietary library only in preview for private
       # repositories.
-      - uses: gradle/actions/setup-gradle@v6
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
           cache-provider: basic
       - run: mise run android:build
@@ -204,20 +204,20 @@ jobs:
       # ios:test needs none of mise.toml's tools.
       MISE_TASK_RUN_AUTO_INSTALL: "false"
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: sudo xcode-select --switch "/Applications/Xcode_$(cat .xcode-version).app"
       # The packages' checkouts and the builds made from them, the macros'
       # swift-syntax above all, for each Xcode and set of resolved packages.
       # The app's own sources build anew each time, as a checkout gives them
       # new dates. Only main saves, so a pull request reads main's.
       - id: cache
-        uses: actions/cache/restore@v6
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             ${{ runner.temp }}/ios
             apps/ios/Packages/*/.build
           key: ios-${{ hashFiles('.xcode-version', 'apps/ios/**/Package.resolved') }}
-      - uses: jdx/mise-action@v5
+      - uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5.2.4
         with:
           install: false
       # -skipMacroValidation and -skipPackagePluginValidation: no one is
@@ -226,7 +226,7 @@ jobs:
           xcodebuild build -project apps/ios/Pochical/Pochical.xcodeproj -scheme Pochical -destination generic/platform=iOS -derivedDataPath ${{ runner.temp }}/ios/DerivedData -clonedSourcePackagesDirPath ${{ runner.temp }}/ios/SourcePackages -skipMacroValidation -skipPackagePluginValidation CODE_SIGNING_ALLOWED=NO
       - run: mise run ios:test
       - if: github.event_name == 'push' && steps.cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v6
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             ${{ runner.temp }}/ios

@@ -1,9 +1,6 @@
 package app.pochical
 
 import android.util.Log
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -33,7 +30,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -174,11 +170,18 @@ fun Onboarding() {
   // A roster's work begins, its pages the period its shifts come for.
   fun startRoster(ids: List<String>, period: ShiftPeriod) = begin(ids, emptyList(), first(), period)
 
+  val motion = rememberPageMotion()
+  val push = remember(motion) { motion.push<FirstRunStep>() }
+  val pop = remember(motion) { motion.pop<FirstRunStep>() }
+  val predictivePop = remember(motion) { motion.predictivePop<FirstRunStep>() }
   NavDisplay(
     backStack = steps,
     onBack = { steps.removeAt(steps.lastIndex) },
-    transitionSpec = { slideInHorizontally { it } togetherWith slideOutHorizontally { -it / 4 } },
-    popTransitionSpec = { slideInHorizontally { -it / 4 } togetherWith slideOutHorizontally { it } },
+    // On the theme's ground, so what shows through as a page fades is the テーマ's, not the window's.
+    modifier = Modifier.background(MaterialTheme.colorScheme.background),
+    transitionSpec = push,
+    popTransitionSpec = pop,
+    predictivePopTransitionSpec = predictivePop,
   ) { step ->
     NavEntry(step) {
       val back: () -> Unit = { steps.removeAt(steps.lastIndex) }
@@ -289,7 +292,7 @@ private fun Welcome(onStart: () -> Unit, onSignIn: () -> Unit) {
 @Composable
 private fun SignInStep(onBack: () -> Unit, onEmpty: () -> Unit) {
   val account = LocalAccount.current
-  val state by account.state.collectAsState()
+  val state by account.state.collectAsStateWithLifecycle()
   StepPage(
     stringResource(R.string.first_run_sign_in_title),
     stringResource(R.string.first_run_sign_in_note),

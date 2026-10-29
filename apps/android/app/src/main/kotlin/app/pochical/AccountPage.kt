@@ -32,7 +32,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,6 +46,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.design.GoogleButtonColors
 import app.pochical.design.Metrics
 import app.pochical.kit.AccountState
@@ -66,7 +66,7 @@ val LocalAccount = staticCompositionLocalOf<SyncAccount> { error("No account pro
 /** 設定's アカウント row: the provider signed in with, or ログインしていません. */
 @Composable
 fun AccountRow(open: (RootPage) -> Unit) {
-  val state by LocalAccount.current.state.collectAsState()
+  val state by LocalAccount.current.state.collectAsStateWithLifecycle()
   val linked = state.linked
   SettingsRow(
     stringResource(R.string.account),
@@ -83,7 +83,7 @@ fun AccountRow(open: (RootPage) -> Unit) {
 @Composable
 fun AccountPage(onBack: () -> Unit) {
   val account = LocalAccount.current
-  val state by account.state.collectAsState()
+  val state by account.state.collectAsStateWithLifecycle()
   SettingsPage(stringResource(R.string.account), onBack) { padding ->
     LazyColumn(contentPadding = padding) {
       val linked = state.linked
