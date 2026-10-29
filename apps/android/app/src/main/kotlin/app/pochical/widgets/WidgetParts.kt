@@ -215,6 +215,9 @@ abstract class PochicalWidget(
   /** The picker's generated preview (Android 15 on): the sample week, in the person's settings. */
   override val previewSizeMode = SizeMode.Responsive(previews)
 
+  /** The size the kind is placed at first (its provider's target cells), the smallest it offers: its picture's before Android 15. */
+  val pickerSize: DpSize = previews.minBy { it.width.value * it.height.value }
+
   override suspend fun providePreview(context: Context, widgetCategory: Int) {
     val settings = (context.applicationContext as PochicalApplication).widgetSources.settings.first()
     val drawn = Drawn(sampleWidgetEntry(LocalDate.now(), settings.week), settings)

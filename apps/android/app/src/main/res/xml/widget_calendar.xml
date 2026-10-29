@@ -2,6 +2,7 @@
 <!-- カレンダー (spec/widgets.md, Views): 4×2 to 4×4. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
   android:description="@string/widget_calendar_description"
+  android:previewImage="@drawable/widget_preview_calendar"
   android:initialLayout="@layout/glance_default_loading_layout"
   android:minWidth="276dp"
   android:minHeight="130dp"
