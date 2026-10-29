@@ -518,7 +518,7 @@ public actor SyncClient {
       if peer.placeID == nil {
         for groupID in Groups.left(in: changes.changes) {
           NotificationCenter.default.post(
-            name: Groups.left, object: nil, userInfo: ["groupID": groupID])
+            name: groupLeft, object: nil, userInfo: ["groupID": groupID])
         }
       }
       Logger.sync.info("Took \(changes.changes.count) changes")

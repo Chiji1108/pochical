@@ -144,6 +144,12 @@ extension DatabaseMigrator {
   }
 }
 
+/// Told of each group the user leaves or is taken out of, with its
+/// `groupID` in the user info, once the device has let go of what it held
+/// of it, for what the app keeps of it outside the database (its chats'
+/// notifications) to go too.
+public let groupLeft = Notification.Name("Groups.left")
+
 enum Groups {
   /// A group the user is in, or how much of its chats they have not
   /// read, from their socket; other changes are left to what takes them.
@@ -185,12 +191,6 @@ enum Groups {
       photoID: mark.photoID)
     try GroupRow.upsert { row }.execute(db)
   }
-
-  /// Told of each group the user leaves or is taken out of, with its
-  /// `groupID` in the user info, once the device has let go of what it
-  /// held of it, for what the app keeps of it outside the database (its
-  /// chats' notifications) to go too.
-  public static let left = Notification.Name("Groups.left")
 
   /// The groups `changes` say the user left or was taken out of.
   static func left(in changes: [Pochical_V1_Change]) -> [String] {

@@ -69,7 +69,7 @@ nonisolated struct OpenedChat: Hashable, Sendable {
     // A group left takes its chats' notifications with it (spec/chat.md,
     // Notifications).
     Task {
-      for await note in NotificationCenter.default.notifications(named: Groups.left) {
+      for await note in NotificationCenter.default.notifications(named: groupLeft) {
         guard let groupID = note.userInfo?["groupID"] as? String else { continue }
         await takeBack { $0.filter { $0.groupID == groupID }.map(\.id) }
       }
