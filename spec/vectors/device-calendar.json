@@ -1,5 +1,5 @@
 {
-  "about": "A month's shifts as events in the device's calendar (spec/calendar.md, Adding a month to the device calendar). `days` are the month's days as they show, a pattern id and any hours of the day's own; `patterns` give each pattern's name and its time (none is all day); `shown` are the patterns picked under 入れるシフト, the only ones put in. Each event is the pattern's name, `start` and `end` in minutes from the day's midnight, past 1440 when the shift ends the next day (at or before its start), or null for all day. Optional `notes` (each day's memo) and `people` (each day's names, in order) are given only when the person asks for them; an event's `notes` is the memo, then 一緒に働く人：A、B on its own line, left out without either. A day with a memo and no shift's event (no shift, or a pattern not picked) gets an all-day event of its own, named by the memo's first line, the whole memo in its notes only when it runs longer. `shownAtFirst` gives the patterns picked until the person picks otherwise: those with a time, and of those without, all but the days off (`off`) and a pattern another names as its next day (`nextDay`), like 明け after 夜勤, whose night shows on that day already. `picks` pin what is kept of the person's picks (`chosen`, a pattern id to put in or left out, only where it differs from the first pick): `pick`, when given, picks one pattern (`id`) in or out (`on`) first, which drops any choice of a pattern no longer there and keeps none for one picked back to its first pick; `expectedChosen` is what is kept then, and `expectedShown` the patterns put in.",
+  "about": "A month's shifts as events in the device's calendar (spec/calendar.md, Adding a month to the device calendar). The page is `month`'s, or with `start` (a シフトの期間's first day, spec/vectors/periods.json) the period starting in that month. `days` are the month's days as they show, a pattern id and any hours of the day's own; `patterns` give each pattern's name and its time (none is all day); `shown` are the patterns picked under 入れるシフト, the only ones put in. Each event is the pattern's name, `start` and `end` in minutes from the day's midnight, past 1440 when the shift ends the next day (at or before its start), or null for all day. Optional `notes` (each day's memo) and `people` (each day's names, in order) are given only when the person asks for them; an event's `notes` is the memo, then 一緒に働く人：A、B on its own line, left out without either. A day with a memo and no shift's event (no shift, or a pattern not picked) gets an all-day event of its own, named by the memo's first line, the whole memo in its notes only when it runs longer. `shownAtFirst` gives the patterns picked until the person picks otherwise: those with a time, and of those without, all but the days off (`off`) and a pattern another names as its next day (`nextDay`), like 明け after 夜勤, whose night shows on that day already. `picks` pin what is kept of the person's picks (`chosen`, a pattern id to put in or left out, only where it differs from the first pick): `pick`, when given, picks one pattern (`id`) in or out (`on`) first, which drops any choice of a pattern no longer there and keeps none for one picked back to its first pick; `expectedChosen` is what is kept then, and `expectedShown` the patterns put in.",
   "events": [
     {
       "name": "work at its pattern's time, a pattern not picked left out",
@@ -161,6 +161,25 @@
       "expected": [
         { "day": "2026-11-05", "title": "夜勤", "start": 990, "end": 1980 },
         { "day": "2026-11-06", "title": "歯医者", "start": null, "end": null }
+      ]
+    },
+    {
+      "name": "a period's page puts in its own days, across two months",
+      "month": "2026-10-01",
+      "start": 15,
+      "patterns": {
+        "day": { "name": "日勤", "time": ["08:30", "17:30"] }
+      },
+      "days": {
+        "2026-10-14": { "shift": "day" },
+        "2026-10-15": { "shift": "day" },
+        "2026-11-14": { "shift": "day" },
+        "2026-11-15": { "shift": "day" }
+      },
+      "shown": ["day"],
+      "expected": [
+        { "day": "2026-10-15", "title": "日勤", "start": 510, "end": 1050 },
+        { "day": "2026-11-14", "title": "日勤", "start": 510, "end": 1050 }
       ]
     },
     {

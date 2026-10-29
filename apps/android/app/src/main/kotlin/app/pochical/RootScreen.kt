@@ -113,6 +113,10 @@ fun RootScreen(navigator: RootNavigator) {
       RootPage.CalendarSettings -> NavEntry(route) { CalendarSettingsPage(onBack = rememberPageNavigation(navigator)::back) }
       is RootPage.MonthPicture ->
         NavEntry(route) { MonthPicturePage(java.time.YearMonth.parse(route.month), onBack = rememberPageNavigation(navigator)::back) }
+      is RootPage.DeviceCalendar ->
+        NavEntry(route) { DeviceCalendarPage(java.time.YearMonth.parse(route.month), rememberPageNavigation(navigator)) }
+      is RootPage.DeviceCalendarPatterns ->
+        NavEntry(route) { DeviceCalendarPatternsPage(java.time.YearMonth.parse(route.month), onBack = rememberPageNavigation(navigator)::back) }
       RootPage.NewGroup ->
         NavEntry(route) {
           NewGroupPage(onBack = rememberPageNavigation(navigator)::back, onMade = { navigator.showGroup(it, RootPage.GroupInvite(it)) })
