@@ -324,7 +324,11 @@ class AccountChangeTest {
   @Test
   fun aDeletionTheServerRefusesSaysWhyAndKeepsEverything() = runBlocking<Unit> {
     server.provider = SignInProvider.SIGN_IN_PROVIDER_APPLE
+    // The sign-in's own GetMe answers only after the deletion is refused: the deletion's tells of Apple.
+    server.getMeDelayMs = 5_000
     val phone = signedInDevice()
+    eventually { server.getMes == 1 }
+    server.getMeDelayMs = 0
     phone.edits.setDay("2026-11-02", DayField.DAY_FIELD_PATTERN, "night")
     server.deleteRefusal = "failed_precondition"
 

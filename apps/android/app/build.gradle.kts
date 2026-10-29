@@ -1,3 +1,5 @@
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.compose)
@@ -78,7 +80,12 @@ android {
     unitTests.isIncludeAndroidResources = true
     // Robolectric sets up Android 16's shared memory through the JDK's
     // SharedSecrets, which java.base keeps to itself unless exported.
-    unitTests.all { it.jvmArgs("--add-exports=java.base/jdk.internal.access=ALL-UNNAMED") }  }
+    unitTests.all { test ->
+      test.jvmArgs("--add-exports=java.base/jdk.internal.access=ALL-UNNAMED")
+      // A test failing on CI says what it expected and where, not the assertion's class alone.
+      test.testLogging.exceptionFormat = TestExceptionFormat.FULL
+    }
+  }
 }
 
 dependencies {
