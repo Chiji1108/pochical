@@ -1,7 +1,9 @@
 package app.pochical.calendar
 
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -19,10 +21,13 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -33,6 +38,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -48,6 +54,7 @@ import app.pochical.design.PATTERNS_PER_PAGE
 import app.pochical.design.Radius
 import app.pochical.kit.Week
 import java.time.LocalDate
+import kotlinx.coroutines.launch
 
 /**
  * ポチポチ入力's tray (spec/calendar.md, ポチポチ入力): the day being entered, a key for each
@@ -154,7 +161,8 @@ private fun KeyGrid(patterns: List<Pattern>, columns: Int, rows: Int, tall: Bool
   val height = if (tall) 77.dp else 64.dp
   BoxWithConstraints(Modifier.fillMaxWidth()) {
     val width = minOf(KEY_WIDTH, (maxWidth - KEY_GAP * (columns - 1)) / columns)
-    Column(verticalArrangement = Arrangement.spacedBy(KEY_GAP)) {
+    val keysLabel = stringResource(R.string.entering_keys)
+    Column(Modifier.semantics { isTraversalGroup = true; contentDescription = keysLabel }, verticalArrangement = Arrangement.spacedBy(KEY_GAP)) {
       repeat(rows) { row ->
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(KEY_GAP, Alignment.CenterHorizontally)) {
           repeat(columns) { column ->
@@ -204,15 +212,23 @@ fun TrayActionsRow(pages: PagerState, leading: @Composable () -> Unit, trailing:
   }
 }
 
-/** [pages] as dots, the one shown filled, read as [label] says. */
+/**
+ * [pages] as dots, the one shown a longer bar in the stronger color (iOS's PageDots), growing on
+ * the motion scheme's spring as the pages turn; a dot pressed turns to its page. Read as [label] says.
+ */
 @Composable
 fun PageDots(pages: PagerState, label: String, modifier: Modifier = Modifier) {
   val colors = LocalThemeColors.current
-  Row(modifier.semantics(mergeDescendants = true) { contentDescription = label }, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+  val scope = rememberCoroutineScope()
+  Row(modifier.semantics(mergeDescendants = true) { contentDescription = label }, verticalAlignment = Alignment.CenterVertically) {
     repeat(pages.pageCount) { page ->
+      val shown = page == pages.currentPage
+      val width by animateDpAsState(if (shown) 18.dp else 7.dp, MaterialTheme.motionScheme.fastSpatialSpec(), label = "dot")
       Box(
-        Modifier.size(7.dp)
-          .background(if (page == pages.currentPage) colors.textSecondary else colors.fillPrimary, CircleShape)
+        Modifier.clickable(interactionSource = null, indication = null) { scope.launch { pages.animateScrollToPage(page) } }
+          .padding(horizontal = 3.dp, vertical = 8.dp)
+          .size(width, 7.dp)
+          .background(if (shown) colors.textSecondary else colors.fillPrimary, CircleShape)
       )
     }
   }

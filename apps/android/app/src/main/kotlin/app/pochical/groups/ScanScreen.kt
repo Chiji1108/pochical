@@ -9,6 +9,9 @@ import androidx.camera.mlkit.vision.MlKitAnalyzer
 import androidx.camera.view.CameraController
 import androidx.camera.view.LifecycleCameraController
 import androidx.camera.view.PreviewView
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -169,9 +172,12 @@ fun ScanScreen(onClose: () -> Unit, onInvite: (String) -> Unit) {
       }
     }
     // Over the picture under the bar, as a toast is, so the frame stays where the code is held.
-    problem?.let {
+    // Keeps its words as it fades out.
+    var said by remember { mutableStateOf("") }
+    problem?.let { said = it }
+    AnimatedVisibility(problem != null, enter = fadeIn(), exit = fadeOut()) {
       Text(
-        it,
+        said,
         Modifier.safeDrawingPadding()
           .padding(start = 16.dp, end = 16.dp, top = 76.dp)
           .fillMaxWidth()

@@ -34,6 +34,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
@@ -177,11 +178,11 @@ private fun NoGroups(actions: GroupsActions) {
         style = MaterialTheme.typography.bodyMedium,
         textAlign = TextAlign.Center,
       )
-      Button(onClick = actions.onNew, Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
+      Button(onClick = actions.onNew, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
         Icon(painterResource(R.drawable.ic_add), contentDescription = null)
         Text(stringResource(R.string.new_group), Modifier.padding(start = 8.dp))
       }
-      OutlinedButton(onClick = actions.onScan, Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
+      OutlinedButton(onClick = actions.onScan, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
         Icon(painterResource(R.drawable.ic_qr_code_scanner), contentDescription = null)
         Text(stringResource(R.string.scan), Modifier.padding(start = 8.dp))
       }

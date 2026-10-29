@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -86,7 +87,7 @@ fun DayDetail(
   val entry = calendar.shown(day, day)[day]
   val pattern = entry?.let { shown -> calendar.patterns.find { it.id == shown.shift } }
   // Above the keyboard, so the memo being written scrolls into sight.
-  Column(modifier.imePadding().verticalScroll(rememberScrollState())) {
+  Column(modifier.imePadding().verticalScroll(rememberScrollState()).navigationBarsPadding()) {
     Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
       Text(
         day.fullText,

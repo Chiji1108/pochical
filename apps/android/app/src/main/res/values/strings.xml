@@ -113,6 +113,9 @@
   <string name="account_sign_in_body">機種変更しても、スマホとタブレットでも、同じシフトとグループを使えます。</string>
   <string name="account_sign_in_note">はじめてなら、この端末のデータがそのまま引き継がれます。すでにアカウントがあれば、そのデータを開きます。ログインしなくても、この端末ではそのまま使えます。</string>
   <string name="account_sign_in_offline">インターネットにつながると、ログインできます。</string>
+  <string name="entering_keys">入力するシフト</string>
+  <string name="month_choose_hint">押すと月を選べます</string>
+  <string name="go_back_to">%1$sに戻る</string>
   <string name="text_count">%1$d文字中%2$d文字</string>
   <string name="account_offline">インターネットにつながると、ログアウトとアカウントの削除ができます。</string>
   <string name="account_continue_with_apple">Appleで続ける</string>
@@ -241,6 +244,7 @@
   <string name="new_group_failed">グループを作れませんでした</string>
   <string name="invite">メンバーを招待</string>
   <string name="invite_qr">招待のQRコード</string>
+  <string name="invite_qr_menu">共有・保存</string>
   <string name="invite_qr_note">この画面を相手に読み取ってもらいます</string>
   <string name="invite_link_failed">リンクを読み込めませんでした</string>
   <string name="invite_offline">接続できません</string>

@@ -31,11 +31,8 @@ fun MemberAvatar(name: String, photoId: String, shelf: PhotoShelf?, size: Dp, mo
     Image(painterResource(sample), contentDescription = null, modifier.size(size).clip(CircleShape), contentScale = ContentScale.Crop)
     return
   }
-  if (photoId.isNotEmpty()) {
-    PhotoPicture(photoId, shelf, modifier.size(size).clip(CircleShape))
-    return
-  }
   val colors = LocalThemeColors.current
+  // The name's letter, under the photo while it loads or when it cannot be read, as iOS's.
   Box(
     modifier.size(size).background(if (me) colors.accentFill else colors.fillSecondary, CircleShape),
     contentAlignment = Alignment.Center,
@@ -46,6 +43,7 @@ fun MemberAvatar(name: String, photoId: String, shelf: PhotoShelf?, size: Dp, mo
       fontSize = with(LocalDensity.current) { (size * 0.45f).toSp() },
       fontWeight = FontWeight.SemiBold,
     )
+    if (photoId.isNotEmpty()) PhotoPicture(photoId, shelf, Modifier.matchParentSize().clip(CircleShape), ground = null)
   }
 }
 

@@ -16,12 +16,13 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.requiredWidth
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHost
@@ -187,6 +188,7 @@ fun MonthPicturePage(month: YearMonth, onBack: () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
       ) {
         OutlinedButton(
+          shapes = ButtonDefaults.shapes(),
           onClick = {
             scope.launch {
               val shared = picture(layer)?.let { sharePicture(context, it, "month", title) } ?: false
@@ -203,6 +205,7 @@ fun MonthPicturePage(month: YearMonth, onBack: () -> Unit) {
           Text(stringResource(R.string.picture_share))
         }
         Button(
+          shapes = ButtonDefaults.shapes(),
           onClick = {
             scope.launch {
               if (picture(layer)?.let { savePicture(context, it, "pochical-${page.first}.png") } == true) {

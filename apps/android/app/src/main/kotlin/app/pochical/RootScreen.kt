@@ -6,6 +6,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteItem
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldValue
 import androidx.compose.material3.adaptive.navigationsuite.rememberNavigationSuiteScaffoldState
@@ -13,9 +14,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
@@ -38,10 +39,10 @@ import app.pochical.groups.GroupsScreen
 import app.pochical.groups.InvitePage
 import app.pochical.groups.JoinScreen
 import app.pochical.groups.LocalValues
-import app.pochical.kit.AppLink
-import app.pochical.kit.GROUP_THREAD
 import app.pochical.groups.NewGroupPage
 import app.pochical.groups.ScanScreen
+import app.pochical.kit.AppLink
+import app.pochical.kit.GROUP_THREAD
 import app.pochical.notifications.ChatNotificationsPage
 import app.pochical.patterns.AddPatternPage
 import app.pochical.patterns.PatternEditor
@@ -198,12 +199,14 @@ private fun TabsScreen(navigator: RootNavigator, navigation: PageNavigation) {
   // Read once over the tabs, for their badges and the group rail's.
   val unread = rememberNotifyingUnread()
   val badges = tabBadges(unread)
+  // Material 3 Expressive's navigation suite: its short bar on a phone, its wide rail on a larger
+  // window, rather than the older bar and rail.
   NavigationSuiteScaffold(
     state = suite,
-    navigationSuiteItems = {
+    navigationItems = {
       RootTab.entries.forEach { tab ->
         val selected = tab == navigation.tab
-        item(
+        NavigationSuiteItem(
           selected = selected,
           onClick = { navigation.select(tab) },
           icon = {
