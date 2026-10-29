@@ -57,6 +57,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -72,6 +73,7 @@ import app.pochical.groups.GroupMarkView
 import app.pochical.groups.LocalGroupCalls
 import app.pochical.groups.LocalValues
 import app.pochical.groups.MemberAvatar
+import app.pochical.groups.SAMPLE_PHOTO
 import app.pochical.kit.GroupCalls
 import app.pochical.kit.GroupMarkValue
 import app.pochical.kit.GroupMemberRow
@@ -327,7 +329,20 @@ fun MemberProfileSheet(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp),
       ) {
-        MemberAvatar(person.name, person.photoId, shelf, PROFILE_FACE)
+        // Their face opens large when it is a photo.
+        var faceOpen by remember { mutableStateOf(false) }
+        val opensLarge = stringResource(R.string.profile_photo_open)
+        val photo = stringResource(R.string.profile_photo_of, person.name)
+        // /design's sample faces are drawn on the device, not fetched: they open nothing.
+        val opens = person.photoId.isNotEmpty() && !person.photoId.startsWith(SAMPLE_PHOTO)
+        MemberAvatar(
+          person.name,
+          person.photoId,
+          shelf,
+          PROFILE_FACE,
+          if (opens) Modifier.clip(CircleShape).clickable(onClickLabel = opensLarge) { faceOpen = true }.semantics { contentDescription = photo } else Modifier,
+        )
+        if (faceOpen) FaceViewer(person.photoId, shelf, person.name) { faceOpen = false }
         Text(person.name, style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
         if (blocked) {
           Text(
