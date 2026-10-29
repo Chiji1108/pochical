@@ -30,6 +30,8 @@ import app.pochical.LimitedTextField
 import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.ReviewPrompt
+import app.pochical.SectionRow
+import app.pochical.SettingsRow
 import app.pochical.design.TextLimits
 import app.pochical.kit.GroupMarkValue
 import app.pochical.kit.MarkPhotoGone
@@ -132,11 +134,9 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
         )
       }
       item {
-        ListItem(
-          headlineContent = { Text(stringResource(R.string.group_mark)) },
-          trailingContent = { GroupMarkBadge(mark) },
-          modifier = Modifier.clickable { editingMark = true },
-        )
+        SectionRow(0, 1, Modifier.padding(vertical = 8.dp)) {
+          SettingsRow(stringResource(R.string.group_mark), R.drawable.ic_palette, onClick = { editingMark = true }, valueContent = { GroupMarkBadge(mark) })
+        }
       }
       item {
         LimitedTextField(

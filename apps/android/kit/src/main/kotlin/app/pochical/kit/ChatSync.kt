@@ -193,6 +193,24 @@ internal suspend fun SyncDao.photosLetGo(changes: List<Change>, groupId: String)
     }
 
 /**
+ * The photos of the group's lines the device holds, let go of with them as they are reset (the
+ * lines taken back while away come again only as lines taken back) or the group is left
+ * (spec/chat.md, Photos). Read in the transaction that lets go of the lines, before it does.
+ */
+internal suspend fun SyncDao.photosHeld(groupId: String): List<String> =
+  linesOf(groupId, LineKind.Photos.key).flatMap { WireLine.parseFrom(it).content.photos.photosList.map { photo -> photo.id } }
+
+/**
+ * The groups [changes] say the user left (or was taken out of), each with the photos the device
+ * holds of it: its lines', its members' faces and its mark's. Read in the transaction the changes
+ * are taken in, before them.
+ */
+internal suspend fun SyncDao.placesLeft(changes: List<Change>): Map<String, List<String>> =
+  changes
+    .filter { it.kindCase == KindCase.MEMBERSHIP && it.membership.left }
+    .associate { it.membership.groupId.let { groupId -> groupId to photosHeld(groupId) + groupFaces(groupId) } }
+
+/**
  * The edits an Acked names stop waiting, but for the sends the group [refused]: those stay as lines
  * not sent (spec/chat.md, Lines on their way), which the group does not have.
  */

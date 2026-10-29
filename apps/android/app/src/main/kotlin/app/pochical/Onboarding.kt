@@ -352,6 +352,7 @@ private fun OrderStep(template: JobTemplate, ids: List<String>, onBack: () -> Un
   SettingsPage(
     jobOrderTitle(template),
     onBack = onBack,
+    collapsing = false,
     actions = {
       TextButton(onClick = { onDone(ids, typing.sequence, typing.anchor) }, enabled = typing.sequence.isNotEmpty() && !waiting) {
         Text(stringResource(R.string.job_done))

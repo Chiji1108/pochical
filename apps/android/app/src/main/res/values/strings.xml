@@ -113,6 +113,8 @@
   <string name="account_sign_in_body">機種変更しても、スマホとタブレットでも、同じシフトとグループを使えます。</string>
   <string name="account_sign_in_note">はじめてなら、この端末のデータがそのまま引き継がれます。すでにアカウントがあれば、そのデータを開きます。ログインしなくても、この端末ではそのまま使えます。</string>
   <string name="account_sign_in_offline">インターネットにつながると、ログインできます。</string>
+  <string name="text_count">%1$d文字中%2$d文字</string>
+  <string name="account_offline">インターネットにつながると、ログアウトとアカウントの削除ができます。</string>
   <string name="account_continue_with_apple">Appleで続ける</string>
   <string name="account_continue_with_google">Googleで続ける</string>
   <string name="account_sign_in_failed">ログインできませんでした。時間をおいてもう一度お試しください。</string>

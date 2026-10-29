@@ -421,22 +421,6 @@ fun rememberMeId(): String? {
   return (state as? AccountState.SignedIn)?.userId ?: (state as? AccountState.Changing)?.before?.userId
 }
 
-/** Someone in the group, by their face and their name in it. */
-@Composable
-fun MemberRow(member: GroupMemberRow, groupId: String, modifier: Modifier = Modifier, me: Boolean = false) {
-  ListItem(
-    headlineContent = {
-      Text(
-        if (me) stringResource(R.string.member_me, member.displayName) else member.displayName,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-      )
-    },
-    leadingContent = { MemberAvatar(member.displayName, member.photoId, PhotoShelf.Group(groupId), 28.dp, me = me) },
-    modifier = modifier,
-  )
-}
-
 /** The open group's buttons in the bar over its page: メンバーを招待 and グループの設定. */
 @Composable
 fun GroupButtons(groupId: String, open: (RootPage) -> Unit) {
