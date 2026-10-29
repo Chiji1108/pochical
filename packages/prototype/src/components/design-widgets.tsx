@@ -308,6 +308,7 @@ export function useWords() {
       inDays: (inDays: number) =>
         inDays === 1 ? "Tomorrow" : `in ${inDays} days`,
       apart: "No days off together yet",
+      noOneElse: "No one else in the group yet",
       // Over the count on the lock screen's round face.
       circle: { all: "Everyone", alone: "Off", together: "Together" },
       nextOff: "Next day off",
@@ -352,6 +353,7 @@ export function useWords() {
     inDays: inDaysWords,
     nextDay: () => "明日",
     nextOff: "次の休み",
+    noOneElse: "ほかのメンバーがまだいません",
     nothingYet: "まだ入っていません",
     offAll: "みんな休み",
     offTogether: "一緒に休める日",

@@ -42,6 +42,7 @@ import type { GroupProfile } from "./group-do";
 import { markColumns } from "./group-marks";
 import { isAhead } from "./hlc";
 import { isId } from "./ids";
+import { errorFields } from "./log";
 import {
   deleteBatchesOf,
   deletePhotosUnder,
@@ -888,7 +889,11 @@ export class UserDO extends DurableObject<Env> {
           )
         );
       } catch (error) {
-        console.error(`Deleting user ${userId}'s photos failed`, error);
+        console.error({
+          error: errorFields(error),
+          message: "Deleting a user's photos failed",
+          userId,
+        });
         return bucketRetryWait(countFailure(kv, PHOTOS_FAILURES));
       }
       kv.delete(PHOTOS_FAILURES);
@@ -1206,7 +1211,12 @@ export class UserDO extends DurableObject<Env> {
         // oxlint-disable-next-line no-await-in-loop -- one group at a time
         await this.pushTo(groupId, userId, this.sharedAfter(pushedCursor));
       } catch (error) {
-        console.error(`Pushing to group ${groupId} failed`, error);
+        console.error({
+          error: errorFields(error),
+          groupId,
+          message: "Pushing to a group failed",
+          userId,
+        });
         const wait = this.pushFailed(groupId);
         if (wait !== undefined) {
           retries.push(wait);

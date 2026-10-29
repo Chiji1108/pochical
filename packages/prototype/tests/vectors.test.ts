@@ -1204,7 +1204,7 @@ describe("spec/vectors/widgets.json", () => {
       }));
       const [only] = people;
       let companion: WidgetCompanion | undefined;
-      if (people.length > 1) {
+      if (people.length > 1 || offs.group === true) {
         companion = {
           kind: "group",
           mark: { emoji: "🍉", kind: "emoji" },

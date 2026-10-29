@@ -105,6 +105,7 @@ export const sendPush = async (
   const sandbox = device.platform === "apns" && device.sandbox;
   if (outcome.sent !== "sent") {
     console.warn({
+      message: "Push not sent",
       push: {
         ...outcome,
         kind: push.kind,
