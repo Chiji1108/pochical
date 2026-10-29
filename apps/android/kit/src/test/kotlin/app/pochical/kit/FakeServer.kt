@@ -39,6 +39,8 @@ import app.pochical.v1.pong
 import app.pochical.v1.serverError
 import app.pochical.v1.serverFrame
 import app.pochical.v1.welcome
+import app.pochical.v1.patternValue
+import app.pochical.v1.pattern
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -366,6 +368,21 @@ class FakeServer : AutoCloseable {
       valuesOf(user)[taken.valueKey!!] = taken
       for (each in openOf(user)) each.send(serverFrame { changes = changes { changes += taken } })
     }
+  }
+
+  /** A pattern [id] [user] made on another device, sent to every socket of theirs open. */
+  @Synchronized
+  fun patternElsewhere(id: String, user: String = userId) {
+    val taken = change {
+      cursor = next(user)
+      pattern = patternValue {
+        this.id = id
+        pattern = pattern { name = id }
+        hlc = hlc { physicalMs = System.currentTimeMillis(); deviceId = "other" }
+      }
+    }
+    valuesOf(user)[taken.valueKey!!] = taken
+    for (each in openOf(user)) each.send(serverFrame { changes = changes { changes += taken } })
   }
 
   /** The value [user]'s DO holds for the day's field, as it would send it. */
