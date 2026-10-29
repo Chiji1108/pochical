@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -135,6 +136,14 @@ private fun SignInSection(state: AccountState) {
     horizontalAlignment = Alignment.CenterHorizontally,
     verticalArrangement = Arrangement.spacedBy(8.dp),
   ) {
+    // What is kept, in the accent on its tint, as /design and iOS head it.
+    val colors = LocalThemeColors.current
+    Icon(
+      painterResource(R.drawable.ic_cloud_done),
+      contentDescription = null,
+      Modifier.padding(bottom = 8.dp).size(56.dp).background(colors.accentContainer, CircleShape).padding(14.dp),
+      tint = colors.accentDefault,
+    )
     Text(
       stringResource(R.string.account_sign_in_title),
       style = MaterialTheme.typography.titleLarge,
