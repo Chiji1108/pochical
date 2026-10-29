@@ -28,6 +28,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -35,7 +36,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -86,7 +86,7 @@ import kotlinx.coroutines.launch
 fun ChatNotificationsRow(open: (RootPage) -> Unit) {
   val allowed by LocalNotificationPermission.current.allowed.collectAsStateWithLifecycle()
   val values = LocalValues.current
-  val groups by remember(values) { values.groups() }.collectAsState(emptyList())
+  val groups by remember(values) { values.groups() }.collectAsStateWithLifecycle(emptyList())
   // Its value once the device has read the switches, never a guess before.
   val summary = rememberChatNotifications()?.let { chatNotificationsSummary(groups.map { it.id }, it, allowed) }
   SettingsRow(
@@ -114,8 +114,8 @@ fun ChatNotificationsRow(open: (RootPage) -> Unit) {
 fun ChatNotificationsPage(onBack: () -> Unit) {
   val context = LocalContext.current
   val values = LocalValues.current
-  val groups by remember(values) { values.groups() }.collectAsState(emptyList())
-  val members by remember(values) { values.allMembers() }.collectAsState(emptyList())
+  val groups by remember(values) { values.groups() }.collectAsStateWithLifecycle(emptyList())
+  val members by remember(values) { values.allMembers() }.collectAsStateWithLifecycle(emptyList())
   val read = rememberChatNotifications()
   val me = rememberMeId()
   val snackbar = remember { SnackbarHostState() }

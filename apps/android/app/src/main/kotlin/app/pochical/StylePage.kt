@@ -26,7 +26,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.calendar.DayCell
 import app.pochical.calendar.DayEntry
 import app.pochical.calendar.DayLook
@@ -105,7 +105,7 @@ private val SAMPLE_DAY = LocalDate.of(2026, 10, 5)
 fun StylePage(onBack: () -> Unit) {
   val settings = LocalDeviceSettings.current
   val look = settings.device.look
-  val calendar by LocalOwnDays.current.calendar.collectAsState()
+  val calendar by LocalOwnDays.current.calendar.collectAsStateWithLifecycle()
   val patterns = calendar.patterns.filterNot { it.archived }
   val work = patterns.firstOrNull { !it.countsAsOff }
   val offs = patterns.filter { it.countsAsOff }
@@ -189,7 +189,7 @@ fun StylePage(onBack: () -> Unit) {
 @Composable
 fun StyleRow(open: (RootPage) -> Unit) {
   val device = LocalDeviceSettings.current.device
-  val calendar by LocalOwnDays.current.calendar.collectAsState()
+  val calendar by LocalOwnDays.current.calendar.collectAsStateWithLifecycle()
   val patterns = calendar.patterns.filterNot { it.archived }
   val work = patterns.firstOrNull { !it.countsAsOff } ?: patterns.firstOrNull()
   val spoken = "${stringResource(Shape.of(device.look).title)}、${device.theme.displayName}"

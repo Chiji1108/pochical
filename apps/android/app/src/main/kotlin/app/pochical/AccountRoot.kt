@@ -17,10 +17,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -28,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.calendar.LocalOwnDays
 import app.pochical.design.Metrics
 import app.pochical.kit.AccountState
@@ -41,8 +41,8 @@ import app.pochical.kit.AccountState
 @Composable
 fun AccountRoot() {
   val account = LocalAccount.current
-  val state by account.state.collectAsState()
-  val deleted by account.deleted.collectAsState()
+  val state by account.state.collectAsStateWithLifecycle()
+  val deleted by account.deleted.collectAsStateWithLifecycle()
   // The deletions said so far, so each is said once, an activity made again included.
   var said by rememberSaveable { mutableIntStateOf(account.deleted.value) }
   when (val now = state) {
@@ -111,7 +111,7 @@ private fun ErasingScreen(erasing: AccountState.Erasing, retry: () -> Unit) {
 @Composable
 private fun FirstRunOrTabs() {
   val firstRun = LocalFirstRun.current
-  val calendar by LocalOwnDays.current.calendar.collectAsState()
+  val calendar by LocalOwnDays.current.calendar.collectAsStateWithLifecycle()
   val holds = calendar.patterns.isNotEmpty()
   LaunchedEffect(holds, firstRun.done) { if (holds && !firstRun.done) firstRun.kit.finish() }
   if (firstRun.done || holds) RootScreen(rememberRootNavigator()) else Onboarding()
