@@ -33,17 +33,19 @@ import app.pochical.calendar.DAY_FULL_HEIGHT
 import app.pochical.calendar.DayCell
 import app.pochical.calendar.DayEntry
 import app.pochical.calendar.DayLook
+import app.pochical.calendar.MonthGrid
 import app.pochical.calendar.OffShown
 import app.pochical.calendar.OwnCalendar
 import app.pochical.calendar.Pattern
 import app.pochical.calendar.PatternKeys
 import app.pochical.calendar.TrayAction
 import app.pochical.calendar.TrayActionsRow
-import app.pochical.calendar.holidayName
-import app.pochical.calendar.monthWeeks
-import app.pochical.calendar.pageCount
 import app.pochical.calendar.WeekdayRow
+import app.pochical.calendar.holidayName
+import app.pochical.calendar.monthCellHeight
+import app.pochical.calendar.monthWeeks
 import app.pochical.calendar.monthWithYear
+import app.pochical.calendar.pageCount
 import app.pochical.design.Metrics
 import app.pochical.design.Springs
 import app.pochical.kit.repeatSchedule
@@ -67,7 +69,6 @@ sealed interface OrderCover {
 /** How far the months reach either side of the order's 1st day. */
 private const val MONTHS_AROUND = 24
 
-private val DAY_GAP = Metrics.spacingStep
 
 /**
  * A repeating order typed on a month, as ポチポチ入力 enters days (/design's RepeatCalendar;
@@ -131,7 +132,7 @@ fun RepeatCalendar(
     }
     WeekdayRow(week)
     BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
-      val cell = ((maxHeight - DAY_GAP * 5) / 6).coerceIn(Metrics.touch, DAY_FULL_HEIGHT)
+      val cell = monthCellHeight(maxHeight)
       HorizontalPager(pages, Modifier.fillMaxSize(), verticalAlignment = Alignment.Top) { page ->
         MonthOfOrder(monthAt(page), typing, cover, byId, before, until, holidayShift, holidayCountry, cell) { type(typing.pressed(it)) }
       }
@@ -185,38 +186,32 @@ private fun MonthOfOrder(
     }
   val kept = remember(before, first) { before?.shown(first, last).orEmpty() }
   val today = LocalDate.now()
-  Column(verticalArrangement = Arrangement.spacedBy(DAY_GAP)) {
-    for (days in weeks) {
-      Row(horizontalArrangement = Arrangement.spacedBy(DAY_GAP)) {
-        for (day in days) {
-          val index = ChronoUnit.DAYS.between(typing.anchor, day)
-          val typed = index in 0 until typing.sequence.size
-          val inOrder = day >= start && (until == null || day < until)
-          val comesRound = inOrder && !typed && before?.hasOwnShift(day) != true
-          val shift = if (typed) typing.sequence[index.toInt()] else if (comesRound) planned[day] else kept[day]?.shift
-          val entry = if (typed || comesRound) shift?.let { DayEntry(it) } else kept[day]
-          DayCell(
-            DayLook(
-              day = day,
-              entry = entry,
-              pattern = shift?.let(patterns::get),
-              note = null,
-              holiday = day.holidayName(holidayCountry),
-              outside = YearMonth.from(day) != month || !inOrder,
-              isToday = day == today,
-              isSelected = index == typing.cursor.toLong(),
-              framesToday = false,
-              faint = comesRound,
-              // The order is what is being looked at, so a day off left blank shows faint.
-              offShown = OffShown.Faint,
-            ),
-            height = cell,
-            colorsHoliday = week.holiday,
-            onClick = { onPress(day) },
-            modifier = Modifier.weight(1f),
-          )
-        }
-      }
-    }
+  MonthGrid(weeks, cell) { _, day ->
+    val index = ChronoUnit.DAYS.between(typing.anchor, day)
+    val typed = index in 0 until typing.sequence.size
+    val inOrder = day >= start && (until == null || day < until)
+    val comesRound = inOrder && !typed && before?.hasOwnShift(day) != true
+    val shift = if (typed) typing.sequence[index.toInt()] else if (comesRound) planned[day] else kept[day]?.shift
+    val entry = if (typed || comesRound) shift?.let { DayEntry(it) } else kept[day]
+    DayCell(
+      DayLook(
+        day = day,
+        entry = entry,
+        pattern = shift?.let(patterns::get),
+        note = null,
+        holiday = day.holidayName(holidayCountry),
+        outside = YearMonth.from(day) != month || !inOrder,
+        isToday = day == today,
+        isSelected = index == typing.cursor.toLong(),
+        framesToday = false,
+        faint = comesRound,
+        // The order is what is being looked at, so a day off left blank shows faint.
+        offShown = OffShown.Faint,
+      ),
+      height = cell,
+      colorsHoliday = week.holiday,
+      onClick = { onPress(day) },
+      modifier = Modifier.weight(1f),
+    )
   }
 }
