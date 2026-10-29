@@ -13,11 +13,7 @@ val LocalDate.weekday: Int
 /** The first day of the week `this` is in, the week starting on `weekStart`. */
 fun LocalDate.weekStartingOn(weekStart: Int): LocalDate = minusDays(((weekday - weekStart + 7) % 7).toLong())
 
-/**
- * The days `month`'s page shows, a week to a row from `weekStart`: whole
- * weeks covering the month, with the days of the months around it filling
- * the first and last (spec/vectors/month.json).
- */
+/** The days `month`'s page shows, a week to a row from `weekStart` (:kit's Period.weeks). */
 fun monthWeeks(month: YearMonth, weekStart: Int): List<List<LocalDate>> = Period.of(month, 1).weeks(weekStart)
 
 /** The country whose holidays this device's days take: its region's when Pochical has them, else Japan's. */
