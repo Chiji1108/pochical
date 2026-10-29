@@ -622,7 +622,7 @@ fun ChatPage(
       linkItems = linkItems,
       takenTitle = { floatingDay.taken },
     )
-  Box {
+  PhotoZoomLayout(viewing, reducedMotion, places = {
     ChatScaffold(groupId, threadId, support, members, groups, socket, onBack, onPhotos, say, onTitle) {
       Column(Modifier.fillMaxSize().imePadding()) {
         Box(Modifier.weight(1f).fillMaxWidth()) {
@@ -690,10 +690,9 @@ fun ChatPage(
       }
     }
     LineMenu(menu)
-    viewing?.let { open ->
-      FollowPhotos(groupId, threadId, open)
-      PhotoViewer(groupId, threadId, open, nameOf, onClose = { viewing = null })
-    }
+  }) { open, shown ->
+    FollowPhotos(groupId, threadId, open)
+    PhotoViewer(groupId, threadId, open, nameOf, onClose = { viewing = null }, onShown = { shown(it.photo.id) }, zoom = this)
   }
   if (notKept) NotKeptDialog { notKept = false }
   val group = groups.firstOrNull { it.id == groupId }

@@ -2,6 +2,7 @@ package app.pochical.chat
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
@@ -130,7 +131,16 @@ internal val ChatPhotoItem.layoutKey: String
  * the photo shown, for a list to keep its square in sight.
  */
 @Composable
-fun PhotoViewer(groupId: String, threadId: String, open: OpenPhotos, nameOf: (String) -> String, onClose: () -> Unit, onShown: (PhotoKey) -> Unit = {}) {
+fun PhotoViewer(
+  groupId: String,
+  threadId: String,
+  open: OpenPhotos,
+  nameOf: (String) -> String,
+  onClose: () -> Unit,
+  onShown: (ChatPhotoItem) -> Unit = {},
+  /** The viewer's coming and going, for the photo shown to come out of its place and go back into it; null to fade alone. */
+  zoom: AnimatedVisibilityScope? = null,
+) {
   val calls = LocalGroupCalls.current
   val files = LocalPhotoFiles.current
   val context = LocalContext.current
@@ -157,7 +167,7 @@ fun PhotoViewer(groupId: String, threadId: String, open: OpenPhotos, nameOf: (St
     snapshotFlow { pager.settledPage }.distinctUntilChanged().collect { page ->
       val key = photos.getOrNull(page)?.key ?: return@collect
       if (key != open.run.shown) open.change { show(key) }
-      shown(key)
+      photos.getOrNull(page)?.let(shown)
       // The two on each side fetched ahead onto the disk, drawn only as they show.
       val loader = SingletonImageLoader.get(context)
       for (near in (page - 2..page + 2) - page) {
@@ -183,7 +193,16 @@ fun PhotoViewer(groupId: String, threadId: String, open: OpenPhotos, nameOf: (St
             place?.let { stringResource(R.string.chat_photo_place_said, it.first, it.second) },
           )
           .joinToString("、")
-      LargePhoto(photo, groupId, said, onTap = { controls = !controls }, onPulled = { if (page == pager.currentPage) pulled = it }, onDismissed = { close() })
+      LargePhoto(
+        photo,
+        groupId,
+        said,
+        onTap = { controls = !controls },
+        onPulled = { if (page == pager.currentPage) pulled = it },
+        onDismissed = { close() },
+        // Only the photo shown goes back into its place.
+        Modifier.then(if (page == pager.currentPage) Modifier.largePhoto(photo.photo.id, zoom) else Modifier),
+      )
     }
     AnimatedVisibility(controls && pulled == 0f, enter = fadeIn(), exit = fadeOut()) {
       Box(Modifier.fillMaxSize()) {
@@ -269,8 +288,8 @@ fun FollowPhotos(groupId: String, threadId: String, open: OpenPhotos) {
  * blur, else the system's spinner) under the photo itself as it comes.
  */
 @Composable
-private fun LargePhoto(item: ChatPhotoItem, groupId: String, said: String, onTap: () -> Unit, onPulled: (Float) -> Unit, onDismissed: () -> Unit) {
-  LargeImage(ChatPhotoData(item.photo.id, groupId, small = false), said, onTap, onPulled, onDismissed) {
+private fun LargePhoto(item: ChatPhotoItem, groupId: String, said: String, onTap: () -> Unit, onPulled: (Float) -> Unit, onDismissed: () -> Unit, modifier: Modifier = Modifier) {
+  LargeImage(ChatPhotoData(item.photo.id, groupId, small = false), said, onTap, onPulled, onDismissed, modifier) {
     val blur = remember(item.photo.id) { blurOf(item.photo)?.asImageBitmap() }
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
       // What the chat drew of it, read from memory or the disk cache at once.
@@ -316,7 +335,7 @@ fun FaceViewer(photoId: String, shelf: PhotoShelf, name: String, onClose: () -> 
  */
 @Composable
 @OptIn(ExperimentalTelephotoApi::class)
-private fun LargeImage(model: Any, said: String, onTap: () -> Unit, onPulled: (Float) -> Unit, onDismissed: () -> Unit, coming: @Composable () -> Unit) {
+private fun LargeImage(model: Any, said: String, onTap: () -> Unit, onPulled: (Float) -> Unit, onDismissed: () -> Unit, modifier: Modifier = Modifier, coming: @Composable () -> Unit) {
   val zoom = rememberZoomableState(ZoomSpec(maxZoomFactor = MOST_ZOOM))
   val image = rememberZoomableImageState(zoom)
   val flick = rememberFlickToDismissState(rotateOnDrag = false)
@@ -334,7 +353,7 @@ private fun LargeImage(model: Any, said: String, onTap: () -> Unit, onPulled: (F
   val zoomOut = stringResource(R.string.chat_photo_zoom_out)
   FlickToDismiss(
     flick,
-    Modifier.fillMaxSize().semantics(mergeDescendants = true) {
+    modifier.fillMaxSize().semantics(mergeDescendants = true) {
       contentDescription = said
       // Zoomed in on its middle a step at a time, as far as it goes, and back.
       customActions =

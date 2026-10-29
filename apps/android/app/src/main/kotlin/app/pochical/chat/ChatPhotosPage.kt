@@ -39,6 +39,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.unit.dp
 import app.pochical.LocalThemeColors
 import app.pochical.R
+import app.pochical.calendar.rememberReducedMotion
 import app.pochical.groups.LocalValues
 import app.pochical.kit.PhotoRun
 import java.time.Instant
@@ -84,7 +85,7 @@ fun ChatPhotosPage(groupId: String, threadId: String, onBack: () -> Unit) {
       if (viewing == null) listed.change { show(key) }
     }
   }
-  Box(Modifier.fillMaxSize()) {
+  PhotoZoomLayout(viewing, rememberReducedMotion(), places = {
     Scaffold(
       topBar = {
         TopAppBar(
@@ -115,7 +116,7 @@ fun ChatPhotosPage(groupId: String, threadId: String, onBack: () -> Unit) {
                 retries = true,
                 onOpen = open,
                 modifier =
-                  Modifier.aspectRatio(1f).clearAndSetSemantics {
+                  Modifier.aspectRatio(1f).photoPlace(item.photo.id).clearAndSetSemantics {
                     contentDescription = said
                     role = Role.Image
                     onClick { open(); true }
@@ -131,22 +132,23 @@ fun ChatPhotosPage(groupId: String, threadId: String, onBack: () -> Unit) {
           }
       }
     }
-    viewing?.let { open ->
-      PhotoViewer(
-        groupId,
-        threadId,
-        open,
-        nameOf = { names[it] ?: deleted },
-        onClose = { viewing = null },
-        // Its square kept in sight as the photo opened large is swiped, as Photos' grid follows.
-        onShown = { key ->
-          val index = photos.indexOfFirst { it.key == key }
-          if (index >= 0 && grid.layoutInfo.visibleItemsInfo.none { it.index == index }) {
-            pending = index
-          }
-        },
-      )
-    }
+  }) { open, shown ->
+    PhotoViewer(
+      groupId,
+      threadId,
+      open,
+      nameOf = { names[it] ?: deleted },
+      onClose = { viewing = null },
+      // Its square kept in sight as the photo opened large is swiped, as Photos' grid follows, so it closes into it.
+      onShown = { item ->
+        shown(item.photo.id)
+        val index = photos.indexOfFirst { it.key == item.key }
+        if (index >= 0 && grid.layoutInfo.visibleItemsInfo.none { it.index == index }) {
+          pending = index
+        }
+      },
+      zoom = this,
+    )
   }
   LaunchedEffect(pending) { pending?.let { grid.scrollToItem(it); pending = null } }
 }

@@ -136,7 +136,14 @@ fun PhotoLine(photos: List<ChatPhoto>, groupId: String, waiting: WaitingLine?, o
     Box(modifier) {
       // Not while it goes up; one of the member's own once up, or not sent, opens alone.
       val opens = waiting == null || waiting.failed || waiting.sending
-      ChatPhotoImage(photos[index], groupId, retries = waiting == null, onOpen = onOpen?.takeIf { opens }?.let { open -> { open(index) } }, Modifier.matchParentSize())
+      // The place it opens large out of; not the copy lifted over the line's menu, which opens nothing.
+      ChatPhotoImage(
+        photos[index],
+        groupId,
+        retries = waiting == null,
+        onOpen = onOpen?.takeIf { opens }?.let { open -> { open(index) } },
+        Modifier.matchParentSize().then(if (onOpen != null) Modifier.photoPlace(photos[index].id) else Modifier),
+      )
       if (waiting != null && !waiting.failed) PhotoGoingUp(photos[index].id, waiting.sending, onStop.takeIf { !waiting.sending }, Modifier.matchParentSize())
     }
   }
