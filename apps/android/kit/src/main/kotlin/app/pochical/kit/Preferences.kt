@@ -33,11 +33,29 @@ class PreferencePart<M : MessageLite>(
 ) {
   fun encode(settings: DeviceSettings): ByteArray = write(settings).toByteArray()
 
-  fun adopt(settings: DeviceSettings, value: ByteArray): DeviceSettings = settings.take(parse(value))
+  /** [settings] with [value] taken, null for a value this app cannot read. */
+  fun adopt(settings: DeviceSettings, value: ByteArray): DeviceSettings? =
+    try {
+      settings.take(parse(value))
+    } catch (_: UnreadablePreference) {
+      null
+    } catch (_: InvalidProtocolBufferException) {
+      null
+    }
 }
 
 /** A preference holding what this app has no name for, or a number out of its range, as an app newer than it may write. */
 class UnreadablePreference(message: String) : Exception(message)
+
+/** The marks' look, which goes to the user's groups too (spec/sync-protocol.md, Profile). */
+private val lookPart =
+  PreferencePart("look", "pochical.v1.LookPreference", LookPreference::parseFrom, { it.look.message }) {
+    copy(look = Look(it))
+  }
+
+/** The look the account keeps among [preferences], null while it keeps none or one this app cannot read. */
+internal fun accountLook(preferences: Map<String, ByteArray>): Look? =
+  preferences[lookPart.key]?.let { lookPart.adopt(DeviceSettings(), it)?.look }
 
 /** The parts kept with the account, by key; 外観 and a picture's light or dark are the device's own. */
 val preferenceParts: List<PreferencePart<*>> =
@@ -50,9 +68,7 @@ val preferenceParts: List<PreferencePart<*>> =
     ) {
       copy(themeId = it.id)
     },
-    PreferencePart("look", "pochical.v1.LookPreference", LookPreference::parseFrom, { it.look.message }) {
-      copy(look = Look(it))
-    },
+    lookPart,
     PreferencePart("week", "pochical.v1.WeekPreference", WeekPreference::parseFrom, { it.week.message }) {
       copy(week = Week(it))
     },
@@ -82,14 +98,7 @@ val DeviceSettings.preferences: Map<String, ByteArray>
 /** The parts [preferences] holds; a key this app has none of, or a value it cannot read, leaves the device's own. */
 fun DeviceSettings.adopting(preferences: Map<String, ByteArray>): DeviceSettings =
   preferenceParts.fold(this) { settings, part ->
-    val value = preferences[part.key] ?: return@fold settings
-    try {
-      part.adopt(settings, value)
-    } catch (_: UnreadablePreference) {
-      settings
-    } catch (_: InvalidProtocolBufferException) {
-      settings
-    }
+    preferences[part.key]?.let { part.adopt(settings, it) } ?: settings
   }
 
 /** The keys whose value differs between [before] and this. */
