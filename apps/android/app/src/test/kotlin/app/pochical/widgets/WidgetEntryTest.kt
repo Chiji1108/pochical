@@ -15,6 +15,7 @@ import app.pochical.vectors
 import java.time.LocalDate
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -56,7 +57,7 @@ class WidgetEntryTest {
         val kind = me(date)
         return WidgetDay.of(date, kind?.let(::ShownDay), kind?.let { pattern(it, null, off = it == "off") }, false, Week(), false)
       }
-      val offs = widgetOffs(dayAt(0), people, ::dayAt)
+      val offs = widgetOffs(dayAt(0), people, case["group"]?.jsonPrimitive?.boolean == true, ::dayAt)
       val expected = case.getValue("expected").jsonObject
       val none = expected["none"]?.takeUnless { it is JsonNull }?.jsonObject
       assertEquals(
@@ -98,6 +99,7 @@ class WidgetEntryTest {
     when (none.string("kind")) {
       "waiting" -> NoOff.Waiting(none.strings("names")!!)
       "apart" -> NoOff.Apart
+      "alone" -> NoOff.Alone
       else -> NoOff.NotEntered
     }
 

@@ -71,6 +71,7 @@ private fun noOffWords(none: NoOff?, words: WidgetWords): String =
       else "${first}さん" + (if (others > 0) "ほか${others}人" else "") + "の入力待ち"
     }
     NoOff.Apart -> if (words.english) "No days off together yet" else "重なる休みはまだありません"
+    NoOff.Alone -> if (words.english) "No one else in the group yet" else "ほかのメンバーがまだいません"
     NoOff.NotEntered,
     null -> words.nothingYet
   }

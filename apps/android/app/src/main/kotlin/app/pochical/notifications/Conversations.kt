@@ -108,7 +108,7 @@ class DrawnConversations(
   }
 
   /**
-   * A photo as the app's image loader has it, or fetches it, within the time a push leaves for it
+   * A photo as the app's image loader keeps it, in memory or on the disk, or fetches it, within the time a push leaves for it
    * ([PHOTO_WAIT_MS]): a notification is not held back for a face.
    */
   private suspend fun photo(photoId: String, shelf: PhotoShelf): Bitmap? {

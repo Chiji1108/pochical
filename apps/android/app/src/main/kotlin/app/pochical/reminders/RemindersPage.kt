@@ -21,7 +21,9 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -43,13 +45,18 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.pochical.ChoiceButtons
 import app.pochical.LocalDeviceSettings
+import app.pochical.LocalThemeColors
 import app.pochical.PageNavigation
 import app.pochical.R
 import app.pochical.RootPage
+import app.pochical.RowEnd
 import app.pochical.SectionHeader
-import app.pochical.Segments
+import app.pochical.SettingsCheckRow
 import app.pochical.SettingsPage
+import app.pochical.SettingsRow
+import app.pochical.SettingsSection
 import app.pochical.ShiftMark
 import app.pochical.calendar.LocalOwnDays
 import app.pochical.calendar.OwnCalendar
@@ -57,13 +64,16 @@ import app.pochical.calendar.Pattern
 import app.pochical.calendar.TimeDialog
 import app.pochical.calendar.fullText
 import app.pochical.calendar.row
+import app.pochical.chat.AppIcon
 import app.pochical.kit.Reminder
 import app.pochical.kit.ReminderFiring
 import app.pochical.kit.ShownDay
 import app.pochical.notifications.AskingCard
+import app.pochical.notifications.LocalNotificationAsking
 import app.pochical.notifications.LocalNotificationPermission
 import app.pochical.notifications.PermissionCard
-import app.pochical.notifications.LocalNotificationAsking
+import app.pochical.rowColors
+import app.pochical.segmentShapes
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
@@ -76,18 +86,16 @@ val LocalReminderAlarms = staticCompositionLocalOf<ReminderAlarms> { error("No r
 fun RemindersRow(open: (RootPage) -> Unit) {
   val allowed by LocalNotificationPermission.current.allowed.collectAsStateWithLifecycle()
   val on = LocalDeviceSettings.current.device.reminders.filter { it.on }
-  ListItem(
-    headlineContent = { Text(stringResource(R.string.reminders)) },
-    supportingContent = {
-      Text(
-        when {
-          !allowed || on.isEmpty() -> stringResource(R.string.notifications_off)
-          on.size == 1 -> on.single().name
-          else -> stringResource(R.string.reminders_count, on.size)
-        }
-      )
-    },
-    modifier = Modifier.clickable { open(RootPage.Reminders) },
+  SettingsRow(
+    stringResource(R.string.reminders),
+    R.drawable.ic_alarm,
+    onClick = { open(RootPage.Reminders) },
+    value =
+      when {
+        !allowed || on.isEmpty() -> stringResource(R.string.notifications_off)
+        on.size == 1 -> on.single().name
+        else -> stringResource(R.string.reminders_count, on.size)
+      },
   )
 }
 
@@ -107,23 +115,23 @@ fun RemindersPage(navigation: PageNavigation) {
     LazyColumn(contentPadding = padding) {
       item { PermissionCard() }
       item { ExactAlarmCard(reminders.any { it.on }) }
-      items(reminders, key = { it.id }) { reminder ->
-        ReminderRow(
-          reminder,
-          calendar,
-          onOpen = { navigation.open(RootPage.ReminderEditor(reminder.id)) },
-          onSwitch = { on ->
-            settings.change { device -> device.copy(reminders = device.reminders.map { if (it.id == reminder.id) it.copy(on = on) else it }) }
-            if (on) asking.askOnce()
-          },
-        )
-      }
       item {
-        ListItem(
-          headlineContent = { Text(stringResource(R.string.reminders_add), color = MaterialTheme.colorScheme.primary) },
-          leadingContent = { Icon(painterResource(R.drawable.ic_add), contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-          modifier = Modifier.clickable { navigation.open(RootPage.ReminderEditor(null)) },
-        )
+        SettingsSection() {
+          for (reminder in reminders) {
+            row {
+              ReminderRow(
+                reminder,
+                calendar,
+                onOpen = { navigation.open(RootPage.ReminderEditor(reminder.id)) },
+                onSwitch = { on ->
+                  settings.change { device -> device.copy(reminders = device.reminders.map { if (it.id == reminder.id) it.copy(on = on) else it }) }
+                  if (on) asking.askOnce()
+                },
+              )
+            }
+          }
+          row { SettingsRow(stringResource(R.string.reminders_add), R.drawable.ic_add, onClick = { navigation.open(RootPage.ReminderEditor(null)) }, end = RowEnd.None) }
+        }
       }
     }
   }
@@ -152,12 +160,19 @@ private fun ExactAlarmCard(anyOn: Boolean) {
   )
 }
 
-/** A reminder as a row of the alarms' list: what it is and when it next goes off, opening it to edit, and its switch. */
+/**
+ * A reminder as a row of the alarms' list: what it is and when it next goes off, opening it to edit,
+ * and its switch, named by the reminder for a screen reader.
+ */
 @Composable
 private fun ReminderRow(reminder: Reminder, calendar: OwnCalendar, onOpen: () -> Unit, onSwitch: (Boolean) -> Unit) {
   val shown = remindable(reminder, calendar.patterns)
   val picked = shown.filter { it.id !in reminder.skip }
-  ListItem(
+  SettingsRow(
+    reminder.name,
+    R.drawable.ic_alarm,
+    onClick = onOpen,
+    end = RowEnd.None,
     headlineContent = {
       Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(reminder.name, color = if (reminder.on) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
@@ -170,8 +185,7 @@ private fun ReminderRow(reminder: Reminder, calendar: OwnCalendar, onOpen: () ->
         }
       }
     },
-    supportingContent =
-      if (reminder.on) {
+    supportingContent = if (reminder.on) {
         {
           val next = remember(reminder, calendar) { nextFiring(reminder, calendar) }
           Text(
@@ -179,8 +193,14 @@ private fun ReminderRow(reminder: Reminder, calendar: OwnCalendar, onOpen: () ->
           )
         }
       } else null,
-    trailingContent = { Switch(checked = reminder.on, onCheckedChange = onSwitch) },
-    modifier = Modifier.clickable(onClick = onOpen),
+    valueContent = {
+      Switch(
+        checked = reminder.on,
+        onCheckedChange = onSwitch,
+        modifier = Modifier.semantics { contentDescription = reminder.name },
+        colors = SwitchDefaults.colors(checkedTrackColor = LocalThemeColors.current.accentSwitch),
+      )
+    },
   )
 }
 
@@ -237,7 +257,7 @@ fun ReminderEditorPage(id: String?, navigation: PageNavigation) {
   ) { padding ->
     LazyColumn(contentPadding = padding) {
       item {
-        Segments(
+        ChoiceButtons(
           options = listOf(true, false),
           picked = dayBefore,
           label = { stringResource(if (it) R.string.reminder_day_before else R.string.reminder_before_start) },
@@ -245,45 +265,49 @@ fun ReminderEditorPage(id: String?, navigation: PageNavigation) {
         )
       }
       item {
-        if (dayBefore) {
-          ListItem(
-            headlineContent = { Text(stringResource(R.string.reminder_time)) },
-            trailingContent = { TextButton(onClick = { pickingTime = true }) { Text(time.removePrefix("0")) } },
-          )
-        } else {
-          ListItem(
-            headlineContent = { Text(stringResource(R.string.reminder_start)) },
-            trailingContent = {
-              TextButton(onClick = { pickingMinutes = true }) {
-                Text(stringResource(R.string.reminder_minutes_before, Reminder.beforeText(minutes)))
-                DropdownMenu(expanded = pickingMinutes, onDismissRequest = { pickingMinutes = false }) {
-                  for (choice in Reminder.MINUTES_CHOICES) {
-                    DropdownMenuItem(
-                      text = { Text(stringResource(R.string.reminder_minutes_before, Reminder.beforeText(choice))) },
-                      onClick = {
-                        minutes = choice
-                        pickingMinutes = false
-                      },
-                    )
+        SettingsSection(modifier = Modifier.padding(top = 16.dp)) {
+          row {
+            if (dayBefore) {
+              SettingsRow(stringResource(R.string.reminder_time), R.drawable.ic_schedule, onClick = { pickingTime = true }, value = time.removePrefix("0"), end = RowEnd.None)
+            } else {
+              SettingsRow(
+                stringResource(R.string.reminder_start),
+                R.drawable.ic_schedule,
+                onClick = { pickingMinutes = true },
+                end = RowEnd.None,
+                valueContent = {
+                  Text(stringResource(R.string.reminder_minutes_before, Reminder.beforeText(minutes)), style = MaterialTheme.typography.bodyMedium)
+                  DropdownMenu(expanded = pickingMinutes, onDismissRequest = { pickingMinutes = false }) {
+                    for (choice in Reminder.MINUTES_CHOICES) {
+                      DropdownMenuItem(
+                        text = { Text(stringResource(R.string.reminder_minutes_before, Reminder.beforeText(choice))) },
+                        onClick = {
+                          minutes = choice
+                          pickingMinutes = false
+                        },
+                      )
+                    }
                   }
-                }
-              }
-            },
-          )
+                },
+              )
+            }
+          }
         }
       }
-      item { SectionHeader(stringResource(R.string.reminder_shifts)) }
-      items(shown, key = { it.id }) { pattern ->
-        val on = pattern.id !in skip
-        ListItem(
-          headlineContent = { Text(pattern.name) },
-          leadingContent = { ShiftMark(pattern.icon, pattern.emoji, pattern.symbol, pattern.color, size = 24.dp) },
-          trailingContent = {
-            if (on) Icon(painterResource(R.drawable.ic_check), contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-          },
-          modifier =
-            Modifier.semantics { selected = on }.clickable { skip = if (on) skip + pattern.id else skip - pattern.id },
-        )
+      item {
+        SettingsSection(stringResource(R.string.reminder_shifts)) {
+          for (pattern in shown) {
+            val on = pattern.id !in skip
+            row {
+              SettingsCheckRow(
+                pattern.name,
+                checked = on,
+                onCheckedChange = { skip = if (on) skip + pattern.id else skip - pattern.id },
+                leading = { ShiftMark(pattern.icon, pattern.emoji, pattern.symbol, pattern.color, size = 24.dp) },
+              )
+            }
+          }
+        }
       }
       sample(draft, calendar)?.let { (firing, next) ->
         item { SectionHeader(if (next) stringResource(R.string.reminder_next_sample, firing.text) else stringResource(R.string.reminder_sample)) }
@@ -291,8 +315,8 @@ fun ReminderEditorPage(id: String?, navigation: PageNavigation) {
       }
       if (reminder != null) {
         item {
-          TextButton(onClick = { deleting = true }, Modifier.fillMaxWidth().padding(16.dp)) {
-            Text(stringResource(R.string.reminder_delete), color = MaterialTheme.colorScheme.error)
+          SettingsSection(modifier = Modifier.padding(top = 24.dp)) {
+            row { SettingsRow(stringResource(R.string.reminder_delete), R.drawable.ic_delete, onClick = { deleting = true }, end = RowEnd.None, danger = true) }
           }
         }
       }
@@ -334,7 +358,11 @@ private fun NotificationBanner(firing: ReminderFiring) {
       Modifier.padding(16.dp),
       verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-      Text(stringResource(R.string.app_name), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+      // The app's icon and name over it, as the system draws a notification's.
+      Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        AppIcon(16.dp)
+        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+      }
       Text(firing.title, style = MaterialTheme.typography.titleSmall)
       firing.body?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
     }

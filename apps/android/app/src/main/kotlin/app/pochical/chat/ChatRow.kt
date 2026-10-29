@@ -145,6 +145,7 @@ internal fun ChatRow(
   today: LocalDate = rememberToday(),
   empty: String = stringResource(R.string.chat_none),
   onCard: Boolean = false,
+  modifier: Modifier = Modifier,
   icon: @Composable () -> Unit,
 ) {
   val chats = LocalChats.current
@@ -191,7 +192,7 @@ internal fun ChatRow(
         }
       },
     colors = if (onCard) ListItemDefaults.colors(containerColor = colors.fillQuaternary) else ListItemDefaults.colors(),
-    modifier = Modifier.clickable(onClick = onOpen),
+    modifier = modifier.clickable(onClick = onOpen),
   )
 }
 

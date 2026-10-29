@@ -22,7 +22,9 @@ import app.pochical.Footnote
 import app.pochical.PageNavigation
 import app.pochical.R
 import app.pochical.RootPage
+import app.pochical.SectionRow
 import app.pochical.SettingsPage
+import app.pochical.SettingsRow
 import app.pochical.calendar.LocalOwnDays
 import app.pochical.calendar.pattern
 import app.pochical.design.ReadyPatterns
@@ -78,12 +80,10 @@ fun AddPatternPage(navigation: PageNavigation) {
         item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
       }
       item {
-        ListItem(
-          headlineContent = { Text(stringResource(R.string.patterns_custom)) },
-          modifier =
-            // Once kept, it goes back to the list past this page.
-            Modifier.clickable { navigation.open(RootPage.PatternEditor(newId(), isNew = true)) },
-        )
+        // Once kept, it goes back to the list past this page.
+        SectionRow(0, 1, Modifier.padding(top = 8.dp)) {
+          SettingsRow(stringResource(R.string.patterns_custom), R.drawable.ic_edit, onClick = { navigation.open(RootPage.PatternEditor(newId(), isNew = true)) })
+        }
       }
     }
   }

@@ -1,10 +1,9 @@
 package app.pochical
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldValue
@@ -12,15 +11,16 @@ import androidx.compose.material3.adaptive.navigationsuite.rememberNavigationSui
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import app.pochical.calendar.CalendarScreen
@@ -39,10 +39,10 @@ import app.pochical.groups.GroupsScreen
 import app.pochical.groups.InvitePage
 import app.pochical.groups.JoinScreen
 import app.pochical.groups.LocalValues
-import app.pochical.kit.AppLink
-import app.pochical.kit.GROUP_THREAD
 import app.pochical.groups.NewGroupPage
 import app.pochical.groups.ScanScreen
+import app.pochical.kit.AppLink
+import app.pochical.kit.GROUP_THREAD
 import app.pochical.notifications.ChatNotificationsPage
 import app.pochical.patterns.AddPatternPage
 import app.pochical.patterns.PatternEditor
@@ -68,7 +68,7 @@ fun RootScreen(navigator: RootNavigator) {
   val links = LocalOpenedLinks.current
   val values = LocalValues.current
   val ownDays = LocalOwnDays.current
-  val groups by remember(values) { values.groups() }.collectAsState(null)
+  val groups by remember(values) { values.groups() }.collectAsStateWithLifecycle(null)
   // What a link opens: an invitation over whatever shows; a day in the calendar, or the next day
   // off as the days are now; a group, at a day in its table, or once the person has left it,
   // グループ on the first of their groups; a chat's notification, the chat over its group in
@@ -99,11 +99,18 @@ fun RootScreen(navigator: RootNavigator) {
     }
     links.consume()
   }
+  val motion = rememberPageMotion()
+  val push = remember(motion) { motion.push<RootRoute>() }
+  val pop = remember(motion) { motion.pop<RootRoute>() }
+  val predictivePop = remember(motion) { motion.predictivePop<RootRoute>() }
   NavDisplay(
     backStack = navigator.routes,
     onBack = navigator::back,
-    transitionSpec = { slideInHorizontally { it } togetherWith slideOutHorizontally { -it / 4 } },
-    popTransitionSpec = { slideInHorizontally { -it / 4 } togetherWith slideOutHorizontally { it } },
+    // On the theme's ground, so what shows through as a page fades is the テーマ's, not the window's.
+    modifier = Modifier.background(MaterialTheme.colorScheme.background),
+    transitionSpec = push,
+    popTransitionSpec = pop,
+    predictivePopTransitionSpec = predictivePop,
   ) { route ->
     when (route) {
       Tabs -> NavEntry(route) { TabsScreen(navigator, rememberPageNavigation(navigator)) }

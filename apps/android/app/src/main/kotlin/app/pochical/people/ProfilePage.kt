@@ -2,10 +2,16 @@ package app.pochical.people
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
@@ -28,8 +34,7 @@ import app.pochical.PageNavigation
 import app.pochical.R
 import app.pochical.RootPage
 import app.pochical.SettingsPage
-import app.pochical.rememberKeptField
-import app.pochical.kit.characterCount
+import app.pochical.SettingsRow
 import app.pochical.design.TextLimits
 import app.pochical.groups.LocalGroupCalls
 import app.pochical.groups.LocalValues
@@ -39,6 +44,8 @@ import app.pochical.groups.PhotoEditor
 import app.pochical.kit.PhotoShelf
 import app.pochical.kit.ProfileRow
 import app.pochical.kit.UsualPhoto
+import app.pochical.kit.characterCount
+import app.pochical.rememberKeptField
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.flow.map
 
@@ -60,9 +67,9 @@ fun ProfilePage(navigation: PageNavigation) {
   val saved = usualProfile()
   SettingsPage(stringResource(R.string.profile), onBack = navigation::back) { padding ->
     if (saved == null) {
-      CircularProgressIndicator(Modifier.padding(padding).padding(24.dp))
+      Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
     } else {
-      ProfileForm(saved, Modifier.padding(padding))
+      ProfileForm(saved, Modifier.consumeWindowInsets(padding).imePadding().verticalScroll(rememberScrollState()).padding(padding))
     }
   }
 }
@@ -120,18 +127,13 @@ private fun ProfileForm(saved: ProfileRow, modifier: Modifier) {
 @Composable
 fun UsualProfileRow(open: (RootPage) -> Unit) {
   val saved = usualProfile()
-  ListItem(
-    headlineContent = { Text(stringResource(R.string.profile)) },
-    supportingContent = {
-      if (saved == null || saved.name.isEmpty()) {
-        Text(stringResource(R.string.profile_unset))
-      } else {
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-          MemberAvatar(saved.name, saved.photoId, PhotoShelf.Mine, 22.dp, me = true)
-          Text(saved.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-      }
-    },
-    modifier = Modifier.clickable { open(RootPage.Profile) },
+  val named = saved?.takeIf { it.name.isNotEmpty() }
+  // The face leads the row, as Android's own Settings leads with the account's; one line, as the others.
+  SettingsRow(
+    stringResource(R.string.profile),
+    R.drawable.ic_person,
+    onClick = { open(RootPage.Profile) },
+    value = named?.name ?: stringResource(R.string.profile_unset),
+    leading = named?.let { { MemberAvatar(it.name, it.photoId, PhotoShelf.Mine, 24.dp, me = true) } },
   )
 }

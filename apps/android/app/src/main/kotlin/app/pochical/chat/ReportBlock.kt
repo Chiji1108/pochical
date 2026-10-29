@@ -18,8 +18,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -57,6 +57,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -65,13 +66,17 @@ import app.pochical.ListSheet
 import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.ReviewPrompt
+import app.pochical.RowEnd
 import app.pochical.SectionHeader
+import app.pochical.SettingsRow
+import app.pochical.SettingsSection
 import app.pochical.design.Chat
 import app.pochical.design.Radius
 import app.pochical.groups.GroupMarkView
 import app.pochical.groups.LocalGroupCalls
 import app.pochical.groups.LocalValues
 import app.pochical.groups.MemberAvatar
+import app.pochical.groups.SAMPLE_PHOTO
 import app.pochical.kit.GroupCalls
 import app.pochical.kit.GroupMarkValue
 import app.pochical.kit.GroupMemberRow
@@ -327,7 +332,20 @@ fun MemberProfileSheet(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp),
       ) {
-        MemberAvatar(person.name, person.photoId, shelf, PROFILE_FACE)
+        // Their face opens large when it is a photo.
+        var faceOpen by remember { mutableStateOf(false) }
+        val opensLarge = stringResource(R.string.profile_photo_open)
+        val photo = stringResource(R.string.profile_photo_of, person.name)
+        // /design's sample faces are drawn on the device, not fetched: they open nothing.
+        val opens = person.photoId.isNotEmpty() && !person.photoId.startsWith(SAMPLE_PHOTO)
+        MemberAvatar(
+          person.name,
+          person.photoId,
+          shelf,
+          PROFILE_FACE,
+          if (opens) Modifier.clip(CircleShape).clickable(onClickLabel = opensLarge) { faceOpen = true }.semantics { contentDescription = photo } else Modifier,
+        )
+        if (faceOpen) FaceViewer(person.photoId, shelf, person.name) { faceOpen = false }
         Text(person.name, style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
         if (blocked) {
           Text(
@@ -440,17 +458,24 @@ fun FoldedLine(onShow: () -> Unit, modifier: Modifier = Modifier) {
  * there is one: each blocked person by the name and face a group they were in with them knows,
  * 解除 asked first ([onUnblock]).
  */
-fun LazyListScope.blockedMembers(people: List<BlockedPerson>, onUnblock: (BlockedPerson) -> Unit) {
+@Composable
+fun BlockedMembers(people: List<BlockedPerson>, onUnblock: (BlockedPerson) -> Unit) {
   if (people.isEmpty()) return
-  item(key = "blocked-heading") { SectionHeader(stringResource(R.string.blocked_members)) }
-  items(people, key = { "blocked-${it.id}" }) { person ->
-    ListItem(
-      headlineContent = { Text(person.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-      supportingContent = person.group.takeIf { it.isNotEmpty() }?.let { { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
-      leadingContent = { MemberAvatar(person.name, person.photoId, person.shelf, 40.dp) },
-      trailingContent = { Text(stringResource(R.string.unblock_confirm), color = MaterialTheme.colorScheme.primary) },
-      modifier = Modifier.clickable { onUnblock(person) },
-    )
+  SettingsSection(stringResource(R.string.blocked_members)) {
+    for (person in people) {
+      row {
+        SettingsRow(
+          person.name,
+          icon = null,
+          onClick = { onUnblock(person) },
+          supporting = person.group.takeIf { it.isNotEmpty() },
+          leading = { MemberAvatar(person.name, person.photoId, person.shelf, 40.dp) },
+          valueContent = { Text(stringResource(R.string.unblock_confirm), color = MaterialTheme.colorScheme.primary) },
+          end = RowEnd.None,
+          oneLine = true,
+        )
+      }
+    }
   }
 }
 
