@@ -195,6 +195,9 @@ final class RootController: UIViewController, UINavigationControllerDelegate {
   private var nothingOpen: (RootTab) -> AnyView
   private var pages: [RootPage] = []
   private var shownTab = RootTab.calendar
+  /// The pages are being moved or put in place: what the navigations show
+  /// meanwhile is not where the person has gone.
+  private var arranging = false
   var onShown: ([RootPage]) -> Void = { _ in }
 
   init(
@@ -284,27 +287,30 @@ final class RootController: UIViewController, UINavigationControllerDelegate {
   /// the tab have it. The calendar, which its month heads, has no bar:
   /// hidden only while it shows alone, so never as a page comes or goes.
   private func arrange(animated: Bool) {
+    arranging = true
+    defer { arranging = false }
+    // The tabs as a phone's screen beside the pages, whatever the window's
+    // width.
+    if beside {
+      main.traitOverrides.horizontalSizeClass = .compact
+    } else {
+      main.traitOverrides.remove(UITraitHorizontalSizeClass.self)
+    }
     let open = hosts
     var kept = 0
     while kept < min(open.count, pages.count), open[kept].page == pages[kept] { kept += 1 }
     let shown = Array(open[..<kept]) + pages[kept...].map { PageHost(page: $0, view: page($0)) }
     let (over, besides): ([UIViewController], [UIViewController]) =
       beside ? ([tabs], shown.isEmpty ? [nothing] : shown) : ([tabs] + shown, [nothing])
-    // A page moved from one navigation to the other leaves the first
-    // before the second takes it, all at once, as does a new root beside the
-    // tabs: only pages coming over the same root come with a push.
+    // A page moved from one navigation to the other comes all at once, the
+    // one it leaves let go of it first, as does a new root beside the tabs:
+    // only pages coming over the same root come with a push.
     let moved = open.contains { host in
       (over.contains(host) && side.viewControllers.contains(host))
         || (besides.contains(host) && main.viewControllers.contains(host))
     }
-    if moved {
-      for (navigation, other) in [(main, besides), (side, over)] {
-        navigation.setViewControllers(
-          navigation.viewControllers.filter { !other.contains($0) }, animated: false)
-      }
-    }
-    for (navigation, controllers) in [(main, over), (side, besides)]
-    where navigation.viewControllers != controllers {
+    let order = beside ? [(main, over), (side, besides)] : [(side, besides), (main, over)]
+    for (navigation, controllers) in order where navigation.viewControllers != controllers {
       let push = animated && !moved && view.window != nil
         && navigation.viewControllers.first === controllers.first
       navigation.setViewControllers(controllers, animated: push)
@@ -313,11 +319,14 @@ final class RootController: UIViewController, UINavigationControllerDelegate {
     view.setNeedsLayout()
   }
 
+  /// A page gone back from, by a back swipe or the back button.
   func navigationController(
     _ navigationController: UINavigationController, didShow viewController: UIViewController,
     animated: Bool
   ) {
-    onShown(hosts.map(\.page))
+    guard !arranging else { return }
+    pages = hosts.map(\.page)
+    onShown(pages)
   }
 }
 

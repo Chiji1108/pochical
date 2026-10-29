@@ -67,7 +67,7 @@ struct RootView: View {
     RootNavigation(navigator: navigator, tabs: hosted(tabs)) { page in
       hosted(self.page(page).environment(\.photoShelf, navigator.photoShelf(of: page)))
     } nothingOpen: { tab in
-      hosted(NothingOpen(tab: tab))
+      hosted(NothingOpen(tab: tab, hasGroups: !groups.isEmpty))
     }
     .ignoresSafeArea()
     .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.top } action: { barTop = $0 }
@@ -372,18 +372,22 @@ private struct ThemedSwitchBody: View {
 }
 
 /// What stands beside a tab on a wide screen while none of its pages is
-/// open, on the app's ground, as Messages says to pick a conversation.
+/// open, on the app's ground, as Messages says to pick a conversation:
+/// nothing to pick before there is a group. The calendar never has a side.
 private struct NothingOpen: View {
   @Environment(\.themeColors) private var colors
   let tab: RootTab
+  let hasGroups: Bool
 
   var body: some View {
     Group {
       switch tab {
-      case .groups:
+      case .groups where hasGroups:
         ContentUnavailableView("チャットを選んでください", systemImage: "bubble.left.and.bubble.right")
-      case .calendar, .settings:
+      case .settings:
         ContentUnavailableView("項目を選んでください", systemImage: "gearshape")
+      case .groups, .calendar:
+        EmptyView()
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)

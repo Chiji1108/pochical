@@ -494,11 +494,11 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
       composer.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
       composer.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
       composerHeight,
-      latest.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+      latest.view.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
       latest.view.bottomAnchor.constraint(equalTo: composer.view.topAnchor),
       room.topAnchor.constraint(equalTo: top.view.bottomAnchor),
       room.bottomAnchor.constraint(equalTo: composer.view.topAnchor),
-      empty.view.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+      empty.view.centerXAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerXAnchor),
       empty.view.centerYAnchor.constraint(equalTo: room.centerYAnchor),
     ])
   }

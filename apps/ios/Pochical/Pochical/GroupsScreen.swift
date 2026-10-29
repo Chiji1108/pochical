@@ -102,10 +102,12 @@ struct GroupsScreen: View {
     navigator?.open(.group(.newGroup))
   }
 
-  /// Opens another group beside the rail, taking away the pages of the one
-  /// open: on a wide screen they stand beside it (RootNavigation).
+  /// Opens another group beside the rail, taking away the pages open: on
+  /// a wide screen they stand beside it (RootNavigation), グループを作る and
+  /// what it turned into among them; on a narrow one none are open while
+  /// the rail shows.
   private func pick(_ id: String, over open: String) {
-    if id != open { navigator?.close(open) }
+    if id != open { navigator?.show([]) }
     openID = id
   }
 }
