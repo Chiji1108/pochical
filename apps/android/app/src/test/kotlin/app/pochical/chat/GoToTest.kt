@@ -36,7 +36,7 @@ class GoToTest {
       LazyColumn(Modifier.fillMaxSize(), state = list, reverseLayout = true) {
         items(items, key = { it.key }) { Text(it.key, Modifier.height(40.dp)) }
       }
-      GoTo(going, items, list, reducedMotion = false, enabled = true) { there ->
+      GoTo(going, items, list, reducedMotion = false, moves = ListMoves(), enabled = true) { there ->
         following = there
         going = null
       }
@@ -55,7 +55,7 @@ class GoToTest {
       LazyColumn(Modifier.fillMaxSize(), state = list, reverseLayout = true) {
         items(items, key = { it.key }) { Text(it.key, Modifier.height(40.dp)) }
       }
-      GoTo(null, items, list, reducedMotion = false, enabled = true) {}
+      GoTo(null, items, list, reducedMotion = false, moves = ListMoves(), enabled = true) {}
     }
     compose.waitForIdle()
     assertTrue(list.firstVisibleItemIndex >= 150)

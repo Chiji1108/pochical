@@ -111,15 +111,8 @@ private fun DayTitle(day: LocalDate, modifier: Modifier) {
 @Composable
 fun DayWords(day: LocalDate, modifier: Modifier = Modifier, floating: Boolean = false) {
   val colors = LocalThemeColors.current
-  val today = rememberToday()
-  val words =
-    when (day) {
-      today -> stringResource(R.string.today)
-      today.minusDays(1) -> stringResource(R.string.chat_yesterday)
-      else -> day.fullText
-    }
   Text(
-    words,
+    dayWords(day),
     modifier
       .background(if (floating) MaterialTheme.colorScheme.surfaceContainerHighest else colors.fillTertiary, RoundedCornerShape(Radius.sm))
       .padding(horizontal = 12.dp, vertical = 2.dp),
@@ -141,6 +134,17 @@ private fun UnreadDivider(modifier: Modifier) {
       color = accent,
     )
     HorizontalDivider(Modifier.weight(1f), color = accent)
+  }
+}
+
+/** A day as the chat says it: 今日, 昨日, 10月5日(月). */
+@Composable
+fun dayWords(day: LocalDate): String {
+  val today = rememberToday()
+  return when (day) {
+    today -> stringResource(R.string.today)
+    today.minusDays(1) -> stringResource(R.string.chat_yesterday)
+    else -> day.fullText
   }
 }
 

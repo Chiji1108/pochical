@@ -22,7 +22,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
-/** When the day floats over a chat's lines, and how a line's links are named for a screen reader. */
+/** When the day floats over a chat's lines. */
 @RunWith(RobolectricTestRunner::class)
 class FloatingDayTest {
   @get:Rule val compose = createComposeRule()
@@ -49,13 +49,5 @@ class FloatingDayTest {
     // Left alone long enough after: gone.
     compose.mainClock.advanceTimeBy(Chat.floatingDayMs + 2_000L)
     assertFalse(shown)
-  }
-
-  @Test
-  fun eachLinkToOneSiteIsToldApart() {
-    assertEquals(
-      listOf("example.com/a", "example.com/b", "apple.com", "example.com/a"),
-      linkNames(listOf("https://example.com/a", "https://example.com/b", "https://www.apple.com/", "https://example.com/a")),
-    )
   }
 }

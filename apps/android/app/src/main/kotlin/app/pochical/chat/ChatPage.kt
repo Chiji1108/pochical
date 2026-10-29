@@ -269,7 +269,9 @@ fun ChatPage(
   var going by remember { mutableStateOf<Going?>(null) }
   // To the foot only once the latest lines are laid out, when the window stopped short of them.
   val reducedMotion = rememberReducedMotion()
-  GoTo(going, items, list, reducedMotion, enabled = placed && (going != Going.ToFoot || chat.atEnd)) { there ->
+  // The lines moved by the chat itself, not the person: a screen reader hears nothing of these.
+  val moves = remember { ListMoves() }
+  GoTo(going, items, list, reducedMotion, moves, enabled = placed && (going != Going.ToFoot || chat.atEnd)) { there ->
     following = there
     going = null
   }
@@ -287,8 +289,8 @@ fun ChatPage(
     if (!opened || placed || (unreadFrom != null && ChatItem.Unread !in items)) return@LaunchedEffect
     val rest = restingOn?.let { key -> items.indexOfFirst { it.key == key } }?.takeIf { it >= 0 }
     when {
-      rest != null -> list.scrollToItem(rest, restingOffset)
-      unreadFrom != null -> following = list.showAtTop(items.indexOfFirst { it == ChatItem.Unread })
+      rest != null -> moves.run { list.scrollToItem(rest, restingOffset) }
+      unreadFrom != null -> following = moves.run { list.showAtTop(items.indexOfFirst { it == ChatItem.Unread }) }
     }
     following = following && !list.canScrollBackward
     placed = true
@@ -326,7 +328,7 @@ fun ChatPage(
     val first = coming?.let { seq -> items.indexOfFirst { it is ChatItem.Line && it.line.seq == seq } } ?: -1
     when {
       // They fit: they come in at the foot, the lines sliding up to them.
-      first < 0 || unreadFrom != null || list.fits(first + 1) -> list.toFoot(reducedMotion)
+      first < 0 || unreadFrom != null || list.fits(first + 1) -> moves.run { list.toFoot(reducedMotion) }
       // More than the screen shows: stopped under ここから新着, once laid out over them.
       else -> {
         unreadFrom = coming
@@ -374,7 +376,7 @@ fun ChatPage(
   }
 
   // Someone writing shows under the latest line, kept in sight while following.
-  LaunchedEffect(typers.isNotEmpty()) { if (placed && following && typers.isNotEmpty()) list.toFoot(reducedMotion) }
+  LaunchedEffect(typers.isNotEmpty()) { if (placed && following && typers.isNotEmpty()) moves.run { list.toFoot(reducedMotion) } }
 
   var notKept by remember { mutableStateOf(false) }
   val composer = rememberComposerState()
@@ -430,7 +432,7 @@ fun ChatPage(
     when {
       index >= 0 -> {
         following = false
-        list.showInMiddle(index, animated = !reducedMotion)
+        moves.run { list.showInMiddle(index, animated = !reducedMotion) }
         lit = Lit(seq, System.nanoTime())
         jumping = null
       }
@@ -550,9 +552,10 @@ fun ChatPage(
   var keepTop by remember { mutableStateOf<Pair<String, Int>?>(null) }
   LaunchedEffect(keepTop) {
     val (key, top) = keepTop ?: return@LaunchedEffect
-    // Reversed, the line grows up from its foot: the lines go down by as much as its top rose.
-    val now = snapshotFlow { list.layoutInfo.visibleItemsInfo.firstOrNull { it.key == key }?.let { it.offset + it.size } }.first { it != top } ?: return@LaunchedEffect
-    list.scrollBy((now - top).toFloat())
+    // Reversed, the line grows up from its foot: the lines go down by as much as its top rose, as it
+    // is laid out opened (it runs past its lines, so opening it always changes its height).
+    val now = snapshotFlow { list.layoutInfo.visibleItemsInfo.firstOrNull { it.key == key }?.let { it.offset + it.size } }.first { it != top }
+    if (now != null) moves.run { list.scrollBy((now - top).toFloat()) }
     keepTop = null
   }
   val linkItems = rememberLinkActions(openLink, snackbar)
@@ -645,6 +648,18 @@ fun ChatPage(
           )
           // The day of the lines at the top, while the person scrolls.
           FloatingDay(floatingDay, list, over.top)
+          // What a screen reader hears of the chat as it changes and scrolls.
+          ChatSpeech(
+            me,
+            placed,
+            moves = moves,
+            newest = { chats.newest(groupId, threadId) },
+            arrived = { after -> chats.arrived(groupId, threadId, after) },
+            blockedLine,
+            nameOf,
+            list,
+            floatingDay,
+          )
           // Drawn while there are pins, keeping its room over the lines only then.
           if (chat.pins.isNotEmpty()) {
             PinBar(
@@ -968,19 +983,35 @@ private fun LatestButton(
  * before, its key's change would cancel the scroll on its way.
  */
 @Composable
-internal fun GoTo(going: Going?, items: List<ChatItem>, list: LazyListState, reducedMotion: Boolean, enabled: Boolean, onThere: (following: Boolean) -> Unit) {
+internal fun GoTo(going: Going?, items: List<ChatItem>, list: LazyListState, reducedMotion: Boolean, moves: ListMoves, enabled: Boolean, onThere: (following: Boolean) -> Unit) {
   LaunchedEffect(going, items, enabled) {
     val to = going ?: return@LaunchedEffect
     if (!enabled) return@LaunchedEffect
     val following =
       when (to) {
-        Going.ToUnread -> list.showAtTop(items.indexOfFirst { it == ChatItem.Unread })
+        Going.ToUnread -> moves.run { list.showAtTop(items.indexOfFirst { it == ChatItem.Unread }) }
         Going.ToFoot -> {
-          list.toFoot(reducedMotion)
+          moves.run { list.toFoot(reducedMotion) }
           true
         }
       }
     onThere(following)
+  }
+}
+
+/** How many moves of the lines the chat itself is making now (↓, following, a jump, opening), not the person. */
+@Stable
+class ListMoves {
+  var count by mutableIntStateOf(0)
+    private set
+
+  suspend fun <T> run(move: suspend () -> T): T {
+    count++
+    try {
+      return move()
+    } finally {
+      count--
+    }
   }
 }
 
