@@ -42,6 +42,8 @@ data class DeviceSettings(
   val picture: PictureLook = PictureLook(),
   /** What 端末カレンダーに追加 puts in besides the shifts, as last left. */
   val calendarAdd: CalendarAdd = CalendarAdd(),
+  /** The device's calendar 端末カレンダーに追加 put events in last, picked first next time; the device's own. */
+  val deviceCalendar: Long? = null,
   /**
    * Reminders of the person's shifts, sent by this device on its own, so kept with it rather than
    * the account: on every device they would go off on each (spec/sync-protocol.md).
