@@ -162,6 +162,21 @@ class FakeServer : AutoCloseable {
   /** Whether a group refuses the chat sends it is sent, as not fitting. */
   @Volatile var refuseSends = false
 
+  /**
+   * The groups' chat edits held unanswered, as a server slow to take them, until [releaseChatEdits]:
+   * what a device shows while its lines wait, seen for as long as the test looks.
+   */
+  @Volatile var holdChatEdits = false
+  private val heldChatEdits = mutableListOf<() -> Unit>()
+
+  /** Takes the chat edits held, in the order they came, and those coming after at once. */
+  @Synchronized
+  fun releaseChatEdits() {
+    holdChatEdits = false
+    heldChatEdits.forEach { it() }
+    heldChatEdits.clear()
+  }
+
   /** Each group's log of chat changes, as its Group DO keeps them, the latest of each line or mark. */
   private val groupLogs = HashMap<String, LinkedHashMap<String, Change>>()
   private val groupCursors = HashMap<String, Long>()
@@ -463,6 +478,10 @@ class FakeServer : AutoCloseable {
         )
       }
       ClientFrame.KindCase.CHAT_EDITS -> {
+        if (holdChatEdits) {
+          heldChatEdits += { takeGroup(user, groupId, frame, socket) }
+          return
+        }
         val refused = mutableListOf<RefusedSend>()
         for (edit in frame.chatEdits.editsList) {
           when (edit.kindCase) {
