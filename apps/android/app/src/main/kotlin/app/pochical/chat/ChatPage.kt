@@ -67,7 +67,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -551,12 +550,10 @@ fun ChatPage(
   var keepTop by remember { mutableStateOf<Pair<String, Int>?>(null) }
   LaunchedEffect(keepTop) {
     val (key, top) = keepTop ?: return@LaunchedEffect
-    // Reversed, the line grows up from its foot: the lines go down by as much as its top rose, once
-    // it is laid out opened, the frame after.
-    withFrameNanos {}
-    withFrameNanos {}
-    val now = list.layoutInfo.visibleItemsInfo.firstOrNull { it.key == key }?.let { it.offset + it.size }
-    if (now != null && now != top) moves.run { list.scrollBy((now - top).toFloat()) }
+    // Reversed, the line grows up from its foot: the lines go down by as much as its top rose, as it
+    // is laid out opened (it runs past its lines, so opening it always changes its height).
+    val now = snapshotFlow { list.layoutInfo.visibleItemsInfo.firstOrNull { it.key == key }?.let { it.offset + it.size } }.first { it != top }
+    if (now != null) moves.run { list.scrollBy((now - top).toFloat()) }
     keepTop = null
   }
   val linkItems = rememberLinkActions(openLink, snackbar)
