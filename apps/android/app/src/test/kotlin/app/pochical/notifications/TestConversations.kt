@@ -14,7 +14,13 @@ class TestConversations(private val context: Context) : Conversations {
   val published = mutableListOf<Pair<String, String>>()
   var forgotten = false
 
-  override suspend fun face(name: String, photoId: String, groupId: String): IconCompat = IconCompat.createWithBitmap(createBitmap(1, 1))
+  /** Runs as a face loads, for what lands meanwhile. */
+  var loading: suspend () -> Unit = {}
+
+  override suspend fun face(name: String, photoId: String, groupId: String): IconCompat {
+    loading()
+    return IconCompat.createWithBitmap(createBitmap(1, 1))
+  }
 
   override fun appFace(): IconCompat = IconCompat.createWithBitmap(createBitmap(1, 1))
 
@@ -27,5 +33,9 @@ class TestConversations(private val context: Context) : Conversations {
 
   override fun forgetAll() {
     forgotten = true
+  }
+
+  override fun forget(gone: (id: String) -> Boolean) {
+    published.removeAll { (id, _) -> gone(id) }
   }
 }
