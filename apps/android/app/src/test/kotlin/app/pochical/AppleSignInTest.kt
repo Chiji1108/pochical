@@ -36,7 +36,7 @@ import org.robolectric.android.controller.ActivityController
  */
 @RunWith(RobolectricTestRunner::class)
 class AppleSignInTest {
-  private val web = AppleWebSignIn("http://localhost/".toHttpUrl(), OkHttpClient())
+  private val web = AppleWebSignIn("http://localhost/".toHttpUrl(), lazyOf(OkHttpClient()))
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
   @After fun cancel() = scope.cancel()
