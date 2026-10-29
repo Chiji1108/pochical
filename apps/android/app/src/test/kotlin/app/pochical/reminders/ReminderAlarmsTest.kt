@@ -1,24 +1,17 @@
 package app.pochical.reminders
 
 import android.Manifest
-import android.app.Activity
 import android.app.AlarmManager
 import android.app.Application
 import android.app.NotificationManager
-import android.app.Service
-import android.content.BroadcastReceiver
-import android.content.ContentProvider
 import app.pochical.kit.OwnCalendar
 import app.pochical.kit.OwnDay
 import app.pochical.kit.PatternRow
 import app.pochical.kit.Reminder
-import dev.zacsweers.metrox.android.MetroAppComponentProviders
-import dev.zacsweers.metrox.android.MetroApplication
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZonedDateTime
-import kotlin.reflect.KClass
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
@@ -31,23 +24,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
-import org.robolectric.annotation.Config
 
-/**
- * An application without the app's graph, so the app's own reminders, which keep the same one alarm
- * from its database, do not set it under the test.
- */
-class PlainApplication : Application(), MetroApplication {
-  override val appComponentProviders =
-    object : MetroAppComponentProviders {
-      override val activityProviders = emptyMap<KClass<out Activity>, () -> Activity>()
-      override val providerProviders = emptyMap<KClass<out ContentProvider>, () -> ContentProvider>()
-      override val receiverProviders = emptyMap<KClass<out BroadcastReceiver>, () -> BroadcastReceiver>()
-      override val serviceProviders = emptyMap<KClass<out Service>, () -> Service>()
-    }
-}
-
-@Config(application = PlainApplication::class)
 @RunWith(RobolectricTestRunner::class)
 class ReminderAlarmsTest {
   private val application = RuntimeEnvironment.getApplication()

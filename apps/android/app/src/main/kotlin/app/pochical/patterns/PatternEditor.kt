@@ -63,7 +63,7 @@ import app.pochical.kit.guessLook
 import app.pochical.kit.nextColor
 import app.pochical.kit.refusesArchiving
 import app.pochical.kit.repeats
-import app.pochical.limitText
+import app.pochical.kit.limitText
 import app.pochical.mark
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable

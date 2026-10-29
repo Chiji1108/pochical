@@ -68,7 +68,7 @@ import app.pochical.MarkFrameSize
 import app.pochical.R
 import app.pochical.ReviewPrompt
 import app.pochical.SectionHeader
-import app.pochical.characterCount
+import app.pochical.kit.characterCount
 import app.pochical.design.GROUP_MAX_MEMBERS
 import app.pochical.design.Metrics
 import app.pochical.design.TextLimits
