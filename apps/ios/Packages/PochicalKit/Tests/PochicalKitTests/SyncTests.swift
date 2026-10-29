@@ -224,6 +224,17 @@ private func synced(in db: Database) throws {
   }
 }
 
+@Test func onlyTheGroupsLeftAreToldAsLeft() {
+  var left = Pochical_V1_Change()
+  left.membership.groupID = "g1"
+  left.membership.left = true
+  var joined = Pochical_V1_Change()
+  joined.membership.groupID = "g2"
+  var other = Pochical_V1_Change()
+  other.profile.name = "ゆうき"
+  #expect(Groups.left(in: [left, joined, other]) == ["g1"])
+}
+
 @Test func aGroupsIconLettersOrPhotoComeAsTheyAre() throws {
   let database = try appDatabase()
   try database.write { db in
