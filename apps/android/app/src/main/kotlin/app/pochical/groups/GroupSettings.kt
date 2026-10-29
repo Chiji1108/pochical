@@ -49,6 +49,7 @@ import app.pochical.kit.GroupMemberRow
 import app.pochical.kit.GroupRow
 import app.pochical.kit.MarkPhotoGone
 import app.pochical.kit.PhotoShelf
+import app.pochical.notifications.GroupChatNotifications
 import app.pochical.kit.directThread
 import app.pochical.kit.nextGroupColor
 import app.pochical.chat.ProfileOf
@@ -59,8 +60,8 @@ import kotlinx.coroutines.launch
 
 /**
  * グループの設定 (/design's GroupSettingsPage): the group's name and mark, how the person appears in
- * it, who is in it with a way to invite more, and leaving. Someone else's row opens their sheet,
- * whose このグループから外す takes them out, asked first. Its chat's 通知 comes with the chat.
+ * it, its chat's 通知, who is in it with a way to invite more, and leaving. Someone else's row opens their sheet,
+ * whose このグループから外す takes them out, asked first.
  */
 @Composable
 fun GroupSettingsPage(
@@ -113,6 +114,8 @@ fun GroupSettingsPage(
           modifier = Modifier.clickable(enabled = me != null, onClick = onProfile),
         )
       }
+      item { SectionHeader(stringResource(R.string.settings_notifications)) }
+      item { GroupChatNotifications(groupId, snackbar) }
       item { SectionHeader(stringResource(R.string.group_members)) }
       items(members, key = { it.userId }) { member ->
         val mine = member.userId == meId

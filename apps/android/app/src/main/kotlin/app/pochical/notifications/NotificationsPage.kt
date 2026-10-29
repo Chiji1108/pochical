@@ -181,6 +181,28 @@ fun ChatNotificationsPage(onBack: () -> Unit) {
   }
 }
 
+/**
+ * A group's own 通知 (spec/chat.md, Notifications; iOS's GroupSettingsPage): the same switch as the
+ * group's on 設定 › 通知 › チャット, and the note that mentions still notify while that is so. A change
+ * the server does not keep is said in [snackbar].
+ */
+@Composable
+fun GroupChatNotifications(groupId: String, snackbar: SnackbarHostState) {
+  val read = rememberChatNotifications() ?: return
+  val switching = rememberChatSwitching()
+  val scope = rememberCoroutineScope()
+  val failed = stringResource(R.string.notifications_change_failed)
+  Column {
+    SwitchRow(
+      ChatSwitch(!read.isMuted(groupId, GROUP_THREAD)) { on ->
+        switching.setMuted(groupId, GROUP_THREAD, !on) { kept -> if (!kept) scope.launch { snackbar.showSnackbar(failed) } }
+      },
+      headline = stringResource(R.string.group_chat_notifications),
+    )
+    if (read.mentionsWhenMuted) Footnote(stringResource(R.string.notifications_group_chats_note))
+  }
+}
+
 /** A switch as shown, and what turning it does. */
 private class ChatSwitch(val on: Boolean, val turn: (Boolean) -> Unit)
 
