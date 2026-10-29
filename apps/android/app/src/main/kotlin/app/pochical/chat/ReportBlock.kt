@@ -18,8 +18,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -65,7 +65,10 @@ import app.pochical.ListSheet
 import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.ReviewPrompt
+import app.pochical.RowEnd
 import app.pochical.SectionHeader
+import app.pochical.SettingsRow
+import app.pochical.SettingsSection
 import app.pochical.design.Chat
 import app.pochical.design.Radius
 import app.pochical.groups.GroupMarkView
@@ -440,17 +443,23 @@ fun FoldedLine(onShow: () -> Unit, modifier: Modifier = Modifier) {
  * there is one: each blocked person by the name and face a group they were in with them knows,
  * 解除 asked first ([onUnblock]).
  */
-fun LazyListScope.blockedMembers(people: List<BlockedPerson>, onUnblock: (BlockedPerson) -> Unit) {
+@Composable
+fun BlockedMembers(people: List<BlockedPerson>, onUnblock: (BlockedPerson) -> Unit) {
   if (people.isEmpty()) return
-  item(key = "blocked-heading") { SectionHeader(stringResource(R.string.blocked_members)) }
-  items(people, key = { "blocked-${it.id}" }) { person ->
-    ListItem(
-      headlineContent = { Text(person.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-      supportingContent = person.group.takeIf { it.isNotEmpty() }?.let { { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
-      leadingContent = { MemberAvatar(person.name, person.photoId, person.shelf, 40.dp) },
-      trailingContent = { Text(stringResource(R.string.unblock_confirm), color = MaterialTheme.colorScheme.primary) },
-      modifier = Modifier.clickable { onUnblock(person) },
-    )
+  SettingsSection(stringResource(R.string.blocked_members)) {
+    for (person in people) {
+      row {
+        SettingsRow(
+          person.name,
+          icon = null,
+          onClick = { onUnblock(person) },
+          supporting = person.group.takeIf { it.isNotEmpty() },
+          leading = { MemberAvatar(person.name, person.photoId, person.shelf, 40.dp) },
+          valueContent = { Text(stringResource(R.string.unblock_confirm), color = MaterialTheme.colorScheme.primary) },
+          end = RowEnd.None,
+        )
+      }
+    }
   }
 }
 

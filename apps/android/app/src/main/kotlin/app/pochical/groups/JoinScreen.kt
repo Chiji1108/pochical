@@ -29,6 +29,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -68,6 +69,7 @@ import app.pochical.MarkFrameSize
 import app.pochical.R
 import app.pochical.ReviewPrompt
 import app.pochical.SectionHeader
+import app.pochical.SectionRow
 import app.pochical.characterCount
 import app.pochical.design.GROUP_MAX_MEMBERS
 import app.pochical.design.Metrics
@@ -75,6 +77,8 @@ import app.pochical.design.TextLimits
 import app.pochical.kit.InviteDetails
 import app.pochical.kit.InviteFailure
 import app.pochical.kit.PhotoShelf
+import app.pochical.rowColors
+import app.pochical.segmentShapes
 import java.io.IOException
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.launch
@@ -207,25 +211,29 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
           Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
             Invitation(shown, code) { showingMembers = true }
             SectionHeader(stringResource(if (usualName.isEmpty()) R.string.join_you_usual else R.string.group_me))
-            ListItem(
-              headlineContent = {
+            SectionRow(0, 1) {
+              SegmentedListItem(
+                onClick = { editingProfile = true },
+                shapes = segmentShapes(),
+                colors = rowColors(),
+                leadingContent = { JoinFacePicture(face, myName, usualPhoto, 32.dp) },
+                trailingContent = {
+                  Text(
+                    stringResource(
+                      if (usualName.isEmpty() || (myName == usualName && face == JoinFace.Usual)) R.string.usual_same else R.string.group_only
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                  )
+                },
+              ) {
                 Text(
                   myName.ifEmpty { stringResource(R.string.join_name_needed) },
                   color = if (myName.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
                   maxLines = 1,
                   overflow = TextOverflow.Ellipsis,
                 )
-              },
-              leadingContent = { JoinFacePicture(face, myName, usualPhoto, 28.dp) },
-              trailingContent = {
-                Text(
-                  stringResource(
-                    if (usualName.isEmpty() || (myName == usualName && face == JoinFace.Usual)) R.string.usual_same else R.string.group_only
-                  )
-                )
-              },
-              modifier = Modifier.clickable { editingProfile = true },
-            )
+              }
+            }
           }
           Column(
             Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp),

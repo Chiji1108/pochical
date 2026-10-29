@@ -1,15 +1,22 @@
 package app.pochical.people
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
@@ -47,17 +54,23 @@ import app.pochical.LocalThemeColors
 import app.pochical.PageNavigation
 import app.pochical.R
 import app.pochical.RootPage
+import app.pochical.RowEnd
+import app.pochical.SectionRow
 import app.pochical.SettingsPage
-import app.pochical.design.TextLimits
+import app.pochical.SettingsRow
+import app.pochical.SettingsSection
 import app.pochical.calendar.Coworker
 import app.pochical.calendar.LocalOwnDays
 import app.pochical.design.COWORKERS_MAX
+import app.pochical.design.TextLimits
 import app.pochical.groups.LocalValues
 import app.pochical.kit.coworkerDays
 import app.pochical.limitText
 import app.pochical.limited
 import app.pochical.rememberDragOrder
 import app.pochical.rememberKeptField
+import app.pochical.rowColors
+import app.pochical.segmentShapes
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
@@ -109,6 +122,7 @@ fun CoworkersPage(navigation: PageNavigation) {
   SettingsPage(
     stringResource(R.string.coworkers),
     onBack = navigation::back,
+    snackbar = snackbar,
     actions = {
       if (people.size > 1 && !adding) {
         TextButton(onClick = { sorting = !sorting }) {
@@ -117,36 +131,41 @@ fun CoworkersPage(navigation: PageNavigation) {
       }
     },
   ) { padding ->
-    Column(Modifier.padding(padding)) {
-      LazyColumn(Modifier.weight(1f, fill = false), state = list) {
-        items(order.rows, key = { it.id }) { person ->
-          ReorderableItem(order.state, key = person.id, enabled = sorting) {
-            ListItem(
-              headlineContent = { Text(person.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-              trailingContent =
-                if (sorting) ({ order.Handle(this, stringResource(R.string.coworkers_move, person.name)) })
-                else ({ Text(stringResource(R.string.coworker_days, counts[person.id] ?: 0)) }),
-              modifier = if (sorting) Modifier else Modifier.clickable { navigation.open(RootPage.CoworkerEditor(person.id)) },
+    // Under the system's bars, the list's foot rising clear of the keyboard as a name is typed.
+    LazyColumn(Modifier.imePadding(), state = list, contentPadding = padding) {
+      // The people, then 人を追加, one rounded group of segments.
+      val count = order.rows.size + if (sorting) 0 else 1
+      item { Spacer(Modifier.height(8.dp)) }
+      itemsIndexed(order.rows, key = { _, person -> person.id }) { index, person ->
+        ReorderableItem(order.state, key = person.id, enabled = sorting) {
+          SectionRow(index, count) {
+            SettingsRow(
+              person.name,
+              R.drawable.ic_person,
+              onClick = if (sorting) null else ({ navigation.open(RootPage.CoworkerEditor(person.id)) }),
+              value = if (sorting) null else stringResource(R.string.coworker_days, counts[person.id] ?: 0),
+              valueContent = if (sorting) ({ order.Handle(this, stringResource(R.string.coworkers_move, person.name)) }) else null,
             )
           }
         }
-        if (!sorting) {
-          item {
+      }
+      if (!sorting) {
+        item {
+          SectionRow(count - 1, count) {
             if (adding) {
               AddField(typed, { typed = it }, onAdd = ::add, onDone = { adding = false })
             } else {
-              val colors = LocalThemeColors.current
-              ListItem(
-                headlineContent = { Text(stringResource(R.string.coworkers_add), color = colors.accentDefault) },
-                leadingContent = { Icon(painterResource(R.drawable.ic_add), null, tint = colors.accentDefault) },
-                modifier = Modifier.clickable { if (people.size >= COWORKERS_MAX) full() else adding = true },
+              SettingsRow(
+                stringResource(R.string.coworkers_add),
+                R.drawable.ic_add,
+                onClick = { if (people.size >= COWORKERS_MAX) full() else adding = true },
+                end = RowEnd.None,
               )
             }
           }
         }
-        item { Footnote(stringResource(if (sorting) R.string.coworkers_sort_note else R.string.coworkers_note)) }
       }
-      SnackbarHost(snackbar)
+      item { Footnote(stringResource(if (sorting) R.string.coworkers_sort_note else R.string.coworkers_note), Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) }
     }
   }
 }
@@ -163,7 +182,11 @@ private fun AddField(typed: TextFieldValue, onType: (TextFieldValue) -> Unit, on
     onAdd()
     focus.requestFocus()
   }
-  Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+  // On its segment's ground, where 人を追加 was.
+  Row(
+    Modifier.fillMaxWidth().background(rowColors().containerColor, segmentShapes().shape).padding(horizontal = 16.dp, vertical = 8.dp),
+    verticalAlignment = Alignment.CenterVertically,
+  ) {
     OutlinedTextField(
       typed,
       { onType(it.limited(TextLimits.personName)) },
@@ -222,7 +245,7 @@ private fun CoworkerForm(person: Coworker, count: Int?, taken: List<String>, nav
   }
 
   SettingsPage(person.name, onBack = navigation::back) { padding ->
-    Column(Modifier.padding(padding)) {
+    Column(Modifier.verticalScroll(rememberScrollState()).padding(padding).imePadding()) {
       LimitedTextField(
         name.field.value,
         { name.field.value = it },
@@ -242,8 +265,17 @@ private fun CoworkerForm(person: Coworker, count: Int?, taken: List<String>, nav
         style = MaterialTheme.typography.bodyMedium,
         color = if (problem != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
       )
-      TextButton(onClick = { if (count == 0) delete() else confirming = true }, Modifier.padding(16.dp), enabled = count != null) {
-        Text(stringResource(R.string.coworker_delete), color = MaterialTheme.colorScheme.error)
+      SettingsSection(modifier = Modifier.padding(top = 24.dp)) {
+        row {
+          SettingsRow(
+            stringResource(R.string.coworker_delete),
+            R.drawable.ic_delete,
+            onClick = { if (count == 0) delete() else confirming = true },
+            end = RowEnd.None,
+            enabled = count != null,
+            danger = true,
+          )
+        }
       }
     }
   }
@@ -271,9 +303,10 @@ private fun CoworkerForm(person: Coworker, count: Int?, taken: List<String>, nav
 @Composable
 fun CoworkersRow(open: (RootPage) -> Unit) {
   val calendar by LocalOwnDays.current.calendar.collectAsStateWithLifecycle()
-  ListItem(
-    headlineContent = { Text(stringResource(R.string.coworkers)) },
-    supportingContent = { Text(stringResource(R.string.coworkers_count, calendar.coworkers.size)) },
-    modifier = Modifier.clickable { open(RootPage.Coworkers) },
+  SettingsRow(
+    stringResource(R.string.coworkers),
+    R.drawable.ic_handshake,
+    onClick = { open(RootPage.Coworkers) },
+    value = stringResource(R.string.coworkers_count, calendar.coworkers.size),
   )
 }

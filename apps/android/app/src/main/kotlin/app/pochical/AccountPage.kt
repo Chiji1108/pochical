@@ -2,6 +2,7 @@ package app.pochical
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -10,7 +11,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -71,10 +71,11 @@ val LocalAccount = staticCompositionLocalOf<SyncAccount> { error("No account pro
 fun AccountRow(open: (RootPage) -> Unit) {
   val state by LocalAccount.current.state.collectAsState()
   val linked = state.linked
-  ListItem(
-    headlineContent = { Text(stringResource(R.string.account)) },
-    supportingContent = { Text(linked?.provider?.displayName ?: stringResource(R.string.account_not_signed_in)) },
-    modifier = Modifier.clickable { open(RootPage.Account) },
+  SettingsRow(
+    stringResource(R.string.account),
+    R.drawable.ic_account_circle,
+    onClick = { open(RootPage.Account) },
+    value = linked?.provider?.displayName ?: stringResource(R.string.account_not_signed_in),
   )
 }
 
@@ -82,45 +83,40 @@ fun AccountRow(open: (RootPage) -> Unit) {
  * アカウント (/design's AccountPage): before signing in, what it keeps and the way in; after, which
  * account it is. Signing in is optional, so the page never pushes it beyond saying what it keeps.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountPage(onBack: () -> Unit) {
   val account = LocalAccount.current
   val state by account.state.collectAsState()
-  Scaffold(
-    topBar = {
-      TopAppBar(
-        title = { Text(stringResource(R.string.account)) },
-        navigationIcon = {
-          IconButton(onClick = onBack) {
-            Icon(painterResource(R.drawable.ic_back), contentDescription = stringResource(R.string.back))
-          }
-        },
-      )
-    }
-  ) { padding ->
+  SettingsPage(stringResource(R.string.account), onBack) { padding ->
     LazyColumn(contentPadding = padding) {
       val linked = state.linked
       if (linked != null) {
-        item { SectionHeader(stringResource(R.string.account_signed_in)) }
         item {
-          ListItem(
-            leadingContent = {
-              when (linked.provider) {
-                LinkedAccount.Provider.Apple ->
-                  Icon(painterResource(R.drawable.ic_apple_logo), contentDescription = null, Modifier.size(24.dp))
-                LinkedAccount.Provider.Google ->
-                  Image(painterResource(R.drawable.ic_google_g), contentDescription = null, Modifier.size(24.dp))
-              }
-            },
-            headlineContent = { Text(linked.provider.displayName) },
-            supportingContent = linked.email?.let { email -> { Text(email) } },
-          )
+          SettingsSection(stringResource(R.string.account_signed_in), footnote = stringResource(R.string.account_signed_in_note)) {
+            row {
+              SettingsRow(
+                linked.provider.displayName,
+                icon = null,
+                onClick = null,
+                supporting = linked.email,
+                leading = {
+                  when (linked.provider) {
+                    LinkedAccount.Provider.Apple -> Icon(painterResource(R.drawable.ic_apple_logo), contentDescription = null, Modifier.size(24.dp))
+                    LinkedAccount.Provider.Google -> Image(painterResource(R.drawable.ic_google_g), contentDescription = null, Modifier.size(24.dp))
+                  }
+                },
+              )
+            }
+          }
         }
-        item { Footnote(stringResource(R.string.account_signed_in_note)) }
-        // Each asks first, on the spot, so no arrow as for a page.
-        item { SignOutRow(state) }
-        item { DeleteRow(state) }
+        // Each asks first, on the spot, so no arrow as for a page; offered once the session is up,
+        // and said so meanwhile, as iOS does.
+        item {
+          SettingsSection(footnote = stringResource(R.string.account_offline).takeIf { state == AccountState.SigningIn }) {
+            row { SignOutRow(state) }
+            row { DeleteRow(state) }
+          }
+        }
       } else {
         item { SignInSection(state) }
       }
@@ -318,10 +314,14 @@ private fun DeleteRow(state: AccountState) {
   var failure by remember { mutableStateOf<DeletionFailure.Reason?>(null) }
   // From the tap on, as the server and Apple are asked before the account begins changing.
   var deleting by remember { mutableStateOf(false) }
-  ListItem(
-    headlineContent = { Text(stringResource(R.string.account_delete), color = MaterialTheme.colorScheme.error) },
-    trailingContent = if (deleting) ({ CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp) }) else null,
-    modifier = Modifier.clickable(enabled = state is AccountState.SignedIn && !deleting) { confirming = true },
+  SettingsRow(
+    stringResource(R.string.account_delete),
+    R.drawable.ic_person_remove,
+    onClick = { confirming = true },
+    end = RowEnd.None,
+    valueContent = if (deleting) ({ CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp) }) else null,
+    enabled = state is AccountState.SignedIn && !deleting,
+    danger = true,
   )
   if (confirming) {
     AlertDialog(
@@ -375,10 +375,14 @@ private fun SignOutRow(state: AccountState) {
   var confirming by remember { mutableStateOf(false) }
   var failed by remember { mutableStateOf(false) }
   var signingOut by remember { mutableStateOf(false) }
-  ListItem(
-    headlineContent = { Text(stringResource(R.string.account_sign_out), color = MaterialTheme.colorScheme.error) },
-    trailingContent = if (signingOut) ({ CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp) }) else null,
-    modifier = Modifier.clickable(enabled = state is AccountState.SignedIn && !signingOut) { confirming = true },
+  SettingsRow(
+    stringResource(R.string.account_sign_out),
+    R.drawable.ic_logout,
+    onClick = { confirming = true },
+    end = RowEnd.None,
+    valueContent = if (signingOut) ({ CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp) }) else null,
+    enabled = state is AccountState.SignedIn && !signingOut,
+    danger = true,
   )
   if (confirming) {
     AlertDialog(
