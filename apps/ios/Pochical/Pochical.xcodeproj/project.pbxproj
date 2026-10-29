@@ -126,6 +126,15 @@
 			);
 			target = C6C3AE0E30750000000C5B81 /* PochicalNotificationsExtension */;
 		};
+		C6C3AF0130750000000C5B81 /* Exceptions for "PochicalWidgets" folder in "Pochical" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				CompanionIntents.swift,
+				Opening.swift,
+				WidgetWords.swift,
+			);
+			target = C6C382E1307343AF00C0C5B8 /* Pochical */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -154,6 +163,7 @@
 			exceptions = (
 				C6C38321307344AB00C0C5B8 /* Exceptions for "PochicalWidgets" folder in "PochicalWidgetsExtension" target */,
 				C6C3AE0D30750000000C5B81 /* Exceptions for "PochicalWidgets" folder in "PochicalNotificationsExtension" target */,
+				C6C3AF0130750000000C5B81 /* Exceptions for "PochicalWidgets" folder in "Pochical" target */,
 			);
 			path = PochicalWidgets;
 			sourceTree = "<group>";

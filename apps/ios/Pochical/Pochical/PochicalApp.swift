@@ -1,10 +1,10 @@
+import AppIntents
 import GoogleSignIn
 import PochicalDesign
 import PochicalKit
 import SQLiteData
 import SwiftUI
 import UIKit
-import WidgetKit
 
 @main
 struct PochicalApp: App {
@@ -40,6 +40,9 @@ struct PochicalApp: App {
     session.onErase = { await Notifications.shared.forgetAccount() }
     Notifications.shared.groupCalls = groupCalls
     Notifications.shared.replies = Replies(database: database, session: session)
+    // The controls and the shortcuts open their places as a widget's link
+    // does.
+    AppDependencyManager.shared.add(dependency: LinkOpener { openPlaceLink($0) })
   }
 
   var body: some Scene {
@@ -56,7 +59,7 @@ struct PochicalApp: App {
         // Someone else from now, or signed in at last: the widgets show
         // them, and the push token goes under their session.
         .onChange(of: session.userID) {
-          WidgetCenter.shared.reloadAllTimelines()
+          reloadWidgets()
           Notifications.shared.sendToken()
         }
     }
