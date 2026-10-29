@@ -55,9 +55,15 @@ class MainActivity(
   private val push: Push,
   private val notificationPermission: NotificationPermission,
   private val reminderAlarms: ReminderAlarms,
+  private val appleSignIn: AppleSignIn,
+  private val signIns: SignIns,
 ) : ComponentActivity() {
   private var settings by mutableStateOf<DeviceSettings?>(null)
-  private val appleSignIn = AppleSignIn(this, kit.appleSignIn)
+
+  init {
+    // Before the activity is created, as the Auth Tab's result launcher must be.
+    appleSignIn.attach(this)
+  }
   private var calendarRead by mutableStateOf(false)
   private var firstRunDone by mutableStateOf<Boolean?>(null)
   private val links = OpenedLinks()
@@ -97,6 +103,7 @@ class MainActivity(
         LocalOwnDays provides ownDays,
         LocalAccount provides kit.account,
         LocalAppleSignIn provides appleSignIn,
+        LocalSignIns provides signIns,
         LocalGroupCalls provides kit.groups,
         LocalValues provides kit.database.values(),
         LocalChats provides kit.chats,

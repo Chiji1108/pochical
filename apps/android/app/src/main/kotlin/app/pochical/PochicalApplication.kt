@@ -60,6 +60,17 @@ interface AppGraph : MetroAppComponentProviders {
   @SingleIn(AppScope::class)
   fun pochicalKit(application: Application): PochicalKit = PochicalKit(application)
 
+  /** Appleで続ける, its page kept open through the activities made while it is. */
+  @Provides
+  @SingleIn(AppScope::class)
+  fun appleSignIn(kit: PochicalKit): AppleSignIn = AppleSignIn(kit.appleSignIn)
+
+  /** Appleで続ける and Googleで続ける under way, kept through the activities made while they run. */
+  @Provides
+  @SingleIn(AppScope::class)
+  fun signIns(kit: PochicalKit, apple: AppleSignIn): SignIns =
+    SignIns(kit.account, apple, CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate))
+
   /** The notifications from the server. */
   @Provides
   @SingleIn(AppScope::class)
