@@ -9,7 +9,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -47,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
@@ -55,14 +57,15 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.pochical.R
-import app.pochical.savePicture
-import app.pochical.sharePicture
 import app.pochical.design.Metrics
 import app.pochical.design.Radius
 import app.pochical.kit.inviteLink
+import app.pochical.savePicture
+import app.pochical.sharePicture
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
@@ -115,8 +118,10 @@ fun InvitePage(groupId: String, onBack: () -> Unit) {
   }
   LaunchedEffect(groupId) { load(remake = false) }
 
-  fun say(words: Int) {
-    haptics.performHapticFeedback(HapticFeedbackType.Confirm)
+  // What went through confirms with a haptic; what did not is only said (spec/haptics.md).
+  val qrMenuLabel = stringResource(R.string.invite_qr_menu)
+  fun say(words: Int, done: Boolean) {
+    if (done) haptics.performHapticFeedback(HapticFeedbackType.Confirm)
     scope.launch { snackbar.showSnackbar(resources.getString(words)) }
   }
 
@@ -125,7 +130,7 @@ fun InvitePage(groupId: String, onBack: () -> Unit) {
     snackbarHost = { SnackbarHost(snackbar) },
   ) { padding ->
     Column(
-      Modifier.padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
+      Modifier.verticalScroll(rememberScrollState()).padding(padding).padding(16.dp),
       verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
       val card = RoundedCornerShape(Radius.xxl)
@@ -146,7 +151,13 @@ fun InvitePage(groupId: String, onBack: () -> Unit) {
                 contentDescription = null,
                 Modifier.size(200.dp)
                   .semantics { contentDescription = resources.getString(R.string.invite_qr) }
-                  .combinedClickable(onClick = {}, onLongClick = { qrMenu = true }),
+                  .pointerInput(Unit) {
+                    detectTapGestures(onLongPress = {
+                      haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                      qrMenu = true
+                    })
+                  }
+                  .semantics { onLongClick(qrMenuLabel) { qrMenu = true; true } },
                 filterQuality = FilterQuality.None,
               )
               DropdownMenu(expanded = qrMenu, onDismissRequest = { qrMenu = false }) {
@@ -155,7 +166,7 @@ fun InvitePage(groupId: String, onBack: () -> Unit) {
                   leadingIcon = { Icon(painterResource(R.drawable.ic_share), contentDescription = null) },
                   onClick = {
                     qrMenu = false
-                    scope.launch { if (!shareQr(context, shownQr, name)) say(R.string.not_shared) }
+                    scope.launch { if (!shareQr(context, shownQr, name)) say(R.string.not_shared, done = false) }
                   },
                 )
                 DropdownMenuItem(
@@ -163,7 +174,10 @@ fun InvitePage(groupId: String, onBack: () -> Unit) {
                   leadingIcon = { Icon(painterResource(R.drawable.ic_download), contentDescription = null) },
                   onClick = {
                     qrMenu = false
-                    scope.launch { say(if (saveQr(context, shownQr)) R.string.saved_to_photos else R.string.not_saved) }
+                    scope.launch {
+                      val saved = saveQr(context, shownQr)
+                      say(if (saved) R.string.saved_to_photos else R.string.not_saved, done = saved)
+                    }
                   },
                 )
               }
@@ -183,11 +197,12 @@ fun InvitePage(groupId: String, onBack: () -> Unit) {
         )
       }
       link?.takeUnless { remaking }?.let { shown ->
-        Button(onClick = { sendLink(context, shown) }, Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
+        Button(onClick = { sendLink(context, shown) }, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
           Icon(painterResource(R.drawable.ic_share), contentDescription = null)
           Text(stringResource(R.string.invite_send), Modifier.padding(start = 8.dp))
         }
         OutlinedButton(
+          shapes = ButtonDefaults.shapes(),
           onClick = {
             scope.launch {
               clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(name, shown)))
@@ -195,7 +210,7 @@ fun InvitePage(groupId: String, onBack: () -> Unit) {
               haptics.performHapticFeedback(HapticFeedbackType.Confirm)
             }
           },
-          Modifier.fillMaxWidth().heightIn(min = Metrics.control),
+          modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control),
         ) {
           Icon(painterResource(if (copied) R.drawable.ic_check else R.drawable.ic_content_copy), contentDescription = null)
           Text(stringResource(if (copied) R.string.copied else R.string.invite_copy), Modifier.padding(start = 8.dp))

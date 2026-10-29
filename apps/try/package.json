@@ -31,6 +31,7 @@
     "tsx": "catalog:",
     "typescript": "~7.0.2",
     "vite": "^8.0.0",
+    "vite-plugin-pwa": "^2.0.0",
     "wrangler": "^4.151.3"
   }
 }

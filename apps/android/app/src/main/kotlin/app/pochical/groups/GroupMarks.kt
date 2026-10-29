@@ -12,6 +12,8 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -19,11 +21,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.pochical.IconLayers
-import app.pochical.chat.Picture
-import coil3.compose.AsyncImage
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.ColorPainter
 import app.pochical.LocalThemeColors
+import app.pochical.chat.Picture
 import app.pochical.design.Radius
 import app.pochical.kit.GroupCalls
 import app.pochical.kit.GroupMarkValue
@@ -33,6 +32,7 @@ import app.pochical.kit.Values
 import app.pochical.mark
 import app.pochical.markLayers
 import app.pochical.markShape
+import coil3.compose.AsyncImage
 
 /** GroupService, the profile and the photos, as the user the device is signed in as. */
 val LocalGroupCalls = staticCompositionLocalOf<GroupCalls> { error("No group calls provided") }
@@ -114,12 +114,13 @@ fun GroupMarkBadge(
 
 /**
  * A photo the screens show, a face or a mark, filling [modifier]'s bounds: from the device or else
- * [shelf] (none: the device's alone); its ground while it loads or when it cannot be read.
+ * [shelf] (none: the device's alone); [ground] while it loads or when it cannot be read.
  */
 @Composable
-fun PhotoPicture(photoId: String, shelf: PhotoShelf?, modifier: Modifier = Modifier) {
+fun PhotoPicture(photoId: String, shelf: PhotoShelf?, modifier: Modifier = Modifier, ground: Color? = MaterialTheme.colorScheme.surfaceContainerHighest) {
   // Through the app's one image loader, read at the size it shows and kept drawn in memory, so a
-  // face drawn again (a line scrolled back) shows at once (spec/chat.md, Photos).
-  val ground = ColorPainter(MaterialTheme.colorScheme.surfaceContainerHighest)
-  AsyncImage(Picture(photoId, shelf), contentDescription = null, modifier, placeholder = ground, error = ground, contentScale = ContentScale.Crop)
+  // face drawn again (a line scrolled back) shows at once (spec/chat.md, Photos). With no [ground],
+  // what is under it shows until it comes.
+  val painter = ground?.let(::ColorPainter)
+  AsyncImage(Picture(photoId, shelf), contentDescription = null, modifier, placeholder = painter, error = painter, contentScale = ContentScale.Crop)
 }

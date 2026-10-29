@@ -104,7 +104,7 @@ fun GroupMarkPage(
         )
       },
     ) { padding ->
-      Column(Modifier.padding(padding).verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
+      Column(Modifier.verticalScroll(rememberScrollState()).padding(padding).padding(bottom = 24.dp)) {
         PhotoEditor(
           label = stringResource(if (mark.photoId.isEmpty()) R.string.mark_photo_use else R.string.mark_photo_change),
           shape = PhotoCropShape.Square,

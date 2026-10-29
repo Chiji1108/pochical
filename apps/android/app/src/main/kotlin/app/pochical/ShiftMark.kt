@@ -88,7 +88,10 @@ fun ShiftMark(
 }
 
 /** A mark's tile, a pattern's letters or a group's, as /design rounds it: 28% of its side. */
-fun markShape(size: Dp) = RoundedCornerShape(size * 0.28f)
+fun markShape(size: Dp) = RoundedCornerShape(size * MARK_CORNER)
+
+/** A mark's corners, a share of its side. */
+const val MARK_CORNER = 0.28f
 
 private fun triangle(a: Offset, b: Offset, c: Offset) =
   Path().apply {

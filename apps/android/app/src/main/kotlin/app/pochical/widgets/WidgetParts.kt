@@ -56,6 +56,7 @@ import app.pochical.mark
 import java.time.LocalDate
 import java.time.YearMonth
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import androidx.datastore.preferences.core.Preferences
@@ -127,7 +128,7 @@ class WidgetColors(theme: Theme) {
 }
 
 /** What a widget is drawn from: the entry, and the settings it is drawn in. */
-class Drawn(val entry: WidgetEntry, val settings: DeviceSettings) {
+class Drawn(val entry: WidgetEntry, val settings: DeviceSettings, val faces: WidgetFaces = WidgetFaces()) {
   val colors = WidgetColors(settings.theme)
   val look = settings.look
   val english = settings.heading.english
@@ -192,14 +193,18 @@ abstract class PochicalWidget(
           choice?.let { picked -> sources.values.companion(picked, today).map { Companion(picked, it) } } ?: flowOf(Companion(null, null))
         }
           .collectAsState(firstRead)
+      // Read for another choice than the one now kept: the person's own days until it is.
+      val companion = read.companion.takeIf { read.choice == choice }
+      // Their photos apart from their days, drawn as they come and fetched again only for other
+      // photos: the days never wait on a face, which is its letter until then.
+      val photos = companion?.let { WidgetPhotos.of(it, ownFace = chooses == Choosing.People) }
+      val faces by remember(photos) { flow { emit(photos?.let { widgetFaces(context, it) } ?: WidgetFaces()) } }.collectAsState(WidgetFaces())
       val drawn =
-        remember(shownCalendar, shownSettings, today, read) {
-          // Read for another choice than the one now kept: the person's own days until it is.
-          val companion = read.companion.takeIf { read.choice == choice }
+        remember(shownCalendar, shownSettings, today, read, faces) {
           val entry = shownCalendar.widgetEntry(today, shownSettings.week, { it.holidayName(country) != null }, companion)
           // Picked, but no longer there: what the widget shows changes only when the person changes it.
           val gone = choice != null && read.choice == choice && companion == null
-          Drawn(entry.copy(pickAgain = choice?.groupId?.takeIf { gone }), shownSettings)
+          Drawn(entry.copy(pickAgain = choice?.groupId?.takeIf { gone }), shownSettings, faces.takeIf { it.photos == photos } ?: WidgetFaces())
         }
       Framed(drawn)
     }

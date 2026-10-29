@@ -1,5 +1,9 @@
 package app.pochical.repeat
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterExitState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -11,6 +15,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -120,10 +125,13 @@ fun RepeatCalendar(
         style = MaterialTheme.typography.titleLarge,
         modifier = Modifier.weight(1f),
       )
-      if (shown != firstMonth) {
+      AnimatedVisibility(shown != firstMonth, enter = fadeIn(), exit = fadeOut()) {
         val label = stringResource(R.string.repeat_first_day_label)
         OutlinedButton(
           onClick = { scope.launch { pages.animateScrollToPage(pageOf(firstMonth), animationSpec = Springs.standard()) } },
+          shapes = ButtonDefaults.shapes(),
+          // Pressed no more once it is going.
+          enabled = transition.targetState == EnterExitState.Visible,
           modifier = Modifier.semantics { contentDescription = label },
         ) {
           Text(stringResource(R.string.repeat_first_day))

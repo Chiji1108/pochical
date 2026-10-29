@@ -34,6 +34,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
@@ -49,7 +50,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
@@ -76,6 +76,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.LocalAccount
 import app.pochical.LocalNotifyingUnread
 import app.pochical.LocalThemeColors
@@ -123,7 +124,7 @@ class GroupsActions(
 @Composable
 fun GroupsScreen(openId: String?, onOpen: (String) -> Unit, actions: GroupsActions) {
   val values = LocalValues.current
-  val groups by remember(values) { values.groups() }.collectAsState(null)
+  val groups by remember(values) { values.groups() }.collectAsStateWithLifecycle(null)
   val list = groups ?: return
   val open = openGroup(openId, list)
   if (open == null) {
@@ -177,11 +178,11 @@ private fun NoGroups(actions: GroupsActions) {
         style = MaterialTheme.typography.bodyMedium,
         textAlign = TextAlign.Center,
       )
-      Button(onClick = actions.onNew, Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
+      Button(onClick = actions.onNew, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
         Icon(painterResource(R.drawable.ic_add), contentDescription = null)
         Text(stringResource(R.string.new_group), Modifier.padding(start = 8.dp))
       }
-      OutlinedButton(onClick = actions.onScan, Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
+      OutlinedButton(onClick = actions.onScan, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
         Icon(painterResource(R.drawable.ic_qr_code_scanner), contentDescription = null)
         Text(stringResource(R.string.scan), Modifier.padding(start = 8.dp))
       }
@@ -417,7 +418,7 @@ private fun GroupHub(group: GroupRow, actions: GroupsActions) {
 /** The id of the user the device is signed in as, null while it is not. */
 @Composable
 fun rememberMeId(): String? {
-  val state by LocalAccount.current.state.collectAsState()
+  val state by LocalAccount.current.state.collectAsStateWithLifecycle()
   return (state as? AccountState.SignedIn)?.userId ?: (state as? AccountState.Changing)?.before?.userId
 }
 

@@ -1,8 +1,8 @@
 package app.pochical
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -66,7 +66,7 @@ fun SessionEndedScreen(tryAgain: suspend () -> Unit, startAfresh: () -> Unit) {
       textAlign = TextAlign.Center,
     )
     Spacer(Modifier.weight(1f))
-    Button(onClick = { confirming = true }, modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
+    Button(onClick = { confirming = true }, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
       Text(stringResource(R.string.session_ended_start_afresh))
     }
     TextButton(

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedListItem
@@ -294,6 +295,6 @@ private fun TemplateRow(template: JobTemplate, onClick: () -> Unit) {
 @Composable
 private fun Next(title: String, enabled: Boolean = true, onClick: () -> Unit) {
   Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-    Button(onClick = onClick, enabled = enabled, modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) { Text(title) }
+    Button(onClick = onClick, shapes = ButtonDefaults.shapes(), enabled = enabled, modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) { Text(title) }
   }
 }
