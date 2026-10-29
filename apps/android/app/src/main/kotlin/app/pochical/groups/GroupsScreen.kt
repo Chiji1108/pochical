@@ -1,35 +1,35 @@
 package app.pochical.groups
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.only
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -63,18 +63,19 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.lerp
 import app.pochical.LocalAccount
 import app.pochical.LocalNotifyingUnread
 import app.pochical.LocalThemeColors
@@ -282,7 +283,7 @@ private fun GroupRail(groups: List<GroupRow>, openId: String, onOpen: (String) -
   val colors = LocalThemeColors.current
   Column(
     Modifier.fillMaxHeight()
-      .statusBarsPadding()
+      .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
       .background(colors.fillQuaternary, RoundedCornerShape(topEnd = Radius.xl))
       .verticalScroll(rememberScrollState())
       .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Start + WindowInsetsSides.Bottom))
@@ -291,28 +292,14 @@ private fun GroupRail(groups: List<GroupRow>, openId: String, onOpen: (String) -
     verticalArrangement = Arrangement.spacedBy(12.dp),
     horizontalAlignment = Alignment.CenterHorizontally,
   ) {
-    // Each group's chats' unread lines that notify, as the グループ tab adds them up.
-    val unread = LocalNotifyingUnread.current
-    for (group in groups) key(group.id) {
-      val isOpen = group.id == openId
-      val count = unread[group.id] ?: 0
-      val label = if (count > 0) stringResource(R.string.group_unread_label, group.name, count) else group.name
-      Box(Modifier.fillMaxWidth().height(48.dp), contentAlignment = Alignment.Center) {
-        // The flag at the edge grows by the open group, each group's its own as they move.
-        val flag by animateDpAsState(if (isOpen) 32.dp else 0.dp, MaterialTheme.motionScheme.fastSpatialSpec(), label = "flag")
-        Box(
-          Modifier.align(Alignment.CenterStart)
-            .size(4.dp, flag)
-            .background(colors.accentDefault, RoundedCornerShape(topEnd = Radius.xs, bottomEnd = Radius.xs))
-        )
-        RailMark(group, isOpen, label) { onOpen(group.id) }
-        if (count > 0) {
-          // Ringed in the rail's ground, so it stands clear of the mark.
-          UnreadBadge(
-            count,
-            Modifier.align(Alignment.BottomEnd).padding(end = 3.dp).background(colors.fillQuaternary, CircleShape).padding(2.dp),
-          )
-        }
+    // The groups are the rail's tabs, one of them open; the ways to start or join one follow apart.
+    Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+      // Each group's chats' unread lines that notify, as the グループ tab adds them up.
+      val unread = LocalNotifyingUnread.current
+      for (group in groups) key(group.id) {
+        val count = unread[group.id] ?: 0
+        val label = if (count > 0) stringResource(R.string.group_unread_label, group.name, count) else group.name
+        RailTab(group, group.id == openId, label, count) { onOpen(group.id) }
       }
     }
     Box(Modifier.size(28.dp, 2.dp).background(colors.borderDefault, CircleShape))
@@ -322,48 +309,48 @@ private fun GroupRail(groups: List<GroupRow>, openId: String, onOpen: (String) -
 }
 
 /**
- * A group's mark on the rail, a tab of it, on the card's ground; the open one on the accent's tint,
- * its corners drawn in and ringed in the accent inside its edge, a thin gap of the card's ground
- * keeping the ring clear of a photo's own colors. Its corners morph as Material 3 Expressive's
- * shapes do, on the motion scheme's springs: in further while pressed, the press's ripple in the
- * mark's own shape, and to the open one's as it opens, the ring coming with them, as iOS animates
- * both.
+ * A group's tab on the rail, its whole row pressed: its mark on the card's ground, flagged at the
+ * edge while open, its unread count on its corner. The open one's mark is on the accent's tint, its
+ * corners drawn in and ringed in the accent inside its edge, a thin gap of the card's ground keeping
+ * the ring clear of a photo's own colors. Opening morphs it there on the motion scheme's spring, as
+ * Material 3 Expressive's shapes morph and as iOS animates the corner and ring; the press's ripple
+ * is the mark's own shape.
  */
 @Composable
-private fun RailMark(group: GroupRow, isOpen: Boolean, label: String, onClick: () -> Unit) {
+private fun RailTab(group: GroupRow, isOpen: Boolean, label: String, count: Int, onClick: () -> Unit) {
   val colors = LocalThemeColors.current
   val press = remember { MutableInteractionSource() }
-  val pressed by press.collectIsPressedAsState()
-  val motion = MaterialTheme.motionScheme
-  val corner by
-    animateDpAsState(
-      when {
-        pressed -> Radius.sm
-        isOpen -> Radius.md
-        else -> Radius.lg
-      },
-      motion.fastSpatialSpec(),
-      label = "corner",
+  // How far open, 0 to 1: the flag, the corners and the ring all follow it.
+  val open by animateFloatAsState(if (isOpen) 1f else 0f, MaterialTheme.motionScheme.fastSpatialSpec(), label = "open")
+  val shown = open.coerceIn(0f, 1f)
+  val shape = RoundedCornerShape(lerp(Radius.lg, Radius.md, shown))
+  Box(
+    Modifier.fillMaxWidth()
+      .height(48.dp)
+      .selectable(isOpen, interactionSource = press, indication = null, role = Role.Tab, onClick = onClick)
+      .semantics { contentDescription = label },
+    contentAlignment = Alignment.Center,
+  ) {
+    Box(
+      Modifier.align(Alignment.CenterStart)
+        .size(4.dp, 32.dp * open.coerceAtLeast(0f))
+        .background(colors.accentDefault, RoundedCornerShape(topEnd = Radius.xs, bottomEnd = Radius.xs))
     )
-  val ground by animateColorAsState(if (isOpen) colors.accentContainer else colors.backgroundCard, motion.fastEffectsSpec(), label = "ground")
-  val ring by animateColorAsState(if (isOpen) colors.accentDefault else colors.accentDefault.copy(alpha = 0f), motion.fastEffectsSpec(), label = "ring")
-  val gap by animateColorAsState(if (isOpen) colors.backgroundCard else colors.backgroundCard.copy(alpha = 0f), motion.fastEffectsSpec(), label = "gap")
-  val shape = RoundedCornerShape(corner)
-  GroupMarkView(
-    group.mark,
-    44.dp,
-    Modifier.clip(shape)
-      .clickable(interactionSource = press, indication = ripple(), role = Role.Tab, onClick = onClick)
-      .semantics {
-        contentDescription = label
-        selected = isOpen
-      }
-      .background(ground, shape)
-      // The outer border is drawn last, so the accent's ring lies over the gap's outer half.
-      .border(2.dp, ring, shape)
-      .border(4.dp, gap, shape),
-    shelf = PhotoShelf.Group(group.id),
-  )
+    // The outer border is drawn last, so the accent's ring lies over the gap's outer half.
+    val ring =
+      if (shown > 0f) Modifier.border(2.dp, colors.accentDefault.copy(alpha = shown), shape).border(4.dp, colors.backgroundCard.copy(alpha = shown), shape)
+      else Modifier
+    GroupMarkView(
+      group.mark,
+      44.dp,
+      Modifier.clip(shape).indication(press, ripple()).background(lerp(colors.backgroundCard, colors.accentContainer, shown), shape).then(ring),
+      shelf = PhotoShelf.Group(group.id),
+    )
+    if (count > 0) {
+      // Ringed in the rail's ground, so it stands clear of the mark.
+      UnreadBadge(count, Modifier.align(Alignment.BottomEnd).padding(end = 3.dp).background(colors.fillQuaternary, CircleShape).padding(2.dp))
+    }
+  }
 }
 
 /** One of the rail's ways to start or join a group: its symbol in the accent on the card's ground. */
