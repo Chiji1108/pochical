@@ -92,6 +92,7 @@ import {
   takeMemberRepeatOrders,
 } from "./group-shifts";
 import { linkPreview } from "./link-preview";
+import { errorFields } from "./log";
 import {
   copyPersonPhoto,
   CREATE_ONLY,
@@ -819,7 +820,12 @@ export class GroupDO extends DurableObject<Env> {
         try {
           await this.env.USERS.getByName(userId).takeMembership(groupId, news);
         } catch (error) {
-          console.error(`Telling ${userId} of group ${groupId} failed`, error);
+          console.error({
+            error: errorFields(error),
+            groupId,
+            message: "Telling a member of their group failed",
+            userId,
+          });
           const wait = retryWait(
             failures + 1,
             NEWS_RETRY_FIRST_MS,
@@ -1147,7 +1153,11 @@ export class GroupDO extends DurableObject<Env> {
         try {
           await deleteGroupPhotos(this.env, groupId, [...going, ...takingBack]);
         } catch (error) {
-          console.error(`Sweeping group ${groupId}'s photos failed`, error);
+          console.error({
+            error: errorFields(error),
+            groupId,
+            message: "Sweeping a group's photos failed",
+          });
           return (
             Date.now() +
             bucketRetryWait(countFailure(this.ctx.storage.kv, SWEEP_FAILURES))
