@@ -1,5 +1,7 @@
 package app.pochical.widgets
 
+import android.content.Context
+import android.graphics.Bitmap
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -7,17 +9,24 @@ import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
+import androidx.glance.Image
+import androidx.glance.ImageProvider
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.size
-import app.pochical.kit.limitText
+import app.pochical.MARK_CORNER
+import app.pochical.cutPicture
 import app.pochical.design.Widgets
 import app.pochical.kit.GroupRow
+import app.pochical.kit.PhotoShelf
 import app.pochical.kit.Values
 import app.pochical.kit.groupMembers
+import app.pochical.kit.limitText
+import app.pochical.photoBitmap
+import coil3.SingletonImageLoader
 import java.time.LocalDate
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -109,21 +118,58 @@ fun Values.choiceGroups(): Flow<List<ChoiceGroup>> =
     }
   }
 
-/** Who a widget is set to, by their face or the group's mark. */
+/**
+ * The photos a widget set to someone or a group shows, as pictures cut to their shapes: [with]'s,
+ * a person's face in a circle or a group's photo mark in a mark's corners, and the person's own
+ * face there ([me]); none where there is no photo or it did not come in time.
+ */
+data class WidgetFaces(val with: Bitmap? = null, val me: Bitmap? = null)
+
+/** How long a widget waits for a photo before drawing the letter in its place. */
+private const val FACE_WAIT_MS = 3_000L
+
+/** A widget's faces, a few times the largest it draws them, small for the views' room for pictures. */
+private const val FACE_DP = 32
+
+/**
+ * The photos of [companion]'s faces through the app's one image loader, from the group's photos
+ * (spec/widgets.md): the one picked, or the group's photo mark, and the person's own.
+ */
+suspend fun widgetFaces(context: Context, companion: WidgetCompanion?): WidgetFaces {
+  if (companion == null) return WidgetFaces()
+  val loader = SingletonImageLoader.get(context)
+  val side = (FACE_DP * context.resources.displayMetrics.density).toInt()
+  suspend fun picture(photoId: String, groupId: String, corner: Float) =
+    photoBitmap(context, loader, photoId, PhotoShelf.place(groupId), side, FACE_WAIT_MS)?.let { cutPicture(it, side, corner) }
+  val with = companion.with
+  return WidgetFaces(
+    with =
+      when (with.kind) {
+        WidgetWith.Kind.Person -> picture(with.photoId, with.groupId, side / 2f)
+        WidgetWith.Kind.Group -> picture(with.mark.photoId, with.groupId, side * MARK_CORNER)
+      },
+    me = picture(companion.me.photoId, companion.me.groupId, side / 2f),
+  )
+}
+
+/** Who a widget is set to, by their face or the group's mark, its photo where it has one. */
 @Composable
 fun CompanionFace(with: WidgetWith, drawn: Drawn, size: Dp = 20.dp) {
-  when (with.kind) {
-    WidgetWith.Kind.Person -> WidgetFace(with.name, size)
-    WidgetWith.Kind.Group -> WidgetGroupMark(with.mark, with.name, size, drawn.colors)
+  val photo = drawn.faces.with
+  when {
+    photo != null -> Image(ImageProvider(photo), contentDescription = null, GlanceModifier.size(size))
+    with.kind == WidgetWith.Kind.Person -> WidgetFace(with.name, size)
+    else -> WidgetGroupMark(with.mark, with.name, size, drawn.colors)
   }
 }
 
 /**
- * Someone's face as the group's screens draw one without a photo: the first letter of their name
- * in a circle, the person's own in the accent. Photos stand so until widgets show them.
+ * Someone's face as the group's screens draw it: their [photo], else the first letter of their
+ * name in a circle, the person's own in the accent.
  */
 @Composable
-fun WidgetFace(name: String, size: Dp, me: Boolean = false) {
+fun WidgetFace(name: String, size: Dp, me: Boolean = false, photo: Bitmap? = null) {
+  if (photo != null) return Image(ImageProvider(photo), contentDescription = null, GlanceModifier.size(size))
   val colors = GlanceTheme.colors
   Box(
     GlanceModifier.size(size).background(if (me) colors.primary else colors.secondaryContainer).cornerRadius(size / 2),

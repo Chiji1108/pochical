@@ -127,7 +127,7 @@ class WidgetColors(theme: Theme) {
 }
 
 /** What a widget is drawn from: the entry, and the settings it is drawn in. */
-class Drawn(val entry: WidgetEntry, val settings: DeviceSettings) {
+class Drawn(val entry: WidgetEntry, val settings: DeviceSettings, val faces: WidgetFaces = WidgetFaces()) {
   val colors = WidgetColors(settings.theme)
   val look = settings.look
   val english = settings.heading.english
@@ -180,7 +180,8 @@ abstract class PochicalWidget(
     val calendar = sources.calendar.first()
     val settings = sources.settings.first()
     val firstChoice = choiceIn(getAppWidgetState(context, stateDefinition, id))
-    val firstRead = Companion(firstChoice, firstChoice?.let { sources.values.companion(it, LocalDate.now()).first() })
+    val firstCompanion = firstChoice?.let { sources.values.companion(it, LocalDate.now()).first() }
+    val firstRead = Companion(firstChoice, firstCompanion, widgetFaces(context, firstCompanion))
     WidgetDayReceiver.schedule(context)
     provideContent {
       val shownCalendar by sources.calendar.collectAsState(calendar)
@@ -189,7 +190,8 @@ abstract class PochicalWidget(
       val choice = choiceIn(currentState())
       val read by
         remember(choice, today) {
-          choice?.let { picked -> sources.values.companion(picked, today).map { Companion(picked, it) } } ?: flowOf(Companion(null, null))
+          choice?.let { picked -> sources.values.companion(picked, today).map { Companion(picked, it, widgetFaces(context, it)) } }
+            ?: flowOf(Companion(null, null))
         }
           .collectAsState(firstRead)
       val drawn =
@@ -199,7 +201,7 @@ abstract class PochicalWidget(
           val entry = shownCalendar.widgetEntry(today, shownSettings.week, { it.holidayName(country) != null }, companion)
           // Picked, but no longer there: what the widget shows changes only when the person changes it.
           val gone = choice != null && read.choice == choice && companion == null
-          Drawn(entry.copy(pickAgain = choice?.groupId?.takeIf { gone }), shownSettings)
+          Drawn(entry.copy(pickAgain = choice?.groupId?.takeIf { gone }), shownSettings, if (companion == null) WidgetFaces() else read.faces)
         }
       Framed(drawn)
     }
@@ -235,7 +237,7 @@ abstract class PochicalWidget(
   enum class Choosing { Nobody, People, PeopleAndGroups }
 
   /** Who [choice] is, as last read. */
-  private data class Companion(val choice: WidgetChoice?, val companion: WidgetCompanion?)
+  private data class Companion(val choice: WidgetChoice?, val companion: WidgetCompanion?, val faces: WidgetFaces = WidgetFaces())
 }
 
 /** A phone's 2×2, 4×2 and 4×4, the sizes a kind's preview is drawn at among those it offers (/design's android families). */
