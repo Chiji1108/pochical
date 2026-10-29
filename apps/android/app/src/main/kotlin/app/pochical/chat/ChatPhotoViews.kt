@@ -67,6 +67,7 @@ import app.pochical.v1.ChatPhoto
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import coil3.request.ImageRequest
+import coil3.size.Scale
 import coil3.request.crossfade
 
 // Photos in a chat (spec/chat.md, Photos; Albums): a line's photo or album, each photo over the
@@ -136,6 +137,27 @@ private val ALBUM_WIDTH = 240.dp
 private val ALBUM_GAP = 2.dp
 
 /**
+ * The size each of a line's [photos] shows at in the chat: one alone in its [PhotoBox], an album's
+ * cells in their rows (`albumRows`), a row of several as tall as a cell is wide and the row of one
+ * half the album's width tall. The line and the photos fetched ahead for it read it alike.
+ */
+fun photoCells(photos: List<ChatPhoto>): List<DpSize> {
+  if (photos.size == 1) return listOf(PhotoBox.size(photos.single()))
+  return albumRows(photos.size).flatMap { across ->
+    val width = (ALBUM_WIDTH - ALBUM_GAP * (across - 1)) / across
+    List(across) { DpSize(width, if (across == 1) ALBUM_WIDTH / 2 else width) }
+  }
+}
+
+/**
+ * A line's photo as the chat asks for it: its small version, filling its cell as the line crops it.
+ * The line ([ChatPhotoImage]) and the photos fetched ahead (`PrefetchPhotos`) ask alike, so one finds
+ * what the other kept.
+ */
+fun linePhotoRequest(context: Context, photoId: String, groupId: String, attempt: Int = 0): ImageRequest.Builder =
+  ImageRequest.Builder(context).data(ChatPhotoData(photoId, groupId, small = true, attempt = attempt)).scale(Scale.FILL)
+
+/**
  * A line's photos with no bubble (spec/chat.md, Photos; Albums): one alone the size it was sent at
  * within [PhotoBox], two or more as an album in rows (`albumRows`), rounded at `lg` with a hairline
  * edge. While the line goes up ([waiting] still being sent) each is dimmed with its ring, × in it
@@ -196,7 +218,7 @@ fun ChatPhotoImage(photo: ChatPhoto, groupId: String, retries: Boolean, onOpen: 
   var shown by remember(photo.id) { mutableStateOf(false) }
   val request =
     remember(photo.id, groupId, attempt) {
-      ImageRequest.Builder(context).data(ChatPhotoData(photo.id, groupId, small = true, attempt = attempt)).crossfade(if (blur != null) Chat.photoFadeMs else 0).build()
+      linePhotoRequest(context, photo.id, groupId, attempt).crossfade(if (blur != null) Chat.photoFadeMs else 0).build()
     }
   val open by rememberUpdatedState(onOpen)
   // A tap, not a press held: one held `chatRules.longPressMs` opens the line's menu, and its lift is no tap.

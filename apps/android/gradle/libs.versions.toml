@@ -1,5 +1,6 @@
 [versions]
-# The JDK every module compiles with and targets, mise.toml's java.
+# The JDK every module compiles with and targets, mise.toml's java, which
+# .github/renovate.json5 keeps below the next major (<22): raise all three together.
 jvm = "21"
 compileSdk = "37"
 minSdk = "29"
@@ -11,6 +12,9 @@ kotlin = "2.4.21"
 protobuf = "4.36.2"
 connect = "0.9.0"
 compose-bom = "2026.09.00"
+# Material 3 ahead of the BOM's 1.4.0: 1.5 is the release with Material 3 Expressive's components
+# (segmented list items, flexible app bars, button groups) and its motion scheme.
+material3 = "1.5.0-beta02"
 activity-compose = "1.13.0"
 navigation3 = "1.2.0"
 metro = "1.4.5"
@@ -65,8 +69,8 @@ connect-kotlin-okhttp = { module = "com.connectrpc:connect-kotlin-okhttp", versi
 compose-bom = { module = "androidx.compose:compose-bom", version.ref = "compose-bom" }
 compose-ui = { module = "androidx.compose.ui:ui" }
 compose-animation-core = { module = "androidx.compose.animation:animation-core" }
-compose-material3 = { module = "androidx.compose.material3:material3" }
-compose-material3-navigation-suite = { module = "androidx.compose.material3:material3-adaptive-navigation-suite" }
+compose-material3 = { module = "androidx.compose.material3:material3", version.ref = "material3" }
+compose-material3-navigation-suite = { module = "androidx.compose.material3:material3-adaptive-navigation-suite", version.ref = "material3" }
 activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity-compose" }
 navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "navigation3" }
 navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "navigation3" }

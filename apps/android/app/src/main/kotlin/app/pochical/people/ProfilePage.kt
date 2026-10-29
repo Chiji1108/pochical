@@ -29,7 +29,7 @@ import app.pochical.R
 import app.pochical.RootPage
 import app.pochical.SettingsPage
 import app.pochical.rememberKeptField
-import app.pochical.characterCount
+import app.pochical.kit.characterCount
 import app.pochical.design.TextLimits
 import app.pochical.groups.LocalGroupCalls
 import app.pochical.groups.LocalValues
