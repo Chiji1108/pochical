@@ -127,9 +127,10 @@ class PochicalApplication : Application(), MetroApplication, PochicalKit.Holder,
     CoroutineScope(SupervisorJob() + Dispatchers.Default).launch(start = CoroutineStart.UNDISPATCHED) {
       followForgotten(graph.kit.photoFiles) { SingletonImageLoader.get(this@PochicalApplication) }
     }
+    // Push listens before anything syncs too, so a group left is never missed (`SyncAccount.left`).
+    graph.push.start()
     graph.kit.followProcess()
     followForWidgets(this, graph.kit.database, graph.settings)
-    graph.push.start()
     graph.reminderAlarms.start()
     ProcessLifecycleOwner.get()
       .lifecycle

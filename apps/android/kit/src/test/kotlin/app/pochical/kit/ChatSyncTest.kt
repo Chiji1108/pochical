@@ -417,7 +417,7 @@ class ChatValuesTest {
   }
 
   @Test
-  fun aGroupLeftOrResetLetsGoOfThePhotosOfItsLines() = runTest {
+  fun aGroupLeftLetsGoOfThePhotosOfItsLines() = runTest {
     database.listGroup()
     val album = chatLine {
       threadId = GROUP_THREAD

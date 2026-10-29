@@ -344,6 +344,8 @@ class SyncClient internal constructor(
           write {
             leaving = placesLeft(changes)
             take(changes)
+            // Not one joined again later in the same changes.
+            leaving = leaving.filterKeys { !isListed(it) }
           }
           for ((groupId, photos) in leaving) {
             linePhotos.files.forgetPlace(groupId, photos)

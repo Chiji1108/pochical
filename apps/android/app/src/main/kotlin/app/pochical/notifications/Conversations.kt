@@ -100,6 +100,9 @@ class DrawnConversations(
   override fun forget(gone: (id: String) -> Boolean) {
     val ids = ShortcutManagerCompat.getShortcuts(context, ShortcutManagerCompat.FLAG_MATCH_DYNAMIC or ShortcutManagerCompat.FLAG_MATCH_CACHED).map { it.id }.filter(gone)
     if (ids.isNotEmpty()) ShortcutManagerCompat.removeLongLivedShortcuts(context, ids)
+    // One the person pinned stays where they put it, as only they can take it away, but opens nothing.
+    val pinned = ShortcutManagerCompat.getShortcuts(context, ShortcutManagerCompat.FLAG_MATCH_PINNED).map { it.id }.filter(gone)
+    if (pinned.isNotEmpty()) ShortcutManagerCompat.disableShortcuts(context, pinned, context.getString(R.string.push_conversation_gone))
   }
 
   /**

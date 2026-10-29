@@ -30,13 +30,14 @@ class ChatNotifierTest {
   private val context: Application = RuntimeEnvironment.getApplication()
   private val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
   private var signedIn: String? = ME
+  private var inGroup = true
   private val conversations = TestConversations(context)
   private val notifier =
     ChatNotifier(
       context,
       { signedIn },
       { groupId -> if (groupId == GROUP) listOf(member(ME, "ゆうき"), member(WRITER, "さくら")) else emptyList() },
-      { groupId -> if (groupId == GROUP) GroupRow(GROUP, "いとこ会", 0, GroupMarkValue(emoji = "🍙")) else null },
+      { groupId -> if (groupId == GROUP && inGroup) GroupRow(GROUP, "いとこ会", 0, GroupMarkValue(emoji = "🍙")) else null },
       conversations,
     )
 
@@ -302,6 +303,35 @@ class ChatNotifierTest {
     notifier.forgetPlace(GROUP)
     assertEquals(listOf("g2/group"), shown().map { it.tag })
     assertEquals(listOf("g2/group"), conversations.published.map { it.first }.distinct())
+  }
+
+  @Test
+  fun aGroupLeftWhileItsLinesFacesLoadShowsNothingOfIt() = runTest {
+    conversations.loading = {
+      conversations.loading = {}
+      inGroup = false
+      notifier.forgetPlace(GROUP)
+    }
+    notifier.show(groupLine(2, "今週どう？"))
+    assertTrue(shown().isEmpty())
+    assertTrue(conversations.published.isEmpty())
+  }
+
+  @Test
+  fun aGroupLeftJustAfterItsLineIsCheckedTakesWhatWasPosted() = runTest {
+    // Left after the check before posting, its letting go already run: the line lets go of itself.
+    var checks = 0
+    val racing =
+      ChatNotifier(
+        context,
+        { ME },
+        { listOf(member(ME, "ゆうき"), member(WRITER, "さくら")) },
+        { if (++checks <= 3) GroupRow(GROUP, "いとこ会", 0, GroupMarkValue(emoji = "🍙")) else null },
+        conversations,
+      )
+    racing.show(groupLine(2, "今週どう？"))
+    assertTrue(shown().isEmpty())
+    assertTrue(conversations.published.isEmpty())
   }
 
   private fun support(seq: Long, words: String) =

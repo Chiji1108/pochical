@@ -172,6 +172,11 @@ class ChatPhotoFiles internal constructor(private val caches: File, private val 
         pendingSmall(groupId, id).delete()
       }
     }
+    letGo(groupId, photoIds)
+  }
+
+  /** Tells the app's image cache to let go of the group [groupId]'s [photoIds]. */
+  private suspend fun letGo(groupId: String, photoIds: List<String>) {
     for (id in photoIds) mutableForgotten.emit(ForgottenPhoto(PhotoShelf.place(groupId), id))
   }
 
@@ -184,7 +189,7 @@ class ChatPhotoFiles internal constructor(private val caches: File, private val 
       File(caches, "chat-photos/$groupId").deleteRecursively()
       File(files, "pending-photos/$groupId").deleteRecursively()
     }
-    for (id in photoIds) mutableForgotten.emit(ForgottenPhoto(PhotoShelf.place(groupId), id))
+    letGo(groupId, photoIds)
   }
 
   /** Every photo kept, to send or to show, gone with the user. */

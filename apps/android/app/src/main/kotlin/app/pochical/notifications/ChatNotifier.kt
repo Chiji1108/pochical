@@ -86,9 +86,17 @@ class ChatNotifier(
     if (alert.recipientId != me) return
     val tag = tagOf(alert.groupId, alert.threadId)
     if (tag == onScreen.get()) return
+    // A group the device holds that it lets go of meanwhile (left, [forgetPlace]) shows nothing: one
+    // not held yet shows as the server words it.
+    val held = group(alert.groupId) != null
+    val gone = suspend { held && group(alert.groupId) == null }
     // Who and where, faces and marks among them, before the chat's notification is read.
     val line = line(alert, tag, me)
+    if (gone()) return
     synchronized(lock) { post(tag, line.after(shownOf(tag))) }
+    // Left as it was posted: its letting go ran before the post, so it is let go of here; one after
+    // it finds the post.
+    if (gone()) forgetPlace(alert.groupId)
   }
 
   /**
@@ -110,7 +118,7 @@ class ChatNotifier(
    */
   fun withdrawRead(read: ReadState) =
     synchronized(lock) {
-      val tags = (posted.keys + manager.activeNotifications.filter { it.id == ID }.mapNotNull { it.tag }).distinct() - answering
+      val tags = shownTags() - answering
       val shown = tags.mapNotNull { tag -> shownOf(tag)?.let { tag to it } }.toMap()
       val lines =
         shown.flatMap { (tag, chat) -> chat.seqs.mapIndexed { index, seq -> NotifiedLine("$tag$LINE$index", chat.groupId, chat.threadId, seq) } }
@@ -236,8 +244,7 @@ class ChatNotifier(
   fun forgetPlace(groupId: String) {
     val ofGroup = { tag: String -> tag.startsWith(tagOf(groupId, "")) }
     synchronized(lock) {
-      val tags = posted.keys + manager.activeNotifications.filter { it.id == ID }.mapNotNull { it.tag }
-      tags.filter(ofGroup).distinct().forEach(::cancel)
+      shownTags().filter(ofGroup).forEach(::cancel)
       answering.removeAll(ofGroup)
     }
     conversations.forget(ofGroup)
@@ -256,6 +263,9 @@ class ChatNotifier(
     val style: NotificationCompat.MessagingStyle?,
     val messages: List<NotificationCompat.MessagingStyle.Message>,
   )
+
+  /** The tags of the chats' notifications shown, by this process or before it. */
+  private fun shownTags(): Set<String> = posted.keys + manager.activeNotifications.filter { it.id == ID }.mapNotNull { it.tag }
 
   /** The chat [tag]'s notification shown, if any. */
   private fun shownOf(tag: String): Shown? {
@@ -314,15 +324,11 @@ class ChatNotifier(
     val title = if (inGroup) worded(alert.title) else null
     // The chat as one of Android's conversations: the group's chat under the group's mark, a
     // one-to-one chat, and Pochical's people's, under the other's face.
-    val shortcut =
-      conversations.publish(
-        tag,
-        title ?: writerName,
-        mark.await() ?: writerFace.await(),
-        if (inGroup) emptyList() else listOf(writer),
-        openingIntent(alert.groupId, alert.threadId),
-      )
-    Line(alert, tag, if (support) Channels.SUPPORT else Channels.CHAT, user, writer, words, title, inGroup, shortcut)
+    val icon = mark.await() ?: writerFace.await()
+    val publish = {
+      conversations.publish(tag, title ?: writerName, icon, if (inGroup) emptyList() else listOf(writer), openingIntent(alert.groupId, alert.threadId))
+    }
+    Line(alert, tag, if (support) Channels.SUPPORT else Channels.CHAT, user, writer, words, title, inGroup, publish)
   }
 
   /** A line come in, ready to show after what the chat's notification shows. */
@@ -335,9 +341,10 @@ class ChatNotifier(
     val words: String,
     val title: String?,
     val inGroup: Boolean,
-    val shortcut: ShortcutInfoCompat,
+    /** Makes the chat a conversation shortcut, as it is posted. */
+    val publish: () -> ShortcutInfoCompat,
   ) {
-    /** The chat's notification with this line's message added to those [before] shows. */
+    /** The chat's notification with this line's message added to those [before] shows, its conversation published with it. */
     fun after(before: Shown?): Notification {
       val style = NotificationCompat.MessagingStyle(user).setGroupConversation(inGroup).setConversationTitle(title)
       before?.messages?.forEach(style::addMessage)
@@ -345,7 +352,7 @@ class ChatNotifier(
       return NotificationCompat.Builder(context, channel)
         .setSmallIcon(R.drawable.ic_notification)
         .setStyle(style)
-        .setShortcutInfo(shortcut)
+        .setShortcutInfo(publish())
         .addExtras(extrasOf(alert.groupId, alert.threadId, before?.seqs.orEmpty() + (alert.line?.seq ?: 0)))
         .setCategory(NotificationCompat.CATEGORY_MESSAGE)
         .setContentIntent(opening(alert))
