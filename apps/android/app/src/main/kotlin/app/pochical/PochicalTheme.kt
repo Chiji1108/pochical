@@ -52,13 +52,13 @@ fun PochicalTheme(settings: DeviceSettings, content: @Composable () -> Unit) {
 
 /**
  * Material's type scale, its Japanese breaking between phrases rather than in the middle of a word,
- * as the app's own text styles and the site's do (PochicalTextStyles), so a title, a button or a
- * note wraps where a reader would.
+ * as the app's own text styles and the site's do (PochicalTextStyles.phrases), so a title, a button
+ * or a note wraps where a reader would. bodyLarge, what Material's text fields type in, keeps
+ * Material's break, as words being typed should not jump between lines a phrase at a time.
  */
 private val Phrases: Typography =
   Typography().run {
-    val phrases = PochicalTextStyles.body.lineBreak
-    fun TextStyle.inPhrases() = copy(lineBreak = phrases)
+    fun TextStyle.inPhrases() = copy(lineBreak = PochicalTextStyles.phrases)
     Typography(
       displayLarge = displayLarge.inPhrases(),
       displayMedium = displayMedium.inPhrases(),
@@ -69,7 +69,7 @@ private val Phrases: Typography =
       titleLarge = titleLarge.inPhrases(),
       titleMedium = titleMedium.inPhrases(),
       titleSmall = titleSmall.inPhrases(),
-      bodyLarge = bodyLarge.inPhrases(),
+      bodyLarge = bodyLarge,
       bodyMedium = bodyMedium.inPhrases(),
       bodySmall = bodySmall.inPhrases(),
       labelLarge = labelLarge.inPhrases(),
