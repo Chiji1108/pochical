@@ -90,10 +90,9 @@ suspend fun followForgotten(files: ChatPhotoFiles, loader: () -> ImageLoader) {
       disk?.clear()
       return@collect
     }
-    for (key in listOf(photoKey(groupId, photoId, small = true), photoKey(groupId, photoId, small = false), pictureKey(gone.shelf, photoId))) {
-      disk?.remove(key)
-      memory?.keys?.filter { it.key == key }?.forEach { memory.remove(it) }
-    }
+    val keys = setOf(photoKey(groupId, photoId, small = true), photoKey(groupId, photoId, small = false), pictureKey(gone.shelf, photoId))
+    keys.forEach { disk?.remove(it) }
+    memory?.keys?.filter { it.key in keys }?.forEach { memory.remove(it) }
   }
 }
 
