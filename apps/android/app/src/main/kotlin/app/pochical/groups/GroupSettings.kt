@@ -14,7 +14,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -40,21 +39,27 @@ import app.pochical.LimitedTextField
 import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.ReviewPrompt
+import app.pochical.RowEnd
 import app.pochical.SectionHeader
-import app.pochical.kit.characterCount
-import app.pochical.rememberKeptField
+import app.pochical.SectionRow
+import app.pochical.SettingsPage
+import app.pochical.SettingsRow
+import app.pochical.SettingsSection
+import app.pochical.chat.ProfileOf
+import app.pochical.chat.ReportAndBlock
+import app.pochical.chat.ReportAndBlockState
 import app.pochical.design.TextLimits
 import app.pochical.kit.GroupMarkValue
 import app.pochical.kit.GroupMemberRow
 import app.pochical.kit.GroupRow
 import app.pochical.kit.MarkPhotoGone
 import app.pochical.kit.PhotoShelf
-import app.pochical.notifications.GroupChatNotifications
+import app.pochical.kit.characterCount
 import app.pochical.kit.directThread
 import app.pochical.kit.nextGroupColor
-import app.pochical.chat.ProfileOf
-import app.pochical.chat.ReportAndBlock
-import app.pochical.chat.ReportAndBlockState
+import app.pochical.notifications.GroupChatNotifications
+import app.pochical.rememberKeptField
+import app.pochical.sectionRows
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.launch
 
@@ -90,58 +95,71 @@ fun GroupSettingsPage(
   val blocked = remember(blockRows) { blockRows.map { it.userId }.toSet() }
   var confirmingRemove by remember { mutableStateOf<GroupMemberRow?>(null) }
 
-  GroupPage(groupId, stringResource(R.string.group_settings), onBack) { group ->
-    Scaffold(topBar = { PageBar(stringResource(R.string.group_settings), onBack) }, snackbarHost = { SnackbarHost(snackbar) }) { padding ->
-    LazyColumn(contentPadding = padding) {
-      item { SectionHeader(stringResource(R.string.group)) }
-      item {
-        ListItem(
-          headlineContent = { Text(group.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-          leadingContent = { GroupMarkBadge(group.mark, shelf = PhotoShelf.Group(groupId)) },
-          trailingContent = { Text(stringResource(R.string.edit)) },
-          modifier = Modifier.clickable(onClick = onEdit),
-        )
+  GroupPage(groupId, stringResource(R.string.group_settings), onBack, loading = { title -> SettingsPage(title, onBack) { padding -> PageLoading(padding) } }) { group ->
+    SettingsPage(stringResource(R.string.group_settings), onBack, snackbar = snackbar) { padding ->
+      LazyColumn(contentPadding = padding) {
+        item {
+          SettingsSection(stringResource(R.string.group), footnote = stringResource(R.string.group_settings_note)) {
+            row {
+              SettingsRow(
+                group.name,
+                icon = null,
+                onClick = onEdit,
+                oneLine = true,
+                leading = { GroupMarkBadge(group.mark, shelf = PhotoShelf.Group(groupId)) },
+                value = stringResource(R.string.edit),
+              )
+            }
+          }
+        }
+        item {
+          SettingsSection(stringResource(R.string.group_me)) {
+            row {
+              SettingsRow(
+                me?.displayName.orEmpty(),
+                icon = null,
+                onClick = onProfile,
+                oneLine = true,
+                leading = { MemberAvatar(me?.displayName.orEmpty(), me?.photoId.orEmpty(), PhotoShelf.Group(groupId), 32.dp, me = true) },
+                value = stringResource(if (me?.ownName == true || me?.ownPhoto == true) R.string.group_only else R.string.usual_same),
+                enabled = me != null,
+              )
+            }
+          }
+        }
+        item { GroupChatNotifications(groupId, snackbar) }
+        item { SectionHeader(stringResource(R.string.group_members)) }
+        // A whole group's people, composed as they scroll into sight, then メンバーを招待.
+        sectionRows(members, key = { it.userId }, extra = 1) { member ->
+          val mine = member.userId == meId
+          SettingsRow(
+            if (mine) stringResource(R.string.member_me, member.displayName) else member.displayName,
+            icon = null,
+            onClick = if (mine) null else ({ reportAndBlock.profileOf = ProfileOf.of(member) }),
+            leading = { MemberAvatar(member.displayName, member.photoId, PhotoShelf.Group(groupId), 32.dp, me = mine) },
+            end = RowEnd.None,
+            oneLine = true,
+          )
+        }
+        item(key = "invite") {
+          SectionRow(members.size, members.size + 1) { SettingsRow(stringResource(R.string.invite), R.drawable.ic_person_add, onClick = onInvite) }
+        }
+        item {
+          SettingsSection(modifier = Modifier.padding(top = 24.dp)) {
+            row {
+              SettingsRow(
+                stringResource(R.string.group_leave),
+                R.drawable.ic_logout,
+                onClick = { confirmingLeave = true },
+                end = RowEnd.None,
+                valueContent = if (leaving) ({ CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp) }) else null,
+                enabled = !leaving,
+                danger = true,
+              )
+            }
+          }
+        }
       }
-      item { Footnote(stringResource(R.string.group_settings_note)) }
-      item { SectionHeader(stringResource(R.string.group_me)) }
-      item {
-        ListItem(
-          headlineContent = { Text(me?.displayName.orEmpty(), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-          leadingContent = { MemberAvatar(me?.displayName.orEmpty(), me?.photoId.orEmpty(), PhotoShelf.Group(groupId), 28.dp, me = true) },
-          trailingContent = {
-            Text(stringResource(if (me?.ownName == true || me?.ownPhoto == true) R.string.group_only else R.string.usual_same))
-          },
-          modifier = Modifier.clickable(enabled = me != null, onClick = onProfile),
-        )
-      }
-      item { GroupChatNotifications(groupId, snackbar) }
-      item { SectionHeader(stringResource(R.string.group_members)) }
-      items(members, key = { it.userId }) { member ->
-        val mine = member.userId == meId
-        MemberRow(
-          member,
-          groupId,
-          if (mine) Modifier else Modifier.clickable { reportAndBlock.profileOf = ProfileOf.of(member) },
-          me = mine,
-        )
-      }
-      item {
-        ListItem(
-          headlineContent = { Text(stringResource(R.string.invite), color = MaterialTheme.colorScheme.secondary) },
-          leadingContent = { Icon(painterResource(R.drawable.ic_person_add), contentDescription = null, tint = MaterialTheme.colorScheme.secondary) },
-          modifier = Modifier.clickable(onClick = onInvite),
-        )
-      }
-      item {
-        ListItem(
-          headlineContent = {
-            if (leaving) CircularProgressIndicator(Modifier.size(20.dp))
-            else Text(stringResource(R.string.group_leave), color = MaterialTheme.colorScheme.error)
-          },
-          modifier = Modifier.padding(top = 16.dp).clickable(enabled = !leaving) { confirmingLeave = true },
-        )
-      }
-    }
     }
 
     ReportAndBlock(

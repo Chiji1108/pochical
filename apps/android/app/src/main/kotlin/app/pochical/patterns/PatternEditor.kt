@@ -47,7 +47,11 @@ import app.pochical.LocalDeviceSettings
 import app.pochical.LocalThemeColors
 import app.pochical.PageNavigation
 import app.pochical.R
+import app.pochical.RowEnd
+import app.pochical.SectionRow
 import app.pochical.SettingsPage
+import app.pochical.SettingsRow
+import app.pochical.SettingsSwitchRow
 import app.pochical.ShiftMark
 import app.pochical.calendar.LocalOwnDays
 import app.pochical.calendar.Pattern
@@ -194,7 +198,7 @@ fun PatternEditor(id: String, isNew: Boolean, navigation: PageNavigation) {
           placeholder = stringResource(R.string.pattern_name_example),
         )
       }
-      item { SwitchRow(stringResource(R.string.pattern_no_time), null, allDay) { allDay = it } }
+      item { SectionRow(0, 1) { SettingsSwitchRow(stringResource(R.string.pattern_no_time), R.drawable.ic_schedule, allDay, { allDay = it }) } }
       if (!allDay) {
         item {
           Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -212,20 +216,24 @@ fun PatternEditor(id: String, isNew: Boolean, navigation: PageNavigation) {
       }
       item {
         val next = others.find { it.id == draft.nextDay }
-        ListItem(
-          headlineContent = { Text(stringResource(R.string.pattern_next_day)) },
-          trailingContent = {
-            if (next == null) {
-              Text(stringResource(R.string.none))
-            } else {
-              Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                ShiftMark(next.icon, next.emoji, next.symbol, next.color, size = 18.dp)
-                Text(next.name)
-              }
-            }
-          },
-          modifier = Modifier.clickable { choosingNextDay = true },
-        )
+        SectionRow(0, 1, Modifier.padding(top = 8.dp)) {
+          SettingsRow(
+            stringResource(R.string.pattern_next_day),
+            R.drawable.ic_event,
+            onClick = { choosingNextDay = true },
+            end = RowEnd.None,
+            value = if (next == null) stringResource(R.string.none) else null,
+            valueContent =
+              next?.let {
+                {
+                  Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    ShiftMark(it.icon, it.emoji, it.symbol, it.color, size = 18.dp)
+                    Text(it.name, style = MaterialTheme.typography.bodyMedium)
+                  }
+                }
+              },
+          )
+        }
       }
       // A state undone as easily, so a switch saved with the rest; a new pattern is in use.
       if (!isNew) {
