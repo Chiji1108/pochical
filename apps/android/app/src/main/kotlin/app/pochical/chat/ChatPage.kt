@@ -101,6 +101,7 @@ import app.pochical.R
 import app.pochical.design.Chat
 import app.pochical.design.SyncSocket
 import app.pochical.groups.HoldSocket
+import app.pochical.groups.LocalGroupCalls
 import app.pochical.groups.rememberGroupDays
 import app.pochical.groups.rememberGroupMembers
 import app.pochical.groups.LocalValues
@@ -488,7 +489,16 @@ fun ChatPage(
   // Pochical's invitations open their join screen, or the group once in it, never the browser
   // (spec/chat.md, Pochical's invitation links); any other link its page.
   val browse = rememberLinkOpener()
-  val openLink = { url: String -> inviteCode(url)?.let { open(RootPage.Join(it)) } ?: browse(url) }
+  // One known to be unusable says so where it is, as its card does.
+  val unusableInvite = stringResource(R.string.chat_invite_unusable)
+  val invites = remember { InviteCards() }
+  val openLink = { url: String ->
+    when (val code = inviteCode(url)) {
+      null -> browse(url)
+      else -> if (invites.answer(code) == InviteAnswer.Unusable) say(unusableInvite) else open(RootPage.Join(code))
+    }
+  }
+  val groupCalls = LocalGroupCalls.current
   // Polls (spec/chat.md, Polls): 行ける, the sheet a poll is settled with, and who can come on a day.
   var deciding by remember { mutableStateOf<Long?>(null) }
   var listing by remember { mutableStateOf<Pair<LocalDate, List<String>>?>(null) }
@@ -554,6 +564,11 @@ fun ChatPage(
       voters = { day, people -> listing = day to people },
       groupId = groupId,
       openShifts = { day -> open(RootPage.GroupShifts(groupId, day.toString())) },
+      // Asked as a card shows, and again as the socket catches up after it could not be.
+      invite = { code ->
+        LaunchedEffect(code, current) { if (current) invites.ask(code, groupCalls::invite) }
+        invites.answer(code)
+      },
       dayMembers = dayMembers,
       stopSending = { opId -> scope.launch { keeping({ notKept = true }) { chats.stopSending(opId) } } },
       // Among the photos of the lines laid out, those the reader sees, the rest coming from the group.
@@ -869,7 +884,7 @@ private fun ChatLines(
     contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 8.dp + topRoom, bottom = 8.dp),
   ) {
     items(items, key = { it.key }, contentType = { it::class }) { item ->
-      val look = messageLook(item, me, writers, direct, pinned, quoteOf, handlers.nameOf)
+      val look = messageLook(item, me, writers, direct, pinned, quoteOf, handlers.nameOf, handlers.invite)
       ChatItemRow(item, look, writers, me, handlers, Modifier.animateItem())
     }
     if (head != null && chat.atStart) item(key = "head") { head() }

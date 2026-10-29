@@ -186,6 +186,8 @@ class MessageHandlers(
   val voters: (day: LocalDate, people: List<String>) -> Unit,
   /** The chat's group, whose photos its lines show. */
   val groupId: String,
+  /** What the server said of an invitation's group, asked as its card shows. */
+  val invite: @Composable (code: String) -> InviteAnswer? = { null },
   /** シフト表で見る: the group's shifts, from a line's first shared day. */
   val openShifts: (LocalDate) -> Unit = {},
   /** Whose shifts a card of days shows, over every day the chat's lines share: everyone in the group, or the two of a one-to-one chat. */
@@ -457,7 +459,7 @@ fun Bubble(look: MessageLook, handlers: MessageHandlers, onQuote: () -> Unit) {
     )
     if (invitation != null) {
       Spacer(Modifier.height(8.dp))
-      InviteCard(invitation, Modifier.padding(horizontal = 8.dp)) { handlers.openLink(inviteLink(invitation)) }
+      InviteCard(invitation, handlers.invite(invitation), Modifier.padding(horizontal = 8.dp)) { handlers.openLink(inviteLink(invitation)) }
     } else if (preview != null) {
       Spacer(Modifier.height(8.dp))
       PreviewCard(preview, ink) { handlers.openLink(preview.url) }
@@ -542,6 +544,8 @@ fun messageLook(
   pins: Set<Long>,
   quoteOf: @Composable (Long) -> LineQuote,
   nameOf: (String) -> String,
+  /** What the server said of the group of an invitation a line's first link is, read with the line. */
+  invite: @Composable (code: String) -> InviteAnswer? = { null },
 ): MessageLook? {
   val mine = stringResource(R.string.chat_me)
   val edited = stringResource(R.string.chat_edited)
@@ -563,6 +567,7 @@ fun messageLook(
             replying,
             words,
             (line.content as? LineContent.Words)?.preview?.title,
+            invitationOf(line.content)?.let { inviteWords(invite(it)) },
             clock(line.sentAtMs),
             pinnedWords.takeIf { pinned },
             edited.takeIf { (line.content as? LineContent.Words)?.edited == true },
@@ -653,7 +658,7 @@ private fun partsOf(content: LineContent, quote: LineQuote?, reactions: Reaction
   val words = content as? LineContent.Words
   val links = words?.let { textParts(it.text).mapNotNull { part -> part.url } }.orEmpty()
   // A first link that is one of Pochical's invitations shows the group in place of any page.
-  val invitation = links.firstOrNull()?.let(::inviteCode)
+  val invitation = invitationOf(content)
   val photos = (content as? LineContent.Photos)?.let { PhotosPart(it.photos.size, waiting) }
   // シフト表で見る for a line sent, as its link under the card offers.
   val days = (content as? LineContent.Days)?.days?.firstOrNull()?.takeIf { waiting == null }?.let { DaysPart(LocalDate.parse(it)) }
@@ -670,6 +675,10 @@ private fun partsOf(content: LineContent, quote: LineQuote?, reactions: Reaction
     words?.preview?.takeIf { invitation == null }?.let { PagePart(it, inWords = links.isNotEmpty()) },
   )
 }
+
+/** The code of a line's first link, when that is one of Pochical's invitations. */
+private fun invitationOf(content: LineContent): String? =
+  (content as? LineContent.Words)?.let { words -> textParts(words.text).firstNotNullOfOrNull { it.url } }?.let(::inviteCode)
 
 /** A poll's part, for a line of days put to the vote; [canDecide] for its writer, or anyone once they left. */
 private fun pollLook(content: LineContent, canDecide: Boolean, waiting: Boolean): PollPart? {
