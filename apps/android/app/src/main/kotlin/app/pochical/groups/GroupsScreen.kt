@@ -1,27 +1,35 @@
 package app.pochical.groups
 
-import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -38,6 +46,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -54,17 +63,19 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.lerp
 import app.pochical.LocalAccount
 import app.pochical.LocalNotifyingUnread
 import app.pochical.LocalThemeColors
@@ -263,51 +274,32 @@ private const val SAMPLE_GROUP = "sample"
 /**
  * The groups down the start edge, as the messaging apps' server rails (/design's GroupRail): a mark
  * each, the open one ringed and flagged at the edge, then the ways to start or join one. Its panel
- * starts beside the bar's heading and runs down to the navigation bar, which, docked rather than
- * floating as /design's tab bar is, it ends at rather than fading out under.
+ * starts beside the bar's heading and runs down to the foot of what the tabs leave it: the docked
+ * navigation bar, or, while the tabs are a rail, the screen's foot under the system's gesture bar,
+ * its marks scrolling under that and the last still able to rise clear of it (iOS's contentMargins).
  */
 @Composable
 private fun GroupRail(groups: List<GroupRow>, openId: String, onOpen: (String) -> Unit, actions: GroupsActions) {
   val colors = LocalThemeColors.current
   Column(
-    Modifier.width(RAIL_WIDTH)
-      .fillMaxHeight()
-      .statusBarsPadding()
+    Modifier.fillMaxHeight()
+      .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
       .background(colors.fillQuaternary, RoundedCornerShape(topEnd = Radius.xl))
-      .safeDrawingPadding()
       .verticalScroll(rememberScrollState())
+      .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Start + WindowInsetsSides.Bottom))
+      .width(RAIL_WIDTH)
       .padding(vertical = 12.dp),
     verticalArrangement = Arrangement.spacedBy(12.dp),
     horizontalAlignment = Alignment.CenterHorizontally,
   ) {
-    // Each group's chats' unread lines that notify, as the グループ tab adds them up.
-    val unread = LocalNotifyingUnread.current
-    for (group in groups) key(group.id) {
-      val isOpen = group.id == openId
-      val count = unread[group.id] ?: 0
-      val label = if (count > 0) stringResource(R.string.group_unread_label, group.name, count) else group.name
-      Box(
-        Modifier.fillMaxWidth().height(48.dp).clickable { onOpen(group.id) }.semantics {
-          contentDescription = label
-          selected = isOpen
-        },
-        contentAlignment = Alignment.Center,
-      ) {
-        // The flag at the edge grows by the open group, each group's its own as they move.
-        val flag by animateDpAsState(if (isOpen) 32.dp else 0.dp, label = "flag")
-        Box(
-          Modifier.align(Alignment.CenterStart)
-            .size(4.dp, flag)
-            .background(colors.accentDefault, RoundedCornerShape(topEnd = Radius.xs, bottomEnd = Radius.xs))
-        )
-        RailMark(group, isOpen)
-        if (count > 0) {
-          // Ringed in the rail's ground, so it stands clear of the mark.
-          UnreadBadge(
-            count,
-            Modifier.align(Alignment.BottomEnd).padding(end = 3.dp).background(colors.fillQuaternary, CircleShape).padding(2.dp),
-          )
-        }
+    // The groups are the rail's tabs, one of them open; the ways to start or join one follow apart.
+    Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+      // Each group's chats' unread lines that notify, as the グループ tab adds them up.
+      val unread = LocalNotifyingUnread.current
+      for (group in groups) key(group.id) {
+        val count = unread[group.id] ?: 0
+        val label = if (count > 0) stringResource(R.string.group_unread_label, group.name, count) else group.name
+        RailTab(group, group.id == openId, label, count) { onOpen(group.id) }
       }
     }
     Box(Modifier.size(28.dp, 2.dp).background(colors.borderDefault, CircleShape))
@@ -317,22 +309,48 @@ private fun GroupRail(groups: List<GroupRow>, openId: String, onOpen: (String) -
 }
 
 /**
- * A group's mark on the rail, on the card's ground; the open one on the accent's tint, its corners
- * drawn in and ringed in the accent inside its edge, a thin gap of the card's ground keeping the
- * ring clear of a photo's own colors.
+ * A group's tab on the rail, its whole row pressed: its mark on the card's ground, flagged at the
+ * edge while open, its unread count on its corner. The open one's mark is on the accent's tint, its
+ * corners drawn in and ringed in the accent inside its edge, a thin gap of the card's ground keeping
+ * the ring clear of a photo's own colors. Opening morphs it there on the motion scheme's spring, as
+ * Material 3 Expressive's shapes morph and as iOS animates the corner and ring; the press's ripple
+ * is the mark's own shape.
  */
 @Composable
-private fun RailMark(group: GroupRow, isOpen: Boolean) {
+private fun RailTab(group: GroupRow, isOpen: Boolean, label: String, count: Int, onClick: () -> Unit) {
   val colors = LocalThemeColors.current
-  val shape = RoundedCornerShape(if (isOpen) Radius.md else Radius.lg)
-  // The outer border is drawn last, so the accent's ring lies over the gap's outer half.
-  val ring = if (isOpen) Modifier.border(2.dp, colors.accentDefault, shape).border(4.dp, colors.backgroundCard, shape) else Modifier
-  GroupMarkView(
-    group.mark,
-    44.dp,
-    Modifier.clip(shape).background(if (isOpen) colors.accentContainer else colors.backgroundCard, shape).then(ring),
-    shelf = PhotoShelf.Group(group.id),
-  )
+  val press = remember { MutableInteractionSource() }
+  // How far open, 0 to 1: the flag, the corners and the ring all follow it.
+  val open by animateFloatAsState(if (isOpen) 1f else 0f, MaterialTheme.motionScheme.fastSpatialSpec(), label = "open")
+  val shown = open.coerceIn(0f, 1f)
+  val shape = RoundedCornerShape(lerp(Radius.lg, Radius.md, shown))
+  Box(
+    Modifier.fillMaxWidth()
+      .height(48.dp)
+      .selectable(isOpen, interactionSource = press, indication = null, role = Role.Tab, onClick = onClick)
+      .semantics { contentDescription = label },
+    contentAlignment = Alignment.Center,
+  ) {
+    Box(
+      Modifier.align(Alignment.CenterStart)
+        .size(4.dp, 32.dp * open.coerceAtLeast(0f))
+        .background(colors.accentDefault, RoundedCornerShape(topEnd = Radius.xs, bottomEnd = Radius.xs))
+    )
+    // The outer border is drawn last, so the accent's ring lies over the gap's outer half.
+    val ring =
+      if (shown > 0f) Modifier.border(2.dp, colors.accentDefault.copy(alpha = shown), shape).border(4.dp, colors.backgroundCard.copy(alpha = shown), shape)
+      else Modifier
+    GroupMarkView(
+      group.mark,
+      44.dp,
+      Modifier.clip(shape).indication(press, ripple()).background(lerp(colors.backgroundCard, colors.accentContainer, shown), shape).then(ring),
+      shelf = PhotoShelf.Group(group.id),
+    )
+    if (count > 0) {
+      // Ringed in the rail's ground, so it stands clear of the mark.
+      UnreadBadge(count, Modifier.align(Alignment.BottomEnd).padding(end = 3.dp).background(colors.fillQuaternary, CircleShape).padding(2.dp))
+    }
+  }
 }
 
 /** One of the rail's ways to start or join a group: its symbol in the accent on the card's ground. */
