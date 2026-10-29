@@ -158,4 +158,9 @@
   <string name="days_poll_count">%1$d日の中から、みんなが行ける日を投票で決めます。</string>
   <string name="days_share_count">%1$d日分のみんなのシフトを送ります。</string>
   <string name="days_too_many">一度に送れるのは%1$d日までです</string>
+  <!-- Pochical's invitation links (spec/chat.md) -->
+  <string name="chat_invite">グループへの招待</string>
+  <string name="chat_invite_members">グループへの招待・%1$d人</string>
+  <string name="chat_invite_joined">参加中のグループ</string>
+  <string name="chat_invite_unusable">この招待は使えません</string>
 </resources>
