@@ -74,13 +74,13 @@ import app.pochical.ReviewPrompt
 import app.pochical.SectionHeader
 import app.pochical.SectionRow
 import app.pochical.SettingsRow
-import app.pochical.characterCount
 import app.pochical.design.GROUP_MAX_MEMBERS
 import app.pochical.design.Metrics
 import app.pochical.design.TextLimits
 import app.pochical.kit.InviteDetails
 import app.pochical.kit.InviteFailure
 import app.pochical.kit.PhotoShelf
+import app.pochical.kit.characterCount
 import app.pochical.rowColors
 import app.pochical.segmentShapes
 import java.io.IOException

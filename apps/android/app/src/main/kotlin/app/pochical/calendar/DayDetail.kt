@@ -61,7 +61,7 @@ import app.pochical.kit.ShiftTime
 import app.pochical.kit.hoursText
 import app.pochical.kit.minutes
 import app.pochical.kit.timeChange
-import app.pochical.limitText
+import app.pochical.kit.limitText
 import app.pochical.limited
 import java.time.LocalDate
 

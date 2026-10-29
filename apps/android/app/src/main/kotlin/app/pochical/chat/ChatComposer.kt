@@ -6,6 +6,11 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.content.MediaType
+import androidx.compose.foundation.content.consume
+import androidx.compose.foundation.content.contentReceiver
+import androidx.compose.foundation.content.hasMediaType
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,6 +19,9 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledIconButton
@@ -84,7 +92,19 @@ import kotlinx.coroutines.withContext
  */
 @Stable
 class ComposerState(writing: Writing<PickedPhoto>, tookDraft: Boolean) {
-  var writing by mutableStateOf(writing)
+  /** The field's words as the keyboard writes them, the one place the composer's words are kept. */
+  val words = TextFieldState(writing.text)
+
+  /** What the composer holds but its words. */
+  private var rest by mutableStateOf(writing)
+
+  /** What the composer holds, its words the field's. */
+  var writing: Writing<PickedPhoto>
+    get() = words.text.toString().let { text -> if (text == rest.text) rest else rest.copy(text = text) }
+    set(value) {
+      rest = value
+      if (words.text.toString() != value.text) words.setTextAndPlaceCursorAtEnd(value.text)
+    }
 
   /** Only once the chat's draft was read is what the composer holds the draft. */
   var tookDraft by mutableStateOf(tookDraft)
@@ -149,6 +169,7 @@ fun rememberComposerState(): ComposerState = rememberSaveable(saver = ComposerSt
  * Days brought to share wait over the field as 共有する日, × taking them off, and go before the
  * photos and the words, each a line of its own answering what the composer answers.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun Composer(
   state: ComposerState,
@@ -176,14 +197,18 @@ fun Composer(
   val scope = rememberCoroutineScope()
   val context = LocalContext.current
   val resources = context.resources
-  // Picked photos join those waiting, as many as there is room for under chatRules.photosPerSend.
+  // Picked or pasted photos join those waiting, as many as there is room for under
+  // chatRules.photosPerSend as they join, so pastes close together keep within it too; none join a
+  // line being changed meanwhile, which takes words alone.
   val took = { uris: List<Uri> ->
     scope.launch {
-      val room = Chat.photosPerSend - state.writing.photos.size
-      if (uris.size > room) onSay(resources.getString(R.string.chat_photo_limit, Chat.photosPerSend))
-      val picked = pickPhotos(context, uris.take(maxOf(room, 0)))
+      val picked = pickPhotos(context, uris.take(Chat.photosPerSend))
       if (picked.unreadable) onSay(resources.getString(R.string.chat_photo_unreadable))
-      state.writing = state.writing.copy(photos = state.writing.photos + picked.photos)
+      val changing = state.writing.editing != null
+      val room = if (changing) 0 else maxOf(Chat.photosPerSend - state.writing.photos.size, 0)
+      if (!changing && uris.size > room) onSay(resources.getString(R.string.chat_photo_limit, Chat.photosPerSend))
+      dropPicked(context, picked.photos.drop(room))
+      state.writing = state.writing.copy(photos = state.writing.photos + picked.photos.take(room))
     }
     Unit
   }
@@ -324,11 +349,25 @@ fun Composer(
           }
         }
         OutlinedTextField(
-          value = text,
-          onValueChange = { state.writing = state.writing.copy(text = it) },
-          modifier = Modifier.weight(1f).focusRequester(state.focus),
+          state = state.words,
+          modifier =
+            Modifier.weight(1f).focusRequester(state.focus).contentReceiver { content ->
+              // Images pasted, by the edit menu or the keyboard, go above it as picked photos do, an
+              // image copied with words as the image; while a line is changed, nothing (spec/chat.md, Photos).
+              val clip = content.clipEntry.clipData
+              val images = (0 until clip.itemCount).mapNotNull { clip.getItemAt(it).uri }
+              if (!content.hasMediaType(MediaType.Image) || images.isEmpty()) return@contentReceiver content
+              when {
+                // Its words paste as ever while a line is changed.
+                editing != null -> content.consume { it.uri != null }
+                else -> {
+                  took(images)
+                  null
+                }
+              }
+            },
           placeholder = { Text(stringResource(R.string.chat_message)) },
-          maxLines = COMPOSER_LINES,
+          lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = COMPOSER_LINES),
           shape = RoundedCornerShape(Radius.xxl),
         )
         FilledIconButton(

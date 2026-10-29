@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.Dp
 import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.kit.PhotoShelf
-import app.pochical.limitText
+import app.pochical.kit.limitText
 
 /**
  * A face (/design's PhotoAvatar): the photo, read from [shelf], else the name's first letter on a
