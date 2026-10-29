@@ -23,7 +23,8 @@ struct TodayControl: ControlWidget {
 struct NextOffControl: ControlWidget {
   var body: some ControlWidgetConfiguration {
     StaticControlConfiguration(kind: "nextOff", provider: NextOffValue.Provider()) { value in
-      ControlWidgetButton(action: OpenDayIntent(value.day ?? .today)) {
+      // With none ahead, today as it is when tapped.
+      ControlWidgetButton(action: value.day.map(OpenDayIntent.init) ?? OpenDayIntent()) {
         Label {
           Text("次の休み")
           Text(value.words)
