@@ -1,6 +1,7 @@
 package app.pochical.calendar
 
 import app.pochical.design.Holidays
+import app.pochical.kit.Period
 import java.time.LocalDate
 import java.time.YearMonth
 import java.util.Locale
@@ -17,13 +18,7 @@ fun LocalDate.weekStartingOn(weekStart: Int): LocalDate = minusDays(((weekday - 
  * weeks covering the month, with the days of the months around it filling
  * the first and last (spec/vectors/month.json).
  */
-fun monthWeeks(month: YearMonth, weekStart: Int): List<List<LocalDate>> {
-  val first = month.atDay(1)
-  val lead = (first.weekday - weekStart + 7) % 7
-  val start = first.minusDays(lead.toLong())
-  val weeks = (lead + month.lengthOfMonth() + 6) / 7
-  return List(weeks) { week -> List(7) { start.plusDays((week * 7 + it).toLong()) } }
-}
+fun monthWeeks(month: YearMonth, weekStart: Int): List<List<LocalDate>> = Period.of(month, 1).weeks(weekStart)
 
 /** The country whose holidays this device's days take: its region's when Pochical has them, else Japan's. */
 fun holidayCountry(locale: Locale = Locale.getDefault()): String = Holidays.countryFor(locale.country.ifEmpty { null })
