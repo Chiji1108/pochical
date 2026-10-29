@@ -46,8 +46,8 @@ class LineDrag {
 
 /** What the line's gestures tell, by where the finger is in the window. */
 class LineGestureHandler(
-  /** The long press: the menu opens over the line. */
-  val onLongPress: () -> Unit,
+  /** The long press, where the finger went down in the window: the menu opens over the line, or a link's under it. */
+  val onLongPress: (Offset) -> Unit,
   /** The finger that opened the menu moves, at this point in the window. */
   val onSlide: (Offset) -> Unit,
   /** It lifts, at this point; [slid] once it moved past the touch slop since the menu opened. */
@@ -90,7 +90,12 @@ fun Modifier.lineGestures(
           while (true) {
             val event = awaitPointerEvent()
             val change = event.changes.firstOrNull { it.id == down.id } ?: return@withTimeoutOrNull false
-            if (change.changedToUpIgnoreConsumed() || change.isConsumed) return@withTimeoutOrNull false
+            if (change.isConsumed) return@withTimeoutOrNull false
+            if (change.changedToUpIgnoreConsumed()) {
+              // A tap is the line's own: nothing under it (the list putting the keyboard away) takes it.
+              change.consume()
+              return@withTimeoutOrNull false
+            }
             val moved = change.position - down.position
             if (moved.getDistance() > slop) {
               val sign = currentSwipe?.sign
@@ -105,7 +110,7 @@ fun Modifier.lineGestures(
       when {
         pressed -> {
           haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-          current.onLongPress()
+          current.onLongPress(start)
           // Taken from here on before anything under it (a quote) or the list sees it.
           var slid = false
           while (true) {

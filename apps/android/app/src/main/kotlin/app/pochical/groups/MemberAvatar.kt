@@ -13,6 +13,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import app.pochical.LocalThemeColors
@@ -31,21 +32,21 @@ fun MemberAvatar(name: String, photoId: String, shelf: PhotoShelf?, size: Dp, mo
     Image(painterResource(sample), contentDescription = null, modifier.size(size).clip(CircleShape), contentScale = ContentScale.Crop)
     return
   }
-  if (photoId.isNotEmpty()) {
-    PhotoPicture(photoId, shelf, modifier.size(size).clip(CircleShape))
-    return
-  }
   val colors = LocalThemeColors.current
+  // The name's letter, under the photo while it loads or when it cannot be read, as iOS's.
   Box(
     modifier.size(size).background(if (me) colors.accentFill else colors.fillSecondary, CircleShape),
     contentAlignment = Alignment.Center,
   ) {
     Text(
       limitText(name.trim(), 1),
+      // Under a photo, not read: the photo is the face.
+      Modifier.then(if (photoId.isNotEmpty()) Modifier.clearAndSetSemantics {} else Modifier),
       color = if (me) colors.accentOnFill else colors.textSecondary,
       fontSize = with(LocalDensity.current) { (size * 0.45f).toSp() },
       fontWeight = FontWeight.SemiBold,
     )
+    if (photoId.isNotEmpty()) PhotoPicture(photoId, shelf, Modifier.matchParentSize().clip(CircleShape), ground = null)
   }
 }
 

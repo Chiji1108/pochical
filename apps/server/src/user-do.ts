@@ -11,6 +11,8 @@ import {
   inArray,
   isNotNull,
   isNull,
+  lte,
+  min,
   ne,
   sql,
 } from "drizzle-orm";
@@ -40,6 +42,7 @@ import type { GroupProfile } from "./group-do";
 import { markColumns } from "./group-marks";
 import { isAhead } from "./hlc";
 import { isId } from "./ids";
+import { errorFields } from "./log";
 import {
   deleteBatchesOf,
   deletePhotosUnder,
@@ -47,11 +50,16 @@ import {
   sharePersonPhoto,
   uploadedPhotoKey,
 } from "./photos";
-import { sendAlert, sendWithdrawal } from "./push";
-import type { Alert, Sent } from "./push";
+import { sendPush } from "./push";
+import type { Alert, Push } from "./push";
 import { devicesOf, dropPushToken } from "./push-tokens";
 import type { Device } from "./push-tokens";
-import { bucketRetryWait, countFailure, retryWait } from "./retry-wait";
+import {
+  bucketRetryWait,
+  countFailure,
+  jittered,
+  retryWait,
+} from "./retry-wait";
 import { supportPlace } from "./support-lines";
 import {
   acceptSyncSocket,
@@ -93,6 +101,7 @@ import {
   chatNotified,
   chatSettings,
   profile,
+  pushRetries,
   unreadCounts,
 } from "./user-do-schema";
 import {
@@ -125,6 +134,15 @@ const PUSH_RETRY_MOST_MS = 3_600_000;
 // …and stops coming back after this many in a row, about a day: the
 // user's next change tries it again.
 const PUSH_RETRIES_MOST = 30;
+
+// A push to a device its service refused for a while is tried again after
+// this long, twice as long each time, up to the most, jittered, or after
+// the service's Retry-After when longer…
+const DEVICE_RETRY_FIRST_MS = 10_000;
+const DEVICE_RETRY_MOST_MS = 300_000;
+// …in as many tries in all, over about five minutes: a notification later
+// than that tells little the app does not show by then.
+const DEVICE_TRIES_MOST = 6;
 
 // How many pushes to the group have failed in a row, in the DO's storage.
 const pushFailuresKey = (groupId: string): string => `pushFailures:${groupId}`;
@@ -592,10 +610,10 @@ export class UserDO extends DurableObject<Env> {
         .where(chat)
         .run();
     }
-    await this.toDevices(
-      async (device) =>
-        await sendWithdrawal(this.env, device, { groupId, readTo, threadId })
-    );
+    await this.toDevices(() => ({
+      kind: "withdrawal",
+      withdrawal: { groupId, readTo, threadId },
+    }));
   }
 
   /**
@@ -871,7 +889,11 @@ export class UserDO extends DurableObject<Env> {
           )
         );
       } catch (error) {
-        console.error(`Deleting user ${userId}'s photos failed`, error);
+        console.error({
+          error: errorFields(error),
+          message: "Deleting a user's photos failed",
+          userId,
+        });
         return bucketRetryWait(countFailure(kv, PHOTOS_FAILURES));
       }
       kv.delete(PHOTOS_FAILURES);
@@ -919,31 +941,145 @@ export class UserDO extends DurableObject<Env> {
       this.keepNotified(alert.groupId, alert.threadId, alert.line.seq);
     }
     const badge = this.badge();
-    await this.toDevices(
-      async (device, recipientId) =>
-        await sendAlert(this.env, device, alert, { badge, recipientId })
-    );
+    // The same on each try, for a device to show it once.
+    const id = crypto.randomUUID();
+    await this.toDevices((recipientId) => ({
+      alert,
+      id,
+      kind: "alert",
+      recipient: { badge, recipientId },
+    }));
   }
 
-  /**
-   * Sends to each of the user's devices, those of their sessions now; a
-   * token its push service says is gone is dropped.
-   */
-  private async toDevices(
-    push: (device: Device, userId: string) => Promise<Sent>
-  ): Promise<void> {
+  /** Sends to each of the user's devices, those of their sessions now. */
+  private async toDevices(pushFor: (userId: string) => Push): Promise<void> {
     const userId = this.ctx.id.name;
     if (userId === undefined) {
       return;
     }
+    const push = pushFor(userId);
     const devices = await devicesOf(this.env.DB, userId);
     await Promise.all(
       devices.map(async (device) => {
-        if ((await push(device, userId)) === "gone") {
-          await dropPushToken(this.env.DB, device.token);
-        }
+        await this.deliver(device, push, 1);
       })
     );
+  }
+
+  /**
+   * Sends `push` to `device`, its `tries`th try (spec/sync-protocol.md,
+   * Push). A token its push service says is gone is dropped. A push it
+   * refused for a while, or did not answer, is kept for the alarm to try
+   * again: after twice as long as the wait before, jittered so the devices
+   * of a service's outage do not all come back at once, or after the
+   * service's Retry-After when that is longer; at most DEVICE_TRIES_MOST
+   * tries in all, and none asked to wait past DEVICE_RETRY_MOST_MS, by
+   * when it would come too late.
+   */
+  private async deliver(
+    device: Device,
+    push: Push,
+    tries: number
+  ): Promise<void> {
+    const outcome = await sendPush(this.env, device, push);
+    if (outcome.sent === "gone") {
+      await dropPushToken(this.env.DB, device.token);
+      return;
+    }
+    if (outcome.sent !== "later") {
+      return;
+    }
+    const wait = Math.max(
+      jittered(retryWait(tries, DEVICE_RETRY_FIRST_MS, DEVICE_RETRY_MOST_MS)),
+      outcome.retryAfterMs ?? 0
+    );
+    if (tries >= DEVICE_TRIES_MOST || wait > DEVICE_RETRY_MOST_MS) {
+      console.warn({
+        message: "Push given up",
+        push: { kind: push.kind, platform: device.platform, tries },
+      });
+      return;
+    }
+    const dueAt = Date.now() + wait;
+    this.db
+      .insert(pushRetries)
+      .values({
+        dueAt: new Date(dueAt),
+        platform: device.platform,
+        push,
+        sandbox: device.platform === "apns" && device.sandbox,
+        token: device.token,
+        tries,
+      })
+      .run();
+    await this.alarms.setBy(dueAt);
+  }
+
+  /**
+   * Tries again each push to a device that is due (deliver), to a device
+   * of the user's still, and a notification only while the user has not
+   * read its line, as a read takes it back, with the badge as it is now.
+   * Each row is taken before its try, which leaves a new one should it be
+   * refused again: a try lost with the object is lost, as a first one is,
+   * rather than kept twice. When the next left is due.
+   */
+  private async retryPushes(userId: string): Promise<Date | undefined> {
+    const due = this.db
+      .delete(pushRetries)
+      .where(lte(pushRetries.dueAt, new Date()))
+      .returning()
+      .all();
+    if (due.length > 0) {
+      const devices = await devicesOf(this.env.DB, userId);
+      const tokens = new Set(devices.map(({ token }) => token));
+      await Promise.all(
+        due.map(async ({ platform, push, sandbox, token, tries }) => {
+          if (!(tokens.has(token) && this.owed(push))) {
+            return;
+          }
+          const device: Device =
+            platform === "apns"
+              ? { platform, sandbox, token }
+              : { platform, token };
+          const now =
+            push.kind === "alert"
+              ? {
+                  ...push,
+                  recipient: { ...push.recipient, badge: this.badge() },
+                }
+              : push;
+          await this.deliver(device, now, tries + 1);
+        })
+      );
+    }
+    const next = this.db
+      .select({ at: min(pushRetries.dueAt) })
+      .from(pushRetries)
+      .get();
+    return next?.at ?? undefined;
+  }
+
+  /**
+   * Whether a push is still owed to the user's devices: a chat line's
+   * notification only while the line is among those notified and not yet
+   * read (chat_notified).
+   */
+  private owed(push: Push): boolean {
+    if (push.kind !== "alert" || push.alert.line === undefined) {
+      return true;
+    }
+    const { groupId, line, threadId } = push.alert;
+    const notified = this.db
+      .select({ firstSeq: chatNotified.firstSeq })
+      .from(chatNotified)
+      .where(
+        and(
+          eq(chatNotified.groupId, groupId),
+          eq(chatNotified.threadId, threadId)
+        )
+      )
+      .get();
+    return notified !== undefined && notified.firstSeq <= line.seq;
   }
 
   /**
@@ -1049,7 +1185,9 @@ export class UserDO extends DurableObject<Env> {
    * the alarm comes back for a failed group itself, each group waiting by
    * its own failures. A change made while it runs has set the next alarm
    * already, which is kept when earlier. The user's own photos noted as
-   * going are deleted first, and come back so should storage fail.
+   * going are deleted first, and come back so should storage fail; the
+   * pushes to their devices that are due are tried again last, and it
+   * comes back for those left.
    */
   async alarm(run: AlarmInvocationInfo): Promise<void> {
     await this.alarms.begin(run);
@@ -1073,7 +1211,12 @@ export class UserDO extends DurableObject<Env> {
         // oxlint-disable-next-line no-await-in-loop -- one group at a time
         await this.pushTo(groupId, userId, this.sharedAfter(pushedCursor));
       } catch (error) {
-        console.error(`Pushing to group ${groupId} failed`, error);
+        console.error({
+          error: errorFields(error),
+          groupId,
+          message: "Pushing to a group failed",
+          userId,
+        });
         const wait = this.pushFailed(groupId);
         if (wait !== undefined) {
           retries.push(wait);
@@ -1086,6 +1229,11 @@ export class UserDO extends DurableObject<Env> {
         .set({ pushedCursor: head })
         .where(eq(memberships.groupId, groupId))
         .run();
+    }
+    // After the groups, which a push service slow to answer would hold up.
+    const pushesDue = await this.retryPushes(userId);
+    if (pushesDue !== undefined) {
+      retries.push(pushesDue.getTime() - Date.now());
     }
     if (retries.length > 0) {
       await this.alarms.setBy(Date.now() + Math.min(...retries));

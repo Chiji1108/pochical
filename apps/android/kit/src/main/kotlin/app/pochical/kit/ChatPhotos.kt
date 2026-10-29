@@ -134,7 +134,10 @@ data class ForgottenPhoto(val shelf: PhotoShelf?, val photoId: String?)
  * show (the system may empty them, and they are fetched again), and, until it is up, a copy of each
  * kept out of the caches to upload. The group's photos the app's image cache keeps, within its limit.
  */
-class ChatPhotoFiles internal constructor(private val caches: File, private val files: File) {
+class ChatPhotoFiles internal constructor(caches: Lazy<File>, files: Lazy<File>) {
+  private val caches by caches
+  private val files by files
+
   private val mutableForgotten = MutableSharedFlow<ForgottenPhoto>(extraBufferCapacity = 64)
 
   /** The photos let go of, as they are. */
@@ -200,10 +203,30 @@ class ChatPhotoFiles internal constructor(private val caches: File, private val 
         pendingSmall(groupId, id).delete()
       }
     }
+    tellLetGo(groupId, photoIds)
+  }
+
+  /**
+   * Marks the group [groupId]'s [photoIds] let go of, so a fetch on its way keeps none of them, and
+   * tells the app's image cache to let go of them too.
+   */
+  private suspend fun tellLetGo(groupId: String, photoIds: List<String>) {
     for (id in photoIds) {
       letGo += "$groupId/$id"
       mutableForgotten.emit(ForgottenPhoto(PhotoShelf.place(groupId), id))
     }
+  }
+
+  /**
+   * A group left: every photo of the member's kept for it, to send or to show, and [photoIds], those
+   * of its lines the device held, for the app's image cache to let go of too.
+   */
+  internal suspend fun forgetPlace(groupId: String, photoIds: List<String>) {
+    withContext(Dispatchers.IO) {
+      File(caches, "chat-photos/$groupId").deleteRecursively()
+      File(files, "pending-photos/$groupId").deleteRecursively()
+    }
+    tellLetGo(groupId, photoIds)
   }
 
   /** Every photo kept, to send or to show, gone with the user. */

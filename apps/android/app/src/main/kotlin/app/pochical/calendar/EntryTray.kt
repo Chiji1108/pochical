@@ -1,7 +1,10 @@
 package app.pochical.calendar
 
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -19,20 +22,31 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -48,6 +62,8 @@ import app.pochical.design.PATTERNS_PER_PAGE
 import app.pochical.design.Radius
 import app.pochical.kit.Week
 import java.time.LocalDate
+import kotlin.math.abs
+import kotlinx.coroutines.launch
 
 /**
  * ポチポチ入力's tray (spec/calendar.md, ポチポチ入力): the day being entered, a key for each
@@ -154,7 +170,7 @@ private fun KeyGrid(patterns: List<Pattern>, columns: Int, rows: Int, tall: Bool
   val height = if (tall) 77.dp else 64.dp
   BoxWithConstraints(Modifier.fillMaxWidth()) {
     val width = minOf(KEY_WIDTH, (maxWidth - KEY_GAP * (columns - 1)) / columns)
-    Column(verticalArrangement = Arrangement.spacedBy(KEY_GAP)) {
+    Column(Modifier.semantics { isTraversalGroup = true }, verticalArrangement = Arrangement.spacedBy(KEY_GAP)) {
       repeat(rows) { row ->
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(KEY_GAP, Alignment.CenterHorizontally)) {
           repeat(columns) { column ->
@@ -199,20 +215,49 @@ private fun KeyGrid(patterns: List<Pattern>, columns: Int, rows: Int, tall: Bool
 fun TrayActionsRow(pages: PagerState, leading: @Composable () -> Unit, trailing: @Composable () -> Unit) {
   Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
     Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) { leading() }
-    if (pages.pageCount > 1) PageDots(pages, stringResource(R.string.entering_key_page, pages.currentPage + 1, pages.pageCount))
+    if (pages.pageCount > 1) PageDots(pages, { stringResource(R.string.entering_key_page, it + 1, pages.pageCount) })
     Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) { trailing() }
   }
 }
 
-/** [pages] as dots, the one shown filled, read as [label] says. */
+/**
+ * [pages] as dots, the one shown a longer bar in the stronger color (iOS's PageDots), growing on
+ * the motion scheme's spring as the pages turn. A tap turns to the page of the dot nearest it, so
+ * the small dots never fight over a touch. For TalkBack the row is one node, said by [label] for
+ * the page shown, its pages turned by its actions 次のページ and 前のページ.
+ */
 @Composable
-fun PageDots(pages: PagerState, label: String, modifier: Modifier = Modifier) {
+fun PageDots(pages: PagerState, label: @Composable (Int) -> String, modifier: Modifier = Modifier) {
   val colors = LocalThemeColors.current
-  Row(modifier.semantics(mergeDescendants = true) { contentDescription = label }, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+  val scope = rememberCoroutineScope()
+  val said = label(pages.currentPage)
+  val next = stringResource(R.string.page_next)
+  val previous = stringResource(R.string.page_previous)
+  // Where each dot's middle is across the row, for the tap.
+  val middles = remember(pages.pageCount) { FloatArray(pages.pageCount) }
+  fun turn(page: Int) = scope.launch { pages.animateScrollToPage(page.coerceIn(0, pages.pageCount - 1)) }
+  Row(
+    modifier
+      .clearAndSetSemantics {
+        contentDescription = said
+        customActions =
+          listOfNotNull(
+            CustomAccessibilityAction(next) { turn(pages.currentPage + 1); true }.takeIf { pages.currentPage < pages.pageCount - 1 },
+            CustomAccessibilityAction(previous) { turn(pages.currentPage - 1); true }.takeIf { pages.currentPage > 0 },
+          )
+      }
+      .pointerInput(pages.pageCount) { detectTapGestures { tap -> turn(middles.indices.minBy { abs(middles[it] - tap.x) }) } }
+      .padding(vertical = 6.dp),
+    verticalAlignment = Alignment.CenterVertically,
+  ) {
     repeat(pages.pageCount) { page ->
+      val shown = page == pages.currentPage
+      val width by animateDpAsState(if (shown) 18.dp else 7.dp, MaterialTheme.motionScheme.fastSpatialSpec(), label = "dot")
       Box(
-        Modifier.size(7.dp)
-          .background(if (page == pages.currentPage) colors.textSecondary else colors.fillPrimary, CircleShape)
+        Modifier.padding(horizontal = 3.dp)
+          .onPlaced { middles[page] = it.positionInParent().x + it.size.width / 2f }
+          .size(width, 7.dp)
+          .background(if (shown) colors.textSecondary else colors.fillPrimary, CircleShape)
       )
     }
   }

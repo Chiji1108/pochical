@@ -30,13 +30,14 @@ class ChatNotifierTest {
   private val context: Application = RuntimeEnvironment.getApplication()
   private val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
   private var signedIn: String? = ME
+  private var inGroup = true
   private val conversations = TestConversations(context)
   private val notifier =
     ChatNotifier(
       context,
       { signedIn },
       { groupId -> if (groupId == GROUP) listOf(member(ME, "ゆうき"), member(WRITER, "さくら")) else emptyList() },
-      { groupId -> if (groupId == GROUP) GroupRow(GROUP, "いとこ会", 0, GroupMarkValue(emoji = "🍙")) else null },
+      { groupId -> if (groupId == GROUP && inGroup) GroupRow(GROUP, "いとこ会", 0, GroupMarkValue(emoji = "🍙")) else null },
       conversations,
     )
 
@@ -72,6 +73,14 @@ class ChatNotifierTest {
     notifier.show(groupLine(4, "", kind = "PHOTO"))
     assertEquals(1, shown().size)
     assertEquals(listOf("今週どう？", "土曜とか", "写真を送りました"), messagesOf().messages.map { it.text.toString() })
+  }
+
+  @Test
+  fun aLineTheServerTriedAgainShowsOnce() = runTest {
+    notifier.show(groupLine(2, "今週どう？"))
+    notifier.show(groupLine(2, "今週どう？"))
+    notifier.show(groupLine(3, "土曜とか"))
+    assertEquals(listOf("今週どう？", "土曜とか"), messagesOf().messages.map { it.text.toString() })
   }
 
   @Test
@@ -292,6 +301,38 @@ class ChatNotifierTest {
     assertEquals(listOf("土曜とか"), messagesOf(shown().indexOfFirst { it.tag == "$GROUP/group" }).messages.map { it.text.toString() })
     // A chat with nothing unread left.
     notifier.withdrawRead(ReadState(cleared = setOf(ChatKey("g2", "group"))))
+    assertEquals(listOf("$GROUP/group"), shown().map { it.tag })
+  }
+
+  @Test
+  fun aGroupLeftTakesItsChatsNotificationsAndConversationsAway() = runTest {
+    notifier.show(groupLine(2, "今週どう？"))
+    notifier.show(groupLine(3, "まだ？", groupId = "g2"))
+    notifier.forgetPlace(GROUP)
+    assertEquals(listOf("g2/group"), shown().map { it.tag })
+    assertEquals(listOf("g2/group"), conversations.published.map { it.first }.distinct())
+  }
+
+  @Test
+  fun aGroupLeftWhileItsLinesFacesLoadShowsNothingOfIt() = runTest {
+    conversations.loading = {
+      conversations.loading = {}
+      inGroup = false
+      notifier.forgetPlace(GROUP)
+    }
+    notifier.show(groupLine(2, "今週どう？"))
+    assertTrue(shown().isEmpty())
+    assertTrue(conversations.published.isEmpty())
+  }
+
+  @Test
+  fun aResetWhileItsLinesFacesLoadStillShowsIt() = runTest {
+    // A Reset empties the groups until its catch-up brings them again: nobody left.
+    conversations.loading = {
+      conversations.loading = {}
+      inGroup = false
+    }
+    notifier.show(groupLine(2, "今週どう？"))
     assertEquals(listOf("$GROUP/group"), shown().map { it.tag })
   }
 

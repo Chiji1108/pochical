@@ -66,9 +66,17 @@ class OpenedLinksTest {
   }
 
   @Test
+  fun readsTheLaunchersShortcuts() {
+    assertEquals(AppLink.Today, appLink("pochical://today"))
+    assertEquals(AppLink.NextOff, appLink("pochical://next-off"))
+  }
+
+  @Test
   fun leavesWhatItDoesNotOpen() {
     val urls =
       listOf(
+        "pochical://today/2026-09-24",
+        "pochical://next-off/2026-09-24",
         "pochical://day/",
         "pochical://day/2026-13-01",
         "pochical://group/",

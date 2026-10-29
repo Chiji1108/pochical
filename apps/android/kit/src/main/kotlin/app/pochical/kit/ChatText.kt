@@ -1,5 +1,7 @@
 package app.pochical.kit
 
+import app.pochical.design.Chat
+
 import java.net.URI
 import java.net.URISyntaxException
 
@@ -105,3 +107,16 @@ fun withMentions(text: String, picked: List<PickedMember>): String =
       append(sent, at, sent.length)
     }
   }
+
+/**
+ * How many emoji a message of nothing but 1 to `chatRules.largeEmojiMax` emoji has, shown large
+ * without a bubble; 0 for any other, so a space or a line between them keeps the bubble
+ * (spec/chat.md, Large emoji; spec/vectors/chat-text.json, largeEmoji).
+ */
+fun largeEmojiCount(text: String): Int {
+  // Past the most, no need to cut the rest of a long message.
+  val ends = characterEnds(text).take(Chat.largeEmojiMax + 1).toList()
+  if (ends.isEmpty() || ends.size > Chat.largeEmojiMax) return 0
+  val starts = listOf(0) + ends.dropLast(1)
+  return if (starts.zip(ends).all { (start, end) -> isEmoji(text.substring(start, end)) }) ends.size else 0
+}

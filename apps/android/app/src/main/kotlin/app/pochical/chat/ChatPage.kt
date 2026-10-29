@@ -23,11 +23,16 @@ import app.pochical.kit.LineReaction
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flowOf
 import androidx.compose.animation.AnimatedVisibility
+import kotlinx.coroutines.flow.first
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.layout.imeNestedScroll
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
@@ -67,7 +72,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -191,16 +196,17 @@ fun ChatPage(
   // Its lines are not notified while the person sees them come here.
   ShowingChat(groupId, threadId)
   val onPhotos = { open(RootPage.ChatPhotos(groupId, threadId)) }
+  val onShifts = { open(RootPage.GroupShifts(groupId, null)) }.takeIf { threadId == GROUP_THREAD && groupId != Chat.supportPlace }
   val chats = LocalChats.current
   val account = LocalAccount.current
   val values = LocalValues.current
   val me = rememberMeId()
   // Null until read, so a draft's mentions are named once the names are known.
-  val memberRows by remember(values, groupId) { values.members(groupId) }.collectAsState(null)
+  val memberRows by remember(values, groupId) { values.members(groupId) }.collectAsStateWithLifecycle(null)
   val members = memberRows.orEmpty()
-  val groups by remember(values) { values.groups() }.collectAsState(emptyList())
-  val blocked by remember(values) { values.blocks() }.collectAsState(emptyList())
-  val socket by remember(account, groupId) { account.chatSocket(groupId) }.collectAsState(null)
+  val groups by remember(values) { values.groups() }.collectAsStateWithLifecycle(emptyList())
+  val blocked by remember(values) { values.blocks() }.collectAsStateWithLifecycle(emptyList())
+  val socket by remember(account, groupId) { account.chatSocket(groupId) }.collectAsStateWithLifecycle(null)
 
   // Where the chat is, kept across a rotation and the process's death: the first line laid out,
   // the line ここから新着 is over as it opened, and the line the lines rest on at the foot.
@@ -217,7 +223,7 @@ fun ChatPage(
     remember(chats, groupId, threadId) {
       snapshotFlow { from to currentMe }.flatMapLatest { (from, me) -> chats.state(groupId, threadId, me, from) }
     }
-      .collectAsState(null)
+      .collectAsStateWithLifecycle(null)
   // A member's profile, a report and blocking, over the chat.
   val reportAndBlock = remember { ReportAndBlockState() }
   val other = me?.let { otherIn(threadId, it) }
@@ -237,7 +243,7 @@ fun ChatPage(
   val snackbar = remember { SnackbarHostState() }
   val scope = rememberCoroutineScope()
   val say = remember(snackbar, scope) { { said: String -> scope.launch { snackbar.showSnackbar(said) }; Unit } }
-  val chat = state ?: return ChatScaffold(groupId, threadId, support, members, groups, socket, onBack, onPhotos, say, onTitle = null) {}
+  val chat = state ?: return ChatScaffold(groupId, threadId, support, members, groups, socket, onBack, onPhotos, onShifts, say, onTitle = null) {}
 
   val blockedIds = remember(blocked) { blocked.map { it.userId }.toSet() }
   // Blocked members' lines in the place's own chat, folded but those shown this once, by seq.
@@ -266,7 +272,10 @@ fun ChatPage(
   // Where the lines are to go once laid out as they are now: ここから新着 at the top, or the foot.
   var going by remember { mutableStateOf<Going?>(null) }
   // To the foot only once the latest lines are laid out, when the window stopped short of them.
-  GoTo(going, items, list, enabled = placed && (going != Going.ToFoot || chat.atEnd)) { there ->
+  val reducedMotion = rememberReducedMotion()
+  // The lines moved by the chat itself, not the person: a screen reader hears nothing of these.
+  val moves = remember { ListMoves() }
+  GoTo(going, items, list, reducedMotion, moves, enabled = placed && (going != Going.ToFoot || chat.atEnd)) { there ->
     following = there
     going = null
   }
@@ -284,8 +293,8 @@ fun ChatPage(
     if (!opened || placed || (unreadFrom != null && ChatItem.Unread !in items)) return@LaunchedEffect
     val rest = restingOn?.let { key -> items.indexOfFirst { it.key == key } }?.takeIf { it >= 0 }
     when {
-      rest != null -> list.scrollToItem(rest, restingOffset)
-      unreadFrom != null -> following = list.showAtTop(items.indexOfFirst { it == ChatItem.Unread })
+      rest != null -> moves.run { list.scrollToItem(rest, restingOffset) }
+      unreadFrom != null -> following = moves.run { list.showAtTop(items.indexOfFirst { it == ChatItem.Unread }) }
     }
     following = following && !list.canScrollBackward
     placed = true
@@ -323,7 +332,7 @@ fun ChatPage(
     val first = coming?.let { seq -> items.indexOfFirst { it is ChatItem.Line && it.line.seq == seq } } ?: -1
     when {
       // They fit: they come in at the foot, the lines sliding up to them.
-      first < 0 || unreadFrom != null || list.fits(first + 1) -> list.animateScrollToItem(0)
+      first < 0 || unreadFrom != null || list.fits(first + 1) -> moves.run { list.toFoot(reducedMotion) }
       // More than the screen shows: stopped under ここから新着, once laid out over them.
       else -> {
         unreadFrom = coming
@@ -339,7 +348,7 @@ fun ChatPage(
     val first = chat.lines.firstOrNull() ?: return@LaunchedEffect
     if (placed && touched && nearTop && chat.heldBefore > 0) from = maxOf(first.seq - Chat.pageSize, chat.heldFrom ?: 1)
   }
-  val current = socket?.state?.collectAsState()?.value == SocketState.Current
+  val current = socket?.state?.collectAsStateWithLifecycle()?.value == SocketState.Current
   LaunchedEffect(opened, socket, current, chat.heldFrom, chat.heldBefore < Chat.pageSize) {
     val held = chat.heldFrom ?: return@LaunchedEffect
     if (opened && current && chat.heldBefore < Chat.pageSize && held > 1) socket?.requestPage(threadId, held)
@@ -371,7 +380,7 @@ fun ChatPage(
   }
 
   // Someone writing shows under the latest line, kept in sight while following.
-  LaunchedEffect(typers.isNotEmpty()) { if (placed && following && typers.isNotEmpty()) list.animateScrollToItem(0) }
+  LaunchedEffect(typers.isNotEmpty()) { if (placed && following && typers.isNotEmpty()) moves.run { list.toFoot(reducedMotion) } }
 
   var notKept by remember { mutableStateOf(false) }
   val composer = rememberComposerState()
@@ -411,7 +420,6 @@ fun ChatPage(
   var sendingDays by remember { mutableStateOf(false) }
   val asking = LocalNotificationAsking.current
   val menu = rememberLineMenuState()
-  val reducedMotion = rememberReducedMotion()
   val deleted = stringResource(R.string.deleted_account)
   val nameOf = remember(writers, deleted) { { id: String -> writers[id]?.shownName(deleted) ?: deleted } }
 
@@ -428,7 +436,7 @@ fun ChatPage(
     when {
       index >= 0 -> {
         following = false
-        list.showInMiddle(index, animated = !reducedMotion)
+        moves.run { list.showInMiddle(index, animated = !reducedMotion) }
         lit = Lit(seq, System.nanoTime())
         jumping = null
       }
@@ -461,7 +469,7 @@ fun ChatPage(
 
   // The line the composer answers, held however far from the lines laid out.
   val replying = composer.writing.replyTo
-  val answered by remember(chats, groupId, threadId, replying) { replying?.let { chats.line(groupId, threadId, it) } ?: flowOf(null) }.collectAsState(null)
+  val answered by remember(chats, groupId, threadId, replying) { replying?.let { chats.line(groupId, threadId, it) } ?: flowOf(null) }.collectAsStateWithLifecycle(null)
 
   // Reactions (spec/chat.md, Reactions): the member's own put on sprays from its pill, with its
   // haptic (spec/haptics.md), but with animations off; + opens the system's emoji picker, and a
@@ -543,6 +551,19 @@ fun ChatPage(
       onDecide = { deciding = it },
       onReport = { reportAndBlock.reporting = it },
     )
+  // 続きを読む: the lines opened while the chat is open, each keeping its top as it opens.
+  var unfolded by rememberSaveable { mutableStateOf(emptySet<String>()) }
+  var keepTop by remember { mutableStateOf<Pair<String, Int>?>(null) }
+  LaunchedEffect(keepTop) {
+    val (key, top) = keepTop ?: return@LaunchedEffect
+    // Reversed, the line grows up from its foot: the lines go down by as much as its top rose, as it
+    // is laid out opened (it runs past its lines, so opening it always changes its height).
+    val now = snapshotFlow { list.layoutInfo.visibleItemsInfo.firstOrNull { it.key == key }?.let { it.offset + it.size } }.first { it != top }
+    if (now != null) moves.run { list.scrollBy((now - top).toFloat()) }
+    keepTop = null
+  }
+  val linkItems = rememberLinkActions(openLink, snackbar)
+  val floatingDay = rememberFloatingDay(list, items)
   val handlers =
     MessageHandlers(
       menu = menu,
@@ -600,9 +621,18 @@ fun ChatPage(
       openProfile = { writer: GroupMemberRow -> reportAndBlock.profileOf = ProfileOf.of(writer) }.takeIf { placeRules(groupId).reports },
       folded = folded,
       showFolded = { seq -> shownBlocked = shownBlocked + seq },
+      unfolded = unfolded,
+      unfold = { key ->
+        // Opened where it is, its words going on down, and the chat no longer follows its latest.
+        following = false
+        keepTop = list.layoutInfo.visibleItemsInfo.firstOrNull { it.key == key }?.let { key to it.offset + it.size }
+        unfolded = unfolded + key
+      },
+      linkItems = linkItems,
+      takenTitle = { floatingDay.taken },
     )
-  Box {
-    ChatScaffold(groupId, threadId, support, members, groups, socket, onBack, onPhotos, say, onTitle) {
+  PhotoZoomLayout(viewing, reducedMotion, shownOf = OpenPhotos::shownPhoto, places = {
+    ChatScaffold(groupId, threadId, support, members, groups, socket, onBack, onPhotos, onShifts, say, onTitle) {
       Column(Modifier.fillMaxSize().imePadding()) {
         Box(Modifier.weight(1f).fillMaxWidth()) {
           // What floats over the lines' top keeps its room there, so the first of them scrolls out from under it.
@@ -619,6 +649,20 @@ fun ChatPage(
             over.top,
             head = if (support) { { SupportHead() } } else null,
             modifier = Modifier.alpha(if (placed) 1f else 0f),
+          )
+          // The day of the lines at the top, while the person scrolls.
+          FloatingDay(floatingDay, list, over.top)
+          // What a screen reader hears of the chat as it changes and scrolls.
+          ChatSpeech(
+            me,
+            placed,
+            moves = moves,
+            newest = { chats.newest(groupId, threadId) },
+            arrived = { after -> chats.arrived(groupId, threadId, after) },
+            blockedLine,
+            nameOf,
+            list,
+            floatingDay,
           )
           // Drawn while there are pins, keeping its room over the lines only then.
           if (chat.pins.isNotEmpty()) {
@@ -665,10 +709,9 @@ fun ChatPage(
       }
     }
     LineMenu(menu)
-    viewing?.let { open ->
-      FollowPhotos(groupId, threadId, open)
-      PhotoViewer(groupId, threadId, open, nameOf, onClose = { viewing = null })
-    }
+  }) { open, closing ->
+    if (!closing) FollowPhotos(groupId, threadId, open)
+    PhotoViewer(groupId, threadId, open, nameOf, onClose = { viewing = null }, zoom = this, closing = closing)
   }
   if (notKept) NotKeptDialog { notKept = false }
   val group = groups.firstOrNull { it.id == groupId }
@@ -761,6 +804,8 @@ private fun ChatScaffold(
   onBack: () -> Unit,
   /** 写真 in its ⋯: the chat's photos alone. */
   onPhotos: () -> Unit,
+  /** みんなのシフト in its ⋯, for the group's own chat; null in any other. */
+  onShifts: (() -> Unit)?,
   /** Says what its ⋯ did, over the chat. */
   say: (String) -> Unit,
   /** A tap on the title: what the chat is of; null while it opens nothing. */
@@ -808,6 +853,17 @@ private fun ChatScaffold(
           Box {
             IconButton(onClick = { more = true }) { Icon(painterResource(R.drawable.ic_more_vert), stringResource(R.string.chat_more)) }
             DropdownMenu(more, onDismissRequest = { more = false }) {
+              // The group's own chat: everyone's shifts first, as the chat is the group's.
+              if (onShifts != null) {
+                DropdownMenuItem(
+                  text = { Text(stringResource(R.string.group_shifts)) },
+                  leadingIcon = { Icon(painterResource(R.drawable.ic_calendar), contentDescription = null) },
+                  onClick = {
+                    more = false
+                    onShifts()
+                  },
+                )
+              }
               DropdownMenuItem(
                 text = { Text(stringResource(R.string.chat_photos_title)) },
                 leadingIcon = { Icon(painterResource(R.drawable.ic_photo_library), contentDescription = null) },
@@ -847,7 +903,7 @@ private fun ChatScaffold(
  */
 @Composable
 private fun rememberSocketWords(socket: ChatSocket?): String? {
-  val state = socket?.state?.collectAsState()?.value ?: SocketState.Closed
+  val state = socket?.state?.collectAsStateWithLifecycle()?.value ?: SocketState.Closed
   var shown by remember { mutableStateOf<SocketState?>(null) }
   LaunchedEffect(state) {
     shown = null
@@ -867,6 +923,7 @@ private fun rememberSocketWords(socket: ChatSocket?): String? {
  * The lines, from the foot up: the spinner at the top while the page before them is on its way,
  * then each item, and who is writing at the very foot, under the latest line.
  */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun ChatLines(
   items: List<ChatItem>,
@@ -883,17 +940,35 @@ private fun ChatLines(
   modifier: Modifier = Modifier,
 ) {
   val pinned = remember(chat.pins) { chat.pins.mapTo(HashSet()) { it.seq } }
+  val focus = LocalFocusManager.current
   LazyColumn(
-    modifier.fillMaxSize(),
+    modifier
+      .fillMaxSize()
+      // While the keyboard is up, a tap off the lines (beside or between them) puts it away, as LINE
+      // does, a tap on a line staying its own; and dragging the lines down at their foot takes the
+      // keyboard down with the finger, as Material's messaging apps do (spec/chat.md, Opening a
+      // message's menu).
+      .pointerInput(focus) { detectTapGestures(onTap = { focus.clearFocus() }) }
+      .imeNestedScroll(),
     state = list,
     reverseLayout = true,
     contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 8.dp + topRoom, bottom = 8.dp),
   ) {
     items(items, key = { it.key }, contentType = { it::class }) { item ->
       val look = messageLook(item, me, writers, direct, pinned, quoteOf, handlers.nameOf, handlers.invite)
-      ChatItemRow(item, look, writers, me, handlers, Modifier.animateItem())
+      // Lines come in fading as the lines slide up to them, and move to a new height together, over
+      // chatRules.lineMoveMs; with motion reduced they fade where they go, put there at once.
+      ChatItemRow(item, look, writers, me, handlers, Modifier.animateItem(fadeInSpec = tween(Chat.lineMoveMs), placementSpec = if (handlers.reducedMotion) null else tween(Chat.lineMoveMs), fadeOutSpec = tween(Chat.lineMoveMs)))
     }
     if (head != null && chat.atStart) item(key = "head") { head() }
+    // A chat with nothing in it yet says so in the middle of the lines' room.
+    if (head == null && items.none { it !is ChatItem.Typing } && chat.atStart) {
+      item(key = "none") {
+        Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+          Text(stringResource(R.string.chat_none), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+      }
+    }
     if (!chat.atStart && chat.heldBefore == 0) {
       item(key = "earlier") {
         Box(Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
@@ -941,19 +1016,35 @@ private fun LatestButton(
  * before, its key's change would cancel the scroll on its way.
  */
 @Composable
-internal fun GoTo(going: Going?, items: List<ChatItem>, list: LazyListState, enabled: Boolean, onThere: (following: Boolean) -> Unit) {
+internal fun GoTo(going: Going?, items: List<ChatItem>, list: LazyListState, reducedMotion: Boolean, moves: ListMoves, enabled: Boolean, onThere: (following: Boolean) -> Unit) {
   LaunchedEffect(going, items, enabled) {
     val to = going ?: return@LaunchedEffect
     if (!enabled) return@LaunchedEffect
     val following =
       when (to) {
-        Going.ToUnread -> list.showAtTop(items.indexOfFirst { it == ChatItem.Unread })
+        Going.ToUnread -> moves.run { list.showAtTop(items.indexOfFirst { it == ChatItem.Unread }) }
         Going.ToFoot -> {
-          list.animateScrollToItem(0)
+          moves.run { list.toFoot(reducedMotion) }
           true
         }
       }
     onThere(following)
+  }
+}
+
+/** How many moves of the lines the chat itself is making now (↓, following, a jump, opening), not the person. */
+@Stable
+class ListMoves {
+  var count by mutableIntStateOf(0)
+    private set
+
+  suspend fun <T> run(move: suspend () -> T): T {
+    count++
+    try {
+      return move()
+    } finally {
+      count--
+    }
   }
 }
 
@@ -996,6 +1087,9 @@ private suspend fun LazyListState.showAtTop(index: Int): Boolean {
   scrollBy(-(top - (item.offset + item.size)).toFloat())
   return !canScrollBackward
 }
+
+/** Takes the lines to their foot, the latest: gliding there, or at once with motion reduced (spec/chat.md, Reduced motion). */
+private suspend fun LazyListState.toFoot(reducedMotion: Boolean) = if (reducedMotion) scrollToItem(0) else animateScrollToItem(0)
 
 /** Puts the item at [index] in the middle of the screen, gliding there unless [animated] is off. */
 private suspend fun LazyListState.showInMiddle(index: Int, animated: Boolean) {

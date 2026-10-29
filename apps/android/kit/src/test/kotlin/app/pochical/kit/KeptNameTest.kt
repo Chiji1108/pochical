@@ -19,9 +19,9 @@ class KeptNameTest {
   private val calls =
     GroupCalls(
       phone.account,
-      OkHttpClient(),
+      lazyOf(OkHttpClient()),
       server.url,
-      Photos(OkHttpClient(), server.url, File(RuntimeEnvironment.getApplication().cacheDir, "held")),
+      Photos(lazyOf(OkHttpClient()), server.url, lazyOf(File(RuntimeEnvironment.getApplication().cacheDir, "held"))),
       phone.scope,
     )
 

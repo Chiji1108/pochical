@@ -11,11 +11,10 @@ import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -33,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.RootPage
+import app.pochical.SettingsSection
 import app.pochical.design.Chat
 import app.pochical.groups.HoldSocket
 import app.pochical.groups.LocalValues
@@ -57,10 +57,10 @@ fun SupportRow(open: (RootPage) -> Unit) {
   HoldSocket(Chat.supportPlace)
   // The place's members as it names them: the user, and ポチカル for Pochical's people.
   val values = LocalValues.current
-  val members by remember(values) { values.members(Chat.supportPlace) }.collectAsState(emptyList())
-  Column {
-    // Apart from the rows of settings above it, the line drawn only with the row.
-    HorizontalDivider(Modifier.padding(vertical = 8.dp))
+  val members by remember(values) { values.members(Chat.supportPlace) }.collectAsStateWithLifecycle(emptyList())
+  // A section of its own, apart from the rows of settings above it.
+  SettingsSection(modifier = Modifier.padding(top = 20.dp)) {
+    row {
     ChatRow(
       Chat.supportPlace,
       GROUP_THREAD,
@@ -70,8 +70,11 @@ fun SupportRow(open: (RootPage) -> Unit) {
       blocked = emptySet(),
       empty = stringResource(R.string.support_empty),
       onOpen = { open(RootPage.Chat(Chat.supportPlace, GROUP_THREAD)) },
+      onCard = true,
+      modifier = Modifier.clip(MaterialTheme.shapes.large),
     ) {
       AppIcon(28.dp)
+    }
     }
   }
 }

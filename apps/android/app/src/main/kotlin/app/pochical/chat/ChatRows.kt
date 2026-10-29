@@ -35,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -74,7 +75,8 @@ import kotlinx.coroutines.launch
 fun ChatItemRow(item: ChatItem, look: MessageLook?, writers: Map<String, GroupMemberRow>, me: String?, handlers: MessageHandlers, modifier: Modifier = Modifier) {
   when (item) {
     is ChatItem.Typing -> TypingRow(item.userIds.mapNotNull { writers[it] }, modifier)
-    is ChatItem.DayTitle -> DayTitle(item.day, modifier)
+    // Taken over by the floating day, read in its layer, so the row is not drawn again as the list scrolls.
+    is ChatItem.DayTitle -> DayTitle(item.day, modifier.graphicsLayer { alpha = if (handlers.takenTitle() == item.key) 0f else 1f })
     ChatItem.Unread -> UnreadDivider(modifier)
     is ChatItem.Line -> {
       val line = item.line
@@ -94,25 +96,29 @@ fun ChatItemRow(item: ChatItem, look: MessageLook?, writers: Map<String, GroupMe
   }
 }
 
-/** A day's title over its first line: 今日, 昨日, 10月5日(月). */
+/** A day's title over its first line: 今日, 昨日, 10月5日(月), a heading for a screen reader to go by. */
 @Composable
 private fun DayTitle(day: LocalDate, modifier: Modifier) {
-  val colors = LocalThemeColors.current
-  val today = rememberToday()
-  val words =
-    when (day) {
-      today -> stringResource(R.string.today)
-      today.minusDays(1) -> stringResource(R.string.chat_yesterday)
-      else -> day.fullText
-    }
   Box(modifier.fillMaxWidth().padding(top = Chat.runGap.dp), contentAlignment = Alignment.Center) {
-    Text(
-      words,
-      Modifier.background(colors.fillTertiary, RoundedCornerShape(Radius.sm)).padding(horizontal = 12.dp, vertical = 2.dp).semantics { heading() },
-      style = MaterialTheme.typography.labelSmall,
-      color = colors.textTertiary,
-    )
+    DayWords(day, Modifier.semantics { heading() })
   }
+}
+
+/**
+ * A day as the chat says it, 今日, 昨日 or 10月5日(月), on its quiet ground: a day's title, or the day
+ * floating over the lines ([floating]), on the surface a piece over them stands on.
+ */
+@Composable
+fun DayWords(day: LocalDate, modifier: Modifier = Modifier, floating: Boolean = false) {
+  val colors = LocalThemeColors.current
+  Text(
+    dayWords(day),
+    modifier
+      .background(if (floating) MaterialTheme.colorScheme.surfaceContainerHighest else colors.fillTertiary, RoundedCornerShape(Radius.sm))
+      .padding(horizontal = 12.dp, vertical = 2.dp),
+    style = MaterialTheme.typography.labelSmall,
+    color = if (floating) colors.textSecondary else colors.textTertiary,
+  )
 }
 
 /** ここから新着, a rule either side, in the accent. */
@@ -128,6 +134,17 @@ private fun UnreadDivider(modifier: Modifier) {
       color = accent,
     )
     HorizontalDivider(Modifier.weight(1f), color = accent)
+  }
+}
+
+/** A day as the chat says it: 今日, 昨日, 10月5日(月). */
+@Composable
+fun dayWords(day: LocalDate): String {
+  val today = rememberToday()
+  return when (day) {
+    today -> stringResource(R.string.today)
+    today.minusDays(1) -> stringResource(R.string.chat_yesterday)
+    else -> day.fullText
   }
 }
 

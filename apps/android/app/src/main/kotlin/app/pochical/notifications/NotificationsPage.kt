@@ -13,25 +13,36 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -40,29 +51,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.pochical.Footnote
 import app.pochical.LocalDeviceSettings
 import app.pochical.R
 import app.pochical.RootPage
-import app.pochical.SettingsPage
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.selection.toggleable
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Switch
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.Saver
-import app.pochical.kit.ChatNotificationState
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.style.TextOverflow
-import app.pochical.Footnote
+import app.pochical.RowEnd
 import app.pochical.SectionHeader
-import app.pochical.chat.blockedMembers
+import app.pochical.SettingsPage
+import app.pochical.SettingsRow
+import app.pochical.SettingsSection
+import app.pochical.SettingsSwitchRow
+import app.pochical.chat.BlockedMembers
 import app.pochical.chat.rememberBlockedPeople
 import app.pochical.chat.rememberUnblocking
 import app.pochical.chat.shownName
@@ -71,6 +74,7 @@ import app.pochical.groups.LocalValues
 import app.pochical.groups.MemberAvatar
 import app.pochical.groups.rememberMeId
 import app.pochical.kit.ChatKey
+import app.pochical.kit.ChatNotificationState
 import app.pochical.kit.ChatNotificationsSummary
 import app.pochical.kit.GROUP_THREAD
 import app.pochical.kit.PhotoShelf
@@ -83,22 +87,20 @@ import kotlinx.coroutines.launch
 fun ChatNotificationsRow(open: (RootPage) -> Unit) {
   val allowed by LocalNotificationPermission.current.allowed.collectAsStateWithLifecycle()
   val values = LocalValues.current
-  val groups by remember(values) { values.groups() }.collectAsState(emptyList())
+  val groups by remember(values) { values.groups() }.collectAsStateWithLifecycle(emptyList())
   // Its value once the device has read the switches, never a guess before.
   val summary = rememberChatNotifications()?.let { chatNotificationsSummary(groups.map { it.id }, it, allowed) }
-  ListItem(
-    headlineContent = { Text(stringResource(R.string.notifications_chat)) },
-    supportingContent = {
-      Text(
-        when (summary) {
-          null -> ""
-          ChatNotificationsSummary.On -> stringResource(R.string.notifications_on)
-          ChatNotificationsSummary.Off -> stringResource(R.string.notifications_off)
-          is ChatNotificationsSummary.Groups -> stringResource(R.string.notifications_groups, summary.count)
-        }
-      )
-    },
-    modifier = Modifier.clickable { open(RootPage.ChatNotifications) },
+  SettingsRow(
+    stringResource(R.string.notifications_chat),
+    R.drawable.ic_notifications,
+    onClick = { open(RootPage.ChatNotifications) },
+    value =
+      when (summary) {
+        null -> null
+        ChatNotificationsSummary.On -> stringResource(R.string.notifications_on)
+        ChatNotificationsSummary.Off -> stringResource(R.string.notifications_off)
+        is ChatNotificationsSummary.Groups -> stringResource(R.string.notifications_groups, summary.count)
+      },
   )
 }
 
@@ -113,8 +115,8 @@ fun ChatNotificationsRow(open: (RootPage) -> Unit) {
 fun ChatNotificationsPage(onBack: () -> Unit) {
   val context = LocalContext.current
   val values = LocalValues.current
-  val groups by remember(values) { values.groups() }.collectAsState(emptyList())
-  val members by remember(values) { values.allMembers() }.collectAsState(emptyList())
+  val groups by remember(values) { values.groups() }.collectAsStateWithLifecycle(emptyList())
+  val members by remember(values) { values.allMembers() }.collectAsStateWithLifecycle(emptyList())
   val read = rememberChatNotifications()
   val me = rememberMeId()
   val snackbar = remember { SnackbarHostState() }
@@ -129,47 +131,66 @@ fun ChatNotificationsPage(onBack: () -> Unit) {
   val notifications = read ?: ChatNotificationState()
   val blocked = rememberBlockedPeople()
   val unblock = rememberUnblocking(snackbar)
-  SettingsPage(title = stringResource(R.string.notifications_chat), onBack = onBack) { padding ->
-    Box(Modifier.padding(padding).fillMaxSize()) {
-      LazyColumn {
-        item { PermissionCard() }
-        item { SectionHeader(stringResource(R.string.notifications_group_chats)) }
-        items(if (read == null) emptyList() else groups, key = { "group-${it.id}" }) { group ->
-          SwitchRow(switches.chat(notifications, group.id, GROUP_THREAD), headline = group.name) {
-            GroupMarkBadge(group.mark, shelf = PhotoShelf.Group(group.id))
+  SettingsPage(title = stringResource(R.string.notifications_chat), onBack = onBack, snackbar = snackbar) { padding ->
+    LazyColumn(contentPadding = padding) {
+      item { PermissionCard() }
+      item {
+        SettingsSection(
+          stringResource(R.string.notifications_group_chats),
+          footnote = stringResource(R.string.notifications_group_chats_note).takeIf { read?.mentionsWhenMuted == true },
+        ) {
+          for (group in if (read == null) emptyList() else groups) {
+            row {
+              SwitchRow(switches.chat(notifications, group.id, GROUP_THREAD), headline = group.name) {
+                GroupMarkBadge(group.mark, shelf = PhotoShelf.Group(group.id))
+              }
+            }
           }
-        }
-        if (read?.mentionsWhenMuted == true) item { GroupChatsNote() }
-        item { SectionHeader(stringResource(R.string.notifications_direct_chats)) }
-        items(directOff.orEmpty(), key = { "direct-${it.groupId}-${it.threadId}" }) { chat ->
-          val group = groups.firstOrNull { it.id == chat.groupId }
-          val other = me?.let { otherIn(chat.threadId, it) }
-          val person = members.firstOrNull { it.groupId == chat.groupId && it.userId == other }
-          val name = person?.shownName() ?: stringResource(R.string.blocked_someone)
-          SwitchRow(switches.chat(notifications, chat.groupId, chat.threadId), headline = name, supporting = group?.name) {
-            MemberAvatar(name, person?.photoId.orEmpty(), PhotoShelf.Group(chat.groupId), 40.dp)
-          }
-        }
-        item { Footnote(stringResource(R.string.notifications_direct_chats_note)) }
-        item { SectionHeader(stringResource(R.string.notifications_mentions)) }
-        if (read != null) item {
-          SwitchRow(
-            switches.mentions(notifications),
-            headline = stringResource(R.string.notifications_mentions_always),
-            supporting = stringResource(R.string.notifications_mentions_always_about),
-          )
-        }
-        blockedMembers(blocked, unblock)
-        item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
-        item {
-          ListItem(
-            headlineContent = { Text(stringResource(R.string.notifications_system)) },
-            supportingContent = { Text(stringResource(R.string.notifications_system_about)) },
-            modifier = Modifier.clickable { context.startActivity(systemSettings(context.packageName)) },
-          )
         }
       }
-      SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
+      item {
+        SettingsSection(stringResource(R.string.notifications_direct_chats), footnote = stringResource(R.string.notifications_direct_chats_note)) {
+          for (chat in directOff.orEmpty()) {
+            row {
+              val group = groups.firstOrNull { it.id == chat.groupId }
+              val other = me?.let { otherIn(chat.threadId, it) }
+              val person = members.firstOrNull { it.groupId == chat.groupId && it.userId == other }
+              val name = person?.shownName() ?: stringResource(R.string.blocked_someone)
+              SwitchRow(switches.chat(notifications, chat.groupId, chat.threadId), headline = name, supporting = group?.name) {
+                MemberAvatar(name, person?.photoId.orEmpty(), PhotoShelf.Group(chat.groupId), 40.dp)
+              }
+            }
+          }
+        }
+      }
+      item {
+        SettingsSection(stringResource(R.string.notifications_mentions)) {
+          if (read != null) {
+            row {
+              SwitchRow(
+                switches.mentions(notifications),
+                headline = stringResource(R.string.notifications_mentions_always),
+                supporting = stringResource(R.string.notifications_mentions_always_about),
+                icon = R.drawable.ic_mark_chat_unread,
+              )
+            }
+          }
+        }
+      }
+      item { BlockedMembers(blocked, unblock) }
+      item {
+        SettingsSection(modifier = Modifier.padding(top = 24.dp)) {
+          row {
+            SettingsRow(
+              stringResource(R.string.notifications_system),
+              R.drawable.ic_settings,
+              onClick = { context.startActivity(systemSettings(context.packageName)) },
+              supporting = stringResource(R.string.notifications_system_about),
+              end = RowEnd.Outside,
+            )
+          }
+        }
+      }
     }
   }
 }
@@ -184,17 +205,12 @@ fun GroupChatNotifications(groupId: String, snackbar: SnackbarHostState) {
   // Nothing of it, its heading too, until the switches are read, so none shows what it is not.
   val read = rememberChatNotifications() ?: return
   val switches = rememberChatSwitches(snackbar)
-  Column {
-    SectionHeader(stringResource(R.string.settings_notifications))
-    SwitchRow(switches.chat(read, groupId, GROUP_THREAD), headline = stringResource(R.string.group_chat_notifications))
-    if (read.mentionsWhenMuted) GroupChatsNote()
+  SettingsSection(
+    stringResource(R.string.settings_notifications),
+    footnote = stringResource(R.string.notifications_group_chats_note).takeIf { read.mentionsWhenMuted },
+  ) {
+    row { SwitchRow(switches.chat(read, groupId, GROUP_THREAD), headline = stringResource(R.string.group_chat_notifications), icon = R.drawable.ic_notifications) }
   }
-}
-
-/** What the group chats' switches say while メンションはいつも通知 is on: mentions still notify. */
-@Composable
-private fun GroupChatsNote() {
-  Footnote(stringResource(R.string.notifications_group_chats_note))
 }
 
 /** A switch as shown, and what turning it does. */
@@ -225,14 +241,8 @@ private fun rememberChatSwitches(snackbar: SnackbarHostState): ChatSwitches {
 
 /** A row its switch turns on and off, the whole row toggling it as Material's lists do. */
 @Composable
-private fun SwitchRow(switch: ChatSwitch, headline: String, supporting: String? = null, leading: (@Composable () -> Unit)? = null) {
-  ListItem(
-    headlineContent = { Text(headline, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-    supportingContent = supporting?.takeIf { it.isNotEmpty() }?.let { { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
-    leadingContent = leading,
-    trailingContent = { Switch(checked = switch.on, onCheckedChange = null) },
-    modifier = Modifier.toggleable(value = switch.on, role = Role.Switch, onValueChange = switch.turn),
-  )
+private fun SwitchRow(switch: ChatSwitch, headline: String, supporting: String? = null, icon: Int? = null, leading: (@Composable () -> Unit)? = null) {
+  SettingsSwitchRow(headline, icon, switch.on, switch.turn, supporting = supporting?.takeIf { it.isNotEmpty() }, leading = leading, oneLine = leading != null)
 }
 
 /** The one-to-one chats turned off as the page opened, kept across the process's death; none kept before they are read. */
@@ -268,6 +278,7 @@ fun PermissionCard() {
 fun AskingCard(icon: Int, title: String, about: String, action: String, onAction: () -> Unit) {
   Card(
     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
+    shape = MaterialTheme.shapes.extraLarge,
     modifier = Modifier.fillMaxWidth().padding(16.dp),
   ) {
     Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -280,7 +291,7 @@ fun AskingCard(icon: Int, title: String, about: String, action: String, onAction
       Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(title, style = MaterialTheme.typography.titleSmall)
         Text(about, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Button(onClick = onAction, modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) { Text(action) }
+        Button(onClick = onAction, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) { Text(action) }
       }
     }
   }
