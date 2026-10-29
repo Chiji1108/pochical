@@ -9,6 +9,9 @@ plugins {
 // -PpochicalServer=http://10.0.2.2:<port>, for a server beside another checkout's.
 val localServer = providers.gradleProperty("pochicalServer").orElse("http://10.0.2.2:8787").get()
 
+// The app's release builds the Baseline Profile plugin makes (app/build.gradle.kts).
+val profileBuildTypes = listOf("nonMinifiedRelease", "benchmarkRelease")
+
 android {
   namespace = "app.pochical.kit"
   compileSdk = libs.versions.compileSdk.get().toInt()
@@ -29,6 +32,24 @@ android {
     }
     release {
       buildConfigField("String", "SERVER", "\"https://api.pochical.app\"")
+    }
+    // The release builds the Baseline Profile plugin makes for :baselineprofile's journeys and
+    // benchmarks, which sign in and make a group: on the emulator, against `mise run server` too,
+    // over plain HTTP as the debug build's manifest allows.
+    for (name in profileBuildTypes) {
+      create(name) {
+        initWith(getByName("release"))
+        matchingFallbacks += "release"
+        buildConfigField("String", "SERVER", "\"$localServer\"")
+      }
+    }
+  }
+  sourceSets {
+    for (name in profileBuildTypes) {
+      named(name) {
+        manifest.srcFile("src/debug/AndroidManifest.xml")
+        res.directories.add("src/debug/res")
+      }
     }
   }
   testOptions {
