@@ -41,6 +41,7 @@ import app.pochical.v1.serverFrame
 import app.pochical.v1.welcome
 import app.pochical.v1.patternValue
 import app.pochical.v1.pattern
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -87,8 +88,14 @@ class FakeServer : AutoCloseable {
   /** How many `GetMe` calls have come in. */
   val getMes = AtomicInteger()
 
-  /** The provider `GetMe` says the user is linked to. */
+  /** The provider `GetMe` says the user is linked to, one not in [linked]. */
   @Volatile var provider = SignInProvider.SIGN_IN_PROVIDER_UNSPECIFIED
+
+  /**
+   * The provider each of these users is linked to, as `GetMe` says it to them alone: the account in
+   * use's user, linked elsewhere, whose link the device's own user does not have.
+   */
+  val linked = ConcurrentHashMap<String, SignInProvider>()
 
   /** What `/link-social` answers: 200 links, 409 is an account in use. */
   @Volatile var linkStatus = 200
@@ -243,7 +250,7 @@ class FakeServer : AutoCloseable {
                     .also { getMes.incrementAndGet() }
                     .headersDelay(getMeDelayMs, TimeUnit.MILLISECONDS)
                     .addHeader("Content-Type", "application/proto")
-                    .body(Buffer().write(getMeResponse { userId = user; provider = this@FakeServer.provider }.toByteArray()))
+                    .body(Buffer().write(getMeResponse { userId = user; provider = linked[user] ?: this@FakeServer.provider }.toByteArray()))
                     .build()
               }
             "/api/auth/sign-in/social" -> {
@@ -280,6 +287,8 @@ class FakeServer : AutoCloseable {
               when {
                 userOf(request.headers["Authorization"]) == null -> refused("unauthenticated")
                 else -> {
+                  // The provider's account goes to the user who took it.
+                  inUse?.second?.let { taken -> linked.remove(taken)?.let { linked[userOf(request.headers["Authorization"])!!] = it } }
                   inUse = null
                   proto(takeAccountResponse {})
                 }
