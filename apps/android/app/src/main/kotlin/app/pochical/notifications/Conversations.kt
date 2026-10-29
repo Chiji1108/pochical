@@ -7,27 +7,22 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Typeface
 import androidx.compose.ui.graphics.toArgb
+import androidx.core.app.Person
+import androidx.core.content.LocusIdCompat
 import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
-import androidx.core.app.Person
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.drawable.IconCompat
-import androidx.core.content.LocusIdCompat
 import app.pochical.MainActivity
 import app.pochical.R
-import app.pochical.chat.Picture
+import app.pochical.design.Theme
 import app.pochical.kit.GroupMarkValue
 import app.pochical.kit.PhotoShelf
-import app.pochical.design.Theme
 import app.pochical.kit.limitText
 import app.pochical.mark
+import app.pochical.photoBitmap
 import app.pochical.widgets.groupMarkPicture
 import coil3.ImageLoader
-import coil3.request.ImageRequest
-import coil3.request.SuccessResult
-import coil3.request.allowHardware
-import coil3.toBitmap
-import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * How a chat shows among Android's conversations (spec/chat.md, Notifications): the faces of who
@@ -111,12 +106,7 @@ class DrawnConversations(
    * A photo as the app's image loader keeps it, in memory or on the disk, or fetches it, within the time a push leaves for it
    * ([PHOTO_WAIT_MS]): a notification is not held back for a face.
    */
-  private suspend fun photo(photoId: String, shelf: PhotoShelf): Bitmap? {
-    if (photoId.isEmpty()) return null
-    val request = ImageRequest.Builder(context).data(Picture(photoId, shelf)).size(side).allowHardware(false).build()
-    val result = withTimeoutOrNull(PHOTO_WAIT_MS) { loader().execute(request) } as? SuccessResult ?: return null
-    return result.image.toBitmap()
-  }
+  private suspend fun photo(photoId: String, shelf: PhotoShelf): Bitmap? = photoBitmap(context, loader(), photoId, shelf, side, PHOTO_WAIT_MS)
 
   /** Someone's first letter on the quiet ground faces without a photo take (MemberAvatar). */
   private suspend fun letter(name: String): IconCompat {

@@ -5,6 +5,16 @@ import vitest from "ultracite/oxlint/vitest";
 
 import { ignorePatterns } from "./lint-ignores.ts";
 
+/** Imports no file may make. */
+const restrictedPaths = [
+  {
+    importNames: ["useReducedMotion"],
+    message:
+      "It reads the device on the first render, which breaks hydration of pages drawn on the server. Use useReducedMotion from @pochical/prototype/lib/device-media.",
+    name: "motion/react",
+  },
+];
+
 export default defineConfig({
   // Oxlint does not carry `env` through `extends`.
   env: core.env,
@@ -68,6 +78,14 @@ export default defineConfig({
       },
     },
     {
+      // An Astro component's bare image import is only ever Astro's image
+      // object, which astro:assets' <Image> and <Picture> take.
+      files: ["apps/web/src/**/*.astro"],
+      rules: {
+        "no-restricted-imports": ["error", { paths: restrictedPaths }],
+      },
+    },
+    {
       files: ["apps/server/**"],
       globals: { WebSocketPair: "readonly" },
       rules: {
@@ -97,14 +115,7 @@ export default defineConfig({
     "no-restricted-imports": [
       "error",
       {
-        paths: [
-          {
-            importNames: ["useReducedMotion"],
-            message:
-              "It reads the device on the first render, which breaks hydration of pages drawn on the server. Use useReducedMotion from @pochical/prototype/lib/device-media.",
-            name: "motion/react",
-          },
-        ],
+        paths: restrictedPaths,
         patterns: [
           {
             message:
