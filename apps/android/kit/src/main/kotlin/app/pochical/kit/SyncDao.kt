@@ -129,6 +129,10 @@ internal interface SyncDao : ChatDao {
 
   @Query("DELETE FROM groups WHERE id = :id") suspend fun deleteGroup(id: String)
 
+  /** The photos of the group's faces the device knows: its members' and its mark's. */
+  @Query("SELECT photoId FROM groupMembers WHERE groupId = :id AND photoId != '' UNION SELECT photoId FROM groups WHERE id = :id AND photoId != ''")
+  suspend fun groupFaces(id: String): List<String>
+
   @Query("SELECT EXISTS(SELECT 1 FROM groups WHERE id = :id)") suspend fun isListed(id: String): Boolean
 
   @Query("DELETE FROM groups") suspend fun deleteGroups()

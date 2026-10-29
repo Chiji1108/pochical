@@ -2,6 +2,13 @@ package app.pochical.groups
 
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterExitState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,6 +26,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.BottomSheetScaffold
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -47,7 +55,9 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -334,14 +344,37 @@ fun togetherTitle(month: YearMonth, thisMonth: YearMonth): String =
 @Composable
 fun MonthRow(month: YearMonth, back: String?, onChoose: () -> Unit, onBack: () -> Unit) {
   val colors = LocalThemeColors.current
+  val choose = stringResource(R.string.month_choose_hint)
   Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(start = 8.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-    TextButton(onClick = onChoose) {
-      Text(month.yearMonthText, style = PochicalTextStyles.headline, color = colors.textPrimary)
+    TextButton(onClick = onChoose, Modifier.semantics { onClick(label = choose, action = null) }) {
+      // The name rolls to the next month, up as the months go on and down as they go back.
+      AnimatedContent(
+        month,
+        transitionSpec = {
+          val on = if (targetState > initialState) 1 else -1
+          (slideInVertically { it * on } + fadeIn()) togetherWith (slideOutVertically { -it * on } + fadeOut())
+        },
+        label = "month",
+      ) {
+        Text(it.yearMonthText, style = PochicalTextStyles.headline, color = colors.textPrimary)
+      }
       Icon(painterResource(R.drawable.ic_expand_more), contentDescription = null, Modifier.padding(start = 4.dp).size(18.dp), tint = colors.textTertiary)
     }
     Box(Modifier.weight(1f))
-    if (back != null) {
-      OutlinedButton(onClick = onBack) { Text(back) }
+    // Fades in and out as what it goes back to leaves sight and comes back, keeping its words as it
+    // goes and pressed no more once going.
+    AnimatedContent(back, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "back") { shown ->
+      if (shown != null) {
+        val said = stringResource(R.string.go_back_to, shown)
+        OutlinedButton(
+          onClick = onBack,
+          shapes = ButtonDefaults.shapes(),
+          enabled = transition.targetState == EnterExitState.Visible,
+          modifier = Modifier.semantics { contentDescription = said },
+        ) {
+          Text(shown)
+        }
+      }
     }
   }
 }

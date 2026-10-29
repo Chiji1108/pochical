@@ -17,6 +17,7 @@ import app.pochical.v1.chatSend
 import app.pochical.v1.chatSendContent
 import app.pochical.v1.chatSendWords
 import app.pochical.v1.chatNotifications
+import app.pochical.v1.member
 import app.pochical.v1.membership
 import app.pochical.v1.unreadCount
 import kotlinx.coroutines.CoroutineStart
@@ -447,7 +448,10 @@ class ChatValuesTest {
       authorId = "u2"
       content = chatContent { photos = chatAlbum { photos += listOf("p1", "p2").map { chatPhoto { id = it; width = 1; height = 1 } } } }
     }
-    database.write { takeChanges(listOf(wordsLine(1, "u2"), album), "g1") }
+    database.write {
+      takeChanges(listOf(wordsLine(1, "u2"), album), "g1")
+      take(listOf(change { member = member { userId = "u2"; displayName = "さくら"; photoId = "face" } }), "g1")
+    }
     assertEquals(listOf("p1", "p2"), database.read { photosHeld("g1") })
 
     // Only a group the changes say was left, read before its lines go.
@@ -456,7 +460,8 @@ class ChatValuesTest {
       take(listOf(change { membership = membership { groupId = "g1"; left = true } }))
       leaving
     }
-    assertEquals(mapOf("g1" to listOf("p1", "p2")), left)
+    // Its lines' photos, and its faces.
+    assertEquals(mapOf("g1" to listOf("p1", "p2", "face")), left)
     assertTrue(database.read { photosHeld("g1") }.isEmpty())
   }
 

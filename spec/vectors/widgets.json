@@ -1,5 +1,5 @@
 {
-  "about": "What a widget's entry says of a day and of days off (spec/widgets.md). day: a day's own `start` and `end`, if set, over its pattern's standard `time` (null for a pattern without one); `expected.time` is the range read aloud (a leading zero dropped from the hour, 翌 before an end at or before the start) and `expected.change` the words shown on a day whose hours differ from its pattern's (null on an ordinary day); `expected.column` the same, short enough for a column of これから on one line (the new start alone for 早出, the new end alone for 残業, else both ends), and `expected.columnShort` that written shorter for a column it does not fit even shrunk to 8pt, its hours without :00. offs: what 次の休み counts. Each one's `days` are keyed by how many days from today (0 is today): work, off, or null where not entered; days not listed are `rest`, else not entered. `with` is who the widget is set to: nobody, one person, or the people of a group. `expected.today` says today is off (together); `expected.next` is how many days on the next day off after today is, looking no further than design/src/widgets.ts's widgetRules.offLookaheadDays (62), or null; `expected.none`, only when neither today nor any day ahead counts, is why: waiting (with the names of those who have not entered days the person is off and no one who has entered them works, as they come), apart (set to someone and the person has entered days), else notEntered. A day counts only when the person and everyone picked are off, as みんな休み (spec/vectors/together.json). now: いまのシフト at `at` (\"HH:MM\" on the Monday of offset 0), with each day's shift by its offset from it (day 09:00–18:00, night 16:30–09:30, duty 08:30–08:30, after and offDuty without hours, off a day off) and any own `start` or `end`; `expected.on` and `.next` are [start offset, start, end offset, end] or null, `.nextInDays` the whole days to the next shift's day when it is more than widgetRules.countdownHours away, and `.refresh` [offset, time] when the entry is made again.",
+  "about": "What a widget's entry says of a day and of days off (spec/widgets.md). day: a day's own `start` and `end`, if set, over its pattern's standard `time` (null for a pattern without one); `expected.time` is the range read aloud (a leading zero dropped from the hour, 翌 before an end at or before the start) and `expected.change` the words shown on a day whose hours differ from its pattern's (null on an ordinary day); `expected.column` the same, short enough for a column of これから on one line (the new start alone for 早出, the new end alone for 残業, else both ends), and `expected.columnShort` that written shorter for a column it does not fit even shrunk to 8pt, its hours without :00. offs: what 次の休み counts. Each one's `days` are keyed by how many days from today (0 is today): work, off, or null where not entered; days not listed are `rest`, else not entered. `with` is who the widget is set to: nobody, one person, or the people of a group. `group`, true, says it is set to a group, which may have no one else in it (`with` empty). `expected.today` says today is off (together); `expected.next` is how many days on the next day off after today is, looking no further than design/src/widgets.ts's widgetRules.offLookaheadDays (62), or null; `expected.none`, only when neither today nor any day ahead counts, is why: waiting (with the names of those who have not entered days the person is off and no one who has entered them works, as they come), apart (set to someone and the person has entered days), alone (set to a group with no one else in it, which counts nothing, today neither), else notEntered. A day counts only when the person and everyone picked are off, as みんな休み (spec/vectors/together.json). now: いまのシフト at `at` (\"HH:MM\" on the Monday of offset 0), with each day's shift by its offset from it (day 09:00–18:00, night 16:30–09:30, duty 08:30–08:30, after and offDuty without hours, off a day off) and any own `start` or `end`; `expected.on` and `.next` are [start offset, start, end offset, end] or null, `.nextInDays` the whole days to the next shift's day when it is more than widgetRules.countdownHours away, and `.refresh` [offset, time] when the entry is made again.",
   "day": [
     {
       "name": "an ordinary day says nothing, and is read with its pattern's hours",
@@ -388,6 +388,26 @@
         "next": null,
         "none": {
           "kind": "apart"
+        }
+      }
+    },
+    {
+      "name": "a group the person is alone in counts no day off, today's either",
+      "me": {
+        "days": {
+          "0": "off",
+          "1": "work",
+          "2": "off"
+        },
+        "rest": "work"
+      },
+      "with": [],
+      "group": true,
+      "expected": {
+        "today": false,
+        "next": null,
+        "none": {
+          "kind": "alone"
         }
       }
     }

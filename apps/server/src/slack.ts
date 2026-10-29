@@ -7,6 +7,7 @@ import { and, eq, isNull, notExists, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { erasingSlackThreads, supportChats } from "./db/schema";
+import { errorFields } from "./log";
 import { photoKey } from "./photos";
 import { photoWords, supportPlace } from "./support-lines";
 import type { SupportLine } from "./support-lines";
@@ -260,7 +261,11 @@ const askSlack = async (
       });
     }
   } catch (error) {
-    console.error(`Slack ${method} failed`, error);
+    console.error({
+      error: errorFields(error),
+      message: "Slack call failed",
+      method,
+    });
     return { refused: passing("network") };
   }
   const result: unknown = await response.json().catch(() => null);
@@ -273,7 +278,12 @@ const askSlack = async (
     response.headers.get("Retry-After"),
     error
   );
-  console.error(`Slack ${method} failed`, refused.why);
+  console.error({
+    message: "Slack refused a call",
+    method,
+    status: response.status,
+    why: refused.why,
+  });
   return { refused };
 };
 
@@ -517,7 +527,7 @@ const warnOfPost = (posted: Record<string, unknown>, what: string): void => {
   const said = posted.response_metadata;
   const warnings = isRecord(said) ? said.warnings : undefined;
   if (Array.isArray(warnings) && warnings.length > 0) {
-    console.warn(`Slack warned of ${what}`, warnings);
+    console.warn({ message: "Slack warned of a post", warnings, what });
   }
 };
 

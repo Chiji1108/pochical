@@ -12,9 +12,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -31,17 +28,17 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import app.pochical.ChoiceButtons
 import app.pochical.EmojiPickerSheet
 import app.pochical.Footnote
 import app.pochical.IconPickerSheet
+import app.pochical.MarkChoiceGrid
+import app.pochical.MarkColorGrid
 import app.pochical.MarkFrame
 import app.pochical.MarkFrameSize
 import app.pochical.MarkLetterField
-import app.pochical.MarkChoiceGrid
-import app.pochical.MarkColorGrid
 import app.pochical.R
 import app.pochical.SectionHeader
-import app.pochical.withPicked
 import app.pochical.design.MarkIconNames
 import app.pochical.design.ReadyPatterns
 import app.pochical.design.TextLimits
@@ -49,6 +46,7 @@ import app.pochical.kit.GroupMarkValue
 import app.pochical.kit.PhotoShelf
 import app.pochical.kit.initialLetter
 import app.pochical.kit.paletteColor
+import app.pochical.withPicked
 
 /** The kinds of mark the tabs pick from; a photo is picked above them. */
 private enum class MarkKind(val title: Int) {
@@ -106,7 +104,7 @@ fun GroupMarkPage(
         )
       },
     ) { padding ->
-      Column(Modifier.padding(padding).verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
+      Column(Modifier.verticalScroll(rememberScrollState()).padding(padding).padding(bottom = 24.dp)) {
         PhotoEditor(
           label = stringResource(if (mark.photoId.isEmpty()) R.string.mark_photo_use else R.string.mark_photo_change),
           shape = PhotoCropShape.Square,
@@ -122,17 +120,7 @@ fun GroupMarkPage(
         ) {
           MarkFrame { GroupMarkView(mark, MarkFrameSize, shelf = shelf) }
         }
-        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(16.dp)) {
-          MarkKind.entries.forEach { each ->
-            SegmentedButton(
-              selected = shown == each,
-              onClick = { kind = each },
-              shape = SegmentedButtonDefaults.itemShape(each.ordinal, MarkKind.entries.size),
-            ) {
-              Text(stringResource(each.title))
-            }
-          }
-        }
+        ChoiceButtons<MarkKind?>(MarkKind.entries, shown, { it?.let { each -> stringResource(each.title) }.orEmpty() }, modifier = Modifier.padding(16.dp)) { kind = it }
         Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
           when (shown) {
             null -> Unit

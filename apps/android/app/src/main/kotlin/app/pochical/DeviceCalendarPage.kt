@@ -29,19 +29,17 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -56,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.calendar.DeviceCalendar
 import app.pochical.calendar.DeviceCalendars
 import app.pochical.calendar.LocalOwnDays
@@ -102,7 +101,7 @@ fun DeviceCalendarPage(month: YearMonth, navigation: PageNavigation) {
   val activity = LocalActivity.current
   val settings = LocalDeviceSettings.current
   val device = settings.device
-  val calendar by LocalOwnDays.current.calendar.collectAsState()
+  val calendar by LocalOwnDays.current.calendar.collectAsStateWithLifecycle()
   val me = rememberMeId()
   val calendars = remember(context) { DeviceCalendars(context.applicationContext) }
   val scope = rememberCoroutineScope()
@@ -215,9 +214,8 @@ fun DeviceCalendarPage(month: YearMonth, navigation: PageNavigation) {
     }
   }
 
-  SettingsPage(doneTitle ?: stringResource(R.string.calendar_add), onBack = navigation::back) { padding ->
-    Box(Modifier.padding(padding)) {
-      LazyColumn(Modifier.fillMaxWidth()) {
+  SettingsPage(doneTitle ?: stringResource(R.string.calendar_add), onBack = navigation::back, snackbar = snackbar) { padding ->
+    LazyColumn(Modifier.fillMaxWidth(), contentPadding = padding) {
         when {
           !allowed && refused -> {
             item { Footnote(stringResource(R.string.calendar_add_denied)) }
@@ -239,46 +237,62 @@ fun DeviceCalendarPage(month: YearMonth, navigation: PageNavigation) {
             }
           doneTitle != null -> {
             item {
-              ListItem(
-                headlineContent = { Text(doneText) },
-                leadingContent = { Icon(painterResource(R.drawable.ic_check), null, tint = LocalThemeColors.current.accentDefault) },
-              )
+              SettingsSection(modifier = Modifier.padding(top = 8.dp).animateItem()) {
+                row {
+                  SettingsRow(doneText, icon = null, onClick = null, leading = { Icon(painterResource(R.drawable.ic_check), null, tint = LocalThemeColors.current.accentDefault) })
+                }
+              }
             }
             item { Wide(stringResource(R.string.close), onClick = navigation::back) }
           }
           else -> {
             item { Footnote(stringResource(R.string.calendar_add_about, name)) }
             item {
-              ListItem(
-                headlineContent = { Text(stringResource(R.string.calendar_add_target)) },
-                supportingContent = { Text(target?.name ?: stringResource(R.string.calendar_add_no_calendar)) },
-                leadingContent = target?.let { { CalendarDot(it.color) } },
-                modifier = Modifier.clickable(enabled = !list.isNullOrEmpty()) { pickingCalendar = true },
-              )
-            }
-            item {
-              ListItem(
-                headlineContent = { Text(stringResource(R.string.calendar_add_patterns)) },
-                // What is left out under it, every name of it, as a switch's line says what it does.
-                supportingContent = { Text(leftOut(adding.listed, picked)) },
-                modifier = Modifier.clickable { navigation.open(RootPage.DeviceCalendarPatterns(month.toString())) },
-              )
-            }
-            if (adding.offersNotes) {
-              item {
-                SwitchRow(stringResource(R.string.calendar_add_notes), stringResource(R.string.calendar_add_notes_note), putting.notes) { on ->
-                  settings.change { it.copy(calendarAdd = it.calendarAdd.copy(notes = on)) }
+              SettingsSection(footnote = stringResource(R.string.calendar_add_again, name)) {
+                row {
+                  SettingsRow(
+                    stringResource(R.string.calendar_add_target),
+                    R.drawable.ic_calendar,
+                    onClick = { pickingCalendar = true },
+                    supporting = target?.name ?: stringResource(R.string.calendar_add_no_calendar),
+                    leading = target?.let { { Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) { CalendarDot(it.color) } } },
+                    enabled = !list.isNullOrEmpty(),
+                    end = RowEnd.None,
+                  )
+                }
+                row {
+                  // What is left out under it, every name of it, as a switch's line says what it does.
+                  SettingsRow(
+                    stringResource(R.string.calendar_add_patterns),
+                    R.drawable.ic_work,
+                    onClick = { navigation.open(RootPage.DeviceCalendarPatterns(month.toString())) },
+                    supporting = leftOut(adding.listed, picked),
+                  )
+                }
+                if (adding.offersNotes) {
+                  row {
+                    SettingsSwitchRow(
+                      stringResource(R.string.calendar_add_notes),
+                      R.drawable.ic_edit,
+                      putting.notes,
+                      { on -> settings.change { it.copy(calendarAdd = it.calendarAdd.copy(notes = on)) } },
+                      supporting = stringResource(R.string.calendar_add_notes_note),
+                    )
+                  }
+                }
+                if (adding.offersPeople) {
+                  row {
+                    SettingsSwitchRow(
+                      stringResource(R.string.calendar_add_people),
+                      R.drawable.ic_handshake,
+                      putting.people,
+                      { on -> settings.change { it.copy(calendarAdd = it.calendarAdd.copy(people = on)) } },
+                      supporting = stringResource(R.string.calendar_add_people_note),
+                    )
+                  }
                 }
               }
             }
-            if (adding.offersPeople) {
-              item {
-                SwitchRow(stringResource(R.string.calendar_add_people), stringResource(R.string.calendar_add_people_note), putting.people) { on ->
-                  settings.change { it.copy(calendarAdd = it.calendarAdd.copy(people = on)) }
-                }
-              }
-            }
-            item { Footnote(stringResource(R.string.calendar_add_again, name)) }
             item {
               Wide(
                 stringResource(R.string.calendar_add_button, events.size),
@@ -301,8 +315,6 @@ fun DeviceCalendarPage(month: YearMonth, navigation: PageNavigation) {
             }
           }
         }
-      }
-      SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
     }
   }
 
@@ -381,6 +393,7 @@ private fun leftOut(listed: List<Pattern>, picked: Set<String>): String {
 private fun Wide(title: String, enabled: Boolean = true, onClick: () -> Unit) {
   Button(
     onClick = onClick,
+    shapes = ButtonDefaults.shapes(),
     enabled = enabled,
     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).heightIn(min = Metrics.control),
   ) {
@@ -439,27 +452,31 @@ private fun CalendarPicker(calendars: List<DeviceCalendar>, picked: Long?, onPic
 @Composable
 fun DeviceCalendarPatternsPage(month: YearMonth, onBack: () -> Unit) {
   val settings = LocalDeviceSettings.current
-  val calendar by LocalOwnDays.current.calendar.collectAsState()
+  val calendar by LocalOwnDays.current.calendar.collectAsStateWithLifecycle()
   val page = settings.device.period.page(month)
   val rows = calendar.patterns.map { it.row }
   val shown = settings.device.calendarAdd.shown(rows)
   val listed = remember(calendar, page) { Adding(calendar, page, CalendarAdd()).listed }
   SettingsPage(stringResource(R.string.calendar_add_patterns), onBack) { padding ->
     LazyColumn(contentPadding = padding) {
-      items(listed, key = { it.id }) { pattern ->
-        val on = pattern.id in shown
-        ListItem(
-          headlineContent = { Text(pattern.name, maxLines = 1) },
-          supportingContent = { Text(pattern.time?.let { hoursText(it.start, it.end) } ?: stringResource(R.string.pattern_no_time)) },
-          leadingContent = { ShiftMark(pattern.icon, pattern.emoji, pattern.symbol, pattern.color, size = 24.dp) },
-          trailingContent = { Checkbox(checked = on, onCheckedChange = null) },
-          modifier =
-            Modifier.toggleable(value = on, role = Role.Checkbox) { checked ->
-              settings.change { it.copy(calendarAdd = it.calendarAdd.picking(pattern.id, checked, calendar.patterns.map { p -> p.row })) }
-            },
-        )
+      item {
+        SettingsSection(footnote = stringResource(R.string.calendar_add_patterns_note)) {
+          for (pattern in listed) {
+            val on = pattern.id in shown
+            row {
+              SettingsCheckRow(
+                pattern.name,
+                checked = on,
+                onCheckedChange = { checked ->
+                  settings.change { it.copy(calendarAdd = it.calendarAdd.picking(pattern.id, checked, calendar.patterns.map { p -> p.row })) }
+                },
+                supporting = pattern.time?.let { hoursText(it.start, it.end) } ?: stringResource(R.string.pattern_no_time),
+                leading = { ShiftMark(pattern.icon, pattern.emoji, pattern.symbol, pattern.color, size = 24.dp) },
+              )
+            }
+          }
+        }
       }
-      item { Footnote(stringResource(R.string.calendar_add_patterns_note)) }
     }
   }
 }

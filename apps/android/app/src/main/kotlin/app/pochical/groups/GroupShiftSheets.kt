@@ -7,12 +7,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -33,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -62,7 +66,7 @@ import java.time.LocalDate
 @Composable
 fun DaySheetContent(day: LocalDate, members: List<GroupMember>, days: GroupDays, groupId: String, meId: String?, onShare: (LocalDate) -> Unit) {
   val colors = LocalThemeColors.current
-  Column(Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+  Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(bottom = 16.dp)) {
     Box(Modifier.fillMaxWidth()) {
       Column(Modifier.fillMaxWidth().padding(horizontal = 56.dp, vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Text(day.fullText, Modifier.semantics { heading() }, style = PochicalTextStyles.headline, color = colors.textPrimary)
@@ -112,7 +116,7 @@ fun TogetherSummary(label: String, together: Together, onOpen: () -> Unit, modif
   val colors = LocalThemeColors.current
   val open = together.days.isNotEmpty()
   Surface(
-    modifier.fillMaxWidth().then(if (open) Modifier.clickable(onClick = onOpen) else Modifier),
+    modifier.fillMaxWidth().then(if (open) Modifier.clickable(role = Role.Button, onClick = onOpen) else Modifier),
     shape = RoundedCornerShape(Radius.xxl),
     color = colors.fillQuaternary,
   ) {
@@ -127,6 +131,8 @@ fun TogetherSummary(label: String, together: Together, onOpen: () -> Unit, modif
         style = PochicalTextStyles.headline,
         color = if (open) colors.textPrimary else colors.textTertiary,
       )
+      // The days open in a sheet, as iOS's chevron says.
+      if (open) Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = null, Modifier.padding(start = 4.dp), tint = colors.textTertiary)
     }
   }
 }
