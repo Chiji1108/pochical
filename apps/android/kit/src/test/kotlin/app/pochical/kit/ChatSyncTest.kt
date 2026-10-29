@@ -6,6 +6,9 @@ import app.pochical.v1.ChatPoll
 import app.pochical.v1.block
 import app.pochical.v1.change
 import app.pochical.v1.chatContent
+import app.pochical.v1.chatPhoto
+import app.pochical.v1.chatAlbum
+import app.pochical.v1.chatLine
 import app.pochical.v1.chatPoll
 import app.pochical.v1.copy
 import app.pochical.v1.linkPreview
@@ -16,6 +19,7 @@ import app.pochical.v1.chatSendWords
 import app.pochical.v1.chatNotifications
 import app.pochical.v1.membership
 import app.pochical.v1.unreadCount
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
@@ -65,10 +69,14 @@ class ChatSyncTest {
   fun aLineSentShowsWaitingAtOnceThenAsTheGroups() = runBlocking {
     val phone = signedIn()
     val me = server.userId
+    // Held by the server once sent, until the line has been seen waiting, which it is until the group has it.
+    server.holdSends()
     phone.chats.send("g1", GROUP_THREAD, "おはよう")
+    eventually { server.sendsHeld() == 1 }
     val waiting = phone.chat(me).waiting.single()
     assertEquals(LineContent.Words("おはよう"), waiting.content)
     assertFalse(waiting.failed)
+    server.releaseSends()
 
     // No page holds the group open: its socket opens for the outbox alone, and closes once it is sent.
     val sent = phone.chat(me) { it.waiting.isEmpty() && it.lines.isNotEmpty() }
@@ -165,10 +173,14 @@ class ChatSyncTest {
     val phone = signedIn()
     val me = server.userId
     val photos = listOf(ShrunkPhoto(byteArrayOf(1, 2, 3), 4, 3, byteArrayOf(9)), ShrunkPhoto(byteArrayOf(4, 5), 3, 4, byteArrayOf(8)))
+    // Held by the server once sent, until the line has been seen waiting, which it is until the group has it.
+    server.holdSends()
     phone.chats.sendPhotos("g1", GROUP_THREAD, photos)
+    eventually { server.sendsHeld() == 1 }
     val waiting = phone.chat(me).waiting.single().content as LineContent.Photos
     val ids = waiting.photos.map { it.id }
     assertEquals(listOf(4 to 3, 3 to 4), waiting.photos.map { it.width to it.height })
+    server.releaseSends()
 
     val sent = phone.chat(me) { it.waiting.isEmpty() && it.lines.isNotEmpty() }
     assertEquals(ids, (sent.lines.single().content as LineContent.Photos).photos.map { it.id })
@@ -209,6 +221,8 @@ class ChatSyncTest {
     phone.chat(me) { it.lines.single().content == LineContent.Unsent }
     assertEquals(ForgottenPhoto(PhotoShelf.Group("g1"), photo), withTimeout(10_000) { forgotten.await() })
     assertEquals(null, phone.linePhotos.files.held("g1", photo))
+    // A fetch of it still on its way is not kept.
+    assertTrue(phone.linePhotos.files.wasLetGo("g1", photo))
   }
 
   @Test
@@ -411,6 +425,41 @@ class ChatValuesTest {
 
     database.write { take(listOf(change { membership = membership { groupId = "g1"; left = true } })) }
     assertTrue(database.read { chatOutbox("g1") }.isEmpty())
+  }
+
+  @Test
+  fun aGroupLeftLetsGoOfThePhotosOfItsLines() = runTest {
+    database.listGroup()
+    val album = chatLine {
+      threadId = GROUP_THREAD
+      seq = 2
+      authorId = "u2"
+      content = chatContent { photos = chatAlbum { photos += listOf("p1", "p2").map { chatPhoto { id = it; width = 1; height = 1 } } } }
+    }
+    database.write { takeChanges(listOf(wordsLine(1, "u2"), album), "g1") }
+    assertEquals(listOf("p1", "p2"), database.read { photosHeld("g1") })
+
+    // Only a group the changes say was left, read before its lines go.
+    val left = database.write {
+      val leaving = placesLeft(listOf(change { membership = membership { groupId = "g1"; left = true } }, change { membership = membership { groupId = "g2" } }))
+      take(listOf(change { membership = membership { groupId = "g1"; left = true } }))
+      leaving
+    }
+    assertEquals(mapOf("g1" to listOf("p1", "p2")), left)
+    assertTrue(database.read { photosHeld("g1") }.isEmpty())
+  }
+
+  @Test
+  fun aGroupLeftTakesEveryPhotoOfTheMembersKeptForIt() = runBlocking {
+    val files = testLinePhotos().files
+    files.keep("g1", "mine", ShrunkPhoto(byteArrayOf(1), 1, 1, byteArrayOf()))
+    files.keep("g2", "other", ShrunkPhoto(byteArrayOf(1), 1, 1, byteArrayOf()))
+    // Listening before it lets go, which may not suspend at all once the files go quickly.
+    val forgotten = async(start = CoroutineStart.UNDISPATCHED) { files.forgotten.first() }
+    files.forgetPlace("g1", listOf("p1"))
+    assertEquals(ForgottenPhoto(PhotoShelf.Group("g1"), "p1"), withTimeout(10_000) { forgotten.await() })
+    assertNull(files.held("g1", "mine"))
+    assertTrue(files.held("g2", "other") != null)
   }
 
   @Test

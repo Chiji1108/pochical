@@ -11,7 +11,7 @@ val vectorJson = Json { ignoreUnknownKeys = true }
 
 /**
  * A file of spec/vectors, the cases every platform checks its own code against, read from the
- * repository this project is in (kit/build.gradle.kts names where).
+ * repository this project is in (apps/android/build.gradle.kts names where).
  */
 @OptIn(ExperimentalSerializationApi::class)
 inline fun <reified T> vectors(name: String): T {

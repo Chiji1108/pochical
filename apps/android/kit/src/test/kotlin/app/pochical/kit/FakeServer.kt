@@ -39,6 +39,8 @@ import app.pochical.v1.pong
 import app.pochical.v1.serverError
 import app.pochical.v1.serverFrame
 import app.pochical.v1.welcome
+import app.pochical.v1.patternValue
+import app.pochical.v1.pattern
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -159,6 +161,32 @@ class FakeServer : AutoCloseable {
 
   /** Whether a group refuses the chat sends it is sent, as not fitting. */
   @Volatile var refuseSends = false
+
+  /** A group's frame of chat edits sending a line, held unanswered. */
+  private data class HeldSend(val user: String, val groupId: String, val frame: ClientFrame, val socket: WebSocket)
+
+  private var holdingSends = false
+  private val heldSends = mutableListOf<HeldSend>()
+
+  /**
+   * Holds the groups' frames that send lines unanswered, as a server slow to take them, until
+   * [releaseSends]: what a device shows while its lines wait, seen for as long as the test looks.
+   */
+  @Synchronized
+  fun holdSends() {
+    holdingSends = true
+  }
+
+  /** How many frames sending lines are held. */
+  @Synchronized fun sendsHeld(): Int = heldSends.size
+
+  /** Takes the frames held, in the order they came, and those coming after at once. */
+  @Synchronized
+  fun releaseSends() {
+    holdingSends = false
+    heldSends.forEach { takeGroup(it.user, it.groupId, it.frame, it.socket) }
+    heldSends.clear()
+  }
 
   /** Each group's log of chat changes, as its Group DO keeps them, the latest of each line or mark. */
   private val groupLogs = HashMap<String, LinkedHashMap<String, Change>>()
@@ -368,6 +396,21 @@ class FakeServer : AutoCloseable {
     }
   }
 
+  /** A pattern [id] [user] made on another device, sent to every socket of theirs open. */
+  @Synchronized
+  fun patternElsewhere(id: String, user: String = userId) {
+    val taken = change {
+      cursor = next(user)
+      pattern = patternValue {
+        this.id = id
+        pattern = pattern { name = id }
+        hlc = hlc { physicalMs = System.currentTimeMillis(); deviceId = "other" }
+      }
+    }
+    valuesOf(user)[taken.valueKey!!] = taken
+    for (each in openOf(user)) each.send(serverFrame { changes = changes { changes += taken } })
+  }
+
   /** The value [user]'s DO holds for the day's field, as it would send it. */
   @Synchronized fun day(date: String, field: Int, user: String = userId): Change? = valuesOf(user)["day/$date/$field"]
 
@@ -446,6 +489,10 @@ class FakeServer : AutoCloseable {
         )
       }
       ClientFrame.KindCase.CHAT_EDITS -> {
+        if (holdingSends && frame.chatEdits.editsList.any { it.kindCase == ChatEdit.KindCase.SEND }) {
+          heldSends += HeldSend(user, groupId, frame, socket)
+          return
+        }
         val refused = mutableListOf<RefusedSend>()
         for (edit in frame.chatEdits.editsList) {
           when (edit.kindCase) {

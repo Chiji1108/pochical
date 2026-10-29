@@ -59,6 +59,17 @@ interface AppGraph : MetroAppComponentProviders {
   @SingleIn(AppScope::class)
   fun pochicalKit(application: Application): PochicalKit = PochicalKit(application)
 
+  /** Appleで続ける, its page kept open through the activities made while it is. */
+  @Provides
+  @SingleIn(AppScope::class)
+  fun appleSignIn(kit: PochicalKit): AppleSignIn = AppleSignIn(kit.appleSignIn)
+
+  /** Appleで続ける and Googleで続ける under way, kept through the activities made while they run. */
+  @Provides
+  @SingleIn(AppScope::class)
+  fun signIns(kit: PochicalKit, apple: AppleSignIn): SignIns =
+    SignIns(kit.account, kit.firstRun, apple, CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate))
+
   /** The notifications from the server. */
   @Provides
   @SingleIn(AppScope::class)
@@ -126,9 +137,10 @@ class PochicalApplication : Application(), MetroApplication, PochicalKit.Holder,
     CoroutineScope(SupervisorJob() + Dispatchers.Default).launch(start = CoroutineStart.UNDISPATCHED) {
       followForgotten(graph.kit.photoFiles) { SingletonImageLoader.get(this@PochicalApplication) }
     }
+    // Push listens before anything syncs too, so a group left is never missed (`SyncAccount.left`).
+    graph.push.start()
     graph.kit.followProcess()
     followForWidgets(this, graph.kit.database, graph.settings)
-    graph.push.start()
     graph.reminderAlarms.start()
     ProcessLifecycleOwner.get()
       .lifecycle

@@ -9,7 +9,8 @@ import androidx.activity.compose.LocalActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialExpressiveTheme
+import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -30,6 +31,7 @@ import app.pochical.kit.DeviceSettings
  * or dark whatever it says for a テーマ drawn so. The system is told too,
  * where it can be (Android 12 on), so the splash, the window and the
  * system's own sheets agree; the system bars' icons follow on every version.
+ * Drawn in Material 3 Expressive, as Android 16's own apps are.
  */
 @Composable
 fun PochicalTheme(settings: DeviceSettings, content: @Composable () -> Unit) {
@@ -46,7 +48,8 @@ fun PochicalTheme(settings: DeviceSettings, content: @Composable () -> Unit) {
     activity?.enableEdgeToEdge(statusBarStyle = bars, navigationBarStyle = bars)
   }
   CompositionLocalProvider(LocalThemeColors provides settings.theme.colors(dark)) {
-    MaterialTheme(colorScheme = colorScheme(settings, dark), typography = Phrases, content = content)
+    // Material 3 Expressive: its motion scheme's springs, and its components' shapes and sizes.
+    MaterialExpressiveTheme(colorScheme = colorScheme(settings, dark), motionScheme = MotionScheme.expressive(), typography = Phrases, content = content)
   }
 }
 
