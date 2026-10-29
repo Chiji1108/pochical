@@ -44,6 +44,9 @@ interface Conversations {
 
   /** Takes away every conversation, as the device lets go of the user they were for. */
   fun forgetAll()
+
+  /** Takes away the conversations whose ids [gone] says go, as their group is left. */
+  fun forget(gone: (id: String) -> Boolean)
 }
 
 /**
@@ -79,6 +82,8 @@ class DrawnConversations(
         .setPersons(persons.toTypedArray())
         .setIsConversation()
         .build()
+    // A pinned one disabled as its group was left opens again as the person joins it again.
+    ShortcutManagerCompat.enableShortcuts(context, listOf(shortcut))
     ShortcutManagerCompat.pushDynamicShortcut(context, shortcut)
     return shortcut
   }
@@ -87,6 +92,14 @@ class DrawnConversations(
     val kept = ShortcutManagerCompat.getShortcuts(context, ShortcutManagerCompat.FLAG_MATCH_DYNAMIC or ShortcutManagerCompat.FLAG_MATCH_CACHED)
     ShortcutManagerCompat.removeLongLivedShortcuts(context, kept.map { it.id })
     ShortcutManagerCompat.removeAllDynamicShortcuts(context)
+  }
+
+  override fun forget(gone: (id: String) -> Boolean) {
+    val ids = ShortcutManagerCompat.getShortcuts(context, ShortcutManagerCompat.FLAG_MATCH_DYNAMIC or ShortcutManagerCompat.FLAG_MATCH_CACHED).map { it.id }.filter(gone)
+    if (ids.isNotEmpty()) ShortcutManagerCompat.removeLongLivedShortcuts(context, ids)
+    // One the person pinned stays where they put it, as only they can take it away, but opens nothing.
+    val pinned = ShortcutManagerCompat.getShortcuts(context, ShortcutManagerCompat.FLAG_MATCH_PINNED).map { it.id }.filter(gone)
+    if (pinned.isNotEmpty()) ShortcutManagerCompat.disableShortcuts(context, pinned, context.getString(R.string.push_conversation_gone))
   }
 
   /**
