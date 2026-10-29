@@ -4,6 +4,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -18,8 +19,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -29,18 +28,24 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -57,6 +62,7 @@ import app.pochical.design.PATTERNS_PER_PAGE
 import app.pochical.design.Radius
 import app.pochical.kit.Week
 import java.time.LocalDate
+import kotlin.math.abs
 import kotlinx.coroutines.launch
 
 /**
@@ -216,23 +222,40 @@ fun TrayActionsRow(pages: PagerState, leading: @Composable () -> Unit, trailing:
 
 /**
  * [pages] as dots, the one shown a longer bar in the stronger color (iOS's PageDots), growing on
- * the motion scheme's spring as the pages turn; a dot pressed turns to its page. Each is a tab of
- * the group, read as [label] says its page and selected while shown, as iOS's.
+ * the motion scheme's spring as the pages turn. A tap turns to the page of the dot nearest it, so
+ * the small dots never fight over a touch. For TalkBack the row is one node, said by [label] for
+ * the page shown, its pages turned by its actions 次のページ and 前のページ.
  */
 @Composable
 fun PageDots(pages: PagerState, label: @Composable (Int) -> String, modifier: Modifier = Modifier) {
   val colors = LocalThemeColors.current
   val scope = rememberCoroutineScope()
-  Row(modifier.selectableGroup(), verticalAlignment = Alignment.CenterVertically) {
+  val said = label(pages.currentPage)
+  val next = stringResource(R.string.page_next)
+  val previous = stringResource(R.string.page_previous)
+  // Where each dot's middle is across the row, for the tap.
+  val middles = remember(pages.pageCount) { FloatArray(pages.pageCount) }
+  fun turn(page: Int) = scope.launch { pages.animateScrollToPage(page.coerceIn(0, pages.pageCount - 1)) }
+  Row(
+    modifier
+      .clearAndSetSemantics {
+        contentDescription = said
+        customActions =
+          listOfNotNull(
+            CustomAccessibilityAction(next) { turn(pages.currentPage + 1); true }.takeIf { pages.currentPage < pages.pageCount - 1 },
+            CustomAccessibilityAction(previous) { turn(pages.currentPage - 1); true }.takeIf { pages.currentPage > 0 },
+          )
+      }
+      .pointerInput(pages.pageCount) { detectTapGestures { tap -> turn(middles.indices.minBy { abs(middles[it] - tap.x) }) } }
+      .padding(vertical = 6.dp),
+    verticalAlignment = Alignment.CenterVertically,
+  ) {
     repeat(pages.pageCount) { page ->
       val shown = page == pages.currentPage
       val width by animateDpAsState(if (shown) 18.dp else 7.dp, MaterialTheme.motionScheme.fastSpatialSpec(), label = "dot")
-      val said = label(page)
-      // As tall as iOS's, so a dot is pressed without the row growing much.
       Box(
-        Modifier.selectable(shown, interactionSource = null, indication = null, role = Role.Tab) { scope.launch { pages.animateScrollToPage(page) } }
-          .semantics { contentDescription = said }
-          .padding(horizontal = 3.dp, vertical = 6.dp)
+        Modifier.padding(horizontal = 3.dp)
+          .onPlaced { middles[page] = it.positionInParent().x + it.size.width / 2f }
           .size(width, 7.dp)
           .background(if (shown) colors.textSecondary else colors.fillPrimary, CircleShape)
       )
