@@ -1,6 +1,10 @@
 package app.pochical.chat
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
@@ -21,7 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,7 +66,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 fun ChatPhotosPage(groupId: String, threadId: String, onBack: () -> Unit) {
   val colors = LocalThemeColors.current
   val values = LocalValues.current
-  val members by remember(values, groupId) { values.members(groupId) }.collectAsState(emptyList())
+  val members by remember(values, groupId) { values.members(groupId) }.collectAsStateWithLifecycle(emptyList())
   val deleted = stringResource(R.string.deleted_account)
   val names = remember(members, deleted) { members.associate { it.userId to it.shownName(deleted) } }
   val listed = remember { OpenPhotos(PhotoRun.latest()) }
@@ -98,8 +102,14 @@ fun ChatPhotosPage(groupId: String, threadId: String, onBack: () -> Unit) {
         photos.isNotEmpty() ->
           LazyVerticalGrid(
             GridCells.Fixed(ACROSS),
-            Modifier.fillMaxSize().padding(padding),
+            // Under the top bar, scrolling on under the navigation bar.
+            Modifier.fillMaxSize().padding(
+              start = padding.calculateStartPadding(LocalLayoutDirection.current),
+              top = padding.calculateTopPadding(),
+              end = padding.calculateEndPadding(LocalLayoutDirection.current),
+            ),
             state = grid,
+            contentPadding = PaddingValues(bottom = padding.calculateBottomPadding()),
             horizontalArrangement = Arrangement.spacedBy(GAP),
             verticalArrangement = Arrangement.spacedBy(GAP),
           ) {
