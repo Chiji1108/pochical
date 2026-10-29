@@ -96,7 +96,6 @@ fun rememberLineActions(
 ): (MessageLook) -> List<LineMenuItem> {
   val chats = LocalChats.current
   val scope = rememberCoroutineScope()
-  val clipboard = LocalClipboard.current
   val haptics = LocalHapticFeedback.current
   val context = LocalContext.current
   val resources = context.resources

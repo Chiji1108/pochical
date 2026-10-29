@@ -43,6 +43,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import kotlinx.coroutines.flow.filterNotNull
+import androidx.compose.runtime.mutableLongStateOf
 import kotlinx.coroutines.flow.drop
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -195,16 +197,13 @@ fun PhotoViewer(
   }
 
   // Swiped to another, a screen reader says the one come to and its place (spec/chat.md, Screen readers).
-  var swiped by remember { mutableStateOf(false) }
-  LaunchedEffect(pager) { snapshotFlow { pager.settledPage }.drop(1).collect { swiped = true } }
-  if (reading && swiped) {
-    val photo = photos.getOrNull(pager.settledPage)
+  // By the photo come to, not its page: pages of earlier photos coming before it move no photo.
+  var swipes by remember { mutableLongStateOf(0L) }
+  val settled = photos.getOrNull(pager.settledPage)
+  LaunchedEffect(pager) { snapshotFlow { photos.getOrNull(pager.settledPage)?.key }.filterNotNull().distinctUntilChanged().drop(1).collect { swipes++ } }
+  if (reading && settled != null) {
     val place = remember(version) { open.run.place }?.takeIf { it.second > 1 }
-    if (photo != null) {
-      val said = photoSaid(photo, place, nameOf)
-      // A node of its own each time, so it is said as it is come to.
-      key(pager.settledPage) { Box(Modifier.size(1.dp).semantics { liveRegion = LiveRegionMode.Polite; contentDescription = said }) }
-    }
+    Spoken(swipes, photoSaid(settled, place, nameOf))
   }
   var controls by remember { mutableStateOf(true) }
   val snackbar = remember { SnackbarHostState() }
@@ -226,7 +225,8 @@ fun PhotoViewer(
         Modifier.then(if (page == pager.settledPage) Modifier.largePhoto(photo.photo.id, zoom) else Modifier),
       )
     }
-    AnimatedVisibility(controls && pulled == 0f, enter = fadeIn(), exit = fadeOut()) {
+    // Always in reach with a screen reader on, hidden before or not.
+    AnimatedVisibility((controls || reading) && pulled == 0f, enter = fadeIn(), exit = fadeOut()) {
       Box(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().statusBarsPadding().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
           IconButton(onClick = { close() }) {
@@ -342,16 +342,17 @@ fun FaceViewer(photoId: String, shelf: PhotoShelf, name: String, onClose: () -> 
   val colors = LocalThemeColors.current
   Dialog(onClose, DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
     var pulled by remember { mutableFloatStateOf(0f) }
+    val reading = rememberScreenReaderOn()
     var controls by remember { mutableStateOf(true) }
     Box(Modifier.fillMaxSize().background(colors.mediaBackground.copy(alpha = 1f - pulled))) {
       // A face has no small version: the one the profile drew, from memory, under it until it is drawn whole.
-      LargeImage(Picture(photoId, shelf), stringResource(R.string.profile_photo_of, name), onTap = { controls = !controls }, onPulled = { pulled = it }, onDismissed = onClose) {
+      LargeImage(Picture(photoId, shelf), stringResource(R.string.profile_photo_of, name), onTap = { if (!reading) controls = !controls }, onPulled = { pulled = it }, onDismissed = onClose) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
           CircularProgressIndicator(Modifier.size(40.dp), color = colors.mediaText)
           AsyncImage(Picture(photoId, shelf), contentDescription = null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
         }
       }
-      AnimatedVisibility(controls && pulled == 0f, enter = fadeIn(), exit = fadeOut()) {
+      AnimatedVisibility((controls || reading) && pulled == 0f, enter = fadeIn(), exit = fadeOut()) {
         IconButton(onClick = onClose, Modifier.statusBarsPadding().padding(8.dp)) {
           Icon(painterResource(R.drawable.ic_close), stringResource(R.string.chat_photo_close), tint = colors.mediaText)
         }

@@ -960,7 +960,7 @@ private fun ChatLines(
     }
     if (head != null && chat.atStart) item(key = "head") { head() }
     // A chat with nothing in it yet says so in the middle of the lines' room.
-    if (head == null && items.isEmpty() && chat.atStart) {
+    if (head == null && items.none { it !is ChatItem.Typing } && chat.atStart) {
       item(key = "none") {
         Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
           Text(stringResource(R.string.chat_none), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

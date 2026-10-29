@@ -129,16 +129,23 @@ fun ChatSpeech(
       is What.Scrolled -> what.day?.let { dayWords(it) } ?: stringResource(R.string.chat_latest_lines)
       null -> ""
     }
-  // Two live regions, each thing said by the one the last was not, the other emptied: a live region
-  // is told as its words change on a node the screen already has, so the same words said again are
-  // a change too.
-  val turn = (now?.id ?: 0L) % 2
   LaunchedEffect(now?.id) { if (now != null) onSaid(words) }
+  Spoken(now?.id ?: 0L, words)
+}
+
+/**
+ * Says [words] to a screen reader, politely, as [id] changes: by two live regions, each thing said by
+ * the one the last was not, the other emptied. A live region is told as its words change on a node
+ * the screen already has, so the same words said again are a change too.
+ */
+@Composable
+fun Spoken(id: Long, words: String) {
+  val turn = id % 2
   for (side in 0L..1L) {
     Box(
       Modifier.size(1.dp).semantics {
         liveRegion = LiveRegionMode.Polite
-        contentDescription = if (side == turn) words else ""
+        contentDescription = if (side == turn && id != 0L) words else ""
       }
     )
   }
