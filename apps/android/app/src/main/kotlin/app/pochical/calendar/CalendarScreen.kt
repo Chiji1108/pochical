@@ -91,7 +91,13 @@ import app.pochical.RootPage
 import app.pochical.design.Metrics
 import app.pochical.design.PochicalTextStyles
 import app.pochical.design.Springs
+import app.pochical.kit.Period
+import app.pochical.kit.ShiftPeriod
 import app.pochical.kit.Week
+import app.pochical.kit.byPeriod
+import app.pochical.kit.monthHolding
+import app.pochical.kit.page
+import app.pochical.kit.pageHolding
 import app.pochical.kit.firstBlankDay
 import app.pochical.kit.gapDays
 import app.pochical.kit.selectedAfterEntering
@@ -145,6 +151,8 @@ fun CalendarScreen(
   val days = LocalOwnDays.current
   val calendar by days.calendar.collectAsStateWithLifecycle()
   val week = LocalDeviceSettings.current.device.week
+  // シフトの期間: each page the period starting in its month, named by that month (spec/calendar.md, The shift period).
+  val period = LocalDeviceSettings.current.device.period
   val today = rememberToday()
   val country = remember { holidayCountry() }
   val reduceMotion = rememberReducedMotion()
@@ -152,8 +160,9 @@ fun CalendarScreen(
   // The pages count from the month the screen opened on, so they stay put
   // when today moves into another month.
   val openedMonth = rememberSaveable { YearMonth.from(today).toString() }
-  val range = remember(openedMonth) { CalendarRange(YearMonth.parse(openedMonth), MONTHS_AROUND) }
-  val pager = rememberPagerState(initialPage = range.pageOf(YearMonth.parse(openedMonth))) { range.monthPages }
+  val range = remember(openedMonth, period) { CalendarRange(YearMonth.parse(openedMonth), MONTHS_AROUND, period) }
+  // The calendar opens on the page holding today.
+  val pager = rememberPagerState(initialPage = range.pageOf(period.monthHolding(today))) { range.monthPages }
   val scope = rememberCoroutineScope()
   val turnTo = { month: YearMonth ->
     scope.launch {
@@ -193,8 +202,8 @@ fun CalendarScreen(
   // counted as the days or the month change rather than as a finger moves the pages.
   var breakingDown by rememberSaveable { mutableStateOf<String?>(null) }
   val offCounts =
-    remember(calendar, pager.settledPage) {
-      (-2..2).map { range.monthAt(pager.settledPage + it) }.associateWith { calendar.daysOffCount(it) }
+    remember(calendar, period, pager.settledPage) {
+      (-2..2).map { range.monthAt(pager.settledPage + it) }.associateWith { calendar.daysOffCount(period.page(it)) }
     }
   val hidesBar by rememberUpdatedState(hidesTabBar)
   val showsDay = opened != null && !closing
@@ -247,7 +256,7 @@ fun CalendarScreen(
   LaunchedEffect(showsDay || entering != null) { hidesBar(showsDay || entering != null) }
 
   fun monthShowing(day: LocalDate, month: YearMonth): YearMonth =
-    if (monthWeeks(month, week.start).any { day in it }) month else YearMonth.from(day)
+    if (period.page(month).weeks(week.start).any { day in it }) month else period.monthHolding(day)
 
   // Only a day the pages show opens, so no week is asked for past them.
   val reachable = range.days(week.start)
@@ -258,33 +267,35 @@ fun CalendarScreen(
     scope.launch { if (reduceMotion) fold.snapTo(1f) else fold.animateTo(1f, Springs.standard()) }
   }
 
-  /** Entering starts on the month's first blank day, the 1st when none is blank. */
+  /** Entering starts on the page's first blank day, its first when none is blank. */
   fun firstBlank(month: YearMonth): LocalDate {
-    val shown = calendar.shown(month.atDay(1), month.atEndOfMonth())
-    return firstBlankDay(month.atDay(1), month.atEndOfMonth(), shown::containsKey)
+    val page = period.page(month)
+    val shown = calendar.shown(page.first, page.last)
+    return firstBlankDay(page.first, page.last, shown::containsKey)
   }
 
-  // A day tapped while entering is entered next, turning to its month when it is one around.
+  // A day tapped while entering is entered next, turning to its page when it is one around.
   fun selectDay(day: LocalDate) {
     if (enteringKey == null) return openDay(day)
     if (day !in reachable) return
     enteringKey = day.toString()
     said = null
-    if (YearMonth.from(day) != range.monthAt(pager.currentPage)) turnTo(YearMonth.from(day))
+    val month = period.monthHolding(day)
+    if (month != range.monthAt(pager.currentPage)) turnTo(month)
   }
 
   /** Says what a key did on [day] and where entering goes on, as /design's live region does. */
   fun say(done: String, day: LocalDate, next: LocalDate) {
     val after =
       if (next == day) {
-        resources.getString(R.string.entering_month_end)
+        resources.getString(if (period.byPeriod) R.string.entering_period_end else R.string.entering_month_end)
       } else {
         resources.getString(R.string.entering_selecting, if (next.month == day.month) next.dayText else next.monthDayText)
       }
     said = resources.getString(R.string.entering_said, day.monthDayText, done, after)
   }
 
-  // 完了, or a back: entering ends, then the month's blank days before its last entered one are
+  // 完了, or a back: entering ends, then the page's blank days before its last entered one are
   // asked about, when a pattern that counts as off could fill them.
   fun finish() {
     val day = enteringKey?.let(LocalDate::parse) ?: return
@@ -292,16 +303,16 @@ fun CalendarScreen(
     enteringKey = null
     said = null
     if (calendar.patterns.daysOff().isEmpty()) return closedEntering()
-    val month = YearMonth.from(day)
+    val page = period.pageHolding(day)
     scope.launch {
-      val shown = days.shownOnceWritten(month.atDay(1), month.atEndOfMonth())
-      gapKeys = gapDays(month.atDay(1), month.atEndOfMonth(), shown::contains).joinToString(",")
+      val shown = days.shownOnceWritten(page.first, page.last)
+      gapKeys = gapDays(page.first, page.last, shown::contains).joinToString(",")
       if (gapKeys.isEmpty()) closedEntering()
     }
   }
   BackHandler(enabled = entering != null, onBack = ::finish)
 
-  // A day a link opens: on its month, opened as a tap opens it, or entered next while entering.
+  // A day a link opens: on its page, opened as a tap opens it, or entered next while entering.
   LaunchedEffect(opening) {
     val day = opening ?: return@LaunchedEffect
     if (entering != null) {
@@ -309,17 +320,31 @@ fun CalendarScreen(
     } else if (day in reachable) {
       // The month is asked of the pages, which take it as they are next laid out: with a day open,
       // its week shows in their place, and they are not laid out until it folds back.
-      pager.requestScrollToPage(range.pageOf(YearMonth.from(day)))
-      openDay(day, from = YearMonth.from(day))
+      pager.requestScrollToPage(range.pageOf(period.monthHolding(day)))
+      openDay(day, from = period.monthHolding(day))
     }
     // Taken once the day is picked, nothing above waiting on the pages.
     onOpening()
   }
 
-  // A month swiped to while entering starts on its first blank day.
+  // A page swiped to while entering starts on its first blank day.
   LaunchedEffect(pager.settledPage, entering != null) {
     val month = range.monthAt(pager.settledPage)
-    if (entering != null && YearMonth.from(entering) != month) {
+    if (entering != null && entering !in period.page(month)) {
+      enteringKey = firstBlank(month).toString()
+      said = null
+    }
+  }
+
+  // A シフトの期間 changed, here or on another device, turns to the page holding today, and entering
+  // goes on from that page's first blank day.
+  var pagedBy by rememberSaveable { mutableIntStateOf(period.start) }
+  LaunchedEffect(period) {
+    if (pagedBy == period.start) return@LaunchedEffect
+    pagedBy = period.start
+    val month = period.monthHolding(today)
+    pager.requestScrollToPage(range.pageOf(month))
+    if (enteringKey != null) {
       enteringKey = firstBlank(month).toString()
       said = null
     }
@@ -361,13 +386,14 @@ fun CalendarScreen(
     Heading(
       pages = if (opened != null) range.pageOf(folded).toFloat() else pager.currentPage + pager.currentPageOffsetFraction,
       range = range,
-      todayPage = range.pageOf(YearMonth.from(today)),
+      todayPage = range.pageOf(period.monthHolding(today)),
+      byPeriod = period.byPeriod,
       reduceMotion = reduceMotion,
       dayOpen = opened != null,
       entering = entering != null,
       thisWeekAway = opened != null && opened.weekStartingOn(week.start) != today.weekStartingOn(week.start),
       onPick = { turnTo(it) },
-      onThisMonth = { turnTo(YearMonth.from(today)) },
+      onThisMonth = { turnTo(period.monthHolding(today)) },
       onThisWeek = { openDay(today) },
       onDone = ::finish,
       // The month the heading names, though the pages are still on their way to it.
@@ -382,10 +408,11 @@ fun CalendarScreen(
         // While 完了 asks, the blank days show faint as the pattern picked would fill them.
         val preview = if (gapFill != null) gaps.associateWith { gapFill } else emptyMap()
         val pageDays =
-          remember(calendar, week, today, country, cell, opened, entering, preview) {
+          remember(calendar, week, period, today, country, cell, opened, entering, preview) {
             PageDays(
               calendar,
               week,
+              period,
               today,
               country,
               cell,
@@ -470,14 +497,15 @@ fun CalendarScreen(
               pages = { pager.currentPage + pager.currentPageOffsetFraction },
               monthAt = range::monthAt,
               thisMonth = YearMonth.from(today),
+              byPeriod = period.byPeriod,
               reduceMotion = reduceMotion,
-              daysOff = { month -> offCounts[month] ?: calendar.daysOffCount(month) },
+              daysOff = { month -> offCounts[month] ?: calendar.daysOffCount(period.page(month)) },
               // The row fading out as entering starts opens nothing.
               onOpen = { if (enteringKey == null) breakingDown = it.toString() },
             )
             Button(
               onClick = {
-                // The month the pages settle on, as a swipe while entering starts there too.
+                // The page the pages settle on, as a swipe while entering starts there too.
                 val month = range.monthAt(pager.settledPage)
                 said = null
                 enteringKey = firstBlank(month).toString()
@@ -490,7 +518,8 @@ fun CalendarScreen(
             }
           }
         } else {
-          val last = YearMonth.from(day).atEndOfMonth()
+          // Entering stays on the page of the day entered, to its last day.
+          val last = period.pageHolding(day).last
           EntryTray(
             day = day,
             week = week,
@@ -531,11 +560,15 @@ fun CalendarScreen(
     }
   }
   breakingDown?.let { month ->
-    MonthBreakdownSheet(remember(calendar, month) { calendar.breakdown(YearMonth.parse(month)) }, onDismiss = { breakingDown = null })
+    MonthBreakdownSheet(
+      remember(calendar, period, month) { calendar.breakdown(period.page(YearMonth.parse(month)), period.byPeriod) },
+      onDismiss = { breakingDown = null },
+    )
   }
   if (gaps.isNotEmpty() && gapFill != null) {
     GapSheet(
       days = gaps,
+      pageFirst = period.pageHolding(gaps.first()).first,
       offPatterns = offPatterns,
       picked = gapFill,
       onPick = { gapPick = it.id },
@@ -561,6 +594,8 @@ private fun Heading(
   pages: Float,
   range: CalendarRange,
   todayPage: Int,
+  /** The pages are シフトの期間's: 今月 is 今日, as no page is a month. */
+  byPeriod: Boolean,
   reduceMotion: Boolean,
   dayOpen: Boolean,
   entering: Boolean,
@@ -609,7 +644,15 @@ private fun Heading(
         modifier = Modifier.alpha(away),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary),
       ) {
-        Text(stringResource(if (dayOpen) R.string.calendar_this_week else R.string.calendar_this_month))
+        Text(
+          stringResource(
+            when {
+              dayOpen -> R.string.calendar_this_week
+              byPeriod -> R.string.calendar_today
+              else -> R.string.calendar_this_month
+            }
+          )
+        )
       }
     }
     // The heading's corner holds saving whenever it is wanted; it is never offered by itself.
@@ -712,6 +755,7 @@ fun WeekdayRow(week: Week, modifier: Modifier = Modifier) {
 private class PageDays(
   val calendar: OwnCalendar,
   val week: Week,
+  val period: ShiftPeriod,
   val today: LocalDate,
   val country: String,
   val cell: Dp,
@@ -725,12 +769,15 @@ private class PageDays(
 ) {
   private val patterns = calendar.patterns.associateBy { it.id }
 
-  /** A week's row, its days of other months faded when `month` is given. */
+  /**
+   * A week's row, its days outside `fadingOutside` faded when a page is given, the 1st of a month
+   * inside a シフトの期間's page dated 11/1.
+   */
   @Composable
   fun Week(
     days: List<LocalDate>,
     shown: Map<LocalDate, DayEntry>,
-    fadingOutside: YearMonth?,
+    fadingOutside: Period?,
     modifier: Modifier = Modifier,
     selectable: Boolean = true,
   ) {
@@ -744,13 +791,14 @@ private class PageDays(
             pattern = entry?.let { patterns[it.shift] },
             note = calendar.note(day),
             holiday = day.holidayName(country),
-            outside = fadingOutside != null && YearMonth.from(day) != fadingOutside,
+            outside = fadingOutside != null && day !in fadingOutside,
             isToday = day == today,
             isSelected = day == selected,
             framesToday = !isEntering,
             preview = preview[day].takeIf { entry == null },
             // Blank days off come back faint while entering and in a day's week, where the days are looked at.
             offShown = if (selected != null) OffShown.Faint else OffShown.Hidden,
+            withMonth = period.byPeriod && day.dayOfMonth == 1 && fadingOutside != null && day in fadingOutside,
           ),
           height = cell,
           colorsHoliday = week.holiday,
@@ -764,8 +812,8 @@ private class PageDays(
 }
 
 /**
- * A month's page: its weeks, a row each, with room kept for six, so what is
- * under it stays put as the months turn. A day opened folds the page into
+ * A month's page, or a シフトの期間's: its weeks, a row each, with room kept
+ * for six, so what is under it stays put as the months turn. A day opened folds the page into
  * its week, as the Calendar apps do and /design's: the weeks move up to bring
  * that week to the top while the others fade, all following `fold`, so a
  * predictive back moves it as the animations do.
@@ -778,7 +826,8 @@ private fun MonthPage(
   foldedInto: LocalDate? = null,
   fold: Float = 0f,
 ) {
-  val weeks = remember(month, days.week.start) { monthWeeks(month, days.week.start) }
+  val page = days.period.page(month)
+  val weeks = remember(page, days.week.start) { page.weeks(days.week.start) }
   val shown = remember(days.calendar, weeks) { days.calendar.shown(weeks.first().first(), weeks.last().last()) }
   val row = foldedInto?.let { day -> weeks.indexOfFirst { day in it } }?.takeIf { it >= 0 } ?: 0
   Column(
@@ -794,7 +843,7 @@ private fun MonthPage(
       days.Week(
         week,
         shown,
-        fadingOutside = if (foldedInto == null) month else null,
+        fadingOutside = if (foldedInto == null) page else null,
         Modifier.graphicsLayer { alpha = if (away) 1 - fold else 1f }.then(if (away) Modifier.clearAndSetSemantics {} else Modifier),
         selectable = !away,
       )

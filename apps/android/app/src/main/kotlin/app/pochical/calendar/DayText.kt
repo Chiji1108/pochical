@@ -1,5 +1,6 @@
 package app.pochical.calendar
 
+import app.pochical.kit.Period
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -72,3 +73,40 @@ fun YearMonth.shortText(thisMonth: YearMonth): String = if (year == thisMonth.ye
 /** 2026年11月 */
 val YearMonth.yearMonthText: String
   get() = "${year}年${monthValue}月"
+
+// A シフトの期間's page by its days, never a month's name, which would read as the month's own days
+// (spec/calendar.md, How days are written; spec/vectors/periods.json, written).
+
+/** 11/1, whatever the year: a period's day, with its year written apart. */
+private val LocalDate.monthDaySlash: String
+  get() = "$monthValue/$dayOfMonth"
+
+/** 11月1日, whatever the year. */
+private val LocalDate.monthDayKanji: String
+  get() = "${monthValue}月${dayOfMonth}日"
+
+/** 11/1, as a period's page dates the 1st of a month inside it, in English too. */
+val LocalDate.periodDayText: String
+  get() = monthDaySlash
+
+/** 10/15〜11/14 */
+val Period.text: String
+  get() = "${first.monthDaySlash}〜${last.monthDaySlash}"
+
+/** 2026/10/15〜11/14, its last day's year too in another year. */
+val Period.yearText: String
+  get() = "${first.year}/${first.monthDaySlash}〜${if (last.year == first.year) "" else "${last.year}/"}${last.monthDaySlash}"
+
+/** 2026年10月15日〜11月14日, titling a picture of it. */
+val Period.fullText: String
+  get() = "${first.year}年${first.monthDayKanji}〜${if (last.year == first.year) "" else "${last.year}年"}${last.monthDayKanji}"
+
+/** The picture's title: its full text, or Oct 15 – Nov 14, 2026 with 月と曜日 in English. */
+fun Period.title(english: Boolean): String {
+  if (!english) return fullText
+  fun day(day: LocalDate) = "${YearMonth.from(day).shortMonth(true)} ${day.dayOfMonth}"
+  return if (first.year == last.year) "${day(first)} – ${day(last)}, ${last.year}" else "${day(first)}, ${first.year} – ${day(last)}, ${last.year}"
+}
+
+/** A period's day as the calendar's heading writes it: 10/15, or oct. 15. */
+fun LocalDate.headingDay(english: Boolean): String = if (english) "${YearMonth.from(this).headingMonth} $dayOfMonth" else monthDaySlash

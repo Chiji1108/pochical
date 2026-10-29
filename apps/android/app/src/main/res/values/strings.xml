@@ -17,6 +17,20 @@
   <string name="picture_not_shared">共有できませんでした</string>
   <string name="picture_app">ポチカル</string>
   <string name="calendar_settings_summary">%1$s曜はじまり・%2$s</string>
+  <string name="period">シフトの期間</string>
+  <string name="period_page">1ページの期間</string>
+  <string name="period_month">1日〜末日</string>
+  <string name="period_from">%1$d日〜翌月%2$d日</string>
+  <string name="period_short">%1$d日〜</string>
+  <string name="period_note">シフトが15日から翌月14日の分で出るなら「15日〜翌月14日」に。カレンダーの1ページ、お休みの数、画像と端末カレンダーへの保存が、この期間になります。</string>
+  <string name="period_question_title">シフト表は、いつからいつまでの分が出ますか？</string>
+  <string name="period_question_note">カレンダーの1ページを、この期間にします。あとから設定の「カレンダー」で変えられます。</string>
+  <string name="period_question_month">毎月1日から末日まで</string>
+  <string name="period_question_month_note">月ごとに出る</string>
+  <string name="period_question_mid_month">月の途中から始まる</string>
+  <string name="period_question_mid_month_note">15日から翌月14日まで、など</string>
+  <string name="period_question_day_title">何日から始まりますか？</string>
+  <string name="period_question_day_note">シフト表の最初の日を選んでください。</string>
   <string name="calendar_names">月と曜日</string>
   <string name="calendar_names_japanese">日本語</string>
   <string name="calendar_names_english">英語</string>
@@ -117,6 +131,8 @@
   <string name="clear">消す</string>
   <string name="calendar_this_month">今月</string>
   <string name="calendar_this_week">今週</string>
+  <string name="calendar_today">今日</string>
+  <string name="calendar_this_period">この期間</string>
   <string name="summary_days_off">のお休み</string>
   <string name="summary_days_off_spoken">%1$sのお休み %2$d日</string>
   <string name="summary_days">日</string>
@@ -124,6 +140,8 @@
   <string name="breakdown_title">今月の内訳</string>
   <string name="breakdown_unfilled">未入力</string>
   <string name="breakdown_length">この月は全%1$d日</string>
+  <string name="breakdown_period_title">期間の内訳</string>
+  <string name="breakdown_period_length">この期間は全%1$d日</string>
   <string name="breakdown_days">%1$d日</string>
   <string name="day_before">前の日</string>
   <string name="day_after">次の日</string>
@@ -274,6 +292,7 @@
   <string name="entering_said">%1$s、%2$s。%3$s</string>
   <string name="entering_selecting">%1$sを選択中</string>
   <string name="entering_month_end">月末です。入力が終わったら完了を押してください</string>
+  <string name="entering_period_end">期間の最後の日です。入力が終わったら完了を押してください</string>
   <string name="gaps_title_one">この日はお休みですか？</string>
   <string name="gaps_title">この%1$d日はお休みですか？</string>
   <string name="gaps_patterns">入れるパターン</string>

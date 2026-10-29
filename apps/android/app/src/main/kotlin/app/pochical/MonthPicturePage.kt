@@ -64,20 +64,22 @@ import app.pochical.calendar.SchemeSwitch
 import app.pochical.calendar.WeekdayRow
 import app.pochical.calendar.holidayCountry
 import app.pochical.calendar.holidayName
-import app.pochical.calendar.monthWeeks
 import app.pochical.calendar.monthWithYear
+import app.pochical.calendar.title
 import app.pochical.calendar.yearMonthText
 import app.pochical.design.Metrics
 import app.pochical.design.Radius
 import app.pochical.kit.DeviceSettings
 import app.pochical.kit.MarkOptions
 import app.pochical.kit.OffLook
+import app.pochical.kit.byPeriod
+import app.pochical.kit.page
 import java.time.YearMonth
 import kotlinx.coroutines.launch
 
 /**
- * 画像で保存 (spec/calendar.md, Saving a month as a picture; iOS's MonthPicturePage): [month] as a
- * picture in the calendar's own ground, with the look it goes out in, shared through Android's share
+ * 画像で保存 (spec/calendar.md, Saving a month as a picture; iOS's MonthPicturePage): the page
+ * [month] names, the month or the シフトの期間 starting in it, as a picture in the calendar's own ground, with the look it goes out in, shared through Android's share
  * sheet or saved to the phone's pictures. Light or dark is the picture's alone, kept on the device;
  * シフト名 and 休みの見せ方 are the picture's own, kept with the account; the app's スタイル stays.
  */
@@ -94,7 +96,11 @@ fun MonthPicturePage(month: YearMonth, onBack: () -> Unit) {
   val layer = rememberGraphicsLayer()
   // Until picked, the screen's light or dark; an always-dark テーマ saves its dark.
   val dark = device.theme.isAlwaysDark || (device.picture.dark ?: isDark(device, isSystemInDarkTheme()))
-  val title = stringResource(R.string.picture_title, month.yearMonthText)
+  // A period is named by its days wherever the month would be (spec/calendar.md, The shift period).
+  val period = device.period
+  val page = period.page(month)
+  val named = if (period.byPeriod) page.title(english = false) else month.yearMonthText
+  val title = stringResource(R.string.picture_title, named)
   val offs = calendar.patterns.filter { it.countsAsOff }
 
   fun say(words: Int) = scope.launch { snackbar.showSnackbar(resources.getString(words)) }
@@ -126,7 +132,7 @@ fun MonthPicturePage(month: YearMonth, onBack: () -> Unit) {
               dark,
               Modifier.clip(shape)
                 .border(1.dp, LocalThemeColors.current.separator, shape)
-                .clearAndSetSemantics { contentDescription = resources.getString(R.string.picture_label, month.yearMonthText) },
+                .clearAndSetSemantics { contentDescription = resources.getString(R.string.picture_label, named) },
             )
             SchemeSwitch(
               dark = dark,
@@ -199,7 +205,7 @@ fun MonthPicturePage(month: YearMonth, onBack: () -> Unit) {
         Button(
           onClick = {
             scope.launch {
-              if (picture(layer)?.let { savePicture(context, it, "pochical-$month.png") } == true) {
+              if (picture(layer)?.let { savePicture(context, it, "pochical-${if (period.byPeriod) page.first.toString() else month.toString()}.png") } == true) {
                 // Saved out of sight, in the phone's pictures: felt as well as said (spec/haptics.md).
                 haptics.performHapticFeedback(HapticFeedbackType.Confirm)
                 say(R.string.picture_saved)
@@ -233,24 +239,27 @@ private fun changeOptions(settings: DeviceSettingsState, change: (MarkOptions) -
   settings.change { it.copy(picture = it.picture.copy(options = change(it.picture.options))) }
 
 /**
- * A month as it goes out in a picture: its name, the weekdays and its days as the calendar draws
- * them in the picture's look and the テーマ's colors, light or dark as [dark] says, and ポチカル with
- * the app's icon, so whoever gets it can find the app by the same dog. Days of the months around
- * are faded with nothing on them, and there is no today or memo: the picture is for any day.
+ * A month, or the シフトの期間 starting in it, as it goes out in a picture: its name, the weekdays and
+ * its days as the calendar draws them in the picture's look and the テーマ's colors, light or dark as
+ * [dark] says, and ポチカル with the app's icon, so whoever gets it can find the app by the same dog.
+ * Days outside the page are faded with nothing on them, and there is no today or memo: the picture
+ * is for any day. A period is titled by its days, its month's 1st dated 11/1 as on the page.
  */
 @Composable
 fun MonthPicture(month: YearMonth, calendar: OwnCalendar, device: DeviceSettings, dark: Boolean, modifier: Modifier = Modifier) {
   val week = device.week
   val look = device.look.withOptions { device.picture.options }
-  val weeks = remember(month, week.start) { monthWeeks(month, week.start) }
-  val shown = remember(calendar, weeks) { calendar.shown(month.atDay(1), month.atEndOfMonth()) }
+  val period = device.period
+  val page = period.page(month)
+  val weeks = remember(page, week.start) { page.weeks(week.start) }
+  val shown = remember(calendar, page) { calendar.shown(page.first, page.last) }
   val byId = remember(calendar) { calendar.patterns.associateBy { it.id } }
   val country = remember { holidayCountry() }
   CompositionLocalProvider(LocalThemeColors provides device.theme.colors(dark)) {
     val colors = LocalThemeColors.current
     Column(modifier.background(colors.backgroundBase).padding(start = 12.dp, end = 12.dp, top = 16.dp, bottom = 12.dp)) {
       Text(
-        month.monthWithYear(device.heading.english),
+        if (period.byPeriod) page.title(device.heading.english) else month.monthWithYear(device.heading.english),
         Modifier.padding(start = 4.dp, end = 4.dp, bottom = 12.dp),
         fontSize = 15.sp,
         fontWeight = FontWeight.SemiBold,
@@ -261,7 +270,7 @@ fun MonthPicture(month: YearMonth, calendar: OwnCalendar, device: DeviceSettings
         for (days in weeks) {
           Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             for (day in days) {
-              val inMonth = YearMonth.from(day) == month
+              val inMonth = day in page
               val entry = if (inMonth) shown[day] else null
               DayCell(
                 DayLook(
@@ -272,6 +281,7 @@ fun MonthPicture(month: YearMonth, calendar: OwnCalendar, device: DeviceSettings
                   holiday = day.holidayName(country),
                   outside = !inMonth,
                   isToday = false,
+                  withMonth = period.byPeriod && inMonth && day.dayOfMonth == 1,
                 ),
                 height = 64.dp,
                 colorsHoliday = week.holiday,

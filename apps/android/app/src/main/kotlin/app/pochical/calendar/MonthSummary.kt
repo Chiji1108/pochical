@@ -42,6 +42,7 @@ import app.pochical.R
 import app.pochical.ShiftMark
 import app.pochical.design.PochicalTextStyles
 import app.pochical.design.Radius
+import app.pochical.kit.Period
 import java.time.YearMonth
 import kotlin.math.roundToInt
 import kotlin.math.sign
@@ -49,30 +50,35 @@ import kotlin.math.sign
 // 今月のお休み under the calendar and 今月の内訳 it opens (spec/calendar.md, The month;
 // /design's MonthSummary and BreakdownSheet; iOS's MonthSummary.swift).
 
-/** A month's days by what they show: each pattern in the person's order with its days, and how many show no shift (未入力). */
-data class MonthBreakdown(val month: YearMonth, val counts: List<Pair<Pattern, Int>>, val unfilled: Int)
+/**
+ * A page's days by what they show: each pattern in the person's order with its days, and how many
+ * show no shift (未入力); a シフトの期間's page ([byPeriod]) is named by its days.
+ */
+data class PageBreakdown(val page: Period, val byPeriod: Boolean, val counts: List<Pair<Pattern, Int>>, val unfilled: Int)
 
-/** How many of the month's days show a pattern that counts as off, archived ones too. */
-fun OwnCalendar.daysOffCount(month: YearMonth): Int = summary(month.atDay(1), month.atEndOfMonth()).daysOff
+/** How many of the page's days show a pattern that counts as off, archived ones too. */
+fun OwnCalendar.daysOffCount(page: Period): Int = summary(page.first, page.last).daysOff
 
-/** 今月の内訳 of [month]. */
-fun OwnCalendar.breakdown(month: YearMonth): MonthBreakdown {
-  val summary = summary(month.atDay(1), month.atEndOfMonth())
+/** 今月の内訳, or 期間の内訳, of [page]. */
+fun OwnCalendar.breakdown(page: Period, byPeriod: Boolean): PageBreakdown {
+  val summary = summary(page.first, page.last)
   val byId = patterns.associateBy { it.id }
-  return MonthBreakdown(month, summary.counts.mapNotNull { (id, days) -> byId[id]?.let { it to days } }, summary.unfilled)
+  return PageBreakdown(page, byPeriod, summary.counts.mapNotNull { (id, days) -> byId[id]?.let { it to days } }, summary.unfilled)
 }
 
 /**
- * 今月のお休み, or 〇月のお休み away from this month: a rounded row, the label quiet, the number in
- * the accent, opening 今月の内訳. The month and its count crossfade in place as the pages move
- * (`pages` as [MonthName] reads them), so the row is right as a page lands while the heading above
- * rolls; the words around them stay put. With reduced motion they just change.
+ * 今月のお休み, or 〇月のお休み away from this month, or この期間のお休み on a シフトの期間's pages
+ * ([byPeriod]): a rounded row, the label quiet, the number in the accent, opening 今月の内訳. The
+ * month and its count crossfade in place as the pages move (`pages` as [MonthName] reads them), so
+ * the row is right as a page lands while the heading above rolls; the words around them stay put.
+ * With reduced motion they just change. Pages are named by the month they start in.
  */
 @Composable
 fun MonthSummary(
   pages: () -> Float,
   monthAt: (Int) -> YearMonth,
   thisMonth: YearMonth,
+  byPeriod: Boolean,
   reduceMotion: Boolean,
   daysOff: (YearMonth) -> Int,
   onOpen: (YearMonth) -> Unit,
@@ -86,7 +92,13 @@ fun MonthSummary(
   val month = monthAt(page)
   val coming = monthAt(page + toward)
   val thisMonthName = stringResource(R.string.calendar_this_month)
-  fun name(of: YearMonth) = if (of == thisMonth) thisMonthName else of.monthText
+  val thisPeriodName = stringResource(R.string.calendar_this_period)
+  fun name(of: YearMonth) =
+    when {
+      byPeriod -> thisPeriodName
+      of == thisMonth -> thisMonthName
+      else -> of.monthText
+    }
   val spoken = stringResource(R.string.summary_days_off_spoken, name(month), daysOff(month))
   val label = PochicalTextStyles.footnote.copy(color = colors.textSecondary)
   val count =
@@ -118,17 +130,18 @@ fun MonthSummary(
 }
 
 /**
- * 今月の内訳: how many days of each pattern and how many still blank, then the month's length,
- * in Material's bottom sheet, half the screen or all of it for many patterns.
+ * 今月の内訳, or 期間の内訳: how many days of each pattern and how many still blank, then the page's
+ * length, in Material's bottom sheet, half the screen or all of it for many patterns.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MonthBreakdownSheet(breakdown: MonthBreakdown, onDismiss: () -> Unit) {
+fun MonthBreakdownSheet(breakdown: PageBreakdown, onDismiss: () -> Unit) {
   val colors = LocalThemeColors.current
-  ListSheet(onDismiss, stringResource(R.string.breakdown_title)) {
+  val byPeriod = breakdown.byPeriod
+  ListSheet(onDismiss, stringResource(if (byPeriod) R.string.breakdown_period_title else R.string.breakdown_title)) {
     item {
       Text(
-        breakdown.month.monthWithYear(LocalDeviceSettings.current.device.heading.english),
+        if (byPeriod) breakdown.page.yearText else breakdown.page.month.monthWithYear(LocalDeviceSettings.current.device.heading.english),
         style = MaterialTheme.typography.bodyMedium,
         color = colors.textSecondary,
         modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 8.dp),
@@ -151,7 +164,7 @@ fun MonthBreakdownSheet(breakdown: MonthBreakdown, onDismiss: () -> Unit) {
     }
     item {
       Text(
-        stringResource(R.string.breakdown_length, breakdown.month.lengthOfMonth()),
+        stringResource(if (byPeriod) R.string.breakdown_period_length else R.string.breakdown_length, breakdown.page.days.size),
         style = MaterialTheme.typography.bodyMedium,
         color = colors.textSecondary,
         textAlign = TextAlign.Center,
