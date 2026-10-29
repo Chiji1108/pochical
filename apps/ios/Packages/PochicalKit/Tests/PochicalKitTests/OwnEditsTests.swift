@@ -143,6 +143,52 @@ private func outbox(_ db: Database) throws -> [Pochical_V1_DayValue] {
   }
 }
 
+struct SavedVectors: Decodable, Sendable {
+  struct Saved: VectorCase {
+    let name: String
+    let patterns: [String]
+    let id: String
+    let expected: [String]
+  }
+
+  let saved: [Saved]
+}
+
+/// Saving a pattern over the person's, in their order (spec/vectors/patterns.json, saved): the
+/// order shown, and a new one's order sent as an edit of its own.
+@Test(arguments: try vectors("patterns", as: SavedVectors.self).saved)
+func saved(_ vector: SavedVectors.Saved) throws {
+  let database = try appDatabase()
+  try database.write { db in
+    for id in vector.patterns {
+      var pattern = Pochical_V1_Pattern()
+      pattern.name = id
+      var value = Pochical_V1_PatternValue()
+      value.id = id
+      value.pattern = pattern
+      var change = Pochical_V1_Change()
+      change.pattern = value
+      try OwnValues.take(change, in: db)
+    }
+    var order = Pochical_V1_PatternOrder()
+    order.ids = vector.patterns
+    var change = Pochical_V1_Change()
+    change.patternOrder = order
+    try OwnValues.take(change, in: db)
+
+    let isNew = !vector.patterns.contains(vector.id)
+    try OwnValues.save(
+      Pattern(id: vector.id, name: "\(vector.id)!", emoji: "⭐️", symbol: "!", icon: "star", color: 0),
+      now: 1, in: db)
+
+    #expect(try OwnValues.patterns(in: db).map(\.id) == vector.expected)
+    let sent = try OutboxEdit.order(by: \.id).fetchAll(db)
+      .map { try Pochical_V1_Change(serializedBytes: $0.change) }
+      .last { $0.patternOrder.ids.isEmpty == false }?.patternOrder.ids
+    #expect(sent == (isNew ? vector.expected : nil))
+  }
+}
+
 @Test func patternsAreAddedLastAndDeletedFromTheList() throws {
   let database = try calendarWithAnOrder()
   try database.write { db in
