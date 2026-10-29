@@ -160,7 +160,8 @@ struct PhotoEditor<Picture: View>: View {
 }
 
 /// A photo taken or picked, cut (`PhotoCrop`) once a picked one is read,
-/// a spinner on the cut's own dark meanwhile.
+/// a spinner on the cut's own dark meanwhile, with キャンセル where the cut
+/// has it, as one kept in iCloud may take long to come.
 private struct CroppingCover: View {
   @Environment(\.themeColors) private var colors
   let source: CroppingPhoto.Source
@@ -177,6 +178,12 @@ private struct CroppingCover: View {
         .tint(colors.mediaText)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(colors.mediaBackground)
+        .overlay(alignment: .bottomLeading) {
+          Button("キャンセル") { onDone(nil) }
+            .foregroundStyle(colors.mediaText)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 8)
+        }
         .statusBarHidden()
         .task {
           guard let data = try? await item.loadTransferable(type: Data.self),

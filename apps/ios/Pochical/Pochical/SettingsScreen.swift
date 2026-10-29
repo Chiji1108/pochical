@@ -20,8 +20,6 @@ struct SettingsScreen: View {
   @Fetch(ChatNotificationsRequest()) private var notifications = ChatNotificationState()
   /// The icon in use, read again as the page comes back from changing it.
   @State private var appIcon = AppIconChoice.current
-  /// A page of the site opened from ポチカルについて.
-
   var body: some View {
     List {
       // The patterns first: every way of working has them, and the

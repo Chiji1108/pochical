@@ -114,8 +114,6 @@ struct ChatScreen: View {
   /// What is being written, read by the composer alone.
   @State private var draft = ChatDraft()
   @State private var unsending: Unsending?
-  /// A link tapped in a line, open in the browser sheet.
-
   /// The lines read as the screen first draws, by the reader last heard
   /// of, so they are there through the push that brings it in rather than
   /// arriving, oldest first, as it ends.
