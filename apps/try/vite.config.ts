@@ -12,7 +12,8 @@ export default defineConfig({
     pochicalJsx(),
     { name: "pochical-try-head", transformIndexHtml: head },
     // A service worker (Workbox's, as vite-plugin-pwa writes it) that keeps
-    // the build, so the app opens from the home screen without the network.
+    // the build, so the app opens from the home screen without the network
+    // (spec/try.md).
     // A new build waits until no page of the old one is open ("prompt",
     // with nothing to prompt), so an open page never loses the chunks it
     // has yet to load.
@@ -31,9 +32,11 @@ export default defineConfig({
         // Workbox would otherwise leave out with only a warning.
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         // Every path that is no file draws the app (wrangler.jsonc's
-        // single-page-application); one that names a file goes to it.
+        // single-page-application); one whose last part has a dot is taken
+        // for a file and goes to it. Workbox tests the path with its query,
+        // which this leaves aside.
         navigateFallback: "index.html",
-        navigateFallbackDenylist: [/\/[^/]+\.[^/]+$/u],
+        navigateFallbackDenylist: [/^[^?]*\/[^/?]+\.[^/?]+(?:\?.*)?$/u],
       },
     }),
   ],
