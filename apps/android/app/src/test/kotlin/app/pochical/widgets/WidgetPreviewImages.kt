@@ -33,8 +33,8 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(qualifiers = "w411dp-h891dp-xxhdpi")
 class WidgetPreviewImages {
-  /** A Monday, so the sample week reads from its start. */
-  private val today = LocalDate.of(2026, 10, 26)
+  /** A Sunday, the sample's settings' first day of the week, so the week reads from today. */
+  private val today = LocalDate.of(2026, 10, 25)
 
   @Test
   fun drawsThePickersPictures() = runTest {
@@ -42,10 +42,10 @@ class WidgetPreviewImages {
     assumeTrue("Only when asked for, by mise run android:widget-previews", out != null)
     val kinds =
       listOf(
-        Triple("simple", SimpleWidget() as PochicalWidget, SMALL),
-        Triple("next_off", NextOffWidget(), SMALL),
-        Triple("upcoming", UpcomingWidget(), MEDIUM),
-        Triple("calendar", CalendarWidget(), MEDIUM),
+        "simple" to SimpleWidget(),
+        "next_off" to NextOffWidget(),
+        "upcoming" to UpcomingWidget(),
+        "calendar" to CalendarWidget(),
       )
     val drawn = Drawn(sampleWidgetEntry(today, Week()), DeviceSettings())
     for (dark in listOf(false, true)) {
@@ -56,7 +56,8 @@ class WidgetPreviewImages {
         app.createConfigurationContext(configuration)
       }
       val folder = File(checkNotNull(out), if (dark) "drawable-night-nodpi" else "drawable-nodpi").apply { mkdirs() }
-      for ((name, widget, size) in kinds) {
+      for ((name, widget) in kinds) {
+        val size = widget.pickerSize
         val views = widget.preview(context, drawn, size)
         val view = views.apply(context, FrameLayout(context))
         File(folder, "widget_preview_$name.png").outputStream().use { picture(view, size, context.resources.displayMetrics.density).compress(Bitmap.CompressFormat.PNG, 100, it) }
