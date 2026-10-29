@@ -4,8 +4,8 @@
 import { sql } from "drizzle-orm";
 import {
   check,
-  index,
   customType,
+  index,
   integer,
   primaryKey,
   sqliteTable,

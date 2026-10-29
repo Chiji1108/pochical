@@ -5,7 +5,29 @@
 import type { Outcome } from "./push";
 
 /** How long a push service may take to answer before the try fails. */
-export const PUSH_TIMEOUT_MS = 10_000;
+const PUSH_TIMEOUT_MS = 10_000;
+
+/**
+ * Posts a push to its service at `url`: the answer, or "later" when none
+ * came in time or the service could not be reached, so it is tried again.
+ * The error may name the address, which can hold the device's `token`.
+ */
+export const postPush = async (
+  url: string,
+  init: RequestInit,
+  token: string
+): Promise<Response | Outcome> => {
+  try {
+    return await fetch(url, {
+      ...init,
+      method: "POST",
+      signal: AbortSignal.timeout(PUSH_TIMEOUT_MS),
+    });
+  } catch (error) {
+    const reason = String(error).replaceAll(token, "{token}");
+    return { reason, sent: "later", status: 0 };
+  }
+};
 
 /** A Retry-After header's wait: seconds, or an HTTP date. */
 const retryAfterOf = (header: string | null): number | undefined => {

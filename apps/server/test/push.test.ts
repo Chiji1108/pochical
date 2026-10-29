@@ -963,6 +963,25 @@ describe("a push refused for a while", () => {
     await expect(retriesOf(guest)).resolves.toStrictEqual([]);
   });
 
+  it("is given up when the service asks to be left past the longest wait", async () => {
+    const { groupId, guest, maker } = await pair();
+    await registerToken(TOKEN, guest);
+    const warned = vi.spyOn(console, "warn").mockImplementation(() => {});
+    apnsAnswering(
+      () =>
+        new Response(null, { headers: { "Retry-After": "3600" }, status: 429 })
+    );
+    const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
+    say(mine.socket, "a", "今週どう？");
+    await expect
+      .poll(() => warned.mock.calls.map(([logged]: unknown[]) => logged))
+      .toContainEqual({
+        message: "Push given up",
+        push: { kind: "alert", platform: "apns", tries: 1 },
+      });
+    await expect(retriesOf(guest)).resolves.toStrictEqual([]);
+  });
+
   it("is not tried again once its line is read", async () => {
     const { groupId, guest, maker } = await pair();
     await registerToken(TOKEN, guest);

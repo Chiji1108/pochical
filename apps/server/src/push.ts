@@ -80,10 +80,12 @@ const attempt = async (
       ? await attemptApns(env, device, push)
       : await attemptFcm(env, device, push);
   } catch (error) {
-    // Not reached, or not answered in time: tried again. The error may
-    // name the address, which can hold the device's token.
+    // What went wrong before the service was asked (a key that does not
+    // sign, Google's OAuth not giving a token): mostly the server's own
+    // setup, which another try would meet again, so not tried again. The
+    // error may name the address, which can hold the device's token.
     const reason = String(error).replaceAll(device.token, "{token}");
-    return { reason, sent: "later", status: 0 };
+    return { reason, sent: "failed", status: 0 };
   }
 };
 

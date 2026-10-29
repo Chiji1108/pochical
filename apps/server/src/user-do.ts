@@ -968,7 +968,8 @@ export class UserDO extends DurableObject<Env> {
    * again: after twice as long as the wait before, jittered so the devices
    * of a service's outage do not all come back at once, or after the
    * service's Retry-After when that is longer; at most DEVICE_TRIES_MOST
-   * tries in all.
+   * tries in all, and none asked to wait past DEVICE_RETRY_MOST_MS, by
+   * when it would come too late.
    */
   private async deliver(
     device: Device,
@@ -983,17 +984,17 @@ export class UserDO extends DurableObject<Env> {
     if (outcome.sent !== "later") {
       return;
     }
-    if (tries >= DEVICE_TRIES_MOST) {
+    const wait = Math.max(
+      jittered(retryWait(tries, DEVICE_RETRY_FIRST_MS, DEVICE_RETRY_MOST_MS)),
+      outcome.retryAfterMs ?? 0
+    );
+    if (tries >= DEVICE_TRIES_MOST || wait > DEVICE_RETRY_MOST_MS) {
       console.warn({
         message: "Push given up",
         push: { kind: push.kind, platform: device.platform, tries },
       });
       return;
     }
-    const wait = Math.max(
-      jittered(retryWait(tries, DEVICE_RETRY_FIRST_MS, DEVICE_RETRY_MOST_MS)),
-      outcome.retryAfterMs ?? 0
-    );
     const dueAt = Date.now() + wait;
     this.db
       .insert(pushRetries)
@@ -1012,28 +1013,37 @@ export class UserDO extends DurableObject<Env> {
   /**
    * Tries again each push to a device that is due (deliver), to a device
    * of the user's still, and a notification only while the user has not
-   * read its line, as a read takes it back. When the next left is due.
+   * read its line, as a read takes it back, with the badge as it is now.
+   * Each row is taken before its try, which leaves a new one should it be
+   * refused again: a try lost with the object is lost, as a first one is,
+   * rather than kept twice. When the next left is due.
    */
   private async retryPushes(userId: string): Promise<Date | undefined> {
     const due = this.db
-      .select()
-      .from(pushRetries)
+      .delete(pushRetries)
       .where(lte(pushRetries.dueAt, new Date()))
+      .returning()
       .all();
     if (due.length > 0) {
       const devices = await devicesOf(this.env.DB, userId);
       const tokens = new Set(devices.map(({ token }) => token));
       await Promise.all(
-        due.map(async ({ id, platform, push, sandbox, token, tries }) => {
-          if (tokens.has(token) && this.owed(push)) {
-            const device: Device =
-              platform === "apns"
-                ? { platform, sandbox, token }
-                : { platform, token };
-            await this.deliver(device, push, tries + 1);
+        due.map(async ({ platform, push, sandbox, token, tries }) => {
+          if (!(tokens.has(token) && this.owed(push))) {
+            return;
           }
-          // A try refused again left a row of its own.
-          this.db.delete(pushRetries).where(eq(pushRetries.id, id)).run();
+          const device: Device =
+            platform === "apns"
+              ? { platform, sandbox, token }
+              : { platform, token };
+          const now =
+            push.kind === "alert"
+              ? {
+                  ...push,
+                  recipient: { ...push.recipient, badge: this.badge() },
+                }
+              : push;
+          await this.deliver(device, now, tries + 1);
         })
       );
     }
@@ -1170,9 +1180,9 @@ export class UserDO extends DurableObject<Env> {
    * the alarm comes back for a failed group itself, each group waiting by
    * its own failures. A change made while it runs has set the next alarm
    * already, which is kept when earlier. The user's own photos noted as
-   * going are deleted first, and come back so should storage fail; then
-   * the pushes to their devices that are due are tried again, and it comes
-   * back for those left.
+   * going are deleted first, and come back so should storage fail; the
+   * pushes to their devices that are due are tried again last, and it
+   * comes back for those left.
    */
   async alarm(run: AlarmInvocationInfo): Promise<void> {
     await this.alarms.begin(run);
@@ -1184,10 +1194,6 @@ export class UserDO extends DurableObject<Env> {
     const photosWait = await this.deleteGoingPhotos(userId);
     if (photosWait !== undefined) {
       retries.push(photosWait);
-    }
-    const pushesDue = await this.retryPushes(userId);
-    if (pushesDue !== undefined) {
-      retries.push(pushesDue.getTime() - Date.now());
     }
     const head = this.head();
     const groups = this.db
@@ -1213,6 +1219,11 @@ export class UserDO extends DurableObject<Env> {
         .set({ pushedCursor: head })
         .where(eq(memberships.groupId, groupId))
         .run();
+    }
+    // After the groups, which a push service slow to answer would hold up.
+    const pushesDue = await this.retryPushes(userId);
+    if (pushesDue !== undefined) {
+      retries.push(pushesDue.getTime() - Date.now());
     }
     if (retries.length > 0) {
       await this.alarms.setBy(Date.now() + Math.min(...retries));

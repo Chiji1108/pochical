@@ -7,7 +7,7 @@
 import { fitted } from "./alert-size";
 import { signJwt } from "./jwt";
 import type { Alert, Outcome, Push, Recipient, Withdrawal } from "./push";
-import { PUSH_TIMEOUT_MS, refusal } from "./push-refusal";
+import { postPush, refusal } from "./push-refusal";
 import type { Device } from "./push-tokens";
 
 /** The app's bundle id, the topic every notification is for. */
@@ -152,22 +152,25 @@ export const attemptApns = async (
   }
   const alert = push.kind === "alert";
   const host = sandbox ? "api.sandbox.push.apple.com" : "api.push.apple.com";
-  const response = await fetch(`https://${host}/3/device/${token}`, {
-    body: alert
-      ? fittedPayloadOf(push.alert, push.recipient)
-      : withdrawalOf(push.withdrawal),
-    headers: {
-      // A notification tried again replaces the one before should that
-      // have reached the device unanswered, rather than showing twice.
-      ...(alert && { "apns-collapse-id": push.id }),
-      // A background push must go at the low priority, or APNs refuses it.
-      "apns-priority": alert ? "10" : "5",
-      "apns-push-type": alert ? "alert" : "background",
-      "apns-topic": TOPIC,
-      authorization: `bearer ${await providerToken(key, env.APNS_KEY_ID, env.APNS_TEAM_ID)}`,
+  const bearer = await providerToken(key, env.APNS_KEY_ID, env.APNS_TEAM_ID);
+  const answer = await postPush(
+    `https://${host}/3/device/${token}`,
+    {
+      body: alert
+        ? fittedPayloadOf(push.alert, push.recipient)
+        : withdrawalOf(push.withdrawal),
+      headers: {
+        // A notification tried again replaces the one before should that
+        // have reached the device unanswered, rather than showing twice.
+        ...(alert && { "apns-collapse-id": push.id }),
+        // A background push must go at the low priority, or APNs refuses it.
+        "apns-priority": alert ? "10" : "5",
+        "apns-push-type": alert ? "alert" : "background",
+        "apns-topic": TOPIC,
+        authorization: `bearer ${bearer}`,
+      },
     },
-    method: "POST",
-    signal: AbortSignal.timeout(PUSH_TIMEOUT_MS),
-  });
-  return await outcomeOf(response);
+    token
+  );
+  return answer instanceof Response ? await outcomeOf(answer) : answer;
 };

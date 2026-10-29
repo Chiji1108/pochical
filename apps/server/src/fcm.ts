@@ -6,7 +6,7 @@
 import { fitted } from "./alert-size";
 import { signJwt } from "./jwt";
 import type { Alert, Outcome, Push, Recipient } from "./push";
-import { PUSH_TIMEOUT_MS, refusal } from "./push-refusal";
+import { postPush, refusal } from "./push-refusal";
 import type { Device } from "./push-tokens";
 
 /** What the access token may do: send through FCM, nothing else. */
@@ -242,15 +242,17 @@ export const attemptFcm = async (
   }
   const using = grantFor(account);
   const authorization = `Bearer ${await using.token}`;
-  const response = await fetch(
+  const response = await postPush(
     `https://fcm.googleapis.com/v1/projects/${account.project_id}/messages:send`,
     {
       body: JSON.stringify(messageOf(token, push)),
       headers: { authorization, "content-type": "application/json" },
-      method: "POST",
-      signal: AbortSignal.timeout(PUSH_TIMEOUT_MS),
-    }
+    },
+    token
   );
+  if (!(response instanceof Response)) {
+    return response;
+  }
   const { status } = response;
   if (response.ok) {
     return { reason: "", sent: "sent", status };
