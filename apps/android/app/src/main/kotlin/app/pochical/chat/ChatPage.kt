@@ -254,6 +254,8 @@ fun ChatPage(
       if (typers.isEmpty()) lines else listOf(ChatItem.Typing(typers)) + lines
     }
   val list = rememberLazyListState()
+  // The photos of the lines about to scroll into sight, fetched ahead.
+  PrefetchPhotos(list, items, groupId)
   // Shown once placed where it opens, so the way there is not seen.
   var placed by remember { mutableStateOf(false) }
   // Whether the chat follows its latest line: the person's, stopped as they scroll.
