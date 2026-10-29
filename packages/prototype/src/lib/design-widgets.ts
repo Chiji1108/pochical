@@ -97,7 +97,9 @@ export type WidgetOff = { day: WidgetDay; inDays: number };
 export type WidgetNoOff =
   | { kind: "notEntered" }
   | { kind: "waiting"; names: string[] }
-  | { kind: "apart" };
+  | { kind: "apart" }
+  // Set to a group the person is alone in: no day off is shared.
+  | { kind: "alone" };
 
 // これから with someone: the days of `upcoming`, theirs beside each, and
 // whether both are off.
@@ -368,6 +370,11 @@ function offsFrom(
   companion?: WidgetCompanion
 ): WidgetEntry["offs"] {
   const people = peopleOf(companion);
+  // A group with no one else in it shares no day off, as its own screens
+  // show no みんな休み for one member.
+  if (companion?.kind === "group" && people.length === 0) {
+    return { none: { kind: "alone" }, today: false, with: withOf(companion) };
+  }
   const looked = [today];
   let next: WidgetOff | undefined;
   for (let inDays = 1; inDays <= widgetRules.offLookaheadDays; inDays += 1) {
