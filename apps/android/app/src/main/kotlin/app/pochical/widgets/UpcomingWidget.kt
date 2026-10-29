@@ -199,8 +199,8 @@ private fun PairColumns(drawn: Drawn, pair: WidgetPair, count: Int) {
     Column(GlanceModifier.defaultWeight().fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally) {
       // As tall as a column's head, so the faces sit by their rows.
       ColumnHead(days.first().first, drawn, first = true, onTile = false, compact = true, hidden = true)
-      Box(GlanceModifier.defaultWeight(), contentAlignment = Alignment.Center) { WidgetFace(pair.me.name, 24.dp, me = true) }
-      Box(GlanceModifier.defaultWeight(), contentAlignment = Alignment.Center) { WidgetFace(pair.with.name, 24.dp) }
+      Box(GlanceModifier.defaultWeight(), contentAlignment = Alignment.Center) { WidgetFace(pair.me.name, 24.dp, me = true, photo = drawn.faces.me) }
+      Box(GlanceModifier.defaultWeight(), contentAlignment = Alignment.Center) { WidgetFace(pair.with.name, 24.dp, photo = drawn.faces.with) }
     }
     days.forEachIndexed { index, (mine, shown) ->
       var column = GlanceModifier.defaultWeight().fillMaxHeight().padding(horizontal = 3.dp).opening(drawn.link(mine.date))

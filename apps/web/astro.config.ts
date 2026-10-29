@@ -19,7 +19,9 @@ const staticHeaders: AstroIntegration = {
 };
 
 export default defineConfig({
-  adapter: cloudflare({ imageService: "passthrough" }),
+  // Images are made at build time (astro:assets with Sharp), for the
+  // prerendered pages; none is made on request.
+  adapter: cloudflare({ imageService: "compile" }),
   // The pages are files (/privacy, not /privacy/), as the site's links name
   // them.
   build: { format: "file" },
