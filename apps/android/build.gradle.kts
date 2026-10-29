@@ -12,6 +12,11 @@ plugins {
   alias(libs.plugins.google.services) apply false
 }
 
+// The app's release builds the Baseline Profile plugin makes for :baselineprofile, which talk to
+// `mise run server` as debug builds do: :kit declares them with that server, and :app fails to
+// configure should the plugin make any other, which would fall back to :kit's release, production.
+extra["profileBuildTypes"] = listOf("nonMinifiedRelease", "benchmarkRelease")
+
 // What every module's unit tests run with.
 subprojects {
   tasks.withType<Test>().configureEach {

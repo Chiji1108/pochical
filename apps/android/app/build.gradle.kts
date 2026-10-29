@@ -1,3 +1,5 @@
+import com.android.build.api.variant.HostTestBuilder
+
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.compose)
@@ -138,6 +140,19 @@ baselineProfile {
   automaticGenerationDuringBuild = false
   // The startup profile too, which lays the start's classes out first in the dex files.
   dexLayoutOptimization = true
+}
+
+@Suppress("UNCHECKED_CAST") val profileBuildTypes = rootProject.extra["profileBuildTypes"] as List<String>
+
+androidComponents {
+  beforeVariants { variant ->
+    // A build type :kit does not declare would take its release, which talks to production.
+    check(variant.buildType in listOf("debug", "release") + profileBuildTypes) {
+      "The build type ${variant.buildType} needs its server in :kit, as profileBuildTypes (build.gradle.kts)"
+    }
+    // The profile builds' unit tests would be the release ones again.
+    if (variant.buildType in profileBuildTypes) variant.hostTests[HostTestBuilder.UNIT_TEST_TYPE]?.enable = false
+  }
 }
 
 kotlin {

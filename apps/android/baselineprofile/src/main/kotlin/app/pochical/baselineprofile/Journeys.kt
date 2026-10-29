@@ -3,10 +3,10 @@ package app.pochical.baselineprofile
 import androidx.benchmark.macro.MacrobenchmarkScope
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.BySelector
-import androidx.test.uiautomator.Direction
 import androidx.test.uiautomator.SearchCondition
 import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.Until
+import java.util.regex.Pattern
 
 // What a person does most in the app, walked through the release build by its words on the screen,
 // for the profile and the benchmarks alike: the calendar, a month scrolled, a group, its chat.
@@ -23,13 +23,13 @@ private fun MacrobenchmarkScope.find(selector: BySelector): UiObject2 =
   }
 
 /**
- * Taps [target] until [done]: the app takes no tap while a page slides in or out, which a person
- * waits for and a test does not.
+ * Taps [target] until [done]. A tap is waited on in full before it is made again: the app takes no
+ * tap while a page slides in or out, which a person waits for and a test does not.
  */
 private fun MacrobenchmarkScope.tap(target: BySelector, done: SearchCondition<Boolean>) {
   repeat(3) {
     device.wait(Until.findObject(target), WAIT)?.click()
-    if (device.wait(done, WAIT / 3)) return
+    if (device.wait(done, WAIT)) return
   }
   error("Tapping $target changed nothing")
 }
@@ -49,25 +49,21 @@ private val groupShown = By.text("全体チャット")
  * the emulator's host as the local network Android 17 asks the person to allow.
  */
 fun MacrobenchmarkScope.prepare() {
-  // From the start, not the page the last run left open.
-  killProcess()
   device.executeShellCommand("pm grant $PACKAGE android.permission.ACCESS_LOCAL_NETWORK")
+  killProcess()
   startActivityAndWait()
   if (device.wait(Until.hasObject(By.text("はじめる")), 3_000)) {
     val answers = listOf("はじめる", "繰り返しはない", "二交代制", "次へ", "毎月1日から末日まで")
     for ((answer, next) in answers.zip(answers.drop(1))) tap(By.text(answer), By.text(next))
     tap(By.text(answers.last()), calendarShown)
   }
-  find(By.text("グループ")).click()
-  if (device.wait(Until.hasObject(groupShown), WAIT / 2)) return
-  // No group yet: グループ shows only how to make or join one.
-  tap(By.text("グループ"), By.text("グループを作る"))
-  tap(By.text("グループを作る"), By.clazz("android.widget.EditText"))
+  // グループ shows the person's first group, or with none yet, only how to make or join one.
+  tap(By.text("グループ"), Until.hasObject(By.text(Pattern.compile("全体チャット|グループを作る"))))
+  if (device.hasObject(groupShown)) return
+  tap(By.text("グループを作る"), By.text("このグループでの名前"))
   val (group, me) = device.findObjects(By.clazz("android.widget.EditText"))
   group.text = "Perf"
   me.text = "Bench"
-  // The keyboard the names were typed with stays up over the tabs until it is put away.
-  if (device.executeShellCommand("dumpsys input_method").contains("mInputShown=true")) device.pressBack()
   tap(By.text("作る"), By.desc("招待のQRコード"))
   back(By.desc("招待のQRコード"))
   find(groupShown)
@@ -89,11 +85,10 @@ fun MacrobenchmarkScope.scrollMonth() {
 /** The group tab, on the person's first group. */
 fun MacrobenchmarkScope.openGroups() = tap(By.text("グループ"), groupShown)
 
-/** The group's whole chat, opened from its page, its lines scrolled, and closed again. */
+/** The group's whole chat, opened from its page and closed again. */
 fun MacrobenchmarkScope.openChat() {
   val composer = By.text("メッセージ")
   tap(groupShown, composer)
-  device.findObject(By.scrollable(true))?.fling(Direction.UP)
   back(composer)
   find(groupShown)
 }

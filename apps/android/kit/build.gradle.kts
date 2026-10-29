@@ -1,3 +1,5 @@
+import com.android.build.api.variant.HostTestBuilder
+
 plugins {
   alias(libs.plugins.android.library)
   alias(libs.plugins.kotlin.serialization)
@@ -9,8 +11,8 @@ plugins {
 // -PpochicalServer=http://10.0.2.2:<port>, for a server beside another checkout's.
 val localServer = providers.gradleProperty("pochicalServer").orElse("http://10.0.2.2:8787").get()
 
-// The app's release builds the Baseline Profile plugin makes (app/build.gradle.kts).
-val profileBuildTypes = listOf("nonMinifiedRelease", "benchmarkRelease")
+// The app's release builds the Baseline Profile plugin makes (build.gradle.kts).
+@Suppress("UNCHECKED_CAST") val profileBuildTypes = rootProject.extra["profileBuildTypes"] as List<String>
 
 android {
   namespace = "app.pochical.kit"
@@ -54,6 +56,13 @@ android {
   }
   testOptions {
     unitTests.isIncludeAndroidResources = true
+  }
+}
+
+// The profile builds' unit tests would be the release ones again.
+androidComponents {
+  beforeVariants { variant ->
+    if (variant.buildType in profileBuildTypes) variant.hostTests[HostTestBuilder.UNIT_TEST_TYPE]?.enable = false
   }
 }
 
