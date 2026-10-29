@@ -114,7 +114,6 @@ fun GroupSettingsPage(
           modifier = Modifier.clickable(enabled = me != null, onClick = onProfile),
         )
       }
-      item { SectionHeader(stringResource(R.string.settings_notifications)) }
       item { GroupChatNotifications(groupId, snackbar) }
       item { SectionHeader(stringResource(R.string.group_members)) }
       items(members, key = { it.userId }) { member ->

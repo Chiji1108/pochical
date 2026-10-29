@@ -19,8 +19,8 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -42,6 +42,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -178,8 +179,8 @@ private fun NoGroups(actions: GroupsActions) {
 }
 
 /**
- * The sample's 一覧 from today, as much of it as there is room for, its lower part fading into the
- * ground; a picture only, nothing in it to press or read out.
+ * The sample's 一覧 from today, as much of it as there is room for (only those rows drawn), its lower
+ * part fading into the ground; a picture only, nothing in it to press, reach or read out.
  */
 @Composable
 private fun SampleDays(modifier: Modifier) {
@@ -188,7 +189,7 @@ private fun SampleDays(modifier: Modifier) {
   val days = remember(today) { (0L until SAMPLE_DAYS).map { today.plusDays(it) } }
   val members = remember(days, country) { sampleMembers(days, country) }
   val group = remember(members, days) { groupDays(members, days.first(), days.last()) }
-  Box(
+  Column(
     modifier
       .clipToBounds()
       .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
@@ -198,9 +199,9 @@ private fun SampleDays(modifier: Modifier) {
       }
       .clearAndSetSemantics {}
   ) {
-    Column(Modifier.wrapContentHeight(Alignment.Top, unbounded = true)) {
-      GroupDayHeader(members, SAMPLE_GROUP, meId = null, sideways = null, onFace = null)
-      for (day in days) {
+    GroupDayHeader(members, SAMPLE_GROUP, meId = null, sideways = null, onFace = null)
+    LazyColumn(userScrollEnabled = false) {
+      items(days) { day ->
         GroupDayRow(
           day,
           members,
@@ -210,7 +211,7 @@ private fun SampleDays(modifier: Modifier) {
           today = today,
           country = country,
           sideways = null,
-          onPick = {},
+          onPick = null,
         )
       }
     }
@@ -281,7 +282,7 @@ private fun GroupRail(groups: List<GroupRow>, openId: String, onOpen: (String) -
   ) {
     // Each group's chats' unread lines that notify, as the グループ tab adds them up.
     val unread = LocalNotifyingUnread.current
-    groups.forEach { group ->
+    for (group in groups) key(group.id) {
       val isOpen = group.id == openId
       val count = unread[group.id] ?: 0
       val label = if (count > 0) stringResource(R.string.group_unread_label, group.name, count) else group.name
@@ -292,7 +293,7 @@ private fun GroupRail(groups: List<GroupRow>, openId: String, onOpen: (String) -
         },
         contentAlignment = Alignment.Center,
       ) {
-        // The flag at the edge grows by the open group.
+        // The flag at the edge grows by the open group, each group's its own as they move.
         val flag by animateDpAsState(if (isOpen) 32.dp else 0.dp, label = "flag")
         Box(
           Modifier.align(Alignment.CenterStart)
