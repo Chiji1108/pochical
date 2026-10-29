@@ -18,8 +18,16 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import app.pochical.design.Radius
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
 import app.pochical.LocalThemeColors
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -121,15 +129,26 @@ fun PhotoEditor(
     }
   }
 
-  Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-    // The picture opens the choices too, a camera on its corner saying so, as the platforms' contact
-    // cards have it; [label] under it is the one TalkBack reads.
-    Box(
-      Modifier.clickable(enabled = !working) { menu = true }.clearAndSetSemantics {},
-      contentAlignment = Alignment.Center,
-    ) {
-      picture()
-      if (working) CircularProgressIndicator()
+  // The picture and [label] under it, one button to TalkBack, as a pattern's mark heads its page
+  // (spec/shift-patterns.md, A pattern's page); the picture opens the choices too, a camera on its
+  // corner saying so, as the platforms' contact cards have it.
+  Column(
+    modifier.fillMaxWidth().clearAndSetSemantics {
+      contentDescription = label
+      role = Role.Button
+      if (working) disabled() else onClick { menu = true; true }
+    },
+    horizontalAlignment = Alignment.CenterHorizontally,
+  ) {
+    Box {
+      // Its ripple in the picture's own shape: a face's circle, a mark's frame.
+      Box(
+        Modifier.clip(if (shape == PhotoCropShape.Round) CircleShape else RoundedCornerShape(Radius.xxl)).clickable(enabled = !working) { menu = true },
+        contentAlignment = Alignment.Center,
+      ) {
+        picture()
+        if (working) CircularProgressIndicator()
+      }
       val colors = LocalThemeColors.current
       Icon(
         painterResource(R.drawable.ic_photo_camera),
