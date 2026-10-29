@@ -234,11 +234,14 @@ class SyncAccount internal constructor(
    * Signs in with the provider's account (spec/sync-protocol.md, Signing in): linked to this user,
    * keeping what the device holds; or, when it is another user's already, one side kept, without
    * asking when either holds nothing (this device's data let go first), else [SignInResult.Choose]
-   * for the person to. [NotSignedIn] before the device has a session, or once the server says it
-   * does not know it; [AccountSuspended] for an account Pochical's people suspended; [LinkRefused]
-   * or another error otherwise, nothing changed.
+   * for the person to. Asked while the device is still signing in, as by a sign-in whose page
+   * returned to an app started anew, it waits for the device's session first. [NotSignedIn] when the
+   * device has none once that settles, or once the server says it does not know it;
+   * [AccountSuspended] for an account Pochical's people suspended; [LinkRefused] or another error
+   * otherwise, nothing changed.
    */
   suspend fun signIn(account: ProviderToken): SignInResult {
+    state.first { it != AccountState.SigningIn }
     val credentials = signedIn() ?: throw NotSignedIn()
     if (link(credentials, account) == LinkResult.Linked) return SignInResult.Linked
     val inUse = coroutineScope {

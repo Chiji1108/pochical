@@ -68,6 +68,12 @@
       allowedVersions: "<25",
     },
     {
+      description: "mise's java is the JDK that runs Gradle and the one the Android modules compile with (apps/android/gradle/libs.versions.toml's jvm, the toolchain Gradle finds in it): keep it on that major, and raise this bound with jvm by hand once Gradle, AGP and Kotlin support the next LTS",
+      matchManagers: ["mise"],
+      matchDepNames: ["java"],
+      allowedVersions: "<22",
+    },
+    {
       description: "A Node major's PR reminds whoever merges it to move @types/node and its bound above",
       matchDepNames: ["node"],
       matchUpdateTypes: ["major"],

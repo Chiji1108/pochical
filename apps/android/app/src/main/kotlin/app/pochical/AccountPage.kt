@@ -31,6 +31,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,14 +50,10 @@ import androidx.compose.ui.unit.dp
 import app.pochical.design.GoogleButtonColors
 import app.pochical.design.Metrics
 import app.pochical.kit.AccountState
-import app.pochical.kit.AccountSuspended
 import app.pochical.kit.DeletionFailure
 import app.pochical.kit.Holdings
-import app.pochical.kit.InUse
-import app.pochical.kit.LinkRefused
 import app.pochical.kit.LinkedAccount
 import app.pochical.kit.NotSignedIn
-import app.pochical.kit.ProviderToken
 import app.pochical.kit.SignInResult
 import app.pochical.kit.SyncAccount
 import app.pochical.kit.linked
@@ -177,64 +174,32 @@ private fun SignInSection(state: AccountState) {
  * [onSignedIn] hears which, once done.
  */
 @Composable
-fun SignInButtons(state: AccountState, onSignedIn: suspend (SignInResult) -> Unit = {}) {
+fun SignInButtons(state: AccountState, onSignedIn: (SignedIn) -> Unit = {}) {
   val signedIn = state is AccountState.SignedIn
-  val account = LocalAccount.current
+  val signIns = LocalSignIns.current
   val apple = LocalAppleSignIn.current
   val context = LocalContext.current
-  val scope = rememberCoroutineScope()
-  // The provider whose sign-in runs, one at a time; the choice asked of the person; what went wrong.
-  var busy by remember { mutableStateOf<LinkedAccount.Provider?>(null) }
-  var choosing by remember { mutableStateOf<InUse?>(null) }
-  var problem by remember { mutableStateOf<Pair<SignInProblem, LinkedAccount.Provider>?>(null) }
-  fun run(provider: LinkedAccount.Provider, step: suspend () -> Unit) {
-    if (busy != null) return
-    busy = provider
-    scope.launch {
-      val failed =
-        try {
-          step()
-          null
-        } catch (e: CancellationException) {
-          throw e
-        } catch (_: NotSignedIn) {
-          // Said in place of the app, as the server no longer knows the session.
-          null
-        } catch (e: LinkRefused) {
-          // Linked already, as on another device: the page shows the account the server names.
-          if (e.status == 417) null else SignInProblem.Failed
-        } catch (_: AccountSuspended) {
-          SignInProblem.Suspended
-        } catch (_: NoGoogleAccount) {
-          SignInProblem.NoGoogleAccount
-        } catch (_: Exception) {
-          SignInProblem.Failed
-        } finally {
-          busy = null
-        }
-      problem = failed?.let { it to provider }
+  val busy = signIns.busy
+  // Decided by SignIns, whichever activity asked, and gone on from here at once, so a page made anew
+  // while the sign-in ran hears it too.
+  signIns.done?.let { signedIn ->
+    LaunchedEffect(signedIn) {
+      onSignedIn(signedIn)
+      signIns.handled()
     }
   }
-  fun signIn(provider: LinkedAccount.Provider, providerToken: suspend () -> ProviderToken?) =
-    run(provider) {
-      when (val result = providerToken()?.let { account.signIn(it) }) {
-        is SignInResult.Choose -> choosing = result.inUse
-        null -> Unit
-        else -> onSignedIn(result)
-      }
-    }
   Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
     AppleButton(enabled = signedIn, busy = busy == LinkedAccount.Provider.Apple) {
-      signIn(LinkedAccount.Provider.Apple) { apple.signIn() }
+      signIns.signIn(LinkedAccount.Provider.Apple) { apple.signIn() }
     }
     GoogleButton(enabled = signedIn, busy = busy == LinkedAccount.Provider.Google) {
-      signIn(LinkedAccount.Provider.Google) { signInWithGoogle(context) }
+      signIns.signIn(LinkedAccount.Provider.Google) { signInWithGoogle(context) }
     }
   }
-  choosing?.let { inUse ->
+  signIns.choosing?.let { inUse ->
     val provider = inUse.token.provider
     AlertDialog(
-      onDismissRequest = { choosing = null },
+      onDismissRequest = signIns::cancelChoosing,
       title = { Text(stringResource(R.string.account_choose_title)) },
       text = {
         Text(
@@ -245,37 +210,17 @@ fun SignInButtons(state: AccountState, onSignedIn: suspend (SignInResult) -> Uni
       // often after its data.
       confirmButton = {
         Column(horizontalAlignment = Alignment.End) {
-          TextButton(
-            onClick = {
-              choosing = null
-              run(provider) {
-                account.useAccount(inUse)
-                onSignedIn(SignInResult.Switched)
-              }
-            }
-          ) {
-            Text(stringResource(R.string.account_use_account))
-          }
-          TextButton(
-            onClick = {
-              choosing = null
-              run(provider) {
-                account.keepDevice(inUse)
-                onSignedIn(SignInResult.Linked)
-              }
-            }
-          ) {
-            Text(stringResource(R.string.account_keep_device))
-          }
-          TextButton(onClick = { choosing = null }) { Text(stringResource(R.string.cancel)) }
+          TextButton(onClick = { signIns.useAccount(inUse) }) { Text(stringResource(R.string.account_use_account)) }
+          TextButton(onClick = { signIns.keepDevice(inUse) }) { Text(stringResource(R.string.account_keep_device)) }
+          TextButton(onClick = signIns::cancelChoosing) { Text(stringResource(R.string.cancel)) }
         }
       },
     )
   }
-  problem?.let { (shown, provider) ->
+  signIns.problem?.let { (shown, provider) ->
     AlertDialog(
-      onDismissRequest = { problem = null },
-      confirmButton = { TextButton(onClick = { problem = null }) { Text(stringResource(R.string.ok)) } },
+      onDismissRequest = signIns::problemRead,
+      confirmButton = { TextButton(onClick = signIns::problemRead) { Text(stringResource(R.string.ok)) } },
       title = { Text(stringResource(shown.title, provider.displayName)) },
       text = shown.message?.let { message -> { Text(stringResource(message, provider.displayName)) } },
     )
@@ -293,14 +238,6 @@ private fun summary(held: Holdings): String {
       if (held.groups > 0) stringResource(R.string.holdings_groups, held.groups) else null,
     )
   return if (parts.isEmpty()) stringResource(R.string.none) else parts.joinToString(stringResource(R.string.holdings_separator))
-}
-
-/** Why signing in did not go, each said in a dialog naming the provider where it says one. */
-private enum class SignInProblem(val title: Int, val message: Int?) {
-  Failed(R.string.account_sign_in_failed, null),
-  NoGoogleAccount(R.string.account_no_google_title, R.string.account_no_google_body),
-  /** Suspended by Pochical's people: said as such, as trying again would not help. */
-  Suspended(R.string.account_suspended_title, R.string.account_suspended_body),
 }
 
 /**

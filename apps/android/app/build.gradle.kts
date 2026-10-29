@@ -119,6 +119,8 @@ dependencies {
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)
   testImplementation(libs.robolectric)
+  // AppleWebSignIn, made in the tests as the kit makes it.
+  testImplementation(libs.okhttp)
   testImplementation(libs.compose.ui.test.junit4)
   debugImplementation(libs.compose.ui.test.manifest)
 
