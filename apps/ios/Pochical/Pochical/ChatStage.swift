@@ -295,7 +295,10 @@ struct ChatStage: UIViewControllerRepresentable {
   }
 }
 
-/// The width the SwiftUI over the lines is laid out at, the controller's.
+/// The width the SwiftUI over the lines is laid out at: the controller's
+/// within its safe area, where its host lays it out, so it stays clear of
+/// the Dynamic Island on its side, and in place beside the tabs on a wide
+/// screen, whose safe area is on one side only.
 @MainActor @Observable private final class StageWidth {
   var value: CGFloat?
 }
@@ -551,7 +554,8 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
 
   override func viewDidLayoutSubviews() {
     super.viewDidLayoutSubviews()
-    if width.value != view.bounds.width { width.value = view.bounds.width }
+    let safeWidth = view.safeAreaLayoutGuide.layoutFrame.width
+    if width.value != safeWidth { width.value = safeWidth }
     fitRoom()
     place()
     layoutMenu()

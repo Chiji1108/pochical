@@ -39,4 +39,14 @@ import Testing
     navigator.close("a")
     #expect(navigator.pages == [photos("b")])
   }
+
+  /// On a wide screen the pages stand beside the tab they were opened
+  /// from: another tab comes without them.
+  @Test func aTabGoneToLeavesThePagesOfTheTabLeft() {
+    let navigator = RootNavigator()
+    navigator.show([photos("a")], over: .groups)
+    navigator.select(.settings)
+    #expect(navigator.pages.isEmpty)
+    #expect(navigator.tab == .settings)
+  }
 }

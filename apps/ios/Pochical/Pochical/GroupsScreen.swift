@@ -58,7 +58,7 @@ struct GroupsScreen: View {
         HStack(alignment: .top, spacing: 0) {
           GroupRail(
             groups: groups, openID: open.id, unread: unread,
-            onOpen: { openID = $0 }, onNew: newGroup, onScan: onScan)
+            onOpen: { pick($0, over: open.id) }, onNew: newGroup, onScan: onScan)
           // Up beside the bar's heading, as it stood beside the page's.
           .padding(.top, barTop)
           .ignoresSafeArea(.container, edges: .top)
@@ -100,6 +100,13 @@ struct GroupsScreen: View {
 
   private func newGroup() {
     navigator?.open(.group(.newGroup))
+  }
+
+  /// Opens another group beside the rail, taking away the pages of the one
+  /// open: on a wide screen they stand beside it (RootNavigation).
+  private func pick(_ id: String, over open: String) {
+    if id != open { navigator?.close(open) }
+    openID = id
   }
 }
 

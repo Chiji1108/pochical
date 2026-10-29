@@ -66,6 +66,8 @@ struct RootView: View {
   var body: some View {
     RootNavigation(navigator: navigator, tabs: hosted(tabs)) { page in
       hosted(self.page(page).environment(\.photoShelf, navigator.photoShelf(of: page)))
+    } nothingOpen: { tab in
+      hosted(NothingOpen(tab: tab))
     }
     .ignoresSafeArea()
     .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.top } action: { barTop = $0 }
@@ -366,5 +368,25 @@ private struct ThemedSwitchBody: View {
     Toggle(configuration)
       .toggleStyle(.switch)
       .tint(colors.accentSwitch)
+  }
+}
+
+/// What stands beside a tab on a wide screen while none of its pages is
+/// open, on the app's ground, as Messages says to pick a conversation.
+private struct NothingOpen: View {
+  @Environment(\.themeColors) private var colors
+  let tab: RootTab
+
+  var body: some View {
+    Group {
+      switch tab {
+      case .groups:
+        ContentUnavailableView("チャットを選んでください", systemImage: "bubble.left.and.bubble.right")
+      case .calendar, .settings:
+        ContentUnavailableView("項目を選んでください", systemImage: "gearshape")
+      }
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .background(colors.backgroundBase)
   }
 }
