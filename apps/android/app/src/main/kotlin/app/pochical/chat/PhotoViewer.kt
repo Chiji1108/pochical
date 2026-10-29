@@ -100,6 +100,12 @@ class OpenPhotos(val run: PhotoRun, val follows: Boolean = true) {
   var changes by mutableIntStateOf(0)
     private set
 
+  /** The id of the photo shown, read as the page draws, for its place to stand empty. */
+  fun shownPhoto(): String? {
+    changes
+    return run.photos.firstOrNull { it.key == run.shown }?.photo?.id
+  }
+
   /** Changes the run, the screen following only when what it shows changed. */
   fun change(step: PhotoRun.() -> Unit) {
     val before = shows()
@@ -140,6 +146,8 @@ fun PhotoViewer(
   onShown: (ChatPhotoItem) -> Unit = {},
   /** The viewer's coming and going, for the photo shown to come out of its place and go back into it; null to fade alone. */
   zoom: AnimatedVisibilityScope? = null,
+  /** Going: it fades with nothing more to do, back is the page's again. */
+  closing: Boolean = false,
 ) {
   val calls = LocalGroupCalls.current
   val files = LocalPhotoFiles.current
@@ -148,7 +156,7 @@ fun PhotoViewer(
   val scope = rememberCoroutineScope()
   val close by rememberUpdatedState(onClose)
   val shown by rememberUpdatedState(onShown)
-  BackHandler { close() }
+  BackHandler(enabled = !closing) { close() }
 
   val version = open.version
   val photos = remember(version) { open.run.photos }
@@ -201,7 +209,7 @@ fun PhotoViewer(
         onPulled = { if (page == pager.currentPage) pulled = it },
         onDismissed = { close() },
         // Only the photo shown goes back into its place.
-        Modifier.then(if (page == pager.currentPage) Modifier.largePhoto(photo.photo.id, zoom) else Modifier),
+        Modifier.then(if (page == pager.settledPage) Modifier.largePhoto(photo.photo.id, zoom) else Modifier),
       )
     }
     AnimatedVisibility(controls && pulled == 0f, enter = fadeIn(), exit = fadeOut()) {

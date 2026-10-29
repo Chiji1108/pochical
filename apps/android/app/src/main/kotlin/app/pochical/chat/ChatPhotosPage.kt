@@ -85,7 +85,7 @@ fun ChatPhotosPage(groupId: String, threadId: String, onBack: () -> Unit) {
       if (viewing == null) listed.change { show(key) }
     }
   }
-  PhotoZoomLayout(viewing, rememberReducedMotion(), places = {
+  PhotoZoomLayout(viewing, rememberReducedMotion(), shownOf = OpenPhotos::shownPhoto, places = {
     Scaffold(
       topBar = {
         TopAppBar(
@@ -132,7 +132,7 @@ fun ChatPhotosPage(groupId: String, threadId: String, onBack: () -> Unit) {
           }
       }
     }
-  }) { open, shown ->
+  }) { open, closing ->
     PhotoViewer(
       groupId,
       threadId,
@@ -141,13 +141,13 @@ fun ChatPhotosPage(groupId: String, threadId: String, onBack: () -> Unit) {
       onClose = { viewing = null },
       // Its square kept in sight as the photo opened large is swiped, as Photos' grid follows, so it closes into it.
       onShown = { item ->
-        shown(item.photo.id)
         val index = photos.indexOfFirst { it.key == item.key }
         if (index >= 0 && grid.layoutInfo.visibleItemsInfo.none { it.index == index }) {
           pending = index
         }
       },
       zoom = this,
+      closing = closing,
     )
   }
   LaunchedEffect(pending) { pending?.let { grid.scrollToItem(it); pending = null } }
