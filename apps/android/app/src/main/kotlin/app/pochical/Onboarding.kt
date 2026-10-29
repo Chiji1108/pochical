@@ -67,8 +67,8 @@ import androidx.navigation3.ui.NavDisplay
 import app.pochical.calendar.LocalOwnDays
 import app.pochical.calendar.OwnDays
 import app.pochical.kit.ShiftPeriod
+import app.pochical.kit.firstPick
 import app.pochical.design.JobTemplate
-import app.pochical.design.Days
 import app.pochical.design.Metrics
 import app.pochical.design.ReadyPatterns
 import app.pochical.kit.DeviceSettings
@@ -160,18 +160,20 @@ fun Onboarding() {
   }
 
   // From this month's 1st, a weekly order from the Sunday of its week.
+  fun first() = LocalDate.now().withDayOfMonth(1)
+
   fun choose(template: JobTemplate, ids: List<String>) =
     chooseJob(
       template,
       ids,
-      LocalDate.now().withDayOfMonth(1),
+      first(),
       onFinish = { patterns, sequence, anchor -> begin(patterns, sequence, anchor) },
       onOrder = { steps.add(FirstRunStep.Order(template.id, ids)) },
       onPeriod = { steps.add(FirstRunStep.Period(ids)) },
     )
 
   // A roster's work begins, its pages the period its shifts come for.
-  fun startRoster(ids: List<String>, period: ShiftPeriod) = begin(ids, emptyList(), LocalDate.now(), period)
+  fun startRoster(ids: List<String>, period: ShiftPeriod) = begin(ids, emptyList(), first(), period)
 
   NavDisplay(
     backStack = steps,
@@ -220,7 +222,7 @@ fun Onboarding() {
               stringResource(R.string.period_question_month),
               stringResource(R.string.period_question_month_note),
               icon = "🗓️",
-              onClick = { if (!beginning) startRoster(step.patterns, ShiftPeriod()) },
+              onClick = { startRoster(step.patterns, ShiftPeriod()) },
             )
             OptionCard(
               stringResource(R.string.period_question_mid_month),
@@ -377,7 +379,8 @@ private fun OrderStep(template: JobTemplate, ids: List<String>, onBack: () -> Un
 /** The day a period starting mid-month starts on, 2日 to 28日 (15日 at first), with はじめる at the foot. */
 @Composable
 private fun PeriodDayStep(onBack: () -> Unit, waiting: Boolean, onStart: (Int) -> Unit) {
-  var start by rememberSaveable { mutableIntStateOf(Days.periodFirstPick) }
+  val period = LocalDeviceSettings.current.device.period
+  var start by rememberSaveable { mutableIntStateOf(period.firstPick) }
   StepPage(
     stringResource(R.string.period_question_day_title),
     stringResource(R.string.period_question_day_note),
@@ -487,6 +490,9 @@ internal suspend fun beginFirstRun(
   period?.let { (_, picked) -> changeSettings { it.copy(period = picked) } }
   try {
     days.begin(ids, sequence, anchor)
+  } catch (e: CancellationException) {
+    // The page going as the patterns land: kept all the same, so nothing is taken back.
+    throw e
   } catch (e: Exception) {
     // Not kept, so no order to offer the reminders for, and the period as it was.
     if (sequence.isNotEmpty()) changeSettings { it.copy(reminderOfferWaiting = false) }

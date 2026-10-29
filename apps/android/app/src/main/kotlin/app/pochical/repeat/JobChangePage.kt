@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSerializable
@@ -42,11 +43,11 @@ import app.pochical.SettingsPage
 import app.pochical.calendar.LocalOwnDays
 import app.pochical.calendar.pattern
 import app.pochical.calendar.slashText
-import app.pochical.design.Days
 import app.pochical.design.JobTemplate
 import app.pochical.design.Metrics
 import app.pochical.design.ReadyPatterns
 import app.pochical.kit.ShiftPeriod
+import app.pochical.kit.firstPick
 import app.pochical.kit.readyCopies
 import app.pochical.patterns.ReadyPatternChips
 import app.pochical.patterns.chosenPatterns
@@ -100,7 +101,9 @@ fun JobChangePage(navigation: PageNavigation) {
   var picked by rememberSerializable { mutableStateOf(emptySet<String>()) }
   var typing by rememberSaveable(stateSaver = OrderTyping.saver) { mutableStateOf(OrderTyping(emptyList(), first)) }
   var pickingDay by rememberSaveable { mutableStateOf(false) }
-  var periodStart by rememberSaveable { mutableIntStateOf(Days.periodFirstPick) }
+  var periodStart by rememberSaveable { mutableIntStateOf(settings.device.period.firstPick) }
+  // While the new job is kept, once: a second tap waits.
+  var finishing by remember { mutableStateOf(false) }
   var confirming by rememberSaveable { mutableStateOf(false) }
   val scope = rememberCoroutineScope()
   val step = steps.last()
@@ -112,6 +115,8 @@ fun JobChangePage(navigation: PageNavigation) {
   BackHandler(enabled = steps.size > 1) { back() }
 
   fun finish(ids: List<String>, sequence: List<String>, anchor: LocalDate, period: ShiftPeriod? = null) {
+    if (finishing) return
+    finishing = true
     scope.launch {
       days.changeJob(ids, sequence, first, anchor)
       // A roster's pages become the period its shifts come for, once its patterns are kept.

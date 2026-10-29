@@ -164,7 +164,7 @@ fun MonthBreakdownSheet(breakdown: PageBreakdown, onDismiss: () -> Unit) {
     }
     item {
       Text(
-        stringResource(if (byPeriod) R.string.breakdown_period_length else R.string.breakdown_length, breakdown.page.days.size),
+        stringResource(if (byPeriod) R.string.breakdown_period_length else R.string.breakdown_length, breakdown.page.length),
         style = MaterialTheme.typography.bodyMedium,
         color = colors.textSecondary,
         textAlign = TextAlign.Center,

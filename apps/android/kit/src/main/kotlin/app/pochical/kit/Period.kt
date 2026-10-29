@@ -1,7 +1,9 @@
 package app.pochical.kit
 
+import app.pochical.design.Days
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.temporal.ChronoUnit
 
 /**
  * A page of the calendar's days (spec/calendar.md, The shift period; spec/vectors/periods.json), as
@@ -18,6 +20,10 @@ data class Period(val first: LocalDate, val last: LocalDate) {
   val days: List<LocalDate>
     get() = daysFrom(first, last).toList()
 
+  /** How many days it holds. */
+  val length: Int
+    get() = ChronoUnit.DAYS.between(first, last).toInt() + 1
+
   operator fun contains(day: LocalDate): Boolean = day in first..last
 
   /** The page [by] pages on, or back for a negative count. */
@@ -30,7 +36,7 @@ data class Period(val first: LocalDate, val last: LocalDate) {
   fun weeks(weekStart: Int): List<List<LocalDate>> {
     val lead = (first.dayOfWeek.value % 7 - weekStart + 7) % 7
     val from = first.minusDays(lead.toLong())
-    val count = (lead + days.size + 6) / 7
+    val count = (lead + length + 6) / 7
     return List(count) { week -> List(7) { from.plusDays((week * 7 + it).toLong()) } }
   }
 
@@ -46,6 +52,10 @@ data class Period(val first: LocalDate, val last: LocalDate) {
       of(YearMonth.from(day).minusMonths(if (day.dayOfMonth < start) 1 else 0), start)
   }
 }
+
+/** The day a period starting mid-month is picked from: its own, else 15日 (`Days.periodFirstPick`). */
+val ShiftPeriod.firstPick: Int
+  get() = if (byPeriod) start else Days.periodFirstPick
 
 /** Whether the pages are periods rather than months. */
 val ShiftPeriod.byPeriod: Boolean

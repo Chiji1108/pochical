@@ -6,6 +6,7 @@ import app.pochical.kit.ShiftPeriod
 import java.time.LocalDate
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -30,7 +31,7 @@ class OnboardingTest {
           beginFirstRun(test.days, { change -> settings = change(settings) }, listOf("duty", "offDuty", "off"), listOf("duty", "offDuty", "off"), LocalDate.now())
         }
       withTimeout(5_000) { test.days.calendar.first { it.patterns.isNotEmpty() } }
-      page.cancel()
+      page.cancelAndJoin()
 
       assertTrue(settings.reminderOfferWaiting)
     }
@@ -45,7 +46,7 @@ class OnboardingTest {
           beginFirstRun(test.days, { change -> settings = change(settings) }, listOf("day", "off"), emptyList(), LocalDate.now(), ShiftPeriod() to ShiftPeriod(15))
         }
       withTimeout(5_000) { test.days.calendar.first { it.patterns.isNotEmpty() } }
-      page.cancel()
+      page.cancelAndJoin()
 
       assertEquals(ShiftPeriod(15), settings.period)
     }

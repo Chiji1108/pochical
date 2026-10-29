@@ -55,6 +55,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -194,6 +195,8 @@ fun CalendarScreen(
   var said by remember { mutableStateOf<String?>(null) }
   // The blank days 完了 asks about, and the pattern picked to fill them.
   var gapKeys by rememberSaveable { mutableStateOf("") }
+  // The first day of the page they are on, as the question dates a month's 1st past it.
+  var gapsPageFirst by rememberSaveable { mutableStateOf("") }
   val gaps = remember(gapKeys) { gapKeys.split(",").filter { it.isNotEmpty() }.map(LocalDate::parse) }
   var gapPick by rememberSaveable { mutableStateOf<String?>(null) }
   val offPatterns = calendar.patterns.daysOff()
@@ -306,6 +309,7 @@ fun CalendarScreen(
     val page = period.pageHolding(day)
     scope.launch {
       val shown = days.shownOnceWritten(page.first, page.last)
+      gapsPageFirst = page.first.toString()
       gapKeys = gapDays(page.first, page.last, shown::contains).joinToString(",")
       if (gapKeys.isEmpty()) closedEntering()
     }
@@ -336,13 +340,15 @@ fun CalendarScreen(
     }
   }
 
-  // A シフトの期間 changed, here or on another device, turns to the page holding today, and entering
-  // goes on from that page's first blank day.
+  // A シフトの期間 changed, here or on another device, turns to the page holding today, or with a day
+  // open to the page holding it, which its week folds back into; entering goes on from that page's
+  // first blank day.
   var pagedBy by rememberSaveable { mutableIntStateOf(period.start) }
   LaunchedEffect(period) {
     if (pagedBy == period.start) return@LaunchedEffect
     pagedBy = period.start
-    val month = period.monthHolding(today)
+    val month = period.monthHolding(opened ?: today)
+    if (opened != null) foldedKey = month.toString()
     pager.requestScrollToPage(range.pageOf(month))
     if (enteringKey != null) {
       enteringKey = firstBlank(month).toString()
@@ -462,9 +468,12 @@ fun CalendarScreen(
                 MonthPage(range.monthAt(page), pageDays, Modifier.padding(horizontal = SCREEN_EDGE))
               }
             opened != null && folding == 1f && !closing ->
-              WeekPager(opened, range, week.start, pageDays) { day ->
-                foldedKey = monthShowing(day, folded).toString()
-                openedKey = day.toString()
+              // Its pages counted anew from the range's first week when the range changes.
+              key(range) {
+                WeekPager(opened, range, week.start, pageDays) { day ->
+                  foldedKey = monthShowing(day, folded).toString()
+                  openedKey = day.toString()
+                }
               }
             else ->
               MonthPage(folded, pageDays, Modifier.padding(horizontal = SCREEN_EDGE), foldedInto = opened, fold = folding)
@@ -568,7 +577,7 @@ fun CalendarScreen(
   if (gaps.isNotEmpty() && gapFill != null) {
     GapSheet(
       days = gaps,
-      pageFirst = period.pageHolding(gaps.first()).first,
+      pageFirst = LocalDate.parse(gapsPageFirst),
       offPatterns = offPatterns,
       picked = gapFill,
       onPick = { gapPick = it.id },

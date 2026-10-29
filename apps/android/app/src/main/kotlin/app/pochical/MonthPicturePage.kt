@@ -205,7 +205,7 @@ fun MonthPicturePage(month: YearMonth, onBack: () -> Unit) {
         Button(
           onClick = {
             scope.launch {
-              if (picture(layer)?.let { savePicture(context, it, "pochical-${if (period.byPeriod) page.first.toString() else month.toString()}.png") } == true) {
+              if (picture(layer)?.let { savePicture(context, it, "pochical-${page.first}.png") } == true) {
                 // Saved out of sight, in the phone's pictures: felt as well as said (spec/haptics.md).
                 haptics.performHapticFeedback(HapticFeedbackType.Confirm)
                 say(R.string.picture_saved)
