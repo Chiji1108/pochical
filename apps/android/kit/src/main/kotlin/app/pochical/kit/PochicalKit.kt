@@ -8,9 +8,12 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.launch
 import java.io.File
 import okhttp3.HttpUrl.Companion.toHttpUrl
@@ -31,6 +34,13 @@ class PochicalKit(context: Context) {
 
   val database: AppDatabase = AppDatabase.open(context)
   val edits = OwnEdits(database)
+
+  /**
+   * The person's own calendar, read once for all that follows it, the screens and the reminders'
+   * alarms: again whenever sync or an edit changes it, from when it is first asked for.
+   */
+  val ownCalendar: SharedFlow<OwnCalendar> =
+    database.values().ownCalendar().shareIn(CoroutineScope(SupervisorJob() + Dispatchers.Default), SharingStarted.Lazily, replay = 1)
 
   /** はじめの設定, asked while it is not done for the user the database holds. */
   val firstRun = FirstRun(database)

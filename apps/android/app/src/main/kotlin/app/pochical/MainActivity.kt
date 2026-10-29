@@ -72,8 +72,8 @@ class MainActivity(
     if (savedInstanceState == null && intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY == 0) take(intent)
     addOnNewIntentListener(::take)
     lifecycleScope.launch {
-      // Not cancelled with the activity, so a sample is never left half put in; read after it, so
-      // the first calendar drawn holds it.
+      // Not cancelled with the activity, so a sample is never left half put in. The calendar, which
+      // the reminders follow from the app's start, shows it as the database tells of its writes.
       if (savedInstanceState == null) withContext(NonCancellable) { takeLaunchOptions(intent, kit) }
       ownDays.awaitRead()
       calendarRead = true
