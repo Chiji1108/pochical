@@ -174,17 +174,18 @@ private fun SignInSection(state: AccountState) {
  * [onSignedIn] hears which, once done.
  */
 @Composable
-fun SignInButtons(state: AccountState, onSignedIn: suspend (SignInResult) -> Unit = {}) {
+fun SignInButtons(state: AccountState, onSignedIn: (SignedIn) -> Unit = {}) {
   val signedIn = state is AccountState.SignedIn
   val signIns = LocalSignIns.current
   val apple = LocalAppleSignIn.current
   val context = LocalContext.current
   val busy = signIns.busy
-  // Heard here, whichever activity asked: one made anew while the sign-in ran goes on from it.
-  signIns.done?.let { result ->
-    LaunchedEffect(result) {
+  // Decided by SignIns, whichever activity asked, and gone on from here at once, so a page made anew
+  // while the sign-in ran hears it too.
+  signIns.done?.let { signedIn ->
+    LaunchedEffect(signedIn) {
+      onSignedIn(signedIn)
       signIns.handled()
-      onSignedIn(result)
     }
   }
   Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

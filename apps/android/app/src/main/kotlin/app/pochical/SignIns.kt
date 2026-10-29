@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import app.pochical.kit.AccountState
 import app.pochical.kit.AccountSuspended
+import app.pochical.kit.FirstRun
 import app.pochical.kit.InUse
 import app.pochical.kit.LinkRefused
 import app.pochical.kit.LinkedAccount
@@ -29,13 +30,24 @@ enum class SignInProblem(val title: Int, val message: Int?) {
 }
 
 /**
+ * What a sign-in came to, once the device holds what it brought: [holdsPatterns] when the patterns
+ * are there, as an account in use brings its own (FirstRun.holdsPatternsAfter).
+ */
+data class SignedIn(val result: SignInResult, val holdsPatterns: Boolean)
+
+/**
  * Appleで続ける and Googleで続ける under way (spec/sync-protocol.md, Signing in; Switching to an
  * account in use), kept by the app rather than the page that asked, in [scope] on the main thread:
  * an activity made anew while Apple's page or Google's sheet is open, as it is turned, shows the same
  * sign-in going on, and hears how it went. One whose Apple page was open as the app's process ended
  * goes on too, once the page returns ([AppleSignIn.resumed]).
  */
-class SignIns(private val account: SyncAccount, apple: AppleSignIn, private val scope: CoroutineScope) {
+class SignIns(
+  private val account: SyncAccount,
+  private val firstRun: FirstRun,
+  apple: AppleSignIn,
+  private val scope: CoroutineScope,
+) {
   /** The provider whose sign-in runs, one at a time. */
   var busy by mutableStateOf<LinkedAccount.Provider?>(null)
     private set
@@ -48,8 +60,11 @@ class SignIns(private val account: SyncAccount, apple: AppleSignIn, private val 
   var problem by mutableStateOf<Pair<SignInProblem, LinkedAccount.Provider>?>(null)
     private set
 
-  /** What signing in came to, until the page that asked goes on from it ([handled]). */
-  var done by mutableStateOf<SignInResult?>(null)
+  /**
+   * What signing in came to, decided here rather than by the page, so it is had however the page
+   * changes meanwhile; until the page that asked goes on from it ([handled]).
+   */
+  var done by mutableStateOf<SignedIn?>(null)
     private set
 
   init {
@@ -71,7 +86,7 @@ class SignIns(private val account: SyncAccount, apple: AppleSignIn, private val 
       when (val result = providerToken()?.let { account.signIn(it) }) {
         is SignInResult.Choose -> choosing = result.inUse
         null -> Unit
-        else -> done = result
+        else -> finished(result)
       }
     }
 
@@ -80,7 +95,7 @@ class SignIns(private val account: SyncAccount, apple: AppleSignIn, private val 
     choosing = null
     run(inUse.token.provider) {
       account.useAccount(inUse)
-      done = SignInResult.Switched
+      finished(SignInResult.Switched)
     }
   }
 
@@ -89,7 +104,7 @@ class SignIns(private val account: SyncAccount, apple: AppleSignIn, private val 
     choosing = null
     run(inUse.token.provider) {
       account.keepDevice(inUse)
-      done = SignInResult.Linked
+      finished(SignInResult.Linked)
     }
   }
 
@@ -106,6 +121,10 @@ class SignIns(private val account: SyncAccount, apple: AppleSignIn, private val 
   /** The page that asked has gone on from what signing in came to. */
   fun handled() {
     done = null
+  }
+
+  private suspend fun finished(result: SignInResult) {
+    done = SignedIn(result, firstRun.holdsPatternsAfter(result, account))
   }
 
   private fun run(provider: LinkedAccount.Provider, step: suspend () -> Unit) {

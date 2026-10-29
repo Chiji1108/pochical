@@ -91,6 +91,27 @@ class AccountChangeTest {
   }
 
   @Test
+  fun anAccountSwitchedToThatHoldsNoPatternsSaysSoOnceCaughtUp() = runBlocking<Unit> {
+    val phone = signedInDevice()
+    accountInUse()
+
+    val switched = phone.account.signIn(google)
+
+    assertFalse(FirstRun(phone.database).holdsPatternsAfter(switched, phone.account))
+  }
+
+  @Test
+  fun anAccountSwitchedToBringsItsPatternsBeforeItIsAsked() = runBlocking<Unit> {
+    val phone = signedInDevice()
+    accountInUse()
+    server.patternElsewhere("day", user = "user-b")
+
+    val switched = phone.account.signIn(google)
+
+    assertTrue(FirstRun(phone.database).holdsPatternsAfter(switched, phone.account))
+  }
+
+  @Test
   fun anAccountInUseHoldingNothingIsTakenWithoutAsking() = runBlocking<Unit> {
     val phone = signedInDevice()
     phone.edits.setDay("2026-11-02", DayField.DAY_FIELD_PATTERN, "night")

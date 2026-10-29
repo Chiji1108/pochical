@@ -68,7 +68,7 @@ interface AppGraph : MetroAppComponentProviders {
   @Provides
   @SingleIn(AppScope::class)
   fun signIns(kit: PochicalKit, apple: AppleSignIn): SignIns =
-    SignIns(kit.account, apple, CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate))
+    SignIns(kit.account, kit.firstRun, apple, CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate))
 
   /** The notifications from the server. */
   @Provides
