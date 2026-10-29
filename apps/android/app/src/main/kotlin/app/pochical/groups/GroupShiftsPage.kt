@@ -65,6 +65,7 @@ import app.pochical.design.Radius
 import app.pochical.kit.GroupRow
 import java.time.LocalDate
 import java.time.YearMonth
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 
 /** How many months either side of this one the list holds, as /design's (monthSpan). */
@@ -190,10 +191,20 @@ private fun ShiftsPage(group: GroupRow, opening: LocalDate?, onBack: () -> Unit,
   val sheet = rememberBottomSheetScaffoldState(rememberStandardBottomSheetState(initialValue = SheetValue.Hidden, skipHiddenState = false))
   LaunchedEffect(picked) { if (picked != null) sheet.bottomSheetState.expand() else sheet.bottomSheetState.hide() }
   // Swiped down, the day is no longer picked: the sheet settles hidden or, with no peek, part way
-  // up, which looks the same.
+  // up, which looks the same. Only a sheet that came down counts: before a picked day's sheet
+  // starts up, it is still settled hidden.
   LaunchedEffect(sheet) {
-    snapshotFlow { sheet.bottomSheetState.run { currentValue to targetValue } }
-      .collect { (current, target) -> if (current == target && current != SheetValue.Expanded) pickedDay = null }
+    var up = false
+    snapshotFlow { sheet.bottomSheetState.run { currentValue.takeIf { it == targetValue } } }
+      .filterNotNull()
+      .collect { settled ->
+        if (settled == SheetValue.Expanded) {
+          up = true
+        } else if (up) {
+          up = false
+          pickedDay = null
+        }
+      }
   }
   BackHandler(enabled = picked != null) { pickedDay = null }
   var sheetHeight by remember { mutableIntStateOf(0) }
