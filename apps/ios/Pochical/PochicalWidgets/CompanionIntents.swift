@@ -1,16 +1,16 @@
 import AppIntents
 import GRDB
 import PochicalKit
-import WidgetKit
 
-// Editing 次の休み and これから (spec/widgets.md, 次の休み with someone or a
-// group; これから with someone): who the widget is set to, from each of the
-// person's groups under the group's name, kept as the group and the member
-// in it.
+// Who 次の休み and これから are set to (spec/widgets.md, 次の休み with
+// someone or a group; これから with someone), from each of the person's
+// groups under the group's name, kept as the group and the member in it.
+// Built into the app as well as the widgets, for the shortcut 次の休み's
+// 一緒に休む人 (Shortcuts and controls).
 
 /// Someone, or with 次の休み a whole group, as a widget's editing lists
 /// them.
-struct CompanionEntity: AppEntity {
+nonisolated struct CompanionEntity: AppEntity {
   static let typeDisplayRepresentation: TypeDisplayRepresentation = "一緒に休む人"
   static let defaultQuery = CompanionQuery()
 
@@ -26,7 +26,7 @@ struct CompanionEntity: AppEntity {
 }
 
 /// Someone in one of the person's groups, as これから's editing lists them.
-struct MemberEntity: AppEntity {
+nonisolated struct MemberEntity: AppEntity {
   static let typeDisplayRepresentation: TypeDisplayRepresentation = "一緒に見る人"
   static let defaultQuery = MemberQuery()
 
@@ -40,11 +40,11 @@ struct MemberEntity: AppEntity {
 }
 
 /// The person's groups and who is in each, as the database holds them.
-private func choiceGroups() -> [WidgetChoiceGroup] {
+private nonisolated func choiceGroups() -> [WidgetChoiceGroup] {
   (try? readWidgetDatabase { try widgetChoices(me: widgetMeID(), in: $0) }) ?? []
 }
 
-struct CompanionQuery: EntityQuery {
+nonisolated struct CompanionQuery: EntityQuery {
   func entities(for identifiers: [String]) async throws -> [CompanionEntity] {
     let all = choiceGroups().flatMap(Self.entities)
     return identifiers.compactMap { id in all.first { $0.id == id } }
@@ -73,7 +73,7 @@ struct CompanionQuery: EntityQuery {
   }
 }
 
-struct MemberQuery: EntityQuery {
+nonisolated struct MemberQuery: EntityQuery {
   func entities(for identifiers: [String]) async throws -> [MemberEntity] {
     let all = choiceGroups().flatMap(Self.entities)
     return identifiers.compactMap { id in all.first { $0.id == id } }
@@ -94,22 +94,4 @@ struct MemberQuery: EntityQuery {
         name: $0.shownName, groupName: choice.group.name)
     }
   }
-}
-
-/// 次の休み's editing: 一緒に休む人, nobody unless picked.
-struct NextOffIntent: WidgetConfigurationIntent {
-  static let title: LocalizedStringResource = "次の休み"
-  static let description = IntentDescription("一緒に休む人を選ぶと、その人と一緒に休める日を数えます。")
-
-  @Parameter(title: "一緒に休む人")
-  var with: CompanionEntity?
-}
-
-/// これから's editing: 一緒に見る人, nobody unless picked.
-struct UpcomingIntent: WidgetConfigurationIntent {
-  static let title: LocalizedStringResource = "これから"
-  static let description = IntentDescription("一緒に見る人を選ぶと、その人の日も並べます。")
-
-  @Parameter(title: "一緒に見る人")
-  var with: MemberEntity?
 }

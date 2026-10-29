@@ -108,6 +108,26 @@ Each kind is one widget in the gallery, offering the sizes in the table above; o
 
 What a gallery shows of a kind before it is placed: on the iPhone the person's own entry once they have entered days (WidgetKit's snapshot), else the sample week the pages under /design/widgets show on an ordinary day (ふつう), which is also the placeholder while an entry loads. Android's picker shows the sample, as a generated preview where the launcher supports it (Android 15), else as a picture of it.
 
+## Shortcuts and controls
+
+The iPhone also answers from the same entry outside the home screen: App Shortcuts for Siri, Spotlight, the Shortcuts app and the Action button, and controls for Control Center, the lock screen and the Action button. Like the widgets, they read the database in the App Group and the device's settings, and say days in the words the widgets are read aloud in, so a shortcut and a widget never disagree. Android has none yet.
+
+| Shortcut | Phrases (`ポチカル` is the app's name) | Answer |
+| --- | --- | --- |
+| 今日のシフト | ポチカルで今日のシフト, ポチカルで今日のシフトを教えて, ポチカルの今日のシフト | today as シンプル is read aloud: 今日、10月29日(木)、日勤、9:00 – 18:00 (メモあり on a day with a memo, never its words); before anything is entered, シフトを入れると出ます |
+| 次の休み | ポチカルで次の休み, ポチカルで次の休みはいつ, ポチカルの次の休み | as the widget 次の休み is read aloud: 次の休み、3日後、11月1日(日)、公休, today on a day off, or why none is ahead (`offs.none`). Its 一緒に休む人, set in the Shortcuts app as the widget's editing offers it, counts with someone (一緒に休める日) or a group (みんな休み) instead; one whose group either has left asks for them to be picked again |
+
+Both show the day under what is said: its mark in the person's テーマ and marks, its date, and its shift and hours. They answer and do not open the app, as a question asked of Siri wants its answer where it was asked; opening the app is the widgets' and the controls'.
+
+| Control | Shows | Opens |
+| --- | --- | --- |
+| 今日を開く | its name | the calendar on today |
+| 次の休み | the date of the soonest day off (today's on a day off), or why none is ahead | the calendar on that day, else today |
+
+A control opens the app as a widget's link does, bringing it to the front (the intent カレンダーを開く, which in the Shortcuts app takes a date). A control's value is the date rather than how soon (3日後), as the system keeps a control's value until it is asked for again: a date stays true as days go by until that day has passed. The app asks for the controls' values again whenever it asks the widgets for new entries (When an entry is made). 次の休み's control is the person's own; with someone or a group it is the widget's and the shortcut's to answer.
+
+The widgets have no buttons of their own (`Button(intent:)`): what they show is read, and acting on a day is the app's, which a tap opens.
+
 ## Colors
 
 - **iPhone**: the widgets use the person's テーマ in the light or dark 外観 picks, as the app's screens do: the system's on 端末に合わせる, and always light or always dark when set so (dark whatever it says for a テーマ drawn dark). Where the system recolors a widget (the lock screen, 色合い and クリア), it reads the system's light or dark whatever 外観 says, as the system's recoloring works from it and dark words would fade there. Changing 外観 asks the widgets for new entries at once, as any setting they are drawn in does. In the 色合い (tinted) and クリア (clear) looks, the system recolors them itself.

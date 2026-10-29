@@ -1,3 +1,4 @@
+import AppIntents
 import PochicalDesign
 import PochicalKit
 import SwiftUI
@@ -20,13 +21,22 @@ struct NextOffWidget: Widget {
   }
 }
 
+/// 次の休み's editing: 一緒に休む人, nobody unless picked.
+struct NextOffIntent: WidgetConfigurationIntent {
+  static let title: LocalizedStringResource = "次の休み"
+  static let description = IntentDescription("一緒に休む人を選ぶと、その人と一緒に休める日を数えます。")
+
+  @Parameter(title: "一緒に休む人")
+  var with: CompanionEntity?
+}
+
 private struct NextOffView: View {
   @Environment(\.widgetFamily) private var family
   @Environment(\.english) private var english
   let entry: WidgetEntry
 
   var body: some View {
-    let soonest = soonestOff(entry)
+    let soonest = entry.soonestOff
     Group {
       if family == .accessoryCircular {
         NextOffCircular(entry: entry, soonest: soonest)
@@ -40,58 +50,9 @@ private struct NextOffView: View {
         NextOffSmall(entry: entry, soonest: soonest)
       }
     }
-    // The day off it counts, else today; set to someone or a group, in
-    // the group's table.
-    .widgetURL(
-      entry.pickAgain.map { groupLink($0) } ?? entry.link(soonest?.day.date ?? entry.date))
+    .widgetURL(entry.offLink)
     .accessibilityElement(children: .ignore)
-    .accessibilityLabel(
-      spokenOff(soonest, none: entry.offs.none, with: entry.with, english: english))
-  }
-}
-
-/// The soonest day off: today when it is off, else the next one.
-private func soonestOff(_ entry: WidgetEntry) -> (day: WidgetDay, inDays: Int)? {
-  entry.offs.today ? (entry.today, 0) : entry.offs.next
-}
-
-/// What is said with no day off ahead.
-private func noOffWords(_ none: WidgetNoOff?, words: WidgetWords) -> String {
-  switch none {
-  case .waiting(let names):
-    let others = names.count > 1 ? (words.english ? " +\(names.count - 1)" : "ほか\(names.count - 1)人") : ""
-    return words.english
-      ? "Waiting on \(names.first ?? "")\(others)" : "\(names.first ?? "")さん\(others)の入力待ち"
-  case .apart:
-    return words.english ? "No days off together yet" : "重なる休みはまだありません"
-  case .notEntered, nil:
-    return words.nothingYet
-  }
-}
-
-/// The whole of it as read aloud.
-private func spokenOff(
-  _ off: (day: WidgetDay, inDays: Int)?, none: WidgetNoOff?, with: WidgetWith?, english: Bool
-) -> String {
-  let words = WidgetWords(english: english)
-  var title = offTitle(with, english: english)
-  if let with {
-    title =
-      with.kind == .group
-      ? (english ? "\(title), \(with.name)" : "\(with.name)のみんな休み")
-      : (english ? "\(title) with \(with.name)" : "\(with.name)さんと一緒に休める日")
-  }
-  guard let off else { return "\(title), \(noOffWords(none, words: words))" }
-  let parts = [title, words.inDays(off.inDays), words.date(off.day.date), off.day.pattern?.name]
-  return parts.compactMap(\.self).joined(separator: english ? ", " : "、")
-}
-
-/// 次の休み, 一緒に休める日 with someone, or みんな休み with a group.
-private func offTitle(_ with: WidgetWith?, english: Bool) -> String {
-  switch with?.kind {
-  case nil: english ? "Next day off" : "次の休み"
-  case .person: english ? "Off together" : "一緒に休める日"
-  case .group: english ? "Everyone off" : "みんな休み"
+    .accessibilityLabel(entry.spokenOff(english: english))
   }
 }
 

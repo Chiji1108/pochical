@@ -130,3 +130,42 @@ public func widgetCompanion(
       people: [them], me: meShown)
   }
 }
+
+/// What one read of the database gives a widget, a control or a shortcut
+/// (spec/widgets.md, Shortcuts and controls): the person's calendar, and
+/// who it is set to as they are now.
+public struct WidgetRead {
+  public let calendar: OwnCalendar
+  public let choice: WidgetChoice?
+  public let companion: WidgetCompanion?
+
+  /// The entry at `date`, for the person's week settings.
+  public func entry(at date: Date, _ settings: DeviceSettings) -> WidgetEntry {
+    var entry = calendar.widgetEntry(at: date, week: settings.week, companion: companion)
+    // Picked, but no longer there: what is shown changes only when the
+    // person changes it.
+    if let choice, companion == nil {
+      entry.pickAgain = choice.groupID
+    }
+    return entry
+  }
+}
+
+/// The person's days, beside who `choice` is; nil until the app has made
+/// its database.
+public func readWidget(choice: WidgetChoice?) -> WidgetRead? {
+  try? readWidgetDatabase { db in
+    let calendar = try OwnCalendar(db)
+    let companion = try choice.flatMap {
+      try widgetCompanion($0, me: widgetMeID(), around: Day(.now, in: .current), in: db)
+    }
+    return WidgetRead(calendar: calendar, choice: choice, companion: companion)
+  }
+}
+
+/// The entry now, which a control or a shortcut answers from; before the
+/// app has made its database, as before anything is entered.
+public func currentWidgetEntry(choice: WidgetChoice?, _ settings: DeviceSettings) -> WidgetEntry {
+  readWidget(choice: choice)?.entry(at: .now, settings)
+    ?? .nothingYet(at: .now, week: settings.week)
+}

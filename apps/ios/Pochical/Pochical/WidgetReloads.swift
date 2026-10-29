@@ -4,9 +4,10 @@ import SQLiteData
 import SwiftUI
 import WidgetKit
 
-/// Asks the widgets for new entries at once as what they show changes on
-/// the device: the person's days, patterns or repeating orders, their
-/// groups and who is in them, or the settings they are drawn in (spec/widgets.md, When an entry is made).
+/// Asks the widgets for new entries, and the controls for their values,
+/// at once as what they show changes on the device: the person's days,
+/// patterns or repeating orders, their groups and who is in them, or the
+/// settings they are drawn in (spec/widgets.md, When an entry is made).
 struct WidgetReloads: ViewModifier {
   @Environment(Settings.self) private var settings
   @Dependency(\.defaultDatabase) private var database
@@ -16,7 +17,7 @@ struct WidgetReloads: ViewModifier {
       .task {
         // Once as the app starts, for widgets made before its database
         // was there, or while it could not be read.
-        WidgetCenter.shared.reloadAllTimelines()
+        reloadWidgets()
         // The tables a widget's entry is read from: the person's own, and
         // their groups' for the widgets set to someone.
         let observation = DatabaseRegionObservation(
@@ -28,7 +29,7 @@ struct WidgetReloads: ViewModifier {
           })
         let watching = observation.start(in: database) { _ in
         } onChange: { _ in
-          WidgetCenter.shared.reloadAllTimelines()
+          reloadWidgets()
         }
         // Kept while the screen is, let go as the task ends.
         while !Task.isCancelled {
@@ -37,7 +38,13 @@ struct WidgetReloads: ViewModifier {
         watching.cancel()
       }
       .onChange(of: settings.device) { _, _ in
-        WidgetCenter.shared.reloadAllTimelines()
+        reloadWidgets()
       }
   }
+}
+
+/// Asks every widget for new entries, and every control for its value.
+func reloadWidgets() {
+  WidgetCenter.shared.reloadAllTimelines()
+  ControlCenter.shared.reloadAllControls()
 }

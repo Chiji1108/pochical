@@ -1,3 +1,4 @@
+import AppIntents
 import PochicalDesign
 import PochicalKit
 import SwiftUI
@@ -19,6 +20,15 @@ struct UpcomingWidget: Widget {
     .description("今日からの数日のシフト。一緒に見る人も選べます。")
     .supportedFamilies([.systemSmall, .systemMedium, .accessoryRectangular])
   }
+}
+
+/// これから's editing: 一緒に見る人, nobody unless picked.
+struct UpcomingIntent: WidgetConfigurationIntent {
+  static let title: LocalizedStringResource = "これから"
+  static let description = IntentDescription("一緒に見る人を選ぶと、その人の日も並べます。")
+
+  @Parameter(title: "一緒に見る人")
+  var with: MemberEntity?
 }
 
 private struct UpcomingView: View {

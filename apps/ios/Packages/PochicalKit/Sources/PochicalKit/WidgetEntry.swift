@@ -406,4 +406,14 @@ extension WidgetEntry {
       twoWeeks: (0..<14).map { day(weekStart.adding(days: $0)) },
       month: monthWeeks(today, weekStart: week.start).map { $0.map(day) })
   }
+
+  /// Before the app has made its database: as before anything is
+  /// entered, until it makes one.
+  public static func nothingYet(
+    at now: Date, week: DeviceSettings.Week, calendar: Calendar = .current
+  ) -> WidgetEntry {
+    var entry = sample(at: now, week: week, calendar: calendar)
+    entry.nothingEntered = true
+    return entry
+  }
 }
