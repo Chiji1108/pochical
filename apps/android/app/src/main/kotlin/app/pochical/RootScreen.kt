@@ -39,6 +39,7 @@ import app.pochical.groups.InvitePage
 import app.pochical.groups.JoinScreen
 import app.pochical.groups.LocalValues
 import app.pochical.kit.AppLink
+import app.pochical.kit.GROUP_THREAD
 import app.pochical.groups.NewGroupPage
 import app.pochical.groups.ScanScreen
 import app.pochical.notifications.ChatNotificationsPage
@@ -141,11 +142,19 @@ fun RootScreen(navigator: RootNavigator) {
           )
         }
       is RootPage.GroupShifts ->
-        NavEntry(route) { GroupShiftsPage(route.groupId, route.date?.let(LocalDate::parse), onBack = rememberPageNavigation(navigator)::back) }
+        NavEntry(route) {
+          val navigation = rememberPageNavigation(navigator)
+          GroupShiftsPage(
+            route.groupId,
+            route.date?.let(LocalDate::parse),
+            onBack = navigation::back,
+            onShare = { day -> navigation.open(RootPage.Chat(route.groupId, GROUP_THREAD, sharing = day.toString())) },
+          )
+        }
       is RootPage.Chat ->
         NavEntry(route) {
           val navigation = rememberPageNavigation(navigator)
-          ChatPage(route.groupId, route.threadId, onBack = navigation::back, open = navigation::open)
+          ChatPage(route.groupId, route.threadId, onBack = navigation::back, open = navigation::open, sharing = route.sharing?.let(LocalDate::parse))
         }
       is RootPage.ChatPhotos -> NavEntry(route) { ChatPhotosPage(route.groupId, route.threadId, onBack = rememberPageNavigation(navigator)::back) }
       is RootPage.GroupEdit ->NavEntry(route) { GroupEditPage(route.groupId, onBack = rememberPageNavigation(navigator)::back) }

@@ -7,6 +7,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.compose.LifecycleEventEffect
 import app.pochical.notifications.ShowingChat
+import app.pochical.notifications.LocalNotificationAsking
 import app.pochical.calendar.fullText
 import app.pochical.calendar.rememberReducedMotion
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -176,7 +177,14 @@ val LocalChats = staticCompositionLocalOf<Chats> { error("No chats provided") }
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalCoroutinesApi::class)
 @Composable
-fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit, open: (RootPage) -> Unit) {
+fun ChatPage(
+  groupId: String,
+  threadId: String,
+  onBack: () -> Unit,
+  open: (RootPage) -> Unit,
+  /** A day brought from みんなのシフト to share (全体チャットで共有), set over the composer once as the chat opens. */
+  sharing: LocalDate? = null,
+) {
   HoldSocket(groupId)
   // Its lines are not notified while the person sees them come here.
   ShowingChat(groupId, threadId)
@@ -363,6 +371,17 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit, open: (RootP
 
   var notKept by remember { mutableStateOf(false) }
   val composer = rememberComposerState()
+  // As sharing into a chat app does: the day waits over the composer, after its draft, and nothing
+  // reaches everyone until it is sent, with words if one likes.
+  var tookSharing by rememberSaveable { mutableStateOf(false) }
+  LaunchedEffect(composer.tookDraft) {
+    if (sharing == null || tookSharing || !composer.tookDraft) return@LaunchedEffect
+    tookSharing = true
+    composer.writing = composer.writing.share(listOf(sharing.toString()))
+  }
+  // 日にちを共有 and 日にちの投票 from ＋: the day sheet, in the way it was opened.
+  var pickingDays by rememberSaveable { mutableStateOf<DaysPick?>(null) }
+  val asking = LocalNotificationAsking.current
   val menu = rememberLineMenuState()
   val reducedMotion = rememberReducedMotion()
   val deleted = stringResource(R.string.deleted_account)
@@ -510,6 +529,12 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit, open: (RootP
       decide = { deciding = it },
       voters = { day, people -> listing = day to people },
       groupId = groupId,
+      openShifts = { day -> open(RootPage.GroupShifts(groupId, day.toString())) },
+      dayMembers = { from, through ->
+        val shown = rememberGroupMembers(groupId, from, through).orEmpty()
+        // A one-to-one chat's card shows the two of them.
+        if (other == null) shown else shown.filter { it.userId == other || it.userId == me }
+      },
       stopSending = { opId -> scope.launch { keeping({ notKept = true }) { chats.stopSending(opId) } } },
       // Among the photos of the lines laid out, those the reader sees, the rest coming from the group.
       openPhoto = { seq, index ->
@@ -598,6 +623,9 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit, open: (RootP
           },
           onNotKept = { notKept = true },
           onSay = { said -> scope.launch { snackbar.showSnackbar(said) } },
+          onShareDays = if (placeRules(groupId).days) ({ pickingDays = DaysPick.Share }) else null,
+          // One-to-one chats have no polls.
+          onPollDays = if (other == null && placeRules(groupId).polls) ({ pickingDays = DaysPick.Poll }) else null,
         )
       }
     }
@@ -630,6 +658,24 @@ fun ChatPage(groupId: String, threadId: String, onBack: () -> Unit, open: (RootP
     )
   }
   choosers?.let { ChoosersSheet(it, writers, nameOf) { choosers = null } }
+  pickingDays?.let { pick ->
+    val people = other?.let { setOfNotNull(it, me) }
+    ShareDaysSheet(groupId, people, pick, onDismiss = { pickingDays = null }) { days ->
+      pickingDays = null
+      // A line sent, when an answer is first wanted (spec/chat.md, Notifications).
+      asking.askOnce()
+      val replyTo = composer.writing.replyTo
+      scope.launch {
+        keeping({ notKept = true }) {
+          chats.sendDays(groupId, threadId, days.map { it.toString() }, poll = pick == DaysPick.Poll, replyTo)
+          // The reply goes with the line it went with.
+          if (replyTo != null && composer.writing.replyTo == replyTo) composer.writing = composer.writing.copy(replyTo = null)
+          if (!chat.atEnd) from = null
+          going = Going.ToFoot
+        }
+      }
+    }
+  }
   listing?.let { (day, people) -> VotersSheet(day, people, writers, nameOf) { listing = null } }
   // The poll being settled, gone with its line should it go from the chat meanwhile.
   val settling = deciding?.let { seq -> (chat.line(seq)?.content as? LineContent.Poll)?.poll?.let { seq to it } }

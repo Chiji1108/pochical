@@ -2,6 +2,7 @@ package app.pochical.groups
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,6 +15,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.ModalBottomSheet
@@ -28,6 +31,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -52,16 +56,22 @@ import java.time.LocalDate
 /**
  * Everyone's shifts on a day (/design's PickedDaySheet): a row a member, their face and name, their
  * mark, the pattern's name and hours, 早出 and 残業 said in words with the day's own hours; みんな休み
- * under the date when it is one.
+ * under the date when it is one. 全体チャットで共有 at its head opens 全体チャット with the day over its
+ * composer ([onShare]; spec/chat.md, Polls).
  */
 @Composable
-fun DaySheetContent(day: LocalDate, members: List<GroupMember>, days: GroupDays, groupId: String, meId: String?) {
+fun DaySheetContent(day: LocalDate, members: List<GroupMember>, days: GroupDays, groupId: String, meId: String?, onShare: (LocalDate) -> Unit) {
   val colors = LocalThemeColors.current
   Column(Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-      Text(day.fullText, Modifier.semantics { heading() }, style = PochicalTextStyles.headline, color = colors.textPrimary)
-      if (day in days.together.days) {
-        Text(stringResource(R.string.together_day), style = PochicalTextStyles.caption2, fontWeight = FontWeight.SemiBold, color = colors.accentDefault)
+    Box(Modifier.fillMaxWidth()) {
+      Column(Modifier.fillMaxWidth().padding(horizontal = 56.dp, vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(day.fullText, Modifier.semantics { heading() }, style = PochicalTextStyles.headline, color = colors.textPrimary)
+        if (day in days.together.days) {
+          Text(stringResource(R.string.together_day), style = PochicalTextStyles.caption2, fontWeight = FontWeight.SemiBold, color = colors.accentDefault)
+        }
+      }
+      IconButton(onClick = { onShare(day) }, Modifier.align(Alignment.CenterEnd).padding(end = 4.dp)) {
+        Icon(painterResource(R.drawable.ic_share), stringResource(R.string.chat_share_in_chat))
       }
     }
     members.forEachIndexed { index, member ->

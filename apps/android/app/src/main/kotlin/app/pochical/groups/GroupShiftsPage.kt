@@ -137,13 +137,13 @@ private fun places(layout: ShiftsLayout, thisMonth: YearMonth, weekStart: Int): 
  * day in a sheet along the bottom, the table left live above it.
  */
 @Composable
-fun GroupShiftsPage(groupId: String, opening: LocalDate?, onBack: () -> Unit) {
-  GroupPage(groupId, stringResource(R.string.group_shifts), onBack) { group -> ShiftsPage(group, opening, onBack) }
+fun GroupShiftsPage(groupId: String, opening: LocalDate?, onBack: () -> Unit, onShare: (LocalDate) -> Unit) {
+  GroupPage(groupId, stringResource(R.string.group_shifts), onBack) { group -> ShiftsPage(group, opening, onBack, onShare) }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ShiftsPage(group: GroupRow, opening: LocalDate?, onBack: () -> Unit) {
+private fun ShiftsPage(group: GroupRow, opening: LocalDate?, onBack: () -> Unit, onShare: (LocalDate) -> Unit) {
   val colors = LocalThemeColors.current
   val today = rememberToday()
   val thisMonth = YearMonth.from(today)
@@ -208,7 +208,7 @@ private fun ShiftsPage(group: GroupRow, opening: LocalDate?, onBack: () -> Unit)
     sheetPeekHeight = 0.dp,
     sheetContent = {
       Box(Modifier.onSizeChanged { sheetHeight = it.height }) {
-        sheetDay?.let { day -> DaySheetContent(day, shown, daysOf(YearMonth.from(day)), group.id, meId) }
+        sheetDay?.let { day -> DaySheetContent(day, shown, daysOf(YearMonth.from(day)), group.id, meId, onShare) }
       }
     },
     topBar = {

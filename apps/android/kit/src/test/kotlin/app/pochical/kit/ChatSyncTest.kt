@@ -2,6 +2,7 @@ package app.pochical.kit
 
 import app.pochical.design.Chat
 import app.pochical.v1.ChatEdit
+import app.pochical.v1.ChatPoll
 import app.pochical.v1.block
 import app.pochical.v1.change
 import app.pochical.v1.chatContent
@@ -74,6 +75,20 @@ class ChatSyncTest {
     assertEquals(listOf(1L to "おはよう"), sent.lines.map { it.seq to (it.content as LineContent.Words).text })
     assertEquals(waiting.opId, sent.lines.single().opId)
     assertEquals(1, server.lines("g1").size)
+  }
+
+  @Test
+  fun daysSharedAndPutToTheVoteShowWaitingAtOnceThenAsTheGroups() = runBlocking {
+    val phone = signedIn()
+    val me = server.userId
+    phone.chats.sendDays("g1", GROUP_THREAD, listOf("2026-11-03", "2026-11-04"), poll = false)
+    phone.chats.sendDays("g1", GROUP_THREAD, listOf("2026-11-07", "2026-11-08"), poll = true, replyTo = null)
+    assertEquals(
+      listOf(LineContent.Days(listOf("2026-11-03", "2026-11-04")), LineContent.Poll(ChatPoll.newBuilder().addAllDays(listOf("2026-11-07", "2026-11-08")).build())),
+      phone.chat(me).waiting.map { it.content },
+    )
+    val sent = phone.chat(me) { it.waiting.isEmpty() && it.lines.size == 2 }
+    assertEquals(listOf(LineKind.Days, LineKind.Poll), sent.lines.map { it.content.kind })
   }
 
   @Test

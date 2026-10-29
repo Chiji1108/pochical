@@ -30,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.material3.TextButton
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
@@ -65,6 +66,7 @@ import app.pochical.R
 import app.pochical.design.Chat
 import app.pochical.design.Radius
 import app.pochical.kit.ChatLine
+import app.pochical.kit.GroupMember
 import app.pochical.kit.GroupMemberRow
 import app.pochical.kit.LineContent
 import app.pochical.kit.LineReaction
@@ -178,6 +180,10 @@ class MessageHandlers(
   val voters: (day: LocalDate, people: List<String>) -> Unit,
   /** The chat's group, whose photos its lines show. */
   val groupId: String,
+  /** シフト表で見る: the group's shifts, from a line's first shared day. */
+  val openShifts: (LocalDate) -> Unit = {},
+  /** Whose shifts a card of days shows from one day through another: everyone in the group, or the two of a one-to-one chat. */
+  val dayMembers: @Composable (from: LocalDate, through: LocalDate) -> List<GroupMember> = { _, _ -> emptyList() },
   /** 送信をやめる: the member's line of photos [opId] stops going up, not sent. */
   val stopSending: (opId: String) -> Unit,
   /** A line's photo, by its place in the line, opened large. */
@@ -238,8 +244,13 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
     } else {
       null
     }
+  // シフト表で見る comes last, after the writer's profile (spec/chat.md, Screen readers).
+  val (shifts, parts) = look.parts.partition { it is DaysPart }
   val actions =
-    (items.map { item -> CustomAccessibilityAction(item.label) { item.run(); true } } + look.parts.flatMap { it.actions(partLine) } + listOfNotNull(profile))
+    (items.map { item -> CustomAccessibilityAction(item.label) { item.run(); true } } +
+        parts.flatMap { it.actions(partLine) } +
+        listOfNotNull(profile) +
+        shifts.flatMap { it.actions(partLine) })
       // Android holds at most this many on one element; past them, the latest parts' go.
       .take(MOST_ACTIONS)
   // Activating a sent line of photos opens its first large; any other line opens its menu, as the long press does.
@@ -252,9 +263,9 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
       .fillMaxWidth()
       .padding(top = (if (look.startsRun) Chat.runGap else Chat.lineGap).dp)
       .then(
-        // A poll's days and 行ける are gone through one by one after its line (spec/chat.md, Screen
-        // readers); any other line is one element.
-        if (look.poll != null) Modifier.semantics { lineSemantics(look.said, actions, menuLabel) { activate() } }
+        // A poll's days and 行ける, and shared days, are gone through one by one after its line
+        // (spec/chat.md, Screen readers); any other line is one element.
+        if (look.poll != null || look.content is LineContent.Days) Modifier.semantics { lineSemantics(look.said, actions, menuLabel) { activate() } }
         else Modifier.clearAndSetSemantics { lineSemantics(look.said, actions, menuLabel) { activate() } }
       )
   ) {
@@ -316,6 +327,13 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
           }
           if (!look.mine) TimeRoom(look.time, null, edited, look.pinned, items, Modifier.padding(start = 4.dp).clearAndSetSemantics {})
         }
+        // All the days, with everyone's shifts round them.
+        val shared = look.content as? LineContent.Days
+        if (shared != null && look.seq != null) {
+          TextButton(onClick = { handlers.openShifts(LocalDate.parse(shared.days.first())) }, Modifier.clearAndSetSemantics {}) {
+            Text(stringResource(R.string.chat_see_shifts), style = MaterialTheme.typography.labelMedium)
+          }
+        }
         if (look.waiting?.failed == true) {
           Text(stringResource(R.string.chat_not_sent), style = MaterialTheme.typography.labelSmall, color = colors.dangerDefault)
         }
@@ -345,8 +363,10 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
 private fun LineBody(look: MessageLook, handlers: MessageHandlers, live: Boolean = true, onQuote: () -> Unit) {
   val poll = look.poll
   val photos = look.content as? LineContent.Photos
+  val shared = look.content as? LineContent.Days
   when {
     poll != null -> PollCard(poll, handlers, look.seq.takeIf { live }, live)
+    shared != null -> SharedDaysBody(shared, look, handlers)
     photos != null -> PhotoBody(look, photos, handlers, live, onQuote)
     else -> Bubble(look, handlers, onQuote)
   }
@@ -622,7 +642,10 @@ private fun partsOf(content: LineContent, quote: LineQuote?, reactions: Reaction
   val words = content as? LineContent.Words
   val links = words?.let { textParts(it.text).mapNotNull { part -> part.url } }.orEmpty()
   val photos = (content as? LineContent.Photos)?.let { PhotosPart(it.photos.size, waiting) }
+  // シフト表で見る for a line sent, as its link under the card offers.
+  val days = (content as? LineContent.Days)?.days?.firstOrNull()?.takeIf { waiting == null }?.let { DaysPart(LocalDate.parse(it)) }
   return listOfNotNull(
+    days,
     photos,
     poll,
     reactions,
@@ -638,6 +661,21 @@ private fun partsOf(content: LineContent, quote: LineQuote?, reactions: Reaction
 private fun pollLook(content: LineContent, canDecide: Boolean, waiting: Boolean): PollPart? {
   val poll = content as? LineContent.Poll ?: return null
   return PollPart(PollLook(poll.poll, canDecide, waiting))
+}
+
+/** Shared days as their card, dimmed while on its way, lit as it is gone to. */
+@Composable
+private fun SharedDaysBody(shared: LineContent.Days, look: MessageLook, handlers: MessageHandlers) {
+  val days = remember(shared.days) { shared.days.map(LocalDate::parse) }
+  if (days.isEmpty()) return
+  val members = handlers.dayMembers(days.first(), days.last())
+  DayCard(
+    days,
+    members,
+    handlers.groupId,
+    Modifier.alpha(if (look.waiting != null) WAITING_ALPHA else 1f)
+      .litWhenGoneTo(handlers.lit?.takeIf { it.seq == look.seq && look.seq != null }, RoundedCornerShape(Radius.lg), handlers.reducedMotion, handlers.litShown),
+  )
 }
 
 /** How far in from its bubble's edge a photo answering a line sits. */
