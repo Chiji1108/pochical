@@ -51,7 +51,7 @@ func aThumbHashDrawsItsBlur(_ vector: ThumbHashVectors.Decode) throws {
   #expect(ThumbHash.image(Data()) == nil)
 }
 
-@Test func aPhotosBlurIsTheRightWayUp() throws {
+@Test func aPhotosBlurIsTheRightWayUp() async throws {
   // Red over blue, as a JPEG the phone sends.
   let context = try #require(
     CGContext(
@@ -68,7 +68,7 @@ func aThumbHashDrawsItsBlur(_ vector: ThumbHashVectors.Decode) throws {
   CGImageDestinationAddImage(destination, image, nil)
   CGImageDestinationFinalize(destination)
 
-  let hash = try #require(ChatPhotos.shrink(out as Data)?.thumbHash)
+  let hash = try #require(await ChatPhotos.shrink(out as Data)?.thumbHash)
   let blur = try #require(ThumbHash.decode(hash))
   let top = 0
   let bottom = (blur.height - 1) * blur.width * 4

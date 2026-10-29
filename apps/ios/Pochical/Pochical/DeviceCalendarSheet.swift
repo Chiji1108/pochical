@@ -202,7 +202,6 @@ struct DeviceCalendarSheet: View {
   @State private var asksToRemove = false
   /// The alert's title when adding or taking out failed.
   @State private var failure: String?
-  @State private var guide: OpenedLink?
 
   var body: some View {
     // The patterns picked, the days' memos, and who works them, kept with
@@ -291,9 +290,6 @@ struct DeviceCalendarSheet: View {
       }
       .alert(failure ?? "", isPresented: Binding($failure), presenting: failure) { _ in
         Button("OK", role: .cancel) {}
-      }
-      .sheet(item: $guide) { page in
-        SafariView(url: page.url).ignoresSafeArea()
       }
     }
     .task {
@@ -401,7 +397,7 @@ struct DeviceCalendarSheet: View {
       // A calendar of a Google account added to the iPhone goes on to
       // Google Calendar, which few find by themselves (spec/calendar.md).
       Button("Googleカレンダーに入れるには") {
-        guide = OpenedLink(url: Site.page("support/google-calendar"))
+        openURL(Site.page("support/google-calendar"), prefersInApp: true)
       }
       .font(.footnote)
       .accessibilityHint("ブラウザで開きます")

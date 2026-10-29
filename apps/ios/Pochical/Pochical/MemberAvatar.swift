@@ -64,13 +64,11 @@ struct PhotoEditor<Picture: View>: View {
   var onUsual: (() async -> Void)?
   var onRemove: (() async -> Void)?
   @State private var picking = false
+  @State private var picked: PhotosPickerItem?
   @State private var taking = false
-  /// A photo taken or picked, kept until the camera or the photos have
-  /// gone: a cover opened while another is still closing shows outside
-  /// the safe area, or not at all.
+  /// A photo taken, kept until the camera has gone: a cover opened while
+  /// another is still closing shows outside the safe area, or not at all.
   @State private var pending: UIImage?
-  /// The camera or the photos are on screen, or still closing.
-  @State private var covered = false
   /// A photo taken or picked, being cut.
   @State private var cropping: CroppingPhoto?
   @State private var busy = false
@@ -82,14 +80,10 @@ struct PhotoEditor<Picture: View>: View {
       // without a camera.
       if UIImagePickerController.isSourceTypeAvailable(.camera) {
         Button("写真を撮る", systemImage: "camera") {
-          covered = true
           taking = true
         }
       }
-      Button("写真を選ぶ", systemImage: "photo.on.rectangle") {
-        covered = true
-        picking = true
-      }
+      Button("写真を選ぶ", systemImage: "photo.on.rectangle") { picking = true }
       if let onUsual {
         Button("いつもの写真に戻す", systemImage: "arrow.uturn.backward") {
           run(onUsual)
@@ -108,24 +102,30 @@ struct PhotoEditor<Picture: View>: View {
     }
     .disabled(busy)
     .frame(maxWidth: .infinity)
-    // The system's photos in a sheet of the app's own, as the camera is
-    // in a cover of its own, for onDismiss to say when they have gone.
-    .sheet(isPresented: $picking, onDismiss: uncover) {
-      LibraryPicker { provider in
-        picking = false
-        if let provider { load(provider) }
-      }
-      .ignoresSafeArea()
+    .photosPicker(
+      isPresented: $picking, selection: $picked, matching: .images,
+      preferredItemEncoding: .compatible
+    )
+    // The cut opens as the photos close, in the same update, and reads the
+    // photo there: SwiftUI says nothing of when the photos have gone, and
+    // a cover opened while they are still closing shows outside the safe
+    // area.
+    .onChange(of: picked) { _, item in
+      guard let item else { return }
+      picked = nil
+      cropping = CroppingPhoto(source: .picked(item))
     }
-    .fullScreenCover(isPresented: $taking, onDismiss: uncover) {
+    // The camera in a cover of the app's own, for onDismiss to say when it
+    // has gone.
+    .fullScreenCover(isPresented: $taking, onDismiss: cutTaken) {
       CameraPicker { image in
         pending = image
         taking = false
       }
       .ignoresSafeArea()
     }
-    .fullScreenCover(item: $cropping) { picked in
-      PhotoCrop(image: picked.image, shape: shape) { cut in
+    .fullScreenCover(item: $cropping) { photo in
+      CroppingCover(source: photo.source, shape: shape) { cut in
         cropping = nil
         guard let cut else { return }
         take(cut)
@@ -133,59 +133,21 @@ struct PhotoEditor<Picture: View>: View {
     }
   }
 
-  /// A photo picked, read and turned upright off the main thread, to be
-  /// cut once the photos have gone.
-  private func load(_ provider: NSItemProvider) {
-    busy = true
-    _ = provider.loadDataRepresentation(for: .image) { data, _ in
-      Task { @MainActor in
-        defer { busy = false }
-        guard let data,
-          let image = await Task.detached(operation: {
-            ChatPhotos.upright(data, maxEdge: Chat.photoMaxEdge)
-          }).value
-        else { return }
-        pending = UIImage(cgImage: image)
-        cutPending()
-      }
-    }
-  }
-
-  /// The camera or the photos have gone: a photo already there is cut.
-  private func uncover() {
-    covered = false
-    cutPending()
-  }
-
-  /// Opens the cut for a photo taken or picked, once nothing covers the
-  /// screen.
-  private func cutPending() {
-    guard !covered, let pending else { return }
-    cropping = CroppingPhoto(image: pending)
+  /// The camera has gone: a photo taken is cut.
+  private func cutTaken() {
+    guard let pending else { return }
+    cropping = CroppingPhoto(source: .taken(pending))
     self.pending = nil
   }
 
-  /// A photo just cut, encoded off the main thread and sent.
+  /// A photo just cut, shrunk for how small it shows, then told.
   private func take(_ image: UIImage) {
     busy = true
     Task {
       defer { busy = false }
-      guard
-        let data = await Task.detached(operation: { image.jpegData(compressionQuality: 0.9) })
-          .value
-      else { return }
-      await send(data)
+      guard let shrunk = await shrunkPicture(image) else { return }
+      await onPhoto(shrunk.jpeg)
     }
-  }
-
-  /// Shrunk for how small it shows, then told.
-  private func send(_ data: Data) async {
-    guard
-      let shrunk = await Task.detached(operation: {
-        ChatPhotos.shrink(data, maxEdge: Chat.pictureMaxEdge)
-      }).value
-    else { return }
-    await onPhoto(shrunk.jpeg)
   }
 
   private func run(_ action: @escaping () async -> Void) {
@@ -195,6 +157,50 @@ struct PhotoEditor<Picture: View>: View {
       await action()
     }
   }
+}
+
+/// A photo taken or picked, cut (`PhotoCrop`) once a picked one is read,
+/// a spinner on the cut's own dark meanwhile.
+private struct CroppingCover: View {
+  @Environment(\.themeColors) private var colors
+  let source: CroppingPhoto.Source
+  let shape: PhotoCropShape
+  let onDone: (UIImage?) -> Void
+  @State private var read: UIImage?
+
+  var body: some View {
+    switch (source, read) {
+    case (.taken(let image), _), (.picked, .some(let image)):
+      PhotoCrop(image: image, shape: shape, onDone: onDone)
+    case (.picked(let item), nil):
+      ProgressView()
+        .tint(colors.mediaText)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(colors.mediaBackground)
+        .statusBarHidden()
+        .task {
+          guard let data = try? await item.loadTransferable(type: Data.self),
+            let image = await uprightToCut(data)
+          else { return onDone(nil) }
+          read = image
+        }
+    }
+  }
+}
+
+/// A photo's bytes read upright at the size `PhotoEditor` cuts it at, off
+/// the main actor.
+@concurrent
+private func uprightToCut(_ data: Data) async -> UIImage? {
+  ChatPhotos.upright(data, maxEdge: Chat.photoMaxEdge).map(UIImage.init(cgImage:))
+}
+
+/// A photo `PhotoEditor` just cut, encoded and shrunk for how small it
+/// shows, off the main actor.
+@concurrent
+private func shrunkPicture(_ image: UIImage) async -> ShrunkPhoto? {
+  guard let data = image.jpegData(compressionQuality: 0.9) else { return nil }
+  return await ChatPhotos.shrink(data, maxEdge: Chat.pictureMaxEdge)
 }
 
 /// A picture at the top of a page that changes it, what tapping it does
@@ -265,39 +271,6 @@ private struct CameraPicker: UIViewControllerRepresentable {
 
     func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
       onDone(nil)
-    }
-  }
-}
-
-/// The system's photos, one image to use as a face or a group's mark;
-/// nil when closed without one.
-private struct LibraryPicker: UIViewControllerRepresentable {
-  let onDone: (NSItemProvider?) -> Void
-
-  func makeUIViewController(context: Context) -> PHPickerViewController {
-    var configuration = PHPickerConfiguration()
-    configuration.filter = .images
-    configuration.selectionLimit = 1
-    let picker = PHPickerViewController(configuration: configuration)
-    picker.delegate = context.coordinator
-    return picker
-  }
-
-  func updateUIViewController(_ picker: PHPickerViewController, context: Context) {}
-
-  func makeCoordinator() -> Coordinator {
-    Coordinator(onDone: onDone)
-  }
-
-  final class Coordinator: NSObject, PHPickerViewControllerDelegate {
-    let onDone: (NSItemProvider?) -> Void
-
-    init(onDone: @escaping (NSItemProvider?) -> Void) {
-      self.onDone = onDone
-    }
-
-    func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
-      onDone(results.first?.itemProvider)
     }
   }
 }
