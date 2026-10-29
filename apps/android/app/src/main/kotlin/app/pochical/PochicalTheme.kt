@@ -10,13 +10,16 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.text.TextStyle
 import app.pochical.design.MarkColor
+import app.pochical.design.PochicalTextStyles
 import app.pochical.design.Theme
 import app.pochical.design.ThemeColors
 import app.pochical.kit.Appearance
@@ -43,9 +46,37 @@ fun PochicalTheme(settings: DeviceSettings, content: @Composable () -> Unit) {
     activity?.enableEdgeToEdge(statusBarStyle = bars, navigationBarStyle = bars)
   }
   CompositionLocalProvider(LocalThemeColors provides settings.theme.colors(dark)) {
-    MaterialTheme(colorScheme = colorScheme(settings, dark), content = content)
+    MaterialTheme(colorScheme = colorScheme(settings, dark), typography = Phrases, content = content)
   }
 }
+
+/**
+ * Material's type scale, its Japanese breaking between phrases rather than in the middle of a word,
+ * as the app's own text styles and the site's do (PochicalTextStyles), so a title, a button or a
+ * note wraps where a reader would.
+ */
+private val Phrases: Typography =
+  Typography().run {
+    val phrases = PochicalTextStyles.body.lineBreak
+    fun TextStyle.inPhrases() = copy(lineBreak = phrases)
+    Typography(
+      displayLarge = displayLarge.inPhrases(),
+      displayMedium = displayMedium.inPhrases(),
+      displaySmall = displaySmall.inPhrases(),
+      headlineLarge = headlineLarge.inPhrases(),
+      headlineMedium = headlineMedium.inPhrases(),
+      headlineSmall = headlineSmall.inPhrases(),
+      titleLarge = titleLarge.inPhrases(),
+      titleMedium = titleMedium.inPhrases(),
+      titleSmall = titleSmall.inPhrases(),
+      bodyLarge = bodyLarge.inPhrases(),
+      bodyMedium = bodyMedium.inPhrases(),
+      bodySmall = bodySmall.inPhrases(),
+      labelLarge = labelLarge.inPhrases(),
+      labelMedium = labelMedium.inPhrases(),
+      labelSmall = labelSmall.inPhrases(),
+    )
+  }
 
 /**
  * The colors of the テーマ in use, in light or dark as the screens are, for
