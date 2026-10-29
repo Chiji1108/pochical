@@ -66,6 +66,14 @@ nonisolated struct OpenedChat: Hashable, Sendable {
         UIApplication.shared.registerForRemoteNotifications()
       }
     }
+    // A group left takes its chats' notifications with it (spec/chat.md,
+    // Notifications).
+    Task {
+      for await note in NotificationCenter.default.notifications(named: Groups.left) {
+        guard let groupID = note.userInfo?["groupID"] as? String else { continue }
+        await takeBack { $0.filter { $0.groupID == groupID }.map(\.id) }
+      }
+    }
   }
 
   /// Reads the permission again: it may have changed in the system's

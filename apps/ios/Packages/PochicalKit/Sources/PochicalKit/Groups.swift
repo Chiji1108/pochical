@@ -186,6 +186,20 @@ enum Groups {
     try GroupRow.upsert { row }.execute(db)
   }
 
+  /// Told of each group the user leaves or is taken out of, with its
+  /// `groupID` in the user info, once the device has let go of what it
+  /// held of it, for what the app keeps of it outside the database (its
+  /// chats' notifications) to go too.
+  public static let left = Notification.Name("Groups.left")
+
+  /// The groups `changes` say the user left or was taken out of.
+  static func left(in changes: [Pochical_V1_Change]) -> [String] {
+    changes.compactMap { change in
+      guard case .membership(let membership) = change.kind, membership.left else { return nil }
+      return membership.groupID
+    }
+  }
+
   /// A Reset: the groups come again with everything else.
   static func reset(in db: Database) throws {
     try GroupRow.delete().execute(db)

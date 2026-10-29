@@ -87,6 +87,8 @@ class DrawnConversations(
         .setPersons(persons.toTypedArray())
         .setIsConversation()
         .build()
+    // A pinned one disabled as its group was left opens again as the person joins it again.
+    ShortcutManagerCompat.enableShortcuts(context, listOf(shortcut))
     ShortcutManagerCompat.pushDynamicShortcut(context, shortcut)
     return shortcut
   }
