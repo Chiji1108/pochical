@@ -19,7 +19,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,26 +34,27 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.Footnote
 import app.pochical.LimitedTextField
 import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.ReviewPrompt
 import app.pochical.SectionHeader
-import app.pochical.kit.characterCount
-import app.pochical.rememberKeptField
+import app.pochical.chat.ProfileOf
+import app.pochical.chat.ReportAndBlock
+import app.pochical.chat.ReportAndBlockState
 import app.pochical.design.TextLimits
 import app.pochical.kit.GroupMarkValue
 import app.pochical.kit.GroupMemberRow
 import app.pochical.kit.GroupRow
 import app.pochical.kit.MarkPhotoGone
 import app.pochical.kit.PhotoShelf
-import app.pochical.notifications.GroupChatNotifications
+import app.pochical.kit.characterCount
 import app.pochical.kit.directThread
 import app.pochical.kit.nextGroupColor
-import app.pochical.chat.ProfileOf
-import app.pochical.chat.ReportAndBlock
-import app.pochical.chat.ReportAndBlockState
+import app.pochical.notifications.GroupChatNotifications
+import app.pochical.rememberKeptField
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.launch
 
@@ -86,7 +86,7 @@ fun GroupSettingsPage(
   var failed by remember { mutableStateOf<String?>(null) }
   val reportAndBlock = remember { ReportAndBlockState() }
   val values = LocalValues.current
-  val blockRows by remember(values) { values.blocks() }.collectAsState(emptyList())
+  val blockRows by remember(values) { values.blocks() }.collectAsStateWithLifecycle(emptyList())
   val blocked = remember(blockRows) { blockRows.map { it.userId }.toSet() }
   var confirmingRemove by remember { mutableStateOf<GroupMemberRow?>(null) }
 
@@ -232,7 +232,7 @@ private fun EditForm(group: GroupRow, onBack: () -> Unit) {
   val scope = rememberCoroutineScope()
   val groupId = group.id
   val values = LocalValues.current
-  val groups by remember(values) { values.groups() }.collectAsState(emptyList())
+  val groups by remember(values) { values.groups() }.collectAsStateWithLifecycle(emptyList())
   // The color an emoji or a photo turned into an icon or letters starts in: the first the user's
   // other groups do not use, this one not counting.
   val freeColor = nextGroupColor(groups.filter { it.id != groupId }.map { it.mark }, LocalThemeColors.current.marks.size)
@@ -337,7 +337,7 @@ private fun ProfileForm(groupName: String, me: GroupMemberRow, modifier: Modifie
   val values = LocalValues.current
   val scope = rememberCoroutineScope()
   val groupId = me.groupId
-  val usualName = remember(values) { values.profile() }.collectAsState(null).value?.name.orEmpty()
+  val usualName = remember(values) { values.profile() }.collectAsStateWithLifecycle(null).value?.name.orEmpty()
   val kept = if (me.ownName) me.displayName else ""
   val name =
     rememberKeptField(kept, fits = { characterCount(it) <= TextLimits.personName && !(it.isEmpty() && usualName.isEmpty()) }) {

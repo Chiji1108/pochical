@@ -13,25 +13,35 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -40,28 +50,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.pochical.Footnote
 import app.pochical.LocalDeviceSettings
 import app.pochical.R
 import app.pochical.RootPage
-import app.pochical.SettingsPage
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.selection.toggleable
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Switch
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.Saver
-import app.pochical.kit.ChatNotificationState
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.style.TextOverflow
-import app.pochical.Footnote
 import app.pochical.SectionHeader
+import app.pochical.SettingsPage
 import app.pochical.chat.blockedMembers
 import app.pochical.chat.rememberBlockedPeople
 import app.pochical.chat.rememberUnblocking
@@ -71,6 +69,7 @@ import app.pochical.groups.LocalValues
 import app.pochical.groups.MemberAvatar
 import app.pochical.groups.rememberMeId
 import app.pochical.kit.ChatKey
+import app.pochical.kit.ChatNotificationState
 import app.pochical.kit.ChatNotificationsSummary
 import app.pochical.kit.GROUP_THREAD
 import app.pochical.kit.PhotoShelf
@@ -83,7 +82,7 @@ import kotlinx.coroutines.launch
 fun ChatNotificationsRow(open: (RootPage) -> Unit) {
   val allowed by LocalNotificationPermission.current.allowed.collectAsStateWithLifecycle()
   val values = LocalValues.current
-  val groups by remember(values) { values.groups() }.collectAsState(emptyList())
+  val groups by remember(values) { values.groups() }.collectAsStateWithLifecycle(emptyList())
   // Its value once the device has read the switches, never a guess before.
   val summary = rememberChatNotifications()?.let { chatNotificationsSummary(groups.map { it.id }, it, allowed) }
   ListItem(
@@ -113,8 +112,8 @@ fun ChatNotificationsRow(open: (RootPage) -> Unit) {
 fun ChatNotificationsPage(onBack: () -> Unit) {
   val context = LocalContext.current
   val values = LocalValues.current
-  val groups by remember(values) { values.groups() }.collectAsState(emptyList())
-  val members by remember(values) { values.allMembers() }.collectAsState(emptyList())
+  val groups by remember(values) { values.groups() }.collectAsStateWithLifecycle(emptyList())
+  val members by remember(values) { values.allMembers() }.collectAsStateWithLifecycle(emptyList())
   val read = rememberChatNotifications()
   val me = rememberMeId()
   val snackbar = remember { SnackbarHostState() }
