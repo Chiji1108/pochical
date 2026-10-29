@@ -56,6 +56,12 @@ import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
+import app.pochical.kit.largeEmojiCount
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.withLink
@@ -208,6 +214,14 @@ class MessageHandlers(
   val folded: (ChatLine) -> Boolean = { false },
   /** 表示 on a folded line: shown this once, while the chat is open. */
   val showFolded: (seq: Long) -> Unit = {},
+  /** The lines opened past `chatRules.foldLines` (続きを読む), by key, opened while the chat is open. */
+  val unfolded: Set<String> = emptySet(),
+  /** 続きを読む on the line [key]. */
+  val unfold: (key: String) -> Unit = {},
+  /** A link's own menu, as a long press on it opens it: リンクを開く and リンクをコピー. */
+  val linkItems: (url: String) -> List<LineMenuItem> = { emptyList() },
+  /** The key of the day's title the floating day takes over, not drawn under it, read where it is drawn. */
+  val takenTitle: () -> String? = { null },
 ) {
   /** [member] when their profile opens from the chat (their face, their mention): not the reader's, nor a deleted account's, and only where profiles open. */
   fun profileOf(member: GroupMemberRow?): GroupMemberRow? = member?.takeIf { openProfile != null && it.userId != me && !it.deleted }
@@ -228,28 +242,32 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
   val haptics = LocalHapticFeedback.current
   val swipeWidth = with(LocalDensity.current) { Chat.replySwipe.dp.toPx() }
   val lifted = menu.open?.key == look.key
-  val openMenu = {
+  // Where the words' links are, for a long press on one to open the link's menu instead.
+  val links = remember { LinkHits() }
+  // Its reactions and menu; at [pressed] in the window, on a link, the link's own menu where the line's goes.
+  val openMenu = { pressed: Offset? ->
     coordinates?.let { at ->
-      val items = handlers.items(look)
+      val url = pressed?.let(links::urlAt)
       val seq = look.seq
       val bar =
-        seq?.let {
+        seq?.takeIf { url == null }?.let {
           val chosen = look.reactions.filter { handlers.me in it.userIds }.map { it.emoji }.toSet()
           ReactionBar(chosen, onReact = { emoji -> handlers.react(seq, emoji, emoji !in chosen) }, onMore = { handlers.moreReactions(seq) })
         }
+      val items = if (url != null) handlers.linkItems(url) else handlers.items(look)
       menu.open(MenuLine(look.key, look.mine, look.waiting != null, items, bar) { LineBody(look, handlers, live = false, onQuote = {}) }, at.unclipped())
     }
   }
   val gestures =
     LineGestureHandler(
-      onLongPress = { openMenu() },
+      onLongPress = { at -> openMenu(at) },
       onSlide = { at -> menu.slide(at, haptics) },
       onLift = { at, slid -> menu.lift(at, slid) },
       onReply = { look.seq?.let(handlers.reply) },
     )
   val items = handlers.items(look)
   // Its menu's items, 返信 first, then what each of its parts offers (spec/chat.md, Screen readers).
-  val partLine = PartLine(look.seq, handlers, openMenu = { openMenu() })
+  val partLine = PartLine(look.seq, handlers, openMenu = { openMenu(null) }, writerId = look.writer?.userId)
   // The writer's profile, which a tap on their face opens.
   val profiled = handlers.profileOf(look.writer)
   val openProfile = handlers.openProfile
@@ -266,14 +284,13 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
         parts.flatMap { it.actions(partLine) } +
         listOfNotNull(profile) +
         shifts.flatMap { it.actions(partLine) })
-      // A writer mentioning themselves has their profile once.
-      .distinctBy { it.label }
+
       // Android holds at most this many on one element; past them, the latest parts' go.
       .take(MOST_ACTIONS)
   // Activating a sent line of photos opens its first large; any other line opens its menu, as the long press does.
   val photoSeq = look.seq?.takeIf { look.content is LineContent.Photos }
   val menuLabel = stringResource(if (photoSeq != null) R.string.chat_photo_open else R.string.chat_menu)
-  val activate = { if (photoSeq != null) handlers.openPhoto(photoSeq, 0) else openMenu() }
+  val activate = { if (photoSeq != null) handlers.openPhoto(photoSeq, 0) else openMenu(null) }
   Box(
     modifier
       .zIndex(if (handlers.spray?.seq == look.seq && look.seq != null) 1f else 0f)
@@ -340,7 +357,7 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
               .alpha(if (lifted) 0f else 1f)
               .lineGestures(gestures.takeIf { look.seq != null || look.waiting != null }, look.swipe, drag, { coordinates }, handlers.reducedMotion)
           ) {
-            LineBody(look, handlers, onQuote = { look.quote?.let { handlers.jump(it.seq) } })
+            LineBody(look, handlers, onQuote = { look.quote?.let { handlers.jump(it.seq) } }, links = links)
           }
           if (!look.mine) TimeRoom(look.time, null, edited, look.pinned, items, Modifier.padding(start = 4.dp).clearAndSetSemantics {})
         }
@@ -377,16 +394,36 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
 
 /** What the line is drawn as: a poll's card, or a bubble; [live] false for the copy lifted over the menu, on which nothing acts. */
 @Composable
-private fun LineBody(look: MessageLook, handlers: MessageHandlers, live: Boolean = true, onQuote: () -> Unit) {
+private fun LineBody(look: MessageLook, handlers: MessageHandlers, live: Boolean = true, onQuote: () -> Unit, links: LinkHits? = null) {
   val poll = look.poll
   val photos = look.content as? LineContent.Photos
   val shared = look.content as? LineContent.Days
+  val words = look.content as? LineContent.Words
   when {
     poll != null -> PollCard(poll, handlers, look.seq.takeIf { live }, live)
     shared != null -> SharedDaysBody(shared, look, handlers)
     photos != null -> PhotoBody(look, photos, handlers, live, onQuote)
-    else -> Bubble(look, handlers, onQuote, live)
+    // Nothing but a few emoji, large and without a bubble; a reply keeps its bubble for its quote.
+    words != null && look.quote == null && remember(words.text) { largeEmojiCount(words.text) } > 0 -> LargeEmoji(words.text, look, handlers)
+    else -> Bubble(look, handlers, onQuote, live, links)
   }
+}
+
+/**
+ * A message of nothing but 1 to `chatRules.largeEmojiMax` emoji (spec/chat.md, Large emoji): drawn
+ * at `chatRules.largeEmojiSize` sp, growing with the reader's text size, without a bubble; lit in its
+ * own rounded ground as it is gone to, as a card is.
+ */
+@Composable
+private fun LargeEmoji(text: String, look: MessageLook, handlers: MessageHandlers) {
+  Text(
+    text,
+    Modifier.alpha(if (look.waiting != null && !look.waiting.failed) WAITING_ALPHA else 1f)
+      .litWhenGoneTo(handlers.lit?.takeIf { it.seq == look.seq && look.seq != null }, RoundedCornerShape(Radius.lg), handlers.reducedMotion, handlers.litShown)
+      .padding(horizontal = 4.dp),
+    fontSize = Chat.largeEmojiSize.sp,
+    lineHeight = (Chat.largeEmojiSize * 1.2).sp,
+  )
 }
 
 /**
@@ -435,7 +472,7 @@ private fun PhotoBody(look: MessageLook, photos: LineContent.Photos, handlers: M
  * shine sweeping across, still with motion reduced.
  */
 @Composable
-fun Bubble(look: MessageLook, handlers: MessageHandlers, onQuote: () -> Unit, live: Boolean = true) {
+fun Bubble(look: MessageLook, handlers: MessageHandlers, onQuote: () -> Unit, live: Boolean = true, links: LinkHits? = null) {
   val colors = LocalThemeColors.current
   val shape = remember(look.mine, look.startsRun) { BubbleShape(look.mine, tail = look.startsRun) }
   val ink = if (look.mine) colors.accentOnFill else colors.textPrimary
@@ -460,11 +497,34 @@ fun Bubble(look: MessageLook, handlers: MessageHandlers, onQuote: () -> Unit, li
       )
   ) {
     look.quote?.let { BubbleQuote(it, ink, inset = 12.dp, onOpen = onQuote) }
-    Text(
-      messageText(look.content, look.mine, handlers, live),
-      Modifier.padding(horizontal = 12.dp),
-      style = MaterialTheme.typography.bodyLarge,
-      color = ink,
+    // Past chatRules.foldLines lines, cut with … and 続きを読む under them, as they are laid out
+    // (spec/chat.md, Long messages and shared days); opened, it stays open while the chat is.
+    val unfolded = look.key in handlers.unfolded
+    FoldedWords(
+      words = { onLayout ->
+        Text(
+          messageText(look.content, look.mine, handlers, live),
+          Modifier.padding(horizontal = 12.dp).onGloballyPositioned { links?.coordinates = it },
+          style = MaterialTheme.typography.bodyLarge,
+          color = ink,
+          maxLines = if (unfolded) Int.MAX_VALUE else Chat.foldLines,
+          overflow = TextOverflow.Ellipsis,
+          onTextLayout = { layout ->
+            onLayout(layout)
+            links?.layout = layout
+          },
+        )
+      },
+      more = {
+        Text(
+          stringResource(R.string.chat_read_more),
+          Modifier.padding(horizontal = 12.dp).padding(top = 4.dp).then(if (live) Modifier.clickable { handlers.unfold(look.key) } else Modifier),
+          style = MaterialTheme.typography.bodyMedium,
+          fontWeight = FontWeight.SemiBold,
+          // In the color the bubble's links take.
+          color = if (look.mine) ink else colors.accentDefault,
+        )
+      },
     )
     if (invitation != null) {
       Spacer(Modifier.height(8.dp))
@@ -532,15 +592,25 @@ private fun messageText(content: LineContent, mine: Boolean, handlers: MessageHa
   val nameOf = handlers.nameOf
   val words = content as? LineContent.Words ?: return AnnotatedString(lineWords(content, nameOf))
   val open by rememberUpdatedState(handlers.openProfile)
+  val browse by rememberUpdatedState(handlers.openLink)
   val parts = remember(words.text) { textParts(words.text) }
   // None opens on the copy lifted over the line's menu.
   val opens =
     remember(parts, handlers.writers, handlers.me, handlers.openProfile != null, live) {
       if (live) mentioned(parts.mapNotNull { it.mention }, handlers).associateBy { it.userId } else emptyMap()
     }
-  return remember(parts, mine, accent, nameOf, opens) {
+  return remember(parts, mine, accent, nameOf, opens, live) {
     buildAnnotatedString {
       for (part in parts) {
+        val url = part.url
+        if (url != null) {
+          // Underlined, in the accent in others' and the words' own color in one's own; a tap opens
+          // it in the system's browser sheet (spec/chat.md, In a message).
+          val link = SpanStyle(color = if (mine) Color.Unspecified else accent, textDecoration = TextDecoration.Underline)
+          if (!live) withStyle(link) { append(part.text) }
+          else withLink(LinkAnnotation.Clickable("$URL_TAG$url", TextLinkStyles(link, pressedStyle = link.merge(SpanStyle(background = accent.copy(alpha = PRESSED))))) { browse?.invoke(url) }) { append(part.text) }
+          continue
+        }
         val id = part.mention
         if (id == null) {
           append(part.text)
@@ -744,6 +814,52 @@ private const val ACCESSIBILITY_SCALE = 1.3f
 
 /** How dim a line on its way is, as it would be on the chat's ground. */
 private const val WAITING_ALPHA = 0.6f
+
+/**
+ * Words and, under them only while they run past their lines, [more] (続きを読む): told in the same
+ * pass the words are laid out in, as their layout comes before the rest is measured, so a long line
+ * is laid out whole the first time rather than growing a frame later.
+ */
+@Composable
+private fun FoldedWords(words: @Composable (onLayout: (TextLayoutResult) -> Unit) -> Unit, more: @Composable () -> Unit) {
+  val cut = remember { BooleanArray(1) }
+  Layout(content = {
+    words { cut[0] = it.hasVisualOverflow }
+    more()
+  }) { measurables, constraints ->
+    val text = measurables[0].measure(constraints)
+    val under = if (cut[0]) measurables[1].measure(constraints.copy(minWidth = 0)) else null
+    layout(maxOf(text.width, under?.width ?: 0), text.height + (under?.height ?: 0)) {
+      text.place(0, 0)
+      under?.place(0, text.height)
+    }
+  }
+}
+
+/** What a link's annotation is tagged with, before its URL. */
+private const val URL_TAG = "url:"
+
+/**
+ * Where a message's words are laid out, for a long press to tell a link under the finger, whose own
+ * menu it opens in place of the line's.
+ */
+class LinkHits {
+  var layout: TextLayoutResult? = null
+  var coordinates: LayoutCoordinates? = null
+
+  /** The link at [window], a point in the window, if any: one of its characters drawn under it. */
+  fun urlAt(window: Offset): String? {
+    val layout = layout ?: return null
+    val at = coordinates?.takeIf { it.isAttached }?.windowToLocal(window) ?: return null
+    val text = layout.layoutInput.text
+    // The nearest caret is either side of the character under the finger, if one is.
+    val near = layout.getOffsetForPosition(at)
+    val under = listOf(near, near - 1).firstOrNull { it in text.indices && layout.getBoundingBox(it).contains(at) } ?: return null
+    return text.getLinkAnnotations(under, under + 1).firstNotNullOfOrNull { range ->
+      (range.item as? LinkAnnotation.Clickable)?.tag?.takeIf { it.startsWith(URL_TAG) }?.removePrefix(URL_TAG)
+    }
+  }
+}
 
 /** How strong the accent lights a mention under the finger. */
 private const val PRESSED = 0.2f

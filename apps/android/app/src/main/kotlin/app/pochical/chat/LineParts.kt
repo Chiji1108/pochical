@@ -22,7 +22,7 @@ sealed interface LinePart {
 }
 
 /** What a part's actions act on: the line's seq (null for one on its way), what the chat does, and its menu. */
-class PartLine(val seq: Long?, val handlers: MessageHandlers, val openMenu: () -> Unit)
+class PartLine(val seq: Long?, val handlers: MessageHandlers, val openMenu: () -> Unit, val writerId: String? = null)
 
 /**
  * The line's reactions under its bubble: リアクション, which opens the bar and menu over the chat,
@@ -78,7 +78,20 @@ data class LinksPart(val urls: List<String>) : LinePart {
   @Composable
   override fun actions(line: PartLine): List<CustomAccessibilityAction> {
     val label = stringResource(R.string.chat_open_link)
-    return urls.map { url -> CustomAccessibilityAction(label.format(site(url))) { line.handlers.openLink(url); true } }
+    return urls.zip(linkNames(urls)).map { (url, name) -> CustomAccessibilityAction(label.format(name)) { line.handlers.openLink(url); true } }
+  }
+}
+
+/**
+ * How each of a line's links is named in its リンクを開く: by its site, and with what follows the
+ * host when another link of the line is to the same site, so each is told apart; one written twice
+ * is named alike, as it opens the same page.
+ */
+fun linkNames(urls: List<String>): List<String> {
+  val sites = urls.map(::site)
+  return urls.mapIndexed { index, url ->
+    val shared = urls.indices.any { other -> sites[other] == sites[index] && urls[other] != url }
+    if (shared) sites[index] + url.substringAfter("://").dropWhile { it != '/' } else sites[index]
   }
 }
 
@@ -89,7 +102,8 @@ data class LinksPart(val urls: List<String>) : LinePart {
 data class MentionsPart(val userIds: List<String>) : LinePart {
   @Composable
   override fun actions(line: PartLine): List<CustomAccessibilityAction> {
-    return mentioned(userIds, line.handlers).map { member ->
+    // The writer mentioning themselves: their profile is the line's own action already.
+    return mentioned(userIds, line.handlers).filter { it.userId != line.writerId }.map { member ->
       CustomAccessibilityAction(stringResource(R.string.chat_writer_profile, member.shownName())) { line.handlers.openProfile?.invoke(member); true }
     }
   }

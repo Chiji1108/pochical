@@ -83,6 +83,11 @@
   <string name="chat_preview_loading">読み込み中…</string>
   <string name="chat_preview_remove">プレビューを外す</string>
   <string name="chat_open_link">リンクを開く（%1$s）</string>
+  <!-- A long press on a link: its own menu. -->
+  <string name="chat_link_open">リンクを開く</string>
+  <string name="chat_link_copy">リンクをコピー</string>
+  <!-- Under words cut past chatRules.foldLines lines. -->
+  <string name="chat_read_more">続きを読む</string>
   <string name="chat_pin">ピン留め</string>
   <string name="chat_unpin">ピン留めを外す</string>
   <string name="chat_pinned">ピン留め</string>
