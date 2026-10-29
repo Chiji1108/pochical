@@ -40,8 +40,9 @@ struct PochicalApp: App {
     session.onErase = { await Notifications.shared.forgetAccount() }
     Notifications.shared.groupCalls = groupCalls
     Notifications.shared.replies = Replies(database: database, session: session)
-    // The controls open a day as a widget's link does.
-    AppDependencyManager.shared.add(dependency: DayOpener { OpenedDay.shared.day = $0 })
+    // The controls and the shortcuts open their places as a widget's link
+    // does.
+    AppDependencyManager.shared.add(dependency: LinkOpener { openPlaceLink($0) })
   }
 
   var body: some Scene {

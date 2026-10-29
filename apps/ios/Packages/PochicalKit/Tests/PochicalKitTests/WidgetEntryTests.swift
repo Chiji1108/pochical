@@ -136,6 +136,9 @@ func widgetOffsCount(_ vector: WidgetVectors.OffsCase) {
   let offs = widgetOffs(today: day(0), people: people, group: vector.group ?? false, dayAt: day)
   #expect(offs.today == vector.expected.today)
   #expect(offs.next?.inDays == vector.expected.next)
+  // Where 次の休み opens (spec/shortcuts.md): today on a day off, else the
+  // next, else today.
+  #expect(offs.opensInDays == (vector.expected.today ? 0 : vector.expected.next ?? 0))
   let none: WidgetNoOff? =
     switch vector.expected.none?.kind {
     case "waiting": .waiting(vector.expected.none?.names ?? [])

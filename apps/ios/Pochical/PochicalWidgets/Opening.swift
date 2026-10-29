@@ -3,9 +3,9 @@ import Foundation
 import PochicalKit
 
 // Where the widgets, the controls and the shortcuts open the app
-// (spec/widgets.md, Opening the app): the app's own links, and the intent
-// that opens a day as they do. Built into the app as well as the widgets,
-// as the intent runs in the app.
+// (spec/widgets.md, Opening the app; spec/shortcuts.md): the app's own
+// links, and the intent the controls open them by. Built into the app as
+// well as the widgets, as the intent runs in the app.
 
 /// The link that opens the app on a day: the calendar on its week with
 /// that day picked.
@@ -27,43 +27,58 @@ nonisolated extension WidgetEntry {
     with.map { groupLink($0.groupID, day: day) } ?? dayLink(day)
   }
 
-  /// Where 次の休み opens: the day off it counts, else today; set to
-  /// someone or a group, in the group's table, and the group's top when
-  /// they are to be picked again.
+  /// Where 次の休み opens: its day (`nextOffDay`); set to someone or a
+  /// group, in the group's table, and the group's top when they are to be
+  /// picked again.
   var offLink: URL {
-    pickAgain.map { groupLink($0) } ?? link(soonestOff?.day.date ?? date)
+    pickAgain.map { groupLink($0) } ?? link(nextOffDay)
   }
 }
 
-/// Opens the calendar on a day, today unless one is given, as a widget's
-/// tap does: the controls', and an action of the Shortcuts app. It runs
-/// in the app, brought to the front, which gives it `DayOpener`. It is no
-/// App Shortcut: built into the widgets too, the system would look for
-/// the shortcut there.
-struct OpenDayIntent: AppIntent {
-  static let title: LocalizedStringResource = "カレンダーを開く"
-  static let description = IntentDescription("カレンダーをその日で開きます。日付がなければ今日で開きます。")
+/// A place the app opens on, named as the shortcuts are.
+nonisolated enum OpenedPlace: String, AppEnum {
+  case today, nextOff
+
+  static let typeDisplayRepresentation: TypeDisplayRepresentation = "開く日"
+  static let caseDisplayRepresentations: [OpenedPlace: DisplayRepresentation] = [
+    .today: "今日", .nextOff: "次の休み",
+  ]
+
+  /// Its link, worked out from the days as the device holds them now, so
+  /// it never opens a day that has gone by.
+  nonisolated var link: URL {
+    let entry = currentWidgetEntry(choice: nil, DeviceSettings.kept())
+    return dayLink(self == .today ? entry.date : entry.nextOffDay)
+  }
+}
+
+/// Opens the calendar on today or the next day off, as a widget's tap
+/// does: the controls', and an action of the Shortcuts app. It runs in
+/// the app, brought to the front, which gives it `LinkOpener`.
+struct OpenPlaceIntent: AppIntent {
+  static let title: LocalizedStringResource = "ポチカルを開く"
+  static let description = IntentDescription("カレンダーを今日か次の休みで開きます。")
   static let supportedModes: IntentModes = .foreground
 
-  @Parameter(title: "日付", kind: .date)
-  var date: Date?
+  @Parameter(title: "開く日", default: .today)
+  var place: OpenedPlace
 
-  @AppDependency private var opener: DayOpener
+  @AppDependency private var opener: LinkOpener
 
   init() {}
 
-  init(_ day: Day) {
-    date = day.date(in: .current)
+  init(_ place: OpenedPlace) {
+    self.place = place
   }
 
   func perform() async throws -> some IntentResult {
-    await opener.open(Day(date ?? .now, in: .current))
+    await opener.open(place.link)
     return .result()
   }
 }
 
-/// How the app opens a day, as it opens `dayLink`'s: given to the intents
-/// as the app starts (AppDependencyManager).
-struct DayOpener: Sendable {
-  let open: @MainActor @Sendable (Day) -> Void
+/// How the app opens one of its links, as it opens those a widget's tap
+/// sends: given to the intents as the app starts (AppDependencyManager).
+struct LinkOpener: Sendable {
+  let open: @MainActor @Sendable (URL) -> Void
 }

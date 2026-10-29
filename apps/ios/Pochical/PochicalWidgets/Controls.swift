@@ -10,7 +10,7 @@ import WidgetKit
 struct TodayControl: ControlWidget {
   var body: some ControlWidgetConfiguration {
     StaticControlConfiguration(kind: "today") {
-      ControlWidgetButton(action: OpenDayIntent()) {
+      ControlWidgetButton(action: OpenPlaceIntent(.today)) {
         Label("今日を開く", systemImage: "calendar")
       }
     }
@@ -23,8 +23,9 @@ struct TodayControl: ControlWidget {
 struct NextOffControl: ControlWidget {
   var body: some ControlWidgetConfiguration {
     StaticControlConfiguration(kind: "nextOff", provider: NextOffValue.Provider()) { value in
-      // With none ahead, today as it is when tapped.
-      ControlWidgetButton(action: value.day.map(OpenDayIntent.init) ?? OpenDayIntent()) {
+      // The day is worked out again as it is tapped, so a value shown
+      // before it changed never opens a day gone by.
+      ControlWidgetButton(action: OpenPlaceIntent(.nextOff)) {
         Label {
           Text("次の休み")
           Text(value.words)
@@ -42,17 +43,16 @@ struct NextOffControl: ControlWidget {
 /// is off, which stays true as days go by until that day has gone; or why
 /// none is ahead.
 struct NextOffValue {
-  /// The day off, nil for none.
-  let day: Day?
   let words: String
 
   init(_ entry: WidgetEntry, english: Bool) {
     let words = WidgetWords(english: english)
-    day = entry.soonestOff?.day.date
-    self.words = day.map(words.date) ?? noOffWords(entry.offs.none, words: words)
+    self.words =
+      entry.soonestOff.map { words.date($0.day.date) } ?? noOffWords(entry.offs.none, words: words)
   }
 
   struct Provider: ControlValueProvider {
+    /// The gallery's, the sample week's as the widgets' gallery shows.
     var previewValue: NextOffValue {
       let settings = DeviceSettings.kept()
       return NextOffValue(

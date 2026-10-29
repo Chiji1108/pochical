@@ -3,8 +3,10 @@ import PochicalKit
 import SwiftUI
 
 // The app's shortcuts for Siri, Spotlight, Shortcuts and the Action button
-// (spec/widgets.md, Shortcuts and controls): what the widgets show, said
-// in the words they are read aloud in, from the same entry.
+// (spec/shortcuts.md, iPhone): what the widgets show, said in the words
+// they are read aloud in, from the same entry, opening the app where the
+// widgets open it. They are the app's alone: an App Shortcut's intent built
+// into the widgets too is looked for there.
 
 struct PochicalShortcuts: AppShortcutsProvider {
   static var appShortcuts: [AppShortcut] {
@@ -30,12 +32,16 @@ struct PochicalShortcuts: AppShortcutsProvider {
 /// 今日のシフト: today's shift and its hours, as シンプル shows it.
 struct TodayShiftIntent: AppIntent {
   static let title: LocalizedStringResource = "今日のシフト"
-  static let description = IntentDescription("今日のシフトと時間を答えます。")
+  static let description = IntentDescription("今日のシフトと時間を答えて、カレンダーを今日で開きます。")
+  static let supportedModes: IntentModes = .foreground
+
+  @AppDependency private var opener: LinkOpener
 
   @MainActor func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView {
     let settings = DeviceSettings.kept()
     let english = settings.heading.english
     let entry = currentWidgetEntry(choice: nil, settings)
+    opener.open(dayLink(entry.date))
     return .result(
       dialog: IntentDialog(stringLiteral: entry.spokenToday(english: english)),
       view: DaySnippet(
@@ -50,7 +56,8 @@ struct TodayShiftIntent: AppIntent {
 struct NextOffShortcutIntent: AppIntent {
   static let title: LocalizedStringResource = "次の休み"
   static let description = IntentDescription(
-    "次の休みがいつかを答えます。一緒に休む人を選ぶと、その人と一緒に休める日を答えます。")
+    "次の休みがいつかを答えて、その日を開きます。一緒に休む人を選ぶと、その人と一緒に休める日を答えます。")
+  static let supportedModes: IntentModes = .foreground
 
   @Parameter(title: "一緒に休む人")
   var with: CompanionEntity?
@@ -59,6 +66,8 @@ struct NextOffShortcutIntent: AppIntent {
     Summary("次の休み、一緒に休む人は\(\.$with)")
   }
 
+  @AppDependency private var opener: LinkOpener
+
   @MainActor func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView {
     let settings = DeviceSettings.kept()
     let english = settings.heading.english
@@ -66,6 +75,7 @@ struct NextOffShortcutIntent: AppIntent {
     let entry = currentWidgetEntry(choice: with.flatMap { WidgetChoice(id: $0.id) }, settings)
     let soonest = entry.soonestOff
     let pickAgain = english ? "Pick who again" : "一緒に休む人を選び直してください"
+    opener.open(entry.offLink)
     return .result(
       dialog: IntentDialog(
         stringLiteral: entry.pickAgain == nil ? entry.spokenOff(english: english) : pickAgain),
