@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -40,11 +41,11 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -98,11 +99,11 @@ import app.pochical.kit.Period
 import app.pochical.kit.ShiftPeriod
 import app.pochical.kit.Week
 import app.pochical.kit.byPeriod
+import app.pochical.kit.firstBlankDay
+import app.pochical.kit.gapDays
 import app.pochical.kit.monthHolding
 import app.pochical.kit.page
 import app.pochical.kit.pageHolding
-import app.pochical.kit.firstBlankDay
-import app.pochical.kit.gapDays
 import app.pochical.kit.selectedAfterEntering
 import app.pochical.notifications.LocalNotificationAsking
 import app.pochical.reminders.ReminderOfferDialog
@@ -128,8 +129,6 @@ private const val UNFOLD_SHARE = 1f / 3
 /** A pull let go faster than this, a second, goes the way it was flicked, as iOS's 400 points. */
 private val UNFOLD_FLICK = 400.dp
 
-/** Between a page's weeks, and between a week's days. */
-private val DAY_GAP = Metrics.spacingStep
 
 /** The shortest a day gets on a short screen, keeping its date and mark clear. */
 private val LEAST_DAY_HEIGHT = Metrics.touch
@@ -411,7 +410,7 @@ fun CalendarScreen(
     WeekdayRow(week, Modifier.padding(horizontal = SCREEN_EDGE).padding(bottom = 12.dp))
     BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
       val cell = dayHeight(fitting = maxHeight - DAY_GAP)
-      val monthHeight = cell * 6 + DAY_GAP * 5
+      val monthHeight = monthGridHeight(cell)
       Column {
         val select by rememberUpdatedState(::selectDay)
         // While 完了 asks, the blank days show faint as the pattern picked would fill them.
@@ -821,32 +820,36 @@ private class PageDays(
     selectable: Boolean = true,
   ) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(DAY_GAP)) {
-      for (day in days) {
-        val entry = shown[day]
-        DayCell(
-          DayLook(
-            day = day,
-            entry = entry,
-            pattern = entry?.let { patterns[it.shift] },
-            note = calendar.note(day),
-            holiday = day.holidayName(country),
-            outside = fadingOutside != null && day !in fadingOutside,
-            isToday = day == today,
-            isSelected = day == selected,
-            framesToday = !isEntering,
-            preview = preview[day].takeIf { entry == null },
-            // Blank days off come back faint while entering and in a day's week, where the days are looked at.
-            offShown = if (selected != null) OffShown.Faint else OffShown.Hidden,
-            withMonth = period.byPeriod && day.dayOfMonth == 1 && fadingOutside != null && day in fadingOutside,
-          ),
-          height = cell,
-          colorsHoliday = week.holiday,
-          onClick = { onSelect(day) },
-          enabled = selectable,
-          modifier = Modifier.weight(1f),
-        )
-      }
+      for (day in days) Day(day, shown, fadingOutside, selectable)
     }
+  }
+
+  /** A day of a week's row, in its share of the row: see [Week]. */
+  @Composable
+  fun RowScope.Day(day: LocalDate, shown: Map<LocalDate, DayEntry>, fadingOutside: Period?, selectable: Boolean) {
+    val entry = shown[day]
+    DayCell(
+      DayLook(
+        day = day,
+        entry = entry,
+        pattern = entry?.let { patterns[it.shift] },
+        note = calendar.note(day),
+        holiday = day.holidayName(country),
+        outside = fadingOutside != null && day !in fadingOutside,
+        isToday = day == today,
+        isSelected = day == selected,
+        framesToday = !isEntering,
+        preview = preview[day].takeIf { entry == null },
+        // Blank days off come back faint while entering and in a day's week, where the days are looked at.
+        offShown = if (selected != null) OffShown.Faint else OffShown.Hidden,
+        withMonth = period.byPeriod && day.dayOfMonth == 1 && fadingOutside != null && day in fadingOutside,
+      ),
+      height = cell,
+      colorsHoliday = week.holiday,
+      onClick = { onSelect(day) },
+      enabled = selectable,
+      modifier = Modifier.weight(1f),
+    )
   }
 }
 
@@ -869,24 +872,18 @@ private fun MonthPage(
   val weeks = remember(page, days.week.start) { page.weeks(days.week.start) }
   val shown = remember(days.calendar, weeks) { days.calendar.shown(weeks.first().first(), weeks.last().last()) }
   val row = foldedInto?.let { day -> weeks.indexOfFirst { day in it } }?.takeIf { it >= 0 } ?: 0
-  Column(
-    modifier
-      .wrapContentHeight(Alignment.Top, unbounded = true)
-      .height(days.cell * 6 + DAY_GAP * 5)
-      .graphicsLayer { translationY = -row * (days.cell + DAY_GAP).toPx() * fold },
-    verticalArrangement = Arrangement.spacedBy(DAY_GAP),
-  ) {
-    weeks.forEachIndexed { index, week ->
-      // Folded away, the rest of the month is out of reach.
-      val away = foldedInto != null && index != row
-      days.Week(
-        week,
-        shown,
-        fadingOutside = if (foldedInto == null) page else null,
-        Modifier.graphicsLayer { alpha = if (away) 1 - fold else 1f }.then(if (away) Modifier.clearAndSetSemantics {} else Modifier),
-        selectable = !away,
-      )
-    }
+  // Folded away, the rest of the month is out of reach.
+  fun away(index: Int) = foldedInto != null && index != row
+  MonthGrid(
+    weeks,
+    days.cell,
+    modifier.wrapContentHeight(Alignment.Top, unbounded = true).graphicsLayer { translationY = -row * (days.cell + DAY_GAP).toPx() * fold },
+    week = { index ->
+      val away = away(index)
+      Modifier.graphicsLayer { alpha = if (away) 1 - fold else 1f }.then(if (away) Modifier.clearAndSetSemantics {} else Modifier)
+    },
+  ) { day ->
+    with(days) { Day(day, shown, fadingOutside = if (foldedInto == null) page else null, selectable = foldedInto == null || day in weeks[row]) }
   }
 }
 

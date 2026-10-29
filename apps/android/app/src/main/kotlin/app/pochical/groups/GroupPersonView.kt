@@ -40,9 +40,11 @@ import app.pochical.calendar.DAY_FULL_HEIGHT
 import app.pochical.calendar.DayCell
 import app.pochical.calendar.DayEntry
 import app.pochical.calendar.DayLook
+import app.pochical.calendar.MonthGrid
 import app.pochical.calendar.MonthPicker
 import app.pochical.calendar.WeekdayRow
 import app.pochical.calendar.holidayName
+import app.pochical.calendar.monthGridHeight
 import app.pochical.calendar.monthWeeks
 import app.pochical.design.Metrics
 import app.pochical.design.PochicalTextStyles
@@ -59,7 +61,6 @@ import kotlinx.coroutines.launch
 private const val PERSON_SPAN = 24
 
 /** The gap between a page's days, as the calendar's. */
-private val DAY_GAP = Metrics.spacingStep
 
 /**
  * 1人ずつ (/design's PeoplePicker and PersonPager): one member at a time, picked from a row of people,
@@ -124,46 +125,40 @@ fun GroupPersonView(
         val look = settings.device.look.drawing(person).withOptions { it.copy(names = true, off = OffLook.Highlight, offs = emptyMap()) }
         DeviceSettingsState(settings.device.copy(look = look), settings.change)
       }
-    HorizontalPager(pages, Modifier.fillMaxWidth().height(DAY_FULL_HEIGHT * 6 + DAY_GAP * 5), verticalAlignment = Alignment.Top) { page ->
+    HorizontalPager(pages, Modifier.fillMaxWidth().height(monthGridHeight(DAY_FULL_HEIGHT)), verticalAlignment = Alignment.Top) { page ->
       val shown = thisMonth.plusMonths((page - PERSON_SPAN).toLong())
       val weeks = remember(shown, settings.device.week.start) { monthWeeks(shown, settings.device.week.start) }
       val pageDays = daysOf(shown)
       fun shiftOf(index: Int, day: LocalDate) = pageDays.shifts.getOrNull(index)?.get(day)
       CompositionLocalProvider(LocalDeviceSettings provides theirs) {
-        Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(DAY_GAP)) {
-          for (week in weeks) {
-            Row(horizontalArrangement = Arrangement.spacedBy(DAY_GAP)) {
-              for (day in week) {
-                val outside = YearMonth.from(day) != shown
-                val shift = if (outside) null else shiftOf(personIndex, day)
-                val bothOff =
-                  !outside && person.userId != meId && meIndex >= 0 && shift?.pattern?.countsAsOff == true && shiftOf(meIndex, day)?.pattern?.countsAsOff == true
-                Box(
-                  Modifier.weight(1f).semantics(mergeDescendants = true) { if (bothOff) stateDescription = bothOffWord },
-                ) {
-                DayCell(
-                  DayLook(
-                    day = day,
-                    entry = shift?.let { DayEntry(it.pattern.id, it.start, it.end, emptyList()) },
-                    pattern = shift?.pattern,
-                    note = null,
-                    holiday = day.holidayName(country),
-                    outside = outside,
-                    isToday = day == today,
-                    isSelected = day == picked,
-                  ),
-                  height = DAY_FULL_HEIGHT,
-                  colorsHoliday = settings.device.week.holiday,
-                  onClick = { onPick(day) },
-                  modifier =
-                    Modifier.fillMaxWidth().then(
-                      if (bothOff && day != picked) Modifier.border(1.5.dp, colors.accentBorder, RoundedCornerShape(Radius.md)) else Modifier
-                    ),
-                  enabled = !outside,
-                )
-                }
-              }
-            }
+        MonthGrid(weeks, DAY_FULL_HEIGHT, Modifier.padding(horizontal = 16.dp)) { day ->
+          val outside = YearMonth.from(day) != shown
+          val shift = if (outside) null else shiftOf(personIndex, day)
+          val bothOff =
+            !outside && person.userId != meId && meIndex >= 0 && shift?.pattern?.countsAsOff == true && shiftOf(meIndex, day)?.pattern?.countsAsOff == true
+          Box(
+            Modifier.weight(1f).semantics(mergeDescendants = true) { if (bothOff) stateDescription = bothOffWord },
+          ) {
+            DayCell(
+              DayLook(
+                day = day,
+                entry = shift?.let { DayEntry(it.pattern.id, it.start, it.end, emptyList()) },
+                pattern = shift?.pattern,
+                note = null,
+                holiday = day.holidayName(country),
+                outside = outside,
+                isToday = day == today,
+                isSelected = day == picked,
+              ),
+              height = DAY_FULL_HEIGHT,
+              colorsHoliday = settings.device.week.holiday,
+              onClick = { onPick(day) },
+              modifier =
+                Modifier.fillMaxWidth().then(
+                  if (bothOff && day != picked) Modifier.border(1.5.dp, colors.accentBorder, RoundedCornerShape(Radius.md)) else Modifier
+                ),
+              enabled = !outside,
+            )
           }
         }
       }
