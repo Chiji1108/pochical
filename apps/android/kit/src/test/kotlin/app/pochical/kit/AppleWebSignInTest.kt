@@ -56,7 +56,7 @@ class AppleWebSignInTest {
   fun stop() = server.close()
 
   private val signIn
-    get() = AppleWebSignIn(server.url("/"), OkHttpClient())
+    get() = AppleWebSignIn(server.url("/"), lazyOf(OkHttpClient()))
 
   private fun returned(vararg params: Pair<String, String>): Uri =
     Uri.Builder()

@@ -6,6 +6,7 @@
 import { fitted } from "./alert-size";
 import { signJwt } from "./jwt";
 import type { Alert, Outcome, Push, Recipient } from "./push";
+import { postPush, refusal } from "./push-refusal";
 import type { Device } from "./push-tokens";
 
 /** What the access token may do: send through FCM, nothing else. */
@@ -69,6 +70,9 @@ type Granted = { keyId: string; token: Promise<string>; until: number };
  * one token; its end is known once Google answers.
  */
 let granted: Granted | undefined;
+
+/** The least wait FCM asks after a quota refusal that names none. */
+const QUOTA_WAIT_MS = 60_000;
 
 /** How long Google's OAuth may take to answer before the push fails. */
 const GRANT_TIMEOUT_MS = 10 * 1000;
@@ -228,7 +232,7 @@ const isGone = ({ fields, reason }: Refusal): boolean =>
 /**
  * Posts `push` to an Android phone, "gone" when FCM says the token is no
  * longer the app's, so it is dropped. An access token FCM no longer takes
- * (401) is asked for again by the next push.
+ * (401) is asked for again by the next try.
  */
 export const attemptFcm = async (
   env: Env,
@@ -241,26 +245,40 @@ export const attemptFcm = async (
   }
   const using = grantFor(account);
   const authorization = `Bearer ${await using.token}`;
-  const response = await fetch(
+  const response = await postPush(
     `https://fcm.googleapis.com/v1/projects/${account.project_id}/messages:send`,
     {
       body: JSON.stringify(messageOf(token, push)),
       headers: { authorization, "content-type": "application/json" },
-      method: "POST",
-    }
+    },
+    token
   );
+  if (!(response instanceof Response)) {
+    return response;
+  }
   const { status } = response;
   if (response.ok) {
     return { reason: "", sent: "sent", status };
   }
-  // Only the token refused: one asked for since stays.
-  if (status === 401 && granted === using) {
-    granted = undefined;
+  const refused = refusalOf(await response.text());
+  if (status === 401) {
+    // Only the token refused: one asked for since stays. The next try
+    // asks for a new one.
+    if (granted === using) {
+      granted = undefined;
+    }
+    return { reason: refused.reason, sent: "later", status };
   }
-  const refusal = refusalOf(await response.text());
-  return {
-    reason: refusal.reason,
-    sent: isGone(refusal) ? "gone" : "failed",
-    status,
-  };
+  // 429 QUOTA_EXCEEDED, 500 INTERNAL and 503 UNAVAILABLE are tried again,
+  // after FCM's Retry-After when it gives one (FCM's ErrorCode reference);
+  // a quota refusal without one after a minute at least, as FCM asks
+  // (https://firebase.google.com/docs/cloud-messaging/error-codes).
+  const outcome = refusal(
+    response,
+    refused.reason,
+    isGone(refused) ? "gone" : "failed"
+  );
+  return status === 429 && outcome.retryAfterMs === undefined
+    ? { ...outcome, retryAfterMs: QUOTA_WAIT_MS }
+    : outcome;
 };

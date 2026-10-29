@@ -194,14 +194,18 @@ private fun PollRow(day: LocalDate, poll: ChatPoll, decided: LocalDate?, togethe
           Icon(painterResource(R.drawable.ic_check), contentDescription = null, Modifier.size(16.dp), tint = colors.accentDefault)
           Text(stringResource(R.string.chat_poll_chosen), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = colors.accentDefault)
         }
-      decided == null && seq != null ->
+      decided == null && seq != null -> {
+        val canCome = stringResource(R.string.chat_poll_can_come_on, day.fullText)
         FilterChip(
           selected = mine,
           onClick = { handlers.vote(seq, day.toString(), !mine) },
           label = { Text(stringResource(R.string.chat_poll_can_come)) },
+          // Which day's, for a screen reader going through the days one by one.
+          modifier = Modifier.semantics { contentDescription = canCome },
           enabled = !waiting,
           leadingIcon = if (mine) ({ Icon(painterResource(R.drawable.ic_check), contentDescription = null, Modifier.size(FilterChipDefaults.IconSize)) }) else null,
         )
+      }
     }
   }
 }

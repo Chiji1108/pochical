@@ -77,6 +77,17 @@ class Chats internal constructor(
   fun line(groupId: String, threadId: String, seq: Long): Flow<ChatLine?> =
     observe("chatLines", "chatOutbox") { now -> Timed(shownLine(groupId, threadId, seq, waitingEdits(groupId, threadId, now)), null) }
 
+  /** The seq of the chat's newest line the device holds, 0 with none: what comes after it has arrived since. */
+  suspend fun newest(groupId: String, threadId: String): Long = database.read { latestSeq(groupId, threadId) ?: 0 }
+
+  /**
+   * The chat's lines after [after] the device holds, oldest first, as they arrive: whatever lines are
+   * laid out, a gap between them and the latest included, so what arrives is told wherever the chat
+   * is scrolled, and pages of earlier lines never are.
+   */
+  fun arrived(groupId: String, threadId: String, after: Long): Flow<List<ChatLine>> =
+    observe("chatLines") { Timed(lines(groupId, threadId, after + 1, Long.MAX_VALUE).map { ChatLine.of(WireLine.parseFrom(it.line)) }, null) }
+
   /**
    * Each place's unread lines that notify [me], its chats' together (spec/sync-protocol.md, Unread
    * summary), for the tabs' badges: the groups' under グループ, Pochical's people's under 設定. A

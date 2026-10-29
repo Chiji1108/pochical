@@ -50,8 +50,9 @@ class AccountChangeTest {
   private fun accountInUse(date: String = "2026-11-01", held: Holdings = Holdings(shiftDays = 3)) {
     server.linkStatus = 409
     server.inUse = "token-b" to "user-b"
-    // As GetMe answers once the device is linked, or signed in as the account's user.
-    server.provider = SignInProvider.SIGN_IN_PROVIDER_GOOGLE
+    // Linked to Google is user-b alone: the device's own user's GetMe, which may still be on its
+    // way, says no link, as the server would.
+    server.linked["user-b"] = SignInProvider.SIGN_IN_PROVIDER_GOOGLE
     server.held = held
     server.noteElsewhere(listOf(date), user = "user-b")
   }
@@ -233,7 +234,7 @@ class AccountChangeTest {
     phone.account.signIn(google)
     eventually { phone.sessions.leftBehind().isEmpty() }
 
-    val again = SyncAccount(phone.database, phone.sessions, server.url, okhttp3.OkHttpClient(), phone.scope, linePhotos = phone.linePhotos)
+    val again = SyncAccount(phone.database, phone.sessions, server.url, lazyOf(okhttp3.OkHttpClient()), phone.scope, linePhotos = phone.linePhotos)
     again.foreground()
     withTimeout(10_000) { again.state.first { it == AccountState.SignedIn("user-b", account) } }
   }
@@ -294,7 +295,7 @@ class AccountChangeTest {
     assertNull(phone.pattern("2026-11-02"))
 
     phone.kept.writable = true
-    val again = SyncAccount(phone.database, phone.sessions, server.url, okhttp3.OkHttpClient(), phone.scope, linePhotos = phone.linePhotos)
+    val again = SyncAccount(phone.database, phone.sessions, server.url, lazyOf(okhttp3.OkHttpClient()), phone.scope, linePhotos = phone.linePhotos)
     again.foreground()
 
     withTimeout(10_000) { again.state.first { it is AccountState.SignedIn } }
@@ -326,7 +327,6 @@ class AccountChangeTest {
     eventually { called("/pochical.v1.UserService/DeleteAccount").isNotEmpty() }
 
     server.deleteRefusal = null
-    server.provider = SignInProvider.SIGN_IN_PROVIDER_GOOGLE
     assertTrue(phone.account.deleteAccount { null })
     withTimeout(10_000) { phone.account.state.first { it is AccountState.SignedIn && it.userId != "user-b" } }
 

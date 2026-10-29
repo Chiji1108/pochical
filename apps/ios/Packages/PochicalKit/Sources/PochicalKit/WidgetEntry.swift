@@ -63,6 +63,8 @@ public enum WidgetNoOff: Hashable, Sendable {
   case notEntered
   case waiting([String])
   case apart
+  /// Set to a group the person is alone in: no day off is shared.
+  case alone
 }
 
 /// 次の休み: whether today is off, and the next day off after it, as far
@@ -267,10 +269,15 @@ public func widgetNow(at: Date, today: Day, calendar: Calendar, dayAt: (Int) -> 
 }
 
 /// 次の休み from today, `dayAt` giving each day by how many days on it is,
-/// with `people` those the widget is set to.
-public func widgetOffs(today: WidgetDay, people: [WidgetPerson], dayAt: (Int) -> WidgetDay)
-  -> WidgetOffs
-{
+/// with `people` those the widget is set to; `group` when it is set to a
+/// group, which with no one else in it shares no day off, as the group's
+/// own screens show no みんな休み for one member.
+public func widgetOffs(
+  today: WidgetDay, people: [WidgetPerson], group: Bool = false, dayAt: (Int) -> WidgetDay
+) -> WidgetOffs {
+  if group && people.isEmpty {
+    return WidgetOffs(today: false, nextDay: nil, nextInDays: nil, none: .alone)
+  }
   func theirs(_ day: WidgetDay) -> [Bool?] { people.map { $0.offOn(day.date) } }
   func together(_ day: WidgetDay) -> Bool {
     Together.allOff([day.pattern == nil ? nil : day.off] + theirs(day))
@@ -337,7 +344,9 @@ extension OwnCalendar {
       now: widgetNow(at: now, today: today, calendar: calendar) { day(today.adding(days: $0)) },
       nothingEntered: !hasEnteredDays,
       today: todayDay,
-      offs: widgetOffs(today: todayDay, people: people) { day(today.adding(days: $0)) },
+      offs: widgetOffs(today: todayDay, people: people, group: companion?.with.kind == .group) {
+        day(today.adding(days: $0))
+      },
       upcoming: upcoming,
       twoWeeks: (0..<14).map { day(weekStart.adding(days: $0)) },
       month: monthWeeks(today, weekStart: week.start).map { $0.map(day) },

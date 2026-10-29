@@ -59,6 +59,8 @@ nonisolated func noOffWords(_ none: WidgetNoOff?, words: WidgetWords) -> String 
       ? "Waiting on \(names.first ?? "")\(others)" : "\(names.first ?? "")さん\(others)の入力待ち"
   case .apart:
     return words.english ? "No days off together yet" : "重なる休みはまだありません"
+  case .alone:
+    return words.english ? "No one else in the group yet" : "ほかのメンバーがまだいません"
   case .notEntered, nil:
     return words.nothingYet
   }

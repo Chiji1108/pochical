@@ -12,8 +12,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -33,13 +35,17 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.Footnote
-import app.pochical.MID_MONTH_STARTS
-import app.pochical.PeriodChoices
 import app.pochical.LocalDeviceSettings
 import app.pochical.LocalThemeColors
+import app.pochical.MID_MONTH_STARTS
 import app.pochical.PageNavigation
+import app.pochical.PeriodChoices
 import app.pochical.R
+import app.pochical.RowEnd
+import app.pochical.SectionRow
 import app.pochical.SettingsPage
+import app.pochical.SettingsRow
+import app.pochical.SettingsSection
 import app.pochical.calendar.LocalOwnDays
 import app.pochical.calendar.pattern
 import app.pochical.calendar.slashText
@@ -51,6 +57,8 @@ import app.pochical.kit.firstPick
 import app.pochical.kit.readyCopies
 import app.pochical.patterns.ReadyPatternChips
 import app.pochical.patterns.chosenPatterns
+import app.pochical.rowColors
+import app.pochical.segmentShapes
 import java.time.LocalDate
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
@@ -144,6 +152,7 @@ fun JobChangePage(navigation: PageNavigation) {
     SettingsPage(
       jobOrderTitle(jobTemplate(step.template)),
       onBack = back,
+      collapsing = false,
       actions = { TextButton(onClick = { confirming = true }, enabled = typing.sequence.isNotEmpty()) { Text(stringResource(R.string.entering_done)) } },
     ) { padding ->
       JobOrderCalendar(
@@ -176,33 +185,33 @@ fun JobChangePage(navigation: PageNavigation) {
     return
   }
 
-  SettingsPage(if (steps.size == 1) stringResource(R.string.job_change) else "", onBack = back) { padding ->
+  SettingsPage(if (steps.size == 1) stringResource(R.string.job_change) else "", onBack = back, collapsing = false) { padding ->
     LazyColumn(contentPadding = padding) {
       when (step) {
         JobStep.Day -> {
           item { Footnote(stringResource(R.string.job_day_header)) }
           item {
-            ListItem(
-              headlineContent = { Text(stringResource(R.string.job_first_day)) },
-              trailingContent = { Text(first.slashText) },
-              modifier = Modifier.clickable { pickingDay = true },
-            )
+            SettingsSection(footnote = stringResource(R.string.job_day_note)) {
+              row { SettingsRow(stringResource(R.string.job_first_day), R.drawable.ic_event, onClick = { pickingDay = true }, value = first.slashText, end = RowEnd.None) }
+            }
           }
-          item { Footnote(stringResource(R.string.job_day_note)) }
           item { Next(stringResource(R.string.job_next)) { go(JobStep.Kind) } }
         }
         JobStep.Kind -> {
           item { Question(stringResource(R.string.job_repeats_title), stringResource(R.string.job_repeats_note)) }
-          item { Option("🔁", stringResource(R.string.job_repeats_yes), stringResource(R.string.job_repeats_yes_note)) { go(JobStep.Templates(rotation = true)) } }
-          item { Option("📋", stringResource(R.string.job_repeats_no), stringResource(R.string.job_repeats_no_note)) { go(JobStep.Templates(rotation = false)) } }
+          item { SectionRow(0, 2) { Option("🔁", stringResource(R.string.job_repeats_yes), stringResource(R.string.job_repeats_yes_note)) { go(JobStep.Templates(rotation = true)) } } }
+          item { SectionRow(1, 2) { Option("📋", stringResource(R.string.job_repeats_no), stringResource(R.string.job_repeats_no_note)) { go(JobStep.Templates(rotation = false)) } } }
         }
         is JobStep.Templates -> {
           item { Question(stringResource(R.string.job_kind_title), stringResource(R.string.job_kind_note)) }
-          for (template in if (step.rotation) ReadyPatterns.rotationTemplates else ReadyPatterns.rosterTemplates) {
+          val templates = if (step.rotation) ReadyPatterns.rotationTemplates else ReadyPatterns.rosterTemplates
+          templates.forEachIndexed { index, template ->
             item(key = template.id) {
-              TemplateRow(template) {
-                picked = template.patternIds.toSet()
-                go(JobStep.Patterns(template.id))
+              SectionRow(index, templates.size) {
+                TemplateRow(template) {
+                  picked = template.patternIds.toSet()
+                  go(JobStep.Patterns(template.id))
+                }
               }
             }
           }
@@ -225,13 +234,17 @@ fun JobChangePage(navigation: PageNavigation) {
         is JobStep.Period -> {
           item { Question(stringResource(R.string.period_question_title), stringResource(R.string.period_question_note)) }
           item {
-            Option("🗓️", stringResource(R.string.period_question_month), stringResource(R.string.period_question_month_note)) {
-              finish(step.patterns, emptyList(), first, ShiftPeriod())
+            SectionRow(0, 2) {
+              Option("🗓️", stringResource(R.string.period_question_month), stringResource(R.string.period_question_month_note)) {
+                finish(step.patterns, emptyList(), first, ShiftPeriod())
+              }
             }
           }
           item {
-            Option("📌", stringResource(R.string.period_question_mid_month), stringResource(R.string.period_question_mid_month_note)) {
-              go(JobStep.PeriodDay(step.patterns))
+            SectionRow(1, 2) {
+              Option("📌", stringResource(R.string.period_question_mid_month), stringResource(R.string.period_question_mid_month_note)) {
+                go(JobStep.PeriodDay(step.patterns))
+              }
             }
           }
         }
@@ -257,19 +270,16 @@ private fun Question(title: String, note: String) {
 
 @Composable
 private fun Option(emoji: String, title: String, note: String, onClick: () -> Unit) {
-  ListItem(
-    headlineContent = { Text(title) },
-    supportingContent = { Text(note) },
-    leadingContent = { Text(emoji, style = MaterialTheme.typography.titleLarge) },
-    modifier = Modifier.clickable(onClick = onClick),
-  )
+  SettingsRow(title, icon = null, onClick = onClick, supporting = note, leading = { Text(emoji, style = MaterialTheme.typography.titleLarge) })
 }
 
 /** A way of working: its name and note, with its order's days or the keys a roster's work gives. */
 @Composable
 private fun TemplateRow(template: JobTemplate, onClick: () -> Unit) {
-  ListItem(
-    headlineContent = { Text(template.title) },
+  SettingsRow(
+    template.title,
+    icon = null,
+    onClick = onClick,
     supportingContent = {
       Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(template.note)
@@ -278,7 +288,6 @@ private fun TemplateRow(template: JobTemplate, onClick: () -> Unit) {
         else if (!template.custom) KeysPreview(template.patternIds, readyById)
       }
     },
-    modifier = Modifier.clickable(onClick = onClick),
   )
 }
 
@@ -286,6 +295,6 @@ private fun TemplateRow(template: JobTemplate, onClick: () -> Unit) {
 @Composable
 private fun Next(title: String, enabled: Boolean = true, onClick: () -> Unit) {
   Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-    Button(onClick = onClick, enabled = enabled, modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) { Text(title) }
+    Button(onClick = onClick, shapes = ButtonDefaults.shapes(), enabled = enabled, modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) { Text(title) }
   }
 }

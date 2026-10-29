@@ -24,6 +24,7 @@ import {
   supportRelay,
   supportSlackLines,
 } from "./group-do-schema";
+import { errorFields } from "./log";
 import { overLimit } from "./rate-limits";
 import { retryWait } from "./retry-wait";
 import {
@@ -419,7 +420,7 @@ const relayFailed = async (
   );
   const log = refusal.kind === "lasting" ? console.error : console.warn;
   log({
-    error: String(error),
+    error: errorFields(error),
     failingSince: failingSince.toISOString(),
     failures,
     kind: refusal.kind,
@@ -434,7 +435,11 @@ const relayFailed = async (
       .set({ slackFailingSince: failingSince, slackFailure: refusal.why })
       .where(eq(supportChats.userId, userId));
   } catch (indexError) {
-    console.error("Support relay's failure not kept in D1", indexError);
+    console.error({
+      error: errorFields(indexError),
+      message: "Support relay's failure not kept in D1",
+      userId,
+    });
   }
   return waitMs;
 };

@@ -23,7 +23,7 @@ class DeviceSettingsTest {
   private suspend fun <T> withStore(use: suspend (DataStore<DeviceSettings>) -> T): T {
     val job = Job()
     try {
-      return use(deviceSettingsStore(file, CoroutineScope(job + Dispatchers.IO)))
+      return use(deviceSettingsStore({ file }, CoroutineScope(job + Dispatchers.IO)))
     } finally {
       job.cancelAndJoin()
     }

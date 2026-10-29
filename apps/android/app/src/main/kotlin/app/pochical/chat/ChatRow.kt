@@ -19,7 +19,7 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -67,9 +67,9 @@ fun ChatList(groupId: String, groupName: String, me: String, onOpen: (threadId: 
   val values = LocalValues.current
   val colors = LocalThemeColors.current
   // Null until read, so a group is not taken for a group of one meanwhile.
-  val writers by remember(values, groupId) { values.members(groupId) }.collectAsState(null)
-  val threads by remember(chats, groupId) { chats.threads(groupId) }.collectAsState(emptySet())
-  val blocked by remember(values) { values.blocks() }.collectAsState(emptyList())
+  val writers by remember(values, groupId) { values.members(groupId) }.collectAsStateWithLifecycle(null)
+  val threads by remember(chats, groupId) { chats.threads(groupId) }.collectAsStateWithLifecycle(emptySet())
+  val blocked by remember(values) { values.blocks() }.collectAsStateWithLifecycle(emptyList())
   val today = rememberToday()
   val blockedIds = blocked.map { it.userId }.toSet()
   val everyone = writers.orEmpty()
@@ -145,11 +145,12 @@ internal fun ChatRow(
   today: LocalDate = rememberToday(),
   empty: String = stringResource(R.string.chat_none),
   onCard: Boolean = false,
+  modifier: Modifier = Modifier,
   icon: @Composable () -> Unit,
 ) {
   val chats = LocalChats.current
   val colors = LocalThemeColors.current
-  val summary by remember(chats, groupId, threadId, me) { chats.summary(groupId, threadId, me) }.collectAsState(ChatSummary())
+  val summary by remember(chats, groupId, threadId, me) { chats.summary(groupId, threadId, me) }.collectAsStateWithLifecycle(ChatSummary())
   val time = summary.waiting?.madeAtMs ?: summary.last?.sentAtMs
   ListItem(
     headlineContent = {
@@ -191,7 +192,7 @@ internal fun ChatRow(
         }
       },
     colors = if (onCard) ListItemDefaults.colors(containerColor = colors.fillQuaternary) else ListItemDefaults.colors(),
-    modifier = Modifier.clickable(onClick = onOpen),
+    modifier = modifier.clickable(onClick = onOpen),
   )
 }
 

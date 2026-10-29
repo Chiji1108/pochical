@@ -111,9 +111,13 @@ public func widgetCompanion(
   guard let group = try GroupRow.where({ $0.id.eq(choice.groupID) }).fetchOne(db) else {
     return nil
   }
+  // An account deleted is gone from the group, as one that left is, as Android's widgets have it.
+  let deleted = Set(
+    try GroupMemberRow.where { $0.groupID.eq(group.id) && $0.deleted }.fetchAll(db).map(\.userID))
   let members = try GroupSync.members(
     of: group.id, from: today.adding(days: -1),
-    through: today.adding(days: Widgets.offLookaheadDays), in: db)
+    through: today.adding(days: Widgets.offLookaheadDays), in: db
+  ).filter { !deleted.contains($0.userID) }
   let mine = members.first { $0.userID == me }
   let meShown = WidgetWith(
     kind: .person, name: mine?.name ?? "", groupID: group.id, photoID: mine?.photoID ?? "")

@@ -42,7 +42,7 @@ class LocalServerTest {
     val database = AppDatabase.open(context, inMemory = true)
     val sessions = SessionStore(BlockStoreBytes(context, "e2e-$name").apply { runBlocking { forget() } })
     val edits = OwnEdits(database)
-    val account = SyncAccount(database, sessions, server, http, scope, linePhotos = linePhotos(context, http, server, name))
+    val account = SyncAccount(database, sessions, server, lazyOf(http), scope, linePhotos = linePhotos(context, http, server, name))
 
     suspend fun note(date: String) = database.values().days(date, date).first().singleOrNull()?.note
   }
@@ -184,7 +184,7 @@ class LocalServerTest {
   fun preferencesReachTheUsersOtherDeviceAndItsOwnStayHome() = runBlocking<Unit> {
     fun Device.settings() =
       SyncedSettings(
-        deviceSettingsStore(java.io.File(settingsFiles, "${java.util.UUID.randomUUID()}.json"), scope),
+        deviceSettingsStore({ java.io.File(settingsFiles, "${java.util.UUID.randomUUID()}.json") }, scope),
         database,
         edits,
         scope,

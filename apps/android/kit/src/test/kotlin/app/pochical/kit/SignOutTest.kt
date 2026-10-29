@@ -70,7 +70,7 @@ class SignOutTest {
     phone.database.write { upsert(state().copy(erased = "user-1", erasedWhy = AccountState.Erasing.Why.SignedOut.name)) }
     assertEquals("night", phone.pattern("2026-11-02"))
 
-    val again = SyncAccount(phone.database, phone.sessions, server.url, OkHttpClient(), phone.scope, linePhotos = phone.linePhotos)
+    val again = SyncAccount(phone.database, phone.sessions, server.url, lazyOf(OkHttpClient()), phone.scope, linePhotos = phone.linePhotos)
     again.foreground()
 
     withTimeout(10_000) { again.state.first { it is AccountState.SignedIn } }

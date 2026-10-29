@@ -32,6 +32,9 @@
   <string name="blocked_members">ブロック中のメンバー</string>
   <string name="blocked_someone">メンバー</string>
   <string name="profile_in_group">%1$sでのプロフィール</string>
+  <!-- A face opened large from the profile, as a screen reader reads it, and what a tap on it does. -->
+  <string name="profile_photo_of">%1$sの写真</string>
+  <string name="profile_photo_open">写真を大きく表示</string>
   <string name="profile_message">メッセージを送る</string>
   <string name="profile_menu">%1$sのメニュー</string>
   <string name="chat_writer_profile">%1$sのプロフィール</string>

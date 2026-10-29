@@ -51,7 +51,7 @@ internal class Device(
   val backgroundSends = java.util.concurrent.atomic.AtomicInteger()
   val linePhotos = testLinePhotos(server.url)
   val account =
-    SyncAccount(database, sessions, server.url, OkHttpClient(), scope, network, now, random, linePhotos) {
+    SyncAccount(database, sessions, server.url, lazyOf(OkHttpClient()), scope, network, now, random, linePhotos) {
       backgroundSends.incrementAndGet()
     }
 
@@ -75,7 +75,7 @@ internal class Device(
 /** What uploads a device's chat photos to [server], kept in a folder of its own. */
 internal fun testLinePhotos(server: okhttp3.HttpUrl = "http://localhost/".toHttpUrl()): LinePhotos {
   val root = java.nio.file.Files.createTempDirectory("photos").toFile().apply { deleteOnExit() }
-  return LinePhotos(Photos(OkHttpClient(), server, java.io.File(root, "held")), ChatPhotoFiles(java.io.File(root, "caches"), java.io.File(root, "files")), PhotoUploads())
+  return LinePhotos(Photos(lazyOf(OkHttpClient()), server, lazyOf(java.io.File(root, "held"))), ChatPhotoFiles(lazyOf(java.io.File(root, "caches")), lazyOf(java.io.File(root, "files"))), PhotoUploads())
 }
 
 /** The OS's default network, as the test tells of it. */
@@ -228,7 +228,7 @@ class SyncTest {
     assertEquals(true, phone.sessions.read()?.ended)
     assertEquals("残す", phone.note("2026-10-04"))
     // Nothing tries again, a relaunch included: no new anonymous user.
-    val again = SyncAccount(phone.database, phone.sessions, server.url, OkHttpClient(), phone.scope, linePhotos = phone.linePhotos)
+    val again = SyncAccount(phone.database, phone.sessions, server.url, lazyOf(OkHttpClient()), phone.scope, linePhotos = phone.linePhotos)
     again.foreground()
     withTimeout(10_000) { again.state.first { it == AccountState.SessionEnded } }
     assertEquals("token-1", phone.sessions.read()?.token)
@@ -280,7 +280,7 @@ class SyncTest {
     withTimeout(10_000) { phone.account.state.first { it == AccountState.SignedIn(server.userId, account) } }
     assertEquals(StoredSession(server.token, server.userId, linked = account), phone.sessions.read())
     // A relaunch shows the account as kept.
-    val again = SyncAccount(phone.database, phone.sessions, server.url, OkHttpClient(), phone.scope, linePhotos = phone.linePhotos)
+    val again = SyncAccount(phone.database, phone.sessions, server.url, lazyOf(OkHttpClient()), phone.scope, linePhotos = phone.linePhotos)
     again.foreground()
     withTimeout(10_000) { again.state.first { it == AccountState.SignedIn(server.userId, account) } }
   }
@@ -354,7 +354,7 @@ class SyncTest {
     assertEquals(google, phone.sessions.read()?.linked)
 
     server.provider = SignInProvider.SIGN_IN_PROVIDER_UNSPECIFIED
-    val again = SyncAccount(phone.database, phone.sessions, server.url, OkHttpClient(), phone.scope, linePhotos = phone.linePhotos)
+    val again = SyncAccount(phone.database, phone.sessions, server.url, lazyOf(OkHttpClient()), phone.scope, linePhotos = phone.linePhotos)
     again.foreground()
     withTimeout(10_000) { again.state.first { it == AccountState.SignedIn(server.userId, null) } }
     assertNull(phone.sessions.read()?.linked)
@@ -370,7 +370,7 @@ class SyncTest {
     withTimeout(10_000) { phone.account.state.first { it == AccountState.SignedIn(server.userId, account) } }
 
     server.provider = SignInProvider.SIGN_IN_PROVIDER_GOOGLE
-    val again = SyncAccount(phone.database, phone.sessions, server.url, OkHttpClient(), phone.scope, linePhotos = phone.linePhotos)
+    val again = SyncAccount(phone.database, phone.sessions, server.url, lazyOf(OkHttpClient()), phone.scope, linePhotos = phone.linePhotos)
     again.foreground()
     withTimeout(10_000) { again.userSocket.first { it == SocketState.Current } }
     delay(300)

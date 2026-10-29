@@ -1,5 +1,7 @@
 package app.pochical.widgets
 
+import android.content.Context
+import android.graphics.Bitmap
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -7,19 +9,28 @@ import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
+import androidx.glance.Image
+import androidx.glance.ImageProvider
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.size
-import app.pochical.kit.limitText
+import app.pochical.MARK_CORNER
+import app.pochical.cutPicture
 import app.pochical.design.Widgets
 import app.pochical.kit.GroupRow
+import app.pochical.kit.PhotoShelf
 import app.pochical.kit.Values
 import app.pochical.kit.groupMembers
+import app.pochical.kit.limitText
+import app.pochical.photoBitmap
+import coil3.SingletonImageLoader
 import java.time.LocalDate
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -109,21 +120,64 @@ fun Values.choiceGroups(): Flow<List<ChoiceGroup>> =
     }
   }
 
-/** Who a widget is set to, by their face or the group's mark. */
-@Composable
-fun CompanionFace(with: WidgetWith, drawn: Drawn, size: Dp = 20.dp) {
-  when (with.kind) {
-    WidgetWith.Kind.Person -> WidgetFace(with.name, size)
-    WidgetWith.Kind.Group -> WidgetGroupMark(with.mark, with.name, size, drawn.colors)
+/**
+ * Which photos a widget set to someone or a group shows: [with]'s (a person's face, or a group's
+ * photo mark when [group]) and the person's own there ([me]) where the widget draws it, from
+ * [groupId]'s photos. Plain ids, so the pictures are fetched again only when one of them changes.
+ */
+data class WidgetPhotos(val groupId: String, val with: String, val group: Boolean, val me: String) {
+  companion object {
+    /** [companion]'s photos; the person's own only where the widget shows it ([ownFace], これから's pair). */
+    fun of(companion: WidgetCompanion, ownFace: Boolean): WidgetPhotos {
+      val with = companion.with
+      val group = with.kind == WidgetWith.Kind.Group
+      return WidgetPhotos(with.groupId, if (group) with.mark.photoId else with.photoId, group, if (ownFace) companion.me.photoId else "")
+    }
   }
 }
 
 /**
- * Someone's face as the group's screens draw one without a photo: the first letter of their name
- * in a circle, the person's own in the accent. Photos stand so until widgets show them.
+ * [photos] as pictures cut to their shapes, [with]'s a person's face in a circle or a group's photo
+ * mark in a mark's corners, and the person's own face ([me]); none where there is no photo or it
+ * did not come.
+ */
+data class WidgetFaces(val photos: WidgetPhotos? = null, val with: Bitmap? = null, val me: Bitmap? = null)
+
+/** How long a widget lets a photo take to come; the letter shows meanwhile. */
+private const val FACE_WAIT_MS = 30_000L
+
+/** A widget's faces, a few times the largest it draws them, small for the views' room for pictures. */
+private const val FACE_DP = 32
+
+/** [photos] through the app's one image loader, from the group's photos (spec/widgets.md), both at once. */
+suspend fun widgetFaces(context: Context, photos: WidgetPhotos): WidgetFaces = coroutineScope {
+  val loader = SingletonImageLoader.get(context)
+  val side = (FACE_DP * context.resources.displayMetrics.density).toInt()
+  fun picture(photoId: String, corner: Float) =
+    async { photoBitmap(context, loader, photoId, PhotoShelf.place(photos.groupId), side, FACE_WAIT_MS)?.let { cutPicture(it, side, corner) } }
+  val with = picture(photos.with, if (photos.group) side * MARK_CORNER else side / 2f)
+  val me = picture(photos.me, side / 2f)
+  WidgetFaces(photos, with.await(), me.await())
+}
+
+/** Who a widget is set to, by their face or the group's mark, its photo where it has one. */
+@Composable
+fun CompanionFace(with: WidgetWith, drawn: Drawn, size: Dp = 20.dp) {
+  val photo = drawn.faces.with
+  when {
+    photo != null -> Image(ImageProvider(photo), contentDescription = with.name, GlanceModifier.size(size))
+    with.kind == WidgetWith.Kind.Person -> WidgetFace(with.name, size)
+    else -> WidgetGroupMark(with.mark, with.name, size, drawn.colors)
+  }
+}
+
+/**
+ * Someone's face as the group's screens draw it: their [photo], else the first letter of their
+ * name in a circle, the person's own in the accent.
  */
 @Composable
-fun WidgetFace(name: String, size: Dp, me: Boolean = false) {
+fun WidgetFace(name: String, size: Dp, me: Boolean = false, photo: Bitmap? = null) {
+  if (photo != null) return Image(ImageProvider(photo), contentDescription = name, GlanceModifier.size(size))
   val colors = GlanceTheme.colors
   Box(
     GlanceModifier.size(size).background(if (me) colors.primary else colors.secondaryContainer).cornerRadius(size / 2),

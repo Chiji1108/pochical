@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The launcher's shortcuts, a long press on the app's icon (spec/shortcuts.md). -->
+<resources>
+  <string name="shortcut_today">今日のシフト</string>
+  <string name="shortcut_next_off">次の休み</string>
+</resources>

@@ -10,9 +10,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -22,6 +24,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -29,12 +32,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -60,6 +63,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.Footnote
 import app.pochical.LimitedTextField
 import app.pochical.ListSheet
@@ -68,13 +72,17 @@ import app.pochical.MarkFrameSize
 import app.pochical.R
 import app.pochical.ReviewPrompt
 import app.pochical.SectionHeader
-import app.pochical.kit.characterCount
+import app.pochical.SectionRow
+import app.pochical.SettingsRow
 import app.pochical.design.GROUP_MAX_MEMBERS
 import app.pochical.design.Metrics
 import app.pochical.design.TextLimits
 import app.pochical.kit.InviteDetails
 import app.pochical.kit.InviteFailure
 import app.pochical.kit.PhotoShelf
+import app.pochical.kit.characterCount
+import app.pochical.rowColors
+import app.pochical.segmentShapes
 import java.io.IOException
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.launch
@@ -129,7 +137,7 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
   val resources = LocalResources.current
   val context = LocalContext.current
   val scope = rememberCoroutineScope()
-  val profile by remember(values) { values.profile() }.collectAsState(null)
+  val profile by remember(values) { values.profile() }.collectAsStateWithLifecycle(null)
   val usualName = profile?.name.orEmpty()
   val usualPhoto = profile?.photoId.orEmpty()
   var details by remember { mutableStateOf<InviteDetails?>(null) }
@@ -207,25 +215,19 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
           Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
             Invitation(shown, code) { showingMembers = true }
             SectionHeader(stringResource(if (usualName.isEmpty()) R.string.join_you_usual else R.string.group_me))
-            ListItem(
-              headlineContent = {
-                Text(
-                  myName.ifEmpty { stringResource(R.string.join_name_needed) },
-                  color = if (myName.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-                  maxLines = 1,
-                  overflow = TextOverflow.Ellipsis,
-                )
-              },
-              leadingContent = { JoinFacePicture(face, myName, usualPhoto, 28.dp) },
-              trailingContent = {
-                Text(
+            SectionRow(0, 1) {
+              SettingsRow(
+                myName.ifEmpty { stringResource(R.string.join_name_needed) },
+                icon = null,
+                onClick = { editingProfile = true },
+                leading = { JoinFacePicture(face, myName, usualPhoto, 32.dp) },
+                value =
                   stringResource(
                     if (usualName.isEmpty() || (myName == usualName && face == JoinFace.Usual)) R.string.usual_same else R.string.group_only
-                  )
-                )
-              },
-              modifier = Modifier.clickable { editingProfile = true },
-            )
+                  ),
+                oneLine = true,
+              )
+            }
           }
           Column(
             Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp),
@@ -239,7 +241,7 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
               textAlign = TextAlign.Center,
             )
             val canJoin = !shown.full && myName.isNotEmpty() && characterCount(myName) <= TextLimits.personName
-            Button(onClick = ::join, enabled = canJoin && !joining, modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
+            Button(onClick = ::join, shapes = ButtonDefaults.shapes(), enabled = canJoin && !joining, modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
               if (joining) CircularProgressIndicator(Modifier.size(20.dp)) else Text(stringResource(R.string.join))
             }
           }
@@ -248,7 +250,7 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
         loadError = null
         loads += 1
       }
-      else -> CircularProgressIndicator(Modifier.padding(padding).padding(32.dp))
+      else -> PageLoading(padding)
     }
   }
 
@@ -429,7 +431,7 @@ private fun JoinProfileDialog(
         )
       }
     ) { padding ->
-      Column(Modifier.padding(padding).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+      Column(Modifier.consumeWindowInsets(padding).imePadding().verticalScroll(rememberScrollState()).padding(padding), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         val hasPhoto = face is JoinFace.Held || (face == JoinFace.Usual && usualPhoto.isNotEmpty())
         PhotoEditor(
           label = stringResource(R.string.photo_edit),
