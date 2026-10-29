@@ -30,6 +30,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.layout.imeNestedScroll
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
@@ -900,6 +903,7 @@ private fun rememberSocketWords(socket: ChatSocket?): String? {
  * The lines, from the foot up: the spinner at the top while the page before them is on its way,
  * then each item, and who is writing at the very foot, under the latest line.
  */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun ChatLines(
   items: List<ChatItem>,
@@ -916,8 +920,16 @@ private fun ChatLines(
   modifier: Modifier = Modifier,
 ) {
   val pinned = remember(chat.pins) { chat.pins.mapTo(HashSet()) { it.seq } }
+  val focus = LocalFocusManager.current
   LazyColumn(
-    modifier.fillMaxSize(),
+    modifier
+      .fillMaxSize()
+      // While the keyboard is up, a tap off the lines (beside or between them) puts it away, as LINE
+      // does, a tap on a line staying its own; and dragging the lines down at their foot takes the
+      // keyboard down with the finger, as Material's messaging apps do (spec/chat.md, Opening a
+      // message's menu).
+      .pointerInput(focus) { detectTapGestures(onTap = { focus.clearFocus() }) }
+      .imeNestedScroll(),
     state = list,
     reverseLayout = true,
     contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 8.dp + topRoom, bottom = 8.dp),

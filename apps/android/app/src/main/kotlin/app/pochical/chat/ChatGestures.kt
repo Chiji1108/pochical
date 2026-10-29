@@ -90,7 +90,12 @@ fun Modifier.lineGestures(
           while (true) {
             val event = awaitPointerEvent()
             val change = event.changes.firstOrNull { it.id == down.id } ?: return@withTimeoutOrNull false
-            if (change.changedToUpIgnoreConsumed() || change.isConsumed) return@withTimeoutOrNull false
+            if (change.isConsumed) return@withTimeoutOrNull false
+            if (change.changedToUpIgnoreConsumed()) {
+              // A tap is the line's own: nothing under it (the list putting the keyboard away) takes it.
+              change.consume()
+              return@withTimeoutOrNull false
+            }
             val moved = change.position - down.position
             if (moved.getDistance() > slop) {
               val sign = currentSwipe?.sign
