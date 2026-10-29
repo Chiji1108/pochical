@@ -40,6 +40,8 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -402,8 +404,9 @@ fun CalendarScreen(
       onThisMonth = { turnTo(period.monthHolding(today)) },
       onThisWeek = { openDay(today) },
       onDone = ::finish,
-      // The month the heading names, though the pages are still on their way to it.
-      onSave = { open(RootPage.MonthPicture(range.monthAt(pager.currentPage).toString())) },
+      // The page the heading names, though the pages are still on their way to it.
+      onPicture = { open(RootPage.MonthPicture(range.monthAt(pager.currentPage).toString())) },
+      onDeviceCalendar = { open(RootPage.DeviceCalendar(range.monthAt(pager.currentPage).toString())) },
     )
     WeekdayRow(week, Modifier.padding(horizontal = SCREEN_EDGE).padding(bottom = 12.dp))
     BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
@@ -613,7 +616,8 @@ private fun Heading(
   onThisMonth: () -> Unit,
   onThisWeek: () -> Unit,
   onDone: () -> Unit,
-  onSave: () -> Unit,
+  onPicture: () -> Unit,
+  onDeviceCalendar: () -> Unit,
 ) {
   var picking by remember { mutableStateOf(false) }
   val colors = LocalThemeColors.current
@@ -664,10 +668,36 @@ private fun Heading(
         )
       }
     }
-    // The heading's corner holds saving whenever it is wanted; it is never offered by itself.
+    // The heading's corner holds saving whenever it is wanted, as a picture or in the device's
+    // calendar (/design's save menu); it is never offered by itself.
     if (!entering && !dayOpen) {
-      IconButton(onClick = onSave) {
-        Icon(painterResource(R.drawable.ic_download), stringResource(R.string.picture), tint = colors.textPrimary)
+      Box {
+        var saving by remember { mutableStateOf(false) }
+        IconButton(onClick = { saving = true }) {
+          Icon(
+            painterResource(R.drawable.ic_download),
+            stringResource(if (byPeriod) R.string.calendar_save_period else R.string.calendar_save_month),
+            tint = colors.textPrimary,
+          )
+        }
+        DropdownMenu(expanded = saving, onDismissRequest = { saving = false }) {
+          DropdownMenuItem(
+            text = { Text(stringResource(R.string.picture)) },
+            leadingIcon = { Icon(painterResource(R.drawable.ic_image), null) },
+            onClick = {
+              saving = false
+              onPicture()
+            },
+          )
+          DropdownMenuItem(
+            text = { Text(stringResource(R.string.calendar_add)) },
+            leadingIcon = { Icon(painterResource(R.drawable.ic_calendar_add), null) },
+            onClick = {
+              saving = false
+              onDeviceCalendar()
+            },
+          )
+        }
       }
     }
   }

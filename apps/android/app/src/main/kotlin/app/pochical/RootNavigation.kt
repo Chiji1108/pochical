@@ -69,6 +69,12 @@ sealed interface RootPage : RootRoute, NavKey {
   /** 画像で保存 for `month` ("YYYY-MM"), from the calendar's heading. */
   @Serializable data class MonthPicture(val month: String) : RootPage
 
+  /** 端末カレンダーに追加 for the page `month` ("YYYY-MM") names, from the calendar's heading. */
+  @Serializable data class DeviceCalendar(val month: String) : RootPage
+
+  /** 入れるシフト, from 端末カレンダーに追加 for `month`. */
+  @Serializable data class DeviceCalendarPatterns(val month: String) : RootPage
+
   /** シフト for the day `date` ("YYYY-MM-DD"), from its detail. */
   @Serializable data class ShiftChoice(val date: String) : RootPage
 
