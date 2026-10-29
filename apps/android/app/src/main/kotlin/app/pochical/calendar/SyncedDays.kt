@@ -15,7 +15,7 @@ import app.pochical.kit.RepeatOrder
 import app.pochical.kit.ShownDay
 import app.pochical.kit.daysShowing
 import app.pochical.kit.newId
-import app.pochical.kit.nextDayOff
+import app.pochical.widgets.nextDayOff
 import app.pochical.kit.ownCalendar
 import app.pochical.kit.readyCopies
 import app.pochical.kit.summary

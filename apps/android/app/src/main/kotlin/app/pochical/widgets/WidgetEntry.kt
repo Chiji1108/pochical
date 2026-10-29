@@ -261,6 +261,20 @@ fun OwnCalendar.widgetEntry(
   return entry.copy(pair = companion?.let { pair(it, shifts.firstOrNull(), entry.upcoming, week, holiday) })
 }
 
+/** The day off 次の休み counts: today on a day off, else the next one ahead; none ahead, none. */
+val WidgetEntry.soonestOff: NextOff?
+  get() = if (offs.today) NextOff(today, 0) else offs.next
+
+/** The day 次の休み opens (spec/widgets.md, Opening the app): the day off it counts, else today. */
+val WidgetEntry.offOpens: LocalDate
+  get() = soonestOff?.day?.date ?: date
+
+/**
+ * The day the launcher's 次の休み opens from [today] (spec/shortcuts.md): the one 次の休み not set to
+ * anyone opens. The week and the holidays only color the entry's days, so any do.
+ */
+fun OwnCalendar.nextDayOff(today: LocalDate): LocalDate = widgetEntry(today, Week(), { false }).offOpens
+
 /** The entry for [today] of the days [day] gives, the week from [week]'s start, with [people] those 次の休み counts with. */
 private fun entryOf(today: LocalDate, week: Week, people: List<WidgetPerson>, day: (LocalDate) -> WidgetDay): WidgetEntry {
   val weekStart = today.weekStartingOn(week.start)

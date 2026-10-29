@@ -37,11 +37,11 @@ class NextOffWidget : PochicalWidget(Choosing.PeopleAndGroups, setOf(SMALL)) {
   override fun Content(drawn: Drawn) {
     val entry = drawn.entry
     entry.pickAgain?.let { return PickAgain("一緒に休む人", it, drawn) }
-    val soonest = if (entry.offs.today) NextOff(entry.today, 0) else entry.offs.next
+    val soonest = entry.soonestOff
     // The day off it counts, else today; set to someone or a group, in the group's table.
     val modifier =
       GlanceModifier.fillMaxSize()
-        .opening(drawn.link(soonest?.day?.date ?: entry.date))
+        .opening(drawn.link(entry.offOpens))
         .semantics { contentDescription = spokenOff(soonest, drawn) }
     Box(modifier) {
       when {
