@@ -19,10 +19,14 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeParseException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 /** A calendar of the device that takes new events, under the account it is in. */
 data class DeviceCalendar(val id: Long, val name: String, val color: Int, val account: String, val primary: Boolean)
@@ -36,6 +40,7 @@ data class DeviceCalendar(val id: Long, val name: String, val color: Int, val ac
  */
 class DeviceCalendars(private val context: Context) {
   private val resolver: ContentResolver = context.contentResolver
+  private val packageName = context.packageName
 
   /** Whether the person let the app read and write the device's calendars. */
   val allowed: Boolean
@@ -58,7 +63,8 @@ class DeviceCalendars(private val context: Context) {
 
   /**
    * The calendars that take new events, grouped by account in the order the device lists them,
-   * each account's by name: read-only ones like holidays and birthdays are left out.
+   * each account's by name: read-only ones like holidays and birthdays are left out, and so are
+   * those hidden in the calendar apps, whose events would not show.
    */
   fun calendars(): List<DeviceCalendar> {
     val columns =
@@ -68,7 +74,7 @@ class DeviceCalendars(private val context: Context) {
       .query(
         Calendars.CONTENT_URI,
         columns,
-        "${Calendars.CALENDAR_ACCESS_LEVEL} >= ? AND ${Calendars.SYNC_EVENTS} = 1",
+        "${Calendars.CALENDAR_ACCESS_LEVEL} >= ? AND ${Calendars.SYNC_EVENTS} = 1 AND ${Calendars.VISIBLE} = 1",
         arrayOf(Calendars.CAL_ACCESS_CONTRIBUTOR.toString()),
         null,
       )
@@ -109,7 +115,7 @@ class DeviceCalendars(private val context: Context) {
         arrayOf(Events._ID, Events.CUSTOM_APP_URI),
         "${Events.CUSTOM_APP_PACKAGE} = ? AND ${Events.DELETED} = 0 AND ${Events.CALENDAR_ACCESS_LEVEL} >= ? AND " +
           "${Events.DTSTART} >= ? AND ${Events.DTSTART} < ?",
-        arrayOf(context.packageName, Calendars.CAL_ACCESS_CONTRIBUTOR.toString(), from.toString(), to.toString()),
+        arrayOf(packageName, Calendars.CAL_ACCESS_CONTRIBUTOR.toString(), from.toString(), to.toString()),
         null,
       )
       ?.use { rows ->
@@ -124,9 +130,11 @@ class DeviceCalendars(private val context: Context) {
   /**
    * Puts [events], the page's, in [calendar], taking out first the events Pochical put in for its
    * days as [user]'s, from any calendar, so a page added again is put in anew rather than twice.
-   * All in one batch, which the provider writes whole or not at all.
+   * All in one batch, which the provider writes whole or not at all; the marks are read and the
+   * batch written under [writing], so two writes never both take out the same events and both put
+   * theirs in.
    */
-  fun add(events: List<ShiftEvent>, page: Period, user: String, calendar: Long) {
+  suspend fun add(events: List<ShiftEvent>, page: Period, user: String, calendar: Long) = write {
     val zone = ZoneId.systemDefault()
     val operations = ArrayList<ContentProviderOperation>()
     marked(page, user).mapTo(operations) { ContentProviderOperation.newDelete(eventUri(it)).build() }
@@ -138,7 +146,7 @@ class DeviceCalendars(private val context: Context) {
           .withValue(Events.CALENDAR_ID, calendar)
           .withValue(Events.TITLE, event.title)
           .withValue(Events.DESCRIPTION, event.notes)
-          .withValue(Events.CUSTOM_APP_PACKAGE, context.packageName)
+          .withValue(Events.CUSTOM_APP_PACKAGE, packageName)
           .withValue(Events.CUSTOM_APP_URI, dayLink(event.day, user))
       if (start != null && end != null) {
         // By the clock of the day, so a change to summer time moves nothing.
@@ -157,14 +165,18 @@ class DeviceCalendars(private val context: Context) {
       operations += insert.build()
     }
     resolver.applyBatch(CalendarContract.AUTHORITY, operations)
+    Unit
   }
 
   /** Takes out the events Pochical put in for the page as [user]'s, all at once or none, and says how many went. */
-  fun remove(page: Period, user: String): Int {
+  suspend fun remove(page: Period, user: String): Int = write {
     val old = marked(page, user)
     resolver.applyBatch(CalendarContract.AUTHORITY, old.mapTo(ArrayList()) { ContentProviderOperation.newDelete(eventUri(it)).build() })
-    return old.size
+    old.size
   }
+
+  /** [work] off the main thread, one write to the device's calendars at a time, whoever asks. */
+  private suspend fun <T> write(work: () -> T): T = writing.withLock { withContext(Dispatchers.IO) { work() } }
 
   private fun eventUri(id: Long) = Events.CONTENT_URI.buildUpon().appendPath(id.toString()).build()
 
@@ -173,6 +185,9 @@ class DeviceCalendars(private val context: Context) {
     day.atStartOfDay().plusMinutes(minutes.toLong()).atZone(zone).toInstant().toEpochMilli()
 
   companion object {
+    /** The device's calendars are one for the whole app: its writes to them go one at a time. */
+    private val writing = Mutex()
+
     /** What the calendar's full access is on Android: reading to list them and find its own, writing to put them in. */
     val PERMISSIONS = arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR)
 

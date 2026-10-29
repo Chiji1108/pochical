@@ -40,6 +40,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -65,6 +66,7 @@ import app.pochical.calendar.row
 import app.pochical.calendar.text
 import app.pochical.design.Metrics
 import app.pochical.groups.rememberMeId
+import app.pochical.kit.CalendarAdd
 import app.pochical.kit.Period
 import app.pochical.kit.ShownDay
 import app.pochical.kit.byPeriod
@@ -85,11 +87,6 @@ import kotlinx.coroutines.withContext
 /** The page's name where a sentence names it: 10月, or a シフトの期間's 10/15〜11/14. */
 private fun pageName(page: Period, byPeriod: Boolean): String = if (byPeriod) page.text else page.month.monthText
 
-/** The patterns to pick from: those in use, and one left that still shows on the page. */
-private fun listed(calendar: OwnCalendar, page: Period): List<Pattern> {
-  val onPage = calendar.shown(page.first, page.last).values.mapTo(HashSet()) { it.shift }
-  return calendar.patterns.filter { !it.archived || it.id in onPage }
-}
 
 /**
  * 端末カレンダーに追加 (spec/calendar.md, Adding a month to the device calendar; iOS's
@@ -123,7 +120,8 @@ fun DeviceCalendarPage(month: YearMonth, navigation: PageNavigation) {
       refused = !allowed
       asksAgain = DeviceCalendars.PERMISSIONS.any { activity?.shouldShowRequestPermissionRationale(it) == true }
     }
-  LaunchedEffect(Unit) { if (!allowed) ask.launch(DeviceCalendars.PERMISSIONS) }
+  // Once refused, asked again only by 許可する, not as the page is drawn anew (turned, or 外観 changed).
+  LaunchedEffect(Unit) { if (!allowed && !refused) ask.launch(DeviceCalendars.PERMISSIONS) }
   // Allowed in the system's settings meanwhile, the page goes on as it comes back.
   LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { allowed = calendars.allowed }
 
@@ -132,21 +130,27 @@ fun DeviceCalendarPage(month: YearMonth, navigation: PageNavigation) {
   var list by remember { mutableStateOf<List<DeviceCalendar>?>(null) }
   var put by remember { mutableIntStateOf(0) }
   var pickedId by rememberSaveable { mutableStateOf<Long?>(null) }
+  val lastCalendar by rememberUpdatedState(device.deviceCalendar)
   LaunchedEffect(allowed, page, me) {
     if (!allowed) return@LaunchedEffect
     calendars
       .changes()
       .map {
         withContext(Dispatchers.IO) {
-          val found = calendars.calendars()
-          found to (me?.let { calendars.marked(page, it).size } ?: 0)
+          try {
+            calendars.calendars() to (me?.let { calendars.marked(page, it).size } ?: 0)
+          } catch (e: Exception) {
+            // A provider that would not be read (a vendor's, or access taken away meanwhile): none to offer.
+            Log.w("PochicalCalendarAdd", "The device's calendars were not read: $e")
+            emptyList<DeviceCalendar>() to 0
+          }
         }
       }
       .collect { (found, marked) ->
         list = found
         put = marked
         // The one picked stays while it still takes events, else the first pick.
-        if (found.none { it.id == pickedId }) pickedId = calendars.pickedFirst(found, settings.device.deviceCalendar)?.id
+        if (found.none { it.id == pickedId }) pickedId = calendars.pickedFirst(found, lastCalendar)?.id
       }
   }
 
@@ -154,30 +158,16 @@ fun DeviceCalendarPage(month: YearMonth, navigation: PageNavigation) {
   var doneTitle by rememberSaveable { mutableStateOf<String?>(null) }
   var doneText by rememberSaveable { mutableStateOf("") }
   var asksToRemove by rememberSaveable { mutableStateOf(false) }
+  // While a write runs: its buttons wait, as a second tap would only queue the same again.
+  var writing by remember { mutableStateOf(false) }
   var pickingCalendar by rememberSaveable { mutableStateOf(false) }
 
   // The patterns picked, the days' memos and who works them, kept with the account as last left:
   // the memos and people off at first, as a calendar may be shared with family.
   val putting = device.calendarAdd
-  val rows = calendar.patterns.map { it.row }
-  val shownDays = calendar.shown(page.first, page.last)
-  val picked = putting.shown(rows)
-  val memos = page.days.mapNotNull { day -> calendar.note(day)?.takeIf { it.isNotEmpty() }?.let { day to it } }.toMap()
-  val names = calendar.coworkers.associate { it.id to it.name }
-  val people: Map<LocalDate, List<String>> =
-    shownDays.mapNotNull { (day, entry) -> entry.people.mapNotNull(names::get).takeIf { it.isNotEmpty() }?.let { day to it } }.toMap()
-  val events =
-    shiftEvents(
-      page,
-      shownDays.mapValues { (_, entry) -> ShownDay(entry.shift, entry.start, entry.end) },
-      rows.associateBy { it.id },
-      picked,
-      if (putting.notes) memos else emptyMap(),
-      if (putting.people) people else emptyMap(),
-    )
-  // A switch only when it would put something in: a memo goes in any day, those on a day only in its shift's event.
-  val offersNotes = memos.isNotEmpty()
-  val offersPeople = people.keys.any { shownDays[it]?.shift in picked }
+  val adding = remember(calendar, page, putting) { Adding(calendar, page, putting) }
+  val events = adding.events
+  val picked = adding.picked
   val target = list?.find { it.id == pickedId }
 
   fun failed(words: Int) {
@@ -188,9 +178,10 @@ fun DeviceCalendarPage(month: YearMonth, navigation: PageNavigation) {
   fun add() {
     val user = me ?: return failed(R.string.calendar_add_failed)
     val into = target ?: return failed(R.string.calendar_add_failed)
+    writing = true
     scope.launch {
       try {
-        withContext(Dispatchers.IO) { calendars.add(events, page, user, into.id) }
+        calendars.add(events, page, user, into.id)
         settings.change { it.copy(deviceCalendar = into.id) }
         doneTitle = resources.getString(R.string.calendar_add_saved)
         doneText = resources.getString(R.string.calendar_add_added, into.name, name, events.size)
@@ -199,15 +190,18 @@ fun DeviceCalendarPage(month: YearMonth, navigation: PageNavigation) {
       } catch (e: Exception) {
         Log.w("PochicalCalendarAdd", "The events were not put in: $e")
         failed(R.string.calendar_add_failed)
+      } finally {
+        writing = false
       }
     }
   }
 
   fun remove() {
     val user = me ?: return failed(R.string.calendar_remove_failed)
+    writing = true
     scope.launch {
       try {
-        val removed = withContext(Dispatchers.IO) { calendars.remove(page, user) }
+        val removed = calendars.remove(page, user)
         doneTitle = resources.getString(R.string.calendar_add_removed_title)
         doneText = resources.getString(R.string.calendar_add_removed, name, removed)
       } catch (e: CancellationException) {
@@ -215,6 +209,8 @@ fun DeviceCalendarPage(month: YearMonth, navigation: PageNavigation) {
       } catch (e: Exception) {
         Log.w("PochicalCalendarAdd", "The events were not taken out: $e")
         failed(R.string.calendar_remove_failed)
+      } finally {
+        writing = false
       }
     }
   }
@@ -261,22 +257,21 @@ fun DeviceCalendarPage(month: YearMonth, navigation: PageNavigation) {
               )
             }
             item {
-              val listed = listed(calendar, page)
               ListItem(
                 headlineContent = { Text(stringResource(R.string.calendar_add_patterns)) },
                 // What is left out under it, every name of it, as a switch's line says what it does.
-                supportingContent = { Text(leftOut(listed, picked)) },
+                supportingContent = { Text(leftOut(adding.listed, picked)) },
                 modifier = Modifier.clickable { navigation.open(RootPage.DeviceCalendarPatterns(month.toString())) },
               )
             }
-            if (offersNotes) {
+            if (adding.offersNotes) {
               item {
                 SwitchRow(stringResource(R.string.calendar_add_notes), stringResource(R.string.calendar_add_notes_note), putting.notes) { on ->
                   settings.change { it.copy(calendarAdd = it.calendarAdd.copy(notes = on)) }
                 }
               }
             }
-            if (offersPeople) {
+            if (adding.offersPeople) {
               item {
                 SwitchRow(stringResource(R.string.calendar_add_people), stringResource(R.string.calendar_add_people_note), putting.people) { on ->
                   settings.change { it.copy(calendarAdd = it.calendarAdd.copy(people = on)) }
@@ -285,13 +280,18 @@ fun DeviceCalendarPage(month: YearMonth, navigation: PageNavigation) {
             }
             item { Footnote(stringResource(R.string.calendar_add_again, name)) }
             item {
-              Wide(stringResource(R.string.calendar_add_button, events.size), enabled = events.isNotEmpty() && target != null, onClick = ::add)
+              Wide(
+                stringResource(R.string.calendar_add_button, events.size),
+                enabled = events.isNotEmpty() && target != null && !writing,
+                onClick = ::add,
+              )
             }
             // Only while some are in, as from a calendar picked by mistake, so none is taken out one by one.
             if (put > 0) {
               item {
                 TextButton(
                   onClick = { asksToRemove = true },
+                  enabled = !writing,
                   modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).heightIn(min = Metrics.control),
                   colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
                 ) {
@@ -328,6 +328,41 @@ fun DeviceCalendarPage(month: YearMonth, navigation: PageNavigation) {
   if (pickingCalendar) {
     CalendarPicker(list.orEmpty(), pickedId, onPick = { pickedId = it }, onDismiss = { pickingCalendar = false })
   }
+}
+
+/**
+ * What 端末カレンダーに追加 puts in from [page] as [putting] has it: the patterns to pick from and
+ * those picked, the events, and which switches would put something in, worked out once for each.
+ */
+private class Adding(calendar: OwnCalendar, page: Period, putting: CalendarAdd) {
+  private val rows = calendar.patterns.map { it.row }
+  private val shownDays = calendar.shown(page.first, page.last)
+
+  /** The patterns to pick from: those in use, and one left that still shows on the page. */
+  val listed: List<Pattern> = calendar.patterns.filter { pattern -> !pattern.archived || shownDays.values.any { it.shift == pattern.id } }
+
+  val picked: Set<String> = putting.shown(rows)
+
+  private val memos = page.days.mapNotNull { day -> calendar.note(day)?.takeIf { it.isNotEmpty() }?.let { day to it } }.toMap()
+
+  private val people: Map<LocalDate, List<String>> =
+    calendar.coworkers.associate { it.id to it.name }.let { names ->
+      shownDays.mapNotNull { (day, entry) -> entry.people.mapNotNull(names::get).takeIf { it.isNotEmpty() }?.let { day to it } }.toMap()
+    }
+
+  val events =
+    shiftEvents(
+      page,
+      shownDays.mapValues { (_, entry) -> ShownDay(entry.shift, entry.start, entry.end) },
+      rows.associateBy { it.id },
+      picked,
+      if (putting.notes) memos else emptyMap(),
+      if (putting.people) people else emptyMap(),
+    )
+
+  // A switch only when it would put something in: a memo goes in any day, those on a day only in its shift's event.
+  val offersNotes = memos.isNotEmpty()
+  val offersPeople = people.keys.any { shownDays[it]?.shift in picked }
 }
 
 /** What the row under 入れるシフト says is left out, every name of it. */
@@ -408,9 +443,10 @@ fun DeviceCalendarPatternsPage(month: YearMonth, onBack: () -> Unit) {
   val page = settings.device.period.page(month)
   val rows = calendar.patterns.map { it.row }
   val shown = settings.device.calendarAdd.shown(rows)
+  val listed = remember(calendar, page) { Adding(calendar, page, CalendarAdd()).listed }
   SettingsPage(stringResource(R.string.calendar_add_patterns), onBack) { padding ->
     LazyColumn(contentPadding = padding) {
-      items(listed(calendar, page), key = { it.id }) { pattern ->
+      items(listed, key = { it.id }) { pattern ->
         val on = pattern.id in shown
         ListItem(
           headlineContent = { Text(pattern.name, maxLines = 1) },
