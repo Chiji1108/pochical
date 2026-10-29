@@ -109,6 +109,8 @@ private suspend fun photoSource(data: ChatPhotoData, loader: ImageLoader, calls:
     return SourceFetchResult(ImageSource(snapshot.data, fileSystem, data.key, snapshot), JPEG, DataSource.DISK)
   }
   val bytes = calls.chatPhoto(data.photoId, PhotoShelf.place(data.groupId), data.small)
+  // Let go of while it came (its line taken back): not kept, so it never comes back.
+  if (files.wasLetGo(data.groupId, data.photoId)) throw PhotoLetGo()
   val editor = disk?.openEditor(data.key)
   if (editor != null) {
     try {
@@ -128,6 +130,9 @@ suspend fun wholePhoto(context: Context, calls: GroupCalls, files: ChatPhotoFile
   photoSource(ChatPhotoData(photoId, groupId, small = false), SingletonImageLoader.get(context), calls, files).source.use { it.source().readByteArray() }
 
 private const val JPEG = "image/jpeg"
+
+/** A photo let go of while its fetch was on its way. */
+private class PhotoLetGo : Exception("The photo was let go of")
 
 /** Fetches a face, a mark or a page's picture as the kit holds it, in memory alone. */
 private class PictureFetcher(private val data: Picture, private val calls: GroupCalls) : Fetcher {
