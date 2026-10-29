@@ -6,6 +6,7 @@
 import { fitted } from "./alert-size";
 import { signJwt } from "./jwt";
 import type { Alert, Outcome, Push, Recipient } from "./push";
+import { PUSH_TIMEOUT_MS, refusal } from "./push-refusal";
 import type { Device } from "./push-tokens";
 
 /** What the access token may do: send through FCM, nothing else. */
@@ -228,7 +229,7 @@ const isGone = ({ fields, reason }: Refusal): boolean =>
 /**
  * Posts `push` to an Android phone, "gone" when FCM says the token is no
  * longer the app's, so it is dropped. An access token FCM no longer takes
- * (401) is asked for again by the next push.
+ * (401) is asked for again by the next try.
  */
 export const attemptFcm = async (
   env: Env,
@@ -247,20 +248,23 @@ export const attemptFcm = async (
       body: JSON.stringify(messageOf(token, push)),
       headers: { authorization, "content-type": "application/json" },
       method: "POST",
+      signal: AbortSignal.timeout(PUSH_TIMEOUT_MS),
     }
   );
   const { status } = response;
   if (response.ok) {
     return { reason: "", sent: "sent", status };
   }
-  // Only the token refused: one asked for since stays.
-  if (status === 401 && granted === using) {
-    granted = undefined;
+  const refused = refusalOf(await response.text());
+  if (status === 401) {
+    // Only the token refused: one asked for since stays. The next try
+    // asks for a new one.
+    if (granted === using) {
+      granted = undefined;
+    }
+    return { reason: refused.reason, sent: "later", status };
   }
-  const refusal = refusalOf(await response.text());
-  return {
-    reason: refusal.reason,
-    sent: isGone(refusal) ? "gone" : "failed",
-    status,
-  };
+  // 429 QUOTA_EXCEEDED, 500 INTERNAL and 503 UNAVAILABLE are tried again,
+  // after FCM's Retry-After when it gives one (FCM's ErrorCode reference).
+  return refusal(response, refused.reason, isGone(refused) ? "gone" : "failed");
 };

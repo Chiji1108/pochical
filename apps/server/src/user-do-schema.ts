@@ -4,6 +4,7 @@
 import { sql } from "drizzle-orm";
 import {
   check,
+  index,
   customType,
   integer,
   primaryKey,
@@ -11,6 +12,8 @@ import {
   text,
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
+
+import type { Push } from "./push";
 
 // The groups the user is in, so an id that is not theirs never wakes a
 // Group DO, and their devices list them with the group's name and mark as
@@ -232,6 +235,27 @@ export const chatNotified = sqliteTable(
     threadId: text("thread_id").notNull(),
   },
   (table) => [primaryKey({ columns: [table.groupId, table.threadId] })]
+);
+
+// Pushes to one of the user's devices that its push service refused for a
+// while (429, a 5xx) or did not answer, each to be tried again at `due_at`
+// by the alarm (spec/sync-protocol.md, Push); a try takes its row, and one
+// refused again leaves a new one. Only the server keeps them, so no cursor.
+export const pushRetries = sqliteTable(
+  "push_retries",
+  {
+    dueAt: integer("due_at", { mode: "timestamp_ms" }).notNull(),
+    id: integer().primaryKey({ autoIncrement: true }),
+    platform: text({ enum: ["apns", "fcm"] }).notNull(),
+    // The push, as push.ts's Push.
+    push: text({ mode: "json" }).$type<Push>().notNull(),
+    // An APNs token's environment, false for FCM.
+    sandbox: integer({ mode: "boolean" }).notNull(),
+    token: text().notNull(),
+    // How many tries it has had.
+    tries: integer().notNull(),
+  },
+  (table) => [index("push_retries_due_at").on(table.dueAt)]
 );
 
 // Who the user has blocked (spec/chat.md, Reporting and blocking), one row

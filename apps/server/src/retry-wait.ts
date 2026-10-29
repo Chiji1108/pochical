@@ -10,6 +10,14 @@ export const retryWait = (
 ): number => Math.min(firstMs * 2 ** (failures - 1), mostMs);
 
 /**
+ * A wait between half of `ms` and all of it, at random ("equal jitter"),
+ * so the many objects a service's outage failed at once do not all try it
+ * again at once.
+ */
+export const jittered = (ms: number): number =>
+  ms / 2 + (Math.random() * ms) / 2;
+
+/**
  * One more failure in a row counted under `key` in a Durable Object's
  * storage: how many now. Deleting the key starts the count again.
  */

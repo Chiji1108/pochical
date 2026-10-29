@@ -76,6 +76,14 @@ class ChatNotifierTest {
   }
 
   @Test
+  fun aLineTheServerTriedAgainShowsOnce() = runTest {
+    notifier.show(groupLine(2, "今週どう？"))
+    notifier.show(groupLine(2, "今週どう？"))
+    notifier.show(groupLine(3, "土曜とか"))
+    assertEquals(listOf("今週どう？", "土曜とか"), messagesOf().messages.map { it.text.toString() })
+  }
+
+  @Test
   fun aOneToOneChatsLineIsFromItsWriterAlone() = runTest {
     notifier.show(
       PushedAlert(

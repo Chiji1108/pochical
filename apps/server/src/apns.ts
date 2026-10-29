@@ -7,6 +7,7 @@
 import { fitted } from "./alert-size";
 import { signJwt } from "./jwt";
 import type { Alert, Outcome, Push, Recipient, Withdrawal } from "./push";
+import { PUSH_TIMEOUT_MS, refusal } from "./push-refusal";
 import type { Device } from "./push-tokens";
 
 /** The app's bundle id, the topic every notification is for. */
@@ -119,7 +120,9 @@ const reasonOf = (body: string): string => {
 /**
  * What APNs' answer says of the push. "gone" when the token is no longer
  * the app's (410 Unregistered, or 400 BadDeviceToken or
- * DeviceTokenNotForTopic), so it is dropped.
+ * DeviceTokenNotForTopic), so it is dropped; "later" on 429
+ * TooManyRequests, 500 InternalServerError and 503 ServiceUnavailable, so
+ * it is tried again ("Handling notification responses from APNs").
  */
 const outcomeOf = async (response: Response): Promise<Outcome> => {
   const { status } = response;
@@ -131,7 +134,7 @@ const outcomeOf = async (response: Response): Promise<Outcome> => {
     status === 410 ||
     (status === 400 &&
       (reason === "BadDeviceToken" || reason === "DeviceTokenNotForTopic"));
-  return { reason, sent: gone ? "gone" : "failed", status };
+  return refusal(response, reason, gone ? "gone" : "failed");
 };
 
 /**
@@ -154,6 +157,9 @@ export const attemptApns = async (
       ? fittedPayloadOf(push.alert, push.recipient)
       : withdrawalOf(push.withdrawal),
     headers: {
+      // A notification tried again replaces the one before should that
+      // have reached the device unanswered, rather than showing twice.
+      ...(alert && { "apns-collapse-id": push.id }),
       // A background push must go at the low priority, or APNs refuses it.
       "apns-priority": alert ? "10" : "5",
       "apns-push-type": alert ? "alert" : "background",
@@ -161,6 +167,7 @@ export const attemptApns = async (
       authorization: `bearer ${await providerToken(key, env.APNS_KEY_ID, env.APNS_TEAM_ID)}`,
     },
     method: "POST",
+    signal: AbortSignal.timeout(PUSH_TIMEOUT_MS),
   });
   return await outcomeOf(response);
 };

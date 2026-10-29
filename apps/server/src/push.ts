@@ -2,7 +2,8 @@
 // an iPhone's through Apple's push service (apns.ts), an Android phone's
 // through Firebase Cloud Messaging (fcm.ts). What is sent is the same for
 // both; each words it in its own payload. Whatever comes of a push is
-// logged and counted here, alike for both.
+// logged and counted here, alike for both; one refused for a while is
+// tried again by the User DO (user-do.ts, deliver).
 
 import { attemptApns } from "./apns";
 import { attemptFcm } from "./fcm";
@@ -38,16 +39,23 @@ export type Recipient = { recipientId: string; badge: number };
  */
 export type Withdrawal = { groupId: string; threadId: string; readTo: number };
 
-/** What is sent to a device: a notification, or a withdrawal. */
+/**
+ * What is sent to a device: a notification, or a withdrawal. A
+ * notification's `id` is the same on each try of it (APNs'
+ * `apns-collapse-id`), so a try that reached the device unanswered and the
+ * one after it show as one.
+ */
 export type Push =
-  | { kind: "alert"; alert: Alert; recipient: Recipient }
+  | { kind: "alert"; id: string; alert: Alert; recipient: Recipient }
   | { kind: "withdrawal"; withdrawal: Withdrawal };
 
 /**
- * What the push service's answer says of a token: "gone" when it is no
- * longer the app's, so it is dropped.
+ * What the push service's answer says of the push: "gone" when the token
+ * is no longer the app's, so it is dropped; "later" when it was refused
+ * for a while (429 or a 5xx) or not answered, so it is tried again;
+ * "failed" when another try would be refused the same.
  */
-export type Sent = "sent" | "gone" | "failed";
+export type Sent = "sent" | "gone" | "later" | "failed";
 
 /** One push and what came of it, as logged and counted. */
 export type Outcome = {
@@ -56,6 +64,9 @@ export type Outcome = {
   status: number;
   // The service's reason, or what kept the push from reaching it.
   reason: string;
+  // How long the service asked to be left before the next try, by its
+  // Retry-After, when it said.
+  retryAfterMs?: number;
 };
 
 /** Posts `push` to one device through its platform's service. */
@@ -69,9 +80,10 @@ const attempt = async (
       ? await attemptApns(env, device, push)
       : await attemptFcm(env, device, push);
   } catch (error) {
-    // The error may name the address, which can hold the device's token.
+    // Not reached, or not answered in time: tried again. The error may
+    // name the address, which can hold the device's token.
     const reason = String(error).replaceAll(device.token, "{token}");
-    return { reason, sent: "failed", status: 0 };
+    return { reason, sent: "later", status: 0 };
   }
 };
 
@@ -82,7 +94,11 @@ const attempt = async (
  * push's kind, blob4 "sandbox" or "production", blob5 the platform,
  * double1 the HTTP status).
  */
-const post = async (env: Env, device: Device, push: Push): Promise<Sent> => {
+export const sendPush = async (
+  env: Env,
+  device: Device,
+  push: Push
+): Promise<Outcome> => {
   const outcome = await attempt(env, device, push);
   const sandbox = device.platform === "apns" && device.sandbox;
   if (outcome.sent !== "sent") {
@@ -106,21 +122,5 @@ const post = async (env: Env, device: Device, push: Push): Promise<Sent> => {
     doubles: [outcome.status],
     indexes: [outcome.sent],
   });
-  return outcome.sent;
+  return outcome;
 };
-
-/** Sends `alert` to one device. */
-export const sendAlert = async (
-  env: Env,
-  device: Device,
-  alert: Alert,
-  recipient: Recipient
-): Promise<Sent> =>
-  await post(env, device, { alert, kind: "alert", recipient });
-
-/** Sends a withdrawal to one device, as `sendAlert` sends a notification. */
-export const sendWithdrawal = async (
-  env: Env,
-  device: Device,
-  withdrawal: Withdrawal
-): Promise<Sent> => await post(env, device, { kind: "withdrawal", withdrawal });
