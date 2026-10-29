@@ -41,7 +41,7 @@ import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.ReviewPrompt
 import app.pochical.SectionHeader
-import app.pochical.characterCount
+import app.pochical.kit.characterCount
 import app.pochical.rememberKeptField
 import app.pochical.design.TextLimits
 import app.pochical.kit.GroupMarkValue

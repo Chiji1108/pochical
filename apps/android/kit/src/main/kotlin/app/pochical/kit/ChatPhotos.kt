@@ -15,6 +15,7 @@ import java.nio.ByteBuffer
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -139,6 +140,15 @@ class ChatPhotoFiles internal constructor(private val caches: File, private val 
   /** The photos let go of, as they are. */
   val forgotten: SharedFlow<ForgottenPhoto> = mutableForgotten.asSharedFlow()
 
+  /** The photos let go of while the app runs, by group and id, marked before they are told. */
+  private val letGo = ConcurrentHashMap.newKeySet<String>()
+
+  /**
+   * Whether the photo was let go of: one whose fetch was on its way as it was is not kept, so it
+   * never comes back into the image cache after it let go of it.
+   */
+  fun wasLetGo(groupId: String, photoId: String): Boolean = "$groupId/$photoId" in letGo
+
   private fun shown(groupId: String, photoId: String) = File(caches, "chat-photos/$groupId/$photoId.jpg")
 
   internal fun pending(groupId: String, photoId: String) = File(files, "pending-photos/$groupId/$photoId.jpg")
@@ -190,7 +200,30 @@ class ChatPhotoFiles internal constructor(private val caches: File, private val 
         pendingSmall(groupId, id).delete()
       }
     }
-    for (id in photoIds) mutableForgotten.emit(ForgottenPhoto(PhotoShelf.place(groupId), id))
+    tellLetGo(groupId, photoIds)
+  }
+
+  /**
+   * Marks the group [groupId]'s [photoIds] let go of, so a fetch on its way keeps none of them, and
+   * tells the app's image cache to let go of them too.
+   */
+  private suspend fun tellLetGo(groupId: String, photoIds: List<String>) {
+    for (id in photoIds) {
+      letGo += "$groupId/$id"
+      mutableForgotten.emit(ForgottenPhoto(PhotoShelf.place(groupId), id))
+    }
+  }
+
+  /**
+   * A group left: every photo of the member's kept for it, to send or to show, and [photoIds], those
+   * of its lines the device held, for the app's image cache to let go of too.
+   */
+  internal suspend fun forgetPlace(groupId: String, photoIds: List<String>) {
+    withContext(Dispatchers.IO) {
+      File(caches, "chat-photos/$groupId").deleteRecursively()
+      File(files, "pending-photos/$groupId").deleteRecursively()
+    }
+    tellLetGo(groupId, photoIds)
   }
 
   /** Every photo kept, to send or to show, gone with the user. */

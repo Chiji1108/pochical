@@ -4,6 +4,7 @@ import { css } from "@pochical/styled-system/css";
 import { Fragment, useContext, useState } from "react";
 
 import {
+  patternsSaving,
   patternsWithout,
   refusesArchiving,
   repeatsPattern,
@@ -175,13 +176,7 @@ export function PatternsPage({
         }}
         onSave={(draft) => {
           const pattern = patternOf(draft);
-          setItems((previous) =>
-            isNew
-              ? [...previous, pattern]
-              : previous.map((item) =>
-                  item.id === pattern.id ? pattern : item
-                )
-          );
+          setItems((previous) => patternsSaving(previous, pattern));
           setEditing(undefined);
         }}
         // The next day's choices: patterns in use, and the one it names.

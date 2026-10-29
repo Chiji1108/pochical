@@ -21,7 +21,10 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
@@ -135,6 +138,15 @@ class SyncAccount internal constructor(
   /** Signed in or changing, the stretch whose sockets are open; null otherwise. */
   private val stretch = MutableStateFlow<Stretch?>(null)
 
+  private val mutableLeft = MutableSharedFlow<String>(extraBufferCapacity = 16)
+
+  /**
+   * Each group the user leaves or is taken out of, once the device has let go of what it held of it,
+   * for what the app keeps of the group outside the database (its chats' conversations and
+   * notifications) to go too.
+   */
+  val left: SharedFlow<String> = mutableLeft.asSharedFlow()
+
   /** The user's own socket, for the screens to say 接続中… while it is not current. */
   val userSocket: Flow<SocketState> = stretch.flatMapLatest { it?.user?.state ?: flowOf(SocketState.Closed) }
 
@@ -234,11 +246,14 @@ class SyncAccount internal constructor(
    * Signs in with the provider's account (spec/sync-protocol.md, Signing in): linked to this user,
    * keeping what the device holds; or, when it is another user's already, one side kept, without
    * asking when either holds nothing (this device's data let go first), else [SignInResult.Choose]
-   * for the person to. [NotSignedIn] before the device has a session, or once the server says it
-   * does not know it; [AccountSuspended] for an account Pochical's people suspended; [LinkRefused]
-   * or another error otherwise, nothing changed.
+   * for the person to. Asked while the device is still signing in, as by a sign-in whose page
+   * returned to an app started anew, it waits for the device's session first. [NotSignedIn] when the
+   * device has none once that settles, or once the server says it does not know it;
+   * [AccountSuspended] for an account Pochical's people suspended; [LinkRefused] or another error
+   * otherwise, nothing changed.
    */
   suspend fun signIn(account: ProviderToken): SignInResult {
+    state.first { it != AccountState.SigningIn }
     val credentials = signedIn() ?: throw NotSignedIn()
     if (link(credentials, account) == LinkResult.Linked) return SignInResult.Linked
     val inUse = coroutineScope {
@@ -982,7 +997,7 @@ class SyncAccount internal constructor(
     fun end() = scope.cancel()
 
     private fun client(peer: Peer) =
-      SyncClient(database, peer, server, http, credentials, linePhotos, scope, now, random) {
+      SyncClient(database, peer, server, http, credentials, linePhotos, scope, now, random, left = mutableLeft::emit) {
         commands.trySend(Command.SessionUnknown(credentials.generation))
       }
   }
