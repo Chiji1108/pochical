@@ -70,6 +70,9 @@ internal interface ChatDao {
   @Query("SELECT DISTINCT threadId FROM chatLines WHERE groupId = :groupId")
   suspend fun lineThreads(groupId: String): List<String>
 
+  /** The group's lines of one [kind] (`LineKind`), as the group sent them. */
+  @Query("SELECT line FROM chatLines WHERE groupId = :groupId AND kind = :kind") suspend fun linesOf(groupId: String, kind: String): List<ByteArray>
+
   @Query("DELETE FROM chatLines WHERE groupId = :groupId") suspend fun deleteChatLines(groupId: String)
 
   @Query("DELETE FROM chatLines") suspend fun deleteAllChatLines()
