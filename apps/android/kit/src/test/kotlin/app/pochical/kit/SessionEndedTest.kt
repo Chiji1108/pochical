@@ -79,7 +79,7 @@ class SessionEndedTest {
     assertEquals(StoredSession("token-1", "user-1"), phone.sessions.read())
     assertEquals("残す", phone.note("2026-10-04"))
     assertEquals(1, server.signIns.get())
-    val again = SyncAccount(phone.database, phone.sessions, server.url, OkHttpClient(), phone.scope, linePhotos = phone.linePhotos)
+    val again = SyncAccount(phone.database, phone.sessions, server.url, lazyOf(OkHttpClient()), phone.scope, linePhotos = phone.linePhotos)
     again.foreground()
     withTimeout(10_000) { again.state.first { it == AccountState.SignedIn("user-1", linked = null) } }
   }
@@ -129,7 +129,7 @@ class SessionEndedTest {
     assertNull(phone.note("2026-10-04"))
     assertEquals(StoredSession("token-1", "user-1", ended = true), phone.sessions.read())
 
-    val again = SyncAccount(phone.database, phone.sessions, server.url, OkHttpClient(), phone.scope, linePhotos = phone.linePhotos)
+    val again = SyncAccount(phone.database, phone.sessions, server.url, lazyOf(OkHttpClient()), phone.scope, linePhotos = phone.linePhotos)
     again.foreground()
     withTimeout(10_000) { again.state.first { it == failed } }
     phone.kept.writable = true

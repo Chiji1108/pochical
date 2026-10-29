@@ -233,18 +233,19 @@ data class CalendarAdd(
 )
 
 /**
- * The device settings kept in [file]. A setting missing from what was kept, or one this app cannot
+ * The device settings kept in the file [produceFile] names, asked for as DataStore first reads, off
+ * the main thread. A setting missing from what was kept, or one this app cannot
  * read, takes its default, and a file that cannot be read at all is the defaults, as on iOS.
  */
 fun deviceSettingsStore(
-  file: File,
+  produceFile: () -> File,
   scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
 ): DataStore<DeviceSettings> =
   DataStoreFactory.create(
     serializer = DeviceSettingsSerializer,
     corruptionHandler = ReplaceFileCorruptionHandler { DeviceSettings() },
     scope = scope,
-    produceFile = { file },
+    produceFile = produceFile,
   )
 
 /** The settings as kept, the defaults while the disk cannot be read, as DataStore's data says to. */

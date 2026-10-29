@@ -7,7 +7,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -88,7 +88,7 @@ fun ChatSpeech(
   var heardTo by remember(since) { mutableLongStateOf(since ?: 0) }
   // Those after the last heard, followed only while a screen reader reads the screen, as nothing is
   // said otherwise.
-  val came by remember(since, heardTo, reading) { since?.takeIf { reading }?.let { arrived(heardTo) } ?: flowOf(emptyList()) }.collectAsState(emptyList())
+  val came by remember(since, heardTo, reading) { since?.takeIf { reading }?.let { arrived(heardTo) } ?: flowOf(emptyList()) }.collectAsStateWithLifecycle(emptyList())
   val hidden by rememberUpdatedState(blocked)
   // A run coming at once is said once, rather than each cutting the last off. Keyed on the lines as
   // the device holds them, so one changed or taken back while it settles waits again and is said as
@@ -129,16 +129,23 @@ fun ChatSpeech(
       is What.Scrolled -> what.day?.let { dayWords(it) } ?: stringResource(R.string.chat_latest_lines)
       null -> ""
     }
-  // Two live regions, each thing said by the one the last was not, the other emptied: a live region
-  // is told as its words change on a node the screen already has, so the same words said again are
-  // a change too.
-  val turn = (now?.id ?: 0L) % 2
   LaunchedEffect(now?.id) { if (now != null) onSaid(words) }
+  Spoken(now?.id ?: 0L, words)
+}
+
+/**
+ * Says [words] to a screen reader, politely, as [id] changes: by two live regions, each thing said by
+ * the one the last was not, the other emptied. A live region is told as its words change on a node
+ * the screen already has, so the same words said again are a change too.
+ */
+@Composable
+fun Spoken(id: Long, words: String) {
+  val turn = id % 2
   for (side in 0L..1L) {
     Box(
       Modifier.size(1.dp).semantics {
         liveRegion = LiveRegionMode.Polite
-        contentDescription = if (side == turn) words else ""
+        contentDescription = if (side == turn && id != 0L) words else ""
       }
     )
   }

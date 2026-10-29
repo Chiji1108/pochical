@@ -31,7 +31,7 @@ class SyncedSettingsTest {
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
   private val database = testDatabase()
   private val settings by lazy {
-    SyncedSettings(deviceSettingsStore(File(folder.root, "settings.json"), scope), database, OwnEdits(database), scope)
+    SyncedSettings(deviceSettingsStore({ File(folder.root, "settings.json") }, scope), database, OwnEdits(database), scope)
   }
 
   @After

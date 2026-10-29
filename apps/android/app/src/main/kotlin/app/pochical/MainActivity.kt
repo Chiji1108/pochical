@@ -41,6 +41,7 @@ import dev.zacsweers.metro.ContributesIntoMap
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.binding
 import dev.zacsweers.metrox.android.ActivityKey
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -92,6 +93,8 @@ class MainActivity(
     }
     // The widgets' previews in the picker follow the settings the screens change.
     lifecycleScope.launch { followForWidgetPreviews(this@MainActivity, deviceSettings.settings) }
+    // Set while the app is in front, where the system does not limit how often (spec/shortcuts.md).
+    if (savedInstanceState == null) lifecycleScope.launch(Dispatchers.Default) { publishShortcuts(applicationContext) }
     setContent {
       val device = settings ?: return@setContent
       if (!calendarRead) return@setContent

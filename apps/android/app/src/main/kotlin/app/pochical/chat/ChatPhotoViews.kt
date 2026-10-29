@@ -26,7 +26,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -53,6 +53,9 @@ import app.pochical.calendar.rememberReducedMotion
 import app.pochical.design.Chat
 import app.pochical.design.Radius
 import android.content.Context
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.hapticfeedback.HapticFeedback
+import androidx.compose.material3.SnackbarHostState
 import app.pochical.kit.ChatPhotoFiles
 import app.pochical.kit.GroupCalls
 import app.pochical.kit.PhotoUploads
@@ -82,7 +85,7 @@ val LocalPhotoFiles = staticCompositionLocalOf<ChatPhotoFiles> { error("No photo
  * rest; what to say of it (spec/chat.md, Photos): 写真を保存しました, 一部の写真を保存できませんでした
  * or 保存できませんでした.
  */
-suspend fun savePhotos(context: Context, calls: GroupCalls, files: ChatPhotoFiles, groupId: String, photos: List<ChatPhoto>): String {
+suspend fun savePhotos(context: Context, calls: GroupCalls, files: ChatPhotoFiles, groupId: String, photos: List<ChatPhoto>): Saved {
   val saved =
     photos.count { photo ->
       try {
@@ -93,13 +96,25 @@ suspend fun savePhotos(context: Context, calls: GroupCalls, files: ChatPhotoFile
         false
       }
     }
-  return context.getString(
-    when (saved) {
-      photos.size -> R.string.chat_photo_saved
-      0 -> R.string.chat_photo_not_saved
-      else -> R.string.chat_photo_some_not_saved
-    }
+  return Saved(
+    context.getString(
+      when (saved) {
+        photos.size -> R.string.chat_photo_saved
+        0 -> R.string.chat_photo_not_saved
+        else -> R.string.chat_photo_some_not_saved
+      }
+    ),
+    all = saved == photos.size,
   )
+}
+
+/** What saving photos came to: [words] to say, and whether [all] were saved, which is felt as well (spec/haptics.md). */
+class Saved(val words: String, val all: Boolean)
+
+/** Says what saving came to, felt as well once every photo was saved, as it is out of sight in Photos; a failure plays nothing. */
+suspend fun SnackbarHostState.saying(saved: Saved, haptics: HapticFeedback) {
+  if (saved.all) haptics.performHapticFeedback(HapticFeedbackType.Confirm)
+  showSnackbar(saved.words)
 }
 
 /** The box a photo fits in, and how far from square it may be before its ends are cut, as LINE crops a panorama (/design's photoSize). */
@@ -158,7 +173,14 @@ fun PhotoLine(photos: List<ChatPhoto>, groupId: String, waiting: WaitingLine?, o
     Box(modifier) {
       // Not while it goes up; one of the member's own once up, or not sent, opens alone.
       val opens = waiting == null || waiting.failed || waiting.sending
-      ChatPhotoImage(photos[index], groupId, retries = waiting == null, onOpen = onOpen?.takeIf { opens }?.let { open -> { open(index) } }, Modifier.matchParentSize())
+      // The place it opens large out of; not the copy lifted over the line's menu, which opens nothing.
+      ChatPhotoImage(
+        photos[index],
+        groupId,
+        retries = waiting == null,
+        onOpen = onOpen?.takeIf { opens }?.let { open -> { open(index) } },
+        Modifier.matchParentSize().then(if (onOpen != null) Modifier.photoPlace(photos[index].id) else Modifier),
+      )
       if (waiting != null && !waiting.failed) PhotoGoingUp(photos[index].id, waiting.sending, onStop.takeIf { !waiting.sending }, Modifier.matchParentSize())
     }
   }
@@ -261,7 +283,7 @@ fun PhotoComing(breathing: Boolean, modifier: Modifier = Modifier) {
 private fun PhotoGoingUp(photoId: String, sending: Boolean, onStop: (() -> Unit)?, modifier: Modifier) {
   val colors = LocalThemeColors.current
   val uploads = LocalPhotoUploads.current
-  val sent by uploads.sent.collectAsState()
+  val sent by uploads.sent.collectAsStateWithLifecycle()
   val gone = sent[photoId] ?: if (sending) 1f else null
   Box(modifier.background(colors.mediaDim), contentAlignment = Alignment.Center) {
     Box(Modifier.size(48.dp).background(colors.mediaShade, CircleShape), contentAlignment = Alignment.Center) {

@@ -64,8 +64,11 @@ class ReminderAlarms(
 
   private val alarms = checkNotNull(application.getSystemService(AlarmManager::class.java))
 
-  /** The minute of the alarm set and not yet gone off, kept for as long as the system keeps the alarm. */
-  private val kept = application.getSharedPreferences("reminder-alarm", Context.MODE_PRIVATE)
+  /**
+   * The minute of the alarm set and not yet gone off, kept for as long as the system keeps the alarm:
+   * opened as the alarm is first set or read, off the main thread.
+   */
+  private val kept by lazy { application.getSharedPreferences("reminder-alarm", Context.MODE_PRIVATE) }
 
   /** One at a time: the alarm set, shown or taken away by one before another reads it. */
   private val turn = Mutex()
