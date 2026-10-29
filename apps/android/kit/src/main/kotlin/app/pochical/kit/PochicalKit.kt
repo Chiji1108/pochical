@@ -61,6 +61,9 @@ class PochicalKit(context: Context) {
       sendInBackground = { SendOutboxWorker.enqueue(context) },
     )
 
+  /** The user the device is signed in as, null while it is no one or changing. */
+  private val user = account.state.map { (it as? AccountState.SignedIn)?.userId }.distinctUntilChanged()
+
   /** GroupService, the profile and the photos, as the user the device is signed in as. */
   val groups = GroupCalls(account, http, server, photos, CoroutineScope(SupervisorJob() + Dispatchers.Default))
 
@@ -68,7 +71,7 @@ class PochicalKit(context: Context) {
   val chatNotifications =
     ChatNotificationSwitches(
       combine(database.values().chatMutes(), database.values().chatNotificationSettings(), ChatNotificationState::of),
-      account.state.map { (it as? AccountState.SignedIn)?.userId },
+      user,
       groups::setChatMuted,
       groups::setMentionsWhenMuted,
       CoroutineScope(SupervisorJob() + Dispatchers.Default),
@@ -77,8 +80,11 @@ class PochicalKit(context: Context) {
   init {
     // What was fetched as a user goes with them, as the rest of their data does.
     CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
-      account.state.map { (it as? AccountState.SignedIn)?.userId }.distinctUntilChanged().collect { photos.forget() }
+      user.collect { photos.forget() }
     }
+    // The marks' shape goes to the account for the user's groups (spec/sync-protocol.md, Profile).
+    CoroutineScope(SupervisorJob() + Dispatchers.Default)
+      .syncMarkLook(database.values(), user, groups::setMarkLook)
   }
 
   /** Sign in with Apple through Apple's web page, which Android has in place of iOS's own. */

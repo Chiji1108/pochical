@@ -116,6 +116,16 @@ private fun MarkOptions(message: MarkOptionsMessage) =
     offs = message.offsMap.mapValues { known(it.value, OffLook::id) },
   )
 
+/** The look the account's `look` [value] holds, null for one this app cannot read. */
+internal fun lookOf(value: ByteArray): Look? =
+  try {
+    Look(LookPreference.parseFrom(value))
+  } catch (_: UnreadablePreference) {
+    null
+  } catch (_: InvalidProtocolBufferException) {
+    null
+  }
+
 private val Look.message: LookPreference
   get() = lookPreference {
     style = this@message.style.id
