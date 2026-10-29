@@ -28,8 +28,9 @@ import okio.Path.Companion.toOkioPath
 // and iOS's ChatPhotoLoading.swift does by Nuke: fetched once however many lines, quotes and the
 // photo opened large ask at once, read straight at the size they show, kept drawn in memory and as
 // fetched on the disk, each within its limit, the least lately seen let go first. Faces, groups'
-// photo marks and links' page pictures come the same way (`Picture`), kept drawn in memory beside
-// the photos, so a line drawn again shows them at once.
+// photo marks and links' page pictures come the same way (`Picture`), kept drawn in memory and on
+// the disk beside the photos, so a line drawn again shows them at once and a notification shows its
+// faces without the network.
 
 /**
  * One of a chat's photos as an image request asks for it: its small version as the lines and
@@ -43,14 +44,21 @@ data class ChatPhotoData(val photoId: String, val groupId: String, val small: Bo
 }
 
 /** A face or a mark, or a link's page picture: [shelf] null for the device's own alone. */
-data class Picture(val photoId: String, val shelf: PhotoShelf?)
+data class Picture(val photoId: String, val shelf: PhotoShelf?) {
+  /** What it is kept under, in memory and on the disk. */
+  val key: String
+    get() = pictureKey(shelf, photoId)
+}
 
 private fun photoKey(groupId: String, photoId: String, small: Boolean) = "chat/$groupId/$photoId" + if (small) "?small" else ""
+
+private fun pictureKey(shelf: PhotoShelf?, photoId: String) = "picture/${shelf?.path}$photoId"
 
 /**
  * The app's one image loader: the chat's photos at most `chatRules.photoMemoryBytes` drawn in
  * memory and `chatRules.photoDiskBytes` on the disk among the caches, the member's own read from
- * where they are held as sent and not kept twice; faces and pictures in memory beside them.
+ * where they are held as sent and not kept twice; faces and pictures beside them, a photo never
+ * changing once stored, so one kept is never stale.
  */
 fun chatImageLoader(context: Context, calls: GroupCalls, files: ChatPhotoFiles): ImageLoader =
   ImageLoader.Builder(context)
@@ -59,14 +67,15 @@ fun chatImageLoader(context: Context, calls: GroupCalls, files: ChatPhotoFiles):
     .components {
       add(Keyer<ChatPhotoData> { data, _ -> data.key })
       add(ChatPhotoFetcher.Factory(calls, files))
-      add(Keyer<Picture> { data, _ -> "picture/${data.shelf?.path}${data.photoId}" })
+      add(Keyer<Picture> { data, _ -> data.key })
       add(PictureFetcher.Factory(calls))
     }
     .build()
 
 /**
  * Lets go from the app's image loader of what the device lets go of ([ChatPhotoFiles.forgotten]: a
- * line taken back; every photo, face and picture with the user, as the device erases them), from
+ * line taken back; a group's photos and faces as it is left; every photo, face and picture with
+ * the user, as the device erases them), from
  * memory and the disk at once. Called as the app starts, before anything syncs, so nothing let go
  * of is missed however long before the first picture is drawn.
  */
@@ -81,8 +90,7 @@ suspend fun followForgotten(files: ChatPhotoFiles, loader: () -> ImageLoader) {
       disk?.clear()
       return@collect
     }
-    for (small in listOf(true, false)) {
-      val key = photoKey(groupId, photoId, small)
+    for (key in listOf(photoKey(groupId, photoId, small = true), photoKey(groupId, photoId, small = false), pictureKey(gone.shelf, photoId))) {
       disk?.remove(key)
       memory?.keys?.filter { it.key == key }?.forEach { memory.remove(it) }
     }
@@ -98,29 +106,34 @@ private class ChatPhotoFetcher(private val data: ChatPhotoData, private val load
   }
 }
 
-/** A chat's photo as kept: the member's own from the device, else from the disk cache, else from the group, kept there. */
+/** A chat's photo as kept: the member's own from the device, else as [diskCached] keeps it. */
 private suspend fun photoSource(data: ChatPhotoData, loader: ImageLoader, calls: GroupCalls, files: ChatPhotoFiles): SourceFetchResult {
-  val fileSystem = FileSystem.SYSTEM
   files.held(data.groupId, data.photoId)?.let { held ->
-    return SourceFetchResult(ImageSource(held.toOkioPath(), fileSystem), JPEG, DataSource.DISK)
+    return SourceFetchResult(ImageSource(held.toOkioPath(), FileSystem.SYSTEM), JPEG, DataSource.DISK)
   }
+  return diskCached(data.key, JPEG, loader) { calls.chatPhoto(data.photoId, PhotoShelf.place(data.groupId), data.small) }
+}
+
+/** What is kept under [key] in the loader's disk cache, else [fetch]ed and kept there. */
+private suspend fun diskCached(key: String, mimeType: String?, loader: ImageLoader, fetch: suspend () -> ByteArray): SourceFetchResult {
+  val fileSystem = FileSystem.SYSTEM
   val disk = loader.diskCache
-  disk?.openSnapshot(data.key)?.let { snapshot ->
-    return SourceFetchResult(ImageSource(snapshot.data, fileSystem, data.key, snapshot), JPEG, DataSource.DISK)
+  disk?.openSnapshot(key)?.let { snapshot ->
+    return SourceFetchResult(ImageSource(snapshot.data, fileSystem, key, snapshot), mimeType, DataSource.DISK)
   }
-  val bytes = calls.chatPhoto(data.photoId, PhotoShelf.place(data.groupId), data.small)
-  val editor = disk?.openEditor(data.key)
+  val bytes = fetch()
+  val editor = disk?.openEditor(key)
   if (editor != null) {
     try {
       fileSystem.write(editor.data) { write(bytes) }
       val snapshot = editor.commitAndOpenSnapshot()
-      if (snapshot != null) return SourceFetchResult(ImageSource(snapshot.data, fileSystem, data.key, snapshot), JPEG, DataSource.NETWORK)
+      if (snapshot != null) return SourceFetchResult(ImageSource(snapshot.data, fileSystem, key, snapshot), mimeType, DataSource.NETWORK)
     } catch (e: Exception) {
       editor.abort()
       throw e
     }
   }
-  return SourceFetchResult(ImageSource(Buffer().write(bytes), fileSystem), JPEG, DataSource.NETWORK)
+  return SourceFetchResult(ImageSource(Buffer().write(bytes), fileSystem), mimeType, DataSource.NETWORK)
 }
 
 /** The photo itself as it came, its bytes, to save or share: kept as the photo opened large is, fetched once. */
@@ -129,15 +142,12 @@ suspend fun wholePhoto(context: Context, calls: GroupCalls, files: ChatPhotoFile
 
 private const val JPEG = "image/jpeg"
 
-/** Fetches a face, a mark or a page's picture as the kit holds it, in memory alone. */
-private class PictureFetcher(private val data: Picture, private val calls: GroupCalls) : Fetcher {
-  override suspend fun fetch(): FetchResult {
-    val bytes = calls.photo(data.photoId, data.shelf ?: PhotoShelf.Mine)
-    return SourceFetchResult(ImageSource(Buffer().write(bytes), FileSystem.SYSTEM), null, DataSource.NETWORK)
-  }
+/** Fetches a face, a mark or a page's picture as the kit holds it, kept on the disk as a chat's photo is. */
+private class PictureFetcher(private val data: Picture, private val loader: ImageLoader, private val calls: GroupCalls) : Fetcher {
+  override suspend fun fetch(): FetchResult = diskCached(data.key, null, loader) { calls.photo(data.photoId, data.shelf ?: PhotoShelf.Mine) }
 
   class Factory(private val calls: GroupCalls) : Fetcher.Factory<Picture> {
-    override fun create(data: Picture, options: Options, imageLoader: ImageLoader): Fetcher = PictureFetcher(data, calls)
+    override fun create(data: Picture, options: Options, imageLoader: ImageLoader): Fetcher = PictureFetcher(data, imageLoader, calls)
   }
 }
 
