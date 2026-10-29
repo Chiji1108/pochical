@@ -13,36 +13,27 @@ export default defineConfig({
     { name: "pochical-try-head", transformIndexHtml: head },
     // A service worker (Workbox's, as vite-plugin-pwa writes it) that keeps
     // the build, so the app opens from the home screen without the network.
-    // A new build is taken up on the next start.
+    // A new build waits until no page of the old one is open ("prompt",
+    // with nothing to prompt), so an open page never loses the chunks it
+    // has yet to load.
     VitePWA({
       injectRegister: "script-defer",
       // The manifest is pnpm run icon:app's (public/app), linked from
       // index.html.
       manifest: false,
-      registerType: "autoUpdate",
+      registerType: "prompt",
       workbox: {
         globIgnores: ["app/apple-splash-*"],
         // The app, its images and icons; iOS reads the launch images only
         // as the app is added, so they are left to the network.
         globPatterns: ["**/*.{css,html,js,png,webmanifest}"],
+        // Above the largest file (the app's script, about 1.5 MB), which
+        // Workbox would otherwise leave out with only a warning.
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         // Every path that is no file draws the app (wrangler.jsonc's
-        // single-page-application).
+        // single-page-application); one that names a file goes to it.
         navigateFallback: "index.html",
-        // What the app reads from elsewhere, kept once read: the emoji
-        // picker's data and the sample photos.
-        runtimeCaching: [
-          {
-            handler: "StaleWhileRevalidate",
-            options: {
-              cacheName: "elsewhere",
-              cacheableResponse: { statuses: [0, 200] },
-              expiration: { maxEntries: 200 },
-            },
-            urlPattern: ({ url }) =>
-              url.origin === "https://cdn.jsdelivr.net" ||
-              url.hostname.endsWith("picsum.photos"),
-          },
-        ],
+        navigateFallbackDenylist: [/\/[^/]+\.[^/]+$/u],
       },
     }),
   ],
