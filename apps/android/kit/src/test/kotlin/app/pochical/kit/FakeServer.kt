@@ -41,6 +41,7 @@ import app.pochical.v1.serverFrame
 import app.pochical.v1.welcome
 import app.pochical.v1.patternValue
 import app.pochical.v1.pattern
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -87,8 +88,18 @@ class FakeServer : AutoCloseable {
   /** How many `GetMe` calls have come in. */
   val getMes = AtomicInteger()
 
-  /** The provider `GetMe` says the user is linked to. */
-  @Volatile var provider = SignInProvider.SIGN_IN_PROVIDER_UNSPECIFIED
+  /**
+   * The provider each user is linked to, as `GetMe` says it to them alone; none for one not in it, as
+   * an anonymous user is.
+   */
+  val linked = ConcurrentHashMap<String, SignInProvider>()
+
+  /** The provider the anonymous user it signs in now ([userId]) is linked to. */
+  var provider: SignInProvider
+    get() = linked[userId] ?: SignInProvider.SIGN_IN_PROVIDER_UNSPECIFIED
+    set(value) {
+      linked[userId] = value
+    }
 
   /** What `/link-social` answers: 200 links, 409 is an account in use. */
   @Volatile var linkStatus = 200
@@ -142,7 +153,7 @@ class FakeServer : AutoCloseable {
   val supportPhotos = CopyOnWriteArrayList<String>()
 
   /** What each line sent said of the app and the device (`ChatSend.device`), by its send's op_id. */
-  val sentDevices = java.util.concurrent.ConcurrentHashMap<String, String>()
+  val sentDevices = ConcurrentHashMap<String, String>()
 
   /** The paths the sockets of the chats' places were opened at. */
   val placeSockets = CopyOnWriteArrayList<String>()
@@ -206,7 +217,7 @@ class FakeServer : AutoCloseable {
     }
 
   /** Anonymous users signed in before the last, by their sessions, until deleted. */
-  private val earlier = java.util.concurrent.ConcurrentHashMap<String, String>()
+  private val earlier = ConcurrentHashMap<String, String>()
 
   /** Whether the last anonymous user's session went to a device. */
   @Volatile private var handedOut = false
@@ -243,7 +254,7 @@ class FakeServer : AutoCloseable {
                     .also { getMes.incrementAndGet() }
                     .headersDelay(getMeDelayMs, TimeUnit.MILLISECONDS)
                     .addHeader("Content-Type", "application/proto")
-                    .body(Buffer().write(getMeResponse { userId = user; provider = this@FakeServer.provider }.toByteArray()))
+                    .body(Buffer().write(getMeResponse { userId = user; provider = linked[user] ?: SignInProvider.SIGN_IN_PROVIDER_UNSPECIFIED }.toByteArray()))
                     .build()
               }
             "/api/auth/sign-in/social" -> {
@@ -277,9 +288,11 @@ class FakeServer : AutoCloseable {
             }
             "/pochical.v1.UserService/TakeAccount" -> {
               calls += request.url.encodedPath to request.headers["Authorization"]
-              when {
-                userOf(request.headers["Authorization"]) == null -> refused("unauthenticated")
+              when (val user = userOf(request.headers["Authorization"])) {
+                null -> refused("unauthenticated")
                 else -> {
+                  // The provider's account goes to the user who took it.
+                  inUse?.second?.let { taken -> linked.remove(taken)?.let { linked[user] = it } }
                   inUse = null
                   proto(takeAccountResponse {})
                 }
@@ -295,6 +308,7 @@ class FakeServer : AutoCloseable {
                 refusal != null -> refused(refusal)
                 else -> {
                   deleted += user to DeleteAccountRequest.parseFrom(request.body!!.toByteArray())
+                  linked.remove(user)
                   when {
                     user == userId -> nextAnonymous()
                     user == inUse?.second -> inUse = null
@@ -336,7 +350,12 @@ class FakeServer : AutoCloseable {
                 }
               }
             "/api/auth/link-social" -> {
-              links += request.headers["Authorization"] to request.body!!.utf8()
+              val body = request.body!!.utf8()
+              links += request.headers["Authorization"] to body
+              val user = userOf(request.headers["Authorization"])
+              if (linkStatus == 200 && user != null) {
+                linked[user] = if ("\"apple\"" in body) SignInProvider.SIGN_IN_PROVIDER_APPLE else SignInProvider.SIGN_IN_PROVIDER_GOOGLE
+              }
               MockResponse.Builder().code(linkStatus).body("{}").build()
             }
             "/v1/me/socket" ->
