@@ -29,6 +29,8 @@ import app.pochical.photoBitmap
 import coil3.SingletonImageLoader
 import java.time.LocalDate
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -119,37 +121,43 @@ fun Values.choiceGroups(): Flow<List<ChoiceGroup>> =
   }
 
 /**
- * The photos a widget set to someone or a group shows, as pictures cut to their shapes: [with]'s,
- * a person's face in a circle or a group's photo mark in a mark's corners, and the person's own
- * face there ([me]); none where there is no photo or it did not come in time.
+ * Which photos a widget set to someone or a group shows: [with]'s (a person's face, or a group's
+ * photo mark when [group]) and the person's own there ([me]) where the widget draws it, from
+ * [groupId]'s photos. Plain ids, so the pictures are fetched again only when one of them changes.
  */
-data class WidgetFaces(val with: Bitmap? = null, val me: Bitmap? = null)
+data class WidgetPhotos(val groupId: String, val with: String, val group: Boolean, val me: String) {
+  companion object {
+    /** [companion]'s photos; the person's own only where the widget shows it ([ownFace], これから's pair). */
+    fun of(companion: WidgetCompanion, ownFace: Boolean): WidgetPhotos {
+      val with = companion.with
+      val group = with.kind == WidgetWith.Kind.Group
+      return WidgetPhotos(with.groupId, if (group) with.mark.photoId else with.photoId, group, if (ownFace) companion.me.photoId else "")
+    }
+  }
+}
 
-/** How long a widget waits for a photo before drawing the letter in its place. */
-private const val FACE_WAIT_MS = 3_000L
+/**
+ * [photos] as pictures cut to their shapes, [with]'s a person's face in a circle or a group's photo
+ * mark in a mark's corners, and the person's own face ([me]); none where there is no photo or it
+ * did not come.
+ */
+data class WidgetFaces(val photos: WidgetPhotos? = null, val with: Bitmap? = null, val me: Bitmap? = null)
+
+/** How long a widget lets a photo take to come; the letter shows meanwhile. */
+private const val FACE_WAIT_MS = 30_000L
 
 /** A widget's faces, a few times the largest it draws them, small for the views' room for pictures. */
 private const val FACE_DP = 32
 
-/**
- * The photos of [companion]'s faces through the app's one image loader, from the group's photos
- * (spec/widgets.md): the one picked, or the group's photo mark, and the person's own.
- */
-suspend fun widgetFaces(context: Context, companion: WidgetCompanion?): WidgetFaces {
-  if (companion == null) return WidgetFaces()
+/** [photos] through the app's one image loader, from the group's photos (spec/widgets.md), both at once. */
+suspend fun widgetFaces(context: Context, photos: WidgetPhotos): WidgetFaces = coroutineScope {
   val loader = SingletonImageLoader.get(context)
   val side = (FACE_DP * context.resources.displayMetrics.density).toInt()
-  suspend fun picture(photoId: String, groupId: String, corner: Float) =
-    photoBitmap(context, loader, photoId, PhotoShelf.place(groupId), side, FACE_WAIT_MS)?.let { cutPicture(it, side, corner) }
-  val with = companion.with
-  return WidgetFaces(
-    with =
-      when (with.kind) {
-        WidgetWith.Kind.Person -> picture(with.photoId, with.groupId, side / 2f)
-        WidgetWith.Kind.Group -> picture(with.mark.photoId, with.groupId, side * MARK_CORNER)
-      },
-    me = picture(companion.me.photoId, companion.me.groupId, side / 2f),
-  )
+  fun picture(photoId: String, corner: Float) =
+    async { photoBitmap(context, loader, photoId, PhotoShelf.place(photos.groupId), side, FACE_WAIT_MS)?.let { cutPicture(it, side, corner) } }
+  val with = picture(photos.with, if (photos.group) side * MARK_CORNER else side / 2f)
+  val me = picture(photos.me, side / 2f)
+  WidgetFaces(photos, with.await(), me.await())
 }
 
 /** Who a widget is set to, by their face or the group's mark, its photo where it has one. */
@@ -157,7 +165,7 @@ suspend fun widgetFaces(context: Context, companion: WidgetCompanion?): WidgetFa
 fun CompanionFace(with: WidgetWith, drawn: Drawn, size: Dp = 20.dp) {
   val photo = drawn.faces.with
   when {
-    photo != null -> Image(ImageProvider(photo), contentDescription = null, GlanceModifier.size(size))
+    photo != null -> Image(ImageProvider(photo), contentDescription = with.name, GlanceModifier.size(size))
     with.kind == WidgetWith.Kind.Person -> WidgetFace(with.name, size)
     else -> WidgetGroupMark(with.mark, with.name, size, drawn.colors)
   }
@@ -169,7 +177,7 @@ fun CompanionFace(with: WidgetWith, drawn: Drawn, size: Dp = 20.dp) {
  */
 @Composable
 fun WidgetFace(name: String, size: Dp, me: Boolean = false, photo: Bitmap? = null) {
-  if (photo != null) return Image(ImageProvider(photo), contentDescription = null, GlanceModifier.size(size))
+  if (photo != null) return Image(ImageProvider(photo), contentDescription = name, GlanceModifier.size(size))
   val colors = GlanceTheme.colors
   Box(
     GlanceModifier.size(size).background(if (me) colors.primary else colors.secondaryContainer).cornerRadius(size / 2),
