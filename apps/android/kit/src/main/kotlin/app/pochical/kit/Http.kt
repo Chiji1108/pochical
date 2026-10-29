@@ -18,14 +18,15 @@ internal suspend fun OkHttpClient.answer(request: Request): Response = newCall(r
 
 /**
  * The one client the kit's calls, sockets and photos go through, its sockets tagged as the app's
- * traffic for the system's network statistics, which StrictMode asks of every socket. Made off the
- * main thread: an OkHttpClient sets up TLS as it is made.
+ * traffic for the system's network statistics, which StrictMode asks of every socket.
  */
 internal fun pochicalHttp(): OkHttpClient = OkHttpClient.Builder().socketFactory(TaggedSockets).build()
 
 /**
- * The system's sockets, made on the thread that goes on to connect them, as OkHttp does: the thread
- * carries the tag the socket takes as it opens.
+ * The system's sockets, each opening as the thread that made it connects it, with the tag that
+ * thread holds then. OkHttp makes and connects its sockets on its own threads (a WebSocket's too,
+ * which OkHttp's EventListener does not see), so those threads keep the tag: OkHttp is the only
+ * thing that opens sockets on them, and the kit's client is the app's only OkHttp client.
  */
 private object TaggedSockets : SocketFactory() {
   private const val TAG = 0x9C41

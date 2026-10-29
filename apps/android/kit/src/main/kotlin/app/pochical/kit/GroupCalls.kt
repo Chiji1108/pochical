@@ -64,9 +64,14 @@ class GroupCalls internal constructor(
       ProtocolClientConfig(host = server.toString().trimEnd('/'), serializationStrategy = GoogleJavaLiteProtobufStrategy()),
     )
   }
-  private val groups by lazy { GroupServiceClient(client) }
-  private val users by lazy { UserServiceClient(client) }
-  private val chats by lazy { ChatServiceClient(client) }
+  private val groups
+    get() = GroupServiceClient(client)
+
+  private val users
+    get() = UserServiceClient(client)
+
+  private val chats
+    get() = ChatServiceClient(client)
 
   /** The names and profiles kept, sent one at a time in the order they were kept. */
   private val kept = Channel<Kept>(Channel.UNLIMITED)
