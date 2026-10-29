@@ -118,11 +118,7 @@ fun ChatNotificationsPage(onBack: () -> Unit) {
   val read = rememberChatNotifications()
   val me = rememberMeId()
   val snackbar = remember { SnackbarHostState() }
-  val scope = rememberCoroutineScope()
-  val failed = stringResource(R.string.notifications_change_failed)
-  val switching = rememberChatSwitching()
-  // Shown as turned at once (ChatNotificationSwitches); said should the server not keep it.
-  val done = { kept: Boolean -> if (!kept) scope.launch { snackbar.showSnackbar(failed) } }
+  val switches = rememberChatSwitches(snackbar)
   // The one-to-one chats turned off as the page opened, as the switches show them: one turned on
   // again stays, to turn off again here. Read once they are, and kept while the page is.
   var directOff by rememberSaveable(stateSaver = chatKeysSaver) { mutableStateOf<List<ChatKey>?>(null) }
@@ -131,9 +127,6 @@ fun ChatNotificationsPage(onBack: () -> Unit) {
   }
   // Nothing of the switches is shown until they are read, so none shows what it is not.
   val notifications = read ?: ChatNotificationState()
-  val chatSwitch = { groupId: String, threadId: String ->
-    ChatSwitch(!notifications.isMuted(groupId, threadId)) { on -> switching.setMuted(groupId, threadId, !on) { done(it) } }
-  }
   val blocked = rememberBlockedPeople()
   val unblock = rememberUnblocking(snackbar)
   SettingsPage(title = stringResource(R.string.notifications_chat), onBack = onBack) { padding ->
@@ -142,18 +135,18 @@ fun ChatNotificationsPage(onBack: () -> Unit) {
         item { PermissionCard() }
         item { SectionHeader(stringResource(R.string.notifications_group_chats)) }
         items(if (read == null) emptyList() else groups, key = { "group-${it.id}" }) { group ->
-          SwitchRow(chatSwitch(group.id, GROUP_THREAD), headline = group.name) {
+          SwitchRow(switches.chat(notifications, group.id, GROUP_THREAD), headline = group.name) {
             GroupMarkBadge(group.mark, shelf = PhotoShelf.Group(group.id))
           }
         }
-        if (read?.mentionsWhenMuted == true) item { Footnote(stringResource(R.string.notifications_group_chats_note)) }
+        if (read?.mentionsWhenMuted == true) item { GroupChatsNote() }
         item { SectionHeader(stringResource(R.string.notifications_direct_chats)) }
         items(directOff.orEmpty(), key = { "direct-${it.groupId}-${it.threadId}" }) { chat ->
           val group = groups.firstOrNull { it.id == chat.groupId }
           val other = me?.let { otherIn(chat.threadId, it) }
           val person = members.firstOrNull { it.groupId == chat.groupId && it.userId == other }
           val name = person?.shownName() ?: stringResource(R.string.blocked_someone)
-          SwitchRow(chatSwitch(chat.groupId, chat.threadId), headline = name, supporting = group?.name) {
+          SwitchRow(switches.chat(notifications, chat.groupId, chat.threadId), headline = name, supporting = group?.name) {
             MemberAvatar(name, person?.photoId.orEmpty(), PhotoShelf.Group(chat.groupId), 40.dp)
           }
         }
@@ -161,7 +154,7 @@ fun ChatNotificationsPage(onBack: () -> Unit) {
         item { SectionHeader(stringResource(R.string.notifications_mentions)) }
         if (read != null) item {
           SwitchRow(
-            ChatSwitch(notifications.mentionsWhenMuted) { on -> switching.setMentionsWhenMuted(on) { done(it) } },
+            switches.mentions(notifications),
             headline = stringResource(R.string.notifications_mentions_always),
             supporting = stringResource(R.string.notifications_mentions_always_about),
           )
@@ -181,8 +174,54 @@ fun ChatNotificationsPage(onBack: () -> Unit) {
   }
 }
 
+/**
+ * A group's own 通知 (spec/chat.md, Notifications; iOS's GroupSettingsPage): the same switch as the
+ * group's on 設定 › 通知 › チャット, and the note that mentions still notify while that is so. A change
+ * the server does not keep is said in [snackbar].
+ */
+@Composable
+fun GroupChatNotifications(groupId: String, snackbar: SnackbarHostState) {
+  // Nothing of it, its heading too, until the switches are read, so none shows what it is not.
+  val read = rememberChatNotifications() ?: return
+  val switches = rememberChatSwitches(snackbar)
+  Column {
+    SectionHeader(stringResource(R.string.settings_notifications))
+    SwitchRow(switches.chat(read, groupId, GROUP_THREAD), headline = stringResource(R.string.group_chat_notifications))
+    if (read.mentionsWhenMuted) GroupChatsNote()
+  }
+}
+
+/** What the group chats' switches say while メンションはいつも通知 is on: mentions still notify. */
+@Composable
+private fun GroupChatsNote() {
+  Footnote(stringResource(R.string.notifications_group_chats_note))
+}
+
 /** A switch as shown, and what turning it does. */
 private class ChatSwitch(val on: Boolean, val turn: (Boolean) -> Unit)
+
+/**
+ * The chats' switches as the pages holding them show them: each shown as turned at once
+ * (ChatNotificationSwitches), and said in the page's [SnackbarHostState] should the server not keep it.
+ */
+private class ChatSwitches(private val switching: ChatSwitching, private val done: (Boolean) -> Unit) {
+  /** The switch of the chat [threadId] of [groupId], on while it notifies. */
+  fun chat(state: ChatNotificationState, groupId: String, threadId: String) =
+    ChatSwitch(!state.isMuted(groupId, threadId)) { on -> switching.setMuted(groupId, threadId, !on, done) }
+
+  /** メンションはいつも通知's switch. */
+  fun mentions(state: ChatNotificationState) = ChatSwitch(state.mentionsWhenMuted) { on -> switching.setMentionsWhenMuted(on, done) }
+}
+
+@Composable
+private fun rememberChatSwitches(snackbar: SnackbarHostState): ChatSwitches {
+  val switching = rememberChatSwitching()
+  val scope = rememberCoroutineScope()
+  val failed = stringResource(R.string.notifications_change_failed)
+  return remember(switching, snackbar, failed, scope) {
+    ChatSwitches(switching) { kept -> if (!kept) scope.launch { snackbar.showSnackbar(failed) } }
+  }
+}
 
 /** A row its switch turns on and off, the whole row toggling it as Material's lists do. */
 @Composable

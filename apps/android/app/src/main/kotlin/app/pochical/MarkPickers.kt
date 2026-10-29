@@ -68,7 +68,7 @@ val MarkFrameSize = 76.dp
 fun MarkFrame(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
   val shape = RoundedCornerShape(Radius.xxl)
   Box(
-    modifier.size(MarkFrameSize).clip(shape).background(MaterialTheme.colorScheme.surfaceContainerHigh, shape),
+    modifier.size(MarkFrameSize).clip(shape).background(LocalThemeColors.current.fillQuaternary, shape),
     contentAlignment = Alignment.Center,
   ) {
     content()
