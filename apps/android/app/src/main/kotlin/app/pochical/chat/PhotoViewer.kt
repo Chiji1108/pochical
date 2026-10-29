@@ -293,10 +293,11 @@ fun FaceViewer(photoId: String, shelf: PhotoShelf, name: String, onClose: () -> 
     var pulled by remember { mutableFloatStateOf(0f) }
     var controls by remember { mutableStateOf(true) }
     Box(Modifier.fillMaxSize().background(colors.mediaBackground.copy(alpha = 1f - pulled))) {
-      // A face has no small version: the one the profile drew is the same picture, shown at once.
+      // A face has no small version: the one the profile drew, from memory, under it until it is drawn whole.
       LargeImage(Picture(photoId, shelf), stringResource(R.string.profile_photo_of, name), onTap = { controls = !controls }, onPulled = { pulled = it }, onDismissed = onClose) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
           CircularProgressIndicator(Modifier.size(40.dp), color = colors.mediaText)
+          AsyncImage(Picture(photoId, shelf), contentDescription = null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
         }
       }
       AnimatedVisibility(controls && pulled == 0f, enter = fadeIn(), exit = fadeOut()) {

@@ -89,15 +89,14 @@ data class LinksPart(val urls: List<String>) : LinePart {
 data class MentionsPart(val userIds: List<String>) : LinePart {
   @Composable
   override fun actions(line: PartLine): List<CustomAccessibilityAction> {
-    val label = stringResource(R.string.chat_writer_profile)
-    return mentioned(userIds, line.handlers).map { member -> CustomAccessibilityAction(label.format(member.displayName)) { line.handlers.openProfile?.invoke(member); true } }
+    return mentioned(userIds, line.handlers).map { member ->
+      CustomAccessibilityAction(stringResource(R.string.chat_writer_profile, member.shownName())) { line.handlers.openProfile?.invoke(member); true }
+    }
   }
 }
 
 /** The members of [userIds] whose profile a mention of them opens: not the reader, nor one deleted, and only where profiles open. */
-fun mentioned(userIds: List<String>, handlers: MessageHandlers): List<GroupMemberRow> =
-  if (handlers.openProfile == null) emptyList()
-  else userIds.distinct().filter { it != handlers.me }.mapNotNull { handlers.writers[it]?.takeIf { member -> !member.deleted } }
+fun mentioned(userIds: List<String>, handlers: MessageHandlers): List<GroupMemberRow> = userIds.distinct().mapNotNull { handlers.profileOf(handlers.writers[it]) }
 
 /**
  * The card of Pochical's invitation the words' first link is, in its page's place (spec/chat.md,

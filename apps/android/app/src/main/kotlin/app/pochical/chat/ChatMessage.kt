@@ -208,7 +208,10 @@ class MessageHandlers(
   val folded: (ChatLine) -> Boolean = { false },
   /** 表示 on a folded line: shown this once, while the chat is open. */
   val showFolded: (seq: Long) -> Unit = {},
-)
+) {
+  /** [member] when their profile opens from the chat (their face, their mention): not the reader's, nor a deleted account's, and only where profiles open. */
+  fun profileOf(member: GroupMemberRow?): GroupMemberRow? = member?.takeIf { openProfile != null && it.userId != me && !it.deleted }
+}
 
 /**
  * A message: others' on the start with their face and name over a run, one's own on the end. Its
@@ -248,7 +251,7 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
   // Its menu's items, 返信 first, then what each of its parts offers (spec/chat.md, Screen readers).
   val partLine = PartLine(look.seq, handlers, openMenu = { openMenu() })
   // The writer's profile, which a tap on their face opens.
-  val profiled = look.writer?.takeIf { !look.mine && !it.deleted }
+  val profiled = handlers.profileOf(look.writer)
   val openProfile = handlers.openProfile
   val profile =
     if (profiled != null && openProfile != null) {
@@ -263,6 +266,8 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
         parts.flatMap { it.actions(partLine) } +
         listOfNotNull(profile) +
         shifts.flatMap { it.actions(partLine) })
+      // A writer mentioning themselves has their profile once.
+      .distinctBy { it.label }
       // Android holds at most this many on one element; past them, the latest parts' go.
       .take(MOST_ACTIONS)
   // Activating a sent line of photos opens its first large; any other line opens its menu, as the long press does.
@@ -305,7 +310,7 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
       if (!look.mine) {
         val writer = look.writer?.takeIf { look.startsRun }
         // A tap on the face opens their profile (spec/chat.md, The chat's page).
-        val profile = handlers.openProfile?.takeIf { writer != null && !writer.deleted }
+        val profile = handlers.openProfile?.takeIf { handlers.profileOf(writer) != null }
         Box(Modifier.size(FACE).clip(CircleShape).then(if (profile != null && writer != null) Modifier.clickable { profile(writer) } else Modifier).clearAndSetSemantics {}) {
           if (writer != null) Face(writer.userId, writer.shownName(), writer.photoId, PhotoShelf.place(writer.groupId), FACE)
         }
@@ -380,7 +385,7 @@ private fun LineBody(look: MessageLook, handlers: MessageHandlers, live: Boolean
     poll != null -> PollCard(poll, handlers, look.seq.takeIf { live }, live)
     shared != null -> SharedDaysBody(shared, look, handlers)
     photos != null -> PhotoBody(look, photos, handlers, live, onQuote)
-    else -> Bubble(look, handlers, onQuote)
+    else -> Bubble(look, handlers, onQuote, live)
   }
 }
 
@@ -430,7 +435,7 @@ private fun PhotoBody(look: MessageLook, photos: LineContent.Photos, handlers: M
  * shine sweeping across, still with motion reduced.
  */
 @Composable
-fun Bubble(look: MessageLook, handlers: MessageHandlers, onQuote: () -> Unit) {
+fun Bubble(look: MessageLook, handlers: MessageHandlers, onQuote: () -> Unit, live: Boolean = true) {
   val colors = LocalThemeColors.current
   val shape = remember(look.mine, look.startsRun) { BubbleShape(look.mine, tail = look.startsRun) }
   val ink = if (look.mine) colors.accentOnFill else colors.textPrimary
@@ -456,7 +461,7 @@ fun Bubble(look: MessageLook, handlers: MessageHandlers, onQuote: () -> Unit) {
   ) {
     look.quote?.let { BubbleQuote(it, ink, inset = 12.dp, onOpen = onQuote) }
     Text(
-      messageText(look.content, look.mine, handlers),
+      messageText(look.content, look.mine, handlers, live),
       Modifier.padding(horizontal = 12.dp),
       style = MaterialTheme.typography.bodyLarge,
       color = ink,
@@ -522,15 +527,20 @@ fun Modifier.litWhenGoneTo(lit: Lit?, shape: Shape, reducedMotion: Boolean, onSh
  * a tap on it opening that member's profile but the reader's own (spec/chat.md, Mentions).
  */
 @Composable
-private fun messageText(content: LineContent, mine: Boolean, handlers: MessageHandlers): AnnotatedString {
+private fun messageText(content: LineContent, mine: Boolean, handlers: MessageHandlers, live: Boolean): AnnotatedString {
   val accent = LocalThemeColors.current.accentDefault
   val nameOf = handlers.nameOf
   val words = content as? LineContent.Words ?: return AnnotatedString(lineWords(content, nameOf))
   val open by rememberUpdatedState(handlers.openProfile)
-  val opens = remember(words.text, handlers.writers, handlers.me, handlers.openProfile != null) { mentioned(textParts(words.text).mapNotNull { it.mention }, handlers).associateBy { it.userId } }
-  return remember(words.text, mine, accent, nameOf, opens) {
+  val parts = remember(words.text) { textParts(words.text) }
+  // None opens on the copy lifted over the line's menu.
+  val opens =
+    remember(parts, handlers.writers, handlers.me, handlers.openProfile != null, live) {
+      if (live) mentioned(parts.mapNotNull { it.mention }, handlers).associateBy { it.userId } else emptyMap()
+    }
+  return remember(parts, mine, accent, nameOf, opens) {
     buildAnnotatedString {
-      for (part in textParts(words.text)) {
+      for (part in parts) {
         val id = part.mention
         if (id == null) {
           append(part.text)
@@ -539,7 +549,11 @@ private fun messageText(content: LineContent, mine: Boolean, handlers: MessageHa
         val style = SpanStyle(fontWeight = FontWeight.SemiBold, color = if (mine) Color.Unspecified else accent)
         val member = opens[id]
         if (member == null) withStyle(style) { append("@${nameOf(id)}") }
-        else withLink(LinkAnnotation.Clickable("mention:$id", TextLinkStyles(style)) { open?.invoke(member) }) { append("@${nameOf(id)}") }
+        else {
+          // Pressed, it lights as a link does under the finger.
+          val pressed = style.merge(SpanStyle(background = accent.copy(alpha = PRESSED)))
+          withLink(LinkAnnotation.Clickable("mention:$id", TextLinkStyles(style, pressedStyle = pressed)) { open?.invoke(member) }) { append("@${nameOf(id)}") }
+        }
       }
     }
   }
@@ -672,8 +686,9 @@ private fun LayoutCoordinates.unclipped(): Rect = Rect(positionInWindow(), size.
  */
 private fun partsOf(content: LineContent, quote: LineQuote?, reactions: ReactionsPart?, poll: PollPart?, waiting: WaitingLine? = null): List<LinePart> {
   val words = content as? LineContent.Words
-  val links = words?.let { textParts(it.text).mapNotNull { part -> part.url } }.orEmpty()
-  val mentions = words?.let { textParts(it.text).mapNotNull { part -> part.mention } }.orEmpty()
+  val textParts = words?.let { textParts(it.text) }.orEmpty()
+  val links = textParts.mapNotNull { it.url }
+  val mentions = textParts.mapNotNull { it.mention }
   // A first link that is one of Pochical's invitations shows the group in place of any page.
   val invitation = invitationOf(content)
   val photos = (content as? LineContent.Photos)?.let { PhotosPart(it.photos.size, waiting) }
@@ -729,6 +744,9 @@ private const val ACCESSIBILITY_SCALE = 1.3f
 
 /** How dim a line on its way is, as it would be on the chat's ground. */
 private const val WAITING_ALPHA = 0.6f
+
+/** How strong the accent lights a mention under the finger. */
+private const val PRESSED = 0.2f
 
 /** How strong the accent lights a line gone to. */
 private const val LIGHT = 0.35f
