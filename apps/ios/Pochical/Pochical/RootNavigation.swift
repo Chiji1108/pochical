@@ -100,7 +100,7 @@ struct PhotosOfChat: Hashable {
     guard tab != self.tab else { return }
     self.tab = tab
     pages = []
-    controller?.show(pages, over: tab, animated: false)
+    controller?.arrange(animated: false)
   }
 
   /// Puts `next` in place of `page` and what was opened over it, the
@@ -127,7 +127,7 @@ struct PhotosOfChat: Hashable {
     let jump = tab.map { $0 != self.tab } ?? false
     if let tab { self.tab = tab }
     self.pages = pages
-    controller?.show(pages, over: self.tab, animated: !jump)
+    controller?.arrange(animated: !jump)
   }
 
   /// The place of the top page that is of one, whose socket is held while
@@ -169,47 +169,45 @@ struct RootNavigation: UIViewControllerRepresentable {
   let nothingOpen: (RootTab) -> AnyView
 
   func makeUIViewController(context: Context) -> RootController {
-    let controller = RootController(tabs: tabs, page: page, nothingOpen: nothingOpen)
-    navigator.controller = controller
-    controller.onShown = { [weak navigator] in navigator?.shown($0) }
-    controller.show(navigator.pages, over: navigator.tab, animated: false)
-    return controller
+    RootController(navigator: navigator, tabs: tabs, page: page, nothingOpen: nothingOpen)
   }
 
   func updateUIViewController(_ controller: RootController, context: Context) {
-    navigator.controller = controller
     controller.update(tabs: tabs, page: page, nothingOpen: nothingOpen)
   }
 }
 
-/// The tabs' navigation, and the pages' beside it on a wide screen.
+/// The tabs' navigation, and the pages' beside it on a wide screen, as
+/// `navigator` has them: it keeps no list of its own, and tells the
+/// navigator of a page gone back from.
 final class RootController: UIViewController, UINavigationControllerDelegate {
+  private let navigator: RootNavigator
   private let tabs: UIHostingController<AnyView>
   private let nothing: UIHostingController<AnyView>
   /// The tabs at its root, the pages over them on a narrow screen.
-  private let main: UINavigationController
+  let main: UINavigationController
   /// The pages beside the tabs on a wide screen.
-  private let side = UINavigationController()
+  let side = UINavigationController()
   private let rule = UIView()
   private var page: (RootPage) -> AnyView
   private var nothingOpen: (RootTab) -> AnyView
-  private var pages: [RootPage] = []
-  private var shownTab = RootTab.calendar
   /// The pages are being moved or put in place: what the navigations show
   /// meanwhile is not where the person has gone.
   private var arranging = false
-  var onShown: ([RootPage]) -> Void = { _ in }
 
   init(
-    tabs: AnyView, page: @escaping (RootPage) -> AnyView,
+    navigator: RootNavigator, tabs: AnyView, page: @escaping (RootPage) -> AnyView,
     nothingOpen: @escaping (RootTab) -> AnyView
   ) {
+    self.navigator = navigator
     self.tabs = UIHostingController(rootView: tabs)
-    self.nothing = UIHostingController(rootView: nothingOpen(.calendar))
+    self.nothing = UIHostingController(rootView: nothingOpen(navigator.tab))
     self.page = page
     self.nothingOpen = nothingOpen
     main = UINavigationController(rootViewController: self.tabs)
     super.init(nibName: nil, bundle: nil)
+    navigator.controller = self
+    arrange(animated: false)
   }
 
   @available(*, unavailable) required init?(coder: NSCoder) { fatalError() }
@@ -234,7 +232,7 @@ final class RootController: UIViewController, UINavigationControllerDelegate {
   /// The pages stand beside the tabs: on a wide screen, but for the
   /// calendar, which takes it all.
   private var beside: Bool {
-    traitCollection.horizontalSizeClass == .regular && shownTab != .calendar
+    traitCollection.horizontalSizeClass == .regular && navigator.tab != .calendar
   }
 
   override func viewDidLayoutSubviews() {
@@ -262,6 +260,9 @@ final class RootController: UIViewController, UINavigationControllerDelegate {
     (main.viewControllers + side.viewControllers).compactMap { $0 as? PageHost }
   }
 
+  /// The pages hosted, over the tabs or beside them.
+  var hostedPages: [RootPage] { hosts.map(\.page) }
+
   func update(
     tabs: AnyView, page: @escaping (RootPage) -> AnyView,
     nothingOpen: @escaping (RootTab) -> AnyView
@@ -269,24 +270,18 @@ final class RootController: UIViewController, UINavigationControllerDelegate {
     self.page = page
     self.nothingOpen = nothingOpen
     self.tabs.rootView = tabs
-    nothing.rootView = nothingOpen(shownTab)
+    nothing.rootView = nothingOpen(navigator.tab)
     for host in hosts { host.rootView = page(host.page) }
   }
 
-  /// Puts `pages` over the tabs, or beside them, keeping those already
-  /// there in the same place, so a page under the one opened stays as it
-  /// was.
-  func show(_ pages: [RootPage], over tab: RootTab, animated: Bool) {
-    self.pages = pages
-    shownTab = tab
-    nothing.rootView = nothingOpen(tab)
-    arrange(animated: animated)
-  }
-
-  /// Lays the pages over the tabs or beside them, as the screen's width and
-  /// the tab have it. The calendar, which its month heads, has no bar:
-  /// hidden only while it shows alone, so never as a page comes or goes.
-  private func arrange(animated: Bool) {
+  /// Lays the navigator's pages over its tab or beside it, as the screen's
+  /// width and the tab have it, keeping those already there in the same
+  /// place, so a page under the one opened stays as it was. The calendar,
+  /// which its month heads, has no bar: hidden only while it shows alone,
+  /// so never as a page comes or goes.
+  func arrange(animated: Bool) {
+    let pages = navigator.pages
+    nothing.rootView = nothingOpen(navigator.tab)
     arranging = true
     defer { arranging = false }
     // The tabs as a phone's screen beside the pages, whatever the window's
@@ -311,12 +306,12 @@ final class RootController: UIViewController, UINavigationControllerDelegate {
     }
     let order = beside ? [(main, over), (side, besides)] : [(side, besides), (main, over)]
     for (navigation, controllers) in order where navigation.viewControllers != controllers {
-      let push = animated && !moved && view.window != nil
+      let push = animated && !moved && viewIfLoaded?.window != nil
         && navigation.viewControllers.first === controllers.first
       navigation.setViewControllers(controllers, animated: push)
     }
-    main.setNavigationBarHidden(shownTab == .calendar && over.count == 1, animated: false)
-    view.setNeedsLayout()
+    main.setNavigationBarHidden(navigator.tab == .calendar && over.count == 1, animated: false)
+    viewIfLoaded?.setNeedsLayout()
   }
 
   /// A page gone back from, by a back swipe or the back button.
@@ -325,8 +320,7 @@ final class RootController: UIViewController, UINavigationControllerDelegate {
     animated: Bool
   ) {
     guard !arranging else { return }
-    pages = hosts.map(\.page)
-    onShown(pages)
+    navigator.shown(hosts.map(\.page))
   }
 }
 
