@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -18,9 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -47,7 +44,6 @@ import app.pochical.calendar.MonthPicker
 import app.pochical.calendar.WeekdayRow
 import app.pochical.calendar.holidayName
 import app.pochical.calendar.monthWeeks
-import app.pochical.calendar.yearMonthText
 import app.pochical.design.Metrics
 import app.pochical.design.PochicalTextStyles
 import app.pochical.design.Radius
@@ -114,11 +110,12 @@ fun GroupPersonView(
         )
       }
     }
-    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(start = 8.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-      TextButton(onClick = { choosingMonth = true }) { Text(month.yearMonthText, style = PochicalTextStyles.headline, color = colors.textPrimary) }
-      Box(Modifier.weight(1f))
-      if (month != thisMonth) OutlinedButton(onClick = { turnTo(thisMonth) }) { Text(stringResource(R.string.calendar_this_month)) }
-    }
+    MonthRow(
+      month,
+      back = if (month == thisMonth) null else stringResource(R.string.calendar_this_month),
+      onChoose = { choosingMonth = true },
+      onBack = { turnTo(thisMonth) },
+    )
     WeekdayRow(settings.device.week, Modifier.padding(horizontal = 16.dp))
     // Their marks in their own shape, the rest of the look the viewer's; shift names and days off
     // always shown, whatever the viewer's look, so no list of their patterns is needed.

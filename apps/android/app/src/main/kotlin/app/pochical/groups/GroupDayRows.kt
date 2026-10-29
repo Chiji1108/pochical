@@ -129,7 +129,8 @@ private fun Face(member: GroupMember, groupId: String, meId: String?, density: D
 /**
  * A day of 一覧, a row across everyone (/design's DayRow): its date and weekday, today barred in the
  * accent, then each member's mark, named while few. A day off is on its tile; a day everyone is off
- * one band along the row, and the picked day framed the same way. The whole row picks the day.
+ * one band along the row, and the picked day framed the same way. The whole row picks the day
+ * ([onPick]; none for a picture of one).
  * Scrolling [sideways], the date and the first member's column (the viewer's own) stay at the start.
  */
 @Composable
@@ -142,7 +143,7 @@ fun GroupDayRow(
   today: LocalDate,
   country: String,
   sideways: ScrollState?,
-  onPick: (LocalDate) -> Unit,
+  onPick: ((LocalDate) -> Unit)?,
   modifier: Modifier = Modifier,
 ) {
   val colors = LocalThemeColors.current
@@ -156,7 +157,7 @@ fun GroupDayRow(
       .height(IntrinsicSize.Min)
       .heightIn(min = 36.dp)
       .dayMarks(band = colors.accentContainer.takeIf { together }, frame = colors.accentDefault.takeIf { picked }, inset = TODAY_BAR + 3.dp, vertical = 3.dp)
-      .clickable(role = Role.Button) { onPick(day) }
+      .then(if (onPick != null) Modifier.clickable(role = Role.Button) { onPick(day) } else Modifier)
       .clearAndSetSemantics {
         contentDescription =
           buildList {
