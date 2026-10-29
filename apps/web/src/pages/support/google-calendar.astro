@@ -1,4 +1,8 @@
 ---
+import accountCalendar from "../../assets/support/account-calendar.png";
+import addAccount from "../../assets/support/add-account.png";
+import calendarPicker from "../../assets/support/calendar-picker.png";
+import calendarSettings from "../../assets/support/calendar-settings.png";
 import GuideShot from "../../components/guide-shot.astro";
 import Link from "../../components/link.astro";
 import Page from "../../components/page.astro";
@@ -38,12 +42,12 @@ import Site from "../../layouts/site.astro";
           <GuideShot
             alt="設定アプリのカレンダーの画面。「カレンダーアカウント」の行がある。"
             caption="「カレンダーアカウント」を開く"
-            name="calendar-settings"
+            src={calendarSettings}
           />
           <GuideShot
             alt="アカウントを追加の画面。iCloud、Microsoft Exchange、Google、yahoo!、Aol.、Outlook.comが並ぶ。"
             caption="「アカウントを追加」で「Google」を選ぶ"
-            name="add-account"
+            src={addAccount}
           />
         </div>
       </section>
@@ -64,7 +68,7 @@ import Site from "../../layouts/site.astro";
           <GuideShot
             alt="ポチカルの追加先の画面。iCloudの下と、Gmailの下にカレンダーが並ぶ。"
             caption="「Gmail」の下のカレンダーを選ぶ"
-            name="calendar-picker"
+            src={calendarPicker}
           />
         </div>
         <p class="small-note">
@@ -83,7 +87,7 @@ import Site from "../../layouts/site.astro";
           <GuideShot
             alt="設定アプリのGmailアカウントの画面。メール、連絡先、カレンダー、メモのスイッチが並び、カレンダーがオンになっている。"
             caption="「カレンダー」をオンにする"
-            name="account-calendar"
+            src={accountCalendar}
           />
         </div>
         <h3>Googleカレンダーに出てこない</h3>
