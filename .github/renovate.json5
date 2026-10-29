@@ -1,6 +1,12 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
-  extends: ["config:recommended", "security:minimumReleaseAgeNpm"],
+  extends: [
+    "config:recommended",
+    "security:minimumReleaseAgeNpm",
+    // Actions are pinned to a commit SHA, the version in a trailing comment;
+    // Renovate moves both.
+    "helpers:pinGitHubActionDigests",
+  ],
   timezone: "Asia/Tokyo",
   schedule: ["* 0-8 * * 1"],
   prConcurrentLimit: 5,

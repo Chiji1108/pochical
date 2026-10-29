@@ -15,6 +15,7 @@ import { account, session, user } from "./db/auth-schema";
 import { adminActions, pushTokens, reports, supportChats } from "./db/schema";
 import { ChatEditSchema } from "./gen/pochical/v1/sync_pb";
 import { GROUP_THREAD } from "./group-chat";
+import { errorFields } from "./log";
 import { photoKey } from "./photos";
 import { previewReset, resetEverything } from "./reset";
 import type { ResetPreview } from "./reset";
@@ -200,7 +201,11 @@ const noteDone = async (
       .onConflictDoNothing()
       .run();
   } catch (error) {
-    console.error("Noting an admin action failed", action, error);
+    console.error({
+      action,
+      error: errorFields(error),
+      message: "Noting an admin action failed",
+    });
   }
 };
 

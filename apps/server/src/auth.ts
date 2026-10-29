@@ -7,6 +7,7 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { account, session, user, verification } from "./db/auth-schema";
 import { SignInProvider } from "./gen/pochical/v1/user_pb";
+import { errorFields } from "./log";
 import { linkedProvider } from "./sign-in-providers";
 import { isSuspended } from "./suspension";
 
@@ -185,7 +186,10 @@ export const createAuth = (
             } catch (error) {
               // Signing out still succeeds; the sockets are refused at
               // their next connect.
-              console.error("Closing an ended session's sockets failed", error);
+              console.error({
+                error: errorFields(error),
+                message: "Closing an ended session's sockets failed",
+              });
             }
           },
         },
