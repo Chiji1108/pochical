@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Checkbox
@@ -34,10 +36,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
@@ -95,6 +99,15 @@ fun SectionRow(index: Int, count: Int, modifier: Modifier = Modifier, content: @
   }
 }
 
+/**
+ * A section's rows in a lazy list, each its own item, keyed by [key], so a long one (a full group's
+ * members) is composed as it scrolls into sight: [extra] rows of the section follow them.
+ */
+fun <T> LazyListScope.sectionRows(rows: List<T>, key: (T) -> Any, extra: Int = 0, row: @Composable (T) -> Unit) {
+  val count = rows.size + extra
+  itemsIndexed(rows, key = { _, it -> key(it) }) { index, it -> SectionRow(index, count) { row(it) } }
+}
+
 /** The corners of the row being drawn, from where it sits in its section, for a row drawn as a [SegmentedListItem] of its own. */
 @Composable
 fun segmentShapes(): ListItemShapes {
@@ -123,10 +136,11 @@ enum class RowEnd {
 
 /**
  * A row of a settings list, in its section's segment: led by [icon] (or [leading], a face or a
- * mark), its [headline] over [supporting] when it has some, then [value] (what it holds, in the
- * secondary color) and how it ends. [danger] draws it in the danger color, as a row that deletes.
- * [onClickLabel] says what pressing it does where that is not its headline's own, as one that opens
- * the browser.
+ * mark), its [headline] over [supporting] when it has some (or [headlineContent] and
+ * [supportingContent], drawn by the row), [overline] over both, then [value] (what it holds, in
+ * the secondary color, or [valueContent]) and how it ends. [oneLine] cuts the words to a line each,
+ * as a name's. [danger] draws it in the danger color, as a row that deletes. [onClickLabel] says
+ * what pressing it does where that is not its headline's own, as one that opens the browser.
  */
 @Composable
 fun SettingsRow(
@@ -139,11 +153,16 @@ fun SettingsRow(
   valueContent: (@Composable () -> Unit)? = null,
   end: RowEnd = if (onClick != null) RowEnd.Chevron else RowEnd.None,
   leading: (@Composable () -> Unit)? = null,
+  overline: String? = null,
+  headlineContent: (@Composable () -> Unit)? = null,
+  supportingContent: (@Composable () -> Unit)? = null,
+  oneLine: Boolean = false,
   enabled: Boolean = true,
   danger: Boolean = false,
   onClickLabel: String? = null,
 ) {
   val tint = if (danger) MaterialTheme.colorScheme.error else Color.Unspecified
+  val lines = if (oneLine) 1 else Int.MAX_VALUE
   val lead = leading ?: icon?.let { { RowIcon(it, if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary) } }
   val trail: (@Composable () -> Unit)? =
     if (value == null && valueContent == null && end == RowEnd.None) null
@@ -162,20 +181,43 @@ fun SettingsRow(
         }
       }
     }
-  val headlineText: @Composable () -> Unit = { Text(headline, color = tint) }
-  val supportingText: (@Composable () -> Unit)? = supporting?.let { { Text(it) } }
-  val labelled = if (onClick != null && onClickLabel != null) modifier.semantics { onClick(onClickLabel) { onClick(); true } } else modifier
+  Segment(
+    onClick = onClick,
+    modifier = if (onClick != null && onClickLabel != null) modifier.semantics { onClick(onClickLabel) { onClick(); true } } else modifier,
+    enabled = enabled,
+    leading = lead,
+    trailing = trail,
+    overline = overline?.let { { Text(it) } },
+    supporting = supportingContent ?: supporting?.let { { Text(it, maxLines = lines, overflow = TextOverflow.Ellipsis) } },
+  ) {
+    if (headlineContent != null) headlineContent() else Text(headline, color = tint, maxLines = lines, overflow = TextOverflow.Ellipsis)
+  }
+}
+
+/** A segment of the section, pressed when [onClick] is given: the one place a row's segment is drawn. */
+@Composable
+private fun Segment(
+  onClick: (() -> Unit)?,
+  modifier: Modifier,
+  enabled: Boolean,
+  leading: (@Composable () -> Unit)?,
+  trailing: (@Composable () -> Unit)?,
+  overline: (@Composable () -> Unit)?,
+  supporting: (@Composable () -> Unit)?,
+  content: @Composable () -> Unit,
+) {
   if (onClick != null) {
     SegmentedListItem(
       onClick = onClick,
       shapes = segmentShapes(),
-      modifier = labelled,
+      modifier = modifier,
       colors = rowColors(),
       enabled = enabled,
-      leadingContent = lead,
-      trailingContent = trail,
-      supportingContent = supportingText,
-      content = headlineText,
+      leadingContent = leading,
+      trailingContent = trailing,
+      overlineContent = overline,
+      supportingContent = supporting,
+      content = content,
     )
   } else {
     SegmentedListItem(
@@ -183,10 +225,11 @@ fun SettingsRow(
       modifier = modifier,
       colors = rowColors(),
       enabled = enabled,
-      leadingContent = lead,
-      trailingContent = trail,
-      supportingContent = supportingText,
-      content = headlineText,
+      leadingContent = leading,
+      trailingContent = trailing,
+      overlineContent = overline,
+      supportingContent = supporting,
+      content = content,
     )
   }
 }
@@ -204,8 +247,10 @@ fun SettingsSwitchRow(
   modifier: Modifier = Modifier,
   supporting: String? = null,
   leading: (@Composable () -> Unit)? = null,
+  oneLine: Boolean = false,
   enabled: Boolean = true,
 ) {
+  val lines = if (oneLine) 1 else Int.MAX_VALUE
   SegmentedListItem(
     onClick = { onCheckedChange(!checked) },
     shapes = segmentShapes(),
@@ -221,9 +266,9 @@ fun SettingsSwitchRow(
     trailingContent = {
       Switch(checked, onCheckedChange = null, enabled = enabled, colors = SwitchDefaults.colors(checkedTrackColor = LocalThemeColors.current.accentSwitch))
     },
-    supportingContent = supporting?.let { { Text(it) } },
+    supportingContent = supporting?.let { { Text(it, maxLines = lines, overflow = TextOverflow.Ellipsis) } },
   ) {
-    Text(headline)
+    Text(headline, maxLines = lines, overflow = TextOverflow.Ellipsis)
   }
 }
 
@@ -293,11 +338,13 @@ fun <T> ChoiceButtons(
       val selected = option == picked
       ToggleButton(
         checked = selected,
-        onCheckedChange = { onPick(option) },
+        onCheckedChange = { if (!selected) onPick(option) },
         modifier =
-          Modifier.weight(1f).semantics {
+          Modifier.weight(1f).clearAndSetSemantics {
             contentDescription = description
             role = Role.RadioButton
+            this.selected = selected
+            onClick { if (!selected) onPick(option); true }
           },
         shapes =
           when (index) {

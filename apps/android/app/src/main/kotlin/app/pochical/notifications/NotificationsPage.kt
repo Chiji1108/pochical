@@ -28,7 +28,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -242,7 +241,7 @@ private fun rememberChatSwitches(snackbar: SnackbarHostState): ChatSwitches {
 /** A row its switch turns on and off, the whole row toggling it as Material's lists do. */
 @Composable
 private fun SwitchRow(switch: ChatSwitch, headline: String, supporting: String? = null, icon: Int? = null, leading: (@Composable () -> Unit)? = null) {
-  SettingsSwitchRow(headline, icon, switch.on, switch.turn, supporting = supporting?.takeIf { it.isNotEmpty() }, leading = leading)
+  SettingsSwitchRow(headline, icon, switch.on, switch.turn, supporting = supporting?.takeIf { it.isNotEmpty() }, leading = leading, oneLine = leading != null)
 }
 
 /** The one-to-one chats turned off as the page opened, kept across the process's death; none kept before they are read. */

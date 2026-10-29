@@ -112,7 +112,7 @@ fun AccountPage(onBack: () -> Unit) {
         // Each asks first, on the spot, so no arrow as for a page; offered once the session is up,
         // and said so meanwhile, as iOS does.
         item {
-          SettingsSection(footnote = stringResource(R.string.account_offline).takeIf { state == AccountState.SigningIn }) {
+          SettingsSection(footnote = stringResource(R.string.account_offline).takeIf { state !is AccountState.SignedIn }) {
             row { SignOutRow(state) }
             row { DeleteRow(state) }
           }

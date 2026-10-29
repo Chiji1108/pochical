@@ -198,7 +198,7 @@ fun PatternEditor(id: String, isNew: Boolean, navigation: PageNavigation) {
           placeholder = stringResource(R.string.pattern_name_example),
         )
       }
-      item { SwitchRow(stringResource(R.string.pattern_no_time), null, allDay) { allDay = it } }
+      item { SectionRow(0, 1) { SettingsSwitchRow(stringResource(R.string.pattern_no_time), R.drawable.ic_schedule, allDay, { allDay = it }) } }
       if (!allDay) {
         item {
           Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -331,8 +331,21 @@ fun SwitchRow(
   leading: (@Composable () -> Unit)? = null,
   onChange: (Boolean) -> Unit,
 ) {
-  // A segment of its own, off the screen's edges, as a settings section's one row.
-  SectionRow(0, 1) { SettingsSwitchRow(title, icon = null, on, onChange, supporting = note, leading = leading, enabled = enabled) }
+  ListItem(
+    headlineContent = { Text(title) },
+    leadingContent = leading,
+    supportingContent = note?.let { { Text(it) } },
+    trailingContent = {
+      // accentSwitch, the accent held under 墨's and 黒板's near-white, so the thumb stays clear of its track (#798).
+      Switch(
+        checked = on,
+        onCheckedChange = null,
+        enabled = enabled,
+        colors = SwitchDefaults.colors(checkedTrackColor = LocalThemeColors.current.accentSwitch),
+      )
+    },
+    modifier = Modifier.selectable(selected = on, enabled = enabled, role = Role.Switch) { onChange(!on) },
+  )
 }
 
 /** The mark as the person's スタイル draws it, and its color, for a screen reader. */

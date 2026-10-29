@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
@@ -22,7 +23,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -132,7 +132,7 @@ fun CoworkersPage(navigation: PageNavigation) {
     },
   ) { padding ->
     // Under the system's bars, the list's foot rising clear of the keyboard as a name is typed.
-    LazyColumn(Modifier.imePadding(), state = list, contentPadding = padding) {
+    LazyColumn(Modifier.consumeWindowInsets(padding).imePadding(), state = list, contentPadding = padding) {
       // The people, then 人を追加, one rounded group of segments.
       val count = order.rows.size + if (sorting) 0 else 1
       item { Spacer(Modifier.height(8.dp)) }
@@ -142,6 +142,7 @@ fun CoworkersPage(navigation: PageNavigation) {
             SettingsRow(
               person.name,
               R.drawable.ic_person,
+              oneLine = true,
               onClick = if (sorting) null else ({ navigation.open(RootPage.CoworkerEditor(person.id)) }),
               value = if (sorting) null else stringResource(R.string.coworker_days, counts[person.id] ?: 0),
               valueContent = if (sorting) ({ order.Handle(this, stringResource(R.string.coworkers_move, person.name)) }) else null,
@@ -245,7 +246,7 @@ private fun CoworkerForm(person: Coworker, count: Int?, taken: List<String>, nav
   }
 
   SettingsPage(person.name, onBack = navigation::back) { padding ->
-    Column(Modifier.verticalScroll(rememberScrollState()).padding(padding).imePadding()) {
+    Column(Modifier.consumeWindowInsets(padding).imePadding().verticalScroll(rememberScrollState()).padding(padding)) {
       LimitedTextField(
         name.field.value,
         { name.field.value = it },

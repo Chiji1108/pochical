@@ -135,34 +135,16 @@ fun PatternsPage(navigation: PageNavigation) {
 /** A pattern in the list: its mark, name and time, and where a page of ポチポチ入力's keys starts. */
 @Composable
 private fun PatternRow(pattern: Pattern, keyPage: Int?, onClick: (() -> Unit)?, handle: (@Composable () -> Unit)?) {
-  val overline: (@Composable () -> Unit)? = keyPage?.let { { Text(stringResource(R.string.patterns_key_page, it)) } }
-  val mark: @Composable () -> Unit = { ShiftMark(pattern.icon, pattern.emoji, pattern.symbol, pattern.color, size = 24.dp) }
-  val time: @Composable () -> Unit = { Text(patternTimeText(pattern.time)) }
-  val trailing: (@Composable () -> Unit)? = handle ?: onClick?.let { { Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = null) } }
-  if (onClick != null) {
-    SegmentedListItem(
-      onClick = onClick,
-      shapes = segmentShapes(),
-      colors = rowColors(),
-      overlineContent = overline,
-      supportingContent = time,
-      leadingContent = mark,
-      trailingContent = trailing,
-    ) {
-      Text(pattern.name, maxLines = 1)
-    }
-  } else {
-    SegmentedListItem(
-      shapes = segmentShapes(),
-      colors = rowColors(),
-      overlineContent = overline,
-      supportingContent = time,
-      leadingContent = mark,
-      trailingContent = trailing,
-    ) {
-      Text(pattern.name, maxLines = 1)
-    }
-  }
+  SettingsRow(
+    pattern.name,
+    icon = null,
+    onClick = onClick,
+    supporting = patternTimeText(pattern.time),
+    leading = { ShiftMark(pattern.icon, pattern.emoji, pattern.symbol, pattern.color, size = 24.dp) },
+    overline = keyPage?.let { stringResource(R.string.patterns_key_page, it) },
+    valueContent = handle,
+    oneLine = true,
+  )
 }
 
 /** 設定's シフトパターン row: the marks of the patterns in use, and how many. */

@@ -1,6 +1,7 @@
 package app.pochical.groups
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
@@ -60,17 +61,26 @@ fun pageGroup(groupId: String, onGone: () -> Unit): GroupRow? {
   return group
 }
 
-/** One of a group's pages: [content] once the group is read, only [title]'s bar until then. */
+/**
+ * One of a group's pages: [content] once the group is read, until then [loading], the page's own
+ * bar titled [title] over a spinner, so the bar stays as the group comes.
+ */
 @Composable
-fun GroupPage(groupId: String, title: String, onBack: () -> Unit, content: @Composable (GroupRow) -> Unit) {
+fun GroupPage(
+  groupId: String,
+  title: String,
+  onBack: () -> Unit,
+  loading: @Composable (String) -> Unit = { Scaffold(topBar = { PageBar(it, onBack) }) { padding -> PageLoading(padding) } },
+  content: @Composable (GroupRow) -> Unit,
+) {
   val group = pageGroup(groupId, onBack)
-  if (group != null) {
-    content(group)
-  } else {
-    Scaffold(topBar = { PageBar(title, onBack) }) { padding ->
-      Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-    }
-  }
+  if (group != null) content(group) else loading(title)
+}
+
+/** A page's spinner while what it shows is read, in the middle of the room under its bar. */
+@Composable
+fun PageLoading(padding: PaddingValues) {
+  Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
 }
 
 /** Everyone in the group, those who left too, as the group's socket last said. */

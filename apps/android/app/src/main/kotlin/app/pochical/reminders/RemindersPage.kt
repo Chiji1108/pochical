@@ -168,12 +168,12 @@ private fun ExactAlarmCard(anyOn: Boolean) {
 private fun ReminderRow(reminder: Reminder, calendar: OwnCalendar, onOpen: () -> Unit, onSwitch: (Boolean) -> Unit) {
   val shown = remindable(reminder, calendar.patterns)
   val picked = shown.filter { it.id !in reminder.skip }
-  SegmentedListItem(
+  SettingsRow(
+    reminder.name,
+    R.drawable.ic_alarm,
     onClick = onOpen,
-    shapes = segmentShapes(),
-    colors = rowColors(),
-    leadingContent = { Icon(painterResource(R.drawable.ic_alarm), contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-    content = {
+    end = RowEnd.None,
+    headlineContent = {
       Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(reminder.name, color = if (reminder.on) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
         // The shifts it goes off for, when not all of them.
@@ -185,8 +185,7 @@ private fun ReminderRow(reminder: Reminder, calendar: OwnCalendar, onOpen: () ->
         }
       }
     },
-    supportingContent =
-      if (reminder.on) {
+    supportingContent = if (reminder.on) {
         {
           val next = remember(reminder, calendar) { nextFiring(reminder, calendar) }
           Text(
@@ -194,7 +193,7 @@ private fun ReminderRow(reminder: Reminder, calendar: OwnCalendar, onOpen: () ->
           )
         }
       } else null,
-    trailingContent = {
+    valueContent = {
       Switch(
         checked = reminder.on,
         onCheckedChange = onSwitch,

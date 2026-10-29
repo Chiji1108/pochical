@@ -29,7 +29,6 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -216,8 +215,7 @@ fun DeviceCalendarPage(month: YearMonth, navigation: PageNavigation) {
   }
 
   SettingsPage(doneTitle ?: stringResource(R.string.calendar_add), onBack = navigation::back, snackbar = snackbar) { padding ->
-    Box {
-      LazyColumn(Modifier.fillMaxWidth(), contentPadding = padding) {
+    LazyColumn(Modifier.fillMaxWidth(), contentPadding = padding) {
         when {
           !allowed && refused -> {
             item { Footnote(stringResource(R.string.calendar_add_denied)) }
@@ -317,7 +315,6 @@ fun DeviceCalendarPage(month: YearMonth, navigation: PageNavigation) {
             }
           }
         }
-      }
     }
   }
 

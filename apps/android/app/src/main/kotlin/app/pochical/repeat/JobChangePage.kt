@@ -184,7 +184,7 @@ fun JobChangePage(navigation: PageNavigation) {
     return
   }
 
-  SettingsPage(if (steps.size == 1) stringResource(R.string.job_change) else "", onBack = back) { padding ->
+  SettingsPage(if (steps.size == 1) stringResource(R.string.job_change) else "", onBack = back, collapsing = false) { padding ->
     LazyColumn(contentPadding = padding) {
       when (step) {
         JobStep.Day -> {
@@ -275,11 +275,10 @@ private fun Option(emoji: String, title: String, note: String, onClick: () -> Un
 /** A way of working: its name and note, with its order's days or the keys a roster's work gives. */
 @Composable
 private fun TemplateRow(template: JobTemplate, onClick: () -> Unit) {
-  SegmentedListItem(
+  SettingsRow(
+    template.title,
+    icon = null,
     onClick = onClick,
-    shapes = segmentShapes(),
-    colors = rowColors(),
-    content = { Text(template.title) },
     supportingContent = {
       Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(template.note)
@@ -288,7 +287,6 @@ private fun TemplateRow(template: JobTemplate, onClick: () -> Unit) {
         else if (!template.custom) KeysPreview(template.patternIds, readyById)
       }
     },
-    modifier = Modifier.clickable(onClick = onClick),
   )
 }
 
