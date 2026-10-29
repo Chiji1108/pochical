@@ -41,22 +41,33 @@ sealed interface Unsending {
  */
 @Composable
 fun rememberLinkActions(openLink: (String) -> Unit, snackbar: SnackbarHostState): (String) -> List<LineMenuItem> {
+  val resources = LocalContext.current.resources
+  val open by rememberUpdatedState(openLink)
+  val copy = rememberCopy(snackbar)
+  return { url ->
+    listOf(
+      LineMenuItem(resources.getString(R.string.chat_link_open), R.drawable.ic_link) { open(url) },
+      LineMenuItem(resources.getString(R.string.chat_link_copy), R.drawable.ic_content_copy) { copy(url) },
+    )
+  }
+}
+
+/**
+ * Copies words to the clipboard: done out of sight, so felt as well as said (spec/haptics.md); from
+ * Android 13 the system says it itself, so the app says nothing more.
+ */
+@Composable
+private fun rememberCopy(snackbar: SnackbarHostState): (String) -> Unit {
   val scope = rememberCoroutineScope()
   val clipboard = LocalClipboard.current
   val haptics = LocalHapticFeedback.current
   val resources = LocalContext.current.resources
-  val open by rememberUpdatedState(openLink)
-  return { url ->
-    listOf(
-      LineMenuItem(resources.getString(R.string.chat_link_open), R.drawable.ic_link) { open(url) },
-      LineMenuItem(resources.getString(R.string.chat_link_copy), R.drawable.ic_content_copy) {
-        scope.launch {
-          clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(null, url)))
-          haptics.performHapticFeedback(HapticFeedbackType.Confirm)
-          if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) snackbar.showSnackbar(resources.getString(R.string.chat_copied))
-        }
-      },
-    )
+  return { words ->
+    scope.launch {
+      clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(null, words)))
+      haptics.performHapticFeedback(HapticFeedbackType.Confirm)
+      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) snackbar.showSnackbar(resources.getString(R.string.chat_copied))
+    }
   }
 }
 
@@ -92,16 +103,8 @@ fun rememberLineActions(
   val calls = LocalGroupCalls.current
   val files = LocalPhotoFiles.current
   val rules = placeRules(groupId)
-  fun copy(words: String) =
-    LineMenuItem(resources.getString(R.string.chat_copy), R.drawable.ic_content_copy) {
-      scope.launch {
-        clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(null, plainText(words, nameOf))))
-        // Done out of sight, on the clipboard: felt as well as said (spec/haptics.md). From Android
-        // 13 the system says it itself, so the app says nothing more.
-        haptics.performHapticFeedback(HapticFeedbackType.Confirm)
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) snackbar.showSnackbar(resources.getString(R.string.chat_copied))
-      }
-    }
+  val copied = rememberCopy(snackbar)
+  fun copy(words: String) = LineMenuItem(resources.getString(R.string.chat_copy), R.drawable.ic_content_copy) { copied(plainText(words, nameOf)) }
   return { look ->
     val words = (look.content as? LineContent.Words)?.text
     val waiting = look.waiting

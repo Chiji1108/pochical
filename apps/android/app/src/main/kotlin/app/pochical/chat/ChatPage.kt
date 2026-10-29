@@ -620,7 +620,7 @@ fun ChatPage(
         unfolded = unfolded + key
       },
       linkItems = linkItems,
-      takenTitle = floatingDay.taken,
+      takenTitle = { floatingDay.taken },
     )
   Box {
     ChatScaffold(groupId, threadId, support, members, groups, socket, onBack, onPhotos, say, onTitle) {

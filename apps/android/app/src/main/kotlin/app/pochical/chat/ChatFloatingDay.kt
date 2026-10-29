@@ -29,7 +29,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.pochical.design.Chat
 import java.time.LocalDate
+import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 
 // The floating day (spec/chat.md, Unread lines and typing): while the person scrolls, the day of the
 // lines at the top floats over them, kept as a list pins its section's header, and fades
@@ -41,7 +43,7 @@ private val GAP = 8.dp
 
 /** The day floating over the lines: which, how far the next day's title pushes it up, and the title it takes over. */
 @Stable
-class FloatingDayState(private val list: LazyListState, items: () -> List<ChatItem>) {
+class FloatingDayState(private val list: LazyListState, items: () -> List<ChatItem>, private val runGapPx: Int) {
   private val shown by derivedStateOf(items)
 
   /** The floating day's height, as it measures itself. */
@@ -50,7 +52,10 @@ class FloatingDayState(private val list: LazyListState, items: () -> List<ChatIt
   /** The day at the top, how far it is pushed up, and the key of the title it takes over; null with no day. */
   val at by derivedStateOf { place() }
 
-  /** The title taken over, told only as it changes, not each frame the day is pushed. */
+  /** The day floating, told only as it changes, not each frame it is pushed. */
+  val day by derivedStateOf { at?.day }
+
+  /** The title taken over, told only as it changes. */
   val taken by derivedStateOf { at?.taken }
 
   private fun place(): Place? {
@@ -60,16 +65,18 @@ class FloatingDayState(private val list: LazyListState, items: () -> List<ChatIt
     if (visible.isEmpty()) return null
     // Reversed, an item's top stands its offset and size over the foot.
     val top = { item: androidx.compose.foundation.lazy.LazyListItemInfo -> info.viewportEndOffset - (item.offset + item.size) }
+    // A title's words, under the room kept over it, which the floating day's meet.
+    val words = { item: androidx.compose.foundation.lazy.LazyListItemInfo -> top(item) + runGapPx }
     // Where it floats: at the top of the lines, under what floats over them.
     val line = info.afterContentPadding
     // The item where the day floats, and its day: that of the title over it, the next older one.
-    val under = visible.firstOrNull { top(it) <= line && line < top(it) + it.size } ?: visible.last()
+    val under = visible.firstOrNull { words(it) <= line && line < top(it) + it.size } ?: visible.last()
     val day = (under.index until items.size).firstNotNullOfOrNull { (items[it] as? ChatItem.DayTitle)?.day } ?: return null
     // The next day's title coming up under it pushes it up and out.
-    val next = visible.filter { items.getOrNull(it.index) is ChatItem.DayTitle && top(it) > line }.minOfOrNull(top)
+    val next = visible.filter { items.getOrNull(it.index) is ChatItem.DayTitle && words(it) > line }.minOfOrNull(words)
     val push = next?.let { (line + height - it).coerceIn(0, height) } ?: 0
     // A title up to where the day floats is the floating day's: not drawn under it.
-    val taken = visible.firstOrNull { items.getOrNull(it.index) is ChatItem.DayTitle && top(it) <= line }?.key as? String
+    val taken = visible.firstOrNull { items.getOrNull(it.index) is ChatItem.DayTitle && words(it) <= line }?.key as? String
     return Place(day, push, taken)
   }
 
@@ -81,7 +88,8 @@ class FloatingDayState(private val list: LazyListState, items: () -> List<ChatIt
 @Composable
 fun rememberFloatingDay(list: LazyListState, items: List<ChatItem>): FloatingDayState {
   val current by rememberUpdatedState(items)
-  return remember(list) { FloatingDayState(list) { current } }
+  val runGap = with(LocalDensity.current) { Chat.runGap.dp.roundToPx() }
+  return remember(list, runGap) { FloatingDayState(list, { current }, runGap) }
 }
 
 /**
@@ -96,7 +104,8 @@ fun FloatingDay(state: FloatingDayState, list: LazyListState, topRoom: Dp, modif
   var shown by remember { mutableStateOf(false) }
   LaunchedEffect(list) { list.interactionSource.interactions.collect { if (it is DragInteraction.Start) dragged = true } }
   LaunchedEffect(list) {
-    snapshotFlow { list.isScrollInProgress }.collect { scrolling ->
+    // A scroll starting again before it fades keeps it.
+    snapshotFlow { list.isScrollInProgress }.collectLatest { scrolling ->
       if (scrolling && dragged) shown = true
       if (!scrolling) {
         dragged = false
@@ -105,13 +114,14 @@ fun FloatingDay(state: FloatingDayState, list: LazyListState, topRoom: Dp, modif
       }
     }
   }
-  val at = state.at
+  val day = state.day
   Box(modifier.fillMaxWidth().padding(top = topRoom).clipToBounds().clearAndSetSemantics {}, contentAlignment = Alignment.TopCenter) {
-    AnimatedVisibility(shown && at != null, enter = fadeIn(), exit = fadeOut()) {
-      val place = at ?: return@AnimatedVisibility
+    AnimatedVisibility(shown && day != null, enter = fadeIn(), exit = fadeOut()) {
+      val showing = day ?: return@AnimatedVisibility
       DayWords(
-        place.day,
-        Modifier.padding(top = GAP).graphicsLayer { translationY = -place.push.toFloat() }.onSizeChanged { state.height = it.height },
+        showing,
+        // Pushed in its layer as the lines move, not drawn again each frame.
+        Modifier.padding(top = GAP).graphicsLayer { translationY = -(state.at?.push ?: 0).toFloat() }.onSizeChanged { state.height = it.height },
         floating = true,
       )
     }

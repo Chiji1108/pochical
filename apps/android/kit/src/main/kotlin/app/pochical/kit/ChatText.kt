@@ -114,7 +114,8 @@ fun withMentions(text: String, picked: List<PickedMember>): String =
  * (spec/chat.md, Large emoji; spec/vectors/chat-text.json, largeEmoji).
  */
 fun largeEmojiCount(text: String): Int {
-  val ends = characterEnds(text).toList()
+  // Past the most, no need to cut the rest of a long message.
+  val ends = characterEnds(text).take(Chat.largeEmojiMax + 1).toList()
   if (ends.isEmpty() || ends.size > Chat.largeEmojiMax) return 0
   val starts = listOf(0) + ends.dropLast(1)
   return if (starts.zip(ends).all { (start, end) -> isEmoji(text.substring(start, end)) }) ends.size else 0

@@ -22,7 +22,7 @@ sealed interface LinePart {
 }
 
 /** What a part's actions act on: the line's seq (null for one on its way), what the chat does, and its menu. */
-class PartLine(val seq: Long?, val handlers: MessageHandlers, val openMenu: () -> Unit)
+class PartLine(val seq: Long?, val handlers: MessageHandlers, val openMenu: () -> Unit, val writerId: String? = null)
 
 /**
  * The line's reactions under its bubble: リアクション, which opens the bar and menu over the chat,
@@ -89,7 +89,8 @@ data class LinksPart(val urls: List<String>) : LinePart {
 data class MentionsPart(val userIds: List<String>) : LinePart {
   @Composable
   override fun actions(line: PartLine): List<CustomAccessibilityAction> {
-    return mentioned(userIds, line.handlers).map { member ->
+    // The writer mentioning themselves: their profile is the line's own action already.
+    return mentioned(userIds, line.handlers).filter { it.userId != line.writerId }.map { member ->
       CustomAccessibilityAction(stringResource(R.string.chat_writer_profile, member.shownName())) { line.handlers.openProfile?.invoke(member); true }
     }
   }

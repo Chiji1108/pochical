@@ -35,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -74,7 +75,8 @@ import kotlinx.coroutines.launch
 fun ChatItemRow(item: ChatItem, look: MessageLook?, writers: Map<String, GroupMemberRow>, me: String?, handlers: MessageHandlers, modifier: Modifier = Modifier) {
   when (item) {
     is ChatItem.Typing -> TypingRow(item.userIds.mapNotNull { writers[it] }, modifier)
-    is ChatItem.DayTitle -> DayTitle(item.day, modifier.then(if (item.key == handlers.takenTitle) Modifier.alpha(0f) else Modifier))
+    // Taken over by the floating day, read in its layer, so the row is not drawn again as the list scrolls.
+    is ChatItem.DayTitle -> DayTitle(item.day, modifier.graphicsLayer { alpha = if (handlers.takenTitle() == item.key) 0f else 1f })
     ChatItem.Unread -> UnreadDivider(modifier)
     is ChatItem.Line -> {
       val line = item.line

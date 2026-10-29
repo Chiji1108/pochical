@@ -56,6 +56,7 @@ import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -219,8 +220,8 @@ class MessageHandlers(
   val unfold: (key: String) -> Unit = {},
   /** A link's own menu, as a long press on it opens it: リンクを開く and リンクをコピー. */
   val linkItems: (url: String) -> List<LineMenuItem> = { emptyList() },
-  /** The key of the day's title the floating day takes over, not drawn under it. */
-  val takenTitle: String? = null,
+  /** The key of the day's title the floating day takes over, not drawn under it, read where it is drawn. */
+  val takenTitle: () -> String? = { null },
 ) {
   /** [member] when their profile opens from the chat (their face, their mention): not the reader's, nor a deleted account's, and only where profiles open. */
   fun profileOf(member: GroupMemberRow?): GroupMemberRow? = member?.takeIf { openProfile != null && it.userId != me && !it.deleted }
@@ -266,7 +267,7 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
     )
   val items = handlers.items(look)
   // Its menu's items, 返信 first, then what each of its parts offers (spec/chat.md, Screen readers).
-  val partLine = PartLine(look.seq, handlers, openMenu = { openMenu(null) })
+  val partLine = PartLine(look.seq, handlers, openMenu = { openMenu(null) }, writerId = look.writer?.userId)
   // The writer's profile, which a tap on their face opens.
   val profiled = handlers.profileOf(look.writer)
   val openProfile = handlers.openProfile
@@ -283,8 +284,7 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
         parts.flatMap { it.actions(partLine) } +
         listOfNotNull(profile) +
         shifts.flatMap { it.actions(partLine) })
-      // A writer mentioning themselves has their profile once.
-      .distinctBy { it.label }
+
       // Android holds at most this many on one element; past them, the latest parts' go.
       .take(MOST_ACTIONS)
   // Activating a sent line of photos opens its first large; any other line opens its menu, as the long press does.
@@ -404,7 +404,7 @@ private fun LineBody(look: MessageLook, handlers: MessageHandlers, live: Boolean
     shared != null -> SharedDaysBody(shared, look, handlers)
     photos != null -> PhotoBody(look, photos, handlers, live, onQuote)
     // Nothing but a few emoji, large and without a bubble; a reply keeps its bubble for its quote.
-    words != null && look.quote == null && largeEmojiCount(words.text) > 0 -> LargeEmoji(words.text, look, handlers)
+    words != null && look.quote == null && remember(words.text) { largeEmojiCount(words.text) } > 0 -> LargeEmoji(words.text, look, handlers)
     else -> Bubble(look, handlers, onQuote, live, links)
   }
 }
@@ -500,29 +500,32 @@ fun Bubble(look: MessageLook, handlers: MessageHandlers, onQuote: () -> Unit, li
     // Past chatRules.foldLines lines, cut with … and 続きを読む under them, as they are laid out
     // (spec/chat.md, Long messages and shared days); opened, it stays open while the chat is.
     val unfolded = look.key in handlers.unfolded
-    var overflows by remember(look.content) { mutableStateOf(false) }
-    Text(
-      messageText(look.content, look.mine, handlers, live),
-      Modifier.padding(horizontal = 12.dp).onGloballyPositioned { links?.coordinates = it },
-      style = MaterialTheme.typography.bodyLarge,
-      color = ink,
-      maxLines = if (unfolded) Int.MAX_VALUE else Chat.foldLines,
-      overflow = TextOverflow.Ellipsis,
-      onTextLayout = { layout ->
-        overflows = layout.hasVisualOverflow
-        links?.layout = layout
+    FoldedWords(
+      words = { onLayout ->
+        Text(
+          messageText(look.content, look.mine, handlers, live),
+          Modifier.padding(horizontal = 12.dp).onGloballyPositioned { links?.coordinates = it },
+          style = MaterialTheme.typography.bodyLarge,
+          color = ink,
+          maxLines = if (unfolded) Int.MAX_VALUE else Chat.foldLines,
+          overflow = TextOverflow.Ellipsis,
+          onTextLayout = { layout ->
+            onLayout(layout)
+            links?.layout = layout
+          },
+        )
+      },
+      more = {
+        Text(
+          stringResource(R.string.chat_read_more),
+          Modifier.padding(horizontal = 12.dp).padding(top = 4.dp).then(if (live) Modifier.clickable { handlers.unfold(look.key) } else Modifier),
+          style = MaterialTheme.typography.bodyMedium,
+          fontWeight = FontWeight.SemiBold,
+          // In the color the bubble's links take.
+          color = if (look.mine) ink else colors.accentDefault,
+        )
       },
     )
-    if (overflows && !unfolded) {
-      Text(
-        stringResource(R.string.chat_read_more),
-        Modifier.padding(horizontal = 12.dp).padding(top = 4.dp).then(if (live) Modifier.clickable { handlers.unfold(look.key) } else Modifier),
-        style = MaterialTheme.typography.bodyMedium,
-        fontWeight = FontWeight.SemiBold,
-        // In the color the bubble's links take.
-        color = if (look.mine) ink else colors.accentDefault,
-      )
-    }
     if (invitation != null) {
       Spacer(Modifier.height(8.dp))
       InviteCard(invitation, handlers.invite(invitation), Modifier.padding(horizontal = 8.dp)) { handlers.openLink(inviteLink(invitation)) }
@@ -812,6 +815,27 @@ private const val ACCESSIBILITY_SCALE = 1.3f
 /** How dim a line on its way is, as it would be on the chat's ground. */
 private const val WAITING_ALPHA = 0.6f
 
+/**
+ * Words and, under them only while they run past their lines, [more] (続きを読む): told in the same
+ * pass the words are laid out in, as their layout comes before the rest is measured, so a long line
+ * is laid out whole the first time rather than growing a frame later.
+ */
+@Composable
+private fun FoldedWords(words: @Composable (onLayout: (TextLayoutResult) -> Unit) -> Unit, more: @Composable () -> Unit) {
+  val cut = remember { BooleanArray(1) }
+  Layout(content = {
+    words { cut[0] = it.hasVisualOverflow }
+    more()
+  }) { measurables, constraints ->
+    val text = measurables[0].measure(constraints)
+    val under = if (cut[0]) measurables[1].measure(constraints.copy(minWidth = 0)) else null
+    layout(maxOf(text.width, under?.width ?: 0), text.height + (under?.height ?: 0)) {
+      text.place(0, 0)
+      under?.place(0, text.height)
+    }
+  }
+}
+
 /** What a link's annotation is tagged with, before its URL. */
 private const val URL_TAG = "url:"
 
@@ -823,13 +847,15 @@ class LinkHits {
   var layout: TextLayoutResult? = null
   var coordinates: LayoutCoordinates? = null
 
-  /** The link at [window], a point in the window, if any. */
+  /** The link at [window], a point in the window, if any: one of its characters drawn under it. */
   fun urlAt(window: Offset): String? {
     val layout = layout ?: return null
     val at = coordinates?.takeIf { it.isAttached }?.windowToLocal(window) ?: return null
-    if (at.y < 0 || at.y > layout.size.height) return null
-    val offset = layout.getOffsetForPosition(at)
-    return layout.layoutInput.text.getLinkAnnotations(offset, offset).firstNotNullOfOrNull { range ->
+    val text = layout.layoutInput.text
+    // The nearest caret is either side of the character under the finger, if one is.
+    val near = layout.getOffsetForPosition(at)
+    val under = listOf(near, near - 1).firstOrNull { it in text.indices && layout.getBoundingBox(it).contains(at) } ?: return null
+    return text.getLinkAnnotations(under, under + 1).firstNotNullOfOrNull { range ->
       (range.item as? LinkAnnotation.Clickable)?.tag?.takeIf { it.startsWith(URL_TAG) }?.removePrefix(URL_TAG)
     }
   }
