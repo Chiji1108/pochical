@@ -1,18 +1,6 @@
 package app.pochical
 
-import kotlinx.coroutines.CancellationException
-import app.pochical.repeat.patternsQuestion
-import app.pochical.repeat.needed
-import app.pochical.repeat.jobOrderTitle
-import app.pochical.repeat.chooseJob
-import app.pochical.repeat.asksMore
-import app.pochical.repeat.JobOrderCalendar
-import app.pochical.kit.AccountState
-import androidx.compose.runtime.remember
 import android.util.Log
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -30,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -41,11 +30,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSerializable
 import androidx.compose.runtime.setValue
@@ -66,22 +55,30 @@ import androidx.navigation3.runtime.serialization.NavBackStackSerializer
 import androidx.navigation3.ui.NavDisplay
 import app.pochical.calendar.LocalOwnDays
 import app.pochical.calendar.OwnDays
-import app.pochical.kit.ShiftPeriod
-import app.pochical.kit.firstPick
 import app.pochical.design.JobTemplate
 import app.pochical.design.Metrics
 import app.pochical.design.ReadyPatterns
+import app.pochical.kit.AccountState
 import app.pochical.kit.DeviceSettings
 import app.pochical.kit.FirstRun
+import app.pochical.kit.ShiftPeriod
+import app.pochical.kit.firstPick
 import app.pochical.patterns.ReadyPatternChips
 import app.pochical.patterns.chosenPatterns
+import app.pochical.repeat.JobOrderCalendar
 import app.pochical.repeat.KeysPreview
 import app.pochical.repeat.OrderCover
 import app.pochical.repeat.OrderTyping
 import app.pochical.repeat.SequenceTiles
+import app.pochical.repeat.asksMore
+import app.pochical.repeat.chooseJob
+import app.pochical.repeat.jobOrderTitle
 import app.pochical.repeat.jobTemplate
+import app.pochical.repeat.needed
+import app.pochical.repeat.patternsQuestion
 import app.pochical.repeat.readyById
 import java.time.LocalDate
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
@@ -173,11 +170,18 @@ fun Onboarding() {
   // A roster's work begins, its pages the period its shifts come for.
   fun startRoster(ids: List<String>, period: ShiftPeriod) = begin(ids, emptyList(), first(), period)
 
+  val motion = rememberPageMotion()
+  val push = remember(motion) { motion.push<FirstRunStep>() }
+  val pop = remember(motion) { motion.pop<FirstRunStep>() }
+  val predictivePop = remember(motion) { motion.predictivePop<FirstRunStep>() }
   NavDisplay(
     backStack = steps,
     onBack = { steps.removeAt(steps.lastIndex) },
-    transitionSpec = { slideInHorizontally { it } togetherWith slideOutHorizontally { -it / 4 } },
-    popTransitionSpec = { slideInHorizontally { -it / 4 } togetherWith slideOutHorizontally { it } },
+    // On the theme's ground, so what shows through as a page fades is the テーマ's, not the window's.
+    modifier = Modifier.background(MaterialTheme.colorScheme.background),
+    transitionSpec = push,
+    popTransitionSpec = pop,
+    predictivePopTransitionSpec = predictivePop,
   ) { step ->
     NavEntry(step) {
       val back: () -> Unit = { steps.removeAt(steps.lastIndex) }
@@ -271,7 +275,7 @@ private fun Welcome(onStart: () -> Unit, onSignIn: () -> Unit) {
         modifier = Modifier.padding(top = 12.dp),
       )
     }
-    Button(onClick = onStart, modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
+    Button(onClick = onStart, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
       Text(stringResource(R.string.welcome_start), style = MaterialTheme.typography.titleMedium)
     }
     TextButton(onClick = onSignIn, modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.touch).padding(top = 4.dp)) {
@@ -288,7 +292,7 @@ private fun Welcome(onStart: () -> Unit, onSignIn: () -> Unit) {
 @Composable
 private fun SignInStep(onBack: () -> Unit, onEmpty: () -> Unit) {
   val account = LocalAccount.current
-  val state by account.state.collectAsState()
+  val state by account.state.collectAsStateWithLifecycle()
   StepPage(
     stringResource(R.string.first_run_sign_in_title),
     stringResource(R.string.first_run_sign_in_note),
@@ -319,6 +323,7 @@ private fun PatternsStep(template: JobTemplate, onBack: () -> Unit, waiting: Boo
     foot = {
       Button(
         onClick = { onNext(template, chosenPatterns(picked)) },
+        shapes = ButtonDefaults.shapes(),
         enabled = picked.isNotEmpty() && !waiting,
         modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control),
       ) {
@@ -377,7 +382,7 @@ private fun PeriodDayStep(onBack: () -> Unit, waiting: Boolean, onStart: (Int) -
     stringResource(R.string.period_question_day_note),
     onBack,
     foot = {
-      Button(onClick = { onStart(start) }, enabled = !waiting, modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
+      Button(onClick = { onStart(start) }, shapes = ButtonDefaults.shapes(), enabled = !waiting, modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
         Text(stringResource(R.string.welcome_start))
       }
     },

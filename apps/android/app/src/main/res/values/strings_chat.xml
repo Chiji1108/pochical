@@ -110,6 +110,8 @@
   <string name="chat_poll_people">%1$d人</string>
   <string name="chat_poll_chosen">決定</string>
   <string name="chat_poll_can_come">行ける</string>
+  <!-- 行ける as a screen reader reads it, on its day. -->
+  <string name="chat_poll_can_come_on">%1$sに行ける</string>
   <string name="chat_poll_come">%1$sに行ける</string>
   <string name="chat_poll_not_come">%1$sに行けるを取り消す</string>
   <string name="chat_poll_who">%1$sに行ける人</string>

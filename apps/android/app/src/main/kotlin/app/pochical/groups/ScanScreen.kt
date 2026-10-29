@@ -9,6 +9,10 @@ import androidx.camera.mlkit.vision.MlKitAnalyzer
 import androidx.camera.view.CameraController
 import androidx.camera.view.LifecycleCameraController
 import androidx.camera.view.PreviewView
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -169,17 +173,20 @@ fun ScanScreen(onClose: () -> Unit, onInvite: (String) -> Unit) {
       }
     }
     // Over the picture under the bar, as a toast is, so the frame stays where the code is held.
-    problem?.let {
-      Text(
-        it,
-        Modifier.safeDrawingPadding()
-          .padding(start = 16.dp, end = 16.dp, top = 76.dp)
-          .fillMaxWidth()
-          .background(colors.mediaFill, RoundedCornerShape(Radius.lg))
-          .padding(horizontal = 16.dp, vertical = 12.dp)
-          .semantics { liveRegion = LiveRegionMode.Polite },
-        color = colors.mediaText,
-      )
+    // Keeps its words as it fades out.
+    AnimatedContent(problem, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "problem") { said ->
+      if (said != null) {
+        Text(
+          said,
+          Modifier.safeDrawingPadding()
+            .padding(start = 16.dp, end = 16.dp, top = 76.dp)
+            .fillMaxWidth()
+            .background(colors.mediaFill, RoundedCornerShape(Radius.lg))
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .semantics { liveRegion = LiveRegionMode.Polite },
+          color = colors.mediaText,
+        )
+      }
     }
   }
 }

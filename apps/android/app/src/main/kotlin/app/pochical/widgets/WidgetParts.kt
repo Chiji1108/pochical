@@ -2,28 +2,38 @@ package app.pochical.widgets
 
 import android.content.Context
 import android.content.Intent
-import androidx.core.net.toUri
+import android.widget.RemoteViews
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.glance.GlanceId
+import androidx.core.net.toUri
+import androidx.datastore.preferences.core.Preferences
 import androidx.glance.ColorFilter
+import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
-import androidx.glance.ImageProvider
 import androidx.glance.GlanceTheme
+import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
+import androidx.glance.LocalSize
 import androidx.glance.action.Action
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionStartActivity
+import androidx.glance.appwidget.compose
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
+import androidx.glance.appwidget.state.getAppWidgetState
 import androidx.glance.background
 import androidx.glance.color.ColorProvider
+import androidx.glance.currentState
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
@@ -33,6 +43,7 @@ import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.semantics.contentDescription
 import androidx.glance.semantics.semantics
+import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextAlign
@@ -56,17 +67,9 @@ import app.pochical.mark
 import java.time.LocalDate
 import java.time.YearMonth
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import androidx.datastore.preferences.core.Preferences
-import androidx.glance.appwidget.state.getAppWidgetState
-import androidx.glance.currentState
-import androidx.glance.state.PreferencesGlanceStateDefinition
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.glance.LocalSize
-import androidx.compose.ui.unit.DpSize
-import androidx.compose.runtime.collectAsState
 
 // The pieces every kind of widget draws days with (iOS's WidgetParts.swift; /design's
 // design-widgets.tsx): the colors, a day's mark or dash and its name, a day off's look, the memo's
@@ -127,7 +130,7 @@ class WidgetColors(theme: Theme) {
 }
 
 /** What a widget is drawn from: the entry, and the settings it is drawn in. */
-class Drawn(val entry: WidgetEntry, val settings: DeviceSettings) {
+class Drawn(val entry: WidgetEntry, val settings: DeviceSettings, val faces: WidgetFaces = WidgetFaces()) {
   val colors = WidgetColors(settings.theme)
   val look = settings.look
   val english = settings.heading.english
@@ -192,14 +195,18 @@ abstract class PochicalWidget(
           choice?.let { picked -> sources.values.companion(picked, today).map { Companion(picked, it) } } ?: flowOf(Companion(null, null))
         }
           .collectAsState(firstRead)
+      // Read for another choice than the one now kept: the person's own days until it is.
+      val companion = read.companion.takeIf { read.choice == choice }
+      // Their photos apart from their days, drawn as they come and fetched again only for other
+      // photos: the days never wait on a face, which is its letter until then.
+      val photos = companion?.let { WidgetPhotos.of(it, ownFace = chooses == Choosing.People) }
+      val faces by remember(photos) { flow { emit(photos?.let { widgetFaces(context, it) } ?: WidgetFaces()) } }.collectAsState(WidgetFaces())
       val drawn =
-        remember(shownCalendar, shownSettings, today, read) {
-          // Read for another choice than the one now kept: the person's own days until it is.
-          val companion = read.companion.takeIf { read.choice == choice }
+        remember(shownCalendar, shownSettings, today, read, faces) {
           val entry = shownCalendar.widgetEntry(today, shownSettings.week, { it.holidayName(country) != null }, companion)
           // Picked, but no longer there: what the widget shows changes only when the person changes it.
           val gone = choice != null && read.choice == choice && companion == null
-          Drawn(entry.copy(pickAgain = choice?.groupId?.takeIf { gone }), shownSettings)
+          Drawn(entry.copy(pickAgain = choice?.groupId?.takeIf { gone }), shownSettings, faces.takeIf { it.photos == photos } ?: WidgetFaces())
         }
       Framed(drawn)
     }
@@ -213,6 +220,18 @@ abstract class PochicalWidget(
     val drawn = Drawn(sampleWidgetEntry(LocalDate.now(), settings.week), settings)
     provideContent { Framed(drawn) }
   }
+
+  /**
+   * This kind drawn from [drawn] at [size], as the launcher would show it, for the style pages'
+   * preview of the home screen (spec/widgets.md): Glance composes it into the views a widget is.
+   */
+  suspend fun preview(context: Context, drawn: Drawn, size: DpSize): RemoteViews =
+    object : GlanceAppWidget() {
+      override val sizeMode: SizeMode = SizeMode.Exact
+
+      override suspend fun provideGlance(context: Context, id: GlanceId) = provideContent { Framed(drawn) }
+    }
+      .compose(context, size = size)
 
   @Composable
   private fun Framed(drawn: Drawn) {

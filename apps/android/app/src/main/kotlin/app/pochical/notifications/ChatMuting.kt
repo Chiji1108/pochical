@@ -1,12 +1,12 @@
 package app.pochical.notifications
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalResources
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.R
 import app.pochical.kit.ChatNotificationState
 import app.pochical.kit.ChatNotificationSwitches
@@ -24,7 +24,7 @@ val LocalChatNotificationSwitches =
 @Composable
 fun rememberChatNotifications(): ChatNotificationState? {
   val switches = LocalChatNotificationSwitches.current
-  val state by remember(switches) { switches.state }.collectAsState(null)
+  val state by remember(switches) { switches.state }.collectAsStateWithLifecycle(null)
   return state
 }
 

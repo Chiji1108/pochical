@@ -40,7 +40,9 @@ private val answers = Json { ignoreUnknownKeys = true }
  * on to the app's scheme under a one-time code. The app redeems the code with the verifier only it
  * holds, and goes on with Apple's ID token as iOS does.
  */
-class AppleWebSignIn(private val server: HttpUrl, private val http: OkHttpClient) {
+class AppleWebSignIn(private val server: HttpUrl, http: Lazy<OkHttpClient>) {
+  private val http by http
+
   /** A new sign-in, with its own verifier and nonce. */
   fun start(): Attempt = Attempt(nonce = signInNonce(), verifier = signInNonce())
 

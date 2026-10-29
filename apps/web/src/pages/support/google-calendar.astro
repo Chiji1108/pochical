@@ -1,4 +1,9 @@
 ---
+import accountCalendar from "../../assets/support/account-calendar.png";
+import addAccount from "../../assets/support/add-account.png";
+import calendarPicker from "../../assets/support/calendar-picker.png";
+import calendarSettings from "../../assets/support/calendar-settings.png";
+import GuideShot from "../../components/guide-shot.astro";
 import Link from "../../components/link.astro";
 import Page from "../../components/page.astro";
 import Site from "../../layouts/site.astro";
@@ -34,24 +39,16 @@ import Site from "../../layouts/site.astro";
           すでに追加しているときは、「カレンダーアカウント」でそのアカウントを開き、「カレンダー」がオンになっているか確かめてください。
         </p>
         <div class="guide-shots">
-          <figure>
-            <img
-              alt="設定アプリのカレンダーの画面。「カレンダーアカウント」の行がある。"
-              height="515"
-              src="/support/calendar-settings.png"
-              width="600"
-            />
-            <figcaption>「カレンダーアカウント」を開く</figcaption>
-          </figure>
-          <figure>
-            <img
-              alt="アカウントを追加の画面。iCloud、Microsoft Exchange、Google、yahoo!、Aol.、Outlook.comが並ぶ。"
-              height="1030"
-              src="/support/add-account.png"
-              width="600"
-            />
-            <figcaption>「アカウントを追加」で「Google」を選ぶ</figcaption>
-          </figure>
+          <GuideShot
+            alt="設定アプリのカレンダーの画面。「カレンダーアカウント」の行がある。"
+            caption="「カレンダーアカウント」を開く"
+            src={calendarSettings}
+          />
+          <GuideShot
+            alt="アカウントを追加の画面。iCloud、Microsoft Exchange、Google、yahoo!、Aol.、Outlook.comが並ぶ。"
+            caption="「アカウントを追加」で「Google」を選ぶ"
+            src={addAccount}
+          />
         </div>
       </section>
       <section>
@@ -68,15 +65,11 @@ import Site from "../../layouts/site.astro";
           <li>「追加」を押すと、表示している月のシフトが入ります。</li>
         </ol>
         <div class="guide-shots">
-          <figure>
-            <img
-              alt="ポチカルの追加先の画面。iCloudの下と、Gmailの下にカレンダーが並ぶ。"
-              height="619"
-              src="/support/calendar-picker.png"
-              width="600"
-            />
-            <figcaption>「Gmail」の下のカレンダーを選ぶ</figcaption>
-          </figure>
+          <GuideShot
+            alt="ポチカルの追加先の画面。iCloudの下と、Gmailの下にカレンダーが並ぶ。"
+            caption="「Gmail」の下のカレンダーを選ぶ"
+            src={calendarPicker}
+          />
         </div>
         <p class="small-note">
           「iCloud」や「このiPhone」の下のカレンダーを選ぶと、Googleカレンダーには入りません。次からは、前に追加したカレンダーが最初に選ばれています。
@@ -91,15 +84,11 @@ import Site from "../../layouts/site.astro";
           メールのためにGoogleアカウントを追加していても、カレンダーがオフのままのことがあります。設定アプリの「アプリ」→「カレンダー」→「カレンダーアカウント」でそのアカウントを開き、「カレンダー」をオンにしてください。そこにGoogleのアカウントがないときは、1の手順で追加します。オンにすると、少しして「追加先」に出てきます。
         </p>
         <div class="guide-shots">
-          <figure>
-            <img
-              alt="設定アプリのGmailアカウントの画面。メール、連絡先、カレンダー、メモのスイッチが並び、カレンダーがオンになっている。"
-              height="632"
-              src="/support/account-calendar.png"
-              width="600"
-            />
-            <figcaption>「カレンダー」をオンにする</figcaption>
-          </figure>
+          <GuideShot
+            alt="設定アプリのGmailアカウントの画面。メール、連絡先、カレンダー、メモのスイッチが並び、カレンダーがオンになっている。"
+            caption="「カレンダー」をオンにする"
+            src={accountCalendar}
+          />
         </div>
         <h3>Googleカレンダーに出てこない</h3>
         <p>

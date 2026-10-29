@@ -261,7 +261,7 @@ describe("a line of photos", () => {
     ]);
   });
 
-  it("comes as one notification, which nothing collapses", async () => {
+  it("comes as one notification, under a collapse id of its own, which no other line's replaces", async () => {
     const { groupId, guest, maker } = await pair();
     await call(
       "UserService/RegisterPushToken",
@@ -280,6 +280,7 @@ describe("a line of photos", () => {
     const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
     await edit(mine, [photoLine(["n1", "n2", "n3"])]);
     await expect.poll(() => pushes.length).toBe(1);
-    expect(pushes).toStrictEqual([null]);
+    // Only its own tries share it (spec/sync-protocol.md, Push).
+    expect(pushes).toStrictEqual([expect.stringMatching(/^[\da-f-]{36}$/u)]);
   });
 });

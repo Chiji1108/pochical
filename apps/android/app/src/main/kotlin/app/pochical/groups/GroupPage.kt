@@ -15,7 +15,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.R
 import app.pochical.kit.GroupMemberRow
 import app.pochical.kit.GroupRow
@@ -51,7 +51,7 @@ fun PageBar(title: String, onBack: () -> Unit, actions: @Composable () -> Unit =
 fun pageGroup(groupId: String, onGone: () -> Unit): GroupRow? {
   HoldSocket(groupId)
   val values = LocalValues.current
-  val groups by remember(values) { values.groups() }.collectAsState(null)
+  val groups by remember(values) { values.groups() }.collectAsStateWithLifecycle(null)
   val group = groups?.firstOrNull { it.id == groupId }
   var seen by remember { mutableStateOf(false) }
   val gone by rememberUpdatedState(onGone)
@@ -87,7 +87,7 @@ fun PageLoading(padding: PaddingValues) {
 @Composable
 fun members(groupId: String): List<GroupMemberRow> {
   val values = LocalValues.current
-  val members by remember(values, groupId) { values.members(groupId) }.collectAsState(emptyList())
+  val members by remember(values, groupId) { values.members(groupId) }.collectAsStateWithLifecycle(emptyList())
   return members
 }
 

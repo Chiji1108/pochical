@@ -30,6 +30,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.layout.imeNestedScroll
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
@@ -69,7 +72,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -193,16 +196,17 @@ fun ChatPage(
   // Its lines are not notified while the person sees them come here.
   ShowingChat(groupId, threadId)
   val onPhotos = { open(RootPage.ChatPhotos(groupId, threadId)) }
+  val onShifts = { open(RootPage.GroupShifts(groupId, null)) }.takeIf { threadId == GROUP_THREAD && groupId != Chat.supportPlace }
   val chats = LocalChats.current
   val account = LocalAccount.current
   val values = LocalValues.current
   val me = rememberMeId()
   // Null until read, so a draft's mentions are named once the names are known.
-  val memberRows by remember(values, groupId) { values.members(groupId) }.collectAsState(null)
+  val memberRows by remember(values, groupId) { values.members(groupId) }.collectAsStateWithLifecycle(null)
   val members = memberRows.orEmpty()
-  val groups by remember(values) { values.groups() }.collectAsState(emptyList())
-  val blocked by remember(values) { values.blocks() }.collectAsState(emptyList())
-  val socket by remember(account, groupId) { account.chatSocket(groupId) }.collectAsState(null)
+  val groups by remember(values) { values.groups() }.collectAsStateWithLifecycle(emptyList())
+  val blocked by remember(values) { values.blocks() }.collectAsStateWithLifecycle(emptyList())
+  val socket by remember(account, groupId) { account.chatSocket(groupId) }.collectAsStateWithLifecycle(null)
 
   // Where the chat is, kept across a rotation and the process's death: the first line laid out,
   // the line ここから新着 is over as it opened, and the line the lines rest on at the foot.
@@ -219,7 +223,7 @@ fun ChatPage(
     remember(chats, groupId, threadId) {
       snapshotFlow { from to currentMe }.flatMapLatest { (from, me) -> chats.state(groupId, threadId, me, from) }
     }
-      .collectAsState(null)
+      .collectAsStateWithLifecycle(null)
   // A member's profile, a report and blocking, over the chat.
   val reportAndBlock = remember { ReportAndBlockState() }
   val other = me?.let { otherIn(threadId, it) }
@@ -239,7 +243,7 @@ fun ChatPage(
   val snackbar = remember { SnackbarHostState() }
   val scope = rememberCoroutineScope()
   val say = remember(snackbar, scope) { { said: String -> scope.launch { snackbar.showSnackbar(said) }; Unit } }
-  val chat = state ?: return ChatScaffold(groupId, threadId, support, members, groups, socket, onBack, onPhotos, say, onTitle = null) {}
+  val chat = state ?: return ChatScaffold(groupId, threadId, support, members, groups, socket, onBack, onPhotos, onShifts, say, onTitle = null) {}
 
   val blockedIds = remember(blocked) { blocked.map { it.userId }.toSet() }
   // Blocked members' lines in the place's own chat, folded but those shown this once, by seq.
@@ -344,7 +348,7 @@ fun ChatPage(
     val first = chat.lines.firstOrNull() ?: return@LaunchedEffect
     if (placed && touched && nearTop && chat.heldBefore > 0) from = maxOf(first.seq - Chat.pageSize, chat.heldFrom ?: 1)
   }
-  val current = socket?.state?.collectAsState()?.value == SocketState.Current
+  val current = socket?.state?.collectAsStateWithLifecycle()?.value == SocketState.Current
   LaunchedEffect(opened, socket, current, chat.heldFrom, chat.heldBefore < Chat.pageSize) {
     val held = chat.heldFrom ?: return@LaunchedEffect
     if (opened && current && chat.heldBefore < Chat.pageSize && held > 1) socket?.requestPage(threadId, held)
@@ -465,7 +469,7 @@ fun ChatPage(
 
   // The line the composer answers, held however far from the lines laid out.
   val replying = composer.writing.replyTo
-  val answered by remember(chats, groupId, threadId, replying) { replying?.let { chats.line(groupId, threadId, it) } ?: flowOf(null) }.collectAsState(null)
+  val answered by remember(chats, groupId, threadId, replying) { replying?.let { chats.line(groupId, threadId, it) } ?: flowOf(null) }.collectAsStateWithLifecycle(null)
 
   // Reactions (spec/chat.md, Reactions): the member's own put on sprays from its pill, with its
   // haptic (spec/haptics.md), but with animations off; + opens the system's emoji picker, and a
@@ -627,8 +631,8 @@ fun ChatPage(
       linkItems = linkItems,
       takenTitle = { floatingDay.taken },
     )
-  Box {
-    ChatScaffold(groupId, threadId, support, members, groups, socket, onBack, onPhotos, say, onTitle) {
+  PhotoZoomLayout(viewing, reducedMotion, shownOf = OpenPhotos::shownPhoto, places = {
+    ChatScaffold(groupId, threadId, support, members, groups, socket, onBack, onPhotos, onShifts, say, onTitle) {
       Column(Modifier.fillMaxSize().imePadding()) {
         Box(Modifier.weight(1f).fillMaxWidth()) {
           // What floats over the lines' top keeps its room there, so the first of them scrolls out from under it.
@@ -705,10 +709,9 @@ fun ChatPage(
       }
     }
     LineMenu(menu)
-    viewing?.let { open ->
-      FollowPhotos(groupId, threadId, open)
-      PhotoViewer(groupId, threadId, open, nameOf, onClose = { viewing = null })
-    }
+  }) { open, closing ->
+    if (!closing) FollowPhotos(groupId, threadId, open)
+    PhotoViewer(groupId, threadId, open, nameOf, onClose = { viewing = null }, zoom = this, closing = closing)
   }
   if (notKept) NotKeptDialog { notKept = false }
   val group = groups.firstOrNull { it.id == groupId }
@@ -801,6 +804,8 @@ private fun ChatScaffold(
   onBack: () -> Unit,
   /** 写真 in its ⋯: the chat's photos alone. */
   onPhotos: () -> Unit,
+  /** みんなのシフト in its ⋯, for the group's own chat; null in any other. */
+  onShifts: (() -> Unit)?,
   /** Says what its ⋯ did, over the chat. */
   say: (String) -> Unit,
   /** A tap on the title: what the chat is of; null while it opens nothing. */
@@ -848,6 +853,17 @@ private fun ChatScaffold(
           Box {
             IconButton(onClick = { more = true }) { Icon(painterResource(R.drawable.ic_more_vert), stringResource(R.string.chat_more)) }
             DropdownMenu(more, onDismissRequest = { more = false }) {
+              // The group's own chat: everyone's shifts first, as the chat is the group's.
+              if (onShifts != null) {
+                DropdownMenuItem(
+                  text = { Text(stringResource(R.string.group_shifts)) },
+                  leadingIcon = { Icon(painterResource(R.drawable.ic_calendar), contentDescription = null) },
+                  onClick = {
+                    more = false
+                    onShifts()
+                  },
+                )
+              }
               DropdownMenuItem(
                 text = { Text(stringResource(R.string.chat_photos_title)) },
                 leadingIcon = { Icon(painterResource(R.drawable.ic_photo_library), contentDescription = null) },
@@ -887,7 +903,7 @@ private fun ChatScaffold(
  */
 @Composable
 private fun rememberSocketWords(socket: ChatSocket?): String? {
-  val state = socket?.state?.collectAsState()?.value ?: SocketState.Closed
+  val state = socket?.state?.collectAsStateWithLifecycle()?.value ?: SocketState.Closed
   var shown by remember { mutableStateOf<SocketState?>(null) }
   LaunchedEffect(state) {
     shown = null
@@ -907,6 +923,7 @@ private fun rememberSocketWords(socket: ChatSocket?): String? {
  * The lines, from the foot up: the spinner at the top while the page before them is on its way,
  * then each item, and who is writing at the very foot, under the latest line.
  */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun ChatLines(
   items: List<ChatItem>,
@@ -923,8 +940,16 @@ private fun ChatLines(
   modifier: Modifier = Modifier,
 ) {
   val pinned = remember(chat.pins) { chat.pins.mapTo(HashSet()) { it.seq } }
+  val focus = LocalFocusManager.current
   LazyColumn(
-    modifier.fillMaxSize(),
+    modifier
+      .fillMaxSize()
+      // While the keyboard is up, a tap off the lines (beside or between them) puts it away, as LINE
+      // does, a tap on a line staying its own; and dragging the lines down at their foot takes the
+      // keyboard down with the finger, as Material's messaging apps do (spec/chat.md, Opening a
+      // message's menu).
+      .pointerInput(focus) { detectTapGestures(onTap = { focus.clearFocus() }) }
+      .imeNestedScroll(),
     state = list,
     reverseLayout = true,
     contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 8.dp + topRoom, bottom = 8.dp),
@@ -936,6 +961,14 @@ private fun ChatLines(
       ChatItemRow(item, look, writers, me, handlers, Modifier.animateItem(fadeInSpec = tween(Chat.lineMoveMs), placementSpec = if (handlers.reducedMotion) null else tween(Chat.lineMoveMs), fadeOutSpec = tween(Chat.lineMoveMs)))
     }
     if (head != null && chat.atStart) item(key = "head") { head() }
+    // A chat with nothing in it yet says so in the middle of the lines' room.
+    if (head == null && items.none { it !is ChatItem.Typing } && chat.atStart) {
+      item(key = "none") {
+        Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+          Text(stringResource(R.string.chat_none), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+      }
+    }
     if (!chat.atStart && chat.heldBefore == 0) {
       item(key = "earlier") {
         Box(Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }

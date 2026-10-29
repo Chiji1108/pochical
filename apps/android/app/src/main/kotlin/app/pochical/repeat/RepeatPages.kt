@@ -385,6 +385,7 @@ fun RepeatEditor(mode: RepeatMode, navigation: PageNavigation) {
         )
         HolidayChoice(inUse, on = holidays, setting = setting, onChange = { holidaysOff = it }, onPick = { holidayPick = it })
         Button(
+          shapes = ButtonDefaults.shapes(),
           onClick = {
             confirming = false
             // Off, it keeps the pattern holidays took, as turning it off on the period's page does.
@@ -432,6 +433,7 @@ fun StopRepeatPage(navigation: PageNavigation) {
       }
       Spacer(Modifier.padding(8.dp))
       Button(
+        shapes = ButtonDefaults.shapes(),
         onClick = {
           scope.launch {
             days.putOrder(RepeatOrder(emptyList(), stop, holidayCountry = holidayCountry()))

@@ -1,6 +1,8 @@
 package app.pochical
 
 import android.app.Application
+import android.content.Context
+import android.os.StrictMode
 import androidx.datastore.dataStoreFile
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
@@ -43,7 +45,7 @@ interface AppGraph : MetroAppComponentProviders {
   @SingleIn(AppScope::class)
   fun settings(application: Application, kit: PochicalKit): SyncedSettings =
     SyncedSettings(
-      deviceSettingsStore(application.dataStoreFile("device-settings.json")),
+      deviceSettingsStore({ application.dataStoreFile("device-settings.json") }),
       kit.database,
       kit.edits,
       CoroutineScope(SupervisorJob() + Dispatchers.Default),
@@ -130,6 +132,17 @@ class PochicalApplication : Application(), MetroApplication, PochicalKit.Holder,
 
   override val reminderAlarms: ReminderAlarms
     get() = graph.reminderAlarms
+
+  override fun attachBaseContext(base: Context) {
+    // A debug build reports the main thread's disk and network work, and what is left unclosed or
+    // leaked, into the log under StrictMode: set before the content providers start and the app's
+    // own onCreate, so the whole start is checked. Network on the main thread already stops any build.
+    if (BuildConfig.DEBUG) {
+      StrictMode.setThreadPolicy(StrictMode.ThreadPolicy.Builder().detectAll().penaltyLog().build())
+      StrictMode.setVmPolicy(StrictMode.VmPolicy.Builder().detectAll().penaltyLog().build())
+    }
+    super.attachBaseContext(base)
+  }
 
   override fun onCreate() {
     super.onCreate()

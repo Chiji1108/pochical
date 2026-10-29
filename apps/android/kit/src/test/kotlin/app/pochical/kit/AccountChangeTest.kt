@@ -234,7 +234,7 @@ class AccountChangeTest {
     phone.account.signIn(google)
     eventually { phone.sessions.leftBehind().isEmpty() }
 
-    val again = SyncAccount(phone.database, phone.sessions, server.url, okhttp3.OkHttpClient(), phone.scope, linePhotos = phone.linePhotos)
+    val again = SyncAccount(phone.database, phone.sessions, server.url, lazyOf(okhttp3.OkHttpClient()), phone.scope, linePhotos = phone.linePhotos)
     again.foreground()
     withTimeout(10_000) { again.state.first { it == AccountState.SignedIn("user-b", account) } }
   }
@@ -295,7 +295,7 @@ class AccountChangeTest {
     assertNull(phone.pattern("2026-11-02"))
 
     phone.kept.writable = true
-    val again = SyncAccount(phone.database, phone.sessions, server.url, okhttp3.OkHttpClient(), phone.scope, linePhotos = phone.linePhotos)
+    val again = SyncAccount(phone.database, phone.sessions, server.url, lazyOf(okhttp3.OkHttpClient()), phone.scope, linePhotos = phone.linePhotos)
     again.foreground()
 
     withTimeout(10_000) { again.state.first { it is AccountState.SignedIn } }
