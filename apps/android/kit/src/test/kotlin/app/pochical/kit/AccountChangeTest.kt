@@ -77,6 +77,20 @@ class AccountChangeTest {
   }
 
   @Test
+  fun aSignInAskedBeforeTheDeviceHasItsSessionWaitsForIt() = runBlocking<Unit> {
+    // As a sign-in whose Apple page returned to an app started anew: the account is had before the
+    // device has signed in again.
+    server.signInDelayMs = 500
+    val phone = Device(server).also { devices += it }
+    phone.account.foreground()
+
+    assertEquals(SignInResult.Linked, phone.account.signIn(google))
+
+    withTimeout(10_000) { phone.account.state.first { it == AccountState.SignedIn("user-1", account) } }
+    assertEquals(StoredSession("token-1", "user-1", linked = account), phone.sessions.read())
+  }
+
+  @Test
   fun anAccountInUseHoldingNothingIsTakenWithoutAsking() = runBlocking<Unit> {
     val phone = signedInDevice()
     phone.edits.setDay("2026-11-02", DayField.DAY_FIELD_PATTERN, "night")

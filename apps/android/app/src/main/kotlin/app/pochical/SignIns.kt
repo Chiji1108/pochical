@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import app.pochical.kit.AccountState
 import app.pochical.kit.AccountSuspended
 import app.pochical.kit.InUse
 import app.pochical.kit.LinkRefused
@@ -53,6 +54,15 @@ class SignIns(private val account: SyncAccount, apple: AppleSignIn, private val 
 
   init {
     scope.launch { for (resumed in apple.resumed) signIn(LinkedAccount.Provider.Apple, resumed) }
+    // The device letting go of the user, or its session ended, what was asked of them goes too.
+    scope.launch {
+      account.state.collect {
+        if (it is AccountState.Erasing || it == AccountState.SessionEnded) {
+          choosing = null
+          done = null
+        }
+      }
+    }
   }
 
   /** Signs in with the account [providerToken] gives, null when the person cancelled. */
@@ -108,9 +118,10 @@ class SignIns(private val account: SyncAccount, apple: AppleSignIn, private val 
           null
         } catch (e: CancellationException) {
           throw e
-        } catch (_: NotSignedIn) {
-          // Said in place of the app, as the server no longer knows the session.
-          null
+        } catch (e: NotSignedIn) {
+          // Said in place of the app, as the server no longer knows the session; otherwise the
+          // device has none to sign in with, as when it could not reach the server.
+          if (account.state.value == AccountState.SessionEnded) null else SignInProblem.Failed
         } catch (e: LinkRefused) {
           // Linked already, as on another device: the page shows the account the server names.
           if (e.status == 417) null else SignInProblem.Failed

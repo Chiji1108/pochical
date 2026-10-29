@@ -85,11 +85,14 @@ class AppleSignIn(private val web: AppleWebSignIn) {
           }
           Lifecycle.Event.ON_PAUSE -> open?.takeIf { it.page == Page.CustomTab }?.left = true
           Lifecycle.Event.ON_RESUME -> open?.takeIf { it.page == Page.CustomTab && it.left }?.returned?.complete(null)
-          Lifecycle.Event.ON_DESTROY ->
+          Lifecycle.Event.ON_DESTROY -> {
+            // Finished, not made anew, the activity takes the Auth Tab's result with it: closed.
+            if (activity.isFinishing) open?.takeIf { it.page == Page.AuthTab }?.returned?.complete(null)
             if (this.activity === activity) {
               this.activity = null
               authTab = null
             }
+          }
           else -> {}
         }
       }

@@ -183,8 +183,8 @@ fun SignInButtons(state: AccountState, onSignedIn: suspend (SignInResult) -> Uni
   // Heard here, whichever activity asked: one made anew while the sign-in ran goes on from it.
   signIns.done?.let { result ->
     LaunchedEffect(result) {
-      onSignedIn(result)
       signIns.handled()
+      onSignedIn(result)
     }
   }
   Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
