@@ -31,7 +31,6 @@ import app.pochical.design.Chat
 import java.time.LocalDate
 import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collectLatest
 
 // The floating day (spec/chat.md, Unread lines and typing): while the person scrolls, the day of the
 // lines at the top floats over them, kept as a list pins its section's header, and fades
@@ -84,6 +83,30 @@ class FloatingDayState(private val list: LazyListState, items: () -> List<ChatIt
   data class Place(val day: LocalDate, val push: Int, val taken: String?)
 }
 
+/**
+ * Whether the floating day shows: from the person's drag through its fling, not as the chat follows
+ * its latest, and for `chatRules.floatingDayMs` after it stops, a scroll starting again meanwhile
+ * keeping it.
+ */
+@Composable
+fun rememberFloatingDayShown(list: LazyListState): Boolean {
+  var dragged by remember { mutableStateOf(false) }
+  var shown by remember { mutableStateOf(false) }
+  LaunchedEffect(list) { list.interactionSource.interactions.collect { if (it is DragInteraction.Start) dragged = true } }
+  val scrolling = list.isScrollInProgress
+  // Keyed on the scroll: its starting again cancels the wait to fade.
+  LaunchedEffect(scrolling, dragged) {
+    if (scrolling) {
+      if (dragged) shown = true
+      return@LaunchedEffect
+    }
+    dragged = false
+    delay(Chat.floatingDayMs.toLong())
+    shown = false
+  }
+  return shown
+}
+
 /** The floating day's state, read from [list] laid out as [items]. */
 @Composable
 fun rememberFloatingDay(list: LazyListState, items: List<ChatItem>): FloatingDayState {
@@ -99,21 +122,7 @@ fun rememberFloatingDay(list: LazyListState, items: List<ChatItem>): FloatingDay
  */
 @Composable
 fun FloatingDay(state: FloatingDayState, list: LazyListState, topRoom: Dp, modifier: Modifier = Modifier) {
-  // Scrolling by the person: from their drag through its fling, not as the chat follows its latest.
-  var dragged by remember { mutableStateOf(false) }
-  var shown by remember { mutableStateOf(false) }
-  LaunchedEffect(list) { list.interactionSource.interactions.collect { if (it is DragInteraction.Start) dragged = true } }
-  LaunchedEffect(list) {
-    // A scroll starting again before it fades keeps it.
-    snapshotFlow { list.isScrollInProgress }.collectLatest { scrolling ->
-      if (scrolling && dragged) shown = true
-      if (!scrolling) {
-        dragged = false
-        delay(Chat.floatingDayMs.toLong())
-        shown = false
-      }
-    }
-  }
+  val shown = rememberFloatingDayShown(list)
   val day = state.day
   Box(modifier.fillMaxWidth().padding(top = topRoom).clipToBounds().clearAndSetSemantics {}, contentAlignment = Alignment.TopCenter) {
     AnimatedVisibility(shown && day != null, enter = fadeIn(), exit = fadeOut()) {
