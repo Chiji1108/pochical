@@ -17,7 +17,6 @@ import app.pochical.kit.SyncedSettings
 import app.pochical.kit.deviceSettingsStore
 import app.pochical.widgets.WidgetSources
 import app.pochical.widgets.followForWidgets
-import app.pochical.kit.ownCalendar
 import app.pochical.notifications.NotificationPermission
 import app.pochical.notifications.Push
 import app.pochical.reminders.ReminderAlarms
@@ -53,7 +52,7 @@ interface AppGraph : MetroAppComponentProviders {
   @Provides
   @SingleIn(AppScope::class)
   fun ownDays(kit: PochicalKit): OwnDays =
-    SyncedDays(kit.database, kit.edits, CoroutineScope(SupervisorJob() + Dispatchers.Default))
+    SyncedDays(kit.database, kit.edits, kit.ownCalendar, CoroutineScope(SupervisorJob() + Dispatchers.Default))
 
   /** The database, the edits and the account that syncs them. */
   @Provides
@@ -93,7 +92,7 @@ interface AppGraph : MetroAppComponentProviders {
   ): ReminderAlarms =
     ReminderAlarms(
       application,
-      kit.database.values().ownCalendar(),
+      kit.ownCalendar,
       settings.settings.map { it.reminders }.distinctUntilChanged(),
       permission.allowed,
       CoroutineScope(SupervisorJob() + Dispatchers.Default),
@@ -124,7 +123,7 @@ class PochicalApplication : Application(), MetroApplication, PochicalKit.Holder,
     get() = graph.kit
 
   /** What the widgets draw from: the kit's database and the settings. */
-  val widgetSources by lazy { WidgetSources(graph.kit.database, graph.settings) }
+  val widgetSources by lazy { WidgetSources(graph.kit.database, graph.kit.ownCalendar, graph.settings) }
 
   override val push: Push
     get() = graph.push

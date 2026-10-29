@@ -3,6 +3,7 @@ package app.pochical.calendar
 import app.pochical.kit.AppDatabase
 import app.pochical.kit.OwnEdits
 import app.pochical.kit.firstCharacter
+import app.pochical.kit.ownCalendar
 import app.pochical.v1.Pattern
 import app.pochical.v1.PatternKt
 import app.pochical.v1.pattern
@@ -31,7 +32,7 @@ class TestDays : Closeable {
   val database = AppDatabase.open(RuntimeEnvironment.getApplication(), inMemory = true)
   val edits = OwnEdits(database)
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-  val days: OwnDays = SyncedDays(database, edits, scope)
+  val days: OwnDays = SyncedDays(database, edits, database.values().ownCalendar(), scope)
 
   /** The calendar once it shows what [shows] asks for: edits reach it a moment after they are made. */
   fun awaitCalendar(shows: (OwnCalendar) -> Boolean): OwnCalendar = runBlocking {
