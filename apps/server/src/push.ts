@@ -87,6 +87,7 @@ const post = async (env: Env, device: Device, push: Push): Promise<Sent> => {
   const sandbox = device.platform === "apns" && device.sandbox;
   if (outcome.sent !== "sent") {
     console.warn({
+      message: "Push not sent",
       push: {
         ...outcome,
         kind: push.kind,

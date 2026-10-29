@@ -49,7 +49,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
@@ -76,6 +75,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.LocalAccount
 import app.pochical.LocalNotifyingUnread
 import app.pochical.LocalThemeColors
@@ -123,7 +123,7 @@ class GroupsActions(
 @Composable
 fun GroupsScreen(openId: String?, onOpen: (String) -> Unit, actions: GroupsActions) {
   val values = LocalValues.current
-  val groups by remember(values) { values.groups() }.collectAsState(null)
+  val groups by remember(values) { values.groups() }.collectAsStateWithLifecycle(null)
   val list = groups ?: return
   val open = openGroup(openId, list)
   if (open == null) {
@@ -417,24 +417,8 @@ private fun GroupHub(group: GroupRow, actions: GroupsActions) {
 /** The id of the user the device is signed in as, null while it is not. */
 @Composable
 fun rememberMeId(): String? {
-  val state by LocalAccount.current.state.collectAsState()
+  val state by LocalAccount.current.state.collectAsStateWithLifecycle()
   return (state as? AccountState.SignedIn)?.userId ?: (state as? AccountState.Changing)?.before?.userId
-}
-
-/** Someone in the group, by their face and their name in it. */
-@Composable
-fun MemberRow(member: GroupMemberRow, groupId: String, modifier: Modifier = Modifier, me: Boolean = false) {
-  ListItem(
-    headlineContent = {
-      Text(
-        if (me) stringResource(R.string.member_me, member.displayName) else member.displayName,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-      )
-    },
-    leadingContent = { MemberAvatar(member.displayName, member.photoId, PhotoShelf.Group(groupId), 28.dp, me = me) },
-    modifier = modifier,
-  )
 }
 
 /** The open group's buttons in the bar over its page: メンバーを招待 and グループの設定. */

@@ -15,6 +15,9 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import app.pochical.kit.PhotoShelf
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.CircularProgressIndicator
@@ -262,14 +265,58 @@ fun FollowPhotos(groupId: String, threadId: String, open: OpenPhotos) {
 }
 
 /**
- * One photo large, whole and fit to the screen: what the chat drew of it at once (its small version,
- * else its blur, else the system's spinner) under the photo itself as it comes. Zoomed with a double
- * tap (twice its size about the point tapped, and back) or a pinch (up to four times), moved about
- * while zoomed, and pulled down to close while it is not.
+ * One of the chat's photos large: what the chat drew of it at once (its small version, else its
+ * blur, else the system's spinner) under the photo itself as it comes.
+ */
+@Composable
+private fun LargePhoto(item: ChatPhotoItem, groupId: String, said: String, onTap: () -> Unit, onPulled: (Float) -> Unit, onDismissed: () -> Unit) {
+  LargeImage(ChatPhotoData(item.photo.id, groupId, small = false), said, onTap, onPulled, onDismissed) {
+    val blur = remember(item.photo.id) { blurOf(item.photo)?.asImageBitmap() }
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+      // What the chat drew of it, read from memory or the disk cache at once.
+      if (blur != null) Image(blur, contentDescription = null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+      else CircularProgressIndicator(Modifier.size(40.dp), color = LocalThemeColors.current.mediaText)
+      AsyncImage(ChatPhotoData(item.photo.id, groupId, small = true), contentDescription = null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+    }
+  }
+}
+
+/**
+ * Someone's face opened large from their profile (spec/chat.md, The chat's page; Photos): whole on
+ * black with × alone, zoomed and pulled down to close as a chat's photo is, over the profile's sheet
+ * as a dialog of the whole screen, the sheet still under it as it closes.
+ */
+@Composable
+fun FaceViewer(photoId: String, shelf: PhotoShelf, name: String, onClose: () -> Unit) {
+  val colors = LocalThemeColors.current
+  Dialog(onClose, DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+    var pulled by remember { mutableFloatStateOf(0f) }
+    var controls by remember { mutableStateOf(true) }
+    Box(Modifier.fillMaxSize().background(colors.mediaBackground.copy(alpha = 1f - pulled))) {
+      // A face has no small version: the one the profile drew, from memory, under it until it is drawn whole.
+      LargeImage(Picture(photoId, shelf), stringResource(R.string.profile_photo_of, name), onTap = { controls = !controls }, onPulled = { pulled = it }, onDismissed = onClose) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+          CircularProgressIndicator(Modifier.size(40.dp), color = colors.mediaText)
+          AsyncImage(Picture(photoId, shelf), contentDescription = null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+        }
+      }
+      AnimatedVisibility(controls && pulled == 0f, enter = fadeIn(), exit = fadeOut()) {
+        IconButton(onClick = onClose, Modifier.statusBarsPadding().padding(8.dp)) {
+          Icon(painterResource(R.drawable.ic_close), stringResource(R.string.chat_photo_close), tint = colors.mediaText)
+        }
+      }
+    }
+  }
+}
+
+/**
+ * An image large, whole and fit to the screen, [coming] under it until it is drawn. Zoomed with a
+ * double tap (twice its size about the point tapped, and back) or a pinch (up to four times), moved
+ * about while zoomed, and pulled down to close while it is not.
  */
 @Composable
 @OptIn(ExperimentalTelephotoApi::class)
-private fun LargePhoto(item: ChatPhotoItem, groupId: String, said: String, onTap: () -> Unit, onPulled: (Float) -> Unit, onDismissed: () -> Unit) {
+private fun LargeImage(model: Any, said: String, onTap: () -> Unit, onPulled: (Float) -> Unit, onDismissed: () -> Unit, coming: @Composable () -> Unit) {
   val zoom = rememberZoomableState(ZoomSpec(maxZoomFactor = MOST_ZOOM))
   val image = rememberZoomableImageState(zoom)
   val flick = rememberFlickToDismissState(rotateOnDrag = false)
@@ -298,17 +345,9 @@ private fun LargePhoto(item: ChatPhotoItem, groupId: String, said: String, onTap
     },
     enabled = !zoomed,
   ) {
-    if (!image.isImageDisplayed) {
-      val blur = remember(item.photo.id) { blurOf(item.photo)?.asImageBitmap() }
-      Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        // What the chat drew of it, read from memory or the disk cache at once.
-        if (blur != null) Image(blur, contentDescription = null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
-        else CircularProgressIndicator(Modifier.size(40.dp), color = LocalThemeColors.current.mediaText)
-        AsyncImage(ChatPhotoData(item.photo.id, groupId, small = true), contentDescription = null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
-      }
-    }
+    if (!image.isImageDisplayed) coming()
     ZoomableAsyncImage(
-      ChatPhotoData(item.photo.id, groupId, small = false),
+      model,
       contentDescription = null,
       Modifier.fillMaxSize(),
       state = image,

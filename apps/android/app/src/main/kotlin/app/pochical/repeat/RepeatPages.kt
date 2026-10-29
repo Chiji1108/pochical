@@ -45,8 +45,11 @@ import app.pochical.LocalThemeColors
 import app.pochical.PageNavigation
 import app.pochical.R
 import app.pochical.RootPage
+import app.pochical.RowEnd
 import app.pochical.SectionHeader
 import app.pochical.SettingsPage
+import app.pochical.SettingsRow
+import app.pochical.SettingsSection
 import app.pochical.calendar.LocalOwnDays
 import app.pochical.calendar.Pattern
 import app.pochical.calendar.holidayCountry
@@ -69,10 +72,11 @@ import kotlinx.coroutines.launch
 fun RepeatRow(open: (RootPage) -> Unit) {
   val calendar by LocalOwnDays.current.calendar.collectAsStateWithLifecycle()
   val current = calendar.orders.current()
-  ListItem(
-    headlineContent = { Text(stringResource(R.string.repeat)) },
-    supportingContent = { Text(current?.let { stringResource(R.string.repeat_every, it.sequence.size) } ?: stringResource(R.string.none)) },
-    modifier = Modifier.clickable { open(RootPage.Repeat) },
+  SettingsRow(
+    stringResource(R.string.repeat),
+    R.drawable.ic_repeat,
+    onClick = { open(RootPage.Repeat) },
+    value = current?.let { stringResource(R.string.repeat_every, it.sequence.size) } ?: stringResource(R.string.none),
   )
 }
 
@@ -93,30 +97,20 @@ fun RepeatPage(navigation: PageNavigation) {
     LazyColumn(contentPadding = padding) {
       if (orders.isEmpty()) {
         item {
-          ListItem(
-            headlineContent = { Text(stringResource(R.string.repeat_set)) },
-            trailingContent = { Text(stringResource(R.string.none)) },
-            modifier = Modifier.clickable { navigation.open(RootPage.RepeatEditor(RepeatMode.First)) },
-          )
+          SettingsSection(footnote = stringResource(R.string.repeat_set_note)) {
+            row {
+              SettingsRow(stringResource(R.string.repeat_set), R.drawable.ic_repeat, onClick = { navigation.open(RootPage.RepeatEditor(RepeatMode.First)) }, value = stringResource(R.string.none))
+            }
+          }
         }
-        item { Footnote(stringResource(R.string.repeat_set_note)) }
         return@LazyColumn
       }
       item {
-        ListItem(
-          headlineContent = { Text(stringResource(R.string.repeat_add), color = colors.accentDefault) },
-          leadingContent = { Icon(painterResource(R.drawable.ic_add), null, tint = colors.accentDefault) },
-          modifier = Modifier.clickable { navigation.open(RootPage.RepeatEditor(RepeatMode.Switch)) },
-        )
+        SettingsSection(footnote = stringResource(R.string.repeat_rows_note)) {
+          row { SettingsRow(stringResource(R.string.repeat_add), R.drawable.ic_add, onClick = { navigation.open(RootPage.RepeatEditor(RepeatMode.Switch)) }) }
+          row { SettingsRow(stringResource(R.string.repeat_stop), R.drawable.ic_close, onClick = { navigation.open(RootPage.StopRepeat) }) }
+        }
       }
-      item {
-        ListItem(
-          headlineContent = { Text(stringResource(R.string.repeat_stop)) },
-          leadingContent = { Icon(painterResource(R.drawable.ic_close), null, tint = colors.textSecondary) },
-          modifier = Modifier.clickable { navigation.open(RootPage.StopRepeat) },
-        )
-      }
-      item { Footnote(stringResource(R.string.repeat_rows_note)) }
       val groups =
         listOf(
           R.string.repeat_coming to newestFirst.filter { it > inUse },
@@ -210,21 +204,15 @@ fun RepeatPeriodPage(startKey: String, navigation: PageNavigation) {
             SequenceTiles(order.sequence, byId)
           }
         }
-        item {
-          ListItem(
-            headlineContent = { Text(stringResource(R.string.repeat_fix_on_calendar)) },
-            modifier = Modifier.clickable { navigation.open(RootPage.RepeatEditor(RepeatMode.Fix(start))) },
-          )
-        }
       }
       item {
-        ListItem(
-          headlineContent = { Text(stringResource(R.string.repeat_start)) },
-          trailingContent = { Text(order.start.slashText) },
-          modifier = Modifier.clickable { picking = true },
-        )
+        SettingsSection(footnote = stringResource(if (repeats) R.string.repeat_start_note else R.string.repeat_start_note_by_hand)) {
+          if (repeats) {
+            row { SettingsRow(stringResource(R.string.repeat_fix_on_calendar), R.drawable.ic_edit, onClick = { navigation.open(RootPage.RepeatEditor(RepeatMode.Fix(start))) }) }
+          }
+          row { SettingsRow(stringResource(R.string.repeat_start), R.drawable.ic_event, onClick = { picking = true }, value = order.start.slashText, end = RowEnd.None) }
+        }
       }
-      item { Footnote(stringResource(if (repeats) R.string.repeat_start_note else R.string.repeat_start_note_by_hand)) }
       if (repeats) {
         item {
           HolidayChoice(
@@ -237,12 +225,8 @@ fun RepeatPeriodPage(startKey: String, navigation: PageNavigation) {
         }
       }
       item {
-        TextButton(
-          onClick = { removing = true },
-          modifier = Modifier.fillMaxWidth().padding(16.dp),
-          colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
-        ) {
-          Text(stringResource(R.string.repeat_remove))
+        SettingsSection(modifier = Modifier.padding(top = 24.dp)) {
+          row { SettingsRow(stringResource(R.string.repeat_remove), R.drawable.ic_delete, onClick = { removing = true }, end = RowEnd.None, danger = true) }
         }
       }
     }
@@ -352,6 +336,7 @@ fun RepeatEditor(mode: RepeatMode, navigation: PageNavigation) {
     title,
     onBack = navigation::back,
     subtitle = subtitle,
+    collapsing = false,
     actions = {
       TextButton(onClick = { confirming = true }, enabled = typing.sequence.isNotEmpty()) { Text(stringResource(R.string.entering_done)) }
     },
@@ -436,15 +421,15 @@ fun StopRepeatPage(navigation: PageNavigation) {
   var picking by rememberSaveable { mutableStateOf(false) }
   val scope = rememberCoroutineScope()
   SettingsPage(stringResource(R.string.repeat_stop), onBack = navigation::back) { padding ->
-    Column(Modifier.padding(padding)) {
-      ListItem(
-        headlineContent = { Text(stringResource(R.string.repeat_stop_day)) },
-        trailingContent = { Text(stop.slashText) },
-        modifier = Modifier.clickable { picking = true },
-      )
+    Column(Modifier.verticalScroll(rememberScrollState()).padding(padding)) {
       // A period starting that day gives way to this one.
       val replaces = calendar.orders.any { it.start == stop }
-      Footnote((if (replaces) stringResource(R.string.repeat_stop_replaces) else "") + stringResource(R.string.repeat_stop_note))
+      SettingsSection(
+        modifier = Modifier.padding(top = 8.dp),
+        footnote = (if (replaces) stringResource(R.string.repeat_stop_replaces) else "") + stringResource(R.string.repeat_stop_note),
+      ) {
+        row { SettingsRow(stringResource(R.string.repeat_stop_day), R.drawable.ic_event, onClick = { picking = true }, value = stop.slashText, end = RowEnd.None) }
+      }
       Spacer(Modifier.padding(8.dp))
       Button(
         onClick = {

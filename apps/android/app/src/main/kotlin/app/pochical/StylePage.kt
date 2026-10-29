@@ -1,5 +1,6 @@
 package app.pochical
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,22 +22,25 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.lerp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.calendar.DayCell
 import app.pochical.calendar.DayEntry
 import app.pochical.calendar.DayLook
@@ -101,7 +105,7 @@ private val SAMPLE_DAY = LocalDate.of(2026, 10, 5)
 fun StylePage(onBack: () -> Unit) {
   val settings = LocalDeviceSettings.current
   val look = settings.device.look
-  val calendar by LocalOwnDays.current.calendar.collectAsState()
+  val calendar by LocalOwnDays.current.calendar.collectAsStateWithLifecycle()
   val patterns = calendar.patterns.filterNot { it.archived }
   val work = patterns.firstOrNull { !it.countsAsOff }
   val offs = patterns.filter { it.countsAsOff }
@@ -185,19 +189,20 @@ fun StylePage(onBack: () -> Unit) {
 @Composable
 fun StyleRow(open: (RootPage) -> Unit) {
   val device = LocalDeviceSettings.current.device
-  val calendar by LocalOwnDays.current.calendar.collectAsState()
+  val calendar by LocalOwnDays.current.calendar.collectAsStateWithLifecycle()
   val patterns = calendar.patterns.filterNot { it.archived }
   val work = patterns.firstOrNull { !it.countsAsOff } ?: patterns.firstOrNull()
   val spoken = "${stringResource(Shape.of(device.look).title)}、${device.theme.displayName}"
-  ListItem(
-    headlineContent = { Text(stringResource(R.string.style)) },
-    supportingContent = {
+  SettingsRow(
+    stringResource(R.string.style),
+    R.drawable.ic_palette,
+    onClick = { open(RootPage.Style) },
+    valueContent = {
       Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (work != null) Box(Modifier.clearAndSetSemantics {}) { PatternMark(work, 18, device.look) }
-        Text(device.theme.displayName, Modifier.semantics { contentDescription = spoken })
+        if (work != null) Box(Modifier.clearAndSetSemantics {}) { PatternMark(work, 20, device.look) }
+        Text(device.theme.displayName, Modifier.semantics { contentDescription = spoken }, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
       }
     },
-    modifier = Modifier.clickable { open(RootPage.Style) },
   )
 }
 
@@ -209,6 +214,13 @@ private fun Section(title: String, note: String? = null, content: @Composable ()
     Box(Modifier.padding(horizontal = 16.dp)) { content() }
     if (note != null) Footnote(note)
   }
+}
+
+/** How far a choice is picked, 0 to 1, on the motion scheme's spring. */
+@Composable
+private fun pickedFraction(picked: Boolean): Float {
+  val fraction by animateFloatAsState(if (picked) 1f else 0f, MaterialTheme.motionScheme.fastSpatialSpec(), label = "picked")
+  return fraction.coerceIn(0f, 1f)
 }
 
 /** A pattern's mark in [look]. */
@@ -249,12 +261,15 @@ fun <T> Choices(
   Row(Modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
     for (option in options) {
       val isPicked = option == picked
-      val shape = RoundedCornerShape(Radius.lg)
+      // Picked, its corners round out and its color comes in on the motion scheme's spring, as
+      // Material 3 Expressive's selections morph, where iOS slides the raised ground across.
+      val shown = pickedFraction(isPicked)
+      val shape = RoundedCornerShape(lerp(Radius.lg, Radius.xxl, shown))
       Column(
         Modifier.weight(1f)
           .heightIn(min = if (tall) 108.dp else 72.dp)
-          .border(if (isPicked) 2.dp else 1.dp, if (isPicked) colors.accentDefault else colors.borderDefault, shape)
-          .background(if (isPicked) colors.accentContainer else colors.backgroundCard, shape)
+          .border(lerp(1.dp, 2.dp, shown), lerp(colors.borderDefault, colors.accentDefault, shown), shape)
+          .background(lerp(colors.backgroundCard, colors.accentContainer, shown), shape)
           .clip(shape)
           .selectable(selected = isPicked, role = Role.RadioButton) { onPick(option) }
           .padding(vertical = 8.dp),
@@ -302,11 +317,12 @@ private fun ThemeCard(theme: Theme, picked: Boolean, samples: List<Pattern>, dar
     horizontalAlignment = Alignment.CenterHorizontally,
     verticalArrangement = Arrangement.spacedBy(6.dp),
   ) {
-    val outer = RoundedCornerShape(Radius.lg)
+    val shown = pickedFraction(picked)
+    val outer = RoundedCornerShape(lerp(Radius.lg, Radius.xxl, shown))
     CompositionLocalProvider(LocalThemeColors provides own) {
       Column(
         Modifier.fillMaxWidth()
-          .border(if (picked) 2.dp else 1.dp, if (picked) colors.accentDefault else own.separator, outer)
+          .border(lerp(1.dp, 2.dp, shown), lerp(own.separator, colors.accentDefault, shown), outer)
           .background(own.backgroundBase, outer)
           .padding(8.dp)
           .clearAndSetSemantics {},

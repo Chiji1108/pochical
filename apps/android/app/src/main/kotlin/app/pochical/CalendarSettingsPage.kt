@@ -7,21 +7,19 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -53,10 +51,11 @@ fun CalendarSettingsRow(open: (RootPage) -> Unit) {
       stringResource(R.string.calendar_settings_summary, weekdayLetter(device.week.start), month),
       device.period.takeIf { it.byPeriod }?.let { stringResource(R.string.period_short, it.start) },
     )
-  ListItem(
-    headlineContent = { Text(stringResource(R.string.calendar_settings)) },
-    supportingContent = { Text(summary.joinToString("・")) },
-    modifier = Modifier.clickable { open(RootPage.CalendarSettings) },
+  SettingsRow(
+    stringResource(R.string.calendar_settings),
+    R.drawable.ic_calendar,
+    onClick = { open(RootPage.CalendarSettings) },
+    value = summary.joinToString("・"),
   )
 }
 
@@ -64,7 +63,7 @@ fun CalendarSettingsRow(open: (RootPage) -> Unit) {
  * 設定 > カレンダー (/design's カレンダー page, iOS's CalendarSettings): this week under the month's
  * heading, as the settings below draw it; 月と曜日, what a tap on the month's name does, the day the
  * week starts on, the days that take a color of their own, and シフトの期間, what each page holds.
- * Only this person's screens change, and each change is kept as it is picked. Material's segmented
+ * Only this person's screens change, and each change is kept as it is picked. Material 3 Expressive's connected
  * buttons pick among a few words; the period, one of many, is picked in a dialog's list.
  */
 @Composable
@@ -86,7 +85,7 @@ fun CalendarSettingsPage(onBack: () -> Unit) {
         SectionHeader(stringResource(R.string.calendar_names))
         val month = YearMonth.from(today)
         val weekday = today.dayOfWeek.value % 7
-        Segments(
+        ChoiceButtons(
           listOf(false, true),
           device.heading.english,
           { english -> "${month.shortMonth(english)}・${weekdayName(weekday, english)}" },
@@ -97,7 +96,7 @@ fun CalendarSettingsPage(onBack: () -> Unit) {
       // never before the first tap, not even in the preview above.
       item {
         SectionHeader(stringResource(R.string.calendar_name_tap))
-        Segments(
+        ChoiceButtons(
           listOf(false, true),
           device.heading.surprise,
           { surprise -> stringResource(if (surprise) R.string.calendar_name_tap_surprise else R.string.calendar_pick_month) },
@@ -105,31 +104,29 @@ fun CalendarSettingsPage(onBack: () -> Unit) {
       }
       item {
         SectionHeader(stringResource(R.string.calendar_week_start))
-        Segments(
+        ChoiceButtons(
           (0..6).toList(),
           device.week.start,
           { weekdayLetter(it) },
           { stringResource(R.string.calendar_weekday, weekdayLetter(it)) },
         ) { start -> changeWeek { it.copy(start = start) } }
       }
-      item { SectionHeader(stringResource(R.string.calendar_colored_days)) }
       item {
-        ColoredDay(R.string.calendar_saturday, colors.calendarSaturday, device.week.saturday) { on -> changeWeek { it.copy(saturday = on) } }
+        SettingsSection(stringResource(R.string.calendar_colored_days), footnote = stringResource(R.string.calendar_colored_days_note)) {
+          row { ColoredDay(R.string.calendar_saturday, colors.calendarSaturday, device.week.saturday) { on -> changeWeek { it.copy(saturday = on) } } }
+          row { ColoredDay(R.string.calendar_sunday, colors.calendarHoliday, device.week.sunday) { on -> changeWeek { it.copy(sunday = on) } } }
+          row { ColoredDay(R.string.calendar_holiday, colors.calendarHoliday, device.week.holiday) { on -> changeWeek { it.copy(holiday = on) } } }
+        }
       }
-      item { ColoredDay(R.string.calendar_sunday, colors.calendarHoliday, device.week.sunday) { on -> changeWeek { it.copy(sunday = on) } } }
-      item { ColoredDay(R.string.calendar_holiday, colors.calendarHoliday, device.week.holiday) { on -> changeWeek { it.copy(holiday = on) } } }
-      item { Footnote(stringResource(R.string.calendar_colored_days_note)) }
       // Most people's shifts come by the month, so it starts as the month; a workplace closing on its
       // own day picks the day its shifts start (spec/calendar.md, The shift period).
-      item { SectionHeader(stringResource(R.string.period)) }
       item {
-        ListItem(
-          headlineContent = { Text(stringResource(R.string.period_page)) },
-          supportingContent = { Text(periodName(device.period.start)) },
-          modifier = Modifier.clickable { pickingPeriod = true },
-        )
+        SettingsSection(stringResource(R.string.period), footnote = stringResource(R.string.period_note)) {
+          row {
+            SettingsRow(stringResource(R.string.period_page), R.drawable.ic_event, onClick = { pickingPeriod = true }, value = periodName(device.period.start), end = RowEnd.None)
+          }
+        }
       }
-      item { Footnote(stringResource(R.string.period_note)) }
     }
   }
   if (pickingPeriod) {
@@ -152,39 +149,14 @@ fun CalendarSettingsPage(onBack: () -> Unit) {
   }
 }
 
-/** Material's segmented buttons, one for each of [options], each read as [spoken] says. */
-@Composable
-internal fun <T> Segments(
-  options: List<T>,
-  picked: T,
-  label: @Composable (T) -> String,
-  spoken: @Composable (T) -> String = label,
-  onPick: (T) -> Unit,
-) {
-  SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-    options.forEachIndexed { index, option ->
-      val description = spoken(option)
-      SegmentedButton(
-        selected = option == picked,
-        onClick = { onPick(option) },
-        shape = SegmentedButtonDefaults.itemShape(index, options.size),
-        icon = {},
-        modifier = Modifier.semantics { contentDescription = description },
-      ) {
-        Text(label(option), maxLines = 1)
-      }
-    }
-  }
-}
-
 /** A day that takes a color of its own: its name after a dot of that color, and a switch. */
 @Composable
 private fun ColoredDay(name: Int, color: Color, on: Boolean, onChange: (Boolean) -> Unit) {
-  SwitchRow(
-    title = stringResource(name),
-    note = null,
-    on = on,
-    onChange = onChange,
-    leading = { Box(Modifier.size(10.dp).background(color, CircleShape)) },
+  SettingsSwitchRow(
+    stringResource(name),
+    icon = null,
+    checked = on,
+    onCheckedChange = onChange,
+    leading = { Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) { Box(Modifier.size(12.dp).background(color, CircleShape)) } },
   )
 }
