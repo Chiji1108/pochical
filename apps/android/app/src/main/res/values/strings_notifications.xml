@@ -30,6 +30,8 @@
   <string name="push_reply_not_sent">返信を送れませんでした：%1$s</string>
   <!-- The user in a conversation's notification, before the group knows their name. -->
   <string name="push_me">あなた</string>
+  <!-- A pinned conversation of a group left, which opens nothing any more. -->
+  <string name="push_conversation_gone">このグループのチャットは開けません</string>
 
   <!-- 設定 › 通知 -->
   <string name="settings_notifications">通知</string>
