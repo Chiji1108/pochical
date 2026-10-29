@@ -40,6 +40,8 @@
   <string name="notifications_groups">%1$dグループ</string>
   <string name="notifications_group_chats">全体チャット</string>
   <string name="notifications_group_chats_note">オフにしても、自分へのメンションは通知されます。</string>
+  <!-- A group's own 通知, in グループの設定. -->
+  <string name="group_chat_notifications">全体チャットの通知</string>
   <string name="notifications_direct_chats">個人チャット</string>
   <string name="notifications_direct_chats_note">個人チャットの通知は、それぞれのチャットの右上のメニューでオフにできます。</string>
   <string name="notifications_mentions">メンション</string>

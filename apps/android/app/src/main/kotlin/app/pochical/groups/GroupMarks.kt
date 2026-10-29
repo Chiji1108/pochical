@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import app.pochical.IconLayers
 import app.pochical.chat.Picture
 import coil3.compose.AsyncImage
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.ColorPainter
 import app.pochical.LocalThemeColors
 import app.pochical.design.Radius
@@ -95,16 +96,20 @@ fun GroupMarkView(mark: GroupMarkValue, size: Dp, modifier: Modifier = Modifier,
   }
 }
 
-/** A group's mark on its small rounded square, as rows show it. */
+/**
+ * A group's mark on its small rounded square, as rows show it: on the card's ground in a list's card,
+ * on [ground] elsewhere, as the hub's heading puts it on the quaternary fill.
+ */
 @Composable
-fun GroupMarkBadge(mark: GroupMarkValue, modifier: Modifier = Modifier, size: Dp = 28.dp, shelf: PhotoShelf? = null) {
+fun GroupMarkBadge(
+  mark: GroupMarkValue,
+  modifier: Modifier = Modifier,
+  size: Dp = 28.dp,
+  shelf: PhotoShelf? = null,
+  ground: Color = LocalThemeColors.current.backgroundCard,
+) {
   val shape = RoundedCornerShape(Radius.sm)
-  GroupMarkView(
-    mark,
-    size,
-    modifier.clip(shape).background(MaterialTheme.colorScheme.surfaceContainerHigh, shape),
-    shelf,
-  )
+  GroupMarkView(mark, size, modifier.clip(shape).background(ground, shape), shelf)
 }
 
 /**

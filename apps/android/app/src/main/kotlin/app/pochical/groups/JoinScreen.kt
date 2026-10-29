@@ -307,13 +307,23 @@ private fun Invitation(details: InviteDetails, code: String, onMembers: () -> Un
           )
         }
       }
-      Text(
-        memberLine(LocalResources.current, details.members.map { it.name }),
-        Modifier.padding(top = 8.dp),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        maxLines = 1,
-      )
+      // Its chevron says the line opens who they are.
+      Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+          memberLine(LocalResources.current, details.members.map { it.name }),
+          Modifier.weight(1f, fill = false),
+          style = MaterialTheme.typography.bodySmall,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
+        )
+        Icon(
+          painterResource(R.drawable.ic_chevron_right),
+          contentDescription = null,
+          Modifier.size(16.dp),
+          tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+      }
     }
   }
 }
