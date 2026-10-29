@@ -110,7 +110,12 @@ private suspend fun photoSource(data: ChatPhotoData, loader: ImageLoader, calls:
   files.held(data.groupId, data.photoId)?.let { held ->
     return SourceFetchResult(ImageSource(held.toOkioPath(), FileSystem.SYSTEM), JPEG, DataSource.DISK)
   }
-  return diskCached(data.key, JPEG, loader) { calls.chatPhoto(data.photoId, PhotoShelf.place(data.groupId), data.small) }
+  return diskCached(data.key, JPEG, loader) {
+    calls.chatPhoto(data.photoId, PhotoShelf.place(data.groupId), data.small).also {
+      // Let go of while it came (its line taken back): not kept, so it never comes back.
+      if (files.wasLetGo(data.groupId, data.photoId)) throw PhotoLetGo()
+    }
+  }
 }
 
 /** What is kept under [key] in the loader's disk cache, else [fetch]ed and kept there. */
@@ -140,6 +145,9 @@ suspend fun wholePhoto(context: Context, calls: GroupCalls, files: ChatPhotoFile
   photoSource(ChatPhotoData(photoId, groupId, small = false), SingletonImageLoader.get(context), calls, files).source.use { it.source().readByteArray() }
 
 private const val JPEG = "image/jpeg"
+
+/** A photo let go of while its fetch was on its way. */
+private class PhotoLetGo : Exception("The photo was let go of")
 
 /** Fetches a face, a mark or a page's picture as the kit holds it, kept on the disk as a chat's photo is. */
 private class PictureFetcher(private val data: Picture, private val loader: ImageLoader, private val calls: GroupCalls) : Fetcher {
