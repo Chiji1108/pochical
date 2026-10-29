@@ -327,7 +327,6 @@ class AccountChangeTest {
     eventually { called("/pochical.v1.UserService/DeleteAccount").isNotEmpty() }
 
     server.deleteRefusal = null
-    server.provider = SignInProvider.SIGN_IN_PROVIDER_GOOGLE
     assertTrue(phone.account.deleteAccount { null })
     withTimeout(10_000) { phone.account.state.first { it is AccountState.SignedIn && it.userId != "user-b" } }
 
