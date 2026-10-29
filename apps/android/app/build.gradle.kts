@@ -76,9 +76,7 @@ android {
   }
   testOptions {
     unitTests.isIncludeAndroidResources = true
-    // Robolectric sets up Android 16's shared memory through the JDK's
-    // SharedSecrets, which java.base keeps to itself unless exported.
-    unitTests.all { it.jvmArgs("--add-exports=java.base/jdk.internal.access=ALL-UNNAMED") }  }
+  }
 }
 
 dependencies {

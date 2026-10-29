@@ -97,6 +97,7 @@ import {
   giveDaysToOrder,
   holidayChoiceOf,
   holidayShiftOf,
+  patternsSaving,
   patternsWithout,
   plannedShifts,
   refusesArchiving,
@@ -766,6 +767,15 @@ describe("spec/vectors/patterns.json", () => {
         archiving: refusesArchiving(rules, id, archived, dayOf(today)),
         deleting: repeatsPattern(rules, id, dayOf(today)),
       }).toEqual(expected);
+    });
+  }
+  for (const { name, patterns, id, expected } of patternChanges.saved) {
+    test(name, () => {
+      const saved = patternsSaving(
+        patterns.map((shift) => patternOf({ id: shift })),
+        patternOf({ id })
+      );
+      expect(saved.map((pattern) => pattern.id)).toEqual(expected);
     });
   }
   for (const { name, patterns, id, expected } of patternChanges.deleted) {
