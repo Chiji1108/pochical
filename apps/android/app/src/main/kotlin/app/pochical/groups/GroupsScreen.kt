@@ -1,10 +1,18 @@
 package app.pochical.groups
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -38,6 +46,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -56,6 +65,7 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -263,19 +273,20 @@ private const val SAMPLE_GROUP = "sample"
 /**
  * The groups down the start edge, as the messaging apps' server rails (/design's GroupRail): a mark
  * each, the open one ringed and flagged at the edge, then the ways to start or join one. Its panel
- * starts beside the bar's heading and runs down to the navigation bar, which, docked rather than
- * floating as /design's tab bar is, it ends at rather than fading out under.
+ * starts beside the bar's heading and runs down to the foot of what the tabs leave it: the docked
+ * navigation bar, or, while the tabs are a rail, the screen's foot under the system's gesture bar,
+ * its marks scrolling under that and the last still able to rise clear of it (iOS's contentMargins).
  */
 @Composable
 private fun GroupRail(groups: List<GroupRow>, openId: String, onOpen: (String) -> Unit, actions: GroupsActions) {
   val colors = LocalThemeColors.current
   Column(
-    Modifier.width(RAIL_WIDTH)
-      .fillMaxHeight()
+    Modifier.fillMaxHeight()
       .statusBarsPadding()
       .background(colors.fillQuaternary, RoundedCornerShape(topEnd = Radius.xl))
-      .safeDrawingPadding()
       .verticalScroll(rememberScrollState())
+      .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Start + WindowInsetsSides.Bottom))
+      .width(RAIL_WIDTH)
       .padding(vertical = 12.dp),
     verticalArrangement = Arrangement.spacedBy(12.dp),
     horizontalAlignment = Alignment.CenterHorizontally,
@@ -286,21 +297,15 @@ private fun GroupRail(groups: List<GroupRow>, openId: String, onOpen: (String) -
       val isOpen = group.id == openId
       val count = unread[group.id] ?: 0
       val label = if (count > 0) stringResource(R.string.group_unread_label, group.name, count) else group.name
-      Box(
-        Modifier.fillMaxWidth().height(48.dp).clickable { onOpen(group.id) }.semantics {
-          contentDescription = label
-          selected = isOpen
-        },
-        contentAlignment = Alignment.Center,
-      ) {
+      Box(Modifier.fillMaxWidth().height(48.dp), contentAlignment = Alignment.Center) {
         // The flag at the edge grows by the open group, each group's its own as they move.
-        val flag by animateDpAsState(if (isOpen) 32.dp else 0.dp, label = "flag")
+        val flag by animateDpAsState(if (isOpen) 32.dp else 0.dp, MaterialTheme.motionScheme.fastSpatialSpec(), label = "flag")
         Box(
           Modifier.align(Alignment.CenterStart)
             .size(4.dp, flag)
             .background(colors.accentDefault, RoundedCornerShape(topEnd = Radius.xs, bottomEnd = Radius.xs))
         )
-        RailMark(group, isOpen)
+        RailMark(group, isOpen, label) { onOpen(group.id) }
         if (count > 0) {
           // Ringed in the rail's ground, so it stands clear of the mark.
           UnreadBadge(
@@ -317,20 +322,46 @@ private fun GroupRail(groups: List<GroupRow>, openId: String, onOpen: (String) -
 }
 
 /**
- * A group's mark on the rail, on the card's ground; the open one on the accent's tint, its corners
- * drawn in and ringed in the accent inside its edge, a thin gap of the card's ground keeping the
- * ring clear of a photo's own colors.
+ * A group's mark on the rail, a tab of it, on the card's ground; the open one on the accent's tint,
+ * its corners drawn in and ringed in the accent inside its edge, a thin gap of the card's ground
+ * keeping the ring clear of a photo's own colors. Its corners morph as Material 3 Expressive's
+ * shapes do, on the motion scheme's springs: in further while pressed, the press's ripple in the
+ * mark's own shape, and to the open one's as it opens, the ring coming with them, as iOS animates
+ * both.
  */
 @Composable
-private fun RailMark(group: GroupRow, isOpen: Boolean) {
+private fun RailMark(group: GroupRow, isOpen: Boolean, label: String, onClick: () -> Unit) {
   val colors = LocalThemeColors.current
-  val shape = RoundedCornerShape(if (isOpen) Radius.md else Radius.lg)
-  // The outer border is drawn last, so the accent's ring lies over the gap's outer half.
-  val ring = if (isOpen) Modifier.border(2.dp, colors.accentDefault, shape).border(4.dp, colors.backgroundCard, shape) else Modifier
+  val press = remember { MutableInteractionSource() }
+  val pressed by press.collectIsPressedAsState()
+  val motion = MaterialTheme.motionScheme
+  val corner by
+    animateDpAsState(
+      when {
+        pressed -> Radius.sm
+        isOpen -> Radius.md
+        else -> Radius.lg
+      },
+      motion.fastSpatialSpec(),
+      label = "corner",
+    )
+  val ground by animateColorAsState(if (isOpen) colors.accentContainer else colors.backgroundCard, motion.fastEffectsSpec(), label = "ground")
+  val ring by animateColorAsState(if (isOpen) colors.accentDefault else colors.accentDefault.copy(alpha = 0f), motion.fastEffectsSpec(), label = "ring")
+  val gap by animateColorAsState(if (isOpen) colors.backgroundCard else colors.backgroundCard.copy(alpha = 0f), motion.fastEffectsSpec(), label = "gap")
+  val shape = RoundedCornerShape(corner)
   GroupMarkView(
     group.mark,
     44.dp,
-    Modifier.clip(shape).background(if (isOpen) colors.accentContainer else colors.backgroundCard, shape).then(ring),
+    Modifier.clip(shape)
+      .clickable(interactionSource = press, indication = ripple(), role = Role.Tab, onClick = onClick)
+      .semantics {
+        contentDescription = label
+        selected = isOpen
+      }
+      .background(ground, shape)
+      // The outer border is drawn last, so the accent's ring lies over the gap's outer half.
+      .border(2.dp, ring, shape)
+      .border(4.dp, gap, shape),
     shelf = PhotoShelf.Group(group.id),
   )
 }
