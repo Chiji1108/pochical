@@ -26,6 +26,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -37,19 +38,22 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * The person's days as the device keeps them (:kit): read from its database whenever sync or an
- * edit changes it, and edited through its outbox, which sends them to the server and the person's
- * other devices.
+ * The person's days as the device keeps them (:kit): [own] read from its database whenever sync or
+ * an edit changes it, and edited through its outbox, which sends them to the server and the
+ * person's other devices.
  */
-class SyncedDays(private val database: AppDatabase, private val edits: OwnEdits, scope: CoroutineScope) : OwnDays {
+class SyncedDays(
+  private val database: AppDatabase,
+  private val edits: OwnEdits,
+  own: Flow<KitCalendar>,
+  scope: CoroutineScope,
+) : OwnDays {
   private val values = database.values()
 
   private val unread = Synced(KitCalendar.empty, emptyList())
 
-  // Read first when first asked for, so what the launch puts in before then is in that first read.
   override val calendar: StateFlow<OwnCalendar> =
-    combine(values.ownCalendar(), values.coworkers(), ::Synced)
-      .stateIn(scope, SharingStarted.Lazily, unread)
+    combine(own, values.coworkers(), ::Synced).stateIn(scope, SharingStarted.Lazily, unread)
 
   override suspend fun awaitRead() {
     calendar.first { it !== unread }

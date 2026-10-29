@@ -1,6 +1,8 @@
 package app.pochical.kit
 
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.ColorSpace
 import android.graphics.ImageDecoder
 import app.pochical.design.Chat
@@ -46,7 +48,7 @@ object PhotoShrinking {
    * a photo.
    */
   fun shrink(source: ImageDecoder.Source, maxEdge: Int = Chat.photoMaxEdge): ShrunkPhoto? {
-    val image = upright(source, maxEdge) ?: return null
+    val image = upright(source, maxEdge)?.let(::onWhite) ?: return null
     val jpeg = jpeg(image) ?: return null
     // Made once, from the pixels at hand, however many times the photo goes up.
     val longer = max(image.width, image.height)
@@ -77,6 +79,22 @@ object PhotoShrinking {
    * shown; null for what is not a photo the device can read.
    */
   fun upright(source: ImageDecoder.Source, maxEdge: Int): Bitmap? = decode(source, maxEdge) { _, _ -> }
+
+  /**
+   * An image with see-through parts (a sticker a keyboard put in, a PNG) laid on white, as a JPEG
+   * has none: drawn as it is, they would turn black.
+   */
+  private fun onWhite(image: Bitmap): Bitmap {
+    if (!image.hasAlpha()) return image
+    val flat = Bitmap.createBitmap(image.width, image.height, Bitmap.Config.ARGB_8888)
+    Canvas(flat).apply {
+      drawColor(Color.WHITE)
+      drawBitmap(image, 0f, 0f, null)
+    }
+    flat.setHasAlpha(false)
+    image.recycle()
+    return flat
+  }
 
   private fun decode(source: ImageDecoder.Source, maxEdge: Int, sized: (Int, Int) -> Unit): Bitmap? =
     try {

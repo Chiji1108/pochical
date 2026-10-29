@@ -35,6 +35,17 @@ class PhotosTest {
   private val vectors = vectors<ThumbHashVectors>("thumbhash")
 
   @Test
+  fun whatIsSeeThroughIsSentOnWhite() {
+    val sticker = Bitmap.createBitmap(40, 40, Bitmap.Config.ARGB_8888)
+    Canvas(sticker).drawCircle(20f, 20f, 10f, Paint().apply { color = Color.RED })
+    val png = ByteArrayOutputStream().also { sticker.compress(Bitmap.CompressFormat.PNG, 100, it) }.toByteArray()
+    val shrunk = checkNotNull(PhotoShrinking.shrink(ImageDecoder.createSource(ByteBuffer.wrap(png))))
+    val sent = checkNotNull(PhotoShrinking.upright(ImageDecoder.createSource(ByteBuffer.wrap(shrunk.jpeg)), Int.MAX_VALUE))
+    // A corner the sticker left see-through is white, not black.
+    assertTrue(Color.red(sent.getPixel(1, 1)) > 240 && Color.green(sent.getPixel(1, 1)) > 240)
+  }
+
+  @Test
   fun aPhotosThumbHashIsMade() {
     vectors.encode.checkEach({ it.thumbHash }) { Base64.getEncoder().encodeToString(ThumbHash.encode(it.width, it.height, base64(it.rgba))) }
     for (case in vectors.encode) assertTrue(case.name, base64(case.thumbHash).size <= Chat.photoThumbHashMaxBytes)
