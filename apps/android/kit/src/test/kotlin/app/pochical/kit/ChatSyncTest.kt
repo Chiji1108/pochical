@@ -78,17 +78,18 @@ class ChatSyncTest {
   }
 
   @Test
-  fun daysSharedAndPutToTheVoteShowWaitingAtOnceThenAsTheGroups() = runBlocking {
+  fun daysSharedAndPutToTheVoteGoAsTheirOwnLines() = runBlocking {
     val phone = signedIn()
     val me = server.userId
-    phone.chats.sendDays("g1", GROUP_THREAD, listOf("2026-11-03", "2026-11-04"), poll = false)
-    phone.chats.sendDays("g1", GROUP_THREAD, listOf("2026-11-07", "2026-11-08"), poll = true, replyTo = null)
-    assertEquals(
-      listOf(LineContent.Days(listOf("2026-11-03", "2026-11-04")), LineContent.Poll(ChatPoll.newBuilder().addAllDays(listOf("2026-11-07", "2026-11-08")).build())),
-      phone.chat(me).waiting.map { it.content },
-    )
+    val shared = LineContent.Days(listOf("2026-11-03", "2026-11-04"))
+    val poll = LineContent.Poll(ChatPoll.newBuilder().addAllDays(listOf("2026-11-07", "2026-11-08")).build())
+    phone.chats.sendDays("g1", GROUP_THREAD, shared.days, poll = false)
+    // Each a line of its own, whatever of them is still on its way as the next is kept: the outbox
+    // sends the first as soon as it is kept, so no moment holds both waiting.
+    phone.chats.sendDays("g1", GROUP_THREAD, poll.poll.daysList, poll = true)
+    // Both reach the group as they were sent, in order.
     val sent = phone.chat(me) { it.waiting.isEmpty() && it.lines.size == 2 }
-    assertEquals(listOf(LineKind.Days, LineKind.Poll), sent.lines.map { it.content.kind })
+    assertEquals(listOf(shared, poll), sent.lines.map { it.content })
   }
 
   @Test
