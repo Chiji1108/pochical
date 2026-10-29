@@ -393,6 +393,7 @@ private fun leftOut(listed: List<Pattern>, picked: Set<String>): String {
 private fun Wide(title: String, enabled: Boolean = true, onClick: () -> Unit) {
   Button(
     onClick = onClick,
+    shapes = ButtonDefaults.shapes(),
     enabled = enabled,
     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).heightIn(min = Metrics.control),
   ) {

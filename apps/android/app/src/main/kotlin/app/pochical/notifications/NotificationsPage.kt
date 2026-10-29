@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -290,7 +291,7 @@ fun AskingCard(icon: Int, title: String, about: String, action: String, onAction
       Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(title, style = MaterialTheme.typography.titleSmall)
         Text(about, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Button(onClick = onAction, modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) { Text(action) }
+        Button(onClick = onAction, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) { Text(action) }
       }
     }
   }

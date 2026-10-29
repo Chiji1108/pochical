@@ -125,13 +125,14 @@ fun GroupWeek(
   val meId = rememberMeId()
   val unentered = stringResource(R.string.day_unentered)
   val togetherWord = stringResource(R.string.together_day)
+  val legend = stringResource(R.string.legend_open)
   Row(modifier) {
     Column(Modifier.width(facesWidth(compact)), horizontalAlignment = Alignment.CenterHorizontally) {
       Spacer(Modifier.height(dateHeight))
       for (member in members) {
         Box(
           Modifier.height(rowHeight)
-            .then(if (onFace != null) Modifier.clickable(role = Role.Button) { onFace(member) } else Modifier)
+            .then(if (onFace != null) Modifier.clickable(role = Role.Button, onClickLabel = legend) { onFace(member) } else Modifier)
             .clearAndSetSemantics { contentDescription = member.name },
           contentAlignment = Alignment.Center,
         ) {

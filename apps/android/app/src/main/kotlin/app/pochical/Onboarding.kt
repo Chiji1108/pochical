@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -274,7 +275,7 @@ private fun Welcome(onStart: () -> Unit, onSignIn: () -> Unit) {
         modifier = Modifier.padding(top = 12.dp),
       )
     }
-    Button(onClick = onStart, modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
+    Button(onClick = onStart, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
       Text(stringResource(R.string.welcome_start), style = MaterialTheme.typography.titleMedium)
     }
     TextButton(onClick = onSignIn, modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.touch).padding(top = 4.dp)) {
@@ -322,6 +323,7 @@ private fun PatternsStep(template: JobTemplate, onBack: () -> Unit, waiting: Boo
     foot = {
       Button(
         onClick = { onNext(template, chosenPatterns(picked)) },
+        shapes = ButtonDefaults.shapes(),
         enabled = picked.isNotEmpty() && !waiting,
         modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control),
       ) {
@@ -380,7 +382,7 @@ private fun PeriodDayStep(onBack: () -> Unit, waiting: Boolean, onStart: (Int) -
     stringResource(R.string.period_question_day_note),
     onBack,
     foot = {
-      Button(onClick = { onStart(start) }, enabled = !waiting, modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
+      Button(onClick = { onStart(start) }, shapes = ButtonDefaults.shapes(), enabled = !waiting, modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
         Text(stringResource(R.string.welcome_start))
       }
     },

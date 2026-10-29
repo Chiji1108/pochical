@@ -514,6 +514,7 @@ fun CalendarScreen(
               onOpen = { if (enteringKey == null) breakingDown = it.toString() },
             )
             Button(
+              shapes = ButtonDefaults.shapes(),
               onClick = {
                 // The page the pages settle on, as a swipe while entering starts there too.
                 val month = range.monthAt(pager.settledPage)
@@ -644,7 +645,7 @@ private fun Heading(
     Spacer(Modifier.weight(1f))
     val away = if (dayOpen) (if (thisWeekAway) 1f else 0f) else abs(pages - todayPage).coerceAtMost(1f)
     if (entering) {
-      Button(onClick = onDone) {
+      Button(onClick = onDone, shapes = ButtonDefaults.shapes()) {
         Icon(painterResource(R.drawable.ic_check), null, Modifier.size(18.dp))
         Spacer(Modifier.width(6.dp))
         Text(stringResource(R.string.entering_done))
@@ -652,6 +653,7 @@ private fun Heading(
     } else if (away > 0f) {
       OutlinedButton(
         onClick = if (dayOpen) onThisWeek else onThisMonth,
+        shapes = ButtonDefaults.shapes(),
         modifier = Modifier.alpha(away),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary),
       ) {

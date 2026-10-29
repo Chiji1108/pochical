@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteItem
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldValue
 import androidx.compose.material3.adaptive.navigationsuite.rememberNavigationSuiteScaffoldState
@@ -205,12 +206,14 @@ private fun TabsScreen(navigator: RootNavigator, navigation: PageNavigation) {
   // Read once over the tabs, for their badges and the group rail's.
   val unread = rememberNotifyingUnread()
   val badges = tabBadges(unread)
+  // Material 3 Expressive's navigation suite: its short bar on a phone, its wide rail on a larger
+  // window, rather than the older bar and rail.
   NavigationSuiteScaffold(
     state = suite,
-    navigationSuiteItems = {
+    navigationItems = {
       RootTab.entries.forEach { tab ->
         val selected = tab == navigation.tab
-        item(
+        NavigationSuiteItem(
           selected = selected,
           onClick = { navigation.select(tab) },
           icon = {

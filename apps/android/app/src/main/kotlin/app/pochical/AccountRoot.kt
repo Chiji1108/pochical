@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -96,7 +97,7 @@ private fun ErasingScreen(erasing: AccountState.Erasing, retry: () -> Unit) {
     )
     Spacer(Modifier.weight(1f))
     if (erasing.failed) {
-      Button(onClick = retry, modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
+      Button(onClick = retry, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
         Text(stringResource(R.string.retry))
       }
     }

@@ -304,7 +304,7 @@ private fun ThemeChoices(samples: List<Pattern>, dark: Boolean, inUse: Theme, on
         repeat(3 - themes[page].size) { Box(Modifier.weight(1f)) }
       }
     }
-    PageDots(pages, stringResource(R.string.style_theme_page, pages.currentPage + 1, pages.pageCount))
+    PageDots(pages, { stringResource(R.string.style_theme_page, it + 1, pages.pageCount) })
   }
 }
 
