@@ -91,12 +91,20 @@ struct AppRoot: View {
     .onOpenURL { url in
       if let code = openedInviteCode(of: url) {
         invite = OpenedInvite(code: code)
-      } else if let day = openedDay(of: url) {
-        OpenedDay.shared.day = day
-      } else if let link = openedGroup(of: url) {
-        OpenedGroup.shared.link = link
+      } else {
+        openPlaceLink(url)
       }
     }
+  }
+}
+
+/// Opens a day or a group a widget's link, a control or a shortcut names
+/// (spec/widgets.md, Opening the app).
+func openPlaceLink(_ url: URL) {
+  if let day = openedDay(of: url) {
+    OpenedDay.shared.day = day
+  } else if let link = openedGroup(of: url) {
+    OpenedGroup.shared.link = link
   }
 }
 

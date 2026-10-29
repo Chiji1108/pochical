@@ -1,3 +1,5 @@
+import com.android.build.api.variant.HostTestBuilder
+
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.compose)
@@ -6,6 +8,9 @@ plugins {
   // The Firebase project the notifications come through, from app/google-services.json: Firebase's
   // console gives it for app.pochical, it holds no secret, and it is checked in.
   alias(libs.plugins.google.services)
+  // The Baseline Profile and startup profile :baselineprofile generates, checked in under
+  // src/release/generated (AGENTS.md, Android).
+  alias(libs.plugins.baselineprofile)
 }
 
 // The version people see is the iOS app's: one MARKETING_VERSION for the
@@ -115,6 +120,8 @@ dependencies {
   implementation(libs.glance.appwidget)
   implementation(platform(libs.firebase.bom))
   implementation(libs.firebase.messaging)
+  implementation(libs.profileinstaller)
+  baselineProfile(project(":baselineprofile"))
 
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)
@@ -126,6 +133,26 @@ dependencies {
 
   androidTestImplementation(libs.androidx.test.runner)
   androidTestImplementation(libs.androidx.test.junit)
+}
+
+baselineProfile {
+  // Generated on a device by hand, never by a build: CI has none.
+  automaticGenerationDuringBuild = false
+  // The startup profile too, which lays the start's classes out first in the dex files.
+  dexLayoutOptimization = true
+}
+
+@Suppress("UNCHECKED_CAST") val profileBuildTypes = rootProject.extra["profileBuildTypes"] as List<String>
+
+androidComponents {
+  beforeVariants { variant ->
+    // A build type :kit does not declare would take its release, which talks to production.
+    check(variant.buildType in listOf("debug", "release") + profileBuildTypes) {
+      "The build type ${variant.buildType} needs its server in :kit, as profileBuildTypes (build.gradle.kts)"
+    }
+    // The profile builds' unit tests would be the release ones again.
+    if (variant.buildType in profileBuildTypes) variant.hostTests[HostTestBuilder.UNIT_TEST_TYPE]?.enable = false
+  }
 }
 
 kotlin {
