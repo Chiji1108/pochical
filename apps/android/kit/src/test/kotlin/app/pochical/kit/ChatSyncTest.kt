@@ -209,6 +209,8 @@ class ChatSyncTest {
     phone.chat(me) { it.lines.single().content == LineContent.Unsent }
     assertEquals(ForgottenPhoto(PhotoShelf.Group("g1"), photo), withTimeout(10_000) { forgotten.await() })
     assertEquals(null, phone.linePhotos.files.held("g1", photo))
+    // A fetch of it still on its way is not kept.
+    assertTrue(phone.linePhotos.files.wasLetGo("g1", photo))
   }
 
   @Test
