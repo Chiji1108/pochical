@@ -72,12 +72,14 @@ import app.pochical.design.Radius
 import app.pochical.isDark
 import app.pochical.kit.OwnCalendar
 import app.pochical.kit.OwnDay
+import app.pochical.kit.Week
 import app.pochical.kit.monthHolding
 import app.pochical.kit.stylePreviewDays
 import app.pochical.kit.styleSamples as sampleIds
 import app.pochical.widgets.CalendarWidget
 import app.pochical.widgets.Drawn
 import app.pochical.widgets.MEDIUM
+import app.pochical.widgets.WidgetEntry
 import app.pochical.widgets.widgetEntry
 import java.time.LocalDate
 
@@ -109,6 +111,29 @@ fun styleSamples(patterns: List<Pattern>): List<Pattern> {
 }
 
 /**
+ * What both of a preview's pages are drawn from, as plain data: the fortnight from the week of
+ * [today], the made-up run of the person's [patterns] in use on it ([shown], a pattern's id by
+ * day). Each page derives what it draws from this one value, so they show the same days and change
+ * together, a pattern's look among what changes them.
+ */
+data class StylePreviewInput(val today: LocalDate, val patterns: List<Pattern>, val fortnight: List<LocalDate>, val shown: Map<LocalDate, String>) {
+  /** The widgets' entry for the fortnight, as the calendar's page shows it, with or without the person's days entered. */
+  fun widgetEntry(week: Week): WidgetEntry =
+    OwnCalendar(patterns.map { it.row }, shown.mapValues { OwnDay(it.value) }, emptyList())
+      .widgetEntry(today, week, { false })
+      .copy(nothingEntered = false)
+
+  companion object {
+    /** The preview of [patterns] in use from the week of [today], the week starting on [weekStart]. */
+    fun of(today: LocalDate, patterns: List<Pattern>, weekStart: Int): StylePreviewInput {
+      val first = today.weekStartingOn(weekStart)
+      val fortnight = (0 until 14).map { first.plusDays(it.toLong()) }
+      return StylePreviewInput(today, patterns, fortnight, stylePreviewDays(fortnight, patterns.map { it.row }))
+    }
+  }
+}
+
+/**
  * The preview at the top of スタイル and カレンダー (/design's StylePreview): this week and the next
  * as a made-up run of the person's own patterns in use, drawn in the settings being chosen, on a
  * card in the テーマ's colors, light or dark as [scheme] says, with ☀︎ / ☾ on its edge; swiped
@@ -124,9 +149,7 @@ fun StylePreview(scheme: PreviewScheme, today: LocalDate, modifier: Modifier = M
   val theme = device.theme
   // A テーマ drawn dark has no light to show.
   val dark = scheme.dark || theme.isAlwaysDark
-  val first = today.weekStartingOn(device.week.start)
-  val fortnight = (0 until 14).map { first.plusDays(it.toLong()) }
-  val shown = stylePreviewDays(fortnight, patterns.map { it.row })
+  val input = remember(today, patterns, device.week.start) { StylePreviewInput.of(today, patterns, device.week.start) }
   val pages = rememberPagerState { 2 }
   val names = listOf(stringResource(R.string.preview_page_calendar), stringResource(R.string.preview_page_widget))
   // The calendar's page sets the height; the home screen's keeps it, after the page is made again too.
@@ -139,16 +162,9 @@ fun StylePreview(scheme: PreviewScheme, today: LocalDate, modifier: Modifier = M
         val colors = LocalThemeColors.current
         HorizontalPager(pages, Modifier.fillMaxWidth(), pageSpacing = 12.dp, verticalAlignment = Alignment.Top) { page ->
           if (page == 0) {
-            CalendarPage(
-              if (withHeading) fortnight.take(7) else fortnight,
-              shown,
-              patterns,
-              today,
-              withHeading,
-              Modifier.onSizeChanged { calendarHeight = it.height },
-            )
+            CalendarPage(input, withHeading, Modifier.onSizeChanged { calendarHeight = it.height })
           } else {
-            HomePreview(shown, patterns, today, dark, with(density) { calendarHeight.toDp() })
+            HomePreview(input, dark, with(density) { calendarHeight.toDp() })
           }
         }
         // Which page is shown, on the card's top end, kept still while the pages move.
@@ -176,19 +192,15 @@ fun StylePreview(scheme: PreviewScheme, today: LocalDate, modifier: Modifier = M
   }
 }
 
-/** The calendar's page of the preview: [days] of the made-up run [shown], under the month's heading [withHeading]. */
+/** The calendar's page of the preview: [input]'s fortnight, or its first week under the month's heading [withHeading]. */
 @Composable
-private fun CalendarPage(
-  days: List<LocalDate>,
-  shown: Map<LocalDate, String>,
-  patterns: List<Pattern>,
-  today: LocalDate,
-  withHeading: Boolean,
-  modifier: Modifier,
-) {
+private fun CalendarPage(input: StylePreviewInput, withHeading: Boolean, modifier: Modifier) {
   val colors = LocalThemeColors.current
   val device = LocalDeviceSettings.current.device
-  val byId = patterns.associateBy { it.id }
+  val today = input.today
+  val shown = input.shown
+  val days = if (withHeading) input.fortnight.take(7) else input.fortnight
+  val byId = input.patterns.associateBy { it.id }
   val shape = RoundedCornerShape(Radius.xl)
   val label = stringResource(if (withHeading) R.string.preview_this_week else R.string.preview_week)
   Column(
@@ -233,12 +245,12 @@ private fun CalendarPage(
 
 /**
  * The home screen's page of the preview (/design's HomePreview): the カレンダー widget at a phone's
- * 4×2, drawn by Glance from the same made-up fortnight [shown] of [patterns] as the calendar's page,
- * in the settings being chosen and in light or [dark], on a ground of the テーマ's own and fitted to
- * [height], the calendar page's. It is a picture: a touch on it does what the widget's would not.
+ * 4×2, drawn by Glance from the same [input] as the calendar's page, in the settings being chosen
+ * and in light or [dark], on a ground of the テーマ's own and fitted to [height], the calendar page's.
+ * It is a picture: a touch on it does nothing a widget's would.
  */
 @Composable
-private fun HomePreview(shown: Map<LocalDate, String>, patterns: List<Pattern>, today: LocalDate, dark: Boolean, height: Dp) {
+private fun HomePreview(input: StylePreviewInput, dark: Boolean, height: Dp) {
   val context = LocalContext.current
   val screen = LocalConfiguration.current
   val settings = LocalDeviceSettings.current.device
@@ -254,13 +266,9 @@ private fun HomePreview(shown: Map<LocalDate, String>, patterns: List<Pattern>, 
         (if (dark) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO)
       context.createConfigurationContext(configuration)
     }
-  val views by
-    produceState<RemoteViews?>(null, shown, patterns, settings, today, themed) {
-      val sample = OwnCalendar(patterns.map { it.row }, shown.mapValues { OwnDay(it.value) }, emptyList())
-      // As the calendar's page: the fortnight's days, even with none of the person's entered yet.
-      val entry = sample.widgetEntry(today, settings.week, { false }).copy(nothingEntered = false)
-      value = widget.preview(themed, Drawn(entry, settings), MEDIUM)
-    }
+  // What it shows, worked out in composition from the one input; Glance draws it apart, again for each.
+  val drawing = remember(input, settings) { Drawn(input.widgetEntry(settings.week), settings) }
+  val views by produceState<RemoteViews?>(null, drawing, themed) { value = widget.preview(themed, drawing, MEDIUM) }
   val shape = RoundedCornerShape(Radius.xl)
   BoxWithConstraints(
     Modifier.fillMaxWidth()
