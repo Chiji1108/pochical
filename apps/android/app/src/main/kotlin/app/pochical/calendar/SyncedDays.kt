@@ -15,6 +15,7 @@ import app.pochical.kit.RepeatOrder
 import app.pochical.kit.ShownDay
 import app.pochical.kit.daysShowing
 import app.pochical.kit.newId
+import app.pochical.kit.nextDayOff
 import app.pochical.kit.ownCalendar
 import app.pochical.kit.readyCopies
 import app.pochical.kit.summary
@@ -173,6 +174,8 @@ class SyncedDays(
       own.shown(from, through).mapValues { (_, day) -> DayEntry(day.shift, day.start, day.end, day.people.orEmpty()) }
 
     override fun summary(first: LocalDate, last: LocalDate): PageSummary = own.summary(first, last)
+
+    override fun nextDayOff(today: LocalDate): LocalDate = own.nextDayOff(today)
 
     override fun note(day: LocalDate): String? = own.note(day)
 

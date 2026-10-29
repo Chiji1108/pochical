@@ -63,6 +63,9 @@ interface OwnCalendar {
   /** What 今月のお休み and 今月の内訳 count on the page from `first` through `last`. */
   fun summary(first: LocalDate, last: LocalDate): PageSummary
 
+  /** The day 次の休み opens from `today`, not set to anyone: the next day off, today on one, else today (spec/shortcuts.md). */
+  fun nextDayOff(today: LocalDate): LocalDate
+
   /** The day's memo, or none. */
   fun note(day: LocalDate): String?
 

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 次の休み's shortcut (shortcuts.xml), as 今日のシフト's (shortcut_today). -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+  <background android:drawable="@color/ic_launcher_background" />
+  <foreground>
+    <inset
+      android:drawable="@drawable/ic_event_available"
+      android:inset="30dp" />
+  </foreground>
+</adaptive-icon>

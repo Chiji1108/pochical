@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The launcher's shortcuts (spec/shortcuts.md): each opens the app by its own link, which
+     OpenedLinks reads as it reads a widget's. -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+  <shortcut
+    android:shortcutId="today"
+    android:icon="@drawable/shortcut_today"
+    android:shortcutShortLabel="@string/shortcut_today">
+    <intent
+      android:action="android.intent.action.VIEW"
+      android:data="pochical://today"
+      android:targetClass="app.pochical.MainActivity"
+      android:targetPackage="app.pochical" />
+  </shortcut>
+  <shortcut
+    android:shortcutId="next-off"
+    android:icon="@drawable/shortcut_next_off"
+    android:shortcutShortLabel="@string/shortcut_next_off">
+    <intent
+      android:action="android.intent.action.VIEW"
+      android:data="pochical://next-off"
+      android:targetClass="app.pochical.MainActivity"
+      android:targetPackage="app.pochical" />
+  </shortcut>
+</shortcuts>

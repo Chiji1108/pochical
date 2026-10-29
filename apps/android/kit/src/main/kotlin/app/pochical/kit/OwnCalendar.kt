@@ -1,6 +1,7 @@
 package app.pochical.kit
 
 import app.pochical.design.Days
+import app.pochical.design.Widgets
 import java.time.LocalDate
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -75,6 +76,16 @@ data class PageSummary(val daysOff: Int, val counts: List<Pair<String, Int>>, va
 /** What the page from [first] through [last] counts. */
 fun OwnCalendar.summary(first: LocalDate, last: LocalDate): PageSummary =
   PageSummary.of(first, last, shown(first, last).mapValues { it.value.shift }, patterns)
+
+/**
+ * The day 次の休み opens, not set to anyone (spec/widgets.md, Opening the app; spec/shortcuts.md):
+ * the first from [today] on that shows a pattern counting as off, today itself on a day off, as far
+ * as 次の休み looks; with none ahead, today.
+ */
+fun OwnCalendar.nextDayOff(today: LocalDate): LocalDate {
+  val shown = shown(today, today.plusDays(Widgets.offLookaheadDays.toLong()))
+  return shown.keys.sorted().firstOrNull { pattern(shown.getValue(it).shift)?.countsAsOff == true } ?: today
+}
 
 /** The person's own calendar, again whenever sync or an edit changes it. */
 fun Values.ownCalendar(): Flow<OwnCalendar> = combine(days(), patterns(), repeatOrders(), OwnCalendar::of)

@@ -24,6 +24,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import app.pochical.calendar.CalendarScreen
+import app.pochical.calendar.LocalOwnDays
 import app.pochical.calendar.ShiftChoicePage
 import app.pochical.chat.ChatPage
 import app.pochical.chat.ChatPhotosPage
@@ -66,15 +67,17 @@ import java.time.LocalDate
 fun RootScreen(navigator: RootNavigator) {
   val links = LocalOpenedLinks.current
   val values = LocalValues.current
+  val ownDays = LocalOwnDays.current
   val groups by remember(values) { values.groups() }.collectAsState(null)
-  // What a link opens: an invitation over whatever shows; a day in the calendar; a group, at a
-  // day in its table, or once the person has left it, グループ on the first of their groups; a
-  // chat's notification, the chat over its group in グループ once the device holds the group, or
-  // Pochical's people's over 設定.
+  // What a link opens: an invitation over whatever shows; a day in the calendar, or the next day
+  // off as the days are now; a group, at a day in its table, or once the person has left it,
+  // グループ on the first of their groups; a chat's notification, the chat over its group in
+  // グループ once the device holds the group, or Pochical's people's over 設定.
   LaunchedEffect(links.pending, groups) {
     when (val link = links.pending) {
       is AppLink.Invite -> navigator.openOnce(RootPage.Join(link.code))
       is AppLink.Day -> navigator.showDay(link.day)
+      is AppLink.NextOff -> navigator.showDay(ownDays.calendar.value.nextDayOff(LocalDate.now()))
       is AppLink.Group -> {
         val known = groups ?: return@LaunchedEffect
         if (link.day != null && known.any { it.id == link.groupId }) {
