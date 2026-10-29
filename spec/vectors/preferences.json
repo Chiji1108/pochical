@@ -1,5 +1,5 @@
 {
-  "about": "The preferences a device keeps with the account (spec/sync-protocol.md, Preferences): a key each, its value the part of the device's settings it names, as the message messages names for the key (proto/pochical/v1/preferences.proto), written here in its JSON form. defaults is what each key holds on a device where nothing was set yet, every key the account keeps. Each of roundTrips is one value of its key a device takes from the account and then holds for that key again, the other keys left as they were. Each of unreadable is a value a device cannot take (a name it has none of, or a number out of its range), or a key it has none of, which leaves a device holding the values of roundTrips as it was.",
+  "about": "The preferences a device keeps with the account (spec/sync-protocol.md, Preferences): a key each, its value the part of the device's settings it names, as the message messages names for the key (proto/pochical/v1/preferences.proto), written here in its JSON form. defaults is what each key holds on a device where nothing was set yet, every key the account keeps. Each of roundTrips is one value of its key a device takes from the account and then holds for that key again, the other keys left as they were. Each of unreadable is a value a device cannot take (a name it has none of, or a number out of its range), or a key it has none of, which leaves a device holding the values of roundTrips as it was. Each of markLookToSend is the account's look (only its style and fill matter; null while the account keeps none) and the shape the account last said the user's marks are drawn in (Profile's mark_look; null before any device sent one), and what a device sends with SetMarkLook then, null for nothing (spec/sync-protocol.md, Profile).",
   "messages": {
     "calendarAdd": "pochical.v1.CalendarAddPreference",
     "heading": "pochical.v1.HeadingPreference",
@@ -209,6 +209,101 @@
       "value": {
         "start": 3
       }
+    }
+  ],
+  "markLookToSend": [
+    {
+      "name": "nothing the account keeps yet: a device's own look never goes",
+      "look": null,
+      "said": null,
+      "expected": null
+    },
+    {
+      "name": "the app's default before the account said any, which is the account's already",
+      "look": {
+        "style": "icon",
+        "fill": true
+      },
+      "said": null,
+      "expected": null
+    },
+    {
+      "name": "a shape changed from the app's default before the account said any",
+      "look": {
+        "style": "badge",
+        "fill": true
+      },
+      "said": null,
+      "expected": {
+        "style": "badge",
+        "fill": true
+      }
+    },
+    {
+      "name": "what the account last said",
+      "look": {
+        "style": "badge",
+        "fill": true
+      },
+      "said": {
+        "style": "badge",
+        "fill": true
+      },
+      "expected": null
+    },
+    {
+      "name": "icons drawn as lines after the account said filled",
+      "look": {
+        "style": "icon",
+        "fill": false
+      },
+      "said": {
+        "style": "icon",
+        "fill": true
+      },
+      "expected": {
+        "style": "icon",
+        "fill": false
+      }
+    },
+    {
+      "name": "back to the app's default after the account said another",
+      "look": {
+        "style": "icon",
+        "fill": true
+      },
+      "said": {
+        "style": "emoji",
+        "fill": true
+      },
+      "expected": {
+        "style": "icon",
+        "fill": true
+      }
+    },
+    {
+      "name": "a look the app cannot read sends nothing",
+      "look": {
+        "style": "sparkle",
+        "fill": true
+      },
+      "said": {
+        "style": "badge",
+        "fill": true
+      },
+      "expected": null
+    },
+    {
+      "name": "the account's word on a shape the app does not know reads as the app's default",
+      "look": {
+        "style": "icon",
+        "fill": true
+      },
+      "said": {
+        "style": "sparkle",
+        "fill": true
+      },
+      "expected": null
     }
   ]
 }
