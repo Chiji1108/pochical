@@ -6,6 +6,9 @@ import app.pochical.v1.ChatPoll
 import app.pochical.v1.block
 import app.pochical.v1.change
 import app.pochical.v1.chatContent
+import app.pochical.v1.chatPhoto
+import app.pochical.v1.chatAlbum
+import app.pochical.v1.chatLine
 import app.pochical.v1.chatPoll
 import app.pochical.v1.copy
 import app.pochical.v1.linkPreview
@@ -411,6 +414,40 @@ class ChatValuesTest {
 
     database.write { take(listOf(change { membership = membership { groupId = "g1"; left = true } })) }
     assertTrue(database.read { chatOutbox("g1") }.isEmpty())
+  }
+
+  @Test
+  fun aGroupLeftOrResetLetsGoOfThePhotosOfItsLines() = runTest {
+    database.listGroup()
+    val album = chatLine {
+      threadId = GROUP_THREAD
+      seq = 2
+      authorId = "u2"
+      content = chatContent { photos = chatAlbum { photos += listOf("p1", "p2").map { chatPhoto { id = it; width = 1; height = 1 } } } }
+    }
+    database.write { takeChanges(listOf(wordsLine(1, "u2"), album), "g1") }
+    assertEquals(listOf("p1", "p2"), database.read { photosHeld("g1") })
+
+    // Only a group the changes say was left, read before its lines go.
+    val left = database.write {
+      val leaving = placesLeft(listOf(change { membership = membership { groupId = "g1"; left = true } }, change { membership = membership { groupId = "g2" } }))
+      take(listOf(change { membership = membership { groupId = "g1"; left = true } }))
+      leaving
+    }
+    assertEquals(mapOf("g1" to listOf("p1", "p2")), left)
+    assertTrue(database.read { photosHeld("g1") }.isEmpty())
+  }
+
+  @Test
+  fun aGroupLeftTakesEveryPhotoOfTheMembersKeptForIt() = runBlocking {
+    val files = testLinePhotos().files
+    files.keep("g1", "mine", ShrunkPhoto(byteArrayOf(1), 1, 1, byteArrayOf()))
+    files.keep("g2", "other", ShrunkPhoto(byteArrayOf(1), 1, 1, byteArrayOf()))
+    val forgotten = async { files.forgotten.first() }
+    files.forgetPlace("g1", listOf("p1"))
+    assertEquals(ForgottenPhoto(PhotoShelf.Group("g1"), "p1"), withTimeout(10_000) { forgotten.await() })
+    assertNull(files.held("g1", "mine"))
+    assertTrue(files.held("g2", "other") != null)
   }
 
   @Test

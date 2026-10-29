@@ -295,6 +295,15 @@ class ChatNotifierTest {
     assertEquals(listOf("$GROUP/group"), shown().map { it.tag })
   }
 
+  @Test
+  fun aGroupLeftTakesItsChatsNotificationsAndConversationsAway() = runTest {
+    notifier.show(groupLine(2, "今週どう？"))
+    notifier.show(groupLine(3, "まだ？", groupId = "g2"))
+    notifier.forgetPlace(GROUP)
+    assertEquals(listOf("g2/group"), shown().map { it.tag })
+    assertEquals(listOf("g2/group"), conversations.published.map { it.first }.distinct())
+  }
+
   private fun support(seq: Long, words: String) =
     PushedAlert(
       title = Localized("SUPPORT_TITLE", emptyList()),

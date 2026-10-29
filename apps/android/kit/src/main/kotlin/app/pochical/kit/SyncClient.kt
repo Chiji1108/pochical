@@ -110,6 +110,8 @@ class SyncClient internal constructor(
   scope: CoroutineScope,
   private val now: () -> Long = System::currentTimeMillis,
   private val random: Random = Random.Default,
+  /** Told of each group the user left, once the device has let go of it. */
+  private val left: suspend (groupId: String) -> Unit = {},
   /** Told once the server does not know the session: the account alone decides what comes of it. */
   private val signedOut: () -> Unit = {},
 ) : ChatSocket {
@@ -337,11 +339,31 @@ class SyncClient internal constructor(
           // A line of the member's the group took stops waiting, as its Acked would say.
           linePhotos.uploads.forget(changes.filter { it.hasChatLine() && it.chatLine.opId.isNotEmpty() }.map { it.chatLine.opId })
         } else {
-          write { take(changes) }
+          // A group left goes from the device with its lines' photos (spec/chat.md, Photos).
+          var leaving = emptyMap<String, List<String>>()
+          write {
+            leaving = placesLeft(changes)
+            take(changes)
+          }
+          for ((groupId, photos) in leaving) {
+            linePhotos.files.forgetPlace(groupId, photos)
+            left(groupId)
+          }
         }
         log("Took ${changes.size} changes")
       }
-      ServerFrame.KindCase.RESET -> if (place != null) takeInto(place) { resetGroup(place) } else write { reset() }
+      ServerFrame.KindCase.RESET ->
+        if (place != null) {
+          // The lines come again, those taken back while away only as taken back: the photos held go with the lines.
+          var letGo = emptyList<String>()
+          takeInto(place) {
+            letGo = photosHeld(place)
+            resetGroup(place)
+          }
+          linePhotos.files.forget(place, letGo)
+        } else {
+          write { reset() }
+        }
       ServerFrame.KindCase.ACKED -> {
         val acked = frame.acked
         if (place != null) {

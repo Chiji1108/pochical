@@ -21,7 +21,10 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
@@ -134,6 +137,15 @@ class SyncAccount internal constructor(
 
   /** Signed in or changing, the stretch whose sockets are open; null otherwise. */
   private val stretch = MutableStateFlow<Stretch?>(null)
+
+  private val mutableLeft = MutableSharedFlow<String>(extraBufferCapacity = 16)
+
+  /**
+   * Each group the user leaves or is taken out of, once the device has let go of what it held of it,
+   * for what the app keeps of the group outside the database (its chats' conversations and
+   * notifications) to go too.
+   */
+  val left: SharedFlow<String> = mutableLeft.asSharedFlow()
 
   /** The user's own socket, for the screens to say 接続中… while it is not current. */
   val userSocket: Flow<SocketState> = stretch.flatMapLatest { it?.user?.state ?: flowOf(SocketState.Closed) }
@@ -973,7 +985,7 @@ class SyncAccount internal constructor(
     fun end() = scope.cancel()
 
     private fun client(peer: Peer) =
-      SyncClient(database, peer, server, http, credentials, linePhotos, scope, now, random) {
+      SyncClient(database, peer, server, http, credentials, linePhotos, scope, now, random, left = mutableLeft::emit) {
         commands.trySend(Command.SessionUnknown(credentials.generation))
       }
   }

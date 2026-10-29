@@ -175,6 +175,18 @@ class ChatPhotoFiles internal constructor(private val caches: File, private val 
     for (id in photoIds) mutableForgotten.emit(ForgottenPhoto(PhotoShelf.place(groupId), id))
   }
 
+  /**
+   * A group left: every photo of the member's kept for it, to send or to show, and [photoIds], those
+   * of its lines the device held, for the app's image cache to let go of too.
+   */
+  internal suspend fun forgetPlace(groupId: String, photoIds: List<String>) {
+    withContext(Dispatchers.IO) {
+      File(caches, "chat-photos/$groupId").deleteRecursively()
+      File(files, "pending-photos/$groupId").deleteRecursively()
+    }
+    for (id in photoIds) mutableForgotten.emit(ForgottenPhoto(PhotoShelf.place(groupId), id))
+  }
+
   /** Every photo kept, to send or to show, gone with the user. */
   internal suspend fun eraseAll() {
     withContext(Dispatchers.IO) {

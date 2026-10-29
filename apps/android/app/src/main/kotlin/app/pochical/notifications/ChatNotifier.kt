@@ -230,6 +230,20 @@ class ChatNotifier(
   }
 
   /**
+   * Takes away the notifications and conversations of the group [groupId]'s chats, as the user leaves
+   * it or is taken out of it: none of its chats opens for them any more.
+   */
+  fun forgetPlace(groupId: String) {
+    val ofGroup = { tag: String -> tag.startsWith(tagOf(groupId, "")) }
+    synchronized(lock) {
+      val tags = posted.keys + manager.activeNotifications.filter { it.id == ID }.mapNotNull { it.tag }
+      tags.filter(ofGroup).distinct().forEach(::cancel)
+      answering.removeAll(ofGroup)
+    }
+    conversations.forget(ofGroup)
+  }
+
+  /**
    * A chat's notification as it shows: the lines it holds, in order, and for a conversation its
    * style and a message for each line. Each line's seq is kept in the notification's own extras, as
    * Android keeps no extras of a message; those of the oldest messages the style let go of go too.

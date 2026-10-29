@@ -49,6 +49,9 @@ interface Conversations {
 
   /** Takes away every conversation, as the device lets go of the user they were for. */
   fun forgetAll()
+
+  /** Takes away the conversations whose ids [gone] says go, as their group is left. */
+  fun forget(gone: (id: String) -> Boolean)
 }
 
 /**
@@ -92,6 +95,11 @@ class DrawnConversations(
     val kept = ShortcutManagerCompat.getShortcuts(context, ShortcutManagerCompat.FLAG_MATCH_DYNAMIC or ShortcutManagerCompat.FLAG_MATCH_CACHED)
     ShortcutManagerCompat.removeLongLivedShortcuts(context, kept.map { it.id })
     ShortcutManagerCompat.removeAllDynamicShortcuts(context)
+  }
+
+  override fun forget(gone: (id: String) -> Boolean) {
+    val ids = ShortcutManagerCompat.getShortcuts(context, ShortcutManagerCompat.FLAG_MATCH_DYNAMIC or ShortcutManagerCompat.FLAG_MATCH_CACHED).map { it.id }.filter(gone)
+    if (ids.isNotEmpty()) ShortcutManagerCompat.removeLongLivedShortcuts(context, ids)
   }
 
   /**

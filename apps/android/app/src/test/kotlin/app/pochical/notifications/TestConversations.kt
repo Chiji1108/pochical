@@ -28,4 +28,8 @@ class TestConversations(private val context: Context) : Conversations {
   override fun forgetAll() {
     forgotten = true
   }
+
+  override fun forget(gone: (id: String) -> Boolean) {
+    published.removeAll { (id, _) -> gone(id) }
+  }
 }
