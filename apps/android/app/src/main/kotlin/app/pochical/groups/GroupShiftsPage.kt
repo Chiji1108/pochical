@@ -65,6 +65,8 @@ import app.pochical.design.Radius
 import app.pochical.kit.GroupRow
 import java.time.LocalDate
 import java.time.YearMonth
+import kotlinx.coroutines.flow.dropWhile
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /** How many months either side of this one the list holds, as /design's (monthSpan). */
@@ -188,12 +190,22 @@ private fun ShiftsPage(group: GroupRow, opening: LocalDate?, onBack: () -> Unit,
   }
 
   val sheet = rememberBottomSheetScaffoldState(rememberStandardBottomSheetState(initialValue = SheetValue.Hidden, skipHiddenState = false))
-  LaunchedEffect(picked) { if (picked != null) sheet.bottomSheetState.expand() else sheet.bottomSheetState.hide() }
-  // Swiped down, the day is no longer picked: the sheet settles hidden or, with no peek, part way
-  // up, which looks the same.
-  LaunchedEffect(sheet) {
-    snapshotFlow { sheet.bottomSheetState.run { currentValue to targetValue } }
-      .collect { (current, target) -> if (current == target && current != SheetValue.Expanded) pickedDay = null }
+  // The sheet follows the picked day. Swiped down, the day is no longer picked: once the sheet is
+  // on its way up for this day, it settling anywhere else (hidden or, with no peek, part way up,
+  // which looks the same) unpicks it. Kept to this day's sheet, a settle from before it started up
+  // or from an earlier day's is never taken for a swipe.
+  LaunchedEffect(picked) {
+    val state = sheet.bottomSheetState
+    if (picked == null) {
+      state.hide()
+      return@LaunchedEffect
+    }
+    // A drag that stops it on its way up cancels this, and the settle below unpicks the day.
+    launch { state.expand() }
+    snapshotFlow { state.targetValue to state.currentValue }
+      .dropWhile { (target, _) -> target != SheetValue.Expanded }
+      .first { (target, current) -> target == current && current != SheetValue.Expanded }
+    pickedDay = null
   }
   BackHandler(enabled = picked != null) { pickedDay = null }
   var sheetHeight by remember { mutableIntStateOf(0) }
