@@ -1,6 +1,8 @@
+import { runInDurableObject } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { runAlarm } from "./alarms";
 import { call, ORIGIN, userIdOf } from "./helpers";
 import { providerKeys, idToken, link } from "./provider-helpers";
 import { changesIn, device, pair, sendFrame, syncSocket } from "./sync-helpers";
@@ -9,6 +11,61 @@ import { changesIn, device, pair, sendFrame, syncSocket } from "./sync-helpers";
 const TOKEN = "a1".repeat(32);
 // Another device's.
 const OTHER_TOKEN = "c3".repeat(32);
+
+/** The pushes the user's DO keeps to try again, oldest first. */
+const retriesOf = async (session: string) =>
+  await runInDurableObject(
+    env.USERS.getByName(await userIdOf(session)),
+    (_, state) =>
+      state.storage.sql
+        .exec<{ due_at: number; tries: number }>(
+          "select due_at, tries from push_retries order by id"
+        )
+        .toArray()
+  );
+
+/** How many pushes the user's DO keeps to try again. */
+const retriesLeft = async (session: string): Promise<number> => {
+  const rows = await retriesOf(session);
+  return rows.length;
+};
+
+/**
+ * The pushes kept to try again made due, as their time would come, and
+ * the user's alarm run; or, with `forget`, let go of, so none outlives
+ * its test to reach the next test's spies.
+ */
+const retryNow = async (session: string, forget = false) => {
+  const stub = env.USERS.getByName(await userIdOf(session));
+  await runInDurableObject(stub, (_, state) => {
+    state.storage.sql.exec(
+      forget ? "delete from push_retries" : "update push_retries set due_at = 0"
+    );
+  });
+  if (!forget) {
+    await runAlarm(stub);
+  }
+};
+
+/**
+ * What reached APNs, each with its push type and collapse id, answered
+ * by `answer` as the tries of each type come.
+ */
+const apnsAnswering = (answer: (type: string, nth: number) => Response) => {
+  const calls: { body: unknown; collapseId: string | null; type: string }[] =
+    [];
+  vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+    const request = new Request(input, init);
+    const type = request.headers.get("apns-push-type") ?? "";
+    calls.push({
+      body: await request.json(),
+      collapseId: request.headers.get("apns-collapse-id"),
+      type,
+    });
+    return answer(type, calls.filter((each) => each.type === type).length);
+  });
+  return calls;
+};
 
 const say = (socket: WebSocket, opId: string, text: string): void => {
   sendFrame(socket, {
@@ -417,12 +474,12 @@ describe("a device's push token", () => {
         platform: "apns",
         reason: "InternalServerError",
         sandbox: true,
-        sent: "failed",
+        sent: "later",
         status: 500,
       },
     });
     expect(counted.mock.calls.map(([point]) => point?.indexes)).toStrictEqual(
-      expect.arrayContaining([["gone"], ["failed"]])
+      expect.arrayContaining([["gone"], ["later"]])
     );
 
     await expect
@@ -435,6 +492,9 @@ describe("a device's push token", () => {
         return kept.results;
       })
       .toStrictEqual([{ token: OTHER_TOKEN }]);
+    // The push APNs failed is kept to try again, the other not.
+    await expect.poll(async () => await retriesLeft(guest)).toBe(1);
+    await retryNow(guest, true);
   });
 
   it("is kept when APNs cannot be reached, and left out of what is logged and counted", async () => {
@@ -458,7 +518,7 @@ describe("a device's push token", () => {
         reason:
           "TypeError: fetch to https://api.sandbox.push.apple.com/3/device/{token} failed",
         sandbox: true,
-        sent: "failed",
+        sent: "later",
         status: 0,
       },
     });
@@ -469,6 +529,8 @@ describe("a device's push token", () => {
       .bind(TOKEN)
       .all<{ token: string }>();
     expect(kept.results).toStrictEqual([{ token: TOKEN }]);
+    await expect.poll(async () => await retriesLeft(guest)).toBe(1);
+    await retryNow(guest, true);
   });
 });
 
@@ -659,9 +721,12 @@ describe("an Android phone's notifications", () => {
     // The message's own fault, not the token's.
     [400, "INVALID_ARGUMENT", "message.data[0].value", "failed"],
     [400, "INVALID_ARGUMENT", "", "failed"],
-    [500, "INTERNAL", "", "failed"],
+    // Refused for a while: tried again.
+    [429, "QUOTA_EXCEEDED", "", "later"],
+    [500, "INTERNAL", "", "later"],
+    [503, "UNAVAILABLE", "", "later"],
   ] as const)(
-    "on %i %s (%s), mark the token %s, dropping it only when it is no longer the app's",
+    "on %i %s (%s), the push is %s: its token dropped only when no longer the app's, and it tried again only when refused for a while",
     async (status, errorCode, field, sent) => {
       const { groupId, guest, maker } = await pair();
       await registerFcm(guest);
@@ -702,6 +767,8 @@ describe("an Android phone's notifications", () => {
           kind: "alert",
           platform: "fcm",
           reason: errorCode,
+          // A quota refusal waits a minute at least.
+          ...(status === 429 && { retryAfterMs: 60_000 }),
           sandbox: false,
           sent,
           status,
@@ -717,6 +784,10 @@ describe("an Android phone's notifications", () => {
           return rows.results.length;
         })
         .toBe(sent === "gone" ? 0 : 1);
+      await expect
+        .poll(async () => await retriesLeft(guest))
+        .toBe(sent === "later" ? 1 : 0);
+      await retryNow(guest, true);
     }
   );
 
@@ -812,5 +883,188 @@ describe("a notification's size", () => {
       familiesIn(wordsIn(sent.fcm?.alert, "body", "args")),
     ];
     expect(cuts.every((count) => count > 100 && count < 200)).toBeTruthy();
+  });
+});
+
+describe("a push refused for a while", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("is tried again after the service's Retry-After, under the same collapse id, until it goes through", async () => {
+    const { groupId, guest, maker } = await pair();
+    await registerToken(TOKEN, guest);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const calls = apnsAnswering((_, nth) =>
+      nth === 1
+        ? Response.json(
+            { reason: "ServiceUnavailable" },
+            { headers: { "Retry-After": "120" }, status: 503 }
+          )
+        : new Response(null, { status: 200 })
+    );
+    const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
+    const before = Date.now();
+    say(mine.socket, "a", "今週どう？");
+    await expect.poll(async () => await retriesLeft(guest)).toBe(1);
+    // No sooner than APNs asked, though backoff alone would come back in
+    // seconds.
+    const [kept] = await retriesOf(guest);
+    expect(kept?.tries).toBe(1);
+    expect(kept?.due_at).toBeGreaterThanOrEqual(before + 120_000);
+
+    await retryNow(guest);
+    // The same notification, one on the device should the first have
+    // reached it.
+    const [first, again] = calls;
+    expect(first?.collapseId).toMatch(/^[\da-f-]{36}$/u);
+    expect(again).toStrictEqual({ ...first, type: "alert" });
+    await expect(retriesOf(guest)).resolves.toStrictEqual([]);
+  });
+
+  it("is given up after its tries, twice as long between each", async () => {
+    const { groupId, guest, maker } = await pair();
+    await registerToken(TOKEN, guest);
+    const warned = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const calls = apnsAnswering(() =>
+      Response.json({ reason: "InternalServerError" }, { status: 500 })
+    );
+    const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
+    say(mine.socket, "a", "今週どう？");
+    await expect.poll(async () => await retriesLeft(guest)).toBe(1);
+    const waits: number[] = [];
+    for (let tries = 2; tries <= 6; tries += 1) {
+      // oxlint-disable-next-line no-await-in-loop -- one try after another
+      await retryNow(guest);
+      // oxlint-disable-next-line no-await-in-loop -- read after each try
+      const [left] = await retriesOf(guest);
+      if (left !== undefined) {
+        waits.push(left.due_at - Date.now());
+      }
+    }
+    expect(calls).toHaveLength(6);
+    // Jittered within half of each wait, which doubles: 20, 40, 80 and
+    // 160 seconds at most.
+    expect(waits).toHaveLength(4);
+    expect(waits[3]).toBeGreaterThan(waits[0] ?? 0);
+    expect(warned).toHaveBeenCalledWith({
+      message: "Push given up",
+      push: { kind: "alert", platform: "apns", tries: 6 },
+    });
+    await expect(retriesOf(guest)).resolves.toStrictEqual([]);
+  });
+
+  it("is never tried again when refused for good", async () => {
+    const { groupId, guest, maker } = await pair();
+    await registerToken(TOKEN, guest);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const calls = apnsAnswering(() =>
+      Response.json({ reason: "PayloadTooLarge" }, { status: 413 })
+    );
+    const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
+    say(mine.socket, "a", "今週どう？");
+    await expect.poll(() => calls.length).toBe(1);
+    // Time for a retry that should not be kept.
+    await scheduler.wait(50);
+    await expect(retriesOf(guest)).resolves.toStrictEqual([]);
+  });
+
+  it("is given up when the service asks to be left past the longest wait", async () => {
+    const { groupId, guest, maker } = await pair();
+    await registerToken(TOKEN, guest);
+    const warned = vi.spyOn(console, "warn").mockImplementation(() => {});
+    apnsAnswering(
+      () =>
+        new Response(null, { headers: { "Retry-After": "3600" }, status: 429 })
+    );
+    const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
+    say(mine.socket, "a", "今週どう？");
+    await expect
+      .poll(() => warned.mock.calls.map(([logged]: unknown[]) => logged))
+      .toContainEqual({
+        message: "Push given up",
+        push: { kind: "alert", platform: "apns", tries: 1 },
+      });
+    await expect(retriesOf(guest)).resolves.toStrictEqual([]);
+  });
+
+  it("is not tried again once its line is read", async () => {
+    const { groupId, guest, maker } = await pair();
+    await registerToken(TOKEN, guest);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const calls = apnsAnswering((type) =>
+      type === "alert"
+        ? new Response(null, { status: 429 })
+        : new Response(null, { status: 200 })
+    );
+    const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
+    const theirs = await syncSocket(`/v1/groups/${groupId}/socket`, guest);
+    say(mine.socket, "a", "今週どう？");
+    await expect.poll(async () => await retriesLeft(guest)).toBe(1);
+    read(theirs.socket, "r1", 2);
+    await expect
+      .poll(() => calls.map(({ type }) => type))
+      .toStrictEqual(["alert", "background"]);
+
+    await retryNow(guest);
+    expect(calls.map(({ type }) => type)).toStrictEqual([
+      "alert",
+      "background",
+    ]);
+    await expect(retriesOf(guest)).resolves.toStrictEqual([]);
+  });
+
+  it("through FCM, waits a minute at least after a quota refusal that names no wait", async () => {
+    const { groupId, guest, maker } = await pair();
+    await registerFcm(guest);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    googleCalls(() =>
+      Response.json(
+        { error: { code: 429, status: "RESOURCE_EXHAUSTED" } },
+        { status: 429 }
+      )
+    );
+    const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
+    const before = Date.now();
+    say(mine.socket, "a", "今週どう？");
+    await expect.poll(async () => await retriesLeft(guest)).toBe(1);
+    const [kept] = await retriesOf(guest);
+    expect(kept?.due_at).toBeGreaterThanOrEqual(before + 60_000);
+    await retryNow(guest, true);
+  });
+
+  it("through FCM, is tried again on UNAVAILABLE, a Retry-After date gone by adding no wait", async () => {
+    const { groupId, guest, maker } = await pair();
+    await registerFcm(guest);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { grants, sends } = googleCalls((send) =>
+      send === 1
+        ? Response.json(
+            { error: { code: 503, status: "UNAVAILABLE" } },
+            {
+              headers: { "Retry-After": "Wed, 21 Oct 2015 07:28:00 GMT" },
+              status: 503,
+            }
+          )
+        : Response.json({ name: "sent" })
+    );
+    const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
+    const before = Date.now();
+    say(mine.socket, "a", "今週どう？");
+    await expect.poll(async () => await retriesLeft(guest)).toBe(1);
+    const [kept] = await retriesOf(guest);
+    // Backoff's first wait alone, jittered: 5 to 10 seconds.
+    expect(kept?.due_at).toBeLessThanOrEqual(Date.now() + 10_000);
+    expect(kept?.due_at).toBeGreaterThanOrEqual(before + 5000);
+    const granted = grants.length;
+
+    await retryNow(guest);
+    expect(sends.map(({ body }) => body)).toStrictEqual([
+      sends[0]?.body,
+      sends[0]?.body,
+    ]);
+    // The access token Google gave is kept: only a 401 asks again.
+    expect(grants).toHaveLength(granted);
+    await expect(retriesOf(guest)).resolves.toStrictEqual([]);
   });
 });

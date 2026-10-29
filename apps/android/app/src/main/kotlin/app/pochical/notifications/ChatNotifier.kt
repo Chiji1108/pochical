@@ -95,7 +95,15 @@ class ChatNotifier(
     val leaves = leftCount[alert.groupId]
     // Who and where, faces and marks among them, before the chat's notification is read.
     val line = line(alert, tag, me)
-    synchronized(lock) { if (leftCount[alert.groupId] == leaves) post(tag, line.after(shownOf(tag))) }
+    synchronized(lock) {
+      if (leftCount[alert.groupId] != leaves) return
+      val shown = shownOf(tag)
+      // A line the server tried again after a try that did reach the device (spec/sync-protocol.md,
+      // Push) is shown once.
+      val seq = alert.line?.seq
+      if (seq != null && shown?.seqs?.contains(seq) == true) return
+      post(tag, line.after(shown))
+    }
   }
 
   /**
