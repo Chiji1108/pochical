@@ -21,6 +21,8 @@ import androidx.compose.ui.unit.sp
 import app.pochical.LocalDeviceSettings
 import app.pochical.LocalThemeColors
 import app.pochical.design.PochicalTextStyles
+import app.pochical.kit.byPeriod
+import app.pochical.kit.page
 import java.time.YearMonth
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -32,26 +34,50 @@ import kotlin.math.sign
  * toward the month coming in, the next up from below and the one before
  * down from above, and the year rolls only when it changes. With reduced
  * motion they just change. `pages` is where the pages are, 3.4 being four
- * tenths of the way from the fourth to the fifth.
+ * tenths of the way from the fourth to the fifth, each page named by the
+ * month it starts in. With a シフトの期間 a page is named by its days rather
+ * than its month (spec/calendar.md, The shift period): its first large,
+ * 10/15, its last after it as small as 月, 〜11/14, under the year of its
+ * first day and of its last when that is another.
  */
 @Composable
 fun MonthName(pages: Float, monthAt: (Int) -> YearMonth, reduceMotion: Boolean, modifier: Modifier = Modifier) {
   val colors = LocalThemeColors.current
+  val period = LocalDeviceSettings.current.device.period
+  val english = LocalDeviceSettings.current.device.heading.english
   val page = pages.roundToInt()
   // From the nearest page, so a month comes in whole as its page lands.
   val share = if (reduceMotion) 0f else pages - page
   val month = monthAt(page)
   val coming = if (share == 0f) month else monthAt(page + share.sign.toInt())
+  fun year(of: YearMonth): String {
+    val days = period.page(of)
+    return if (days.first.year == days.last.year) days.first.year.toString() else "${days.first.year} – ${days.last.year}"
+  }
   Column(
     modifier.clearAndSetSemantics {
       heading()
-      contentDescription = month.yearMonthText
+      contentDescription = if (period.byPeriod) period.page(month).title(english = false) else month.yearMonthText
     },
     verticalArrangement = Arrangement.spacedBy(4.dp),
   ) {
-    RollingText(month.year.toString(), coming.year.toString(), share, PochicalTextStyles.caption2.copy(color = colors.textTertiary))
+    RollingText(year(month), year(coming), share, PochicalTextStyles.caption2.copy(color = colors.textTertiary))
     val large = TextStyle(fontSize = 36.sp, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
-    if (LocalDeviceSettings.current.device.heading.english) {
+    if (period.byPeriod) {
+      val small = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Medium, color = colors.textPrimary)
+      fun first(of: YearMonth) = period.page(of).first.headingDay(english)
+      fun last(of: YearMonth) = "${if (english) " – " else "〜"}${period.page(of).last.headingDay(english)}"
+      Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        // English months a letter at a time, as a month's name rolls.
+        if (english) {
+          Row(Modifier.alignByBaseline()) { RollingLetters(first(month), first(coming), share, large) }
+          Row(Modifier.alignByBaseline()) { RollingLetters(last(month), last(coming), share, small) }
+        } else {
+          RollingText(first(month), first(coming), share, large, Modifier.alignByBaseline())
+          RollingText(last(month), last(coming), share, small, Modifier.alignByBaseline())
+        }
+      }
+    } else if (english) {
       // A lettered calendar's month, lower case and cut short: sep.
       RollingLetters(month.headingMonth, coming.headingMonth, share, large)
     } else {

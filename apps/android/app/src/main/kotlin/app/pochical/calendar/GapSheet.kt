@@ -52,6 +52,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun GapSheet(
   days: List<LocalDate>,
+  /** The page's first day: a month's 1st past it, on a シフトの期間's page, is dated 11/1(日) as the page dates it. */
+  pageFirst: LocalDate,
   offPatterns: List<Pattern>,
   picked: Pattern,
   onPick: (Pattern) -> Unit,
@@ -79,8 +81,9 @@ fun GapSheet(
         // The days, as /design's tags: words to read, not to press.
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
           for (day in days) {
+            val turns = day.dayOfMonth == 1 && day != pageFirst
             Text(
-              day.dayWeekdayText,
+              if (turns) "${day.periodDayText}(${weekdayLetter(day.weekday)})" else day.dayWeekdayText,
               style = MaterialTheme.typography.bodySmall,
               color = colors.textSecondary,
               modifier =
