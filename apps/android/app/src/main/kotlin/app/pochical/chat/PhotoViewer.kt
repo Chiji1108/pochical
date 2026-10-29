@@ -43,9 +43,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import kotlinx.coroutines.flow.drop
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.runtime.key
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
@@ -148,6 +153,9 @@ fun PhotoViewer(
   val scope = rememberCoroutineScope()
   val close by rememberUpdatedState(onClose)
   val shown by rememberUpdatedState(onShown)
+  val haptics = LocalHapticFeedback.current
+  // With a screen reader on, a tap never takes the buttons out of reach.
+  val reading = rememberScreenReaderOn()
   BackHandler { close() }
 
   val version = open.version
@@ -178,6 +186,18 @@ fun PhotoViewer(
     }
   }
 
+  // Swiped to another, a screen reader says the one come to and its place (spec/chat.md, Screen readers).
+  var swiped by remember { mutableStateOf(false) }
+  LaunchedEffect(pager) { snapshotFlow { pager.settledPage }.drop(1).collect { swiped = true } }
+  if (reading && swiped) {
+    val photo = photos.getOrNull(pager.settledPage)
+    val place = remember(version) { open.run.place }?.takeIf { it.second > 1 }
+    if (photo != null) {
+      val said = photoSaid(photo, place, nameOf)
+      // A node of its own each time, so it is said as it is come to.
+      key(pager.settledPage) { Box(Modifier.size(1.dp).semantics { liveRegion = LiveRegionMode.Polite; contentDescription = said }) }
+    }
+  }
   var controls by remember { mutableStateOf(true) }
   val snackbar = remember { SnackbarHostState() }
   var pulled by remember { mutableFloatStateOf(0f) }
@@ -186,18 +206,12 @@ fun PhotoViewer(
       val photo = photos.getOrNull(page) ?: return@HorizontalPager
       // Read as whose it is, its shape and when it was sent, and its place among the chat's.
       val place = remember(version) { open.run.place }?.takeIf { page == pager.currentPage && it.second > 1 }
-      val said =
-        listOfNotNull(
-            stringResource(R.string.chat_photo_whose, nameOf(photo.authorId), photoWords(photo.photo)),
-            "${monthDay(photo.sentAtMs)} ${clock(photo.sentAtMs)}",
-            place?.let { stringResource(R.string.chat_photo_place_said, it.first, it.second) },
-          )
-          .joinToString("、")
+      val said = photoSaid(photo, place, nameOf)
       LargePhoto(
         photo,
         groupId,
         said,
-        onTap = { controls = !controls },
+        onTap = { if (!reading) controls = !controls },
         onPulled = { if (page == pager.currentPage) pulled = it },
         onDismissed = { close() },
         // Only the photo shown goes back into its place.
@@ -247,7 +261,7 @@ fun PhotoViewer(
           ) {
             Icon(painterResource(R.drawable.ic_share), stringResource(R.string.chat_photo_share), tint = colors.mediaText)
           }
-          IconButton(onClick = { photo?.let { scope.launch { snackbar.showSnackbar(savePhotos(context, calls, files, groupId, listOf(it.photo))) } } }) {
+          IconButton(onClick = { photo?.let { scope.launch { snackbar.saying(savePhotos(context, calls, files, groupId, listOf(it.photo)), haptics) } } }) {
             Icon(painterResource(R.drawable.ic_download), stringResource(R.string.chat_save), tint = colors.mediaText)
           }
         }
@@ -282,6 +296,16 @@ fun FollowPhotos(groupId: String, threadId: String, open: OpenPhotos) {
     for (ask in open.run.asks()) if (!current || !socket.requestPhotos(threadId, ask.seq, ask.after)) open.run.unasked(ask)
   }
 }
+
+/** A photo opened large as a screen reader says it: whose it is, its shape, when it was sent, and its [place] among the chat's. */
+@Composable
+private fun photoSaid(photo: ChatPhotoItem, place: Pair<Int, Int>?, nameOf: (String) -> String): String =
+  listOfNotNull(
+      stringResource(R.string.chat_photo_whose, nameOf(photo.authorId), photoWords(photo.photo)),
+      "${monthDay(photo.sentAtMs)} ${clock(photo.sentAtMs)}",
+      place?.let { stringResource(R.string.chat_photo_place_said, it.first, it.second) },
+    )
+    .joinToString("、")
 
 /**
  * One of the chat's photos large: what the chat drew of it at once (its small version, else its

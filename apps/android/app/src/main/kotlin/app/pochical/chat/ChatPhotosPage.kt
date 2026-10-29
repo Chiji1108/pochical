@@ -1,6 +1,7 @@
 package app.pochical.chat
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
@@ -98,8 +99,10 @@ fun ChatPhotosPage(groupId: String, threadId: String, onBack: () -> Unit) {
         photos.isNotEmpty() ->
           LazyVerticalGrid(
             GridCells.Fixed(ACROSS),
-            Modifier.fillMaxSize().padding(padding),
+            // Under the top bar, scrolling on under the navigation bar.
+            Modifier.fillMaxSize().padding(top = padding.calculateTopPadding()),
             state = grid,
+            contentPadding = PaddingValues(bottom = padding.calculateBottomPadding()),
             horizontalArrangement = Arrangement.spacedBy(GAP),
             verticalArrangement = Arrangement.spacedBy(GAP),
           ) {

@@ -127,7 +127,7 @@ fun rememberLineActions(
           // A line of photos saves them all (spec/chat.md, Photos).
           val photos = (look.content as? LineContent.Photos)?.photos
           if (photos != null) {
-            add(LineMenuItem(resources.getString(R.string.chat_save), R.drawable.ic_download) { scope.launch { snackbar.showSnackbar(savePhotos(context, calls, files, groupId, photos)) } })
+            add(LineMenuItem(resources.getString(R.string.chat_save), R.drawable.ic_download) { scope.launch { snackbar.saying(savePhotos(context, calls, files, groupId, photos), haptics) } })
           }
           // Anyone's line, for everyone in the chat (spec/chat.md, Pins).
           if (rules.pins) {

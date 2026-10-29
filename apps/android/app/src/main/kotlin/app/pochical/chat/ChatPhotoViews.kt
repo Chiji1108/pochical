@@ -53,6 +53,9 @@ import app.pochical.calendar.rememberReducedMotion
 import app.pochical.design.Chat
 import app.pochical.design.Radius
 import android.content.Context
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.hapticfeedback.HapticFeedback
+import androidx.compose.material3.SnackbarHostState
 import app.pochical.kit.ChatPhotoFiles
 import app.pochical.kit.GroupCalls
 import app.pochical.kit.PhotoUploads
@@ -81,7 +84,7 @@ val LocalPhotoFiles = staticCompositionLocalOf<ChatPhotoFiles> { error("No photo
  * rest; what to say of it (spec/chat.md, Photos): 写真を保存しました, 一部の写真を保存できませんでした
  * or 保存できませんでした.
  */
-suspend fun savePhotos(context: Context, calls: GroupCalls, files: ChatPhotoFiles, groupId: String, photos: List<ChatPhoto>): String {
+suspend fun savePhotos(context: Context, calls: GroupCalls, files: ChatPhotoFiles, groupId: String, photos: List<ChatPhoto>): Saved {
   val saved =
     photos.count { photo ->
       try {
@@ -92,13 +95,25 @@ suspend fun savePhotos(context: Context, calls: GroupCalls, files: ChatPhotoFile
         false
       }
     }
-  return context.getString(
-    when (saved) {
-      photos.size -> R.string.chat_photo_saved
-      0 -> R.string.chat_photo_not_saved
-      else -> R.string.chat_photo_some_not_saved
-    }
+  return Saved(
+    context.getString(
+      when (saved) {
+        photos.size -> R.string.chat_photo_saved
+        0 -> R.string.chat_photo_not_saved
+        else -> R.string.chat_photo_some_not_saved
+      }
+    ),
+    all = saved == photos.size,
   )
+}
+
+/** What saving photos came to: [words] to say, and whether [all] were saved, which is felt as well (spec/haptics.md). */
+class Saved(val words: String, val all: Boolean)
+
+/** Says what saving came to, felt as well once every photo was saved, as it is out of sight in Photos; a failure plays nothing. */
+suspend fun SnackbarHostState.saying(saved: Saved, haptics: HapticFeedback) {
+  if (saved.all) haptics.performHapticFeedback(HapticFeedbackType.Confirm)
+  showSnackbar(saved.words)
 }
 
 /** The box a photo fits in, and how far from square it may be before its ends are cut, as LINE crops a panorama (/design's photoSize). */

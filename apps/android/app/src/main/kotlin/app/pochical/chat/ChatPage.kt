@@ -196,6 +196,7 @@ fun ChatPage(
   // Its lines are not notified while the person sees them come here.
   ShowingChat(groupId, threadId)
   val onPhotos = { open(RootPage.ChatPhotos(groupId, threadId)) }
+  val onShifts = { open(RootPage.GroupShifts(groupId, null)) }.takeIf { threadId == GROUP_THREAD && groupId != Chat.supportPlace }
   val chats = LocalChats.current
   val account = LocalAccount.current
   val values = LocalValues.current
@@ -242,7 +243,7 @@ fun ChatPage(
   val snackbar = remember { SnackbarHostState() }
   val scope = rememberCoroutineScope()
   val say = remember(snackbar, scope) { { said: String -> scope.launch { snackbar.showSnackbar(said) }; Unit } }
-  val chat = state ?: return ChatScaffold(groupId, threadId, support, members, groups, socket, onBack, onPhotos, say, onTitle = null) {}
+  val chat = state ?: return ChatScaffold(groupId, threadId, support, members, groups, socket, onBack, onPhotos, onShifts, say, onTitle = null) {}
 
   val blockedIds = remember(blocked) { blocked.map { it.userId }.toSet() }
   // Blocked members' lines in the place's own chat, folded but those shown this once, by seq.
@@ -626,7 +627,7 @@ fun ChatPage(
       takenTitle = { floatingDay.taken },
     )
   PhotoZoomLayout(viewing, reducedMotion, places = {
-    ChatScaffold(groupId, threadId, support, members, groups, socket, onBack, onPhotos, say, onTitle) {
+    ChatScaffold(groupId, threadId, support, members, groups, socket, onBack, onPhotos, onShifts, say, onTitle) {
       Column(Modifier.fillMaxSize().imePadding()) {
         Box(Modifier.weight(1f).fillMaxWidth()) {
           // What floats over the lines' top keeps its room there, so the first of them scrolls out from under it.
@@ -797,6 +798,8 @@ private fun ChatScaffold(
   onBack: () -> Unit,
   /** 写真 in its ⋯: the chat's photos alone. */
   onPhotos: () -> Unit,
+  /** みんなのシフト in its ⋯, for the group's own chat; null in any other. */
+  onShifts: (() -> Unit)?,
   /** Says what its ⋯ did, over the chat. */
   say: (String) -> Unit,
   /** A tap on the title: what the chat is of; null while it opens nothing. */
@@ -844,6 +847,17 @@ private fun ChatScaffold(
           Box {
             IconButton(onClick = { more = true }) { Icon(painterResource(R.drawable.ic_more_vert), stringResource(R.string.chat_more)) }
             DropdownMenu(more, onDismissRequest = { more = false }) {
+              // The group's own chat: everyone's shifts first, as the chat is the group's.
+              if (onShifts != null) {
+                DropdownMenuItem(
+                  text = { Text(stringResource(R.string.group_shifts)) },
+                  leadingIcon = { Icon(painterResource(R.drawable.ic_calendar), contentDescription = null) },
+                  onClick = {
+                    more = false
+                    onShifts()
+                  },
+                )
+              }
               DropdownMenuItem(
                 text = { Text(stringResource(R.string.chat_photos_title)) },
                 leadingIcon = { Icon(painterResource(R.drawable.ic_photo_library), contentDescription = null) },
@@ -941,6 +955,14 @@ private fun ChatLines(
       ChatItemRow(item, look, writers, me, handlers, Modifier.animateItem(fadeInSpec = tween(Chat.lineMoveMs), placementSpec = if (handlers.reducedMotion) null else tween(Chat.lineMoveMs), fadeOutSpec = tween(Chat.lineMoveMs)))
     }
     if (head != null && chat.atStart) item(key = "head") { head() }
+    // A chat with nothing in it yet says so in the middle of the lines' room.
+    if (head == null && items.isEmpty() && chat.atStart) {
+      item(key = "none") {
+        Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+          Text(stringResource(R.string.chat_none), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+      }
+    }
     if (!chat.atStart && chat.heldBefore == 0) {
       item(key = "earlier") {
         Box(Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
