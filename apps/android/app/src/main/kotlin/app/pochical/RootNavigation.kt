@@ -165,6 +165,15 @@ class RootNavigator(
     pages.add(page)
   }
 
+  /**
+   * Opens the chat [chat] in place of a copy of it lower down, as 全体チャットで共有 does from
+   * みんなのシフト opened from the chat: one chat, its draft kept as it was left, rather than two.
+   */
+  fun openChat(chat: RootPage.Chat) {
+    pages.removeAll { it is RootPage.Chat && it.groupId == chat.groupId && it.threadId == chat.threadId }
+    pages.add(chat)
+  }
+
   /** Opens `page` unless it is the one on top already, as a link opened twice is. */
   fun openOnce(page: RootPage) {
     if (pages.lastOrNull() != page) pages.add(page)
@@ -242,6 +251,8 @@ class PageNavigation(private val navigator: RootNavigator, private val lifecycle
   fun open(page: RootPage) = whenSettled { navigator.open(page) }
 
   fun replace(page: RootPage) = whenSettled { navigator.replace(page) }
+
+  fun openChat(chat: RootPage.Chat) = whenSettled { navigator.openChat(chat) }
 
   fun select(tab: RootTab) = whenSettled { navigator.select(tab) }
 

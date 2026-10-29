@@ -60,6 +60,7 @@ import app.pochical.calendar.WeekdayRow
 import app.pochical.calendar.fullText
 import app.pochical.calendar.holidayCountry
 import app.pochical.calendar.holidayName
+import app.pochical.calendar.monthWeeks
 import app.pochical.calendar.monthWithYear
 import app.pochical.calendar.shortMonth
 import app.pochical.calendar.slashText
@@ -155,8 +156,9 @@ private class CardDays(val members: List<GroupMember>, val days: app.pochical.gr
             val member = members[index]
             val shift = shift(index, day)
             val name = shift?.pattern?.name ?: unentered
+            val said = stringResource(R.string.chat_day_shift, member.name, name)
             Column(
-              Modifier.width(column).clearAndSetSemantics { contentDescription = "${member.name}：$name" },
+              Modifier.width(column).clearAndSetSemantics { contentDescription = said },
               horizontalAlignment = Alignment.CenterHorizontally,
               verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
@@ -192,7 +194,8 @@ private class CardDays(val members: List<GroupMember>, val days: app.pochical.gr
           DateText(day, Modifier.width((DATE_WIDTH * k).dp).padding(start = 4.dp))
           members.forEachIndexed { index, member ->
             val shift = shift(index, day)
-            Cell(member, shift, Modifier.width((26 * k).dp).clearAndSetSemantics { contentDescription = "${member.name}：${shift?.pattern?.name ?: unentered}" })
+            val said = stringResource(R.string.chat_day_shift, member.name, shift?.pattern?.name ?: unentered)
+            Cell(member, shift, Modifier.width((26 * k).dp).clearAndSetSemantics { contentDescription = said })
           }
         }
       }
@@ -239,7 +242,8 @@ private class CardDays(val members: List<GroupMember>, val days: app.pochical.gr
           Box(Modifier.width((26 * k).dp), contentAlignment = Alignment.Center) { MemberAvatar(member.name, member.photoId, shelf, (22 * k).dp, Modifier.semantics { contentDescription = member.name }) }
           for (day in shown) {
             val shift = shift(index, day)
-            Cell(member, shift, Modifier.width((28 * k).dp).clearAndSetSemantics { contentDescription = "${day.fullText}：${shift?.pattern?.name ?: unentered}" })
+            val said = stringResource(R.string.chat_day_shift, day.fullText, shift?.pattern?.name ?: unentered)
+            Cell(member, shift, Modifier.width((28 * k).dp).clearAndSetSemantics { contentDescription = said })
           }
         }
       }
@@ -278,7 +282,7 @@ private class CardDays(val members: List<GroupMember>, val days: app.pochical.gr
 private fun TogetherTag() {
   val colors = LocalThemeColors.current
   Text(
-    stringResource(R.string.days_together),
+    stringResource(R.string.together_day),
     Modifier.background(colors.accentContainer, CircleShape).padding(horizontal = 6.dp, vertical = 2.dp),
     style = MaterialTheme.typography.labelSmall,
     fontWeight = FontWeight.SemiBold,
@@ -316,7 +320,10 @@ fun ShareDaysSheet(groupId: String, people: Set<String>?, pick: DaysPick, onDism
   val shownMonth = YearMonth.parse(month)
   val from = minOf(shownMonth.atDay(1), today)
   val through = maxOf(today.plusDays(SUGGESTION_DAYS - 1), shownMonth.atEndOfMonth())
-  val members = rememberGroupMembers(groupId, from, through).orEmpty().filter { people == null || it.userId in people }
+  // Those last read stay while a month turned to is read, so the tints do not flash away.
+  var read by remember { mutableStateOf(emptyList<GroupMember>()) }
+  rememberGroupMembers(groupId, from, through)?.let { read = it }
+  val members = remember(read, people) { read.filter { people == null || it.userId in people } }
   val together = remember(members, from, through) { groupDays(members, from, through).together.days.toSet() }
   val tooMany = stringResource(R.string.days_too_many, SHARED_DAYS_MAX)
   val toggle = { day: LocalDate ->
@@ -350,7 +357,7 @@ fun ShareDaysSheet(groupId: String, people: Set<String>?, pick: DaysPick, onDism
     if (suggestions.isNotEmpty()) {
       item {
         Text(
-          stringResource(R.string.days_together),
+          stringResource(R.string.together_day),
           Modifier.padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 4.dp),
           style = MaterialTheme.typography.labelMedium,
           color = colors.textSecondary,
@@ -390,8 +397,7 @@ private fun MonthGrid(month: YearMonth, today: LocalDate, together: Set<LocalDat
   val colors = LocalThemeColors.current
   val week = LocalDeviceSettings.current.device.week
   val english = LocalDeviceSettings.current.device.heading.english
-  val lead = (month.atDay(1).weekday - week.start + 7) % 7
-  val first = month.atDay(1).minusDays(lead.toLong())
+  val weeks = remember(month, week.start) { monthWeeks(month, week.start) }
   Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
     Row(verticalAlignment = Alignment.CenterVertically) {
       IconButton(onClick = { onMonth(month.minusMonths(1)) }) { Icon(painterResource(R.drawable.ic_chevron_left), stringResource(R.string.days_previous_month)) }
@@ -399,11 +405,11 @@ private fun MonthGrid(month: YearMonth, today: LocalDate, together: Set<LocalDat
       IconButton(onClick = { onMonth(month.plusMonths(1)) }) { Icon(painterResource(R.drawable.ic_chevron_right), stringResource(R.string.days_next_month)) }
     }
     WeekdayRow(week)
-    for (row in 0 until 6) {
+    for (row in 0 until MOST_WEEKS) {
       Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         for (column in 0 until 7) {
-          val day = first.plusDays((row * 7 + column).toLong())
-          if (YearMonth.from(day) == month) {
+          val day = weeks.getOrNull(row)?.get(column)
+          if (day != null && YearMonth.from(day) == month) {
             DayButton(day, day.toString() in picked, day in together, day == today, Modifier.weight(1f)) { onToggle(day) }
           } else {
             Spacer(Modifier.weight(1f).heightIn(min = DAY_HEIGHT))
@@ -463,3 +469,6 @@ private const val ONE_DAY_INSIDE = 160f
 private const val LEAST_COLUMN = 36f
 
 private val DAY_HEIGHT = 40.dp
+
+/** The most weeks a month spans, the room the grid keeps. */
+private const val MOST_WEEKS = 6

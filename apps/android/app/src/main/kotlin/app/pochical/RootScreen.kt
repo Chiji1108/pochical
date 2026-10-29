@@ -148,7 +148,7 @@ fun RootScreen(navigator: RootNavigator) {
             route.groupId,
             route.date?.let(LocalDate::parse),
             onBack = navigation::back,
-            onShare = { day -> navigation.open(RootPage.Chat(route.groupId, GROUP_THREAD, sharing = day.toString())) },
+            onShare = { day -> navigation.openChat(RootPage.Chat(route.groupId, GROUP_THREAD, sharing = day.toString())) },
           )
         }
       is RootPage.Chat ->

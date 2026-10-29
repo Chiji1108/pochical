@@ -182,8 +182,8 @@ class MessageHandlers(
   val groupId: String,
   /** シフト表で見る: the group's shifts, from a line's first shared day. */
   val openShifts: (LocalDate) -> Unit = {},
-  /** Whose shifts a card of days shows from one day through another: everyone in the group, or the two of a one-to-one chat. */
-  val dayMembers: @Composable (from: LocalDate, through: LocalDate) -> List<GroupMember> = { _, _ -> emptyList() },
+  /** Whose shifts a card of days shows, over every day the chat's lines share: everyone in the group, or the two of a one-to-one chat. */
+  val dayMembers: List<GroupMember> = emptyList(),
   /** 送信をやめる: the member's line of photos [opId] stops going up, not sent. */
   val stopSending: (opId: String) -> Unit,
   /** A line's photo, by its place in the line, opened large. */
@@ -328,9 +328,9 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
           if (!look.mine) TimeRoom(look.time, null, edited, look.pinned, items, Modifier.padding(start = 4.dp).clearAndSetSemantics {})
         }
         // All the days, with everyone's shifts round them.
-        val shared = look.content as? LineContent.Days
-        if (shared != null && look.seq != null) {
-          TextButton(onClick = { handlers.openShifts(LocalDate.parse(shared.days.first())) }, Modifier.clearAndSetSemantics {}) {
+        val firstShared = (look.content as? LineContent.Days)?.days?.firstOrNull()
+        if (firstShared != null && look.seq != null) {
+          TextButton(onClick = { handlers.openShifts(LocalDate.parse(firstShared)) }, Modifier.clearAndSetSemantics {}) {
             Text(stringResource(R.string.chat_see_shifts), style = MaterialTheme.typography.labelMedium)
           }
         }
@@ -668,10 +668,9 @@ private fun pollLook(content: LineContent, canDecide: Boolean, waiting: Boolean)
 private fun SharedDaysBody(shared: LineContent.Days, look: MessageLook, handlers: MessageHandlers) {
   val days = remember(shared.days) { shared.days.map(LocalDate::parse) }
   if (days.isEmpty()) return
-  val members = handlers.dayMembers(days.first(), days.last())
   DayCard(
     days,
-    members,
+    handlers.dayMembers,
     handlers.groupId,
     Modifier.alpha(if (look.waiting != null) WAITING_ALPHA else 1f)
       .litWhenGoneTo(handlers.lit?.takeIf { it.seq == look.seq && look.seq != null }, RoundedCornerShape(Radius.lg), handlers.reducedMotion, handlers.litShown),

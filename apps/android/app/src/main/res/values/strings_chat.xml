@@ -152,7 +152,6 @@
   <string name="days_send">送る</string>
   <string name="days_previous_month">前の月</string>
   <string name="days_next_month">次の月</string>
-  <string name="days_together">みんな休み</string>
   <string name="days_together_marked">%1$s、みんな休み</string>
   <string name="days_tinted">うすく色のついた日は、みんな休みの日です。</string>
   <string name="days_poll_few">候補の日を%1$d日以上選んでください。うすく色のついた日は、みんな休みの日です。</string>

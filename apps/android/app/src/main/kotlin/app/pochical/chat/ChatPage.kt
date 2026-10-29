@@ -379,6 +379,29 @@ fun ChatPage(
     tookSharing = true
     composer.writing = composer.writing.share(listOf(sharing.toString()))
   }
+  // A chat of two by its thread, known before the reader is.
+  val direct = threadId != GROUP_THREAD
+  // Everyone's shifts over every day the chat's lines share or put to the vote, read once for all
+  // their cards: everyone in the group, or the two of a one-to-one chat.
+  val sharedDays =
+    remember(chat.lines, chat.waiting) {
+      (chat.lines.map { it.content } + chat.waiting.map { it.content }).flatMap { content ->
+        when (content) {
+          is LineContent.Days -> content.days
+          is LineContent.Poll -> content.poll.daysList
+          else -> emptyList()
+        }
+      }
+    }
+  val span = sharedDays.minOrNull()?.let(LocalDate::parse)
+  val spanEnd = sharedDays.maxOrNull()?.let(LocalDate::parse)
+  val spanMembers = if (span != null && spanEnd != null) rememberGroupMembers(groupId, span, spanEnd).orEmpty() else emptyList()
+  val dayMembers = remember(spanMembers, direct, other, me) { if (direct) spanMembers.filter { it.userId == other || it.userId == me } else spanMembers }
+  // A line sent, from the composer or the days sheet: the chat goes to its foot, the latest laid out.
+  val toFoot = {
+    if (!chat.atEnd) from = null
+    going = Going.ToFoot
+  }
   // 日にちを共有 and 日にちの投票 from ＋: the day sheet, in the way it was opened.
   var pickingDays by rememberSaveable { mutableStateOf<DaysPick?>(null) }
   val asking = LocalNotificationAsking.current
@@ -521,20 +544,13 @@ fun ChatPage(
       choosers = { choosers = it },
       spray = spray,
       openLink = openLink,
-      together = { from, through ->
-        val members = rememberGroupMembers(groupId, from, through)
-        if (members == null) emptySet() else rememberGroupDays(members, from, through).together.days.toSet()
-      },
+      together = { from, through -> rememberGroupDays(dayMembers, from, through).together.days.toSet() },
       vote = vote,
       decide = { deciding = it },
       voters = { day, people -> listing = day to people },
       groupId = groupId,
       openShifts = { day -> open(RootPage.GroupShifts(groupId, day.toString())) },
-      dayMembers = { from, through ->
-        val shown = rememberGroupMembers(groupId, from, through).orEmpty()
-        // A one-to-one chat's card shows the two of them.
-        if (other == null) shown else shown.filter { it.userId == other || it.userId == me }
-      },
+      dayMembers = dayMembers,
       stopSending = { opId -> scope.launch { keeping({ notKept = true }) { chats.stopSending(opId) } } },
       // Among the photos of the lines laid out, those the reader sees, the rest coming from the group.
       openPhoto = { seq, index ->
@@ -617,15 +633,12 @@ fun ChatPage(
           // The words of the line being changed, whose page stays while their first link does.
           editedWords = composer.writing.editing?.let { (chat.line(it)?.content as? LineContent.Words)?.text },
           onTyping = { on -> socket?.sendTyping(threadId, on) },
-          onSent = {
-            if (!chat.atEnd) from = null
-            going = Going.ToFoot
-          },
+          onSent = toFoot,
           onNotKept = { notKept = true },
           onSay = { said -> scope.launch { snackbar.showSnackbar(said) } },
           onShareDays = if (placeRules(groupId).days) ({ pickingDays = DaysPick.Share }) else null,
           // One-to-one chats have no polls.
-          onPollDays = if (other == null && placeRules(groupId).polls) ({ pickingDays = DaysPick.Poll }) else null,
+          onPollDays = if (!direct && placeRules(groupId).polls) ({ pickingDays = DaysPick.Poll }) else null,
         )
       }
     }
@@ -659,7 +672,7 @@ fun ChatPage(
   }
   choosers?.let { ChoosersSheet(it, writers, nameOf) { choosers = null } }
   pickingDays?.let { pick ->
-    val people = other?.let { setOfNotNull(it, me) }
+    val people = if (direct) setOfNotNull(other, me) else null
     ShareDaysSheet(groupId, people, pick, onDismiss = { pickingDays = null }) { days ->
       pickingDays = null
       // A line sent, when an answer is first wanted (spec/chat.md, Notifications).
@@ -670,8 +683,7 @@ fun ChatPage(
           chats.sendDays(groupId, threadId, days.map { it.toString() }, poll = pick == DaysPick.Poll, replyTo)
           // The reply goes with the line it went with.
           if (replyTo != null && composer.writing.replyTo == replyTo) composer.writing = composer.writing.copy(replyTo = null)
-          if (!chat.atEnd) from = null
-          going = Going.ToFoot
+          toFoot()
         }
       }
     }
