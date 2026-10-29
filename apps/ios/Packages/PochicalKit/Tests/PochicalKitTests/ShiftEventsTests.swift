@@ -24,6 +24,8 @@ struct DeviceCalendarVectors: Decodable {
   struct Case: VectorCase {
     let name: String
     let month: String
+    /// A シフトの期間's first day; the month without it.
+    let start: Int?
     let patterns: [String: PatternCase]
     let days: [String: DayCase]
     let notes: [String: String]?
@@ -92,7 +94,7 @@ func shiftsAsEvents(_ vector: DeviceCalendarVectors.Case) throws {
   let people = Dictionary(
     uniqueKeysWithValues: (vector.people ?? [:]).compactMap { key, names in Day(key).map { ($0, names) } })
   let events = ShiftEvents.page(
-    Period(of: try #require(Day(vector.month)), start: 1), days: days, patterns: patterns, shown: Set(vector.shown),
+    Period(of: try #require(Day(vector.month)), start: vector.start ?? 1), days: days, patterns: patterns, shown: Set(vector.shown),
     notes: notes, people: people)
   #expect(
     events.map {

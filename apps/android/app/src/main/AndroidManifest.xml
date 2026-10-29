@@ -7,6 +7,10 @@
   <uses-feature android:name="android.hardware.camera" android:required="false" />
   <!-- The chats' notifications, asked for from 設定 › 通知 (notifications/PermissionCard). -->
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+  <!-- 端末カレンダーに追加: listing the device's calendars, finding the events Pochical put in, and
+       putting them in or taking them out (spec/calendar.md), asked for as the page opens. -->
+  <uses-permission android:name="android.permission.READ_CALENDAR" />
+  <uses-permission android:name="android.permission.WRITE_CALENDAR" />
   <!-- The reminders go off at their minute (reminders/ReminderAlarms): the special access the
        person grants, asked for from 設定 › 通知 › リマインド. USE_EXACT_ALARM is left to alarm
        clocks and calendars whose core is their events' notifications, as Play's policy has it. -->
@@ -69,6 +73,13 @@
         <data android:scheme="pochical" />
         <data android:host="day" />
         <data android:host="group" />
+      </intent-filter>
+      <!-- An event 端末カレンダーに追加 put in, opened from a calendar app by the app's own link it
+           carries (CalendarContract's EXTRA_CUSTOM_APP_URI): its day, as the link opens it. -->
+      <intent-filter>
+        <action android:name="android.provider.calendar.action.HANDLE_CUSTOM_EVENT" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <data android:mimeType="vnd.android.cursor.item/event" />
       </intent-filter>
       <!-- An invitation's own link, an App Link once Android has verified the site's
            /.well-known/assetlinks.json names this app (apps/web). -->
