@@ -181,3 +181,14 @@ func widgetNowCounts(_ vector: WidgetVectors.NowCase) {
   #expect(now.nextInDays == vector.expected.nextInDays)
   #expect(now.refresh == moment(vector.expected.refresh))
 }
+
+/// Before the app has made its database, nothing is entered and no day is
+/// off: a control or a shortcut says so, never the sample week's days.
+@Test func nothingYetHasNoDays() {
+  let entry = WidgetEntry.nothingYet(at: .now, week: DeviceSettings().week)
+  #expect(entry.nothingEntered)
+  #expect(entry.today.pattern == nil)
+  #expect(!entry.offs.today)
+  #expect(entry.offs.next == nil)
+  #expect(entry.offs.none == .notEntered)
+}

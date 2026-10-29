@@ -416,13 +416,13 @@ extension WidgetEntry {
       month: monthWeeks(today, weekStart: week.start).map { $0.map(day) })
   }
 
-  /// Before the app has made its database: as before anything is
-  /// entered, until it makes one.
+  /// Before the app has made its database: an empty calendar's, as before
+  /// anything is entered, until it makes one. No day of it is the sample
+  /// week's, which a control or a shortcut would otherwise say.
   public static func nothingYet(
     at now: Date, week: DeviceSettings.Week, calendar: Calendar = .current
   ) -> WidgetEntry {
-    var entry = sample(at: now, week: week, calendar: calendar)
-    entry.nothingEntered = true
-    return entry
+    OwnCalendar(days: [], patterns: [], patternOrder: [], orders: [])
+      .widgetEntry(at: now, week: week, calendar: calendar)
   }
 }
