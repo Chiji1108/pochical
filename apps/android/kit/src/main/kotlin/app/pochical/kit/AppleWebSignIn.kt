@@ -44,8 +44,18 @@ class AppleWebSignIn(private val server: HttpUrl, private val http: OkHttpClient
   /** A new sign-in, with its own verifier and nonce. */
   fun start(): Attempt = Attempt(nonce = signInNonce(), verifier = signInNonce())
 
+  /** What the app keeps of a sign-in while its page is open, as an activity's saved state. */
+  data class Kept(val nonce: String, val verifier: String)
+
+  /** The sign-in [kept] was kept as, for an app whose process ended while its page was open. */
+  fun resume(kept: Kept): Attempt = Attempt(kept.nonce, kept.verifier)
+
   /** One sign-in: the page the browser opens, and the account from what it returns to. */
   inner class Attempt internal constructor(private val nonce: String, private val verifier: String) {
+    /** What the app keeps of it while its page is open. */
+    val kept: Kept
+      get() = Kept(nonce, verifier)
+
     /** Its verifier's S256 challenge, which Apple echoes as the state. */
     private val challenge = base64Url(sha256(verifier))
 
@@ -61,15 +71,17 @@ class AppleWebSignIn(private val server: HttpUrl, private val http: OkHttpClient
           .toString()
       )
 
+    /** Whether [returned] is where this sign-in's page came back to, not another's. */
+    fun isItsReturn(returned: Uri): Boolean =
+      returned.scheme == RETURN_SCHEME && returned.host == RETURN_HOST && returned.getQueryParameter("state") == challenge
+
     /**
      * Apple's answer from [returned], the URI the browser came back to: null when they
      * cancelled, [AppleSignInFailed] when it is not this attempt's or Apple's page or the server
      * failed. A code is redeemed once, so this is called once.
      */
     suspend fun finish(returned: Uri): AppleAnswer? {
-      if (returned.scheme != RETURN_SCHEME || returned.host != RETURN_HOST || returned.getQueryParameter("state") != challenge) {
-        throw AppleSignInFailed("Not this sign-in's return")
-      }
+      if (!isItsReturn(returned)) throw AppleSignInFailed("Not this sign-in's return")
       when (returned.getQueryParameter("error")) {
         null -> {}
         "cancelled" -> return null
