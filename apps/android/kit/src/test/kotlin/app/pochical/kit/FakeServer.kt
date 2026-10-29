@@ -162,19 +162,30 @@ class FakeServer : AutoCloseable {
   /** Whether a group refuses the chat sends it is sent, as not fitting. */
   @Volatile var refuseSends = false
 
-  /**
-   * The groups' chat edits held unanswered, as a server slow to take them, until [releaseChatEdits]:
-   * what a device shows while its lines wait, seen for as long as the test looks.
-   */
-  @Volatile var holdChatEdits = false
-  private val heldChatEdits = mutableListOf<() -> Unit>()
+  /** A group's frame of chat edits sending a line, held unanswered. */
+  private data class HeldSend(val user: String, val groupId: String, val frame: ClientFrame, val socket: WebSocket)
 
-  /** Takes the chat edits held, in the order they came, and those coming after at once. */
+  private var holdingSends = false
+  private val heldSends = mutableListOf<HeldSend>()
+
+  /**
+   * Holds the groups' frames that send lines unanswered, as a server slow to take them, until
+   * [releaseSends]: what a device shows while its lines wait, seen for as long as the test looks.
+   */
   @Synchronized
-  fun releaseChatEdits() {
-    holdChatEdits = false
-    heldChatEdits.forEach { it() }
-    heldChatEdits.clear()
+  fun holdSends() {
+    holdingSends = true
+  }
+
+  /** How many frames sending lines are held. */
+  @Synchronized fun sendsHeld(): Int = heldSends.size
+
+  /** Takes the frames held, in the order they came, and those coming after at once. */
+  @Synchronized
+  fun releaseSends() {
+    holdingSends = false
+    heldSends.forEach { takeGroup(it.user, it.groupId, it.frame, it.socket) }
+    heldSends.clear()
   }
 
   /** Each group's log of chat changes, as its Group DO keeps them, the latest of each line or mark. */
@@ -478,8 +489,8 @@ class FakeServer : AutoCloseable {
         )
       }
       ClientFrame.KindCase.CHAT_EDITS -> {
-        if (holdChatEdits) {
-          heldChatEdits += { takeGroup(user, groupId, frame, socket) }
+        if (holdingSends && frame.chatEdits.editsList.any { it.kindCase == ChatEdit.KindCase.SEND }) {
+          heldSends += HeldSend(user, groupId, frame, socket)
           return
         }
         val refused = mutableListOf<RefusedSend>()
