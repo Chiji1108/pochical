@@ -1,6 +1,10 @@
 package app.pochical.widgets
 
 import app.pochical.calendar.Pattern
+import app.pochical.design.Widgets
+import app.pochical.kit.OwnCalendar
+import app.pochical.kit.OwnDay
+import app.pochical.kit.PatternRow
 import app.pochical.kit.ShiftTime
 import app.pochical.kit.ShownDay
 import app.pochical.kit.Week
@@ -65,6 +69,19 @@ class WidgetEntryTest {
         ),
         listOf(offs.today, offs.next?.inDays, offs.none),
       )
+    }
+  }
+
+  @Test
+  fun theLaunchersNextOffOpensTheDayTheWidgetCounts() {
+    // spec/shortcuts.md: the day 次の休み not set to anyone counts, today on a day off, else today.
+    val patterns = listOf("work", "off").map { PatternRow(it, it, "", "", "", 0, null, null, it == "off", null, false) }
+    for (case in vectors("widgets", "offs").filter { it.getValue("with").jsonArray.isEmpty() }) {
+      val me = days(case.getValue("me").jsonObject)
+      val own = (0..Widgets.offLookaheadDays + 1L).map(today::plusDays).mapNotNull { date -> me(date)?.let { date to OwnDay(it) } }.toMap()
+      val expected = case.getValue("expected").jsonObject
+      val inDays = if (expected.getValue("today").jsonPrimitive.content.toBoolean()) 0 else expected["next"]?.takeUnless { it is JsonNull }?.jsonPrimitive?.int ?: 0
+      assertEquals(case.name(), today.plusDays(inDays.toLong()), OwnCalendar(patterns, own, emptyList()).nextDayOff(today))
     }
   }
 

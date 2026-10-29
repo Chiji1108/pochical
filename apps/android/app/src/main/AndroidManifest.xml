@@ -49,8 +49,7 @@
       <intent-filter>
         <action android:name="android.intent.action.MAIN" />
         <category android:name="android.intent.category.LAUNCHER" />
-      </intent-filter>
-      <!-- AppleWebSignIn.RETURN_SCHEME and RETURN_HOST. -->
+      </intent-filter>      <!-- AppleWebSignIn.RETURN_SCHEME and RETURN_HOST. -->
       <intent-filter>
         <action android:name="android.intent.action.VIEW" />
         <category android:name="android.intent.category.DEFAULT" />

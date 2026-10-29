@@ -17,7 +17,6 @@ import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.launch
 import java.io.File
 import okhttp3.HttpUrl.Companion.toHttpUrl
-import okhttp3.OkHttpClient
 
 /**
  * What the app holds of the kit for as long as it runs: the database the screens read, the edits
@@ -30,7 +29,13 @@ class PochicalKit(context: Context) {
   }
 
   private val server = BuildConfig.SERVER.toHttpUrl()
-  private val http = OkHttpClient()
+
+  /**
+   * The client, made as the first call goes rather than as the kit is: the app makes the kit on the
+   * main thread as it starts, which neither TLS being set up nor the disk should hold up. The photos'
+   * folders below are found as late, the first time a photo is kept or read.
+   */
+  private val http = lazy { pochicalHttp() }
 
   val database: AppDatabase = AppDatabase.open(context)
   val edits = OwnEdits(database)
@@ -53,10 +58,10 @@ class PochicalKit(context: Context) {
   /** はじめの設定, asked while it is not done for the user the database holds. */
   val firstRun = FirstRun(database)
 
-  private val photos = Photos(http, server, File(context.cacheDir, "held-photos"))
+  private val photos = Photos(http, server, lazy { File(context.cacheDir, "held-photos") })
 
   /** The member's own chat photos on the device, as sent and until they are up. */
-  val photoFiles = ChatPhotoFiles(context.cacheDir, context.filesDir)
+  val photoFiles = ChatPhotoFiles(lazy { context.cacheDir }, lazy { context.filesDir })
 
   /** How far each of the member's chat photos has gone up, and × to stop its line. */
   val photoUploads = PhotoUploads()

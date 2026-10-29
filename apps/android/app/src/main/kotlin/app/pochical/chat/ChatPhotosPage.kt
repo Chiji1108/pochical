@@ -1,6 +1,10 @@
 package app.pochical.chat
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
@@ -21,7 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,6 +43,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.unit.dp
 import app.pochical.LocalThemeColors
 import app.pochical.R
+import app.pochical.calendar.rememberReducedMotion
 import app.pochical.groups.LocalValues
 import app.pochical.kit.PhotoRun
 import java.time.Instant
@@ -61,7 +66,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 fun ChatPhotosPage(groupId: String, threadId: String, onBack: () -> Unit) {
   val colors = LocalThemeColors.current
   val values = LocalValues.current
-  val members by remember(values, groupId) { values.members(groupId) }.collectAsState(emptyList())
+  val members by remember(values, groupId) { values.members(groupId) }.collectAsStateWithLifecycle(emptyList())
   val deleted = stringResource(R.string.deleted_account)
   val names = remember(members, deleted) { members.associate { it.userId to it.shownName(deleted) } }
   val listed = remember { OpenPhotos(PhotoRun.latest()) }
@@ -84,7 +89,7 @@ fun ChatPhotosPage(groupId: String, threadId: String, onBack: () -> Unit) {
       if (viewing == null) listed.change { show(key) }
     }
   }
-  Box(Modifier.fillMaxSize()) {
+  PhotoZoomLayout(viewing, rememberReducedMotion(), shownOf = OpenPhotos::shownPhoto, places = {
     Scaffold(
       topBar = {
         TopAppBar(
@@ -97,8 +102,14 @@ fun ChatPhotosPage(groupId: String, threadId: String, onBack: () -> Unit) {
         photos.isNotEmpty() ->
           LazyVerticalGrid(
             GridCells.Fixed(ACROSS),
-            Modifier.fillMaxSize().padding(padding),
+            // Under the top bar, scrolling on under the navigation bar.
+            Modifier.fillMaxSize().padding(
+              start = padding.calculateStartPadding(LocalLayoutDirection.current),
+              top = padding.calculateTopPadding(),
+              end = padding.calculateEndPadding(LocalLayoutDirection.current),
+            ),
             state = grid,
+            contentPadding = PaddingValues(bottom = padding.calculateBottomPadding()),
             horizontalArrangement = Arrangement.spacedBy(GAP),
             verticalArrangement = Arrangement.spacedBy(GAP),
           ) {
@@ -115,7 +126,7 @@ fun ChatPhotosPage(groupId: String, threadId: String, onBack: () -> Unit) {
                 retries = true,
                 onOpen = open,
                 modifier =
-                  Modifier.aspectRatio(1f).clearAndSetSemantics {
+                  Modifier.aspectRatio(1f).photoPlace(item.photo.id).clearAndSetSemantics {
                     contentDescription = said
                     role = Role.Image
                     onClick { open(); true }
@@ -131,22 +142,23 @@ fun ChatPhotosPage(groupId: String, threadId: String, onBack: () -> Unit) {
           }
       }
     }
-    viewing?.let { open ->
-      PhotoViewer(
-        groupId,
-        threadId,
-        open,
-        nameOf = { names[it] ?: deleted },
-        onClose = { viewing = null },
-        // Its square kept in sight as the photo opened large is swiped, as Photos' grid follows.
-        onShown = { key ->
-          val index = photos.indexOfFirst { it.key == key }
-          if (index >= 0 && grid.layoutInfo.visibleItemsInfo.none { it.index == index }) {
-            pending = index
-          }
-        },
-      )
-    }
+  }) { open, closing ->
+    PhotoViewer(
+      groupId,
+      threadId,
+      open,
+      nameOf = { names[it] ?: deleted },
+      onClose = { viewing = null },
+      // Its square kept in sight as the photo opened large is swiped, as Photos' grid follows, so it closes into it.
+      onShown = { item ->
+        val index = photos.indexOfFirst { it.key == item.key }
+        if (index >= 0 && grid.layoutInfo.visibleItemsInfo.none { it.index == index }) {
+          pending = index
+        }
+      },
+      zoom = this,
+      closing = closing,
+    )
   }
   LaunchedEffect(pending) { pending?.let { grid.scrollToItem(it); pending = null } }
 }

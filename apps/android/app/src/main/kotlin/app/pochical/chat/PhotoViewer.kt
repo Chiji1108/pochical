@@ -2,6 +2,7 @@ package app.pochical.chat
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
@@ -30,7 +31,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -42,9 +43,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import kotlinx.coroutines.flow.filterNotNull
+import androidx.compose.runtime.mutableLongStateOf
+import kotlinx.coroutines.flow.drop
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.runtime.key
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
@@ -65,6 +73,7 @@ import app.pochical.sharePhoto
 import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
 import coil3.request.CachePolicy
+import coil3.memory.MemoryCache
 import coil3.request.ImageRequest
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -99,6 +108,12 @@ class OpenPhotos(val run: PhotoRun, val follows: Boolean = true) {
   var changes by mutableIntStateOf(0)
     private set
 
+  /** The id of the photo shown, read as the page draws, for its place to stand empty. */
+  fun shownPhoto(): String? {
+    changes
+    return run.photos.firstOrNull { it.key == run.shown }?.photo?.id
+  }
+
   /** Changes the run, the screen following only when what it shows changed. */
   fun change(step: PhotoRun.() -> Unit) {
     val before = shows()
@@ -130,7 +145,18 @@ internal val ChatPhotoItem.layoutKey: String
  * the photo shown, for a list to keep its square in sight.
  */
 @Composable
-fun PhotoViewer(groupId: String, threadId: String, open: OpenPhotos, nameOf: (String) -> String, onClose: () -> Unit, onShown: (PhotoKey) -> Unit = {}) {
+fun PhotoViewer(
+  groupId: String,
+  threadId: String,
+  open: OpenPhotos,
+  nameOf: (String) -> String,
+  onClose: () -> Unit,
+  onShown: (ChatPhotoItem) -> Unit = {},
+  /** The viewer's coming and going, for the photo shown to come out of its place and go back into it; null to fade alone. */
+  zoom: AnimatedVisibilityScope? = null,
+  /** Going: it fades with nothing more to do, back is the page's again. */
+  closing: Boolean = false,
+) {
   val calls = LocalGroupCalls.current
   val files = LocalPhotoFiles.current
   val context = LocalContext.current
@@ -138,7 +164,10 @@ fun PhotoViewer(groupId: String, threadId: String, open: OpenPhotos, nameOf: (St
   val scope = rememberCoroutineScope()
   val close by rememberUpdatedState(onClose)
   val shown by rememberUpdatedState(onShown)
-  BackHandler { close() }
+  val haptics = LocalHapticFeedback.current
+  // With a screen reader on, a tap never takes the buttons out of reach.
+  val reading = rememberScreenReaderOn()
+  BackHandler(enabled = !closing) { close() }
 
   val version = open.version
   val photos = remember(version) { open.run.photos }
@@ -157,7 +186,7 @@ fun PhotoViewer(groupId: String, threadId: String, open: OpenPhotos, nameOf: (St
     snapshotFlow { pager.settledPage }.distinctUntilChanged().collect { page ->
       val key = photos.getOrNull(page)?.key ?: return@collect
       if (key != open.run.shown) open.change { show(key) }
-      shown(key)
+      photos.getOrNull(page)?.let(shown)
       // The two on each side fetched ahead onto the disk, drawn only as they show.
       val loader = SingletonImageLoader.get(context)
       for (near in (page - 2..page + 2) - page) {
@@ -168,6 +197,15 @@ fun PhotoViewer(groupId: String, threadId: String, open: OpenPhotos, nameOf: (St
     }
   }
 
+  // Swiped to another, a screen reader says the one come to and its place (spec/chat.md, Screen readers).
+  // By the photo come to, not its page: pages of earlier photos coming before it move no photo.
+  var swipes by remember { mutableLongStateOf(0L) }
+  val settled = photos.getOrNull(pager.settledPage)
+  LaunchedEffect(pager) { snapshotFlow { photos.getOrNull(pager.settledPage)?.key }.filterNotNull().distinctUntilChanged().drop(1).collect { swipes++ } }
+  if (reading && settled != null) {
+    val place = remember(version) { open.run.place }?.takeIf { it.second > 1 }
+    Spoken(swipes, photoSaid(settled, place, nameOf))
+  }
   var controls by remember { mutableStateOf(true) }
   val snackbar = remember { SnackbarHostState() }
   var pulled by remember { mutableFloatStateOf(0f) }
@@ -176,16 +214,20 @@ fun PhotoViewer(groupId: String, threadId: String, open: OpenPhotos, nameOf: (St
       val photo = photos.getOrNull(page) ?: return@HorizontalPager
       // Read as whose it is, its shape and when it was sent, and its place among the chat's.
       val place = remember(version) { open.run.place }?.takeIf { page == pager.currentPage && it.second > 1 }
-      val said =
-        listOfNotNull(
-            stringResource(R.string.chat_photo_whose, nameOf(photo.authorId), photoWords(photo.photo)),
-            "${monthDay(photo.sentAtMs)} ${clock(photo.sentAtMs)}",
-            place?.let { stringResource(R.string.chat_photo_place_said, it.first, it.second) },
-          )
-          .joinToString("、")
-      LargePhoto(photo, groupId, said, onTap = { controls = !controls }, onPulled = { if (page == pager.currentPage) pulled = it }, onDismissed = { close() })
+      val said = photoSaid(photo, place, nameOf)
+      LargePhoto(
+        photo,
+        groupId,
+        said,
+        onTap = { if (!reading) controls = !controls },
+        onPulled = { if (page == pager.currentPage) pulled = it },
+        onDismissed = { close() },
+        // Only the photo shown goes back into its place.
+        Modifier.then(if (page == pager.settledPage) Modifier.largePhoto(photo.photo.id, zoom) else Modifier),
+      )
     }
-    AnimatedVisibility(controls && pulled == 0f, enter = fadeIn(), exit = fadeOut()) {
+    // Always in reach with a screen reader on, hidden before or not.
+    AnimatedVisibility((controls || reading) && pulled == 0f, enter = fadeIn(), exit = fadeOut()) {
       Box(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().statusBarsPadding().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
           IconButton(onClick = { close() }) {
@@ -228,7 +270,7 @@ fun PhotoViewer(groupId: String, threadId: String, open: OpenPhotos, nameOf: (St
           ) {
             Icon(painterResource(R.drawable.ic_share), stringResource(R.string.chat_photo_share), tint = colors.mediaText)
           }
-          IconButton(onClick = { photo?.let { scope.launch { snackbar.showSnackbar(savePhotos(context, calls, files, groupId, listOf(it.photo))) } } }) {
+          IconButton(onClick = { photo?.let { scope.launch { snackbar.saying(savePhotos(context, calls, files, groupId, listOf(it.photo)), haptics) } } }) {
             Icon(painterResource(R.drawable.ic_download), stringResource(R.string.chat_save), tint = colors.mediaText)
           }
         }
@@ -251,12 +293,12 @@ fun FollowPhotos(groupId: String, threadId: String, open: OpenPhotos) {
   HoldSocket(groupId)
   val chats = LocalChats.current
   val account = LocalAccount.current
-  val socket by remember(account, groupId) { account.chatSocket(groupId) }.collectAsState(null)
+  val socket by remember(account, groupId) { account.chatSocket(groupId) }.collectAsStateWithLifecycle(null)
   LaunchedEffect(chats, groupId, threadId) { chats.photoLines(groupId, threadId).collect { lines -> open.change { follow(lines) } } }
   LaunchedEffect(socket, threadId) {
     socket?.photoPages?.filter { it.threadId == threadId }?.collect { page -> open.change { take(page) } }
   }
-  val current = socket?.state?.collectAsState()?.value == SocketState.Current
+  val current = socket?.state?.collectAsStateWithLifecycle()?.value == SocketState.Current
   LaunchedEffect(current) { if (current) open.reconnected() }
   LaunchedEffect(open.changes, socket, current) {
     val socket = socket ?: return@LaunchedEffect
@@ -264,13 +306,23 @@ fun FollowPhotos(groupId: String, threadId: String, open: OpenPhotos) {
   }
 }
 
+/** A photo opened large as a screen reader says it: whose it is, its shape, when it was sent, and its [place] among the chat's. */
+@Composable
+private fun photoSaid(photo: ChatPhotoItem, place: Pair<Int, Int>?, nameOf: (String) -> String): String =
+  listOfNotNull(
+      stringResource(R.string.chat_photo_whose, nameOf(photo.authorId), photoWords(photo.photo)),
+      "${monthDay(photo.sentAtMs)} ${clock(photo.sentAtMs)}",
+      place?.let { stringResource(R.string.chat_photo_place_said, it.first, it.second) },
+    )
+    .joinToString("、")
+
 /**
  * One of the chat's photos large: what the chat drew of it at once (its small version, else its
  * blur, else the system's spinner) under the photo itself as it comes.
  */
 @Composable
-private fun LargePhoto(item: ChatPhotoItem, groupId: String, said: String, onTap: () -> Unit, onPulled: (Float) -> Unit, onDismissed: () -> Unit) {
-  LargeImage(ChatPhotoData(item.photo.id, groupId, small = false), said, onTap, onPulled, onDismissed) {
+private fun LargePhoto(item: ChatPhotoItem, groupId: String, said: String, onTap: () -> Unit, onPulled: (Float) -> Unit, onDismissed: () -> Unit, modifier: Modifier = Modifier) {
+  LargeImage(ChatPhotoData(item.photo.id, groupId, small = false), said, onTap, onPulled, onDismissed, modifier) {
     val blur = remember(item.photo.id) { blurOf(item.photo)?.asImageBitmap() }
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
       // What the chat drew of it, read from memory or the disk cache at once.
@@ -291,16 +343,20 @@ fun FaceViewer(photoId: String, shelf: PhotoShelf, name: String, onClose: () -> 
   val colors = LocalThemeColors.current
   Dialog(onClose, DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
     var pulled by remember { mutableFloatStateOf(0f) }
+    val reading = rememberScreenReaderOn()
     var controls by remember { mutableStateOf(true) }
     Box(Modifier.fillMaxSize().background(colors.mediaBackground.copy(alpha = 1f - pulled))) {
-      // A face has no small version: the one the profile drew, from memory, under it until it is drawn whole.
-      LargeImage(Picture(photoId, shelf), stringResource(R.string.profile_photo_of, name), onTap = { controls = !controls }, onPulled = { pulled = it }, onDismissed = onClose) {
+      // A face has no small version: the one the profile drew, from memory, shows until it is drawn
+      // whole, which the disk keeps (a face is fetched once).
+      val picture = Picture(photoId, shelf)
+      val context = LocalContext.current
+      val request = remember(picture) { ImageRequest.Builder(context).data(picture).placeholderMemoryCacheKey(MemoryCache.Key(picture.key)).build() }
+      LargeImage(request, stringResource(R.string.profile_photo_of, name), onTap = { if (!reading) controls = !controls }, onPulled = { pulled = it }, onDismissed = onClose) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
           CircularProgressIndicator(Modifier.size(40.dp), color = colors.mediaText)
-          AsyncImage(Picture(photoId, shelf), contentDescription = null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
         }
       }
-      AnimatedVisibility(controls && pulled == 0f, enter = fadeIn(), exit = fadeOut()) {
+      AnimatedVisibility((controls || reading) && pulled == 0f, enter = fadeIn(), exit = fadeOut()) {
         IconButton(onClick = onClose, Modifier.statusBarsPadding().padding(8.dp)) {
           Icon(painterResource(R.drawable.ic_close), stringResource(R.string.chat_photo_close), tint = colors.mediaText)
         }
@@ -316,7 +372,7 @@ fun FaceViewer(photoId: String, shelf: PhotoShelf, name: String, onClose: () -> 
  */
 @Composable
 @OptIn(ExperimentalTelephotoApi::class)
-private fun LargeImage(model: Any, said: String, onTap: () -> Unit, onPulled: (Float) -> Unit, onDismissed: () -> Unit, coming: @Composable () -> Unit) {
+private fun LargeImage(model: Any, said: String, onTap: () -> Unit, onPulled: (Float) -> Unit, onDismissed: () -> Unit, modifier: Modifier = Modifier, coming: @Composable () -> Unit) {
   val zoom = rememberZoomableState(ZoomSpec(maxZoomFactor = MOST_ZOOM))
   val image = rememberZoomableImageState(zoom)
   val flick = rememberFlickToDismissState(rotateOnDrag = false)
@@ -334,7 +390,7 @@ private fun LargeImage(model: Any, said: String, onTap: () -> Unit, onPulled: (F
   val zoomOut = stringResource(R.string.chat_photo_zoom_out)
   FlickToDismiss(
     flick,
-    Modifier.fillMaxSize().semantics(mergeDescendants = true) {
+    modifier.fillMaxSize().semantics(mergeDescendants = true) {
       contentDescription = said
       // Zoomed in on its middle a step at a time, as far as it goes, and back.
       customActions =

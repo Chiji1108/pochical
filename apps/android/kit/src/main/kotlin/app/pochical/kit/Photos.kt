@@ -85,7 +85,10 @@ class PhotoFailure(val status: Int?, cause: Throwable? = null) : IOException("Ph
  * changes once stored, so a kept one is never stale). A photo picked for a group's mark is held in
  * the app's cache until the group is saved with it.
  */
-internal class Photos(private val http: OkHttpClient, private val server: HttpUrl, private val held: File) {
+internal class Photos(http: Lazy<OkHttpClient>, private val server: HttpUrl, held: Lazy<File>) {
+  private val http by http
+  private val held by held
+
   private fun heldFile(photoId: String) = File(held, "$photoId.jpg")
 
   /** Keeps [jpeg] on the device under a new id, to send only as the group is saved with it. */
