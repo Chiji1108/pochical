@@ -1,11 +1,17 @@
 package app.pochical.kit
 
 import java.time.LocalDate
+import java.time.YearMonth
 import kotlinx.serialization.Serializable
 import org.junit.Test
 
 @Serializable
-private data class MonthVectors(val summary: List<Summary>) {
+private data class MonthVectors(val weeks: List<Weeks>, val summary: List<Summary>) {
+  @Serializable data class Laid(val first: String, val last: String, val weeks: Int)
+
+  @Serializable
+  data class Weeks(override val name: String, val month: String, val weekStart: Int, val expected: Laid) : VectorCase
+
   @Serializable data class Pattern(val id: String, val countsAsOff: Boolean, val archived: Boolean = false)
 
   @Serializable data class Count(val id: String, val days: Int)
@@ -23,7 +29,16 @@ private data class MonthVectors(val summary: List<Summary>) {
   ) : VectorCase
 }
 
+// A month's page (spec/vectors/month.json): its whole weeks, and what it counts.
 class PageSummaryTest {
+  @Test
+  fun weeks() =
+    vectors<MonthVectors>("month").weeks.checkEach({ it.expected }) { case ->
+      val weeks = Period.of(YearMonth.parse(case.month), 1).weeks(case.weekStart)
+      check(weeks.all { it.size == 7 }) { "${case.name}: a week of other than seven days" }
+      MonthVectors.Laid(weeks.first().first().toString(), weeks.last().last().toString(), weeks.size)
+    }
+
   @Test
   fun summary() =
     vectors<MonthVectors>("month").summary.checkEach({ it.expected }) { case ->

@@ -65,7 +65,7 @@ import app.pochical.design.COWORKERS_MAX
 import app.pochical.design.TextLimits
 import app.pochical.groups.LocalValues
 import app.pochical.kit.coworkerDays
-import app.pochical.limitText
+import app.pochical.kit.limitText
 import app.pochical.limited
 import app.pochical.rememberDragOrder
 import app.pochical.rememberKeptField

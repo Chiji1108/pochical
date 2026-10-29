@@ -45,7 +45,6 @@ import app.pochical.SectionRow
 import app.pochical.SettingsPage
 import app.pochical.SettingsRow
 import app.pochical.SettingsSection
-import app.pochical.characterCount
 import app.pochical.chat.ProfileOf
 import app.pochical.chat.ReportAndBlock
 import app.pochical.chat.ReportAndBlockState
@@ -55,6 +54,7 @@ import app.pochical.kit.GroupMemberRow
 import app.pochical.kit.GroupRow
 import app.pochical.kit.MarkPhotoGone
 import app.pochical.kit.PhotoShelf
+import app.pochical.kit.characterCount
 import app.pochical.kit.directThread
 import app.pochical.kit.nextGroupColor
 import app.pochical.notifications.GroupChatNotifications

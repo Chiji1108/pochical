@@ -35,7 +35,6 @@ import app.pochical.R
 import app.pochical.RootPage
 import app.pochical.SettingsPage
 import app.pochical.SettingsRow
-import app.pochical.characterCount
 import app.pochical.design.TextLimits
 import app.pochical.groups.LocalGroupCalls
 import app.pochical.groups.LocalValues
@@ -45,6 +44,7 @@ import app.pochical.groups.PhotoEditor
 import app.pochical.kit.PhotoShelf
 import app.pochical.kit.ProfileRow
 import app.pochical.kit.UsualPhoto
+import app.pochical.kit.characterCount
 import app.pochical.rememberKeptField
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.flow.map
