@@ -123,6 +123,9 @@ function noOffWords(
   if (none?.kind === "waiting") {
     return words.waiting(none.names);
   }
+  if (none?.kind === "alone") {
+    return words.alone;
+  }
   return none?.kind === "apart" ? words.apart : words.nothingYet;
 }
 
@@ -205,6 +208,9 @@ export function spokenOff(entry: WidgetEntry, off: WidgetOff | undefined) {
     const { none } = entry.offs;
     if (none?.kind === "waiting") {
       return `${title}、${waitingNames(none.names)}の入力待ち`;
+    }
+    if (none?.kind === "alone") {
+      return `${title}、ほかのメンバーがまだいません`;
     }
     const apart = none?.kind === "apart";
     return `${title}、${apart ? "重なる休みはまだありません" : "まだ入っていません"}`;
