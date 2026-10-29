@@ -24,6 +24,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.shadows.ShadowAlarmManager
 
 @RunWith(RobolectricTestRunner::class)
 class ReminderAlarmsTest {
@@ -96,6 +97,27 @@ class ReminderAlarmsTest {
     reminders.value = listOf(Reminder("evening", kind = Reminder.Kind.DayBefore("20:30")))
     runCurrent()
     assertEquals(at(2026, 11, 1, 20, 30), nextAlarm)
+  }
+
+  @Test
+  fun anExactAlarmHasAnInexactOneBesideItThatTheSystemKeepsWhenExactAlarmsAreTakenAway() = runTest {
+    shadowOf(application).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
+    ShadowAlarmManager.setCanScheduleExactAlarms(true)
+    val alarms = alarms()
+    wake(alarms)
+    val manager = shadowOf(application.getSystemService(AlarmManager::class.java))
+    assertEquals(listOf(at(2026, 11, 1, 21, 0), at(2026, 11, 1, 21, 0)), manager.scheduledAlarms.map { Instant.ofEpochMilli(it.triggerAtMs).atZone(zone) })
+
+    // The exact one taken away with the access, the inexact one brings it late, and sets the next pair.
+    now = at(2026, 11, 1, 21, 30)
+    wake(alarms, firedAt = at(2026, 11, 1, 21, 0))
+    assertEquals(listOf("明日は日勤"), shown)
+    assertEquals(listOf(at(2026, 11, 2, 21, 0), at(2026, 11, 2, 21, 0)), manager.scheduledAlarms.map { Instant.ofEpochMilli(it.triggerAtMs).atZone(zone) })
+
+    // The other of a pair, brought after, finds it shown.
+    application.getSystemService(NotificationManager::class.java).cancelAll()
+    wake(alarms, firedAt = at(2026, 11, 1, 21, 0))
+    assertEquals(emptyList<String>(), shown)
   }
 
   @Test
