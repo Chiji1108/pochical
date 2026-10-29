@@ -54,7 +54,11 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -452,7 +456,7 @@ fun Bubble(look: MessageLook, handlers: MessageHandlers, onQuote: () -> Unit) {
   ) {
     look.quote?.let { BubbleQuote(it, ink, inset = 12.dp, onOpen = onQuote) }
     Text(
-      messageText(look.content, look.mine, handlers.nameOf),
+      messageText(look.content, look.mine, handlers),
       Modifier.padding(horizontal = 12.dp),
       style = MaterialTheme.typography.bodyLarge,
       color = ink,
@@ -513,17 +517,29 @@ fun Modifier.litWhenGoneTo(lit: Lit?, shape: Shape, reducedMotion: Boolean, onSh
   }
 }
 
-/** A message's words: a mention as @ and the name, in its weight, in the accent in others' messages. */
+/**
+ * A message's words: a mention as @ and the name, in its weight, in the accent in others' messages,
+ * a tap on it opening that member's profile but the reader's own (spec/chat.md, Mentions).
+ */
 @Composable
-private fun messageText(content: LineContent, mine: Boolean, nameOf: (String) -> String): AnnotatedString {
+private fun messageText(content: LineContent, mine: Boolean, handlers: MessageHandlers): AnnotatedString {
   val accent = LocalThemeColors.current.accentDefault
+  val nameOf = handlers.nameOf
   val words = content as? LineContent.Words ?: return AnnotatedString(lineWords(content, nameOf))
-  return remember(words.text, mine, accent, nameOf) {
+  val open by rememberUpdatedState(handlers.openProfile)
+  val opens = remember(words.text, handlers.writers, handlers.me, handlers.openProfile != null) { mentioned(textParts(words.text).mapNotNull { it.mention }, handlers).associateBy { it.userId } }
+  return remember(words.text, mine, accent, nameOf, opens) {
     buildAnnotatedString {
       for (part in textParts(words.text)) {
         val id = part.mention
-        if (id == null) append(part.text)
-        else withStyle(SpanStyle(fontWeight = FontWeight.SemiBold, color = if (mine) Color.Unspecified else accent)) { append("@${nameOf(id)}") }
+        if (id == null) {
+          append(part.text)
+          continue
+        }
+        val style = SpanStyle(fontWeight = FontWeight.SemiBold, color = if (mine) Color.Unspecified else accent)
+        val member = opens[id]
+        if (member == null) withStyle(style) { append("@${nameOf(id)}") }
+        else withLink(LinkAnnotation.Clickable("mention:$id", TextLinkStyles(style)) { open?.invoke(member) }) { append("@${nameOf(id)}") }
       }
     }
   }
@@ -657,6 +673,7 @@ private fun LayoutCoordinates.unclipped(): Rect = Rect(positionInWindow(), size.
 private fun partsOf(content: LineContent, quote: LineQuote?, reactions: ReactionsPart?, poll: PollPart?, waiting: WaitingLine? = null): List<LinePart> {
   val words = content as? LineContent.Words
   val links = words?.let { textParts(it.text).mapNotNull { part -> part.url } }.orEmpty()
+  val mentions = words?.let { textParts(it.text).mapNotNull { part -> part.mention } }.orEmpty()
   // A first link that is one of Pochical's invitations shows the group in place of any page.
   val invitation = invitationOf(content)
   val photos = (content as? LineContent.Photos)?.let { PhotosPart(it.photos.size, waiting) }
@@ -673,6 +690,7 @@ private fun partsOf(content: LineContent, quote: LineQuote?, reactions: Reaction
     // is the one the group fetched, written as the server writes it, not as in the words.
     invitation?.let(::InvitePart),
     words?.preview?.takeIf { invitation == null }?.let { PagePart(it, inWords = links.isNotEmpty()) },
+    MentionsPart(mentions).takeIf { mentions.isNotEmpty() },
   )
 }
 

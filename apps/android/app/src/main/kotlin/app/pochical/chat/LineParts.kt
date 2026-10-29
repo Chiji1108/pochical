@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import app.pochical.R
+import app.pochical.kit.GroupMemberRow
 import app.pochical.kit.LineReaction
 import app.pochical.kit.WaitingLine
 import app.pochical.kit.site
@@ -80,6 +81,23 @@ data class LinksPart(val urls: List<String>) : LinePart {
     return urls.map { url -> CustomAccessibilityAction(label.format(site(url))) { line.handlers.openLink(url); true } }
   }
 }
+
+/**
+ * The members the line's words mention, in order: 〇〇のプロフィール for each, as a tap on the mention
+ * opens it, but the reader's own and a deleted account's, which open none (spec/chat.md, Mentions).
+ */
+data class MentionsPart(val userIds: List<String>) : LinePart {
+  @Composable
+  override fun actions(line: PartLine): List<CustomAccessibilityAction> {
+    val label = stringResource(R.string.chat_writer_profile)
+    return mentioned(userIds, line.handlers).map { member -> CustomAccessibilityAction(label.format(member.displayName)) { line.handlers.openProfile?.invoke(member); true } }
+  }
+}
+
+/** The members of [userIds] whose profile a mention of them opens: not the reader, nor one deleted, and only where profiles open. */
+fun mentioned(userIds: List<String>, handlers: MessageHandlers): List<GroupMemberRow> =
+  if (handlers.openProfile == null) emptyList()
+  else userIds.distinct().filter { it != handlers.me }.mapNotNull { handlers.writers[it]?.takeIf { member -> !member.deleted } }
 
 /**
  * The card of Pochical's invitation the words' first link is, in its page's place (spec/chat.md,

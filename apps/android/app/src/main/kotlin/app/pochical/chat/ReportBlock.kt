@@ -327,7 +327,17 @@ fun MemberProfileSheet(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp),
       ) {
-        MemberAvatar(person.name, person.photoId, shelf, PROFILE_FACE)
+        // Their face opens large when it is a photo.
+        var faceOpen by remember { mutableStateOf(false) }
+        val opensLarge = stringResource(R.string.profile_photo_open)
+        MemberAvatar(
+          person.name,
+          person.photoId,
+          shelf,
+          PROFILE_FACE,
+          if (person.photoId.isNotEmpty()) Modifier.clip(CircleShape).clickable(onClickLabel = opensLarge) { faceOpen = true } else Modifier,
+        )
+        if (faceOpen) FaceViewer(person.photoId, shelf, person.name) { faceOpen = false }
         Text(person.name, style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
         if (blocked) {
           Text(
