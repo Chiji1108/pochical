@@ -508,6 +508,14 @@ export function gapDaysIn(schedule: Schedule, period: Period) {
   );
 }
 
+// Saving a pattern (spec/shift-patterns.md): one already there keeps its
+// place, and a new one goes at the end (spec/vectors/patterns.json, saved).
+export function patternsSaving(patterns: readonly Pattern[], saved: Pattern) {
+  return patterns.some((pattern) => pattern.id === saved.id)
+    ? patterns.map((pattern) => (pattern.id === saved.id ? saved : pattern))
+    : [...patterns, saved];
+}
+
 // Deleting a pattern (spec/shift-patterns.md, Deleting a pattern): it goes
 // from the list and nothing that names it changes. Days, orders and other
 // patterns' next days keep its id, read as a pattern that is gone

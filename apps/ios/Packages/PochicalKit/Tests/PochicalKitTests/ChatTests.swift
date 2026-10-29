@@ -1222,6 +1222,29 @@ private func photoSend(_ ids: [String]) -> Pochical_V1_ChatSend {
   #expect(properties?[kCGImagePropertyGPSDictionary] == nil)
 }
 
+@Test func whatIsSeeThroughIsSentOnWhite() throws {
+  // A red dot on nothing, as a sticker a keyboard puts in.
+  let context = CGContext(
+    data: nil, width: 40, height: 40, bitsPerComponent: 8, bytesPerRow: 0,
+    space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+  context.setFillColor(red: 1, green: 0, blue: 0, alpha: 1)
+  context.fillEllipse(in: CGRect(x: 10, y: 10, width: 20, height: 20))
+  let out = NSMutableData()
+  let destination = CGImageDestinationCreateWithData(out, "public.png" as CFString, 1, nil)!
+  CGImageDestinationAddImage(destination, context.makeImage()!, nil)
+  CGImageDestinationFinalize(destination)
+
+  let shrunk = try #require(ChatPhotos.shrink(out as Data))
+  let sent = try #require(ChatPhotos.upright(shrunk.jpeg, maxEdge: 40))
+  let corner = CGContext(
+    data: nil, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4,
+    space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!
+  corner.draw(sent, in: CGRect(x: 0, y: 0, width: sent.width, height: sent.height))
+  let pixel = corner.data!.assumingMemoryBound(to: UInt8.self)
+  // Its corner, see-through, is white rather than black.
+  #expect(pixel[0] > 240 && pixel[1] > 240 && pixel[2] > 240)
+}
+
 @Test func aPhotoGoesWithASmallVersionOnlyWhenLarger() throws {
   let jpeg = { (width: Int, height: Int) -> Data in
     let context = CGContext(
