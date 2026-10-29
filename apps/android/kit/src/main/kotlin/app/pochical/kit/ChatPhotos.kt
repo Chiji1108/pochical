@@ -134,7 +134,10 @@ data class ForgottenPhoto(val shelf: PhotoShelf?, val photoId: String?)
  * show (the system may empty them, and they are fetched again), and, until it is up, a copy of each
  * kept out of the caches to upload. The group's photos the app's image cache keeps, within its limit.
  */
-class ChatPhotoFiles internal constructor(private val caches: File, private val files: File) {
+class ChatPhotoFiles internal constructor(caches: Lazy<File>, files: Lazy<File>) {
+  private val caches by caches
+  private val files by files
+
   private val mutableForgotten = MutableSharedFlow<ForgottenPhoto>(extraBufferCapacity = 64)
 
   /** The photos let go of, as they are. */

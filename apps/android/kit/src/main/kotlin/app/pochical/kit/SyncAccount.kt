@@ -106,7 +106,7 @@ class SyncAccount internal constructor(
   private val database: AppDatabase,
   private val sessions: SessionStore,
   private val server: HttpUrl,
-  private val http: OkHttpClient,
+  http: Lazy<OkHttpClient>,
   private val scope: CoroutineScope,
   network: NetworkWatch? = null,
   private val now: () -> Long = System::currentTimeMillis,
@@ -120,6 +120,9 @@ class SyncAccount internal constructor(
    */
   private val sendInBackground: () -> Unit = {},
 ) {
+  /** The client every call goes through, made as the first one goes. */
+  private val http by http
+
   private val mutableState = MutableStateFlow<AccountState>(AccountState.SigningIn)
   val state: StateFlow<AccountState> = mutableState.asStateFlow()
 

@@ -43,7 +43,7 @@ interface AppGraph : MetroAppComponentProviders {
   @SingleIn(AppScope::class)
   fun settings(application: Application, kit: PochicalKit): SyncedSettings =
     SyncedSettings(
-      deviceSettingsStore(application.dataStoreFile("device-settings.json")),
+      deviceSettingsStore({ application.dataStoreFile("device-settings.json") }),
       kit.database,
       kit.edits,
       CoroutineScope(SupervisorJob() + Dispatchers.Default),
@@ -132,6 +132,7 @@ class PochicalApplication : Application(), MetroApplication, PochicalKit.Holder,
     get() = graph.reminderAlarms
 
   override fun onCreate() {
+    startDebugChecks()
     super.onCreate()
     // Listening before anything syncs, so a photo let go of is never missed (`followForgotten`).
     CoroutineScope(SupervisorJob() + Dispatchers.Default).launch(start = CoroutineStart.UNDISPATCHED) {
