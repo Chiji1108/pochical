@@ -124,7 +124,7 @@ function noOffWords(
     return words.waiting(none.names);
   }
   if (none?.kind === "alone") {
-    return words.alone;
+    return words.noOneElse;
   }
   return none?.kind === "apart" ? words.apart : words.nothingYet;
 }

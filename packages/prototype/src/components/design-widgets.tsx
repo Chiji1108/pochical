@@ -307,8 +307,8 @@ export function useWords() {
       heading: (date: Date) => englishWeekdays[date.getDay()] ?? "",
       inDays: (inDays: number) =>
         inDays === 1 ? "Tomorrow" : `in ${inDays} days`,
-      alone: "No one else in the group yet",
       apart: "No days off together yet",
+      noOneElse: "No one else in the group yet",
       // Over the count on the lock screen's round face.
       circle: { all: "Everyone", alone: "Off", together: "Together" },
       nextOff: "Next day off",
@@ -342,7 +342,6 @@ export function useWords() {
     };
   }
   return {
-    alone: "ほかのメンバーがまだいません",
     apart: "重なる休みはまだありません",
     circle: { all: "みんな", alone: "休み", together: "一緒" },
     date: (date: Date) => `${monthDay(date)}(${weekday(date)})`,
@@ -354,6 +353,7 @@ export function useWords() {
     inDays: inDaysWords,
     nextDay: () => "明日",
     nextOff: "次の休み",
+    noOneElse: "ほかのメンバーがまだいません",
     nothingYet: "まだ入っていません",
     offAll: "みんな休み",
     offTogether: "一緒に休める日",
