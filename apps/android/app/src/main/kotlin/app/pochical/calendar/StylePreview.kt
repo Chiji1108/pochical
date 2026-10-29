@@ -1,6 +1,8 @@
 package app.pochical.calendar
 
+import android.annotation.SuppressLint
 import android.content.res.Configuration
+import android.view.MotionEvent
 import android.widget.FrameLayout
 import android.widget.RemoteViews
 import androidx.compose.foundation.background
@@ -30,6 +32,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -117,129 +120,146 @@ fun styleSamples(patterns: List<Pattern>): List<Pattern> {
 fun StylePreview(scheme: PreviewScheme, today: LocalDate, modifier: Modifier = Modifier, withHeading: Boolean = false) {
   val calendar by LocalOwnDays.current.calendar.collectAsState()
   val patterns = calendar.patterns.filterNot { it.archived }
-  val dark = scheme.dark
   val device = LocalDeviceSettings.current.device
   val theme = device.theme
-  val week = device.week
-  val first = today.weekStartingOn(week.start)
+  // A テーマ drawn dark has no light to show.
+  val dark = scheme.dark || theme.isAlwaysDark
+  val first = today.weekStartingOn(device.week.start)
   val fortnight = (0 until 14).map { first.plusDays(it.toLong()) }
   val shown = stylePreviewDays(fortnight, patterns.map { it.row })
-  val days = if (withHeading) fortnight.take(7) else fortnight
-  val byId = patterns.associateBy { it.id }
-  val label = stringResource(if (withHeading) R.string.preview_this_week else R.string.preview_week)
   val pages = rememberPagerState { 2 }
   val names = listOf(stringResource(R.string.preview_page_calendar), stringResource(R.string.preview_page_widget))
-  // The calendar's page sets the height; the home screen's keeps it.
-  var calendarHeight by remember { mutableIntStateOf(0) }
+  // The calendar's page sets the height; the home screen's keeps it, after the page is made again too.
+  var calendarHeight by rememberSaveable { mutableIntStateOf(0) }
   val density = LocalDensity.current
   // Room for the switch over the card's top edge.
   Column(modifier.padding(top = 14.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-  Box {
-    CompositionLocalProvider(LocalThemeColors provides theme.colors(dark || theme.isAlwaysDark)) {
-      val colors = LocalThemeColors.current
-      val shape = RoundedCornerShape(Radius.xl)
-      HorizontalPager(pages, Modifier.fillMaxWidth(), pageSpacing = 12.dp, verticalAlignment = Alignment.Top) { page ->
-      if (page == 1) {
-        HomePreview(
-          shown,
-          fortnight,
-          today,
-          dark || theme.isAlwaysDark,
-          with(density) { calendarHeight.toDp() },
-        )
-        return@HorizontalPager
-      }
-      Column(
-        Modifier.onSizeChanged { calendarHeight = it.height }
-          .background(colors.backgroundCard, shape)
-          .border(1.dp, colors.separator, shape)
-          .padding(12.dp)
-          .clearAndSetSemantics { contentDescription = label },
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-      ) {
-        if (withHeading) {
-          // The page holding today, as the calendar heads it: by its days with a シフトの期間.
-          val month = LocalDeviceSettings.current.device.period.monthHolding(today)
-          MonthName(0f, { month }, reduceMotion = true, Modifier.padding(start = 8.dp, bottom = 8.dp))
-        }
-        WeekdayRow(week, Modifier.padding(bottom = 8.dp))
-        for (row in days.chunked(7)) {
-          Row(horizontalArrangement = Arrangement.spacedBy(Metrics.spacingStep)) {
-            for (day in row) {
-              val shift = shown[day]
-              DayCell(
-                DayLook(
-                  day = day,
-                  entry = shift?.let(::DayEntry),
-                  pattern = shift?.let(byId::get),
-                  note = null,
-                  holiday = null,
-                  outside = false,
-                  isToday = day == today,
-                ),
-                height = DAY_FULL_HEIGHT,
-                colorsHoliday = week.holiday,
-                onClick = {},
-                enabled = false,
-                modifier = Modifier.weight(1f),
-              )
-            }
+    Box {
+      CompositionLocalProvider(LocalThemeColors provides theme.colors(dark)) {
+        val colors = LocalThemeColors.current
+        HorizontalPager(pages, Modifier.fillMaxWidth(), pageSpacing = 12.dp, verticalAlignment = Alignment.Top) { page ->
+          if (page == 0) {
+            CalendarPage(
+              if (withHeading) fortnight.take(7) else fortnight,
+              shown,
+              patterns,
+              today,
+              withHeading,
+              Modifier.onSizeChanged { calendarHeight = it.height },
+            )
+          } else {
+            HomePreview(shown, patterns, today, dark, with(density) { calendarHeight.toDp() })
           }
         }
+        // Which page is shown, on the card's top end, kept still while the pages move.
+        Text(
+          names[pages.currentPage],
+          Modifier.align(Alignment.TopEnd)
+            .offset(x = (-12).dp, y = (-10).dp)
+            .background(colors.backgroundCard, RoundedCornerShape(Radius.sm))
+            .border(1.dp, colors.separator, RoundedCornerShape(Radius.sm))
+            .padding(horizontal = 8.dp, vertical = 2.dp)
+            .clearAndSetSemantics {},
+          style = PochicalTextStyles.caption2,
+          color = colors.textSecondary,
+        )
+        SchemeSwitch(
+          dark = dark,
+          // A テーマ drawn dark has no light to switch to: its ☾ stays on.
+          enabled = !theme.isAlwaysDark,
+          onChange = scheme::pick,
+          modifier = Modifier.offset(x = 12.dp, y = -Metrics.touch / 2),
+        )
       }
-      }
-      // Which page is shown, on the card's top end, kept still while the pages move.
-      Text(
-        names[pages.currentPage],
-        Modifier.align(Alignment.TopEnd)
-          .offset(x = (-12).dp, y = (-10).dp)
-          .background(colors.backgroundCard, RoundedCornerShape(Radius.sm))
-          .border(1.dp, colors.separator, RoundedCornerShape(Radius.sm))
-          .padding(horizontal = 8.dp, vertical = 2.dp)
-          .clearAndSetSemantics {},
-        style = PochicalTextStyles.caption2,
-        color = colors.textSecondary,
-      )
-      SchemeSwitch(
-        dark = dark || theme.isAlwaysDark,
-        // A テーマ drawn dark has no light to switch to: its ☾ stays on.
-        enabled = !theme.isAlwaysDark,
-        onChange = scheme::pick,
-        modifier = Modifier.offset(x = 12.dp, y = -Metrics.touch / 2),
-      )
     }
+    PageDots(pages, { stringResource(R.string.preview_page, names[it], it + 1, names.size) })
   }
-  PageDots(pages, { stringResource(R.string.preview_page, names[it], it + 1, names.size) })
+}
+
+/** The calendar's page of the preview: [days] of the made-up run [shown], under the month's heading [withHeading]. */
+@Composable
+private fun CalendarPage(
+  days: List<LocalDate>,
+  shown: Map<LocalDate, String>,
+  patterns: List<Pattern>,
+  today: LocalDate,
+  withHeading: Boolean,
+  modifier: Modifier,
+) {
+  val colors = LocalThemeColors.current
+  val device = LocalDeviceSettings.current.device
+  val byId = patterns.associateBy { it.id }
+  val shape = RoundedCornerShape(Radius.xl)
+  val label = stringResource(if (withHeading) R.string.preview_this_week else R.string.preview_week)
+  Column(
+    modifier
+      .background(colors.backgroundCard, shape)
+      .border(1.dp, colors.separator, shape)
+      .padding(12.dp)
+      .clearAndSetSemantics { contentDescription = label },
+    verticalArrangement = Arrangement.spacedBy(4.dp),
+  ) {
+    if (withHeading) {
+      // The page holding today, as the calendar heads it: by its days with a シフトの期間.
+      val month = device.period.monthHolding(today)
+      MonthName(0f, { month }, reduceMotion = true, Modifier.padding(start = 8.dp, bottom = 8.dp))
+    }
+    WeekdayRow(device.week, Modifier.padding(bottom = 8.dp))
+    for (row in days.chunked(7)) {
+      Row(horizontalArrangement = Arrangement.spacedBy(Metrics.spacingStep)) {
+        for (day in row) {
+          val shift = shown[day]
+          DayCell(
+            DayLook(
+              day = day,
+              entry = shift?.let(::DayEntry),
+              pattern = shift?.let(byId::get),
+              note = null,
+              holiday = null,
+              outside = false,
+              isToday = day == today,
+            ),
+            height = DAY_FULL_HEIGHT,
+            colorsHoliday = device.week.holiday,
+            onClick = {},
+            enabled = false,
+            modifier = Modifier.weight(1f),
+          )
+        }
+      }
+    }
   }
 }
 
 /**
  * The home screen's page of the preview (/design's HomePreview): the カレンダー widget at a phone's
- * 4×2, drawn by Glance from the same made-up fortnight [shown] as the calendar's page, in the
- * settings being chosen and in light or [dark], on a ground of the テーマ's own and fitted to
- * [height], the calendar page's.
+ * 4×2, drawn by Glance from the same made-up fortnight [shown] of [patterns] as the calendar's page,
+ * in the settings being chosen and in light or [dark], on a ground of the テーマ's own and fitted to
+ * [height], the calendar page's. It is a picture: a touch on it does what the widget's would not.
  */
 @Composable
-private fun HomePreview(shown: Map<LocalDate, String>, fortnight: List<LocalDate>, today: LocalDate, dark: Boolean, height: Dp) {
+private fun HomePreview(shown: Map<LocalDate, String>, patterns: List<Pattern>, today: LocalDate, dark: Boolean, height: Dp) {
   val context = LocalContext.current
-  val calendar by LocalOwnDays.current.calendar.collectAsState()
+  val screen = LocalConfiguration.current
   val settings = LocalDeviceSettings.current.device
   val colors = LocalThemeColors.current
   val label = stringResource(R.string.preview_widget)
-  val views by
-    produceState<RemoteViews?>(null, shown, settings, today) {
-      val sample = OwnCalendar(calendar.patterns.map { it.row }, shown.mapValues { OwnDay(it.value) }, emptyList())
-      val entry = sample.widgetEntry(today, settings.week, { false })
-      value = CalendarWidget().preview(context, Drawn(entry, settings), MEDIUM)
-    }
-  // The views read their day and night colors from the configuration they are put in.
-  val screen = LocalConfiguration.current
+  val widget = remember { CalendarWidget() }
+  // In light or dark as picked: Glance reads a color's day or night from the context it composes in
+  // before Android 12, and the views read theirs from the one they are put in after.
   val themed =
     remember(context, screen, dark) {
       val configuration = Configuration(screen)
       configuration.uiMode = (configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or
         (if (dark) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO)
       context.createConfigurationContext(configuration)
+    }
+  val views by
+    produceState<RemoteViews?>(null, shown, patterns, settings, today, themed) {
+      val sample = OwnCalendar(patterns.map { it.row }, shown.mapValues { OwnDay(it.value) }, emptyList())
+      // As the calendar's page: the fortnight's days, even with none of the person's entered yet.
+      val entry = sample.widgetEntry(today, settings.week, { false }).copy(nothingEntered = false)
+      value = widget.preview(themed, Drawn(entry, settings), MEDIUM)
     }
   val shape = RoundedCornerShape(Radius.xl)
   BoxWithConstraints(
@@ -252,20 +272,27 @@ private fun HomePreview(shown: Map<LocalDate, String>, fortnight: List<LocalDate
     contentAlignment = Alignment.Center,
   ) {
     val scale = minOf(1f, (maxWidth - 24.dp) / MEDIUM.width, (maxHeight - 24.dp) / MEDIUM.height)
-    views?.let { drawnViews ->
+    val drawn = views ?: return@BoxWithConstraints
+    // Put in once for each drawing; its touches never reach the views, so the pages still swipe.
+    key(drawn, themed) {
       AndroidView(
-        factory = { FrameLayout(it) },
-        update = { frame ->
-          frame.removeAllViews()
-          frame.addView(drawnViews.apply(themed, frame))
+        factory = {
+          object : FrameLayout(it) {
+            override fun onInterceptTouchEvent(event: MotionEvent) = true
+
+            @SuppressLint("ClickableViewAccessibility")
+            override fun onTouchEvent(event: MotionEvent) = false
+          }
+            .apply { addView(drawn.apply(themed, this)) }
         },
         // In the corners a launcher rounds a widget's to.
-        modifier = Modifier.requiredSize(MEDIUM.width, MEDIUM.height).graphicsLayer {
-          scaleX = scale
-          scaleY = scale
-          this.shape = RoundedCornerShape(Radius.xxl)
-          clip = true
-        },
+        modifier =
+          Modifier.requiredSize(MEDIUM.width, MEDIUM.height).graphicsLayer {
+            scaleX = scale
+            scaleY = scale
+            this.shape = RoundedCornerShape(Radius.xxl)
+            clip = true
+          },
       )
     }
   }
