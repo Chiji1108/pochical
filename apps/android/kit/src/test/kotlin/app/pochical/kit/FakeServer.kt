@@ -83,7 +83,7 @@ class FakeServer : AutoCloseable {
   @Volatile var getMeDelayMs = 0L
 
   /** How many `GetMe` calls have come in. */
-  @Volatile var getMes = 0
+  val getMes = AtomicInteger()
 
   /** The provider `GetMe` says the user is linked to. */
   @Volatile var provider = SignInProvider.SIGN_IN_PROVIDER_UNSPECIFIED
@@ -212,7 +212,7 @@ class FakeServer : AutoCloseable {
                 null -> refused("unauthenticated").also { refusedGetMes.incrementAndGet() }
                 else ->
                   MockResponse.Builder()
-                    .also { getMes += 1 }
+                    .also { getMes.incrementAndGet() }
                     .headersDelay(getMeDelayMs, TimeUnit.MILLISECONDS)
                     .addHeader("Content-Type", "application/proto")
                     .body(Buffer().write(getMeResponse { userId = user; provider = this@FakeServer.provider }.toByteArray()))
