@@ -295,7 +295,10 @@ struct ChatStage: UIViewControllerRepresentable {
   }
 }
 
-/// The width the SwiftUI over the lines is laid out at, the controller's.
+/// The width the SwiftUI over the lines is laid out at: the controller's
+/// within its safe area, where its host lays it out, so it stays clear of
+/// the Dynamic Island on its side, and in place beside the tabs on a wide
+/// screen, whose safe area is on one side only.
 @MainActor @Observable private final class StageWidth {
   var value: CGFloat?
 }
@@ -491,11 +494,11 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
       composer.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
       composer.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
       composerHeight,
-      latest.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+      latest.view.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
       latest.view.bottomAnchor.constraint(equalTo: composer.view.topAnchor),
       room.topAnchor.constraint(equalTo: top.view.bottomAnchor),
       room.bottomAnchor.constraint(equalTo: composer.view.topAnchor),
-      empty.view.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+      empty.view.centerXAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerXAnchor),
       empty.view.centerYAnchor.constraint(equalTo: room.centerYAnchor),
     ])
   }
@@ -551,7 +554,8 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
 
   override func viewDidLayoutSubviews() {
     super.viewDidLayoutSubviews()
-    if width.value != view.bounds.width { width.value = view.bounds.width }
+    let safeWidth = view.safeAreaLayoutGuide.layoutFrame.width
+    if width.value != safeWidth { width.value = safeWidth }
     fitRoom()
     place()
     layoutMenu()
