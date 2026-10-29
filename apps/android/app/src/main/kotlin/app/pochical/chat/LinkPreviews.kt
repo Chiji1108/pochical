@@ -148,7 +148,7 @@ fun inviteWords(answer: InviteAnswer?): String? =
  * it; a long press is the line's. Read with its line ([inviteWords]).
  */
 @Composable
-fun InviteCard(code: String, answer: InviteAnswer?, modifier: Modifier = Modifier, onOpen: () -> Unit) {
+fun InviteCard(code: String, answer: InviteAnswer?, modifier: Modifier = Modifier, onOpen: () -> Unit) = CardScale {
   val colors = LocalThemeColors.current
   val open by rememberUpdatedState(onOpen)
   val unusable = answer == InviteAnswer.Unusable
