@@ -70,7 +70,8 @@ class FloatingDayState(private val list: LazyListState, items: () -> List<ChatIt
     val line = info.afterContentPadding
     // The item where the day floats, and its day: that of the title over it, the next older one.
     val under = visible.firstOrNull { words(it) <= line && line < top(it) + it.size } ?: visible.last()
-    val day = (under.index until items.size).firstNotNullOfOrNull { (items[it] as? ChatItem.DayTitle)?.day } ?: return null
+    // Past the lines (the chat's head, the spinner over them), the earliest day's.
+    val day = (minOf(under.index, items.size - 1).coerceAtLeast(0) until items.size).firstNotNullOfOrNull { (items[it] as? ChatItem.DayTitle)?.day } ?: return null
     // The next day's title coming up under it pushes it up and out.
     val next = visible.filter { items.getOrNull(it.index) is ChatItem.DayTitle && words(it) > line }.minOfOrNull(words)
     val push = next?.let { (line + height - it).coerceIn(0, height) } ?: 0

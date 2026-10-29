@@ -9,7 +9,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -64,6 +64,8 @@ fun ChatSpeech(
   me: String?,
   /** Once the chat is placed where it opens: what it opens on is not said. */
   placed: Boolean,
+  /** The lines moved by the chat itself, which say nothing: only the person's scroll says the day. */
+  moves: ListMoves,
   /** The seq of the chat's newest line held now, 0 with none. */
   newest: suspend () -> Long,
   /** The chat's lines after a seq, as they arrive. */
@@ -72,6 +74,10 @@ fun ChatSpeech(
   nameOf: (String) -> String,
   list: LazyListState,
   floatingDay: FloatingDayState,
+  /** Whether a screen reader reads the screen: nothing is followed or said otherwise. */
+  reading: Boolean = rememberScreenReaderOn(),
+  /** Told of each thing said, as it is. */
+  onSaid: (String) -> Unit = {},
 ) {
   var said by remember { mutableStateOf<Said?>(null) }
   var ids by remember { mutableLongStateOf(0L) }
@@ -80,7 +86,8 @@ fun ChatSpeech(
   var since by remember { mutableStateOf<Long?>(null) }
   val asking by rememberUpdatedState(newest)
   LaunchedEffect(placed) { if (placed && since == null) since = asking() }
-  val came by remember(since) { since?.let(arrived) ?: flowOf(emptyList()) }.collectAsState(emptyList())
+  // Followed only while a screen reader reads the screen, as nothing is said otherwise.
+  val came by remember(since, reading) { since?.takeIf { reading }?.let(arrived) ?: flowOf(emptyList()) }.collectAsState(emptyList())
   var heardTo by remember(since) { mutableLongStateOf(since ?: 0) }
   val hidden by rememberUpdatedState(blocked)
   // A run coming at once is said once, rather than each cutting the last off. Keyed on the lines as
@@ -92,41 +99,53 @@ fun ChatSpeech(
     delay(Chat.announceSettleMs.toLong())
     val coming =
       came.filter { line ->
-        line.seq > heardTo && !hidden(line) && line.content != LineContent.Unsent && (line.writer(me) == LineWriter.Others || line.content is LineContent.Notice)
+        line.seq > heardTo &&
+          !hidden(line) &&
+          line.content != LineContent.Unsent &&
+          // Others' lines, and the app's notices of what others did, never the reader's own.
+          (line.writer(me) == LineWriter.Others || (line.content is LineContent.Notice && line.authorId != me))
       }
     heardTo = last
     if (coming.isNotEmpty()) say(What.Coming(coming))
   }
-  val reading = rememberScreenReaderOn()
   LaunchedEffect(list, reading) {
     if (!reading) return@LaunchedEffect
     var scrolled = false
     snapshotFlow { list.isScrollInProgress }.collect { scrolling ->
-      if (scrolling) scrolled = true
+      if (scrolling) scrolled = moves.count == 0
       else if (scrolled) {
         scrolled = false
         say(What.Scrolled(floatingDay.day.takeIf { list.canScrollBackward }))
       }
     }
   }
-  val now = said ?: return
+  val now = said
   val words =
-    when (val what = now.what) {
+    when (val what = now?.what) {
       is What.Coming -> {
         val last = lineSaid(what.lines.last(), nameOf)
         if (what.lines.size == 1) last else stringResource(R.string.chat_new_lines, what.lines.size, last)
       }
       is What.Scrolled -> what.day?.let { dayWords(it) } ?: stringResource(R.string.chat_latest_lines)
+      null -> ""
     }
-  // A node of its own for each, so the same words said again are said again.
-  key(now.id) {
-    Box(
-      Modifier.size(1.dp).semantics {
-        liveRegion = LiveRegionMode.Polite
-        contentDescription = words
-      }
-    )
+  // One live region, its words set as each is said and cleared the frame after: so the same words
+  // said again are a change it tells again, and nothing of it is left for a screen reader to land on.
+  var spoken by remember { mutableStateOf("") }
+  LaunchedEffect(now?.id) {
+    if (now == null) return@LaunchedEffect
+    spoken = words
+    onSaid(words)
+    withFrameNanos {}
+    withFrameNanos {}
+    spoken = ""
   }
+  Box(
+    Modifier.size(1.dp).semantics {
+      liveRegion = LiveRegionMode.Polite
+      contentDescription = spoken
+    }
+  )
 }
 
 /** A line as it is said coming in: who and what, or a notice by its words. */
