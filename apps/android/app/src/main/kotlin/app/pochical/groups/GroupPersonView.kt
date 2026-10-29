@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -46,7 +45,6 @@ import app.pochical.calendar.WeekdayRow
 import app.pochical.calendar.holidayName
 import app.pochical.calendar.monthGridHeight
 import app.pochical.calendar.monthWeeks
-import app.pochical.design.Metrics
 import app.pochical.design.PochicalTextStyles
 import app.pochical.design.Radius
 import app.pochical.kit.GroupMember
@@ -59,8 +57,6 @@ import kotlinx.coroutines.launch
 
 /** How many months either side of this one 1人ずつ's pages hold. */
 private const val PERSON_SPAN = 24
-
-/** The gap between a page's days, as the calendar's. */
 
 /**
  * 1人ずつ (/design's PeoplePicker and PersonPager): one member at a time, picked from a row of people,
@@ -131,7 +127,7 @@ fun GroupPersonView(
       val pageDays = daysOf(shown)
       fun shiftOf(index: Int, day: LocalDate) = pageDays.shifts.getOrNull(index)?.get(day)
       CompositionLocalProvider(LocalDeviceSettings provides theirs) {
-        MonthGrid(weeks, DAY_FULL_HEIGHT, Modifier.padding(horizontal = 16.dp)) { day ->
+        MonthGrid(weeks, DAY_FULL_HEIGHT, Modifier.padding(horizontal = 16.dp)) { _, day ->
           val outside = YearMonth.from(day) != shown
           val shift = if (outside) null else shiftOf(personIndex, day)
           val bothOff =

@@ -30,7 +30,6 @@ import androidx.compose.ui.unit.dp
 import app.pochical.LocalDeviceSettings
 import app.pochical.R
 import app.pochical.calendar.DAY_FULL_HEIGHT
-import app.pochical.calendar.DAY_GAP
 import app.pochical.calendar.DayCell
 import app.pochical.calendar.DayEntry
 import app.pochical.calendar.DayLook
@@ -43,6 +42,7 @@ import app.pochical.calendar.TrayAction
 import app.pochical.calendar.TrayActionsRow
 import app.pochical.calendar.WeekdayRow
 import app.pochical.calendar.holidayName
+import app.pochical.calendar.monthCellHeight
 import app.pochical.calendar.monthWeeks
 import app.pochical.calendar.monthWithYear
 import app.pochical.calendar.pageCount
@@ -132,7 +132,7 @@ fun RepeatCalendar(
     }
     WeekdayRow(week)
     BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
-      val cell = ((maxHeight - DAY_GAP * 5) / 6).coerceIn(Metrics.touch, DAY_FULL_HEIGHT)
+      val cell = monthCellHeight(maxHeight)
       HorizontalPager(pages, Modifier.fillMaxSize(), verticalAlignment = Alignment.Top) { page ->
         MonthOfOrder(monthAt(page), typing, cover, byId, before, until, holidayShift, holidayCountry, cell) { type(typing.pressed(it)) }
       }
@@ -186,7 +186,7 @@ private fun MonthOfOrder(
     }
   val kept = remember(before, first) { before?.shown(first, last).orEmpty() }
   val today = LocalDate.now()
-  MonthGrid(weeks, cell) { day ->
+  MonthGrid(weeks, cell) { _, day ->
     val index = ChronoUnit.DAYS.between(typing.anchor, day)
     val typed = index in 0 until typing.sequence.size
     val inOrder = day >= start && (until == null || day < until)

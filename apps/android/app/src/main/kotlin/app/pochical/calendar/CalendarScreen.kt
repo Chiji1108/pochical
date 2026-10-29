@@ -131,7 +131,6 @@ private val UNFOLD_FLICK = 400.dp
 
 
 /** The shortest a day gets on a short screen, keeping its date and mark clear. */
-private val LEAST_DAY_HEIGHT = Metrics.touch
 
 private val SCREEN_EDGE = 16.dp
 
@@ -409,7 +408,7 @@ fun CalendarScreen(
     )
     WeekdayRow(week, Modifier.padding(horizontal = SCREEN_EDGE).padding(bottom = 12.dp))
     BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
-      val cell = dayHeight(fitting = maxHeight - DAY_GAP)
+      val cell = monthCellHeight(maxHeight - DAY_GAP)
       val monthHeight = monthGridHeight(cell)
       Column {
         val select by rememberUpdatedState(::selectDay)
@@ -819,9 +818,7 @@ private class PageDays(
     modifier: Modifier = Modifier,
     selectable: Boolean = true,
   ) {
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(DAY_GAP)) {
-      for (day in days) Day(day, shown, fadingOutside, selectable)
-    }
+    WeekRow(days, modifier) { Day(it, shown, fadingOutside, selectable) }
   }
 
   /** A day of a week's row, in its share of the row: see [Week]. */
@@ -877,13 +874,13 @@ private fun MonthPage(
   MonthGrid(
     weeks,
     days.cell,
-    modifier.wrapContentHeight(Alignment.Top, unbounded = true).graphicsLayer { translationY = -row * (days.cell + DAY_GAP).toPx() * fold },
+    modifier.wrapContentHeight(Alignment.Top, unbounded = true).graphicsLayer { translationY = -row * monthRowPitch(days.cell).toPx() * fold },
     week = { index ->
       val away = away(index)
       Modifier.graphicsLayer { alpha = if (away) 1 - fold else 1f }.then(if (away) Modifier.clearAndSetSemantics {} else Modifier)
     },
-  ) { day ->
-    with(days) { Day(day, shown, fadingOutside = if (foldedInto == null) page else null, selectable = foldedInto == null || day in weeks[row]) }
+  ) { index, day ->
+    with(days) { Day(day, shown, fadingOutside = if (foldedInto == null) page else null, selectable = !away(index)) }
   }
 }
 
@@ -925,7 +922,6 @@ private fun WeekPager(opened: LocalDate, range: CalendarRange, weekStart: Int, d
 }
 
 /** How tall a day is for six weeks to fit in `room`: its full height where there is room, else less. */
-private fun dayHeight(fitting: Dp): Dp = ((fitting - DAY_GAP * 5) / 6).coerceIn(LEAST_DAY_HEIGHT, DAY_FULL_HEIGHT)
 
 /** Today, moving on at midnight while the screen is open, as the system says the date changed. */
 @Composable

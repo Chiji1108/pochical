@@ -31,6 +31,12 @@ val DAY_GAP = Metrics.spacingStep
 /** How tall a [MonthGrid] is with [cell]-tall days: room kept for six weeks. */
 fun monthGridHeight(cell: Dp): Dp = cell * 6 + DAY_GAP * 5
 
+/** From one week's top to the next's in a [MonthGrid] of [cell]-tall days. */
+fun monthRowPitch(cell: Dp): Dp = cell + DAY_GAP
+
+/** How tall a day is for six weeks to fit in [room]: its full height where there is room, else less, never under a touch's. */
+fun monthCellHeight(room: Dp): Dp = ((room - DAY_GAP * 5) / 6).coerceIn(Metrics.touch, DAY_FULL_HEIGHT)
+
 /**
  * A month's weeks as every calendar of the app draws them, a row each, with room kept for six, so
  * what is under it stays put as the months turn: the calendar's pages, the order typed on 繰り返し's
@@ -43,13 +49,17 @@ fun MonthGrid(
   cell: Dp,
   modifier: Modifier = Modifier,
   week: (Int) -> Modifier = { Modifier },
-  day: @Composable RowScope.(LocalDate) -> Unit,
+  day: @Composable RowScope.(week: Int, date: LocalDate) -> Unit,
 ) {
   Column(modifier.height(monthGridHeight(cell)), verticalArrangement = Arrangement.spacedBy(DAY_GAP)) {
-    weeks.forEachIndexed { index, days ->
-      Row(week(index), horizontalArrangement = Arrangement.spacedBy(DAY_GAP)) { for (it in days) day(it) }
-    }
+    weeks.forEachIndexed { index, dates -> WeekRow(dates, week(index)) { day(index, it) } }
   }
+}
+
+/** A week's days side by side, a [DAY_GAP] apart, as a [MonthGrid]'s rows and a week's page lay them. */
+@Composable
+fun WeekRow(dates: List<LocalDate>, modifier: Modifier = Modifier, day: @Composable RowScope.(LocalDate) -> Unit) {
+  Row(modifier, horizontalArrangement = Arrangement.spacedBy(DAY_GAP)) { for (date in dates) day(date) }
 }
 
 /** The country whose holidays this device's days take: its region's when Pochical has them, else Japan's. */
