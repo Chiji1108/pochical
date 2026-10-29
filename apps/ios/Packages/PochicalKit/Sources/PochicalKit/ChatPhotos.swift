@@ -62,9 +62,8 @@ public enum ChatPhotos {
   /// most `maxEdge`, as JPEG at a quality that keeps it within
   /// `Chat.photoMaxBytes`; nil for what is not a photo the device can read.
   public static func shrink(_ data: Data, maxEdge: Int = Chat.photoMaxEdge) -> ShrunkPhoto? {
-    guard let image = upright(data, maxEdge: maxEdge), let jpeg = jpeg(of: image) else {
-      return nil
-    }
+    guard let image = upright(data, maxEdge: maxEdge).map(onWhite), let jpeg = jpeg(of: image)
+    else { return nil }
     return ShrunkPhoto(
       jpeg: jpeg, width: image.width, height: image.height, thumbHash: ThumbHash.of(image))
   }
@@ -97,6 +96,27 @@ public enum ChatPhotos {
         kCGImageSourceShouldCacheImmediately: true,
         kCGImageSourceThumbnailMaxPixelSize: maxEdge,
       ] as CFDictionary)
+  }
+
+  /// An image with see-through parts (a sticker a keyboard put in, a PNG)
+  /// laid on white, as a JPEG has none: drawn as it is, they would turn
+  /// black.
+  static func onWhite(_ image: CGImage) -> CGImage {
+    switch image.alphaInfo {
+    case .none, .noneSkipFirst, .noneSkipLast: return image
+    default: break
+    }
+    guard
+      let context = CGContext(
+        data: nil, width: image.width, height: image.height, bitsPerComponent: 8,
+        bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+        bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)
+    else { return image }
+    let whole = CGRect(x: 0, y: 0, width: image.width, height: image.height)
+    context.setFillColor(CGColor(gray: 1, alpha: 1))
+    context.fill(whole)
+    context.draw(image, in: whole)
+    return context.makeImage() ?? image
   }
 
   /// An image as JPEG at a quality that keeps it within
