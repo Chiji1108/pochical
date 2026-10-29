@@ -25,6 +25,7 @@ import app.pochical.v1.acked
 import app.pochical.v1.chatContent
 import app.pochical.v1.chatLine
 import app.pochical.v1.chatPage
+import app.pochical.v1.chatPoll
 import app.pochical.v1.chatTakenBack
 import app.pochical.v1.chatWords
 import app.pochical.v1.readMark
@@ -464,7 +465,12 @@ class FakeServer : AutoCloseable {
                 opId = edit.opId
                 content =
                   chatContent {
-                    if (send.content.hasPhotos()) photos = send.content.photos else words = chatWords { text = send.content.words.text }
+                    when {
+                      send.content.hasPhotos() -> photos = send.content.photos
+                      send.content.hasDays() -> days = send.content.days
+                      send.content.hasPoll() -> poll = chatPoll { days += send.content.poll.daysList }
+                      else -> words = chatWords { text = send.content.words.text }
+                    }
                   }
               }
               broadcast(groupId, keep(groupId, line))

@@ -15,6 +15,7 @@ import app.pochical.v1.chatSend
 import app.pochical.v1.chatSendContent
 import app.pochical.v1.chatAlbum
 import app.pochical.v1.chatSendWords
+import app.pochical.v1.chatSharedDays
 import app.pochical.v1.chatUnsend
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -119,6 +120,27 @@ class Chats internal constructor(
         }
       }
       deleteChatDraft(groupId, threadId)
+    }
+  }
+
+  /**
+   * Shares [days] ("YYYY-MM-DD" in order) with everyone's shifts as a line of their own, or puts them
+   * to the vote ([poll], in the group chat), shown at once as the member's line on its way
+   * (spec/chat.md, Long messages and shared days; Polls). Throws when the device cannot keep it.
+   */
+  suspend fun sendDays(groupId: String, threadId: String, days: List<String>, poll: Boolean, replyTo: Long? = null) {
+    database.write {
+      chatEdit(groupId, now()) {
+        send = chatSend {
+          this.threadId = threadId
+          content = chatSendContent {
+            val shared = chatSharedDays { this.days += days }
+            if (poll) this.poll = shared else this.days = shared
+          }
+          replyTo?.let { this.replyTo = it }
+          stamp(groupId)
+        }
+      }
     }
   }
 

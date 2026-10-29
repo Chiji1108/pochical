@@ -128,6 +128,27 @@ class MessageSemanticsTest {
   }
 
   @Test
+  fun sharedDaysOfferTheShiftTableAfterTheWritersProfile() {
+    var shown: java.time.LocalDate? = null
+    val aya = GroupMemberRow("g1", "u2", "あや", 0, left = false, deleted = false, ownName = false, photoId = "", ownPhoto = false, markStyle = "", markFill = true)
+    val day = java.time.LocalDate.parse("2026-11-03")
+    val line =
+      MessageLook("line-1", false, LineContent.Days(listOf("2026-11-03")), true, aya, true, "9:41", null, 1, ReplySwipe.Rightward, "あや、📅 11月3日(火)", listOf(DaysPart(day)))
+    val handlers =
+      MessageHandlers(
+        menu = LineMenuState(), items = { emptyList() }, reply = {}, jump = {}, nameOf = { it }, notKept = {}, reducedMotion = true,
+        lit = null, litShown = {}, me = "me", writers = emptyMap(), react = { _, _, _ -> }, moreReactions = {}, choosers = {}, spray = null,
+        openLink = {}, together = { _, _ -> emptySet() }, vote = { _, _, _ -> }, decide = {}, voters = { _, _ -> }, groupId = "g1",
+        openShifts = { shown = it }, stopSending = {}, openPhoto = { _, _ -> }, openOwnPhoto = { _, _ -> }, openProfile = {},
+      )
+    compose.setContent { CompositionLocalProvider(LocalDeviceSettings provides DeviceSettingsState(DeviceSettings()) {}) { Message(line, handlers) } }
+    val actions = actionsOf(line.said)
+    assertEquals(listOf("あやのプロフィール", "シフト表で見る"), actions.map { it.label })
+    actions.last().action()
+    assertEquals(day, shown)
+  }
+
+  @Test
   fun aPollsDaysAreGoneThroughOneByOneAndTheLineSettlesIt() {
     var voted: Triple<Long, String, Boolean>? = null
     var deciding: Long? = null

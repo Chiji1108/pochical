@@ -96,8 +96,11 @@ sealed interface RootPage : RootRoute, NavKey {
   /** みんなのシフト, from the group's hub: on `date` ("YYYY-MM-DD") with its sheet up when given. */
   @Serializable data class GroupShifts(val groupId: String, val date: String? = null) : RootPage
 
-  /** A chat of the group's, `threadId` its own (全体チャット) or a one-to-one chat, from its hub. */
-  @Serializable data class Chat(val groupId: String, val threadId: String) : RootPage
+  /**
+   * A chat of the group's, `threadId` its own (全体チャット) or a one-to-one chat, from its hub; with
+   * `sharing` ("YYYY-MM-DD") from みんなのシフト's 全体チャットで共有, the day set over its composer.
+   */
+  @Serializable data class Chat(val groupId: String, val threadId: String, val sharing: String? = null) : RootPage
 
   /** 写真, the photos of a chat alone, from its ⋯. */
   @Serializable data class ChatPhotos(val groupId: String, val threadId: String) : RootPage
@@ -166,6 +169,15 @@ class RootNavigator(
   /** Opens `page` over those open. */
   fun open(page: RootPage) {
     pages.add(page)
+  }
+
+  /**
+   * Opens the chat [chat] in place of a copy of it lower down, as 全体チャットで共有 does from
+   * みんなのシフト opened from the chat: one chat, its draft kept as it was left, rather than two.
+   */
+  fun openChat(chat: RootPage.Chat) {
+    pages.removeAll { it is RootPage.Chat && it.groupId == chat.groupId && it.threadId == chat.threadId }
+    pages.add(chat)
   }
 
   /** Opens `page` unless it is the one on top already, as a link opened twice is. */
@@ -245,6 +257,8 @@ class PageNavigation(private val navigator: RootNavigator, private val lifecycle
   fun open(page: RootPage) = whenSettled { navigator.open(page) }
 
   fun replace(page: RootPage) = whenSettled { navigator.replace(page) }
+
+  fun openChat(chat: RootPage.Chat) = whenSettled { navigator.openChat(chat) }
 
   fun select(tab: RootTab) = whenSettled { navigator.select(tab) }
 

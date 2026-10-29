@@ -2,6 +2,7 @@ package app.pochical.kit
 
 import app.pochical.design.Chat
 import app.pochical.v1.ChatEdit
+import app.pochical.v1.ChatPoll
 import app.pochical.v1.block
 import app.pochical.v1.change
 import app.pochical.v1.chatContent
@@ -74,6 +75,21 @@ class ChatSyncTest {
     assertEquals(listOf(1L to "おはよう"), sent.lines.map { it.seq to (it.content as LineContent.Words).text })
     assertEquals(waiting.opId, sent.lines.single().opId)
     assertEquals(1, server.lines("g1").size)
+  }
+
+  @Test
+  fun daysSharedAndPutToTheVoteGoAsTheirOwnLines() = runBlocking {
+    val phone = signedIn()
+    val me = server.userId
+    val shared = LineContent.Days(listOf("2026-11-03", "2026-11-04"))
+    val poll = LineContent.Poll(ChatPoll.newBuilder().addAllDays(listOf("2026-11-07", "2026-11-08")).build())
+    phone.chats.sendDays("g1", GROUP_THREAD, shared.days, poll = false)
+    // Each a line of its own, whatever of them is still on its way as the next is kept: the outbox
+    // sends the first as soon as it is kept, so no moment holds both waiting.
+    phone.chats.sendDays("g1", GROUP_THREAD, poll.poll.daysList, poll = true)
+    // Both reach the group as they were sent, in order.
+    val sent = phone.chat(me) { it.waiting.isEmpty() && it.lines.size == 2 }
+    assertEquals(listOf(shared, poll), sent.lines.map { it.content })
   }
 
   @Test

@@ -138,4 +138,24 @@
   <string name="chat_photos_none">写真はまだありません</string>
   <string name="chat_photo_by">%1$sが送った写真、%2$s</string>
   <string name="chat_more">その他</string>
+  <!-- Shared days (spec/chat.md, Long messages and shared days; Polls) -->
+  <string name="chat_attach">写真や日にちを送る</string>
+  <string name="chat_attach_photo">写真</string>
+  <string name="chat_share_days">日にちを共有</string>
+  <string name="chat_poll_days">日にちの投票</string>
+  <string name="chat_sharing_days">共有する日</string>
+  <string name="chat_stop_sharing">共有をやめる</string>
+  <string name="chat_days_rest">ほか%1$d日</string>
+  <string name="chat_see_shifts">シフト表で見る</string>
+  <string name="chat_day_shift">%1$s：%2$s</string>
+  <string name="chat_share_in_chat">全体チャットで共有</string>
+  <string name="days_send">送る</string>
+  <string name="days_previous_month">前の月</string>
+  <string name="days_next_month">次の月</string>
+  <string name="days_together_marked">%1$s、みんな休み</string>
+  <string name="days_tinted">うすく色のついた日は、みんな休みの日です。</string>
+  <string name="days_poll_few">候補の日を%1$d日以上選んでください。うすく色のついた日は、みんな休みの日です。</string>
+  <string name="days_poll_count">%1$d日の中から、みんなが行ける日を投票で決めます。</string>
+  <string name="days_share_count">%1$d日分のみんなのシフトを送ります。</string>
+  <string name="days_too_many">一度に送れるのは%1$d日までです</string>
 </resources>

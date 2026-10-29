@@ -6,6 +6,7 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,6 +14,8 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -57,6 +60,7 @@ import app.pochical.design.Chat
 import app.pochical.design.Radius
 import app.pochical.design.TextLimits
 import app.pochical.kit.KeptDraft
+import app.pochical.kit.LineContent
 import app.pochical.kit.PickedMember
 import app.pochical.kit.Writing
 import app.pochical.groups.LocalGroupCalls
@@ -75,7 +79,8 @@ import kotlinx.coroutines.withContext
 /**
  * What the chat's composer holds, kept across a rotation and the process's death: what is written
  * and the line it answers or changes (`Writing`), the photos picked (kept in the cache, by id), and
- * the field's focus, which 返信 and 編集 take. Days come with the day sheet.
+ * the field's focus, which 返信 and 編集 take. The days brought to share (共有する日) are kept as
+ * they came, from the page that opened the chat with them.
  */
 @Stable
 class ComposerState(writing: Writing<PickedPhoto>, tookDraft: Boolean) {
@@ -106,7 +111,7 @@ class ComposerState(writing: Writing<PickedPhoto>, tookDraft: Boolean) {
       Saver(
         save = { state ->
           val w = state.writing
-          listOf(w.text, w.replyTo ?: -1L, w.editing ?: -1L, w.picked.flatMap { listOf(it.id, it.name) }, state.tookDraft, w.previewRemoved.orEmpty(), w.photos.map { it.saved() })
+          listOf(w.text, w.replyTo ?: -1L, w.editing ?: -1L, w.picked.flatMap { listOf(it.id, it.name) }, state.tookDraft, w.previewRemoved.orEmpty(), w.photos.map { it.saved() }, w.days)
         },
         restore = { saved ->
           val list = saved as List<*>
@@ -120,6 +125,7 @@ class ComposerState(writing: Writing<PickedPhoto>, tookDraft: Boolean) {
               // × holds until the line is sent, across a rotation too.
               previewRemoved = (list[5] as String).takeIf { it.isNotEmpty() },
               photos = (list[6] as List<*>).map { PickedPhoto.restored(it as List<*>) },
+              days = (list[7] as List<*>?)?.map { it as String },
             )
           ComposerState(writing, list[4] as Boolean)
         },
@@ -138,8 +144,10 @@ fun rememberComposerState(): ComposerState = rememberSaveable(saver = ComposerSt
  * empties and as the chat is left; while it holds words, the others hear the member is writing, at
  * most every `chatRules.typingSendMs`. 写真を送る opens the system's photo picker (no storage
  * permission), its photos waiting above the field until sent, before the words, as a line of their
- * own; it stands in ＋'s place until ＋'s menu has more than it (日にちを共有, #910). Mentions' list and
- * days come later.
+ * own. Where the place shares days, ＋ opens a small menu from itself instead, as Messages' ＋ opens
+ * its apps: 写真, then 日にちを共有, and in a group chat 日にちの投票 ([onShareDays], [onPollDays]).
+ * Days brought to share wait over the field as 共有する日, × taking them off, and go before the
+ * photos and the words, each a line of its own answering what the composer answers.
  */
 @Composable
 fun Composer(
@@ -157,6 +165,10 @@ fun Composer(
   onNotKept: () -> Unit,
   /** Says what picking photos came to (past the most, one that cannot be read). */
   onSay: (String) -> Unit,
+  /** 日にちを共有 in ＋'s menu, where the place shares days; null where it has only the photo tool. */
+  onShareDays: (() -> Unit)?,
+  /** 日にちの投票 in ＋'s menu, in a group chat. */
+  onPollDays: (() -> Unit)?,
   modifier: Modifier = Modifier,
 ) {
   val chats = LocalChats.current
@@ -243,8 +255,10 @@ fun Composer(
 
   val editing = writing.editing
   val photos = writing.photos
-  // Photos go with no words too; words that do not fit go with none.
-  val sendable = if (photos.isNotEmpty()) writing.sent.isBlank() || fitsText(writing.sent, TextLimits.chatMessage) else fitsText(writing.sent, TextLimits.chatMessage)
+  val days = writing.days.takeIf { editing == null }
+  // Photos and days go with no words too; words that do not fit go with none.
+  val sendable =
+    if (photos.isNotEmpty() || days != null) writing.sent.isBlank() || fitsText(writing.sent, TextLimits.chatMessage) else fitsText(writing.sent, TextLimits.chatMessage)
 
   // The page of the first link written, asked for once the link has stayed the same for
   // chatRules.linkPreviewSettleMs, and shown over the composer until × takes it off; none while an
@@ -277,6 +291,16 @@ fun Composer(
       AnimatedVisibility(bar != null) {
         shown?.let { ComposerBar(it.title, it.words, stringResource(it.stop)) { state.writing = state.writing.stop() } }
       }
+      // The days brought to share, kept as they go so the bar leaves whole.
+      var daysShown by remember { mutableStateOf(days) }
+      if (days != null) daysShown = days
+      AnimatedVisibility(days != null) {
+        daysShown?.let { shown ->
+          ComposerBar(stringResource(R.string.chat_sharing_days), lineWords(LineContent.Days(shown), nameOf), stringResource(R.string.chat_stop_sharing)) {
+            state.writing = state.writing.copy(days = null)
+          }
+        }
+      }
       AnimatedVisibility(showsPage) {
         pageShown?.let { (url, shownPage) ->
           // The page's own site's name once it came, as the line will show it.
@@ -292,8 +316,11 @@ fun Composer(
       Row(Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.Bottom) {
         // Hidden while a line is changed, which takes words alone.
         if (editing == null) {
-          IconButton(onClick = pickPhotos, Modifier.padding(bottom = 4.dp)) {
-            Icon(painterResource(R.drawable.ic_image), stringResource(R.string.chat_photo_send))
+          if (onShareDays != null) AttachMenu(pickPhotos, onShareDays, onPollDays, Modifier.padding(bottom = 4.dp))
+          else {
+            IconButton(onClick = pickPhotos, Modifier.padding(bottom = 4.dp)) {
+              Icon(painterResource(R.drawable.ic_image), stringResource(R.string.chat_photo_send))
+            }
           }
         }
         OutlinedTextField(
@@ -322,17 +349,22 @@ fun Composer(
                 withContext(NonCancellable) {
                   val seq = going.editing
                   val words = going.sent
-                  // The photos first, as one line answering what the composer answers; the words after
-                  // them as a line of their own.
+                  // The days first, then the photos, then the words, each a line of its own; the first of them
+                  // answers what the composer answers.
+                  val sharing = going.days?.takeIf { seq == null }
+                  if (sharing != null) {
+                    chats.sendDays(groupId, threadId, sharing, poll = false, left.replyTo)
+                    left = left.copy(days = null, replyTo = null)
+                  }
                   if (seq == null && going.photos.isNotEmpty()) {
                     val shrunk = shrunkPhotos(context, going.photos)
                     // One the system let go of from the cache meanwhile is left out, as one the phone cannot read.
                     if (shrunk.size < going.photos.size) onSay(resources.getString(R.string.chat_photo_unreadable))
                     if (shrunk.isNotEmpty()) {
-                      chats.sendPhotos(groupId, threadId, going.photos.mapNotNull { shrunk[it] }, going.replyTo)
+                      chats.sendPhotos(groupId, threadId, going.photos.mapNotNull { shrunk[it] }, left.replyTo)
                       dropPicked(context, going.photos)
                     }
-                    left = going.copy(photos = emptyList(), replyTo = going.replyTo.takeIf { shrunk.isEmpty() })
+                    left = left.copy(photos = emptyList(), replyTo = left.replyTo.takeIf { shrunk.isEmpty() })
                   }
                   if (words.isNotBlank()) {
                     // The page as it came for the words' first link, or none taken off with ×.
@@ -347,7 +379,7 @@ fun Composer(
                 throw e
               } catch (_: Exception) {
                 // Not kept: what was written comes back, to send again.
-                if (state.writing.text.isEmpty() && state.writing.photos.isEmpty()) state.writing = left
+                if (state.writing.text.isEmpty() && state.writing.photos.isEmpty() && state.writing.days == null) state.writing = left
                 onNotKept()
                 return@launch
               }
@@ -361,6 +393,33 @@ fun Composer(
           else Icon(painterResource(R.drawable.ic_send), stringResource(R.string.chat_send))
         }
       }
+    }
+  }
+}
+
+/**
+ * ＋, opening what may be sent besides words as a small menu from itself, as Messages' ＋ opens its
+ * apps (spec/chat.md, Photos): 写真, 日にちを共有, and in a group chat 日にちの投票, in that order.
+ */
+@Composable
+private fun AttachMenu(onPhotos: () -> Unit, onShareDays: () -> Unit, onPollDays: (() -> Unit)?, modifier: Modifier = Modifier) {
+  var open by remember { mutableStateOf(false) }
+  Box(modifier) {
+    IconButton(onClick = { open = true }) { Icon(painterResource(R.drawable.ic_add), stringResource(R.string.chat_attach)) }
+    DropdownMenu(open, onDismissRequest = { open = false }) {
+      val item = @Composable { label: Int, icon: Int, run: () -> Unit ->
+        DropdownMenuItem(
+          text = { Text(stringResource(label)) },
+          leadingIcon = { Icon(painterResource(icon), contentDescription = null) },
+          onClick = {
+            open = false
+            run()
+          },
+        )
+      }
+      item(R.string.chat_attach_photo, R.drawable.ic_image, onPhotos)
+      item(R.string.chat_share_days, R.drawable.ic_calendar, onShareDays)
+      onPollDays?.let { item(R.string.chat_poll_days, R.drawable.ic_event_available, it) }
     }
   }
 }
