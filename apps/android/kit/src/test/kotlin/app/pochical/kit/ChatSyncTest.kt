@@ -19,6 +19,7 @@ import app.pochical.v1.chatSendWords
 import app.pochical.v1.chatNotifications
 import app.pochical.v1.membership
 import app.pochical.v1.unreadCount
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
@@ -443,7 +444,8 @@ class ChatValuesTest {
     val files = testLinePhotos().files
     files.keep("g1", "mine", ShrunkPhoto(byteArrayOf(1), 1, 1, byteArrayOf()))
     files.keep("g2", "other", ShrunkPhoto(byteArrayOf(1), 1, 1, byteArrayOf()))
-    val forgotten = async { files.forgotten.first() }
+    // Listening before it lets go, which may not suspend at all once the files go quickly.
+    val forgotten = async(start = CoroutineStart.UNDISPATCHED) { files.forgotten.first() }
     files.forgetPlace("g1", listOf("p1"))
     assertEquals(ForgottenPhoto(PhotoShelf.Group("g1"), "p1"), withTimeout(10_000) { forgotten.await() })
     assertNull(files.held("g1", "mine"))
