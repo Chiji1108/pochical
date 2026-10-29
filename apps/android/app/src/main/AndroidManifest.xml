@@ -49,12 +49,7 @@
       <intent-filter>
         <action android:name="android.intent.action.MAIN" />
         <category android:name="android.intent.category.LAUNCHER" />
-      </intent-filter>
-      <!-- 今日のシフト and 次の休み, a long press on the icon away (spec/shortcuts.md). -->
-      <meta-data
-        android:name="android.app.shortcuts"
-        android:resource="@xml/shortcuts" />
-      <!-- AppleWebSignIn.RETURN_SCHEME and RETURN_HOST. -->
+      </intent-filter>      <!-- AppleWebSignIn.RETURN_SCHEME and RETURN_HOST. -->
       <intent-filter>
         <action android:name="android.intent.action.VIEW" />
         <category android:name="android.intent.category.DEFAULT" />

@@ -83,8 +83,9 @@ fun OwnCalendar.summary(first: LocalDate, last: LocalDate): PageSummary =
  * as 次の休み looks; with none ahead, today.
  */
 fun OwnCalendar.nextDayOff(today: LocalDate): LocalDate {
-  val shown = shown(today, today.plusDays(Widgets.offLookaheadDays.toLong()))
-  return shown.keys.sorted().firstOrNull { pattern(shown.getValue(it).shift)?.countsAsOff == true } ?: today
+  val last = today.plusDays(Widgets.offLookaheadDays.toLong())
+  val shown = shown(today, last)
+  return daysFrom(today, last).firstOrNull { day -> shown[day]?.let { pattern(it.shift)?.countsAsOff } == true } ?: today
 }
 
 /** The person's own calendar, again whenever sync or an edit changes it. */

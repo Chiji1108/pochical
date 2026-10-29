@@ -67,9 +67,8 @@ class OpenedLinksTest {
 
   @Test
   fun readsTheLaunchersShortcuts() {
-    val today = LocalDate.of(2026, 10, 29)
-    assertEquals(AppLink.Day(today), appLink("pochical://today", today))
-    assertEquals(AppLink.NextOff, appLink("pochical://next-off", today))
+    assertEquals(AppLink.Today, appLink("pochical://today"))
+    assertEquals(AppLink.NextOff, appLink("pochical://next-off"))
   }
 
   @Test

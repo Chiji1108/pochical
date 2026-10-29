@@ -77,7 +77,8 @@ fun RootScreen(navigator: RootNavigator) {
     when (val link = links.pending) {
       is AppLink.Invite -> navigator.openOnce(RootPage.Join(link.code))
       is AppLink.Day -> navigator.showDay(link.day)
-      is AppLink.NextOff -> navigator.showDay(ownDays.calendar.value.nextDayOff(LocalDate.now()))
+      AppLink.Today -> navigator.showDay(LocalDate.now())
+      AppLink.NextOff -> navigator.showDay(ownDays.calendar.value.nextDayOff(LocalDate.now()))
       is AppLink.Group -> {
         val known = groups ?: return@LaunchedEffect
         if (link.day != null && known.any { it.id == link.groupId }) {

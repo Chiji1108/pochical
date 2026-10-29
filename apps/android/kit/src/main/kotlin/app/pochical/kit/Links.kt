@@ -18,9 +18,12 @@ sealed interface AppLink {
   /** A group's table at a day, or its top: pochical://group/{groupId}, with /day/{yyyy-mm-dd} after it. */
   data class Group(val groupId: String, val day: LocalDate? = null) : AppLink
 
+  /** Today, worked out as the screens open it: pochical://today, the launcher's 今日のシフト (spec/shortcuts.md). */
+  data object Today : AppLink
+
   /**
    * The next day off, today on a day off, as 次の休み not set to anyone opens it, worked out from
-   * the days as the app opens: pochical://next-off, the launcher's 次の休み (spec/shortcuts.md).
+   * the days as the screens open it: pochical://next-off, the launcher's 次の休み (spec/shortcuts.md).
    */
   data object NextOff : AppLink
 
@@ -33,16 +36,15 @@ sealed interface AppLink {
 
 /**
  * The place [url] names, or none for a link the app does not open. As iOS's openedGroup, a group
- * link whose day cannot be read opens the group's top. pochical://today, the launcher's 今日のシフト
- * (spec/shortcuts.md), names [today].
+ * link whose day cannot be read opens the group's top.
  */
-fun appLink(url: String, today: LocalDate = LocalDate.now()): AppLink? {
+fun appLink(url: String): AppLink? {
   openedInviteCode(url)?.let { return AppLink.Invite(it) }
   val uri = parsed(url) ?: return null
   if (!uri.scheme.equals("pochical", ignoreCase = true)) return null
   val parts = uri.path.orEmpty().split("/").filter { it.isNotEmpty() }
   return when (uri.host?.lowercase()) {
-    "today" -> AppLink.Day(today).takeIf { parts.isEmpty() }
+    "today" -> AppLink.Today.takeIf { parts.isEmpty() }
     "next-off" -> AppLink.NextOff.takeIf { parts.isEmpty() }
     "day" -> parts.singleOrNull()?.let(::dayOf)?.let(AppLink::Day)
     "group" -> {
