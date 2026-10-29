@@ -94,6 +94,7 @@ import app.pochical.RootPage
 import androidx.compose.foundation.clickable
 import app.pochical.kit.GroupMarkValue
 import app.pochical.kit.directThread
+import app.pochical.kit.inviteCode
 import app.pochical.kit.folds
 import app.pochical.kit.placeRules
 import app.pochical.R
@@ -484,7 +485,10 @@ fun ChatPage(
     Unit
   }
 
-  val openLink = rememberLinkOpener()
+  // Pochical's invitations open their join screen, or the group once in it, never the browser
+  // (spec/chat.md, Pochical's invitation links); any other link its page.
+  val browse = rememberLinkOpener()
+  val openLink = { url: String -> inviteCode(url)?.let { open(RootPage.Join(it)) } ?: browse(url) }
   // Polls (spec/chat.md, Polls): 行ける, the sheet a poll is settled with, and who can come on a day.
   var deciding by remember { mutableStateOf<Long?>(null) }
   var listing by remember { mutableStateOf<Pair<LocalDate, List<String>>?>(null) }

@@ -67,6 +67,8 @@ import app.pochical.design.Chat
 import app.pochical.design.Radius
 import app.pochical.kit.ChatLine
 import app.pochical.kit.GroupMember
+import app.pochical.kit.inviteCode
+import app.pochical.kit.inviteLink
 import app.pochical.kit.GroupMemberRow
 import app.pochical.kit.LineContent
 import app.pochical.kit.LineReaction
@@ -135,6 +137,10 @@ class MessageLook(
   /** Its first link's page. */
   val page: LinkPreview?
     get() = parts.firstNotNullOfOrNull { (it as? PagePart)?.preview }
+
+  /** The code of its first link, when that is one of Pochical's invitations, whose card takes the page's place. */
+  val invitation: String?
+    get() = parts.firstNotNullOfOrNull { (it as? InvitePart)?.code }
 
   /** The days it puts to the vote. */
   val poll: PollLook?
@@ -423,6 +429,8 @@ fun Bubble(look: MessageLook, handlers: MessageHandlers, onQuote: () -> Unit) {
   val shape = remember(look.mine, look.startsRun) { BubbleShape(look.mine, tail = look.startsRun) }
   val ink = if (look.mine) colors.accentOnFill else colors.textPrimary
   val preview = look.page
+  val invitation = look.invitation
+  val wide = preview != null || invitation != null
   Column(
     Modifier.alpha(if (look.waiting != null && !look.waiting.failed) WAITING_ALPHA else 1f)
       .background(if (look.mine) colors.accentFill else colors.fillTertiary, shape)
@@ -434,7 +442,7 @@ fun Bubble(look: MessageLook, handlers: MessageHandlers, onQuote: () -> Unit) {
       // link's page as wide as the page is drawn.
       .then(
         when {
-          preview == null -> Modifier.width(IntrinsicSize.Max)
+          !wide -> Modifier.width(IntrinsicSize.Max)
           LocalDensity.current.fontScale >= ACCESSIBILITY_SCALE -> Modifier.fillMaxWidth()
           else -> Modifier.width(PREVIEW_WIDTH)
         }
@@ -447,7 +455,10 @@ fun Bubble(look: MessageLook, handlers: MessageHandlers, onQuote: () -> Unit) {
       style = MaterialTheme.typography.bodyLarge,
       color = ink,
     )
-    if (preview != null) {
+    if (invitation != null) {
+      Spacer(Modifier.height(8.dp))
+      InviteCard(invitation, Modifier.padding(horizontal = 8.dp)) { handlers.openLink(inviteLink(invitation)) }
+    } else if (preview != null) {
       Spacer(Modifier.height(8.dp))
       PreviewCard(preview, ink) { handlers.openLink(preview.url) }
     }
@@ -641,6 +652,8 @@ private fun LayoutCoordinates.unclipped(): Rect = Rect(positionInWindow(), size.
 private fun partsOf(content: LineContent, quote: LineQuote?, reactions: ReactionsPart?, poll: PollPart?, waiting: WaitingLine? = null): List<LinePart> {
   val words = content as? LineContent.Words
   val links = words?.let { textParts(it.text).mapNotNull { part -> part.url } }.orEmpty()
+  // A first link that is one of Pochical's invitations shows the group in place of any page.
+  val invitation = links.firstOrNull()?.let(::inviteCode)
   val photos = (content as? LineContent.Photos)?.let { PhotosPart(it.photos.size, waiting) }
   // シフト表で見る for a line sent, as its link under the card offers.
   val days = (content as? LineContent.Days)?.days?.firstOrNull()?.takeIf { waiting == null }?.let { DaysPart(LocalDate.parse(it)) }
@@ -653,7 +666,8 @@ private fun partsOf(content: LineContent, quote: LineQuote?, reactions: Reaction
     LinksPart(links).takeIf { links.isNotEmpty() },
     // A line's page is its first link's (firstLink), already offered with the words' links; its URL
     // is the one the group fetched, written as the server writes it, not as in the words.
-    words?.preview?.let { PagePart(it, inWords = links.isNotEmpty()) },
+    invitation?.let(::InvitePart),
+    words?.preview?.takeIf { invitation == null }?.let { PagePart(it, inWords = links.isNotEmpty()) },
   )
 }
 

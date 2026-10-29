@@ -82,6 +82,15 @@ data class LinksPart(val urls: List<String>) : LinePart {
 }
 
 /**
+ * The card of Pochical's invitation the words' first link is, in its page's place (spec/chat.md,
+ * Pochical's invitation links): its link is among the words', whose リンクを開く opens its join
+ * screen, so it offers nothing more.
+ */
+data class InvitePart(val code: String) : LinePart {
+  @Composable override fun actions(line: PartLine): List<CustomAccessibilityAction> = emptyList()
+}
+
+/**
  * The page of the words' first link, inside the bubble under them: a tap on it opens that link,
  * which [LinksPart] already offers as リンクを開く, so it offers it again only when its link is not
  * among the words' (a page kept by an edit whose words lost it does not happen: the page goes too).
