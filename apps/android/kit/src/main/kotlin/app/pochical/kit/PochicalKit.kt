@@ -79,6 +79,14 @@ class PochicalKit(context: Context) {
     CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
       account.state.map { (it as? AccountState.SignedIn)?.userId }.distinctUntilChanged().collect { photos.forget() }
     }
+    // The marks' shape goes to the account for the user's groups (spec/sync-protocol.md, Profile).
+    CoroutineScope(SupervisorJob() + Dispatchers.Default)
+      .syncMarkLook(
+        database.values().preferences().map { rows -> accountLook(rows.associate { it.key to it.value }) },
+        database.values().profile(),
+        account.userSocket,
+        groups::setMarkLook,
+      )
   }
 
   /** Sign in with Apple through Apple's web page, which Android has in place of iOS's own. */

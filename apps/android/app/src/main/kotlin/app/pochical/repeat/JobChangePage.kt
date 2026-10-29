@@ -18,7 +18,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSerializable
@@ -31,6 +33,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.Footnote
+import app.pochical.MID_MONTH_STARTS
+import app.pochical.PeriodChoices
 import app.pochical.LocalDeviceSettings
 import app.pochical.LocalThemeColors
 import app.pochical.PageNavigation
@@ -42,6 +46,8 @@ import app.pochical.calendar.slashText
 import app.pochical.design.JobTemplate
 import app.pochical.design.Metrics
 import app.pochical.design.ReadyPatterns
+import app.pochical.kit.ShiftPeriod
+import app.pochical.kit.firstPick
 import app.pochical.kit.readyCopies
 import app.pochical.patterns.ReadyPatternChips
 import app.pochical.patterns.chosenPatterns
@@ -64,6 +70,12 @@ private sealed interface JobStep {
 
   /** The order, typed with the patterns chosen. */
   @Serializable data class Order(val template: String, val patterns: List<String>) : JobStep
+
+  /** A roster's period: by the month, or from a day mid-month. */
+  @Serializable data class Period(val patterns: List<String>) : JobStep
+
+  /** The day a period starting mid-month starts on. */
+  @Serializable data class PeriodDay(val patterns: List<String>) : JobStep
 }
 
 private val templates = ReadyPatterns.rosterTemplates + ReadyPatterns.rotationTemplates
@@ -76,8 +88,7 @@ internal val readyById = readyCopies(ReadyPatterns.all.map { it.id }).associate 
 /**
  * 設定 › シフトパターン › 新しい仕事にする (/design's JobChangePage; spec/shift-patterns.md, Changing
  * jobs): the day the new job starts, then the questions はじめの設定 asks, ending with its patterns
- * taking over and its order from that day. Android has no シフトの期間 yet, so a roster's work ends
- * with its patterns rather than asking for its period.
+ * taking over and its order from that day, or for a roster's work, its period as the calendar's page.
  */
 @Composable
 fun JobChangePage(navigation: PageNavigation) {
@@ -90,6 +101,9 @@ fun JobChangePage(navigation: PageNavigation) {
   var picked by rememberSerializable { mutableStateOf(emptySet<String>()) }
   var typing by rememberSaveable(stateSaver = OrderTyping.saver) { mutableStateOf(OrderTyping(emptyList(), first)) }
   var pickingDay by rememberSaveable { mutableStateOf(false) }
+  var periodStart by rememberSaveable { mutableIntStateOf(settings.device.period.firstPick) }
+  // While the new job is kept, once: a second tap waits.
+  var finishing by remember { mutableStateOf(false) }
   var confirming by rememberSaveable { mutableStateOf(false) }
   val scope = rememberCoroutineScope()
   val step = steps.last()
@@ -100,9 +114,13 @@ fun JobChangePage(navigation: PageNavigation) {
   val back = { if (steps.size > 1) steps = steps.dropLast(1) else navigation.back() }
   BackHandler(enabled = steps.size > 1) { back() }
 
-  fun finish(ids: List<String>, sequence: List<String>, anchor: LocalDate) {
+  fun finish(ids: List<String>, sequence: List<String>, anchor: LocalDate, period: ShiftPeriod? = null) {
+    if (finishing) return
+    finishing = true
     scope.launch {
       days.changeJob(ids, sequence, first, anchor)
+      // A roster's pages become the period its shifts come for, once its patterns are kept.
+      period?.let { picked -> settings.change { it.copy(period = picked) } }
       // The order fills the days without ポチポチ入力: the calendar offers the reminders as it shows.
       if (sequence.isNotEmpty()) settings.change { it.copy(reminderOfferWaiting = true) }
       navigation.back()
@@ -110,10 +128,17 @@ fun JobChangePage(navigation: PageNavigation) {
   }
 
   fun choose(template: JobTemplate, ids: List<String>) =
-    chooseJob(template, ids, first, ::finish) { sequence ->
-      typing = OrderTyping(sequence, first)
-      go(JobStep.Order(template.id, ids))
-    }
+    chooseJob(
+      template,
+      ids,
+      first,
+      onFinish = { patterns, sequence, anchor -> finish(patterns, sequence, anchor) },
+      onOrder = { sequence ->
+        typing = OrderTyping(sequence, first)
+        go(JobStep.Order(template.id, ids))
+      },
+      onPeriod = { go(JobStep.Period(ids)) },
+    )
 
   if (step is JobStep.Order) {
     SettingsPage(
@@ -195,6 +220,25 @@ fun JobChangePage(navigation: PageNavigation) {
               choose(template, chosenPatterns(picked))
             }
           }
+        }
+        // By the month first, ending the questions in one tap.
+        is JobStep.Period -> {
+          item { Question(stringResource(R.string.period_question_title), stringResource(R.string.period_question_note)) }
+          item {
+            Option("🗓️", stringResource(R.string.period_question_month), stringResource(R.string.period_question_month_note)) {
+              finish(step.patterns, emptyList(), first, ShiftPeriod())
+            }
+          }
+          item {
+            Option("📌", stringResource(R.string.period_question_mid_month), stringResource(R.string.period_question_mid_month_note)) {
+              go(JobStep.PeriodDay(step.patterns))
+            }
+          }
+        }
+        is JobStep.PeriodDay -> {
+          item { Question(stringResource(R.string.period_question_day_title), stringResource(R.string.period_question_day_note)) }
+          item { PeriodChoices(periodStart, { periodStart = it }, starts = MID_MONTH_STARTS) }
+          item { Next(stringResource(R.string.job_done)) { finish(step.patterns, emptyList(), first, ShiftPeriod(periodStart)) } }
         }
         is JobStep.Order -> Unit
       }

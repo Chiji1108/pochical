@@ -2,13 +2,16 @@ package app.pochical
 
 import app.pochical.calendar.TestDays
 import app.pochical.kit.DeviceSettings
+import app.pochical.kit.ShiftPeriod
 import java.time.LocalDate
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -28,9 +31,24 @@ class OnboardingTest {
           beginFirstRun(test.days, { change -> settings = change(settings) }, listOf("duty", "offDuty", "off"), listOf("duty", "offDuty", "off"), LocalDate.now())
         }
       withTimeout(5_000) { test.days.calendar.first { it.patterns.isNotEmpty() } }
-      page.cancel()
+      page.cancelAndJoin()
 
       assertTrue(settings.reminderOfferWaiting)
+    }
+  }
+
+  @Test
+  fun aRostersPeriodIsKeptThoughThePageGoesAsThePatternsLand() = runBlocking {
+    TestDays().use { test ->
+      var settings = DeviceSettings()
+      val page =
+        launch(Dispatchers.Default, start = CoroutineStart.UNDISPATCHED) {
+          beginFirstRun(test.days, { change -> settings = change(settings) }, listOf("day", "off"), emptyList(), LocalDate.now(), ShiftPeriod() to ShiftPeriod(15))
+        }
+      withTimeout(5_000) { test.days.calendar.first { it.patterns.isNotEmpty() } }
+      page.cancelAndJoin()
+
+      assertEquals(ShiftPeriod(15), settings.period)
     }
   }
 }

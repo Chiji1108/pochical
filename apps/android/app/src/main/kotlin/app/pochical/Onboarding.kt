@@ -45,6 +45,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSerializable
 import androidx.compose.runtime.setValue
@@ -65,6 +66,8 @@ import androidx.navigation3.runtime.serialization.NavBackStackSerializer
 import androidx.navigation3.ui.NavDisplay
 import app.pochical.calendar.LocalOwnDays
 import app.pochical.calendar.OwnDays
+import app.pochical.kit.ShiftPeriod
+import app.pochical.kit.firstPick
 import app.pochical.design.JobTemplate
 import app.pochical.design.Metrics
 import app.pochical.design.ReadyPatterns
@@ -113,6 +116,12 @@ private sealed interface FirstRunStep : NavKey {
 
   /** The order, typed with the patterns chosen. */
   @Serializable data class Order(val template: String, val patterns: List<String>) : FirstRunStep
+
+  /** A roster's period: by the month, or from a day mid-month. */
+  @Serializable data class Period(val patterns: List<String>) : FirstRunStep
+
+  /** The day a period starting mid-month starts on. */
+  @Serializable data class PeriodDay(val patterns: List<String>) : FirstRunStep
 }
 
 /**
@@ -132,12 +141,13 @@ fun Onboarding() {
   // While the patterns chosen are kept, once: the questions' last button waits.
   var beginning by remember { mutableStateOf(false) }
 
-  fun begin(ids: List<String>, sequence: List<String>, anchor: LocalDate) {
+  fun begin(ids: List<String>, sequence: List<String>, anchor: LocalDate, period: ShiftPeriod? = null) {
     if (beginning) return
     beginning = true
+    val before = settings.device.period
     scope.launch {
       try {
-        beginFirstRun(days, settings.change, ids, sequence, anchor)
+        beginFirstRun(days, settings.change, ids, sequence, anchor, period?.let { before to it })
       } catch (e: CancellationException) {
         throw e
       } catch (e: Exception) {
@@ -150,8 +160,20 @@ fun Onboarding() {
   }
 
   // From this month's 1st, a weekly order from the Sunday of its week.
+  fun first() = LocalDate.now().withDayOfMonth(1)
+
   fun choose(template: JobTemplate, ids: List<String>) =
-    chooseJob(template, ids, LocalDate.now().withDayOfMonth(1), ::begin) { steps.add(FirstRunStep.Order(template.id, ids)) }
+    chooseJob(
+      template,
+      ids,
+      first(),
+      onFinish = { patterns, sequence, anchor -> begin(patterns, sequence, anchor) },
+      onOrder = { steps.add(FirstRunStep.Order(template.id, ids)) },
+      onPeriod = { steps.add(FirstRunStep.Period(ids)) },
+    )
+
+  // A roster's work begins, its pages the period its shifts come for.
+  fun startRoster(ids: List<String>, period: ShiftPeriod) = begin(ids, emptyList(), first(), period)
 
   NavDisplay(
     backStack = steps,
@@ -191,7 +213,25 @@ fun Onboarding() {
             }
           }
         is FirstRunStep.Patterns -> PatternsStep(jobTemplate(step.template), back, waiting = beginning, onNext = ::choose)
-        is FirstRunStep.Order -> OrderStep(jobTemplate(step.template), step.patterns, back, waiting = beginning, onDone = ::begin)
+        is FirstRunStep.Order ->
+          OrderStep(jobTemplate(step.template), step.patterns, back, waiting = beginning) { ids, sequence, anchor -> begin(ids, sequence, anchor) }
+        // By the month first, as most people's come, starting in one tap.
+        is FirstRunStep.Period ->
+          StepPage(stringResource(R.string.period_question_title), stringResource(R.string.period_question_note), back) {
+            OptionCard(
+              stringResource(R.string.period_question_month),
+              stringResource(R.string.period_question_month_note),
+              icon = "🗓️",
+              onClick = { startRoster(step.patterns, ShiftPeriod()) },
+            )
+            OptionCard(
+              stringResource(R.string.period_question_mid_month),
+              stringResource(R.string.period_question_mid_month_note),
+              icon = "📌",
+              onClick = { steps.add(FirstRunStep.PeriodDay(step.patterns)) },
+            )
+          }
+        is FirstRunStep.PeriodDay -> PeriodDayStep(back, waiting = beginning) { startRoster(step.patterns, ShiftPeriod(it)) }
       }
     }
   }
@@ -336,6 +376,25 @@ private fun OrderStep(template: JobTemplate, ids: List<String>, onBack: () -> Un
   }
 }
 
+/** The day a period starting mid-month starts on, 2日 to 28日 (15日 at first), with はじめる at the foot. */
+@Composable
+private fun PeriodDayStep(onBack: () -> Unit, waiting: Boolean, onStart: (Int) -> Unit) {
+  val period = LocalDeviceSettings.current.device.period
+  var start by rememberSaveable { mutableIntStateOf(period.firstPick) }
+  StepPage(
+    stringResource(R.string.period_question_day_title),
+    stringResource(R.string.period_question_day_note),
+    onBack,
+    foot = {
+      Button(onClick = { onStart(start) }, enabled = !waiting, modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
+        Text(stringResource(R.string.welcome_start))
+      }
+    },
+  ) {
+    PeriodChoices(start, { start = it }, starts = MID_MONTH_STARTS)
+  }
+}
+
 /**
  * A step: a heading with what it asks, its answers, and a note or the step's button at the foot,
  * the system's back and the bar's ← going a question back.
@@ -371,7 +430,7 @@ private fun StepPage(
     },
   ) { padding ->
     Column(
-      Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(padding).padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 20.dp),
+      Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 20.dp),
       verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
       Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -424,13 +483,20 @@ internal suspend fun beginFirstRun(
   ids: List<String>,
   sequence: List<String>,
   anchor: LocalDate,
+  /** A roster's シフトの期間, the one it takes the place of first. */
+  period: Pair<ShiftPeriod, ShiftPeriod>? = null,
 ) {
   if (sequence.isNotEmpty()) changeSettings { it.copy(reminderOfferWaiting = true) }
+  period?.let { (_, picked) -> changeSettings { it.copy(period = picked) } }
   try {
     days.begin(ids, sequence, anchor)
+  } catch (e: CancellationException) {
+    // The page going as the patterns land: kept all the same, so nothing is taken back.
+    throw e
   } catch (e: Exception) {
-    // Not kept, so no order to offer the reminders for.
+    // Not kept, so no order to offer the reminders for, and the period as it was.
     if (sequence.isNotEmpty()) changeSettings { it.copy(reminderOfferWaiting = false) }
+    period?.let { (before, _) -> changeSettings { it.copy(period = before) } }
     throw e
   }
 }

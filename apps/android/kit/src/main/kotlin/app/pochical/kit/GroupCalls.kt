@@ -6,6 +6,7 @@ import app.pochical.v1.LinkPreview
 import app.pochical.v1.getLinkPreviewRequest
 import app.pochical.v1.PushPlatform
 import app.pochical.v1.UserServiceClient
+import app.pochical.v1.MarkLook
 import app.pochical.v1.createGroupRequest
 import app.pochical.v1.getInviteLinkRequest
 import app.pochical.v1.getInviteRequest
@@ -24,6 +25,7 @@ import app.pochical.v1.setBlockedRequest
 import app.pochical.v1.setChatMutedRequest
 import app.pochical.v1.setChatNotificationsRequest
 import app.pochical.v1.setProfileRequest
+import app.pochical.v1.setMarkLookRequest
 import com.connectrpc.Code
 import com.connectrpc.ConnectException
 import com.connectrpc.ProtocolClientConfig
@@ -323,6 +325,15 @@ class GroupCalls internal constructor(
         headers,
       )
       .answer()
+    Unit
+  }
+
+  /**
+   * Sets the shape the user's marks are drawn in, for their groups to draw them so
+   * (spec/sync-protocol.md, Profile); the device hears of it from the user's socket.
+   */
+  suspend fun setMarkLook(look: MarkLook) = call { headers ->
+    users.setMarkLook(setMarkLookRequest { this.look = look }, headers).answer()
     Unit
   }
 
