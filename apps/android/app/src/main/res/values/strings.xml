@@ -95,6 +95,10 @@
   <string name="off_look_blank">空白</string>
   <string name="preview_week">今週と来週の見え方</string>
   <string name="preview_this_week">今週の見え方</string>
+  <string name="preview_page_calendar">カレンダー</string>
+  <string name="preview_page_widget">ウィジェット</string>
+  <string name="preview_page">プレビュー %1$s（%2$d/%3$d）</string>
+  <string name="preview_widget">ホーム画面のカレンダーのウィジェットの見え方</string>
   <string name="preview_scheme">プレビューの明るさ</string>
   <string name="preview_light">ライトで見る</string>
   <string name="preview_dark">ダークで見る</string>
