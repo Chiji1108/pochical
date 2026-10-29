@@ -83,12 +83,17 @@ fun ChatSpeech(
   val came by remember(since) { since?.let(arrived) ?: flowOf(emptyList()) }.collectAsState(emptyList())
   var heardTo by remember(since) { mutableLongStateOf(since ?: 0) }
   val hidden by rememberUpdatedState(blocked)
-  // A run coming at once is said once, rather than each cutting the last off.
+  // A run coming at once is said once, rather than each cutting the last off. Keyed on the lines as
+  // the device holds them, so one changed or taken back while it settles waits again and is said as
+  // it is then, or not at all.
   LaunchedEffect(came, me) {
     val last = came.lastOrNull()?.seq ?: return@LaunchedEffect
     if (me == null || last <= heardTo) return@LaunchedEffect
     delay(Chat.announceSettleMs.toLong())
-    val coming = came.filter { it.seq > heardTo && !hidden(it) && (it.writer(me) == LineWriter.Others || it.content is LineContent.Notice) }
+    val coming =
+      came.filter { line ->
+        line.seq > heardTo && !hidden(line) && line.content != LineContent.Unsent && (line.writer(me) == LineWriter.Others || line.content is LineContent.Notice)
+      }
     heardTo = last
     if (coming.isNotEmpty()) say(What.Coming(coming))
   }
