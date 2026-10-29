@@ -34,7 +34,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -55,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.calendar.DeviceCalendar
 import app.pochical.calendar.DeviceCalendars
 import app.pochical.calendar.LocalOwnDays
@@ -101,7 +101,7 @@ fun DeviceCalendarPage(month: YearMonth, navigation: PageNavigation) {
   val activity = LocalActivity.current
   val settings = LocalDeviceSettings.current
   val device = settings.device
-  val calendar by LocalOwnDays.current.calendar.collectAsState()
+  val calendar by LocalOwnDays.current.calendar.collectAsStateWithLifecycle()
   val me = rememberMeId()
   val calendars = remember(context) { DeviceCalendars(context.applicationContext) }
   val scope = rememberCoroutineScope()
@@ -452,7 +452,7 @@ private fun CalendarPicker(calendars: List<DeviceCalendar>, picked: Long?, onPic
 @Composable
 fun DeviceCalendarPatternsPage(month: YearMonth, onBack: () -> Unit) {
   val settings = LocalDeviceSettings.current
-  val calendar by LocalOwnDays.current.calendar.collectAsState()
+  val calendar by LocalOwnDays.current.calendar.collectAsStateWithLifecycle()
   val page = settings.device.period.page(month)
   val rows = calendar.patterns.map { it.row }
   val shown = settings.device.calendarAdd.shown(rows)

@@ -30,7 +30,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -56,6 +55,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.calendar.DayCell
 import app.pochical.calendar.DayLook
 import app.pochical.calendar.LocalOwnDays
@@ -88,7 +88,7 @@ import kotlinx.coroutines.launch
 fun MonthPicturePage(month: YearMonth, onBack: () -> Unit) {
   val settings = LocalDeviceSettings.current
   val device = settings.device
-  val calendar by LocalOwnDays.current.calendar.collectAsState()
+  val calendar by LocalOwnDays.current.calendar.collectAsStateWithLifecycle()
   val context = LocalContext.current
   val resources = LocalResources.current
   val haptics = LocalHapticFeedback.current

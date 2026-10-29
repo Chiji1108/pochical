@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import app.pochical.R
+import app.pochical.kit.GroupMemberRow
 import app.pochical.kit.LineReaction
 import app.pochical.kit.WaitingLine
 import app.pochical.kit.site
@@ -21,7 +22,7 @@ sealed interface LinePart {
 }
 
 /** What a part's actions act on: the line's seq (null for one on its way), what the chat does, and its menu. */
-class PartLine(val seq: Long?, val handlers: MessageHandlers, val openMenu: () -> Unit)
+class PartLine(val seq: Long?, val handlers: MessageHandlers, val openMenu: () -> Unit, val writerId: String? = null)
 
 /**
  * The line's reactions under its bubble: リアクション, which opens the bar and menu over the chat,
@@ -77,9 +78,39 @@ data class LinksPart(val urls: List<String>) : LinePart {
   @Composable
   override fun actions(line: PartLine): List<CustomAccessibilityAction> {
     val label = stringResource(R.string.chat_open_link)
-    return urls.map { url -> CustomAccessibilityAction(label.format(site(url))) { line.handlers.openLink(url); true } }
+    return urls.zip(linkNames(urls)).map { (url, name) -> CustomAccessibilityAction(label.format(name)) { line.handlers.openLink(url); true } }
   }
 }
+
+/**
+ * How each of a line's links is named in its リンクを開く: by its site, and whole but its scheme when
+ * another link of the line is to the same site, so each is told apart; one written twice is named
+ * alike, as it opens the same page.
+ */
+fun linkNames(urls: List<String>): List<String> {
+  val sites = urls.map(::site)
+  return urls.mapIndexed { index, url ->
+    val shared = urls.indices.any { other -> sites[other] == sites[index] && urls[other] != url }
+    if (shared) url.substringAfter("://").removePrefix("www.") else sites[index]
+  }
+}
+
+/**
+ * The members the line's words mention, in order: 〇〇のプロフィール for each, as a tap on the mention
+ * opens it, but the reader's own and a deleted account's, which open none (spec/chat.md, Mentions).
+ */
+data class MentionsPart(val userIds: List<String>) : LinePart {
+  @Composable
+  override fun actions(line: PartLine): List<CustomAccessibilityAction> {
+    // The writer mentioning themselves: their profile is the line's own action already.
+    return mentioned(userIds, line.handlers).filter { it.userId != line.writerId }.map { member ->
+      CustomAccessibilityAction(stringResource(R.string.chat_writer_profile, member.shownName())) { line.handlers.openProfile?.invoke(member); true }
+    }
+  }
+}
+
+/** The members of [userIds] whose profile a mention of them opens: not the reader, nor one deleted, and only where profiles open. */
+fun mentioned(userIds: List<String>, handlers: MessageHandlers): List<GroupMemberRow> = userIds.distinct().mapNotNull { handlers.profileOf(handlers.writers[it]) }
 
 /**
  * The card of Pochical's invitation the words' first link is, in its page's place (spec/chat.md,

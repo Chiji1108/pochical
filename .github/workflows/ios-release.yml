@@ -32,9 +32,9 @@ jobs:
       # ios:test needs none of mise.toml's tools.
       MISE_TASK_RUN_AUTO_INSTALL: "false"
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: sudo xcode-select --switch "/Applications/Xcode_$(cat .xcode-version).app"
-      - uses: jdx/mise-action@v5
+      - uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5.2.4
         with:
           install: false
       # The commit released passed its own tests, not only its pull request's.
@@ -42,7 +42,6 @@ jobs:
       # The archive is signed for development with this one certificate, as
       # automatic signing does. Left to make its own, Xcode would make a new
       # certificate on each fresh runner and keep none of their private keys.
-      # Pinned by commit, as it is handed the certificate.
       - uses: Apple-Actions/import-codesign-certs@77ba2a2a8f5cfc8c405ebf3159f767c323e238f9 # v7.1.0
         with:
           p12-file-base64: ${{ secrets.APPLE_DEVELOPMENT_CERTIFICATE_P12_BASE64 }}

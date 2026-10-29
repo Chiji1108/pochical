@@ -202,10 +202,13 @@ internal suspend fun SyncDao.photosHeld(groupId: String): List<String> =
 
 /**
  * The groups [changes] say the user left (or was taken out of), each with the photos the device
- * holds of its lines: read in the transaction the changes are taken in, before them.
+ * holds of it: its lines', its members' faces and its mark's. Read in the transaction the changes
+ * are taken in, before them.
  */
 internal suspend fun SyncDao.placesLeft(changes: List<Change>): Map<String, List<String>> =
-  changes.filter { it.kindCase == KindCase.MEMBERSHIP && it.membership.left }.associate { it.membership.groupId to photosHeld(it.membership.groupId) }
+  changes
+    .filter { it.kindCase == KindCase.MEMBERSHIP && it.membership.left }
+    .associate { it.membership.groupId.let { groupId -> groupId to photosHeld(groupId) + groupFaces(groupId) } }
 
 /**
  * The edits an Acked names stop waiting, but for the sends the group [refused]: those stay as lines
