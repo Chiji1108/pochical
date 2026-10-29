@@ -414,6 +414,17 @@ class ChatValuesTest {
   }
 
   @Test
+  fun whatArrivedIsWhatTheDeviceHoldsAfterTheNewestAsItWasWhereverTheLinesAreLaidOut() = runTest {
+    val chats = Chats(database, testLinePhotos())
+    assertEquals(0L, chats.newest("g1", GROUP_THREAD))
+    // The latest page held, and a page of earlier lines with a gap before it.
+    database.write { takeChanges(listOf(wordsLine(1, "u2"), wordsLine(2, "u2"), wordsLine(50, "u2")), "g1") }
+    assertEquals(50L, chats.newest("g1", GROUP_THREAD))
+    database.write { takeChanges(listOf(wordsLine(51, "u2"), wordsLine(10, "u2")), "g1") }
+    assertEquals(listOf(51L), chats.arrived("g1", GROUP_THREAD, after = 50).first().map { it.seq })
+  }
+
+  @Test
   fun whileTheirReadWaitsTheListCountsOthersLinesTheDeviceHolds() = runTest {
     // The latest page alone held, the member's read further back still to be sent.
     database.write { takeChanges((151L..200L).map { wordsLine(it, "u2") }, "g1") }

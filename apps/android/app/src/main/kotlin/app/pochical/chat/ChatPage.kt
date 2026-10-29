@@ -644,7 +644,16 @@ fun ChatPage(
           // The day of the lines at the top, while the person scrolls.
           FloatingDay(floatingDay, list, over.top)
           // What a screen reader hears of the chat as it changes and scrolls.
-          ChatSpeech(chat, me, placed, blockedLine, nameOf, list, floatingDay)
+          ChatSpeech(
+            me,
+            placed,
+            newest = { chats.newest(groupId, threadId) },
+            arrived = { after -> chats.arrived(groupId, threadId, after) },
+            blockedLine,
+            nameOf,
+            list,
+            floatingDay,
+          )
           // Drawn while there are pins, keeping its room over the lines only then.
           if (chat.pins.isNotEmpty()) {
             PinBar(
