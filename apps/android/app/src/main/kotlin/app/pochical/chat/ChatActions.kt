@@ -7,6 +7,8 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.ClipEntry
@@ -31,6 +33,31 @@ sealed interface Unsending {
   data class Sent(val seq: Long) : Unsending
 
   data class Waiting(val opId: String) : Unsending
+}
+
+/**
+ * A link's own menu, as a long press on it opens it (spec/chat.md, In a message): リンクを開く, and
+ * リンクをコピー, which is felt as copying words is (spec/haptics.md) and said under Android 13.
+ */
+@Composable
+fun rememberLinkActions(openLink: (String) -> Unit, snackbar: SnackbarHostState): (String) -> List<LineMenuItem> {
+  val scope = rememberCoroutineScope()
+  val clipboard = LocalClipboard.current
+  val haptics = LocalHapticFeedback.current
+  val resources = LocalContext.current.resources
+  val open by rememberUpdatedState(openLink)
+  return { url ->
+    listOf(
+      LineMenuItem(resources.getString(R.string.chat_link_open), R.drawable.ic_link) { open(url) },
+      LineMenuItem(resources.getString(R.string.chat_link_copy), R.drawable.ic_content_copy) {
+        scope.launch {
+          clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(null, url)))
+          haptics.performHapticFeedback(HapticFeedbackType.Confirm)
+          if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) snackbar.showSnackbar(resources.getString(R.string.chat_copied))
+        }
+      },
+    )
+  }
 }
 
 /**

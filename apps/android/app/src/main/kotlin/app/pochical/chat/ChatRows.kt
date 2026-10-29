@@ -74,7 +74,7 @@ import kotlinx.coroutines.launch
 fun ChatItemRow(item: ChatItem, look: MessageLook?, writers: Map<String, GroupMemberRow>, me: String?, handlers: MessageHandlers, modifier: Modifier = Modifier) {
   when (item) {
     is ChatItem.Typing -> TypingRow(item.userIds.mapNotNull { writers[it] }, modifier)
-    is ChatItem.DayTitle -> DayTitle(item.day, modifier)
+    is ChatItem.DayTitle -> DayTitle(item.day, modifier.then(if (item.key == handlers.takenTitle) Modifier.alpha(0f) else Modifier))
     ChatItem.Unread -> UnreadDivider(modifier)
     is ChatItem.Line -> {
       val line = item.line
@@ -94,9 +94,20 @@ fun ChatItemRow(item: ChatItem, look: MessageLook?, writers: Map<String, GroupMe
   }
 }
 
-/** A day's title over its first line: 今日, 昨日, 10月5日(月). */
+/** A day's title over its first line: 今日, 昨日, 10月5日(月), a heading for a screen reader to go by. */
 @Composable
 private fun DayTitle(day: LocalDate, modifier: Modifier) {
+  Box(modifier.fillMaxWidth().padding(top = Chat.runGap.dp), contentAlignment = Alignment.Center) {
+    DayWords(day, Modifier.semantics { heading() })
+  }
+}
+
+/**
+ * A day as the chat says it, 今日, 昨日 or 10月5日(月), on its quiet ground: a day's title, or the day
+ * floating over the lines ([floating]), on the surface a piece over them stands on.
+ */
+@Composable
+fun DayWords(day: LocalDate, modifier: Modifier = Modifier, floating: Boolean = false) {
   val colors = LocalThemeColors.current
   val today = rememberToday()
   val words =
@@ -105,14 +116,14 @@ private fun DayTitle(day: LocalDate, modifier: Modifier) {
       today.minusDays(1) -> stringResource(R.string.chat_yesterday)
       else -> day.fullText
     }
-  Box(modifier.fillMaxWidth().padding(top = Chat.runGap.dp), contentAlignment = Alignment.Center) {
-    Text(
-      words,
-      Modifier.background(colors.fillTertiary, RoundedCornerShape(Radius.sm)).padding(horizontal = 12.dp, vertical = 2.dp).semantics { heading() },
-      style = MaterialTheme.typography.labelSmall,
-      color = colors.textTertiary,
-    )
-  }
+  Text(
+    words,
+    modifier
+      .background(if (floating) MaterialTheme.colorScheme.surfaceContainerHighest else colors.fillTertiary, RoundedCornerShape(Radius.sm))
+      .padding(horizontal = 12.dp, vertical = 2.dp),
+    style = MaterialTheme.typography.labelSmall,
+    color = if (floating) colors.textSecondary else colors.textTertiary,
+  )
 }
 
 /** ここから新着, a rule either side, in the accent. */
