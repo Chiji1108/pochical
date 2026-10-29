@@ -78,6 +78,13 @@ public struct WidgetOffs: Hashable, Sendable {
   var nextInDays: Int?
   /// Only when nothing is ahead, today included.
   public var none: WidgetNoOff?
+
+  /// The day 次の休み opens, by how many days on it is: today on a day
+  /// off, else the next day off, else today with none ahead
+  /// (spec/widgets.md, Opening the app; spec/shortcuts.md).
+  public var opensInDays: Int {
+    today ? 0 : next?.inDays ?? 0
+  }
 }
 
 /// Someone a widget is set to, by name, with whether they are off on a
@@ -414,5 +421,21 @@ extension WidgetEntry {
       upcoming: (0..<7).map { day(today.adding(days: $0)) },
       twoWeeks: (0..<14).map { day(weekStart.adding(days: $0)) },
       month: monthWeeks(today, weekStart: week.start).map { $0.map(day) })
+  }
+
+  /// The day 次の休み opens: the widget's tap, its control and the
+  /// shortcut alike.
+  public var nextOffDay: Day {
+    date.adding(days: offs.opensInDays)
+  }
+
+  /// Before the app has made its database: an empty calendar's, as before
+  /// anything is entered, until it makes one. No day of it is the sample
+  /// week's, which a control or a shortcut would otherwise say.
+  public static func nothingYet(
+    at now: Date, week: DeviceSettings.Week, calendar: Calendar = .current
+  ) -> WidgetEntry {
+    OwnCalendar(days: [], patterns: [], patternOrder: [], orders: [])
+      .widgetEntry(at: now, week: week, calendar: calendar)
   }
 }

@@ -4,8 +4,9 @@ import SwiftUI
 import WidgetKit
 
 // The pieces every kind of widget draws days with (/design's
-// design-widgets.tsx): a day's mark or dash, its name, a day off's look,
-// the memo's stroke, and the words a day is written and read in.
+// design-widgets.tsx): a day's mark or dash, its name, a day off's look
+// and the memo's stroke. The words they are written and read in are
+// WidgetWords.swift's, which the shortcuts say too.
 
 /// How much smaller a mark draws with its name under it.
 let nameRoom: CGFloat = 6
@@ -164,14 +165,6 @@ extension WidgetDay {
   var news: String? {
     pattern == nil ? "予定なし" : change
   }
-
-  /// The whole day read aloud: its date, the shift and its hours, in the
-  /// language its date is shown in (Sat, Oct 10).
-  func spoken(english: Bool) -> String {
-    let parts = [WidgetWords(english: english).date(date), pattern?.name ?? "予定なし"] + [time].compactMap { $0 }
-    let memo = noted ? (english ? "memo" : "メモあり") : nil
-    return (parts + [memo].compactMap { $0 }).joined(separator: english ? ", " : "、")
-  }
 }
 
 /// A day as one element for screen readers, read as `spoken`.
@@ -184,35 +177,6 @@ struct SpokenDay: ViewModifier {
       .accessibilityElement(children: .ignore)
       .accessibilityLabel(day.spoken(english: english))
   }
-}
-
-/// The widgets' few words in Japanese or English (/design's useWords).
-struct WidgetWords {
-  let english: Bool
-
-  /// A date as a widget names a day: 9月24日(木), or Thu, Sep 24.
-  func date(_ day: Day) -> String {
-    english
-      ? "\(day.weekdayName(english: true)), \(day.shortMonth(english: true)) \(day.day)"
-      : day.fullText
-  }
-
-  /// When a day comes: 今日, 明日, else how many days on.
-  func inDays(_ count: Int) -> String {
-    if english {
-      return count == 0 ? "Today" : count == 1 ? "Tomorrow" : "in \(count) days"
-    }
-    return count == 0 ? "今日" : count == 1 ? "明日" : "\(count)日後"
-  }
-
-  /// The day after a day off: 明日, or its weekday (Fri) in English,
-  /// short enough to keep clear of the poodle in the corner.
-  func nextDay(_ day: Day) -> String {
-    english ? day.weekdayName(english: true) : "明日"
-  }
-
-  var nothingYet: String { english ? "Nothing yet" : "まだ入っていません" }
-  var firstRunLine: String { english ? "Enter shifts to see them" : "シフトを入れると出ます" }
 }
 
 /// A clock time without its leading zero: 8:30.
@@ -251,20 +215,5 @@ struct PickAgain: View {
       .foregroundStyle(colors.textSecondary)
       .frame(maxWidth: .infinity, maxHeight: .infinity)
       .widgetURL(groupLink(groupID))
-  }
-}
-
-/// The group's table at a day, where whose days make it count can be
-/// seen (spec/widgets.md, Opening the app).
-func groupLink(_ groupID: String, day: Day? = nil) -> URL {
-  let path = day.map { "/day/\($0.key)" } ?? ""
-  return URL(string: "pochical://group/\(groupID)\(path)")!
-}
-
-extension WidgetEntry {
-  /// Where a day opens: the group's table set to someone, else the
-  /// calendar.
-  func link(_ day: Day) -> URL {
-    with.map { groupLink($0.groupID, day: day) } ?? dayLink(day)
   }
 }

@@ -10,5 +10,7 @@ struct PochicalWidgetsBundle: WidgetBundle {
     CalendarWidget()
     NextOffWidget()
     NowWidget()
+    TodayControl()
+    NextOffControl()
   }
 }

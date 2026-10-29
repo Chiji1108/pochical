@@ -147,6 +147,13 @@ description = "Run the Android modules' unit tests and lint"
 dir = "{{config_root}}/apps/android"
 run = "./gradlew test lint"
 
+[tasks."android:widget-previews"]
+description = "Draw the widget picker's pictures before Android 15 (previewImage), light and dark, from the widgets themselves (spec/widgets.md)"
+dir = "{{config_root}}/apps/android"
+env = { WIDGET_PREVIEWS_OUT = "{{config_root}}/apps/android/app/src/main/res" }
+# Without the configuration cache, which could keep the test task from an ordinary run without the folder.
+run = "./gradlew :app:testDebugUnitTest --tests app.pochical.widgets.WidgetPreviewImages --rerun --no-configuration-cache"
+
 [tasks."android:db:check"]
 description = "Fail if a database version's schema Room exports changed shape (its identity hash) since the branch's base, or as built and not committed, or wrote one not committed (run after a build; BASE: the commit to compare with, by default where the branch left origin/main)"
 run = """

@@ -106,7 +106,11 @@ Each kind is one widget in the gallery, offering the sizes in the table above; o
 | カレンダー | medium, large (Android 4×2, 4×4) | カレンダー | 2週間と、1か月のシフト。 |
 | いまのシフト | small; lock screen round and rectangular | いまのシフト | 勤務があと何時間か。なければ次の勤務まで。 |
 
-What a gallery shows of a kind before it is placed: on the iPhone the person's own entry once they have entered days (WidgetKit's snapshot), else the sample week the pages under /design/widgets show on an ordinary day (ふつう), which is also the placeholder while an entry loads. Android's picker shows the sample, as a generated preview where the launcher supports it (Android 15), else as a picture of it.
+What a gallery shows of a kind before it is placed: on the iPhone the person's own entry once they have entered days (WidgetKit's snapshot), else the sample week the pages under /design/widgets show on an ordinary day (ふつう), which is also the placeholder while an entry loads. Android's picker shows the sample, as a generated preview where the launcher supports it (Android 15), else as a picture of it (`android:previewImage`), drawn from the widgets themselves through Glance in light and dark (`drawable-night`) by `mise run android:widget-previews`, run again whenever a widget's look changes.
+
+## Shortcuts and controls
+
+On the iPhone the same entry also answers the app's shortcuts and its controls (Control Center, the lock screen and the Action button): `spec/shortcuts.md`, iPhone.
 
 ## Colors
 
