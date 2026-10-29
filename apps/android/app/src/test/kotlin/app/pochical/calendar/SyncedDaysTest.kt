@@ -1,6 +1,7 @@
 package app.pochical.calendar
 
 import app.pochical.kit.ShiftTime
+import app.pochical.kit.ownCalendar
 import app.pochical.v1.pattern
 import app.pochical.v1.repeatOrder
 import java.time.LocalDate
@@ -59,7 +60,7 @@ class SyncedDaysTest {
   @Test
   fun onceReadTheCalendarHoldsWhatTheDeviceKeeps() = runBlocking {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    val opened = SyncedDays(test.database, test.edits, scope)
+    val opened = SyncedDays(test.database, test.edits, test.database.values().ownCalendar(), scope)
     opened.awaitRead()
     assertEquals(listOf("day", "night"), opened.calendar.value.patterns.map { it.id })
     scope.cancel()
