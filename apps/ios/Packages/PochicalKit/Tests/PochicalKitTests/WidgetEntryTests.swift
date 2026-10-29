@@ -47,6 +47,7 @@ struct WidgetVectors: Decodable, Sendable {
     let name: String
     let me: Days
     let with: [Days]
+    let group: Bool?
     let expected: Expected
   }
 
@@ -132,13 +133,14 @@ func widgetOffsCount(_ vector: WidgetVectors.OffsCase) {
       them.value(date.days(since: today)).map { $0 == "off" }
     }
   }
-  let offs = widgetOffs(today: day(0), people: people, dayAt: day)
+  let offs = widgetOffs(today: day(0), people: people, group: vector.group ?? false, dayAt: day)
   #expect(offs.today == vector.expected.today)
   #expect(offs.next?.inDays == vector.expected.next)
   let none: WidgetNoOff? =
     switch vector.expected.none?.kind {
     case "waiting": .waiting(vector.expected.none?.names ?? [])
     case "apart": .apart
+    case "alone": .alone
     case "notEntered": .notEntered
     default: nil
     }

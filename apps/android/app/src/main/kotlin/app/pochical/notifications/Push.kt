@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
@@ -64,6 +65,8 @@ class Push(
     // The device letting go of a user (spec/sync-protocol.md, Sockets): the notifications of the
     // user before go with their data.
     scope.launch { lettingGo(states).collect { notifier.forgetAll() } }
+    // A group left: its chats' notifications and conversations go with it.
+    scope.launch(start = CoroutineStart.UNDISPATCHED) { kit.account.left.collect(notifier::forgetPlace) }
     // The notifications of lines read go as the device learns of the reads, should no withdrawal
     // reach it (spec/chat.md, Notifications): the user's own reads, here or elsewhere, at once,
     // and a chat whose count comes to nothing unread once it does. The first counts read may be

@@ -5,6 +5,7 @@ import android.app.Application
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import androidx.core.app.AlarmManagerCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -41,7 +42,11 @@ import kotlinx.coroutines.sync.withLock
  *
  * Exact alarms, as a reminder says its time to the minute (21:00に通知が届きます, 開始の15分前), with
  * the special access Android 14 leaves to the person (SCHEDULE_EXACT_ALARM). Without it the system
- * may bring one up to an hour late, so the reminders' page asks for it.
+ * may bring one up to an hour late, so the reminders' page asks for it. Taken away in the system's
+ * settings, the system stops the app and cancels its exact alarms, and says nothing the app hears
+ * until it next runs; so beside each exact alarm an inexact one is set for the same minute, which
+ * the system keeps, and the reminder then comes up to an hour late rather than never. Whichever the
+ * system brings first shows it and sets the next pair; the other finds it shown.
  */
 class ReminderAlarms(
   private val application: Application,
@@ -94,6 +99,8 @@ class ReminderAlarms(
       try {
         if (firedAt == null) readExact()
         turn.withLock {
+          // The other of a pair, brought after the first set the next: nothing to do.
+          if (firedAt != null && firedAt != kept.getLong(KEY_SET_FOR, 0)) return@withLock
           val scheduled = current()
           if (firedAt != null) fired(firedAt, scheduled)
           // Woken by anything but the alarm, the system may hold it no more.
@@ -106,15 +113,14 @@ class ReminderAlarms(
   }
 
   /**
-   * The system brought the alarm of [at]: what is due since, if it may be shown, up to an hour late.
-   * One it brings again, as when it was set anew while already on its way, is the alarm spent.
+   * The system brought the alarm of [at]: what is due since, if it may be shown, up to an hour late,
+   * and a little more, as the inexact alarm's hour of leeway ends a little before it is delivered.
    */
   private fun fired(at: Long, scheduled: Scheduled) {
-    if (at != kept.getLong(KEY_SET_FOR, 0)) return
     kept.edit { remove(KEY_SET_FOR) }
     if (!scheduled.allowed) return
     val now = clock()
-    val since = maxOf(at - 1, now.toInstant().toEpochMilli() - LATE_MOST_MILLIS)
+    val since = maxOf(at - 1, now.toInstant().toEpochMilli() - LATE_MOST_MILLIS - DELIVERY_MILLIS)
     scheduled.reminders.sending(scheduled.calendar, Instant.ofEpochMilli(since).atZone(now.zone), now).forEach { show(it, now.zone) }
   }
 
@@ -147,23 +153,31 @@ class ReminderAlarms(
           ?: scheduled.reminders.sending(scheduled.calendar, after, now.plusDays(LOOK_AHEAD_DAYS)).firstOrNull()
     if (next == null) {
       kept.edit { remove(KEY_SET_FOR) }
-      return alarms.cancel(waking())
+      alarms.cancel(waking(EXACT))
+      alarms.cancel(waking(INEXACT))
+      return
     }
     val at = next.at(zone).toInstant().toEpochMilli()
     kept.edit { putLong(KEY_SET_FOR, at) }
-    val fire = waking(at)
+    // Exact alarms can be taken away from Android 12 on; before, the exact one alone.
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+      AlarmManagerCompat.setAndAllowWhileIdle(alarms, AlarmManager.RTC_WAKEUP, at, waking(INEXACT, at))
+    }
     if (AlarmManagerCompat.canScheduleExactAlarms(alarms)) {
-      AlarmManagerCompat.setExactAndAllowWhileIdle(alarms, AlarmManager.RTC_WAKEUP, at, fire)
+      AlarmManagerCompat.setExactAndAllowWhileIdle(alarms, AlarmManager.RTC_WAKEUP, at, waking(EXACT, at))
     } else {
-      AlarmManagerCompat.setAndAllowWhileIdle(alarms, AlarmManager.RTC_WAKEUP, at, fire)
+      alarms.cancel(waking(EXACT))
     }
   }
 
-  /** The one alarm the reminders keep, for [at]; its extras do not tell it apart, so any one of it cancels it. */
-  private fun waking(at: Long = 0): PendingIntent =
+  /**
+   * One of the two alarms the reminders keep, [EXACT] or [INEXACT], for [at]; its extras do not tell
+   * it apart, so any one of it cancels it.
+   */
+  private fun waking(kind: Int, at: Long = 0): PendingIntent =
     PendingIntent.getBroadcast(
       application,
-      0,
+      kind,
       Intent(application, ReminderReceiver::class.java).setAction(ReminderReceiver.ACTION_FIRE).putExtra(ReminderReceiver.EXTRA_AT, at),
       PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
@@ -191,6 +205,13 @@ class ReminderAlarms(
 
   private companion object {
     const val KEY_SET_FOR = "setFor"
+
+    /** The two alarms' request codes: the exact one, and the inexact one the system keeps beside it. */
+    const val EXACT = 0
+    const val INEXACT = 1
+
+    /** How late past its hour of leeway the system may still deliver an inexact alarm, a minute. */
+    const val DELIVERY_MILLIS = 60 * 1000L
 
     /** The reminders' notifications are told apart by their tags, the reminder and the shift's day. */
     const val TAG_PREFIX = "reminder."

@@ -2,6 +2,8 @@ package app.pochical.kit
 
 import kotlinx.serialization.Serializable
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
 // A message's links, mentions and Pochical's invitation links (spec/vectors/chat-text.json).
 
@@ -13,7 +15,10 @@ private data class ChatTextVectors(
   val inviteCode: List<InviteCode>,
   val withMentions: List<WithMentions>,
   val site: List<Site>,
+  val largeEmoji: List<LargeEmoji>,
 ) {
+  @Serializable data class LargeEmoji(override val name: String, val text: String, val expected: Int) : VectorCase
+
   @Serializable
   data class Site(val url: String, val expected: String) : VectorCase {
     override val name
@@ -48,6 +53,8 @@ private data class ChatTextVectors(
   }
 }
 
+// Robolectric for ICU, which tells emoji (isEmoji).
+@RunWith(RobolectricTestRunner::class)
 class ChatTextTest {
   private val text = vectors<ChatTextVectors>("chat-text")
 
@@ -66,4 +73,6 @@ class ChatTextTest {
   @Test fun site() = text.site.checkEach({ it.expected }) { site(it.url) }
 
   @Test fun inviteCode() = text.inviteCode.checkEach({ it.expected }) { inviteCode(it.url) }
+
+  @Test fun largeEmoji() = text.largeEmoji.checkEach({ it.expected }) { largeEmojiCount(it.text) }
 }

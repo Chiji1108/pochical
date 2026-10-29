@@ -203,10 +203,30 @@ class ChatPhotoFiles internal constructor(caches: Lazy<File>, files: Lazy<File>)
         pendingSmall(groupId, id).delete()
       }
     }
+    tellLetGo(groupId, photoIds)
+  }
+
+  /**
+   * Marks the group [groupId]'s [photoIds] let go of, so a fetch on its way keeps none of them, and
+   * tells the app's image cache to let go of them too.
+   */
+  private suspend fun tellLetGo(groupId: String, photoIds: List<String>) {
     for (id in photoIds) {
       letGo += "$groupId/$id"
       mutableForgotten.emit(ForgottenPhoto(PhotoShelf.place(groupId), id))
     }
+  }
+
+  /**
+   * A group left: every photo of the member's kept for it, to send or to show, and [photoIds], those
+   * of its lines the device held, for the app's image cache to let go of too.
+   */
+  internal suspend fun forgetPlace(groupId: String, photoIds: List<String>) {
+    withContext(Dispatchers.IO) {
+      File(caches, "chat-photos/$groupId").deleteRecursively()
+      File(files, "pending-photos/$groupId").deleteRecursively()
+    }
+    tellLetGo(groupId, photoIds)
   }
 
   /** Every photo kept, to send or to show, gone with the user. */
