@@ -58,8 +58,9 @@ import app.pochical.design.COWORKERS_MAX
 import app.pochical.design.TextLimits
 import app.pochical.kit.ShiftTime
 import app.pochical.kit.hoursText
+import app.pochical.kit.minutes
 import app.pochical.kit.timeChange
-import app.pochical.limitText
+import app.pochical.kit.limitText
 import app.pochical.limited
 import java.time.LocalDate
 
@@ -183,8 +184,8 @@ private fun HoursRow(entry: DayEntry, time: ShiftTime, onChange: (DayEntry) -> U
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun TimeDialog(time: String, onPick: (String) -> Unit, onDismiss: () -> Unit) {
-  val (hour, minute) = time.split(":").map(String::toInt)
-  val state = rememberTimePickerState(initialHour = hour, initialMinute = minute, is24Hour = true)
+  val minutes = minutes(time)
+  val state = rememberTimePickerState(initialHour = minutes / 60, initialMinute = minutes % 60, is24Hour = true)
   AlertDialog(
     onDismissRequest = onDismiss,
     confirmButton = {

@@ -9,7 +9,7 @@ import app.pochical.kit.pushedOf
 import app.pochical.kit.DeviceSettings
 import app.pochical.kit.ReadState
 import app.pochical.kit.SendOutboxWorker
-import app.pochical.limitText
+import app.pochical.kit.limitText
 import app.pochical.design.TextLimits
 import coil3.SingletonImageLoader
 import kotlinx.coroutines.flow.collectLatest

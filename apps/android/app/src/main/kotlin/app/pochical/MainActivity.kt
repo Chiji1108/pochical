@@ -55,9 +55,15 @@ class MainActivity(
   private val push: Push,
   private val notificationPermission: NotificationPermission,
   private val reminderAlarms: ReminderAlarms,
+  private val appleSignIn: AppleSignIn,
+  private val signIns: SignIns,
 ) : ComponentActivity() {
   private var settings by mutableStateOf<DeviceSettings?>(null)
-  private val appleSignIn = AppleSignIn(this, kit.appleSignIn)
+
+  init {
+    // Before the activity is created, as the Auth Tab's result launcher must be.
+    appleSignIn.attach(this)
+  }
   private var calendarRead by mutableStateOf(false)
   private var firstRunDone by mutableStateOf<Boolean?>(null)
   private val links = OpenedLinks()
@@ -72,8 +78,8 @@ class MainActivity(
     if (savedInstanceState == null && intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY == 0) take(intent)
     addOnNewIntentListener(::take)
     lifecycleScope.launch {
-      // Not cancelled with the activity, so a sample is never left half put in; read after it, so
-      // the first calendar drawn holds it.
+      // Not cancelled with the activity, so a sample is never left half put in. The calendar, which
+      // the reminders follow from the app's start, shows it as the database tells of its writes.
       if (savedInstanceState == null) withContext(NonCancellable) { takeLaunchOptions(intent, kit) }
       ownDays.awaitRead()
       calendarRead = true
@@ -97,6 +103,7 @@ class MainActivity(
         LocalOwnDays provides ownDays,
         LocalAccount provides kit.account,
         LocalAppleSignIn provides appleSignIn,
+        LocalSignIns provides signIns,
         LocalGroupCalls provides kit.groups,
         LocalValues provides kit.database.values(),
         LocalChats provides kit.chats,

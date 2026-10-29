@@ -5,14 +5,25 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
-// The marks' rules of text.json and a day's shift name; characterCount and limitText are the app's TextLimitsTest's.
+// How text is counted and cut (spec/text-limits.md), the marks' rules of text.json and a day's shift name.
 @Serializable
 private data class TextVectors(
+  val characterCount: List<CharacterCount>,
+  val limitText: List<LimitText>,
   val isEmoji: List<IsEmoji>,
   val fitsText: List<FitsText>,
   val markLetter: List<MarkLetter>,
   val dayName: List<DayName>,
 ) {
+  @Serializable data class CharacterCount(override val name: String, val text: String, val expected: Int) : VectorCase
+
+  /** Named by its [text]. */
+  @Serializable
+  data class LimitText(val text: String, val limit: Int, val expected: String) : VectorCase {
+    override val name
+      get() = text
+  }
+
   @Serializable data class IsEmoji(override val name: String, val text: String, val expected: Boolean) : VectorCase
 
   @Serializable data class FitsText(override val name: String, val text: String, val limit: Int, val expected: Boolean) : VectorCase
@@ -28,6 +39,10 @@ private data class TextVectors(
 @RunWith(RobolectricTestRunner::class)
 class TextTest {
   private val vectors = vectors<TextVectors>("text")
+
+  @Test fun characterCount() = vectors.characterCount.checkEach({ it.expected }) { characterCount(it.text) }
+
+  @Test fun limitText() = vectors.limitText.checkEach({ it.expected }) { limitText(it.text, it.limit) }
 
   @Test fun isEmoji() = vectors.isEmoji.checkEach({ it.expected }) { isEmoji(it.text) }
 

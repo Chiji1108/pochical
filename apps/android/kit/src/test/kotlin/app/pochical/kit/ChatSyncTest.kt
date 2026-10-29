@@ -70,10 +70,14 @@ class ChatSyncTest {
   fun aLineSentShowsWaitingAtOnceThenAsTheGroups() = runBlocking {
     val phone = signedIn()
     val me = server.userId
+    // Held by the server once sent, until the line has been seen waiting, which it is until the group has it.
+    server.holdSends()
     phone.chats.send("g1", GROUP_THREAD, "おはよう")
+    eventually { server.sendsHeld() == 1 }
     val waiting = phone.chat(me).waiting.single()
     assertEquals(LineContent.Words("おはよう"), waiting.content)
     assertFalse(waiting.failed)
+    server.releaseSends()
 
     // No page holds the group open: its socket opens for the outbox alone, and closes once it is sent.
     val sent = phone.chat(me) { it.waiting.isEmpty() && it.lines.isNotEmpty() }
@@ -170,10 +174,14 @@ class ChatSyncTest {
     val phone = signedIn()
     val me = server.userId
     val photos = listOf(ShrunkPhoto(byteArrayOf(1, 2, 3), 4, 3, byteArrayOf(9)), ShrunkPhoto(byteArrayOf(4, 5), 3, 4, byteArrayOf(8)))
+    // Held by the server once sent, until the line has been seen waiting, which it is until the group has it.
+    server.holdSends()
     phone.chats.sendPhotos("g1", GROUP_THREAD, photos)
+    eventually { server.sendsHeld() == 1 }
     val waiting = phone.chat(me).waiting.single().content as LineContent.Photos
     val ids = waiting.photos.map { it.id }
     assertEquals(listOf(4 to 3, 3 to 4), waiting.photos.map { it.width to it.height })
+    server.releaseSends()
 
     val sent = phone.chat(me) { it.waiting.isEmpty() && it.lines.isNotEmpty() }
     assertEquals(ids, (sent.lines.single().content as LineContent.Photos).photos.map { it.id })

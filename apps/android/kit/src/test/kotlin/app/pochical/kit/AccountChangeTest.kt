@@ -77,6 +77,41 @@ class AccountChangeTest {
   }
 
   @Test
+  fun aSignInAskedBeforeTheDeviceHasItsSessionWaitsForIt() = runBlocking<Unit> {
+    // As a sign-in whose Apple page returned to an app started anew: the account is had before the
+    // device has signed in again.
+    server.signInDelayMs = 500
+    val phone = Device(server).also { devices += it }
+    phone.account.foreground()
+
+    assertEquals(SignInResult.Linked, phone.account.signIn(google))
+
+    withTimeout(10_000) { phone.account.state.first { it == AccountState.SignedIn("user-1", account) } }
+    assertEquals(StoredSession("token-1", "user-1", linked = account), phone.sessions.read())
+  }
+
+  @Test
+  fun anAccountSwitchedToThatHoldsNoPatternsSaysSoOnceCaughtUp() = runBlocking<Unit> {
+    val phone = signedInDevice()
+    accountInUse()
+
+    val switched = phone.account.signIn(google)
+
+    assertFalse(FirstRun(phone.database).holdsPatternsAfter(switched, phone.account))
+  }
+
+  @Test
+  fun anAccountSwitchedToBringsItsPatternsBeforeItIsAsked() = runBlocking<Unit> {
+    val phone = signedInDevice()
+    accountInUse()
+    server.patternElsewhere("day", user = "user-b")
+
+    val switched = phone.account.signIn(google)
+
+    assertTrue(FirstRun(phone.database).holdsPatternsAfter(switched, phone.account))
+  }
+
+  @Test
   fun anAccountInUseHoldingNothingIsTakenWithoutAsking() = runBlocking<Unit> {
     val phone = signedInDevice()
     phone.edits.setDay("2026-11-02", DayField.DAY_FIELD_PATTERN, "night")
@@ -324,7 +359,11 @@ class AccountChangeTest {
   @Test
   fun aDeletionTheServerRefusesSaysWhyAndKeepsEverything() = runBlocking<Unit> {
     server.provider = SignInProvider.SIGN_IN_PROVIDER_APPLE
+    // The sign-in's own GetMe answers only after the deletion is refused: the deletion's tells of Apple.
+    server.getMeDelayMs = 1_000
     val phone = signedInDevice()
+    eventually { server.getMes.get() == 1 }
+    server.getMeDelayMs = 0
     phone.edits.setDay("2026-11-02", DayField.DAY_FIELD_PATTERN, "night")
     server.deleteRefusal = "failed_precondition"
 
@@ -337,12 +376,13 @@ class AccountChangeTest {
   }
 
   @Test
-  fun aLinkTheServerSaysWhileADeletionIsAskedStaysOnceItIsRefused() = runBlocking<Unit> {
-    server.provider = SignInProvider.SIGN_IN_PROVIDER_APPLE
-    // The sign-in's own GetMe answers only once the deletion has begun.
+  fun anAnswerAskedBeforeTheDeletionsNeverUndoesItsOnceItIsRefused() = runBlocking<Unit> {
+    // The sign-in's own GetMe, asked while the user was linked to nothing, answers only once the
+    // deletion has begun; the deletion's, asked after Apple was linked elsewhere, says Apple.
     server.getMeDelayMs = 1_000
     val phone = signedInDevice()
-    eventually { server.getMes == 1 }
+    eventually { server.getMes.get() == 1 }
+    server.provider = SignInProvider.SIGN_IN_PROVIDER_APPLE
     server.getMeDelayMs = 0
     server.deleteDelayMs = 2_000
     server.deleteRefusal = "failed_precondition"

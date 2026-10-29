@@ -192,8 +192,13 @@ class SyncAccount internal constructor(
   private var deletingLeftBehind: Job? = null
   /** A new session the store could not keep yet; only [signIn], one at a time, reads and writes it. */
   private var unkept: StoredSession? = null
-  /** How many links the device has made; an answer to GetMe asked before the last is stale. */
-  private var links = 0L
+  /** How many times the device has asked the server which provider the user is linked to (`GetMe`). */
+  private val asks = AtomicLong()
+  /**
+   * The ask whose answer the account last took, or as many as there were when a link was made here:
+   * the answer to an ask up to it is stale. Read and changed by [handle] alone.
+   */
+  private var heard = 0L
   /** How many [sendOutbox] calls wait: the user's socket stays open for them in the background. */
   private var sending = 0
 
@@ -241,11 +246,14 @@ class SyncAccount internal constructor(
    * Signs in with the provider's account (spec/sync-protocol.md, Signing in): linked to this user,
    * keeping what the device holds; or, when it is another user's already, one side kept, without
    * asking when either holds nothing (this device's data let go first), else [SignInResult.Choose]
-   * for the person to. [NotSignedIn] before the device has a session, or once the server says it
-   * does not know it; [AccountSuspended] for an account Pochical's people suspended; [LinkRefused]
-   * or another error otherwise, nothing changed.
+   * for the person to. Asked while the device is still signing in, as by a sign-in whose page
+   * returned to an app started anew, it waits for the device's session first. [NotSignedIn] when the
+   * device has none once that settles, or once the server says it does not know it;
+   * [AccountSuspended] for an account Pochical's people suspended; [LinkRefused] or another error
+   * otherwise, nothing changed.
    */
   suspend fun signIn(account: ProviderToken): SignInResult {
+    state.first { it != AccountState.SigningIn }
     val credentials = signedIn() ?: throw NotSignedIn()
     if (link(credentials, account) == LinkResult.Linked) return SignInResult.Linked
     val inUse = coroutineScope {
@@ -306,7 +314,7 @@ class SyncAccount internal constructor(
     val asking = signedIn() ?: throw DeletionFailure(whyNotSignedIn())
     val provider =
       try {
-        UserCalls(http, server, asking.token).linkedProvider()
+        askLinked(asking)
       } catch (e: ConnectException) {
         val reason = reasonOf(e)
         if (reason == DeletionFailure.Reason.SessionEnded) commands.send(Command.SessionUnknown(asking.generation))
@@ -471,7 +479,7 @@ class SyncAccount internal constructor(
             }
             throw e
           }
-        if (result == LinkResult.Linked) commands.send(Command.Linked(credentials.generation, account.account, asOf = null))
+        if (result == LinkResult.Linked) commands.send(Command.Linked(credentials.generation, account.account, ask = null))
         result
       }
       .await()
@@ -526,18 +534,23 @@ class SyncAccount internal constructor(
 
   /**
    * Asks the server which provider the user is linked to (`GetMe`), as a session restored or linked
-   * elsewhere may not say, and keeps it with the session; an email this device read stays while the
-   * provider does. Nothing changes when the server cannot be asked.
+   * elsewhere may not say, and keeps it with the session before it is returned, so what the caller
+   * goes on to do starts from it; an email this device read stays while the provider does.
    */
-  private suspend fun askLinked(credentials: Credentials, asOf: Long) {
-    val provider =
-      try {
-        UserCalls(http, server, credentials.token).linkedProvider()
-      } catch (e: ConnectException) {
-        if (e.code == Code.UNAUTHENTICATED) commands.send(Command.SessionUnknown(credentials.generation))
-        return
-      }
-    commands.send(Command.Linked(credentials.generation, provider?.let { LinkedAccount(it, email = null) }, asOf))
+  private suspend fun askLinked(credentials: Credentials): LinkedAccount.Provider? {
+    val ask = asks.incrementAndGet()
+    val provider = UserCalls(http, server, credentials.token).linkedProvider()
+    commands.send(Command.Linked(credentials.generation, provider?.let { LinkedAccount(it, email = null) }, ask))
+    return provider
+  }
+
+  /** [askLinked], nothing changing when the server cannot be asked. */
+  private suspend fun learnLinked(credentials: Credentials) {
+    try {
+      askLinked(credentials)
+    } catch (e: ConnectException) {
+      if (e.code == Code.UNAUTHENTICATED) commands.send(Command.SessionUnknown(credentials.generation))
+    }
   }
 
   /** Keeps the group's socket open, while the app is in the foreground, until [GroupHold.release]. */
@@ -609,8 +622,7 @@ class SyncAccount internal constructor(
         if (foreground || sending > 0) stretch.user.start()
         stretch.openGroups()
         if (command.kept) keepAgain()
-        val asOf = links
-        stretch.scope.launch { askLinked(stretch.credentials, asOf) }
+        stretch.scope.launch { learnLinked(stretch.credentials) }
         deleteLeftBehind(stretch)
       }
       is Command.SessionUnknown -> {
@@ -680,16 +692,16 @@ class SyncAccount internal constructor(
       }
       is Command.AskLinked -> {
         if (state.value !is AccountState.SignedIn || current?.credentials?.generation != command.generation) return
-        val asOf = links
-        current.scope.launch { askLinked(current.credentials, asOf) }
+        current.scope.launch { learnLinked(current.credentials) }
       }
       is Command.Linked -> {
         val now = state.value
         // Heard while a change is asked, it is the user's as they are kept should the change fail.
         val before = (now as? AccountState.Changing)?.before ?: now as? AccountState.SignedIn ?: return
         if (current?.credentials?.generation != command.generation) return
-        // A link made here wins over what the server said of the user before it.
-        if (command.asOf == null) links += 1 else if (command.asOf != links) return
+        // A link made here wins over what the server said of the user before it, and the answer to
+        // a later ask over an earlier one's, whichever comes first.
+        if (command.ask == null) heard = asks.get() else if (command.ask <= heard) return else heard = command.ask
         val after =
           when {
             command.account == null -> null
@@ -771,7 +783,7 @@ class SyncAccount internal constructor(
       }
       is Outcome.Took -> {
         // A link made here wins over what the server said of the user before it.
-        links += 1
+        heard = asks.get()
         keepLinked(outcome.account)
         mutableState.value = AccountState.SignedIn(current.credentials.userId, outcome.account)
         command.settled.complete(Unit)
@@ -1057,10 +1069,10 @@ class SyncAccount internal constructor(
 
     /**
      * The stretch [generation]'s user is linked to [account], null while anonymous; one without an
-     * email names the provider alone, as the server does. [asOf] is how many links the device had
-     * made when GetMe was asked, null for a link made here.
+     * email names the provider alone, as the server does. [ask] is the GetMe that said so, counted
+     * in [asks], null for a link made here.
      */
-    data class Linked(val generation: Long, val account: LinkedAccount?, val asOf: Long?) : Command
+    data class Linked(val generation: Long, val account: LinkedAccount?, val ask: Long?) : Command
 
     /** Ask the server which provider the stretch [generation]'s user is linked to. */
     data class AskLinked(val generation: Long) : Command
