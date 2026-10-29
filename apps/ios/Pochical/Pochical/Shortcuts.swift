@@ -41,7 +41,7 @@ struct TodayShiftIntent: AppIntent {
     let settings = DeviceSettings.kept()
     let english = settings.heading.english
     let entry = currentWidgetEntry(choice: nil, settings)
-    opener.open(dayLink(entry.date))
+    opener.open(OpenedPlace.today.link(in: entry))
     return .result(
       dialog: IntentDialog(stringLiteral: entry.spokenToday(english: english)),
       view: DaySnippet(
@@ -75,7 +75,7 @@ struct NextOffShortcutIntent: AppIntent {
     let entry = currentWidgetEntry(choice: with.flatMap { WidgetChoice(id: $0.id) }, settings)
     let soonest = entry.soonestOff
     let pickAgain = english ? "Pick who again" : "一緒に休む人を選び直してください"
-    opener.open(entry.offLink)
+    opener.open(OpenedPlace.nextOff.link(in: entry))
     return .result(
       dialog: IntentDialog(
         stringLiteral: entry.pickAgain == nil ? entry.spokenOff(english: english) : pickAgain),

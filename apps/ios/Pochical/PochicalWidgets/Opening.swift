@@ -44,11 +44,9 @@ nonisolated enum OpenedPlace: String, AppEnum {
     .today: "今日", .nextOff: "次の休み",
   ]
 
-  /// Its link, worked out from the days as the device holds them now, so
-  /// it never opens a day that has gone by.
-  nonisolated var link: URL {
-    let entry = currentWidgetEntry(choice: nil, DeviceSettings.kept())
-    return dayLink(self == .today ? entry.date : entry.nextOffDay)
+  /// Its link in `entry`: the controls' and the shortcuts' alike.
+  func link(in entry: WidgetEntry) -> URL {
+    self == .today ? entry.link(entry.date) : entry.offLink
   }
 }
 
@@ -72,7 +70,10 @@ struct OpenPlaceIntent: AppIntent {
   }
 
   func perform() async throws -> some IntentResult {
-    await opener.open(place.link)
+    // Worked out from the days as the device holds them now, so it never
+    // opens a day that has gone by.
+    let entry = currentWidgetEntry(choice: nil, DeviceSettings.kept())
+    await opener.open(place.link(in: entry))
     return .result()
   }
 }

@@ -47,8 +47,10 @@ struct NextOffValue {
 
   init(_ entry: WidgetEntry, english: Bool) {
     let words = WidgetWords(english: english)
+    // The day it opens, the same function's.
     self.words =
-      entry.soonestOff.map { words.date($0.day.date) } ?? noOffWords(entry.offs.none, words: words)
+      entry.soonestOff == nil
+      ? noOffWords(entry.offs.none, words: words) : words.date(entry.nextOffDay)
   }
 
   struct Provider: ControlValueProvider {
