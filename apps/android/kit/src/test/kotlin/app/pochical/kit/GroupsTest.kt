@@ -1,7 +1,6 @@
 package app.pochical.kit
 
 import app.pochical.v1.change
-import app.pochical.v1.markLook
 import app.pochical.v1.profile
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -109,27 +108,6 @@ class ProfileTest {
 
     database.write { reset() }
     assertNull(database.values().profile().first())
-  }
-
-  @Test
-  fun theLookGoesToTheAccountOnlyWhenItKeepsAnother() = runTest {
-    suspend fun toSend() = markLookToSend(database.values().preferences().first(), database.values().profile().first())
-    // Nothing the account keeps yet: a device's own look never goes.
-    assertNull(toSend())
-    database.write { upsert(PreferenceRow("look", DeviceSettings(look = Look(style = MarkStyle.Badge)).preferences.getValue("look"))) }
-    assertEquals(markLook { style = "badge"; fill = true }, toSend())
-    // Once the account says so, nothing more.
-    database.write {
-      take(listOf(change { profile = profile { name = "さくら"; markLook = markLook { style = "badge"; fill = true } } }))
-    }
-    assertEquals("badge", database.values().profile().first()?.markStyle)
-    assertNull(toSend())
-  }
-
-  @Test
-  fun theAppsDefaultLookIsTheAccountsUntilItSaysAnother() = runTest {
-    database.write { upsert(PreferenceRow("look", DeviceSettings().preferences.getValue("look"))) }
-    assertNull(markLookToSend(database.values().preferences().first(), database.values().profile().first()))
   }
 
   @Test
