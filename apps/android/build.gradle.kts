@@ -9,3 +9,10 @@ plugins {
   alias(libs.plugins.room) apply false
   alias(libs.plugins.google.services) apply false
 }
+
+// A test failing on CI says what it expected and where, not the assertion's class alone.
+subprojects {
+  tasks.withType<Test>().configureEach {
+    testLogging.exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+  }
+}

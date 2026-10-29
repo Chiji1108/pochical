@@ -14,7 +14,6 @@ import app.pochical.kit.AppDatabase
 import app.pochical.kit.DeviceSettings
 import app.pochical.kit.OwnCalendar
 import app.pochical.kit.SyncedSettings
-import app.pochical.kit.ownCalendar
 import java.time.Duration
 import java.time.LocalDate
 import java.time.ZoneId
@@ -45,7 +44,12 @@ import kotlinx.coroutines.withContext
  * What every widget draws from, read from the kit's database and the device's settings, again as
  * they change: shared by the widgets drawn at once, read while any is.
  */
-class WidgetSources(database: AppDatabase, settings: SyncedSettings) {
+class WidgetSources(
+  database: AppDatabase,
+  /** The person's own calendar (PochicalKit.ownCalendar). */
+  val calendar: Flow<OwnCalendar>,
+  settings: SyncedSettings,
+) {
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
   /** What the database holds, for who a widget is set to. */
@@ -54,9 +58,6 @@ class WidgetSources(database: AppDatabase, settings: SyncedSettings) {
   // Read while a widget draws; once none does, what was read is forgotten, so the next session
   // starts from the database as it is then, not from the last session's reading.
   private val whileDrawn = SharingStarted.WhileSubscribed(replayExpirationMillis = 0)
-
-  /** The person's own calendar. */
-  val calendar: Flow<OwnCalendar> = database.values().ownCalendar().shareIn(scope, whileDrawn, replay = 1)
 
   /** The settings the widgets are drawn in. */
   val settings: Flow<DeviceSettings> = settings.settings.shareIn(scope, whileDrawn, replay = 1)
