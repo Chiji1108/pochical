@@ -15,9 +15,9 @@ import java.time.LocalDate
 // The questions はじめの設定 and 新しい仕事にする both ask (spec/shift-patterns.md, Changing jobs),
 // one piece for both: each draws them its own way, as large cards or as rows of a list.
 
-/** Whether an order is asked after the patterns: only a weekly order or a roster's work has nothing more to ask. */
+/** Whether more is asked after the patterns: an order to type, or a roster's period; only a weekly order ends there. */
 val JobTemplate.asksMore: Boolean
-  get() = sequence != null && !weekly
+  get() = !weekly
 
 /** The patterns that stay picked, as the kind of work's order needs them. */
 val JobTemplate.needed: Set<String>
@@ -34,7 +34,8 @@ fun patternsQuestion(template: JobTemplate): Pair<String, String> =
 
 /**
  * The patterns chosen: a weekly order ends the questions from the Sunday of the week [first] is in,
- * any other order goes on to be typed ([onOrder]), and a roster's work ends with its patterns.
+ * any other order goes on to be typed ([onOrder]), and a roster's work to the period its shifts are
+ * handed out for ([onPeriod]), which becomes the calendar's page.
  */
 fun chooseJob(
   template: JobTemplate,
@@ -42,12 +43,13 @@ fun chooseJob(
   first: LocalDate,
   onFinish: (ids: List<String>, sequence: List<String>, anchor: LocalDate) -> Unit,
   onOrder: (sequence: List<String>) -> Unit,
+  onPeriod: () -> Unit,
 ) {
   val sequence = template.sequence
   when {
     sequence != null && template.weekly -> onFinish(ids, sequence, first.minusDays(first.weekday.toLong()))
     sequence != null -> onOrder(sequence)
-    else -> onFinish(ids, emptyList(), first)
+    else -> onPeriod()
   }
 }
 

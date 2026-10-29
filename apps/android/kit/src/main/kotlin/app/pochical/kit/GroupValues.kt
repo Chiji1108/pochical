@@ -14,11 +14,19 @@ import app.pochical.v1.groupMark
 
 /**
  * What the user's own socket says of them beside their values: a group they are in, a group left
- * going with what the device holds of it, and their usual name and photo.
+ * going with what the device holds of it, and their usual name, photo and marks' shape.
  */
 internal suspend fun SyncDao.takeMembership(change: Change) {
   if (change.kindCase == KindCase.PROFILE) {
-    upsert(ProfileRow(name = change.profile.name, photoId = change.profile.photoId))
+    val profile = change.profile
+    upsert(
+      ProfileRow(
+        name = profile.name,
+        photoId = profile.photoId,
+        markStyle = if (profile.hasMarkLook()) profile.markLook.style else "",
+        markFill = if (profile.hasMarkLook()) profile.markLook.fill else true,
+      )
+    )
     return
   }
   if (change.kindCase != KindCase.MEMBERSHIP) return

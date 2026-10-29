@@ -1,5 +1,6 @@
 package app.pochical.calendar
 
+import app.pochical.kit.ShiftPeriod
 import java.time.LocalDate
 import java.time.YearMonth
 import org.junit.Assert.assertEquals
@@ -35,5 +36,14 @@ class CalendarRangeTest {
       val today = LocalDate.parse("2026-10-23")
       assertEquals(today.weekStartingOn(weekStart), range.weekAt(range.weekPageOf(today, weekStart), weekStart))
     }
+  }
+
+  @Test
+  fun aPeriodsPagesReachTheDaysOfTheLastPeriodPastItsMonth() {
+    val periods = CalendarRange(opened, around = 120, ShiftPeriod(15))
+    val days = periods.days(0)
+    assertEquals(LocalDate.parse("2016-10-15").weekStartingOn(0), days.start)
+    assertEquals(LocalDate.parse("2036-11-14").weekStartingOn(0).plusDays(6), days.endInclusive)
+    assertEquals(periods.weekPages(0) - 1, periods.weekPageOf(LocalDate.parse("2036-11-14"), 0))
   }
 }

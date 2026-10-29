@@ -159,21 +159,43 @@ private func change(_ cursor: UInt64, _ fill: (inout Pochical_V1_Change) -> Void
   }
 }
 
-@Test func theLookGoesToTheAccountOnlyWhenItKeepsAnother() throws {
+struct MarkLookVectors: Decodable, Sendable {
+  struct Shape: Decodable, Sendable {
+    let style: String
+    let fill: Bool
+  }
+
+  struct Case: VectorCase {
+    let name: String
+    let look: Shape?
+    let said: Shape?
+    let expected: Shape?
+  }
+
+  let markLookToSend: [Case]
+}
+
+@Test(arguments: try vectors("preferences", as: MarkLookVectors.self).markLookToSend)
+func theLookToSendToTheAccount(_ vector: MarkLookVectors.Case) throws {
   let database = try appDatabase()
+  let look = try vector.look.map { shape in
+    var message = Look().message
+    message.style = shape.style
+    message.fill = shape.fill
+    return try message.serializedData()
+  }
   try database.write { db in
-    // Nothing the account keeps yet: a device's own look never goes.
-    #expect(try Profile.markLookToSend(in: db) == nil)
-    var look = Look()
-    look.style = .badge
-    let value = try look.message.serializedData()
-    try PreferenceRow.insert { PreferenceRow(key: "look", value: value) }.execute(db)
-    #expect(try Profile.markLookToSend(in: db) == MarkLook(style: .badge, fill: true))
-    // Once the account says so, nothing more.
-    var profile = Pochical_V1_Profile()
-    profile.markLook.style = "badge"
-    profile.markLook.fill = true
-    try Profile.take(profile, in: db)
-    #expect(try Profile.markLookToSend(in: db) == nil)
+    if let look {
+      try PreferenceRow.insert { PreferenceRow(key: "look", value: look) }.execute(db)
+    }
+    if let said = vector.said {
+      var profile = Pochical_V1_Profile()
+      profile.markLook.style = said.style
+      profile.markLook.fill = said.fill
+      try Profile.take(profile, in: db)
+    }
+    #expect(
+      try Profile.markLookToSend(in: db)
+        == vector.expected.flatMap { MarkLook(style: $0.style, fill: $0.fill) })
   }
 }

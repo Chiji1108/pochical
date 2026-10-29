@@ -40,13 +40,13 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.pochical.LocalDeviceSettings
 import app.pochical.LocalThemeColors
+import app.pochical.kit.monthHolding
 import app.pochical.R
 import app.pochical.isDark
 import app.pochical.design.Metrics
 import app.pochical.design.Radius
 import app.pochical.kit.stylePreviewDays
 import java.time.LocalDate
-import java.time.YearMonth
 import app.pochical.kit.styleSamples as sampleIds
 
 /**
@@ -108,7 +108,8 @@ fun StylePreview(scheme: PreviewScheme, today: LocalDate, modifier: Modifier = M
         verticalArrangement = Arrangement.spacedBy(4.dp),
       ) {
         if (withHeading) {
-          val month = YearMonth.from(today)
+          // The page holding today, as the calendar heads it: by its days with a シフトの期間.
+          val month = LocalDeviceSettings.current.device.period.monthHolding(today)
           MonthName(0f, { month }, reduceMotion = true, Modifier.padding(start = 8.dp, bottom = 8.dp))
         }
         WeekdayRow(week, Modifier.padding(bottom = 8.dp))
