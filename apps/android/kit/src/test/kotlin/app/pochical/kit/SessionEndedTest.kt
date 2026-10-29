@@ -106,7 +106,7 @@ class SessionEndedTest {
     // The account is user-1's, still on the server, whose session the device let go of.
     server.linkStatus = 409
     server.inUse = "token-1b" to "user-1"
-    server.provider = SignInProvider.SIGN_IN_PROVIDER_GOOGLE
+    server.linked["user-1"] = SignInProvider.SIGN_IN_PROVIDER_GOOGLE
     val google = ProviderToken(LinkedAccount.Provider.Google, "header.claims.signature", "nonce-1", "a@example.com")
 
     assertEquals(SignInResult.Switched, phone.account.signIn(google))
