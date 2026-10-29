@@ -97,7 +97,7 @@ data class PollPart(val look: PollLook) : LinePart {
  * 日にちを決める; the chosen day is marked 決定 on the accent's container, the rest fade.
  */
 @Composable
-fun PollCard(look: PollLook, handlers: MessageHandlers, seq: Long?, live: Boolean = true) {
+fun PollCard(look: PollLook, handlers: MessageHandlers, seq: Long?, live: Boolean = true) = CardScale {
   val colors = LocalThemeColors.current
   val poll = look.poll
   val days = remember(poll.daysList) { poll.daysList.map(LocalDate::parse) }

@@ -404,6 +404,7 @@ fun ChatPage(
   }
   // 日にちを共有 and 日にちの投票 from ＋: the day sheet, in the way it was opened.
   var pickingDays by rememberSaveable { mutableStateOf<DaysPick?>(null) }
+  var sendingDays by remember { mutableStateOf(false) }
   val asking = LocalNotificationAsking.current
   val menu = rememberLineMenuState()
   val reducedMotion = rememberReducedMotion()
@@ -673,18 +674,21 @@ fun ChatPage(
   choosers?.let { ChoosersSheet(it, writers, nameOf) { choosers = null } }
   pickingDays?.let { pick ->
     val people = if (direct) setOfNotNull(other, me) else null
-    ShareDaysSheet(groupId, people, pick, onDismiss = { pickingDays = null }) { days ->
-      pickingDays = null
+    ShareDaysSheet(groupId, people, pick, sendingDays, onDismiss = { pickingDays = null }) { days ->
+      sendingDays = true
       // A line sent, when an answer is first wanted (spec/chat.md, Notifications).
       asking.askOnce()
       val replyTo = composer.writing.replyTo
       scope.launch {
+        // The sheet goes once the days are kept; one that cannot be keeps it up with its days picked.
         keeping({ notKept = true }) {
           chats.sendDays(groupId, threadId, days.map { it.toString() }, poll = pick == DaysPick.Poll, replyTo)
+          pickingDays = null
           // The reply goes with the line it went with.
           if (replyTo != null && composer.writing.replyTo == replyTo) composer.writing = composer.writing.copy(replyTo = null)
           toFoot()
         }
+        sendingDays = false
       }
     }
   }

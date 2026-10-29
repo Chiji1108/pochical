@@ -25,6 +25,7 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -47,7 +48,9 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -106,15 +109,12 @@ data class DaysPart(val first: LocalDate) : LinePart {
  * month shared does not fill the chat; ほか{n}日 says the rest, which シフト表で見る under it shows.
  */
 @Composable
-fun DayCard(days: List<LocalDate>, members: List<GroupMember>, groupId: String, modifier: Modifier = Modifier) {
+fun DayCard(days: List<LocalDate>, members: List<GroupMember>, groupId: String, modifier: Modifier = Modifier) = CardScale {
   val colors = LocalThemeColors.current
-  // Its small type and table grow with the reader's text size as far as chatRules.cardsMostScale,
-  // so its columns still fit a line on the narrowest phone.
-  val k = minOf(LocalDensity.current.fontScale, Chat.cardsMostScale)
   val shown = if (days.size > 1 && members.size > Chat.dayCardColumns) days.take(Chat.dayCardColumns) else days.take(Chat.dayCardRows)
   val group = rememberGroupDays(members, shown.first(), shown.last())
   val shape = RoundedCornerShape(Radius.lg)
-  val card = CardDays(members, group, PhotoShelf.Group(groupId), k)
+  val card = CardDays(members, group, PhotoShelf.Group(groupId))
   Column(modifier.background(MaterialTheme.colorScheme.surfaceContainerLow, shape).border(1.dp, colors.borderDefault, shape)) {
     when {
       days.size == 1 -> card.OneDay(days.single())
@@ -133,7 +133,7 @@ fun DayCard(days: List<LocalDate>, members: List<GroupMember>, groupId: String, 
 }
 
 /** What a card of days draws its parts with: each person's shift on the days shown. */
-private class CardDays(val members: List<GroupMember>, val days: app.pochical.groups.GroupDays, val shelf: PhotoShelf, val k: Float) {
+private class CardDays(val members: List<GroupMember>, val days: app.pochical.groups.GroupDays, val shelf: PhotoShelf) {
   fun shift(index: Int, day: LocalDate): MemberShift? = days.shifts.getOrNull(index)?.get(day)
 
   fun together(day: LocalDate): Boolean = day in days.together.days
@@ -142,14 +142,14 @@ private class CardDays(val members: List<GroupMember>, val days: app.pochical.gr
   fun OneDay(day: LocalDate) {
     val colors = LocalThemeColors.current
     val unentered = stringResource(R.string.day_unentered)
-    Column(Modifier.widthIn(min = (ONE_DAY_INSIDE + 24f).dp * k).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(Modifier.widthIn(min = (ONE_DAY_INSIDE + 24f).cardDp).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
       Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(day.fullText, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
         if (together(day)) TogetherTag()
       }
       // The people in even columns across the card, many wrapping onto more lines in the same columns.
       val columns = members.size.coerceIn(1, Chat.dayCardColumns)
-      val column = maxOf(LEAST_COLUMN * k, ONE_DAY_INSIDE * k / columns).dp
+      val column = maxOf(LEAST_COLUMN, ONE_DAY_INSIDE / columns).cardDp
       members.indices.chunked(columns).forEach { row ->
         Row {
           for (index in row) {
@@ -162,9 +162,9 @@ private class CardDays(val members: List<GroupMember>, val days: app.pochical.gr
               horizontalAlignment = Alignment.CenterHorizontally,
               verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-              MemberAvatar(member.name, member.photoId, shelf, (24 * k).dp)
-              Mark(member, shift, (16 * k).dp)
-              Text(name, fontSize = (9 * k).sp, color = colors.textTertiary, maxLines = 1)
+              MemberAvatar(member.name, member.photoId, shelf, 24.cardDp)
+              Mark(member, shift, 16.cardDp)
+              Text(name, fontSize = 9.sp, color = colors.textTertiary, maxLines = 1)
             }
           }
         }
@@ -175,27 +175,28 @@ private class CardDays(val members: List<GroupMember>, val days: app.pochical.gr
   /** A row a day, a column a person. */
   @Composable
   fun ByDay(shown: List<LocalDate>) {
+    val dateWidth = dateColumn(shown)
     val unentered = stringResource(R.string.day_unentered)
     Column(Modifier.padding(8.dp), horizontalAlignment = Alignment.End) {
-      Row(Modifier.heightIn(min = (30 * k).dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Spacer(Modifier.width((DATE_WIDTH * k).dp))
+      Row(Modifier.heightIn(min = 30.cardDp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Spacer(Modifier.width(dateWidth))
         for (member in members) {
-          Box(Modifier.width((26 * k).dp), contentAlignment = Alignment.Center) { MemberAvatar(member.name, member.photoId, shelf, (22 * k).dp, Modifier.semantics { contentDescription = member.name }) }
+          Box(Modifier.width(26.cardDp), contentAlignment = Alignment.Center) { MemberAvatar(member.name, member.photoId, shelf, 22.cardDp, Modifier.semantics { contentDescription = member.name }) }
         }
       }
       for (day in shown) {
         Row(
-          Modifier.heightIn(min = (28 * k).dp)
+          Modifier.heightIn(min = 28.cardDp)
             .background(if (together(day)) LocalThemeColors.current.accentContainer else Color.Transparent, RoundedCornerShape(Radius.sm))
             .semantics(mergeDescendants = true) {},
           horizontalArrangement = Arrangement.spacedBy(4.dp),
           verticalAlignment = Alignment.CenterVertically,
         ) {
-          DateText(day, Modifier.width((DATE_WIDTH * k).dp).padding(start = 4.dp))
+          DateText(day, Modifier.width(dateWidth).padding(start = DATE_INSET))
           members.forEachIndexed { index, member ->
             val shift = shift(index, day)
             val said = stringResource(R.string.chat_day_shift, member.name, shift?.pattern?.name ?: unentered)
-            Cell(member, shift, Modifier.width((26 * k).dp).clearAndSetSemantics { contentDescription = said })
+            Cell(member, shift, Modifier.width(26.cardDp).clearAndSetSemantics { contentDescription = said })
           }
         }
       }
@@ -209,12 +210,12 @@ private class CardDays(val members: List<GroupMember>, val days: app.pochical.gr
     val english = LocalDeviceSettings.current.device.heading.english
     val unentered = stringResource(R.string.day_unentered)
     Column(Modifier.padding(8.dp), horizontalAlignment = Alignment.End) {
-      Row(Modifier.heightIn(min = (30 * k).dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+      Row(Modifier.heightIn(min = 30.cardDp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
         // As in the shift table, the month once in the corner and the days by number, a new month's where it turns.
         Text(
           YearMonth.from(shown.first()).shortMonth(english),
-          Modifier.width((26 * k).dp),
-          fontSize = (9 * k).sp,
+          Modifier.width(26.cardDp),
+          fontSize = 9.sp,
           color = colors.textTertiary,
           textAlign = TextAlign.Center,
         )
@@ -222,28 +223,28 @@ private class CardDays(val members: List<GroupMember>, val days: app.pochical.gr
           val turns = index > 0 && day.month != shown[index - 1].month
           val tone = dayTone(day)
           Column(
-            Modifier.width((28 * k).dp)
+            Modifier.width(28.cardDp)
               .background(if (together(day)) colors.accentContainer else Color.Transparent, RoundedCornerShape(Radius.sm))
               .padding(vertical = 2.dp)
               .clearAndSetSemantics { contentDescription = day.fullText },
             horizontalAlignment = Alignment.CenterHorizontally,
           ) {
-            Text(if (turns) day.slashText else "${day.dayOfMonth}", fontSize = (11 * k).sp, fontWeight = FontWeight.SemiBold, color = tone)
-            Text(weekdayName(day.weekday, english), fontSize = (9 * k).sp, color = tone)
+            Text(if (turns) day.slashText else "${day.dayOfMonth}", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = tone)
+            Text(weekdayName(day.weekday, english), fontSize = 9.sp, color = tone)
           }
         }
       }
       members.forEachIndexed { index, member ->
         Row(
-          Modifier.heightIn(min = (28 * k).dp).semantics(mergeDescendants = true) {},
+          Modifier.heightIn(min = 28.cardDp).semantics(mergeDescendants = true) {},
           horizontalArrangement = Arrangement.spacedBy(4.dp),
           verticalAlignment = Alignment.CenterVertically,
         ) {
-          Box(Modifier.width((26 * k).dp), contentAlignment = Alignment.Center) { MemberAvatar(member.name, member.photoId, shelf, (22 * k).dp, Modifier.semantics { contentDescription = member.name }) }
+          Box(Modifier.width(26.cardDp), contentAlignment = Alignment.Center) { MemberAvatar(member.name, member.photoId, shelf, 22.cardDp, Modifier.semantics { contentDescription = member.name }) }
           for (day in shown) {
             val shift = shift(index, day)
             val said = stringResource(R.string.chat_day_shift, day.fullText, shift?.pattern?.name ?: unentered)
-            Cell(member, shift, Modifier.width((28 * k).dp).clearAndSetSemantics { contentDescription = said })
+            Cell(member, shift, Modifier.width(28.cardDp).clearAndSetSemantics { contentDescription = said })
           }
         }
       }
@@ -254,10 +255,10 @@ private class CardDays(val members: List<GroupMember>, val days: app.pochical.gr
   @Composable
   fun Cell(member: GroupMember, shift: MemberShift?, modifier: Modifier) {
     Box(
-      modifier.heightIn(min = (24 * k).dp).background(if (shift?.pattern?.countsAsOff == true) LocalThemeColors.current.accentContainer else Color.Transparent, RoundedCornerShape(Radius.sm)),
+      modifier.heightIn(min = 24.cardDp).background(if (shift?.pattern?.countsAsOff == true) LocalThemeColors.current.accentContainer else Color.Transparent, RoundedCornerShape(Radius.sm)),
       contentAlignment = Alignment.Center,
     ) {
-      Mark(member, shift, (15 * k).dp)
+      Mark(member, shift, 15.cardDp)
     }
   }
 
@@ -266,13 +267,33 @@ private class CardDays(val members: List<GroupMember>, val days: app.pochical.gr
     if (shift != null) MemberMark(member, shift, size) else Spacer(Modifier.size(size))
   }
 
+  /**
+   * The dates' column: room for 12/28 and its weekday at least, and as wide as the widest of
+   * [shown] as the card's text draws them, a year's included, so none is cut.
+   */
+  @Composable
+  fun dateColumn(shown: List<LocalDate>): Dp {
+    val measurer = rememberTextMeasurer()
+    // As the card's Text draws them, in its own text style.
+    val base = LocalTextStyle.current
+    val english = LocalDeviceSettings.current.device.heading.english
+    val density = LocalDensity.current
+    val widest =
+      shown.maxOf { day ->
+        val date = measurer.measure(day.slashText, base.merge(TextStyle(fontSize = DATE_SIZE.sp, fontWeight = FontWeight.SemiBold))).size.width
+        val weekday = measurer.measure(weekdayName(day.weekday, english), base.merge(TextStyle(fontSize = WEEKDAY_SIZE.sp))).size.width
+        with(density) { (date + weekday).toDp() } + DATE_GAP + DATE_INSET
+      }
+    return maxOf(DATE_WIDTH.cardDp, widest)
+  }
+
   @Composable
   fun DateText(day: LocalDate, modifier: Modifier) {
     val english = LocalDeviceSettings.current.device.heading.english
     val tone = dayTone(day)
-    Row(modifier.clearAndSetSemantics { contentDescription = day.fullText }, verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-      Text(day.slashText, fontSize = (11 * k).sp, fontWeight = FontWeight.SemiBold, color = tone, maxLines = 1, softWrap = false)
-      Text(weekdayName(day.weekday, english), fontSize = (9 * k).sp, color = tone, maxLines = 1, softWrap = false)
+    Row(modifier.clearAndSetSemantics { contentDescription = day.fullText }, verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(DATE_GAP)) {
+      Text(day.slashText, fontSize = DATE_SIZE.sp, fontWeight = FontWeight.SemiBold, color = tone, maxLines = 1, softWrap = false)
+      Text(weekdayName(day.weekday, english), fontSize = WEEKDAY_SIZE.sp, color = tone, maxLines = 1, softWrap = false)
     }
   }
 }
@@ -311,7 +332,15 @@ enum class DaysPick {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ShareDaysSheet(groupId: String, people: Set<String>?, pick: DaysPick, onDismiss: () -> Unit, onSend: (List<LocalDate>) -> Unit) {
+fun ShareDaysSheet(
+  groupId: String,
+  people: Set<String>?,
+  pick: DaysPick,
+  /** The days picked are being kept: 送る waits, so they go once. */
+  sending: Boolean,
+  onDismiss: () -> Unit,
+  onSend: (List<LocalDate>) -> Unit,
+) {
   val colors = LocalThemeColors.current
   val context = LocalContext.current
   val today = rememberToday()
@@ -350,7 +379,7 @@ fun ShareDaysSheet(groupId: String, people: Set<String>?, pick: DaysPick, onDism
           Modifier.weight(1f).semantics { heading() },
           style = MaterialTheme.typography.titleLarge,
         )
-        TextButton(onClick = { onSend(picked.map(LocalDate::parse)) }, enabled = picked.size >= least) { Text(stringResource(R.string.days_send)) }
+        TextButton(onClick = { onSend(picked.map(LocalDate::parse)) }, enabled = picked.size >= least && !sending) { Text(stringResource(R.string.days_send)) }
       }
     }
     val suggestions = together.filter { it >= today && it < today.plusDays(SUGGESTION_DAYS) }.sorted()
@@ -461,6 +490,12 @@ private const val SUGGESTION_DAYS = 45L
 
 /** The dates' column, room for 12/28 and its weekday. */
 private const val DATE_WIDTH = 52f
+
+/** A table's date and weekday, in sp. */
+private const val DATE_SIZE = 11
+private const val WEEKDAY_SIZE = 9
+private val DATE_GAP = 2.dp
+private val DATE_INSET = 4.dp
 
 /** Inside one day's card at its narrowest, room for 12月27日(日) and the tag. */
 private const val ONE_DAY_INSIDE = 160f
