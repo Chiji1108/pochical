@@ -76,9 +76,7 @@ android {
   }
   testOptions {
     unitTests.isIncludeAndroidResources = true
-    // Robolectric sets up Android 16's shared memory through the JDK's
-    // SharedSecrets, which java.base keeps to itself unless exported.
-    unitTests.all { it.jvmArgs("--add-exports=java.base/jdk.internal.access=ALL-UNNAMED") }  }
+  }
 }
 
 dependencies {
@@ -121,6 +119,8 @@ dependencies {
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)
   testImplementation(libs.robolectric)
+  // AppleWebSignIn, made in the tests as the kit makes it.
+  testImplementation(libs.okhttp)
   testImplementation(libs.compose.ui.test.junit4)
   debugImplementation(libs.compose.ui.test.manifest)
 

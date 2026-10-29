@@ -30,7 +30,7 @@ import app.pochical.LimitedTextField
 import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.ReviewPrompt
-import app.pochical.characterCount
+import app.pochical.kit.characterCount
 import app.pochical.design.TextLimits
 import app.pochical.kit.GroupMarkValue
 import app.pochical.kit.MarkPhotoGone
