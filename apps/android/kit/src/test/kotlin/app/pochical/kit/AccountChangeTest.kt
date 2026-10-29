@@ -324,7 +324,11 @@ class AccountChangeTest {
   @Test
   fun aDeletionTheServerRefusesSaysWhyAndKeepsEverything() = runBlocking<Unit> {
     server.provider = SignInProvider.SIGN_IN_PROVIDER_APPLE
+    // The sign-in's own GetMe answers only after the deletion is refused: the deletion's tells of Apple.
+    server.getMeDelayMs = 1_000
     val phone = signedInDevice()
+    eventually { server.getMes.get() == 1 }
+    server.getMeDelayMs = 0
     phone.edits.setDay("2026-11-02", DayField.DAY_FIELD_PATTERN, "night")
     server.deleteRefusal = "failed_precondition"
 
@@ -337,12 +341,13 @@ class AccountChangeTest {
   }
 
   @Test
-  fun aLinkTheServerSaysWhileADeletionIsAskedStaysOnceItIsRefused() = runBlocking<Unit> {
-    server.provider = SignInProvider.SIGN_IN_PROVIDER_APPLE
-    // The sign-in's own GetMe answers only once the deletion has begun.
+  fun anAnswerAskedBeforeTheDeletionsNeverUndoesItsOnceItIsRefused() = runBlocking<Unit> {
+    // The sign-in's own GetMe, asked while the user was linked to nothing, answers only once the
+    // deletion has begun; the deletion's, asked after Apple was linked elsewhere, says Apple.
     server.getMeDelayMs = 1_000
     val phone = signedInDevice()
-    eventually { server.getMes == 1 }
+    eventually { server.getMes.get() == 1 }
+    server.provider = SignInProvider.SIGN_IN_PROVIDER_APPLE
     server.getMeDelayMs = 0
     server.deleteDelayMs = 2_000
     server.deleteRefusal = "failed_precondition"

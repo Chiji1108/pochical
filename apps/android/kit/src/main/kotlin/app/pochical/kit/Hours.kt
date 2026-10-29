@@ -47,7 +47,7 @@ fun hoursText(start: String, end: String): String {
 }
 
 /** "HH:MM" as minutes since midnight. */
-internal fun minutes(time: String): Int = checkNotNull(minutesOrNull(time)) { "Not a time: $time" }
+fun minutes(time: String): Int = checkNotNull(minutesOrNull(time)) { "Not a time: $time" }
 
 /** "HH:MM" as minutes since midnight; none for what is not a time, as iOS's minutes. */
 internal fun minutesOrNull(time: String): Int? {
