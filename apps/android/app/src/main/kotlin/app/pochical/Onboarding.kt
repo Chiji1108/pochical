@@ -66,8 +66,6 @@ import app.pochical.kit.AccountState
 import app.pochical.kit.DeviceSettings
 import app.pochical.kit.FirstRun
 import app.pochical.kit.ShiftPeriod
-import app.pochical.kit.SignInResult
-import app.pochical.kit.SocketState
 import app.pochical.kit.firstPick
 import app.pochical.patterns.ReadyPatternChips
 import app.pochical.patterns.chosenPatterns
@@ -291,7 +289,6 @@ private fun Welcome(onStart: () -> Unit, onSignIn: () -> Unit) {
 @Composable
 private fun SignInStep(onBack: () -> Unit, onEmpty: () -> Unit) {
   val account = LocalAccount.current
-  val firstRun = LocalFirstRun.current
   val state by account.state.collectAsState()
   StepPage(
     stringResource(R.string.first_run_sign_in_title),
@@ -299,15 +296,8 @@ private fun SignInStep(onBack: () -> Unit, onEmpty: () -> Unit) {
     onBack,
     footnote = stringResource(R.string.first_run_sign_in_footnote),
   ) {
-    SignInButtons(state) { result ->
-      // Switched, the device takes in the account's data until its socket has caught up, or until it
-      // waits to try again offline, when the questions go on and the account's patterns, coming
-      // later, end them.
-      if (result == SignInResult.Switched) {
-        account.userSocket.first { it == SocketState.Current || it is SocketState.Waiting || it is SocketState.Stopped }
-      }
-      if (!firstRun.kit.holdsPatterns()) onEmpty()
-    }
+    // One that brought no patterns goes on with the questions; patterns coming later end them.
+    SignInButtons(state) { if (!it.holdsPatterns) onEmpty() }
     // Before the device has its session, as offline at a first launch, the buttons wait.
     if (state !is AccountState.SignedIn) {
       Text(stringResource(R.string.account_sign_in_offline), style = MaterialTheme.typography.bodySmall, color = LocalThemeColors.current.textTertiary)

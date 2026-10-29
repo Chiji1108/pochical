@@ -1,5 +1,6 @@
 [versions]
-# The JDK every module compiles with and targets, mise.toml's java.
+# The JDK every module compiles with and targets, mise.toml's java, which
+# .github/renovate.json5 keeps below the next major (<22): raise all three together.
 jvm = "21"
 compileSdk = "37"
 minSdk = "29"
