@@ -71,6 +71,9 @@ type Granted = { keyId: string; token: Promise<string>; until: number };
  */
 let granted: Granted | undefined;
 
+/** The least wait FCM asks after a quota refusal that names none. */
+const QUOTA_WAIT_MS = 60_000;
+
 /** How long Google's OAuth may take to answer before the push fails. */
 const GRANT_TIMEOUT_MS = 10 * 1000;
 
@@ -267,6 +270,15 @@ export const attemptFcm = async (
     return { reason: refused.reason, sent: "later", status };
   }
   // 429 QUOTA_EXCEEDED, 500 INTERNAL and 503 UNAVAILABLE are tried again,
-  // after FCM's Retry-After when it gives one (FCM's ErrorCode reference).
-  return refusal(response, refused.reason, isGone(refused) ? "gone" : "failed");
+  // after FCM's Retry-After when it gives one (FCM's ErrorCode reference);
+  // a quota refusal without one after a minute at least, as FCM asks
+  // (https://firebase.google.com/docs/cloud-messaging/error-codes).
+  const outcome = refusal(
+    response,
+    refused.reason,
+    isGone(refused) ? "gone" : "failed"
+  );
+  return status === 429 && outcome.retryAfterMs === undefined
+    ? { ...outcome, retryAfterMs: QUOTA_WAIT_MS }
+    : outcome;
 };

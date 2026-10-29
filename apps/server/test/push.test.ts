@@ -767,6 +767,8 @@ describe("an Android phone's notifications", () => {
           kind: "alert",
           platform: "fcm",
           reason: errorCode,
+          // A quota refusal waits a minute at least.
+          ...(status === 429 && { retryAfterMs: 60_000 }),
           sandbox: false,
           sent,
           status,
@@ -1010,6 +1012,25 @@ describe("a push refused for a while", () => {
       "background",
     ]);
     await expect(retriesOf(guest)).resolves.toStrictEqual([]);
+  });
+
+  it("through FCM, waits a minute at least after a quota refusal that names no wait", async () => {
+    const { groupId, guest, maker } = await pair();
+    await registerFcm(guest);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    googleCalls(() =>
+      Response.json(
+        { error: { code: 429, status: "RESOURCE_EXHAUSTED" } },
+        { status: 429 }
+      )
+    );
+    const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
+    const before = Date.now();
+    say(mine.socket, "a", "今週どう？");
+    await expect.poll(async () => await retriesLeft(guest)).toBe(1);
+    const [kept] = await retriesOf(guest);
+    expect(kept?.due_at).toBeGreaterThanOrEqual(before + 60_000);
+    await retryNow(guest, true);
   });
 
   it("through FCM, is tried again on UNAVAILABLE, a Retry-After date gone by adding no wait", async () => {
