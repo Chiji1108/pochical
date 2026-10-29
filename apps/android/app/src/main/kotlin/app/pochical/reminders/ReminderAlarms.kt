@@ -5,6 +5,7 @@ import android.app.Application
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import androidx.core.app.AlarmManagerCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -95,6 +96,8 @@ class ReminderAlarms(
       try {
         if (firedAt == null) readExact()
         turn.withLock {
+          // The other of a pair, brought after the first set the next: nothing to do.
+          if (firedAt != null && firedAt != kept.getLong(KEY_SET_FOR, 0)) return@withLock
           val scheduled = current()
           if (firedAt != null) fired(firedAt, scheduled)
           // Woken by anything but the alarm, the system may hold it no more.
@@ -107,15 +110,14 @@ class ReminderAlarms(
   }
 
   /**
-   * The system brought the alarm of [at]: what is due since, if it may be shown, up to an hour late.
-   * One it brings again, as when it was set anew while already on its way, is the alarm spent.
+   * The system brought the alarm of [at]: what is due since, if it may be shown, up to an hour late,
+   * and a little more, as the inexact alarm's hour of leeway ends a little before it is delivered.
    */
   private fun fired(at: Long, scheduled: Scheduled) {
-    if (at != kept.getLong(KEY_SET_FOR, 0)) return
     kept.edit { remove(KEY_SET_FOR) }
     if (!scheduled.allowed) return
     val now = clock()
-    val since = maxOf(at - 1, now.toInstant().toEpochMilli() - LATE_MOST_MILLIS)
+    val since = maxOf(at - 1, now.toInstant().toEpochMilli() - LATE_MOST_MILLIS - DELIVERY_MILLIS)
     scheduled.reminders.sending(scheduled.calendar, Instant.ofEpochMilli(since).atZone(now.zone), now).forEach { show(it, now.zone) }
   }
 
@@ -154,7 +156,10 @@ class ReminderAlarms(
     }
     val at = next.at(zone).toInstant().toEpochMilli()
     kept.edit { putLong(KEY_SET_FOR, at) }
-    AlarmManagerCompat.setAndAllowWhileIdle(alarms, AlarmManager.RTC_WAKEUP, at, waking(INEXACT, at))
+    // Exact alarms can be taken away from Android 12 on; before, the exact one alone.
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+      AlarmManagerCompat.setAndAllowWhileIdle(alarms, AlarmManager.RTC_WAKEUP, at, waking(INEXACT, at))
+    }
     if (AlarmManagerCompat.canScheduleExactAlarms(alarms)) {
       AlarmManagerCompat.setExactAndAllowWhileIdle(alarms, AlarmManager.RTC_WAKEUP, at, waking(EXACT, at))
     } else {
@@ -201,6 +206,9 @@ class ReminderAlarms(
     /** The two alarms' request codes: the exact one, and the inexact one the system keeps beside it. */
     const val EXACT = 0
     const val INEXACT = 1
+
+    /** How late past its hour of leeway the system may still deliver an inexact alarm, a minute. */
+    const val DELIVERY_MILLIS = 60 * 1000L
 
     /** The reminders' notifications are told apart by their tags, the reminder and the shift's day. */
     const val TAG_PREFIX = "reminder."

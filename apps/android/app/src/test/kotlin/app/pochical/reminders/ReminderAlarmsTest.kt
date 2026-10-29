@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.AlarmManager
 import android.app.Application
 import android.app.NotificationManager
+import android.os.Build
 import app.pochical.kit.OwnCalendar
 import app.pochical.kit.OwnDay
 import app.pochical.kit.PatternRow
@@ -18,12 +19,14 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowAlarmManager
 
 @RunWith(RobolectricTestRunner::class)
@@ -99,25 +102,55 @@ class ReminderAlarmsTest {
     assertEquals(at(2026, 11, 1, 20, 30), nextAlarm)
   }
 
+  /** The alarms set, by the minute, and whether each is the exact one (request code 0) or the inexact one beside it. */
+  private val alarmsSet: List<Pair<ZonedDateTime, Boolean>>
+    get() =
+      shadowOf(application.getSystemService(AlarmManager::class.java)).scheduledAlarms.map {
+        Instant.ofEpochMilli(it.triggerAtMs).atZone(zone) to (shadowOf(it.operation).requestCode == 0)
+      }
+
+  @After
+  fun exactAsAtFirst() {
+    ShadowAlarmManager.setCanScheduleExactAlarms(false)
+  }
+
   @Test
+  @Config(sdk = [Build.VERSION_CODES.S])
   fun anExactAlarmHasAnInexactOneBesideItThatTheSystemKeepsWhenExactAlarmsAreTakenAway() = runTest {
     shadowOf(application).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
     ShadowAlarmManager.setCanScheduleExactAlarms(true)
     val alarms = alarms()
     wake(alarms)
-    val manager = shadowOf(application.getSystemService(AlarmManager::class.java))
-    assertEquals(listOf(at(2026, 11, 1, 21, 0), at(2026, 11, 1, 21, 0)), manager.scheduledAlarms.map { Instant.ofEpochMilli(it.triggerAtMs).atZone(zone) })
+    val nine = at(2026, 11, 1, 21, 0)
+    assertEquals(setOf(nine to true, nine to false), alarmsSet.toSet())
 
-    // The exact one taken away with the access, the inexact one brings it late, and sets the next pair.
-    now = at(2026, 11, 1, 21, 30)
-    wake(alarms, firedAt = at(2026, 11, 1, 21, 0))
+    // The access taken away, the system cancels the exact one and keeps the other; set again, the
+    // app sets the inexact one alone.
+    ShadowAlarmManager.setCanScheduleExactAlarms(false)
+    wake(alarms)
+    assertEquals(listOf(nine to false), alarmsSet)
+
+    // The inexact one brings it late, past its hour of leeway by a little, and sets the next.
+    now = at(2026, 11, 1, 22, 0).plusSeconds(30)
+    wake(alarms, firedAt = nine)
     assertEquals(listOf("明日は日勤"), shown)
-    assertEquals(listOf(at(2026, 11, 2, 21, 0), at(2026, 11, 2, 21, 0)), manager.scheduledAlarms.map { Instant.ofEpochMilli(it.triggerAtMs).atZone(zone) })
+    assertEquals(listOf(at(2026, 11, 2, 21, 0) to false), alarmsSet)
+  }
 
-    // The other of a pair, brought after, finds it shown.
+  @Test
+  @Config(sdk = [Build.VERSION_CODES.S])
+  fun theOtherOfAPairFindsItShown() = runTest {
+    shadowOf(application).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
+    ShadowAlarmManager.setCanScheduleExactAlarms(true)
+    val alarms = alarms()
+    wake(alarms)
+    now = at(2026, 11, 1, 21, 0)
+    wake(alarms, firedAt = at(2026, 11, 1, 21, 0))
     application.getSystemService(NotificationManager::class.java).cancelAll()
     wake(alarms, firedAt = at(2026, 11, 1, 21, 0))
     assertEquals(emptyList<String>(), shown)
+    val ten = at(2026, 11, 2, 21, 0)
+    assertEquals(setOf(ten to true, ten to false), alarmsSet.toSet())
   }
 
   @Test
