@@ -1,6 +1,7 @@
 package app.pochical.repeat
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
@@ -128,6 +129,8 @@ fun RepeatCalendar(
         OutlinedButton(
           onClick = { scope.launch { pages.animateScrollToPage(pageOf(firstMonth), animationSpec = Springs.standard()) } },
           shapes = ButtonDefaults.shapes(),
+          // Pressed no more once it is going.
+          enabled = transition.targetState == EnterExitState.Visible,
           modifier = Modifier.semantics { contentDescription = label },
         ) {
           Text(stringResource(R.string.repeat_first_day))

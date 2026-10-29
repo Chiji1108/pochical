@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -36,6 +38,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.isTraversalGroup
@@ -161,8 +164,7 @@ private fun KeyGrid(patterns: List<Pattern>, columns: Int, rows: Int, tall: Bool
   val height = if (tall) 77.dp else 64.dp
   BoxWithConstraints(Modifier.fillMaxWidth()) {
     val width = minOf(KEY_WIDTH, (maxWidth - KEY_GAP * (columns - 1)) / columns)
-    val keysLabel = stringResource(R.string.entering_keys)
-    Column(Modifier.semantics { isTraversalGroup = true; contentDescription = keysLabel }, verticalArrangement = Arrangement.spacedBy(KEY_GAP)) {
+    Column(Modifier.semantics { isTraversalGroup = true }, verticalArrangement = Arrangement.spacedBy(KEY_GAP)) {
       repeat(rows) { row ->
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(KEY_GAP, Alignment.CenterHorizontally)) {
           repeat(columns) { column ->
@@ -207,26 +209,30 @@ private fun KeyGrid(patterns: List<Pattern>, columns: Int, rows: Int, tall: Bool
 fun TrayActionsRow(pages: PagerState, leading: @Composable () -> Unit, trailing: @Composable () -> Unit) {
   Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
     Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) { leading() }
-    if (pages.pageCount > 1) PageDots(pages, stringResource(R.string.entering_key_page, pages.currentPage + 1, pages.pageCount))
+    if (pages.pageCount > 1) PageDots(pages, { stringResource(R.string.entering_key_page, it + 1, pages.pageCount) })
     Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) { trailing() }
   }
 }
 
 /**
  * [pages] as dots, the one shown a longer bar in the stronger color (iOS's PageDots), growing on
- * the motion scheme's spring as the pages turn; a dot pressed turns to its page. Read as [label] says.
+ * the motion scheme's spring as the pages turn; a dot pressed turns to its page. Each is a tab of
+ * the group, read as [label] says its page and selected while shown, as iOS's.
  */
 @Composable
-fun PageDots(pages: PagerState, label: String, modifier: Modifier = Modifier) {
+fun PageDots(pages: PagerState, label: @Composable (Int) -> String, modifier: Modifier = Modifier) {
   val colors = LocalThemeColors.current
   val scope = rememberCoroutineScope()
-  Row(modifier.semantics(mergeDescendants = true) { contentDescription = label }, verticalAlignment = Alignment.CenterVertically) {
+  Row(modifier.selectableGroup(), verticalAlignment = Alignment.CenterVertically) {
     repeat(pages.pageCount) { page ->
       val shown = page == pages.currentPage
       val width by animateDpAsState(if (shown) 18.dp else 7.dp, MaterialTheme.motionScheme.fastSpatialSpec(), label = "dot")
+      val said = label(page)
+      // As tall as iOS's, so a dot is pressed without the row growing much.
       Box(
-        Modifier.clickable(interactionSource = null, indication = null) { scope.launch { pages.animateScrollToPage(page) } }
-          .padding(horizontal = 3.dp, vertical = 8.dp)
+        Modifier.selectable(shown, interactionSource = null, indication = null, role = Role.Tab) { scope.launch { pages.animateScrollToPage(page) } }
+          .semantics { contentDescription = said }
+          .padding(horizontal = 3.dp, vertical = 6.dp)
           .size(width, 7.dp)
           .background(if (shown) colors.textSecondary else colors.fillPrimary, CircleShape)
       )

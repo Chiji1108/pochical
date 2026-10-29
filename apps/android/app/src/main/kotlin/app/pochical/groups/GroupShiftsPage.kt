@@ -3,7 +3,7 @@ package app.pochical.groups
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -346,7 +346,7 @@ fun MonthRow(month: YearMonth, back: String?, onChoose: () -> Unit, onBack: () -
   val colors = LocalThemeColors.current
   val choose = stringResource(R.string.month_choose_hint)
   Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(start = 8.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-    TextButton(onClick = onChoose, Modifier.semantics { onClick(choose) { onChoose(); true } }) {
+    TextButton(onClick = onChoose, Modifier.semantics { onClick(label = choose, action = null) }) {
       // The name rolls to the next month, up as the months go on and down as they go back.
       AnimatedContent(
         month,
@@ -361,12 +361,20 @@ fun MonthRow(month: YearMonth, back: String?, onChoose: () -> Unit, onBack: () -
       Icon(painterResource(R.drawable.ic_expand_more), contentDescription = null, Modifier.padding(start = 4.dp).size(18.dp), tint = colors.textTertiary)
     }
     Box(Modifier.weight(1f))
-    // Fades in and out as what it goes back to leaves sight and comes back, keeping its words as it goes.
-    var shownBack by remember { mutableStateOf(back.orEmpty()) }
-    if (back != null) shownBack = back
-    AnimatedVisibility(back != null, enter = fadeIn(), exit = fadeOut()) {
-      val said = stringResource(R.string.go_back_to, shownBack)
-      OutlinedButton(onClick = onBack, shapes = ButtonDefaults.shapes(), modifier = Modifier.semantics { contentDescription = said }) { Text(shownBack) }
+    // Fades in and out as what it goes back to leaves sight and comes back, keeping its words as it
+    // goes and pressed no more once going.
+    AnimatedContent(back, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "back") { shown ->
+      if (shown != null) {
+        val said = stringResource(R.string.go_back_to, shown)
+        OutlinedButton(
+          onClick = onBack,
+          shapes = ButtonDefaults.shapes(),
+          enabled = transition.targetState == EnterExitState.Visible,
+          modifier = Modifier.semantics { contentDescription = said },
+        ) {
+          Text(shown)
+        }
+      }
     }
   }
 }

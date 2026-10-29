@@ -151,7 +151,12 @@ fun InvitePage(groupId: String, onBack: () -> Unit) {
                 contentDescription = null,
                 Modifier.size(200.dp)
                   .semantics { contentDescription = resources.getString(R.string.invite_qr) }
-                  .pointerInput(Unit) { detectTapGestures(onLongPress = { qrMenu = true }) }
+                  .pointerInput(Unit) {
+                    detectTapGestures(onLongPress = {
+                      haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                      qrMenu = true
+                    })
+                  }
                   .semantics { onLongClick(qrMenuLabel) { qrMenu = true; true } },
                 filterQuality = FilterQuality.None,
               )
