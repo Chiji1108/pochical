@@ -1,0 +1,33 @@
+---
+import type { ImageMetadata } from "astro";
+import { Picture } from "astro:assets";
+
+// A guide's screenshot with its caption, made at build time as AVIF and
+// WebP in the widths it is shown at (.guide-shots: at most 260 CSS
+// pixels, twice that on a dense screen), the PNG for browsers with
+// neither. `name` is its file in src/assets/support, without .png.
+type Props = { name: string; alt: string; caption: string };
+
+const { alt, caption, name } = Astro.props;
+// Astro's image objects, which a bare import would also give but reads as
+// Vite's URL (oxlint.config.ts, no-restricted-imports).
+const shots = import.meta.glob<{ default: ImageMetadata }>(
+  "../assets/support/*.png",
+  { eager: true }
+);
+const src = shots[`../assets/support/${name}.png`]?.default;
+if (src === undefined) {
+  throw new Error(`No screenshot src/assets/support/${name}.png`);
+}
+---
+
+<figure>
+  <Picture
+    alt={alt}
+    formats={["avif", "webp"]}
+    sizes="260px"
+    src={src}
+    widths={[260, 520]}
+  />
+  <figcaption>{caption}</figcaption>
+</figure>
