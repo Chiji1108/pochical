@@ -515,6 +515,12 @@ public actor SyncClient {
         guard let placeID = peer.placeID else { return try Sync.take(changes.changes, in: db) }
         try GroupSync.take(changes.changes, of: placeID, in: db)
       }
+      if peer.placeID == nil {
+        for groupID in Groups.left(in: changes.changes) {
+          NotificationCenter.default.post(
+            name: groupLeft, object: nil, userInfo: ["groupID": groupID])
+        }
+      }
       Logger.sync.info("Took \(changes.changes.count) changes")
     case .reset:
       try await database.write { [peer] db in
