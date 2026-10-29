@@ -11,7 +11,6 @@ import app.pochical.kit.LineContent
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -36,10 +35,15 @@ class ChatSpeechTest {
     compose.waitForIdle()
   }
 
-  private val liveRegion = SemanticsMatcher.keyIsDefined(SemanticsProperties.LiveRegion)
+  /** Everything said, in order. */
+  private val heard = mutableListOf<String>()
 
-  /** What the live region says now; nothing before anything is said. */
-  private fun said(): List<String> = compose.onAllNodes(liveRegion).fetchSemanticsNodes().map { it.config[SemanticsProperties.ContentDescription].joinToString() }
+  /** What was said since the last asked, and the live region left with nothing to land on. */
+  private fun said(): List<String> {
+    val live = compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.LiveRegion)).fetchSemanticsNode()
+    assertEquals("", live.config[SemanticsProperties.ContentDescription].joinToString())
+    return heard.toList().also { heard.clear() }
+  }
 
   private fun open() {
     compose.mainClock.autoAdvance = false
@@ -54,6 +58,9 @@ class ChatSpeechTest {
         nameOf = { names[it].orEmpty() },
         list = list,
         floatingDay = rememberFloatingDay(list, emptyList()),
+        moves = remember { ListMoves() },
+        reading = true,
+        onSaid = { heard += it },
       )
     }
     compose.mainClock.advanceTimeByFrame()
@@ -90,14 +97,13 @@ class ChatSpeechTest {
     compose.waitForIdle()
     compose.mainClock.advanceTimeBy(Chat.announceSettleMs * 2L)
     assertEquals(listOf("さくら、あさって？"), said())
-    // Taken back while it settles: nothing new is said.
-    val before = compose.onNode(liveRegion).fetchSemanticsNode().id
+    // Taken back while it settles: nothing is said.
     come(line(2, "u2", "まちがい"))
     compose.runOnIdle { held.value = held.value.map { if (it.seq == 2L) it.copy(content = LineContent.Unsent) else it } }
     compose.mainClock.advanceTimeByFrame()
     compose.waitForIdle()
     compose.mainClock.advanceTimeBy(Chat.announceSettleMs * 2L)
-    assertEquals(before, compose.onNode(liveRegion).fetchSemanticsNode().id)
+    assertEquals(emptyList<String>(), said())
   }
 
   @Test
@@ -109,16 +115,15 @@ class ChatSpeechTest {
   }
 
   @Test
-  fun theSameWordsAgainAreSaidAgainByANodeOfTheirOwn() {
+  fun theSameWordsAgainAreSaidAgain() {
     open()
     come(line(1, "u2", "了解"))
     compose.mainClock.advanceTimeBy(Chat.announceSettleMs * 2L)
-    val first = compose.onNode(liveRegion).fetchSemanticsNode().id
     come(line(2, "u2", "了解"))
     compose.mainClock.advanceTimeBy(Chat.announceSettleMs * 2L)
-    assertEquals(listOf("さくら、了解"), said())
-    assertNotEquals(first, compose.onNode(liveRegion).fetchSemanticsNode().id)
+    assertEquals(listOf("さくら、了解", "さくら、了解"), said())
   }
+
 
   @Test
   fun linesArrivingBeyondAGapAreSaidAndEarlierPagesAreNot() {
