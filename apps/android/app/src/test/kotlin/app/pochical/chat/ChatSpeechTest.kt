@@ -38,10 +38,10 @@ class ChatSpeechTest {
   /** Everything said, in order. */
   private val heard = mutableListOf<String>()
 
-  /** What was said since the last asked, and the live region left with nothing to land on. */
+  /** What was said since the last asked, each by a live region whose words changed for it. */
   private fun said(): List<String> {
-    val live = compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.LiveRegion)).fetchSemanticsNode()
-    assertEquals("", live.config[SemanticsProperties.ContentDescription].joinToString())
+    val live = compose.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.LiveRegion)).fetchSemanticsNodes()
+    heard.lastOrNull()?.let { last -> assertEquals(listOf(last), live.map { it.config[SemanticsProperties.ContentDescription].joinToString() }.filter { it.isNotEmpty() }) }
     return heard.toList().also { heard.clear() }
   }
 

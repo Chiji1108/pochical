@@ -9,13 +9,11 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 
 // A photo opened large opens out of its place and closes back into the place of the photo then
@@ -27,38 +25,37 @@ import androidx.compose.ui.Modifier
 /** The photo shown large, by id, whose place stands empty while it is, and the transition it moves in. */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Stable
-class PhotoZoom(val scope: SharedTransitionScope) {
-  /** The photo shown large; null while none is. */
-  var shown by mutableStateOf<String?>(null)
-}
+class PhotoZoom(val scope: SharedTransitionScope, val shown: () -> String?)
 
 /** The page's photo zoom; null where photos only fade (motion reduced, or no page provides it). */
 val LocalPhotoZoom = compositionLocalOf<PhotoZoom?> { null }
 
 /**
  * The photos' places on the page, and [open] large over them: out of its place and back into it,
- * or fading with [reducedMotion]. [viewer] draws the photos large while they are open, and as they
- * go, told which it shows ([PhotoZoom.shown]) through [shown].
+ * or fading with [reducedMotion]. [shownOf] tells the photo [open] shows, read as the page draws, so
+ * its place stands empty from the first frame it opens in and is filled again the frame it closes.
+ * [viewer] draws the photos large while they are open, and as they go ([closing]).
  */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun <T : Any> PhotoZoomLayout(
   open: T?,
   reducedMotion: Boolean,
+  shownOf: (T) -> String?,
   places: @Composable () -> Unit,
-  viewer: @Composable AnimatedVisibilityScope.(open: T, shown: (photoId: String) -> Unit) -> Unit,
+  viewer: @Composable AnimatedVisibilityScope.(open: T, closing: Boolean) -> Unit,
 ) {
   SharedTransitionLayout {
-    val zoom = remember(this) { PhotoZoom(this) }
-    // Kept as it goes, so it closes whole.
-    var last by remember { mutableStateOf(open) }
-    if (open != null) last = open
-    // Its place is filled again as it closes, the photo landing on it.
-    SideEffect { if (open == null) zoom.shown = null }
+    val current by rememberUpdatedState(open)
+    val zoom = remember(this) { PhotoZoom(this) { current?.let(shownOf) } }
+    // Kept as it goes, so it closes whole: not state, as nothing is drawn from it changing.
+    val last = remember { arrayOfNulls<Any>(1) }
+    if (open != null) last[0] = open
     CompositionLocalProvider(LocalPhotoZoom provides zoom.takeIf { !reducedMotion }) {
       places()
       AnimatedVisibility(open != null, enter = fadeIn(), exit = fadeOut()) {
-        last?.let { viewer(it) { id -> if (open != null) zoom.shown = id } }
+        @Suppress("UNCHECKED_CAST")
+        (last[0] as T?)?.let { viewer(it, open == null) }
       }
     }
   }
@@ -72,7 +69,7 @@ fun <T : Any> PhotoZoomLayout(
 @Composable
 fun Modifier.photoPlace(photoId: String): Modifier {
   val zoom = LocalPhotoZoom.current ?: return this
-  return with(zoom.scope) { sharedElementWithCallerManagedVisibility(rememberSharedContentState(photoId), visible = zoom.shown != photoId) }
+  return with(zoom.scope) { sharedElementWithCallerManagedVisibility(rememberSharedContentState(photoId), visible = zoom.shown() != photoId) }
 }
 
 /** The photo [photoId] large, coming out of its place as the viewer [scope] opens and back into it as it closes. */
