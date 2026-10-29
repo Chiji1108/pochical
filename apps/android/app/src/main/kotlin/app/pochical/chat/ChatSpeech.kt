@@ -7,10 +7,15 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -22,87 +27,101 @@ import androidx.compose.ui.unit.dp
 import app.pochical.R
 import app.pochical.design.Chat
 import app.pochical.kit.ChatLine
-import app.pochical.kit.ChatState
 import app.pochical.kit.LineContent
 import app.pochical.kit.LineWriter
 import java.time.LocalDate
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 // What a chat says to a screen reader of itself (spec/chat.md, Screen readers): others' lines coming
 // in, once they have settled, and the day at the top as the lines are scrolled a page at a time.
-// Said through a polite live region, queued after what the screen reader is saying, as Android asks
-// in place of announcing.
+// Each is an event of its own, said by a polite live region made for it, queued after what the
+// screen reader is saying, as Android asks in place of announcing (deprecated in Android 16).
 
-/** What the chat has to say to a screen reader now, set as things happen. */
-private sealed interface Said {
+/** Something to say, once: [id] tells it from the one before, the same words included. */
+private class Said(val id: Long, val what: What)
+
+private sealed interface What {
   /** Others' lines come in, in order. */
-  data class Coming(val lines: List<ChatLine>) : Said
+  data class Coming(val lines: List<ChatLine>) : What
 
   /** Scrolled to the day [day] at the top, or the latest lines ([day] null). */
-  data class Scrolled(val day: LocalDate?, val at: Long) : Said
+  data class Scrolled(val day: LocalDate?) : What
 }
 
 /**
  * Says to a screen reader others' lines coming in while the chat is open, wherever it is scrolled,
  * once they have settled for `chatRules.announceSettleMs`: one by who and what (the app's notices by
- * their words), several as 新しいメッセージ{n}件 and the latest; never the reader's own or a blocked
- * member's. And, with a screen reader on, the day of the lines at the top as a scroll stops, or
- * 最新のメッセージ at the foot, as the floating day shows it to the eye.
+ * their words), several as how many and the latest, as iOS says them; never the reader's own or a
+ * blocked member's. What has come is told by [arrived] after the newest line held as the chat was
+ * placed ([newest]), not by the lines laid out, so a gap or a page of earlier lines changes nothing.
+ * And, with a screen reader on, the day of the lines at the top as a scroll stops, or 最新のメッセージ
+ * at the foot, as the floating day shows it to the eye.
  */
 @Composable
 fun ChatSpeech(
-  chat: ChatState,
   me: String?,
   /** Once the chat is placed where it opens: what it opens on is not said. */
   placed: Boolean,
+  /** The seq of the chat's newest line held now, 0 with none. */
+  newest: suspend () -> Long,
+  /** The chat's lines after a seq, as they arrive. */
+  arrived: (after: Long) -> Flow<List<ChatLine>>,
   blocked: (ChatLine) -> Boolean,
   nameOf: (String) -> String,
   list: LazyListState,
   floatingDay: FloatingDayState,
 ) {
   var said by remember { mutableStateOf<Said?>(null) }
-  val latest = chat.lines.lastOrNull()?.seq
-  var heardTo by remember { mutableStateOf<Long?>(null) }
-  LaunchedEffect(latest, placed, me) {
-    if (!placed || me == null || latest == null) return@LaunchedEffect
-    val from = heardTo
-    if (from == null) {
-      heardTo = latest
-      return@LaunchedEffect
-    }
-    // A run coming at once is said once, rather than each cutting the last off.
+  var ids by remember { mutableLongStateOf(0L) }
+  val say = { what: What -> said = Said(++ids, what) }
+  // The newest line as the chat was placed, an empty chat's 0: what comes after it has arrived.
+  var since by remember { mutableStateOf<Long?>(null) }
+  val asking by rememberUpdatedState(newest)
+  LaunchedEffect(placed) { if (placed && since == null) since = asking() }
+  val came by remember(since) { since?.let(arrived) ?: flowOf(emptyList()) }.collectAsState(emptyList())
+  var heardTo by remember(since) { mutableLongStateOf(since ?: 0) }
+  val hidden by rememberUpdatedState(blocked)
+  // A run coming at once is said once, rather than each cutting the last off.
+  LaunchedEffect(came, me) {
+    val last = came.lastOrNull()?.seq ?: return@LaunchedEffect
+    if (me == null || last <= heardTo) return@LaunchedEffect
     delay(Chat.announceSettleMs.toLong())
-    heardTo = latest
-    val coming = chat.lines.filter { it.seq > from && !blocked(it) && (it.writer(me) == LineWriter.Others || it.content is LineContent.Notice) }
-    if (coming.isNotEmpty()) said = Said.Coming(coming)
+    val coming = came.filter { it.seq > heardTo && !hidden(it) && (it.writer(me) == LineWriter.Others || it.content is LineContent.Notice) }
+    heardTo = last
+    if (coming.isNotEmpty()) say(What.Coming(coming))
   }
   val reading = rememberScreenReaderOn()
   LaunchedEffect(list, reading) {
     if (!reading) return@LaunchedEffect
     var scrolled = false
-    androidx.compose.runtime.snapshotFlow { list.isScrollInProgress }.collect { scrolling ->
+    snapshotFlow { list.isScrollInProgress }.collect { scrolling ->
       if (scrolling) scrolled = true
       else if (scrolled) {
         scrolled = false
-        said = Said.Scrolled(floatingDay.day.takeIf { list.canScrollBackward }, System.nanoTime())
+        say(What.Scrolled(floatingDay.day.takeIf { list.canScrollBackward }))
       }
     }
   }
+  val now = said ?: return
   val words =
-    when (val now = said) {
-      is Said.Coming -> {
-        val last = lineSaid(now.lines.last(), nameOf)
-        if (now.lines.size == 1) last else stringResource(R.string.chat_new_lines, now.lines.size, last)
+    when (val what = now.what) {
+      is What.Coming -> {
+        val last = lineSaid(what.lines.last(), nameOf)
+        if (what.lines.size == 1) last else stringResource(R.string.chat_new_lines, what.lines.size, last)
       }
-      is Said.Scrolled -> now.day?.let { dayWords(it) } ?: stringResource(R.string.chat_latest_lines)
-      null -> null
+      is What.Scrolled -> what.day?.let { dayWords(it) } ?: stringResource(R.string.chat_latest_lines)
     }
-  Box(
-    Modifier.size(1.dp).semantics {
-      liveRegion = LiveRegionMode.Polite
-      contentDescription = words.orEmpty()
-    }
-  )
+  // A node of its own for each, so the same words said again are said again.
+  key(now.id) {
+    Box(
+      Modifier.size(1.dp).semantics {
+        liveRegion = LiveRegionMode.Polite
+        contentDescription = words
+      }
+    )
+  }
 }
 
 /** A line as it is said coming in: who and what, or a notice by its words. */

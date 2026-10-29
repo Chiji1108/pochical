@@ -90,7 +90,7 @@
   <string name="chat_read_more">続きを読む</string>
   <!-- Said to a screen reader as others' lines come in, and as the lines are scrolled to the latest. -->
   <string name="chat_line_said">%1$s、%2$s</string>
-  <string name="chat_new_lines">新しいメッセージ%1$d件、%2$s</string>
+  <string name="chat_new_lines">新しいメッセージ%1$d件。最新は、%2$s</string>
   <string name="chat_latest_lines">最新のメッセージ</string>
   <string name="chat_pin">ピン留め</string>
   <string name="chat_unpin">ピン留めを外す</string>
