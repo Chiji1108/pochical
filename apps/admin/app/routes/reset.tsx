@@ -38,7 +38,10 @@ export const action = async ({ request }: Route.ActionArgs) => {
   return await env.SERVER.reset(staffOf(request)).then(
     () => ({ doneAtMs: Date.now() }),
     (error: unknown) => {
-      console.error("全消去 stopped part way", error);
+      console.error({
+        error: String(error),
+        message: "全消去 stopped part way",
+      });
       return data(
         {
           error:
