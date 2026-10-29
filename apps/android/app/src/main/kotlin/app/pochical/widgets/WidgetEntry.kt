@@ -122,6 +122,9 @@ sealed interface NoOff {
   data class Waiting(val names: List<String>) : NoOff
 
   data object Apart : NoOff
+
+  /** Set to a group the person is alone in: no day off is shared. */
+  data object Alone : NoOff
 }
 
 /** 次の休み: whether today is off, and the next day off after it, as far as days are entered; with someone picked, only days all are off. */
@@ -135,8 +138,13 @@ data class WidgetOffs(
 /** Someone a widget is set to, by name, with whether they are off on a day, null where they have not entered it. */
 class WidgetPerson(val name: String, val offOn: (LocalDate) -> Boolean?)
 
-/** 次の休み from [today], [dayAt] giving each day by how many days on it is, with [people] those the widget is set to. */
-fun widgetOffs(today: WidgetDay, people: List<WidgetPerson>, dayAt: (Int) -> WidgetDay): WidgetOffs {
+/**
+ * 次の休み from [today], [dayAt] giving each day by how many days on it is, with [people] those the
+ * widget is set to; [group] when it is set to a group, which with no one else in it shares no day
+ * off, as the group's own screens show no みんな休み for one member.
+ */
+fun widgetOffs(today: WidgetDay, people: List<WidgetPerson>, group: Boolean = false, dayAt: (Int) -> WidgetDay): WidgetOffs {
+  if (group && people.isEmpty()) return WidgetOffs(today = false, next = null, none = NoOff.Alone)
   fun theirs(day: WidgetDay) = people.map { it.offOn(day.date) }
   fun together(day: WidgetDay) = allOff(listOf(if (day.pattern == null) null else day.off) + theirs(day))
   val looked = mutableListOf(today)
@@ -257,19 +265,20 @@ fun OwnCalendar.widgetEntry(
       val offs = theirs.mapValues { it.value.pattern.countsAsOff }
       WidgetPerson(member.name) { offs[it] }
     }
-  val entry = entryOf(today, week, people, ::day).copy(nothingEntered = !hasEnteredDays, with = companion?.with)
+  val group = companion?.with?.kind == WidgetWith.Kind.Group
+  val entry = entryOf(today, week, people, group, ::day).copy(nothingEntered = !hasEnteredDays, with = companion?.with)
   return entry.copy(pair = companion?.let { pair(it, shifts.firstOrNull(), entry.upcoming, week, holiday) })
 }
 
 /** The entry for [today] of the days [day] gives, the week from [week]'s start, with [people] those 次の休み counts with. */
-private fun entryOf(today: LocalDate, week: Week, people: List<WidgetPerson>, day: (LocalDate) -> WidgetDay): WidgetEntry {
+private fun entryOf(today: LocalDate, week: Week, people: List<WidgetPerson>, group: Boolean, day: (LocalDate) -> WidgetDay): WidgetEntry {
   val weekStart = today.weekStartingOn(week.start)
   val todayDay = day(today)
   return WidgetEntry(
     date = today,
     nothingEntered = false,
     today = todayDay,
-    offs = widgetOffs(todayDay, people) { day(today.plusDays(it.toLong())) },
+    offs = widgetOffs(todayDay, people, group) { day(today.plusDays(it.toLong())) },
     upcoming = List(7) { day(today.plusDays(it.toLong())) },
     twoWeeks = List(14) { day(weekStart.plusDays(it.toLong())) },
     month = monthWeeks(YearMonth.from(today), week.start).map { it.map(day) },
@@ -305,7 +314,7 @@ fun sampleWidgetEntry(today: LocalDate, week: Week): WidgetEntry {
   val ids = listOf("day", "day", "night", "after", "off", "off", "day")
   // As iOS's sample: the ready-made patterns, their next days left aside.
   val patterns = readyCopies(ids.distinct(), keeping = emptySet()).associate { it.id to it.pattern }
-  return entryOf(today, week, emptyList()) { date ->
+  return entryOf(today, week, emptyList(), group = false) { date ->
     val id = ids[Math.floorMod(date.toEpochDay() - today.toEpochDay(), ids.size)]
     WidgetDay.of(date, ShownDay(id), patterns[id], noted = false, week = week, holiday = false)
   }

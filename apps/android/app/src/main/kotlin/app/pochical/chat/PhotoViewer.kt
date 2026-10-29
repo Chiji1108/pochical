@@ -73,6 +73,7 @@ import app.pochical.sharePhoto
 import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
 import coil3.request.CachePolicy
+import coil3.memory.MemoryCache
 import coil3.request.ImageRequest
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -345,11 +346,14 @@ fun FaceViewer(photoId: String, shelf: PhotoShelf, name: String, onClose: () -> 
     val reading = rememberScreenReaderOn()
     var controls by remember { mutableStateOf(true) }
     Box(Modifier.fillMaxSize().background(colors.mediaBackground.copy(alpha = 1f - pulled))) {
-      // A face has no small version: the one the profile drew, from memory, under it until it is drawn whole.
-      LargeImage(Picture(photoId, shelf), stringResource(R.string.profile_photo_of, name), onTap = { if (!reading) controls = !controls }, onPulled = { pulled = it }, onDismissed = onClose) {
+      // A face has no small version: the one the profile drew, from memory, shows until it is drawn
+      // whole, which the disk keeps (a face is fetched once).
+      val picture = Picture(photoId, shelf)
+      val context = LocalContext.current
+      val request = remember(picture) { ImageRequest.Builder(context).data(picture).placeholderMemoryCacheKey(MemoryCache.Key(picture.key)).build() }
+      LargeImage(request, stringResource(R.string.profile_photo_of, name), onTap = { if (!reading) controls = !controls }, onPulled = { pulled = it }, onDismissed = onClose) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
           CircularProgressIndicator(Modifier.size(40.dp), color = colors.mediaText)
-          AsyncImage(Picture(photoId, shelf), contentDescription = null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
         }
       }
       AnimatedVisibility((controls || reading) && pulled == 0f, enter = fadeIn(), exit = fadeOut()) {

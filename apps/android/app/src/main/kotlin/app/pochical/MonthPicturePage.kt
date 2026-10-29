@@ -16,12 +16,13 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.requiredWidth
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHost
@@ -29,7 +30,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -55,6 +55,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.calendar.DayCell
 import app.pochical.calendar.DayLook
 import app.pochical.calendar.LocalOwnDays
@@ -87,7 +88,7 @@ import kotlinx.coroutines.launch
 fun MonthPicturePage(month: YearMonth, onBack: () -> Unit) {
   val settings = LocalDeviceSettings.current
   val device = settings.device
-  val calendar by LocalOwnDays.current.calendar.collectAsState()
+  val calendar by LocalOwnDays.current.calendar.collectAsStateWithLifecycle()
   val context = LocalContext.current
   val resources = LocalResources.current
   val haptics = LocalHapticFeedback.current
@@ -187,6 +188,7 @@ fun MonthPicturePage(month: YearMonth, onBack: () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
       ) {
         OutlinedButton(
+          shapes = ButtonDefaults.shapes(),
           onClick = {
             scope.launch {
               val shared = picture(layer)?.let { sharePicture(context, it, "month", title) } ?: false
@@ -203,6 +205,7 @@ fun MonthPicturePage(month: YearMonth, onBack: () -> Unit) {
           Text(stringResource(R.string.picture_share))
         }
         Button(
+          shapes = ButtonDefaults.shapes(),
           onClick = {
             scope.launch {
               if (picture(layer)?.let { savePicture(context, it, "pochical-${page.first}.png") } == true) {

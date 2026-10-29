@@ -5,6 +5,16 @@
 
 @import "@pochical/styled-system/base.css";
 
+/* Going from one of the site's pages to another cross-fades them, as the
+   browser does a same-origin navigation it is asked to (Astro's guide to
+   cross-document view transitions), unless less motion is asked for. A
+   browser without them goes to the page as before. */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+}
+
 @layer site {
   .skip-link {
     position: fixed;

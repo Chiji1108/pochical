@@ -9,9 +9,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -27,6 +24,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.pochical.ChoiceButtons
 import app.pochical.EmojiPickerSheet
 import app.pochical.Footnote
 import app.pochical.IconPickerSheet
@@ -74,18 +72,8 @@ fun LookSheet(draft: Pattern, others: List<Pattern>, onChange: (Pattern, LookPar
     ) {
       Text(stringResource(R.string.look_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
       ShiftMark(draft.icon, draft.emoji, draft.symbol, draft.color, size = 48.dp, look = sample(look, shown))
-      SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-        val styles = listOf(MarkStyle.Icon to R.string.mark_kind_icon, MarkStyle.Emoji to R.string.mark_kind_emoji, MarkStyle.Badge to R.string.mark_kind_letter)
-        styles.forEachIndexed { index, (style, title) ->
-          SegmentedButton(
-            selected = shown == style,
-            onClick = { shown = style },
-            shape = SegmentedButtonDefaults.itemShape(index, styles.size),
-          ) {
-            Text(stringResource(title))
-          }
-        }
-      }
+      val styles = mapOf(MarkStyle.Icon to R.string.mark_kind_icon, MarkStyle.Emoji to R.string.mark_kind_emoji, MarkStyle.Badge to R.string.mark_kind_letter)
+      ChoiceButtons(styles.keys.toList(), shown, { stringResource(styles.getValue(it)) }, modifier = Modifier) { shown = it }
       when (shown) {
         MarkStyle.Icon -> {
           MarkChoiceGrid(
