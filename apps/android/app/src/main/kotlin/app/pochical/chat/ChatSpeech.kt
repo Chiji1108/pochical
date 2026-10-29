@@ -7,7 +7,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -88,7 +88,7 @@ fun ChatSpeech(
   var heardTo by remember(since) { mutableLongStateOf(since ?: 0) }
   // Those after the last heard, followed only while a screen reader reads the screen, as nothing is
   // said otherwise.
-  val came by remember(since, heardTo, reading) { since?.takeIf { reading }?.let { arrived(heardTo) } ?: flowOf(emptyList()) }.collectAsState(emptyList())
+  val came by remember(since, heardTo, reading) { since?.takeIf { reading }?.let { arrived(heardTo) } ?: flowOf(emptyList()) }.collectAsStateWithLifecycle(emptyList())
   val hidden by rememberUpdatedState(blocked)
   // A run coming at once is said once, rather than each cutting the last off. Keyed on the lines as
   // the device holds them, so one changed or taken back while it settles waits again and is said as

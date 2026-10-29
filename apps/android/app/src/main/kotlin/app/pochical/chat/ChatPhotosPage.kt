@@ -25,7 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -66,7 +66,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 fun ChatPhotosPage(groupId: String, threadId: String, onBack: () -> Unit) {
   val colors = LocalThemeColors.current
   val values = LocalValues.current
-  val members by remember(values, groupId) { values.members(groupId) }.collectAsState(emptyList())
+  val members by remember(values, groupId) { values.members(groupId) }.collectAsStateWithLifecycle(emptyList())
   val deleted = stringResource(R.string.deleted_account)
   val names = remember(members, deleted) { members.associate { it.userId to it.shownName(deleted) } }
   val listed = remember { OpenPhotos(PhotoRun.latest()) }

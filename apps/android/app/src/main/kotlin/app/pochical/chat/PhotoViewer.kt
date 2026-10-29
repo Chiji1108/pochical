@@ -31,7 +31,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -292,12 +292,12 @@ fun FollowPhotos(groupId: String, threadId: String, open: OpenPhotos) {
   HoldSocket(groupId)
   val chats = LocalChats.current
   val account = LocalAccount.current
-  val socket by remember(account, groupId) { account.chatSocket(groupId) }.collectAsState(null)
+  val socket by remember(account, groupId) { account.chatSocket(groupId) }.collectAsStateWithLifecycle(null)
   LaunchedEffect(chats, groupId, threadId) { chats.photoLines(groupId, threadId).collect { lines -> open.change { follow(lines) } } }
   LaunchedEffect(socket, threadId) {
     socket?.photoPages?.filter { it.threadId == threadId }?.collect { page -> open.change { take(page) } }
   }
-  val current = socket?.state?.collectAsState()?.value == SocketState.Current
+  val current = socket?.state?.collectAsStateWithLifecycle()?.value == SocketState.Current
   LaunchedEffect(current) { if (current) open.reconnected() }
   LaunchedEffect(open.changes, socket, current) {
     val socket = socket ?: return@LaunchedEffect

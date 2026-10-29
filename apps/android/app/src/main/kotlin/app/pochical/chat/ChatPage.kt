@@ -72,7 +72,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -202,11 +202,11 @@ fun ChatPage(
   val values = LocalValues.current
   val me = rememberMeId()
   // Null until read, so a draft's mentions are named once the names are known.
-  val memberRows by remember(values, groupId) { values.members(groupId) }.collectAsState(null)
+  val memberRows by remember(values, groupId) { values.members(groupId) }.collectAsStateWithLifecycle(null)
   val members = memberRows.orEmpty()
-  val groups by remember(values) { values.groups() }.collectAsState(emptyList())
-  val blocked by remember(values) { values.blocks() }.collectAsState(emptyList())
-  val socket by remember(account, groupId) { account.chatSocket(groupId) }.collectAsState(null)
+  val groups by remember(values) { values.groups() }.collectAsStateWithLifecycle(emptyList())
+  val blocked by remember(values) { values.blocks() }.collectAsStateWithLifecycle(emptyList())
+  val socket by remember(account, groupId) { account.chatSocket(groupId) }.collectAsStateWithLifecycle(null)
 
   // Where the chat is, kept across a rotation and the process's death: the first line laid out,
   // the line ここから新着 is over as it opened, and the line the lines rest on at the foot.
@@ -223,7 +223,7 @@ fun ChatPage(
     remember(chats, groupId, threadId) {
       snapshotFlow { from to currentMe }.flatMapLatest { (from, me) -> chats.state(groupId, threadId, me, from) }
     }
-      .collectAsState(null)
+      .collectAsStateWithLifecycle(null)
   // A member's profile, a report and blocking, over the chat.
   val reportAndBlock = remember { ReportAndBlockState() }
   val other = me?.let { otherIn(threadId, it) }
@@ -346,7 +346,7 @@ fun ChatPage(
     val first = chat.lines.firstOrNull() ?: return@LaunchedEffect
     if (placed && touched && nearTop && chat.heldBefore > 0) from = maxOf(first.seq - Chat.pageSize, chat.heldFrom ?: 1)
   }
-  val current = socket?.state?.collectAsState()?.value == SocketState.Current
+  val current = socket?.state?.collectAsStateWithLifecycle()?.value == SocketState.Current
   LaunchedEffect(opened, socket, current, chat.heldFrom, chat.heldBefore < Chat.pageSize) {
     val held = chat.heldFrom ?: return@LaunchedEffect
     if (opened && current && chat.heldBefore < Chat.pageSize && held > 1) socket?.requestPage(threadId, held)
@@ -467,7 +467,7 @@ fun ChatPage(
 
   // The line the composer answers, held however far from the lines laid out.
   val replying = composer.writing.replyTo
-  val answered by remember(chats, groupId, threadId, replying) { replying?.let { chats.line(groupId, threadId, it) } ?: flowOf(null) }.collectAsState(null)
+  val answered by remember(chats, groupId, threadId, replying) { replying?.let { chats.line(groupId, threadId, it) } ?: flowOf(null) }.collectAsStateWithLifecycle(null)
 
   // Reactions (spec/chat.md, Reactions): the member's own put on sprays from its pill, with its
   // haptic (spec/haptics.md), but with animations off; + opens the system's emoji picker, and a
@@ -901,7 +901,7 @@ private fun ChatScaffold(
  */
 @Composable
 private fun rememberSocketWords(socket: ChatSocket?): String? {
-  val state = socket?.state?.collectAsState()?.value ?: SocketState.Closed
+  val state = socket?.state?.collectAsStateWithLifecycle()?.value ?: SocketState.Closed
   var shown by remember { mutableStateOf<SocketState?>(null) }
   LaunchedEffect(state) {
     shown = null

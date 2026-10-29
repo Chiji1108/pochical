@@ -33,7 +33,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -476,9 +476,9 @@ data class BlockedPerson(val id: String, val name: String, val group: String, va
 @Composable
 fun rememberBlockedPeople(): List<BlockedPerson> {
   val values = LocalValues.current
-  val blocks by remember(values) { values.blocks() }.collectAsState(emptyList())
-  val members by remember(values) { values.blockedMembers() }.collectAsState(emptyList())
-  val groups by remember(values) { values.groups() }.collectAsState(emptyList())
+  val blocks by remember(values) { values.blocks() }.collectAsStateWithLifecycle(emptyList())
+  val members by remember(values) { values.blockedMembers() }.collectAsStateWithLifecycle(emptyList())
+  val groups by remember(values) { values.groups() }.collectAsStateWithLifecycle(emptyList())
   val someone = stringResource(R.string.blocked_someone)
   return blocks.map { it.userId }.sorted().map { id ->
     val member = members.firstOrNull { it.userId == id && !it.deleted }

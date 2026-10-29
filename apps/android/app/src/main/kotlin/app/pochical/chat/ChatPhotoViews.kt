@@ -26,7 +26,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -261,7 +261,7 @@ fun PhotoComing(breathing: Boolean, modifier: Modifier = Modifier) {
 private fun PhotoGoingUp(photoId: String, sending: Boolean, onStop: (() -> Unit)?, modifier: Modifier) {
   val colors = LocalThemeColors.current
   val uploads = LocalPhotoUploads.current
-  val sent by uploads.sent.collectAsState()
+  val sent by uploads.sent.collectAsStateWithLifecycle()
   val gone = sent[photoId] ?: if (sending) 1f else null
   Box(modifier.background(colors.mediaDim), contentAlignment = Alignment.Center) {
     Box(Modifier.size(48.dp).background(colors.mediaShade, CircleShape), contentAlignment = Alignment.Center) {
