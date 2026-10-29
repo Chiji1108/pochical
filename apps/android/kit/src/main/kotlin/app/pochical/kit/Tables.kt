@@ -160,8 +160,9 @@ data class GroupMarkValue(
 )
 
 /**
- * The user's usual name and photo (spec/sync-protocol.md, Profile), as their User DO last sent them:
- * each group shows them unless the user gave it their own. One row, none before the user sets one.
+ * The user's usual name and photo, and the shape their marks are drawn in (spec/sync-protocol.md,
+ * Profile), as their User DO last sent them: each group shows them unless the user gave it their
+ * own. One row, none before the user sets one.
  */
 @Entity(tableName = "profile")
 data class ProfileRow(
@@ -170,6 +171,10 @@ data class ProfileRow(
   val name: String,
   /** One of the user's own photos (/v1/me/photos/{id}); empty for none. */
   val photoId: String,
+  /** The shape the account last said the marks are drawn in, a [MarkStyle]'s id; empty before any device sent it. */
+  val markStyle: String = "",
+  /** Icons drawn filled, as the account last said. */
+  val markFill: Boolean = true,
 )
 
 // What a group's socket brings (spec/sync-protocol.md, Groups; Group projection): who is in the
