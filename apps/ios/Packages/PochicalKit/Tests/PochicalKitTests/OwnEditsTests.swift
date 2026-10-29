@@ -143,7 +143,7 @@ private func outbox(_ db: Database) throws -> [Pochical_V1_DayValue] {
   }
 }
 
-struct SavedVectors: Decodable, Sendable {
+private struct SavedVectors: Decodable, Sendable {
   struct Saved: VectorCase {
     let name: String
     let patterns: [String]
@@ -157,7 +157,7 @@ struct SavedVectors: Decodable, Sendable {
 /// Saving a pattern over the person's, in their order (spec/vectors/patterns.json, saved): the
 /// order shown, and a new one's order sent as an edit of its own.
 @Test(arguments: try vectors("patterns", as: SavedVectors.self).saved)
-func saved(_ vector: SavedVectors.Saved) throws {
+private func savingAPattern(_ vector: SavedVectors.Saved) throws {
   let database = try appDatabase()
   try database.write { db in
     for id in vector.patterns {
