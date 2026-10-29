@@ -80,6 +80,27 @@ class ChatSpeechTest {
   }
 
   @Test
+  fun aLineChangedOrTakenBackWhileItSettlesIsSaidAsItIsThen() {
+    open()
+    come(line(1, "u2", "あした？"))
+    compose.mainClock.advanceTimeBy(Chat.announceSettleMs / 2L)
+    // Edited meanwhile: said as it is now.
+    compose.runOnIdle { held.value = listOf(line(1, "u2", "あさって？")) }
+    compose.mainClock.advanceTimeByFrame()
+    compose.waitForIdle()
+    compose.mainClock.advanceTimeBy(Chat.announceSettleMs * 2L)
+    assertEquals(listOf("さくら、あさって？"), said())
+    // Taken back while it settles: nothing new is said.
+    val before = compose.onNode(liveRegion).fetchSemanticsNode().id
+    come(line(2, "u2", "まちがい"))
+    compose.runOnIdle { held.value = held.value.map { if (it.seq == 2L) it.copy(content = LineContent.Unsent) else it } }
+    compose.mainClock.advanceTimeByFrame()
+    compose.waitForIdle()
+    compose.mainClock.advanceTimeBy(Chat.announceSettleMs * 2L)
+    assertEquals(before, compose.onNode(liveRegion).fetchSemanticsNode().id)
+  }
+
+  @Test
   fun anEmptyChatsFirstLineIsSaid() {
     open()
     come(line(1, "u2", "はじめまして"))
