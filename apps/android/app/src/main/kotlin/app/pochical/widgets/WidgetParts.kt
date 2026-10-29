@@ -2,28 +2,38 @@ package app.pochical.widgets
 
 import android.content.Context
 import android.content.Intent
-import androidx.core.net.toUri
+import android.widget.RemoteViews
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.glance.GlanceId
+import androidx.core.net.toUri
+import androidx.datastore.preferences.core.Preferences
 import androidx.glance.ColorFilter
+import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
-import androidx.glance.ImageProvider
 import androidx.glance.GlanceTheme
+import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
+import androidx.glance.LocalSize
 import androidx.glance.action.Action
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionStartActivity
+import androidx.glance.appwidget.compose
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
+import androidx.glance.appwidget.state.getAppWidgetState
 import androidx.glance.background
 import androidx.glance.color.ColorProvider
+import androidx.glance.currentState
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
@@ -33,6 +43,7 @@ import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.semantics.contentDescription
 import androidx.glance.semantics.semantics
+import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextAlign
@@ -58,15 +69,6 @@ import java.time.YearMonth
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import androidx.datastore.preferences.core.Preferences
-import androidx.glance.appwidget.state.getAppWidgetState
-import androidx.glance.currentState
-import androidx.glance.state.PreferencesGlanceStateDefinition
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.glance.LocalSize
-import androidx.compose.ui.unit.DpSize
-import androidx.compose.runtime.collectAsState
 
 // The pieces every kind of widget draws days with (iOS's WidgetParts.swift; /design's
 // design-widgets.tsx): the colors, a day's mark or dash and its name, a day off's look, the memo's
@@ -213,6 +215,18 @@ abstract class PochicalWidget(
     val drawn = Drawn(sampleWidgetEntry(LocalDate.now(), settings.week), settings)
     provideContent { Framed(drawn) }
   }
+
+  /**
+   * This kind drawn from [drawn] at [size], as the launcher would show it, for the style pages'
+   * preview of the home screen (spec/widgets.md): Glance composes it into the views a widget is.
+   */
+  suspend fun preview(context: Context, drawn: Drawn, size: DpSize): RemoteViews =
+    object : GlanceAppWidget() {
+      override val sizeMode: SizeMode = SizeMode.Exact
+
+      override suspend fun provideGlance(context: Context, id: GlanceId) = provideContent { Framed(drawn) }
+    }
+      .compose(context, size = size)
 
   @Composable
   private fun Framed(drawn: Drawn) {
