@@ -1,6 +1,7 @@
 import { runInDurableObject } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { MockInstance } from "vitest";
 
 import { runAlarm } from "./alarms";
 import { call, ORIGIN, userIdOf } from "./helpers";
@@ -31,21 +32,31 @@ const retriesLeft = async (session: string): Promise<number> => {
 };
 
 /**
- * Waits until `logged` pushes were logged as not sent, then expects the
- * user's DO to keep `kept` to try again. A push is logged (push.ts,
- * sendPush) just before its try is kept or let go (UserDO.deliver), with
- * nothing awaited between, so the DO's rows are settled by then: they are
- * read once, not polled against a deadline, as a read inside the DO goes
- * through the pool's main process, which a busy runner can stall past
- * expect.poll's second.
+ * Waits until a push was logged as not sent, then expects the user's DO to
+ * keep `kept` to try again. sendPush (push.ts) logs it and returns, and
+ * UserDO.deliver, resumed a microtask later, keeps the try or lets it go
+ * before it awaits anything; this poll looks again only in a later task,
+ * so the DO's rows are settled by then. They are read once, not polled
+ * against a deadline, as a read inside the DO goes through the pool's
+ * main process, which a busy runner can stall past expect.poll's second
+ * (#1031).
  */
 const expectKept = async (
-  warned: { mock: { calls: unknown[] } },
+  warned: MockInstance<typeof console.warn>,
   session: string,
-  kept: number,
-  logged = 1
+  kept: number
 ): Promise<void> => {
-  await expect.poll(() => warned.mock.calls.length).toBe(logged);
+  await expect
+    .poll(() =>
+      warned.mock.calls.some(
+        ([logged]: unknown[]) =>
+          typeof logged === "object" &&
+          logged !== null &&
+          "message" in logged &&
+          logged.message === "Push not sent"
+      )
+    )
+    .toBeTruthy();
   await expect(retriesLeft(session)).resolves.toBe(kept);
 };
 
@@ -512,7 +523,7 @@ describe("a device's push token", () => {
       })
       .toStrictEqual([{ token: OTHER_TOKEN }]);
     // The push APNs failed is kept to try again, the other not.
-    await expectKept(warned, guest, 1, 2);
+    await expect(retriesLeft(guest)).resolves.toBe(1);
     await retryNow(guest, true);
   });
 
@@ -548,7 +559,7 @@ describe("a device's push token", () => {
       .bind(TOKEN)
       .all<{ token: string }>();
     expect(kept.results).toStrictEqual([{ token: TOKEN }]);
-    await expectKept(warned, guest, 1);
+    await expect(retriesLeft(guest)).resolves.toBe(1);
     await retryNow(guest, true);
   });
 });
