@@ -35,6 +35,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,6 +49,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
@@ -125,8 +127,10 @@ fun InvitePage(groupId: String, onBack: () -> Unit) {
     scope.launch { snackbar.showSnackbar(resources.getString(words)) }
   }
 
+  val bar = TopAppBarDefaults.pinnedScrollBehavior()
   Scaffold(
-    topBar = { PageBar(stringResource(R.string.invite), onBack) },
+    Modifier.nestedScroll(bar.nestedScrollConnection),
+    topBar = { PageBar(stringResource(R.string.invite), onBack, bar) },
     snackbarHost = { SnackbarHost(snackbar) },
   ) { padding ->
     Column(

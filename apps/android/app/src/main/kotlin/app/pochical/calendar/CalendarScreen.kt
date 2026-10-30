@@ -491,6 +491,7 @@ fun CalendarScreen(
             canStep = { step -> opened.plusDays(step.toLong()) in reachable },
             onClose = { scope.launch { unfold() } },
             onPickShift = { open(RootPage.ShiftChoice(opened.toString())) },
+            reduceMotion = reduceMotion,
             modifier = Modifier.weight(1f).padding(top = 8.dp).graphicsLayer { alpha = folding },
           )
         }

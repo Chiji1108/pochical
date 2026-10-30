@@ -1,8 +1,6 @@
 package app.pochical.groups
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,6 +8,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -19,6 +19,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -45,7 +47,6 @@ import app.pochical.RowEnd
 import app.pochical.SectionHeader
 import app.pochical.SectionRow
 import app.pochical.SettingsPage
-import app.pochical.pageInsets
 import app.pochical.SettingsRow
 import app.pochical.SettingsSection
 import app.pochical.chat.ProfileOf
@@ -61,6 +62,7 @@ import app.pochical.kit.characterCount
 import app.pochical.kit.directThread
 import app.pochical.kit.nextGroupColor
 import app.pochical.notifications.GroupChatNotifications
+import app.pochical.pageInsets
 import app.pochical.rememberKeptField
 import app.pochical.sectionRows
 import kotlin.coroutines.cancellation.CancellationException
@@ -338,7 +340,12 @@ fun GroupProfilePage(groupId: String, onBack: () -> Unit) {
   GroupPage(groupId, stringResource(R.string.group_me), onBack) { group ->
     val meId = rememberMeId()
     val me = members(groupId).firstOrNull { it.userId == meId }
-    Scaffold(topBar = { PageBar(stringResource(R.string.group_me), onBack) }, contentWindowInsets = pageInsets) { padding ->
+    val bar = TopAppBarDefaults.pinnedScrollBehavior()
+    Scaffold(
+      Modifier.nestedScroll(bar.nestedScrollConnection),
+      topBar = { PageBar(stringResource(R.string.group_me), onBack, bar) },
+      contentWindowInsets = pageInsets,
+    ) { padding ->
       if (me == null) {
         CircularProgressIndicator(Modifier.padding(padding).padding(24.dp))
       } else {

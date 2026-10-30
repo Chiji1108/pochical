@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
@@ -25,7 +26,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -106,7 +106,55 @@ fun MonthPicturePage(month: YearMonth, onBack: () -> Unit) {
 
   fun say(words: Int) = scope.launch { snackbar.showSnackbar(resources.getString(words)) }
 
-  SettingsPage(stringResource(R.string.picture), onBack) { padding ->
+  // 共有 and 保存 under the choices, which end above them however large the words are.
+  val buttons: @Composable () -> Unit = {
+      Row(
+        Modifier.fillMaxWidth()
+          .background(LocalThemeColors.current.backgroundBase)
+          .navigationBarsPadding()
+          .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+      ) {
+        OutlinedButton(
+          shapes = ButtonDefaults.shapes(),
+          onClick = {
+            scope.launch {
+              val shared = picture(layer)?.let { sharePicture(context, it, "month", title) } ?: false
+              if (!shared) {
+                ReviewPrompt.troubled = true
+                say(R.string.picture_not_shared)
+              }
+            }
+          },
+          modifier = Modifier.weight(1f).heightIn(min = Metrics.control),
+        ) {
+          Icon(painterResource(R.drawable.ic_share), null, Modifier.size(18.dp))
+          Spacer(Modifier.width(8.dp))
+          Text(stringResource(R.string.picture_share))
+        }
+        Button(
+          shapes = ButtonDefaults.shapes(),
+          onClick = {
+            scope.launch {
+              if (picture(layer)?.let { savePicture(context, it, "pochical-${page.first}.png") } == true) {
+                // Saved out of sight, in the phone's pictures: felt as well as said (spec/haptics.md).
+                haptics.performHapticFeedback(HapticFeedbackType.Confirm)
+                say(R.string.picture_saved)
+              } else {
+                ReviewPrompt.troubled = true
+                say(R.string.picture_not_saved)
+              }
+            }
+          },
+          modifier = Modifier.weight(1f).heightIn(min = Metrics.control),
+        ) {
+          Icon(painterResource(R.drawable.ic_download), null, Modifier.size(18.dp))
+          Spacer(Modifier.width(8.dp))
+          Text(stringResource(R.string.picture_save))
+        }
+      }
+  }
+  SettingsPage(stringResource(R.string.picture), onBack, snackbar = snackbar, bottomBar = buttons) { padding ->
     Box(Modifier.padding(padding)) {
       // The picture as it goes out, drawn apart from the page at one size on every phone, as iOS's
       // 390 points at three times: recorded, never shown, so what is saved is the look as it is now
@@ -178,54 +226,7 @@ fun MonthPicturePage(month: YearMonth, onBack: () -> Unit) {
             Footnote(stringResource(R.string.picture_only))
           }
         }
-        item { Spacer(Modifier.heightIn(min = Metrics.control * 2)) }
       }
-      Row(
-        Modifier.align(Alignment.BottomCenter)
-          .fillMaxWidth()
-          .background(LocalThemeColors.current.backgroundBase)
-          .padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-      ) {
-        OutlinedButton(
-          shapes = ButtonDefaults.shapes(),
-          onClick = {
-            scope.launch {
-              val shared = picture(layer)?.let { sharePicture(context, it, "month", title) } ?: false
-              if (!shared) {
-                ReviewPrompt.troubled = true
-                say(R.string.picture_not_shared)
-              }
-            }
-          },
-          modifier = Modifier.weight(1f).heightIn(min = Metrics.control),
-        ) {
-          Icon(painterResource(R.drawable.ic_share), null, Modifier.size(18.dp))
-          Spacer(Modifier.width(8.dp))
-          Text(stringResource(R.string.picture_share))
-        }
-        Button(
-          shapes = ButtonDefaults.shapes(),
-          onClick = {
-            scope.launch {
-              if (picture(layer)?.let { savePicture(context, it, "pochical-${page.first}.png") } == true) {
-                // Saved out of sight, in the phone's pictures: felt as well as said (spec/haptics.md).
-                haptics.performHapticFeedback(HapticFeedbackType.Confirm)
-                say(R.string.picture_saved)
-              } else {
-                ReviewPrompt.troubled = true
-                say(R.string.picture_not_saved)
-              }
-            }
-          },
-          modifier = Modifier.weight(1f).heightIn(min = Metrics.control),
-        ) {
-          Icon(painterResource(R.drawable.ic_download), null, Modifier.size(18.dp))
-          Spacer(Modifier.width(8.dp))
-          Text(stringResource(R.string.picture_save))
-        }
-      }
-      SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(bottom = Metrics.control + 24.dp))
     }
   }
 }
