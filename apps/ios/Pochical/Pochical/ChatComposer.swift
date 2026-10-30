@@ -414,7 +414,7 @@ struct ChatComposer: View {
     for source in sources {
       defer { draft.comingPhotos -= 1 }
       guard let data = await source.data(),
-        let shrunk = await Task.detached(operation: { ChatPhotos.shrink(data) }).value
+        let shrunk = await ChatPhotos.shrink(data)
       else {
         unreadable = true
         continue

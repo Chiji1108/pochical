@@ -114,9 +114,6 @@ struct ChatScreen: View {
   /// What is being written, read by the composer alone.
   @State private var draft = ChatDraft()
   @State private var unsending: Unsending?
-  /// A link tapped in a line, open in the browser sheet.
-  @State private var browsing: OpenedLink?
-
   /// The lines read as the screen first draws, by the reader last heard
   /// of, so they are there through the push that brings it in rather than
   /// arriving, oldest first, as it ends.
@@ -463,9 +460,6 @@ struct ChatScreen: View {
     }
     .sheet(item: $reactingTo) { line in
       EmojiKeyboardSheet(title: "リアクション") { react($0, on: line) }
-    }
-    .sheet(item: $browsing) { link in
-      SafariView(url: link.url).ignoresSafeArea()
     }
     .alert(
       "送信を取り消しますか？",
@@ -1078,7 +1072,7 @@ struct ChatScreen: View {
     } else if let code = inviteCode(of: url) {
       openInvite(code)
     } else {
-      browsing = OpenedLink(url: url)
+      return .systemAction(url, prefersInApp: true)
     }
     return .handled
   }

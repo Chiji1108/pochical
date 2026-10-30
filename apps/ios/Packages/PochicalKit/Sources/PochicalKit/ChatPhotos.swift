@@ -61,7 +61,10 @@ public enum ChatPhotos {
   /// Shrinks a picked photo to send, turned upright, its longer side at
   /// most `maxEdge`, as JPEG at a quality that keeps it within
   /// `Chat.photoMaxBytes`; nil for what is not a photo the device can read.
-  public static func shrink(_ data: Data, maxEdge: Int = Chat.photoMaxEdge) -> ShrunkPhoto? {
+  /// Off the caller's actor, as decoding and encoding at 2048 pixels would
+  /// hold the screen still a moment.
+  @concurrent
+  public static func shrink(_ data: Data, maxEdge: Int = Chat.photoMaxEdge) async -> ShrunkPhoto? {
     guard let image = upright(data, maxEdge: maxEdge).map(onWhite), let jpeg = jpeg(of: image)
     else { return nil }
     return ShrunkPhoto(

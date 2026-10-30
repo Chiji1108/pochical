@@ -20,9 +20,6 @@ struct SettingsScreen: View {
   @Fetch(ChatNotificationsRequest()) private var notifications = ChatNotificationState()
   /// The icon in use, read again as the page comes back from changing it.
   @State private var appIcon = AppIconChoice.current
-  /// A page of the site opened from ポチカルについて.
-  @State private var page: OpenedLink?
-
   var body: some View {
     List {
       // The patterns first: every way of working has them, and the
@@ -137,9 +134,6 @@ struct SettingsScreen: View {
     }
     .settingsList()
     .onAppear { appIcon = .current }
-    .sheet(item: $page) { page in
-      SafariView(url: page.url).ignoresSafeArea()
-    }
   }
 
   /// Pochical itself, at the foot (/design's AboutSection): rows that leave
@@ -149,7 +143,7 @@ struct SettingsScreen: View {
   /// write one.
   private var about: some View {
     Section {
-      outside("ヘルプ") { page = OpenedLink(url: Site.page("support")) }
+      outside("ヘルプ") { openURL(Site.page("support"), prefersInApp: true) }
       outside("App Storeでレビューを書く") {
         if let url = Site.writeReview {
           openURL(url)
@@ -157,8 +151,8 @@ struct SettingsScreen: View {
           say("公開後はレビューを書く画面が開きます")
         }
       }
-      outside("利用規約") { page = OpenedLink(url: Site.page("terms")) }
-      outside("プライバシーポリシー") { page = OpenedLink(url: Site.page("privacy")) }
+      outside("利用規約") { openURL(Site.page("terms"), prefersInApp: true) }
+      outside("プライバシーポリシー") { openURL(Site.page("privacy"), prefersInApp: true) }
     } header: {
       Text("ポチカルについて")
     } footer: {

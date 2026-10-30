@@ -1,3 +1,4 @@
+import PhotosUI
 import PochicalDesign
 import SwiftUI
 
@@ -11,7 +12,13 @@ enum PhotoCropShape {
 /// A photo taken or picked for a face or a mark, waiting to be cut.
 struct CroppingPhoto: Identifiable {
   let id = UUID()
-  let image: UIImage
+  let source: Source
+
+  enum Source {
+    case taken(UIImage)
+    /// Picked from the photos, still to be read.
+    case picked(PhotosPickerItem)
+  }
 }
 
 /// A picked photo to move and zoom inside its frame before it becomes a

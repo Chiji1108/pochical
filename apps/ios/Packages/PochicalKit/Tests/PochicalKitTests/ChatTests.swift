@@ -1194,7 +1194,7 @@ private func photoSend(_ ids: [String]) -> Pochical_V1_ChatSend {
   }
 }
 
-@Test func aPhotoIsShrunkToItsLongestSideWithoutItsMetadata() throws {
+@Test func aPhotoIsShrunkToItsLongestSideWithoutItsMetadata() async throws {
   // A 3000×1000 picture with a place in its EXIF.
   let context = CGContext(
     data: nil, width: 3000, height: 1000, bitsPerComponent: 8, bytesPerRow: 0,
@@ -1208,7 +1208,7 @@ private func photoSend(_ ids: [String]) -> Pochical_V1_ChatSend {
     [kCGImagePropertyGPSDictionary: [kCGImagePropertyGPSLatitude: 35.68]] as CFDictionary)
   CGImageDestinationFinalize(destination)
 
-  let shrunk = try #require(ChatPhotos.shrink(out as Data))
+  let shrunk = try #require(await ChatPhotos.shrink(out as Data))
   #expect(shrunk.width == 2048)
   #expect(shrunk.height == 683)
   // Its ThumbHash, landscape and the green it is.
@@ -1222,7 +1222,7 @@ private func photoSend(_ ids: [String]) -> Pochical_V1_ChatSend {
   #expect(properties?[kCGImagePropertyGPSDictionary] == nil)
 }
 
-@Test func whatIsSeeThroughIsSentOnWhite() throws {
+@Test func whatIsSeeThroughIsSentOnWhite() async throws {
   // A red dot on nothing, as a sticker a keyboard puts in.
   let context = CGContext(
     data: nil, width: 40, height: 40, bitsPerComponent: 8, bytesPerRow: 0,
@@ -1234,7 +1234,7 @@ private func photoSend(_ ids: [String]) -> Pochical_V1_ChatSend {
   CGImageDestinationAddImage(destination, context.makeImage()!, nil)
   CGImageDestinationFinalize(destination)
 
-  let shrunk = try #require(ChatPhotos.shrink(out as Data))
+  let shrunk = try #require(await ChatPhotos.shrink(out as Data))
   let sent = try #require(ChatPhotos.upright(shrunk.jpeg, maxEdge: 40))
   let corner = CGContext(
     data: nil, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4,
