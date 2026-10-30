@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- Today's frame in the calendar widget (widget_frame), which the day's date and mark keep inside (CalendarWidget). -->
+  <dimen name="widget_frame_width">1.5dp</dimen>
+</resources>

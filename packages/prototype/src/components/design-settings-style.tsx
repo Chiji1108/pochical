@@ -237,6 +237,7 @@ function ShapeChoices() {
             : { style: option.style }
         );
       }}
+      samples
       value={current?.name ?? ""}
     >
       {shapeOptions.map((option) => (
@@ -293,6 +294,7 @@ export function OffLookTabs({
           onChange(option.id);
         }
       }}
+      samples={samples}
       size={samples ? "tall" : "compact"}
       value={value}
     >
@@ -337,6 +339,7 @@ export function NameTabs({
       onValueChange={(picked) => {
         onChange(picked === "true");
       }}
+      samples={samples}
       size={samples ? "tall" : "compact"}
       value={String(value)}
     >
@@ -497,6 +500,7 @@ function ShiftColorsChoices() {
       onValueChange={(picked) => {
         setShiftColors(picked === "true");
       }}
+      samples
       size="tall"
       value={String(shiftColors)}
     >

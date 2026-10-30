@@ -201,11 +201,11 @@ run = "pnpm --dir apps/server typecheck"
 
 [tasks."design:layout"]
 description = "Measure the design documents' pages, or compare them with a saved run: save <name> | check <name> (needs mise run design)"
-run = "pnpm exec tsx tools/layout-diff/index.ts --pages design"
+run = "node tools/layout-diff/index.ts --pages design"
 
 [tasks."design:demo-layout"]
 description = "Measure /demo's screens and page, or compare them with a saved run: save <name> | check <name> (needs mise run design)"
-run = "pnpm exec tsx tools/layout-diff/index.ts --pages demo"
+run = "node tools/layout-diff/index.ts --pages demo"
 
 [tasks."api:try"]
 description = "Try the server's groups and invitations by hand: create [name] [emoji] | join | preview | remake | cleanup [--local]"

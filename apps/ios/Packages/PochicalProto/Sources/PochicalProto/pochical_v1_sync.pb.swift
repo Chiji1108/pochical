@@ -2366,9 +2366,11 @@ public nonisolated struct Pochical_V1_ChatSend: Sendable {
   public var replyTo: UInt64 = 0
 
   /// The app's version and the device, as the chat's head says reach its
-  /// readers (ポチカル 1.0・iPhone (iOS 26.0)): sent where the place's rules
-  /// ask for it (design/src/chat.ts, chatPlaces' sendsDevice), and kept
-  /// only there, cut short as an app's word on itself.
+  /// readers: the app's name and version, the device and its system,
+  /// joined by "・" (ポチカル 1.0・iPhone・iOS 26.0, or ポチカル 1.0・Pixel
+  /// 10a・Android 17). Sent where the place's rules ask for it
+  /// (design/src/chat.ts, chatPlaces' sendsDevice), and kept only there,
+  /// cut short as an app's word on itself.
   public var device: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()

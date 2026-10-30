@@ -7,6 +7,7 @@ import { ArrowUpRight, ChevronRight, Plus } from "lucide-react";
 import { createContext, useContext, useId } from "react";
 import type { ReactNode } from "react";
 
+import { useDevice } from "../lib/design-device";
 import { MaterialSymbol } from "./design-symbol";
 import type { SymbolData } from "./design-symbol";
 import { SegmentedContext, srOnly } from "./design-ui";
@@ -503,43 +504,90 @@ const swatchStyle = css({
 // An on and off switch, as the platforms' Toggle and Switch: a track that
 // fills with the theme when on, and a knob that slides across. Ark UI's
 // Switch does the rest: the hidden checkbox, its label and focus.
+// iOS's is a 44×26 track whose white knob slides across. Android's is
+// Material 3's: a 52×32 track, outlined while off, whose thumb is small
+// and in the outline's color while off, grows as it slides on, in the
+// color on the accent, and grows again while pressed, all about its
+// center.
 const toggle = {
-  thumb: css({
-    _checked: { transform: "translateX(18px)" },
-    bg: "control.knob",
-    borderRadius: "circle",
-    boxShadow: "sm",
-    display: "block",
-    height: "22px",
-    transition: "transform 0.15s",
-    width: "22px",
-  }),
-  track: css({
-    _checked: { bg: "accent.switch" },
-    _focusVisible: {
-      outline: "2px solid token(colors.accent.default)",
-      outlineOffset: "2px",
+  thumb: cva({
+    base: { borderRadius: "circle", display: "block" },
+    variants: {
+      platform: {
+        android: {
+          "--center": "14px",
+          "--size": "16px",
+          _active: { "--size": "28px" },
+          _checked: {
+            "--center": "34px",
+            "--size": "24px",
+            _active: { "--size": "28px" },
+            bg: "accent.onFill",
+          },
+          bg: "border.strong",
+          height: "var(--size)",
+          transform: "translateX(calc(var(--center) - var(--size) / 2))",
+          transitionDuration: "0.2s",
+          transitionProperty: "transform, width, height, background",
+          width: "var(--size)",
+        },
+        ios: {
+          _checked: { transform: "translateX(18px)" },
+          bg: "control.knob",
+          boxShadow: "sm",
+          height: "22px",
+          transition: "0.15s transform",
+          width: "22px",
+        },
+      },
     },
-    bg: "fill.primary",
-    borderRadius: "full",
-    cursor: "pointer",
-    display: "block",
-    flexShrink: 0,
-    height: "26px",
-    marginLeft: "auto",
-    // The gap round the knob is the track's padding, not the knob's margin:
-    // a Toggle's root is a block, and the margin would collapse through it.
-    padding: "2px",
-    transition: "background 0.15s",
-    width: "44px",
+  }),
+  track: cva({
+    base: {
+      _focusVisible: {
+        outline: "2px solid token(colors.accent.default)",
+        outlineOffset: "2px",
+      },
+      borderRadius: "full",
+      cursor: "pointer",
+      flexShrink: 0,
+      marginLeft: "auto",
+    },
+    variants: {
+      platform: {
+        android: {
+          _checked: { bg: "accent.switch", borderColor: "accent.switch" },
+          alignItems: "center",
+          bg: "background.card",
+          border: "2px solid token(colors.border.strong)",
+          display: "flex",
+          height: "32px",
+          transition: "background 0.2s, border-color 0.2s",
+          width: "52px",
+        },
+        ios: {
+          _checked: { bg: "accent.switch" },
+          bg: "fill.primary",
+          display: "block",
+          height: "26px",
+          // The gap round the knob is the track's padding, not the knob's
+          // margin: a Toggle's root is a block, and the margin would
+          // collapse through it.
+          padding: "2px",
+          transition: "background 0.15s",
+          width: "44px",
+        },
+      },
+    },
   }),
 };
 
 function ToggleParts() {
+  const platform = useDevice((state) => state.platform);
   return (
     <>
-      <Switch.Control className={toggle.track}>
-        <Switch.Thumb className={toggle.thumb} />
+      <Switch.Control className={toggle.track({ platform })}>
+        <Switch.Thumb className={toggle.thumb({ platform })} />
       </Switch.Control>
       <Switch.HiddenInput />
     </>

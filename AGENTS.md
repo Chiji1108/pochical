@@ -4,8 +4,8 @@ Pochical is a monorepo: native SwiftUI (`apps/ios`) and Jetpack Compose (`apps/a
 
 ## Where things live
 
-- Tool versions and tasks are in `mise.toml` (`mise run gen`, `mise run server:test`, `mise run ios:test`, ...).
-- The TypeScript workspaces are pnpm's (`pnpm-workspace.yaml`, with the versions several of them share in its `catalog`). pnpm's version is in `packageManager` in `package.json` alone: mise reads it (`idiomatic_version_file_enable_tools` in `mise.toml`), and so does Workers Builds. Scripts written in TypeScript run on Node through tsx (`pnpm exec tsx <file>`), and the tests on vitest.
+- Tool versions and tasks are in `mise.toml` (`mise run gen`, `mise run server:test`, `mise run ios:test`, ...). mise's own version on GitHub Actions is in `.github/actions/mise/action.yml` alone, the step every workflow that uses mise sets it up with, and Renovate raises it.
+- The TypeScript workspaces are pnpm's (`pnpm-workspace.yaml`, with the versions several of them share in its `catalog`). pnpm's version is in `packageManager` in `package.json` alone: mise reads it (`idiomatic_version_file_enable_tools` in `mise.toml`), and so does Workers Builds. Scripts written in TypeScript run on Node through tsx (`pnpm exec tsx <file>`), and the tests on vitest; `tools/layout-diff` and `apps/design`'s `image:share` run on Node alone (`node <file>`), so the functions they send to a browser through Playwright reach it as written (#1028).
 - Xcode's version is in `.xcode-version` alone, the one the `xcode-27` runner of GitHub Actions selects for the `ios` job of `ci.yml` and for the iOS release; raise it in a PR once the runner image has the new Xcode.
 - Node's version is in `.node-version` alone: mise reads it (`idiomatic_version_file_enable_tools` in `mise.toml`), and so does Workers Builds.
 - Generated files are never edited by hand; change their source and regenerate:

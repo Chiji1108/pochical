@@ -7,8 +7,6 @@ import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceModifier
 import androidx.glance.LocalSize
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
-import androidx.glance.appwidget.cornerRadius
-import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
@@ -22,6 +20,7 @@ import androidx.glance.layout.padding
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import app.pochical.R
 import app.pochical.calendar.headingMonth
 import app.pochical.calendar.monthText
 import app.pochical.calendar.weekdayLetter
@@ -132,13 +131,14 @@ private fun androidx.glance.layout.RowScope.GridDay(
   val colors = drawn.colors
   val off = OffDrawing(day, drawn, inWeek)
   val isToday = day.date == drawn.entry.date
-  var cell = GlanceModifier.defaultWeight().fillMaxHeight().padding(1.dp)
-  // Today's frame: the accent's, round the day, as the calendar frames it.
-  if (isToday) cell = cell.background(colors.accentFrame).cornerRadius(8.dp).padding(1.5.dp)
+  val cell = GlanceModifier.defaultWeight().fillMaxHeight().padding(1.dp)
   Box(cell.opening(dayLink(day.date)).spoken(day, drawn.words)) {
-    var inner = GlanceModifier.fillMaxSize().cornerRadius(8.dp)
-    inner = if (off.tile && inMonth) inner.background(drawn.tileColor(day)) else if (isToday) inner.background(colors.ground) else inner
-    Column(inner.padding(vertical = 3.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    if (off.tile && inMonth) Fill(WidgetShape.tile, drawn.tileColor(day))
+    // Today's frame: the accent's, round the day, as the calendar frames it.
+    if (isToday) Fill(WidgetShape.frame, colors.accentFrame)
+    var inner = GlanceModifier.fillMaxSize().padding(vertical = 3.dp)
+    if (isToday) inner = inner.padding(R.dimen.widget_frame_width)
+    Column(inner, horizontalAlignment = Alignment.CenterHorizontally) {
       val faded = !inMonth || gone
       val dateColor = if (isToday) colors.accent else if (day.holiday) colors.holiday else colors.words
       NoteStroke(day.noted, drawn.strokeColor(day, onTile = off.tile && inMonth)) {
@@ -154,9 +154,7 @@ private fun androidx.glance.layout.RowScope.GridDay(
       }
       val pattern = day.pattern
       if (pattern != null && !off.hidden) {
-        Box(GlanceModifier.fillMaxWidth().defaultWeight(), contentAlignment = Alignment.Center) {
-          DayMark(day, drawn, markSize, faint = off.faint || faded, named = drawn.named)
-        }
+        DayMark(day, drawn, markSize, faint = off.faint || faded, named = drawn.named, modifier = GlanceModifier.fillMaxWidth().defaultWeight())
       }
     }
   }
