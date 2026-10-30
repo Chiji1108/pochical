@@ -1,8 +1,6 @@
 package app.pochical.chat
 
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
-import app.pochical.sectionRows
+import androidx.compose.foundation.selection.selectableGroup
 import app.pochical.SettingsRadioRow
 import android.content.res.Resources
 import androidx.compose.foundation.background
@@ -30,9 +28,11 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,7 +60,6 @@ import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.ReviewPrompt
 import app.pochical.RowEnd
-import app.pochical.SectionHeader
 import app.pochical.SettingsRow
 import app.pochical.SettingsSection
 import app.pochical.design.Chat
@@ -210,10 +209,12 @@ fun ReportSheet(target: ReportTarget, groupId: String, onDismiss: () -> Unit, on
   val sends = if (target is ReportTarget.Line) stringResource(R.string.report_sends_line) else stringResource(R.string.report_sends_member, target.name)
   // Open whole, so 送信 at its foot is in sight with the reasons.
   ListSheet(onDismiss, stringResource(R.string.report), sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-    item { SectionHeader(stringResource(R.string.report_why, what)) }
-    // Material 3 Expressive's segments, the one picked on the selected container, as the settings' choices.
-    sectionRows(reasons, key = { it.first.number }) { (choice, words) ->
-      SettingsRadioRow(stringResource(words), selected = reason == choice, onClick = { reason = choice })
+    // Material 3 Expressive's segments, the one picked on the selected container, one selectable
+    // group as the settings' choices are.
+    item {
+      SettingsSection(stringResource(R.string.report_why, what), Modifier.selectableGroup()) {
+        for ((choice, words) in reasons) row { SettingsRadioRow(stringResource(words), selected = reason == choice, onClick = { reason = choice }) }
+      }
     }
     item {
       Text(
@@ -298,7 +299,7 @@ fun MemberProfileSheet(
           GroupedMenu(
             menu,
             onDismiss = { menu = false },
-            listOf(listOf(MenuEntry(block, R.drawable.ic_block) { onBlock(!blocked) }), listOf(MenuEntry(report, R.drawable.ic_flag, danger = true, run = onReport))),
+            listOf(LineMenuItem(block, R.drawable.ic_block) { onBlock(!blocked) }, LineMenuItem(report, R.drawable.ic_flag, destructive = true, startsGroup = true, run = onReport)),
           )
         }
       }

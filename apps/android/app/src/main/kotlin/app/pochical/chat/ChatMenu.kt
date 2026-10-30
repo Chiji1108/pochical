@@ -1,7 +1,5 @@
 package app.pochical.chat
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.annotation.DrawableRes
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
@@ -44,9 +42,6 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.DropdownMenuGroup
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
@@ -54,9 +49,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -399,37 +396,17 @@ private fun BarSurface(bar: ReactionBar, state: LineMenuState, reducedMotion: Bo
 }
 
 /**
- * The menu's items in Material 3 Expressive's groups, as the chat's other menus (GroupedMenu): each
- * group a rounded card a small gap from the next, its first and last item rounder, each item lit
- * while the finger that opened it is over it.
+ * The menu's items in Material 3 Expressive's groups, as the chat's other menus (MenuGroups), each
+ * lit while the finger that opened it is over it; room kept round them for their shadows within the
+ * scroll, when taller than the room.
  */
 @Composable
 private fun MenuSurface(line: MenuLine, state: LineMenuState, first: FocusRequester?) {
-  val colors = LocalThemeColors.current
-  // The items in their groups, by their place in the line's menu.
-  val groups = line.items.withIndex().fold(mutableListOf<MutableList<IndexedValue<LineMenuItem>>>()) { groups, item ->
-    if (groups.isEmpty() || item.value.startsGroup) groups += mutableListOf<IndexedValue<LineMenuItem>>()
-    groups.last() += item
-    groups
-  }
-  Column(Modifier.width(MENU_WIDTH).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(MenuDefaults.GroupSpacing)) {
-    groups.forEachIndexed { at, group ->
-      DropdownMenuGroup(shapes = MenuDefaults.groupShape(at, groups.size), modifier = Modifier.fillMaxWidth()) {
-        group.forEachIndexed { place, (index, item) ->
-          val tint = if (item.destructive) colors.dangerDefault else MaterialTheme.colorScheme.onSurface
-          val shape = MenuDefaults.itemShape(place, group.size).shape
-          DropdownMenuItem(
-            onClick = { state.pick(item) },
-            text = { Text(item.label, color = tint) },
-            shape = shape,
-            leadingIcon = { Icon(painterResource(item.icon), contentDescription = null, tint = tint) },
-            modifier =
-              Modifier.focusedFirst(first.takeIf { index == 0 })
-                .onGloballyPositioned { state.targets[ITEM + index] = it.boundsInWindow() }
-                .background(if (state.lit == ITEM + index) MaterialTheme.colorScheme.onSurface.copy(alpha = LIT) else Color.Transparent, shape),
-          )
-        }
-      }
+  Column(Modifier.width(MENU_WIDTH).verticalScroll(rememberScrollState()).padding(MenuDefaults.ShadowElevation)) {
+    MenuGroups(line.items, onPick = state::pick) { index, shape ->
+      Modifier.focusedFirst(first.takeIf { index == 0 })
+        .onGloballyPositioned { state.targets[ITEM + index] = it.boundsInWindow() }
+        .background(if (state.lit == ITEM + index) MaterialTheme.colorScheme.onSurface.copy(alpha = LIT) else Color.Transparent, shape)
     }
   }
 }

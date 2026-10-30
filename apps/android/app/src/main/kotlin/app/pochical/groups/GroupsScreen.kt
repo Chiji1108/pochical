@@ -407,7 +407,6 @@ private fun GroupHub(group: GroupRow, actions: GroupsActions) {
       }
       val me = me
       if (me != null) {
-        item { SectionHeader(stringResource(R.string.chat_heading)) }
         item { ChatList(group.id, group.name, me, onOpen = { actions.onChat(group.id, it) }) }
       }
       item { Spacer(Modifier.height(24.dp)) }

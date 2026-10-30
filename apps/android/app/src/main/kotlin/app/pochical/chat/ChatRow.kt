@@ -1,7 +1,5 @@
 package app.pochical.chat
 
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,9 +14,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -77,7 +77,7 @@ fun ChatList(groupId: String, groupName: String, me: String, onOpen: (threadId: 
   val start = stringResource(R.string.chat_start)
   // As the settings' lists draw their rows, in Material 3 Expressive's segments (SettingsList); alone
   // in the group, why there is no one to talk to one to one under them.
-  SettingsSection(modifier = modifier, footnote = stringResource(R.string.chat_invite_to_talk).takeIf { writers != null && present.size <= 1 }) {
+  SettingsSection(stringResource(R.string.chat_heading), modifier, footnote = stringResource(R.string.chat_invite_to_talk).takeIf { writers != null && present.size <= 1 }) {
     row {
       ChatRow(groupId, GROUP_THREAD, me, groupChat, names, blockedIds, onOpen = { onOpen(GROUP_THREAD) }, today = today) {
         Box(Modifier.size(28.dp).background(colors.accentContainer, RoundedCornerShape(Radius.sm)), contentAlignment = Alignment.Center) {

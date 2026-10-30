@@ -1,7 +1,5 @@
 package app.pochical.chat
 
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.material3.SnackbarHost
@@ -74,11 +72,13 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
@@ -860,10 +860,11 @@ private fun ChatScaffold(
             GroupedMenu(
               more,
               onDismiss = { more = false },
-              listOf(
+              listOfNotNull(
                 // The group's own chat: everyone's shifts first, as the chat is the group's.
-                listOfNotNull(onShifts?.let { MenuEntry(shifts, R.drawable.ic_calendar, run = it) }, MenuEntry(photos, R.drawable.ic_photo_library, run = onPhotos)),
-                listOfNotNull(muted?.let { MenuEntry(mute, if (it) R.drawable.ic_notifications else R.drawable.ic_notifications_off) { setMuted(!it) } }),
+                onShifts?.let { LineMenuItem(shifts, R.drawable.ic_calendar, run = it) },
+                LineMenuItem(photos, R.drawable.ic_photo_library, run = onPhotos),
+                muted?.let { LineMenuItem(mute, if (it) R.drawable.ic_notifications else R.drawable.ic_notifications_off, startsGroup = true) { setMuted(!it) } },
               ),
             )
           }

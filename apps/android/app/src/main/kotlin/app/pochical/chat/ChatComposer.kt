@@ -1,7 +1,5 @@
 package app.pochical.chat
 
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -36,6 +34,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -45,6 +44,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -452,12 +452,10 @@ private fun AttachMenu(onPhotos: () -> Unit, onShareDays: () -> Unit, onPollDays
     GroupedMenu(
       open,
       onDismiss = { open = false },
-      listOf(
-        listOfNotNull(
-          MenuEntry(photo, R.drawable.ic_image, run = onPhotos),
-          MenuEntry(share, R.drawable.ic_calendar, run = onShareDays),
-          onPollDays?.let { MenuEntry(poll, R.drawable.ic_event_available, run = it) },
-        )
+      listOfNotNull(
+        LineMenuItem(photo, R.drawable.ic_image, run = onPhotos),
+        LineMenuItem(share, R.drawable.ic_calendar, run = onShareDays),
+        onPollDays?.let { LineMenuItem(poll, R.drawable.ic_event_available, run = it) },
       ),
     )
   }

@@ -1,7 +1,5 @@
 package app.pochical.chat
 
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.StartOffset
 import androidx.compose.animation.core.animateFloat
@@ -27,8 +25,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -207,7 +207,7 @@ private fun NotSentMark(items: List<LineMenuItem>, photos: Boolean) {
     GroupedMenu(
       open,
       onDismiss = { open = false },
-      listOf(items.map { MenuEntry(it.label, it.icon, it.destructive, it.run) }),
+      items,
       title = stringResource(if (photos) R.string.chat_photo_not_sent_menu else R.string.chat_not_sent_menu),
     )
   }
