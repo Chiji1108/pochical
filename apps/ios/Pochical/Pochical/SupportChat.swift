@@ -15,7 +15,7 @@ struct SupportRow: View {
   var body: some View {
     ChatRow(
       placeID: ChatPlace.supportID, threadID: groupThread, me: meID ?? "",
-      label: "作っている人とチャット", empty: "ほしい機能や不具合のこと、気軽にどうぞ"
+      label: "作っている人とチャット"
     ) {
       AppIconChoice.current.image(size: 28)
     } onOpen: {
@@ -33,8 +33,8 @@ struct SupportChatScreen: View {
 
   var body: some View {
     ChatScreen(
-      place: .support, threadID: groupThread, otherID: nil, head: AnyView(SupportHead()),
-      unsendNote: "ポチカルを作っている人のチャットからも消えます。")
+      place: .support, threadID: groupThread, otherID: nil, head: AnyView(SupportHead())
+    )
   }
 }
 

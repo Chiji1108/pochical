@@ -160,8 +160,6 @@ struct ChatRow<Icon: View>: View {
   let label: String
   /// Whom the user has blocked: their latest line is folded.
   var blocked: Set<String> = []
-  /// Said while the chat has no line yet.
-  let empty: String
   @ViewBuilder let icon: () -> Icon
   let onOpen: () -> Void
 
@@ -169,7 +167,6 @@ struct ChatRow<Icon: View>: View {
   /// first frame rather than `empty` for a moment.
   init(
     placeID: String, threadID: String, me: String, label: String, blocked: Set<String> = [],
-    empty: String = "まだメッセージはありません",
     @ViewBuilder icon: @escaping () -> Icon, onOpen: @escaping () -> Void
   ) {
     self.placeID = placeID
@@ -177,7 +174,6 @@ struct ChatRow<Icon: View>: View {
     self.me = me
     self.label = label
     self.blocked = blocked
-    self.empty = empty
     self.icon = icon
     self.onOpen = onOpen
     _chat = Fetch(
@@ -273,6 +269,13 @@ struct ChatRow<Icon: View>: View {
       return Text("\(mark) 送れませんでした").accessibilityLabel("送れませんでした")
     }
     return Text(preview)
+  }
+
+  /// Said while the chat has no line yet: the chat with Pochical's people
+  /// asks for one (spec/chat.md, The chat with Pochical's people).
+  private var empty: String {
+    placeID == ChatPlace.supportID
+      ? "ほしい機能や不具合のこと、気軽にどうぞ" : "まだメッセージはありません"
   }
 
   /// The latest line as one line of words: 自分： before one's own.

@@ -62,9 +62,6 @@ struct ChatScreen: View {
   /// What the chat's place says first, over its first line once the lines
   /// reach it: who the chat with Pochical's people reaches, and what does.
   var head: AnyView?
-  /// Whose chats a line taken back leaves, said as 送信取消 is asked
-  /// (spec/chat.md, Editing and unsending).
-  var unsendNote: String
   /// `sharing` has been set over the composer, once.
   @State private var tookSharing = false
   /// The chat's draft was put back in the composer as it opened.
@@ -122,11 +119,10 @@ struct ChatScreen: View {
   /// arriving, oldest first, as it ends.
   init(
     place: ChatPlace, threadID: String, otherID: String?, sharing: Day? = nil,
-    head: AnyView? = nil, unsendNote: String = "メンバー全員のチャットから消えます。"
+    head: AnyView? = nil
   ) {
     self.place = place
     self.head = head
-    self.unsendNote = unsendNote
     self.threadID = threadID
     self.otherID = otherID
     self.sharing = sharing
@@ -482,7 +478,11 @@ struct ChatScreen: View {
       if case .waiting = unsending {
         Text("まだ送られていないメッセージです。")
       } else {
-        Text(unsendNote)
+        // Whose chats it leaves (spec/chat.md, Editing and unsending).
+        switch place {
+        case .group: Text("メンバー全員のチャットから消えます。")
+        case .support: Text("ポチカルを作っている人のチャットからも消えます。")
+        }
       }
     }
     .handles(lineActions) { act($0.action, on: $0.lineID) }
@@ -576,7 +576,7 @@ struct ChatScreen: View {
       var shownAnyway = false
       var unfoldedLine = false
       if case .line(let line, _) = item {
-        blockedWriter = blocked.contains(line.authorID)
+        blockedWriter = line.folds(blocked: blocked)
         shownAnyway = shownBlocked.contains(line.seq)
         unfoldedLine = unfolded.contains(line.opID)
       }
@@ -1536,11 +1536,10 @@ struct ChatScreen: View {
   /// notices, a line taken back or folded for a blocked writer, nor one
   /// still on its way.
   private func replySwipe(_ item: ChatItem?) -> ReplySwipe? {
-    guard let line = answered(item), !folded(line) else { return nil }
-    switch line.content {
-    case .words, .photos, .days, .poll: return line.authorID == meID ? .leftward : .rightward
-    case .notice, .unsent, .hidden: return nil
+    guard let line = answered(item), line.content.kind.isMessage, !folded(line) else {
+      return nil
     }
+    return line.authorID == meID ? .leftward : .rightward
   }
 
   /// Answers a line (返信): quoted over the composer until sent or ×.
@@ -1577,7 +1576,7 @@ struct ChatScreen: View {
       // is quoted as one not held.
       return LineQuote(seq: seq, words: "以前のメッセージ")
     case .words, .photos, .days, .poll:
-      if blocked.contains(line.authorID) {
+      if line.folds(blocked: blocked) {
         return LineQuote(seq: seq, words: "ブロック中のメンバーのメッセージ")
       }
       return LineQuote(
@@ -1653,7 +1652,7 @@ struct ChatScreen: View {
           title: "送信取消", systemImage: "arrow.uturn.backward", destructive: true,
           startsGroup: true
         ) { unsending = .line(line) })
-    } else if line.content.reportable(mine: mine, rules: place.rules) {
+    } else if line.content.kind.reportable(mine: mine, rules: place.rules) {
       // Last, apart and in the danger color (spec/chat.md).
       actions.append(
         MessageAction(

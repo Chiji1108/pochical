@@ -73,26 +73,9 @@ struct ChatVectors: Decodable, Sendable {
     }
   }
 
-  /// A line's kind in folded and reportable.
-  enum LineKind: String, Decodable, Sendable {
-    case words, photos, days, poll, notice, unsent, hidden
-
-    var content: LineContent {
-      switch self {
-      case .words: .words(LineContent.Words(text: "了解"))
-      case .photos: .photos([LinePhoto(id: "p", width: 4, height: 3)])
-      case .days: .days([Day(year: 2026, month: 10, day: 30)])
-      case .poll: .poll(LineContent.Poll(days: [Day(year: 2026, month: 10, day: 30)]))
-      case .notice: .notice(LineNotice(kind: .joined))
-      case .unsent: .unsent
-      case .hidden: .hidden
-      }
-    }
-  }
-
   struct Folded: VectorCase {
     let name: String
-    let kind: LineKind
+    let kind: LineContent.Kind
     let ownChat: Bool
     let writerBlocked: Bool
     let expected: Bool
@@ -103,7 +86,7 @@ struct ChatVectors: Decodable, Sendable {
       case group, support
     }
     let name: String
-    let kind: LineKind
+    let kind: LineContent.Kind
     let mine: Bool
     let place: Place
     let expected: Bool
@@ -436,16 +419,15 @@ func writerOfALine(_ vector: ChatVectors.Writer) {
 
 @Test(arguments: try vectors("chat", as: ChatVectors.self).folded)
 func aBlockedWritersLineFolds(_ vector: ChatVectors.Folded) {
-  let row = ChatLineRow(
-    groupID: "g", threadID: vector.ownChat ? groupThread : directThread("u1", "u2"), seq: 1,
-    authorID: "u2", sentAtMs: 0, opID: "op1", content: vector.kind.content)
-  #expect(row.folds(blocked: vector.writerBlocked ? ["u2"] : []) == vector.expected)
+  #expect(
+    vector.kind.folds(ownChat: vector.ownChat, writerBlocked: vector.writerBlocked)
+      == vector.expected)
 }
 
 @Test(arguments: try vectors("chat", as: ChatVectors.self).reportable)
 func aLineOffersAReport(_ vector: ChatVectors.Reportable) {
   let rules = ChatPlace.rules(of: vector.place == .support ? ChatPlace.supportID : "g1")
-  #expect(vector.kind.content.reportable(mine: vector.mine, rules: rules) == vector.expected)
+  #expect(vector.kind.reportable(mine: vector.mine, rules: rules) == vector.expected)
 }
 
 @Test(arguments: try vectors("chat", as: ChatVectors.self).firstUnread)

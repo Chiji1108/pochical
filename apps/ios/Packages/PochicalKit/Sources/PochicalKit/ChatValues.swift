@@ -60,7 +60,8 @@ public struct ChatLineRow: Hashable, Sendable, Identifiable {
   /// Whether it shows folded to ブロック中のメンバーのメッセージ for a
   /// reader who blocked those in `blocked` (`LineContent.folds`).
   public func folds(blocked: Set<String>) -> Bool {
-    content.folds(ownChat: threadID == groupThread, writerBlocked: blocked.contains(authorID))
+    content.kind.folds(
+      ownChat: threadID == groupThread, writerBlocked: blocked.contains(authorID))
   }
 
   /// Each emoji on the line, in the order first chosen, with who chose it.
@@ -1183,7 +1184,7 @@ public struct LineNotice: Codable, Hashable, Sendable {
 
 /// Reporting and blocking as every platform decides them (spec/chat.md,
 /// Reporting and blocking; spec/vectors/chat.json, folded and reportable).
-extension LineContent {
+extension LineContent.Kind {
   /// A line someone wrote and the reader sees: not the app's notice, one
   /// taken back, or one not delivered to them.
   public var isMessage: Bool {
