@@ -1,43 +1,38 @@
 package app.pochical.chat
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Badge
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.pochical.LocalThemeColors
 import app.pochical.R
+import app.pochical.RowEnd
+import app.pochical.SettingsRow
+import app.pochical.SettingsSection
 import app.pochical.notifications.rememberChatNotifications
 import app.pochical.calendar.rememberToday
 import app.pochical.calendar.slashText
@@ -78,39 +73,27 @@ fun ChatList(groupId: String, groupName: String, me: String, onOpen: (threadId: 
   val present = everyone.filter { !it.left }
   val untouched = present.filter { it.userId != me && talking.none { t -> t.userId == it.userId } && it.userId !in blockedIds }
   var starting by rememberSaveable { mutableStateOf(false) }
-  Column(modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-    Column(Modifier.clip(RoundedCornerShape(Radius.xxl)).background(colors.fillQuaternary)) {
-      ChatRow(groupId, GROUP_THREAD, me, stringResource(R.string.group_chat), names, blockedIds, onOpen = { onOpen(GROUP_THREAD) }, today = today, onCard = true) {
+  val groupChat = stringResource(R.string.group_chat)
+  val start = stringResource(R.string.chat_start)
+  // As the settings' lists draw their rows, in Material 3 Expressive's segments (SettingsList); alone
+  // in the group, why there is no one to talk to one to one under them.
+  SettingsSection(modifier = modifier, footnote = stringResource(R.string.chat_invite_to_talk).takeIf { writers != null && present.size <= 1 }) {
+    row {
+      ChatRow(groupId, GROUP_THREAD, me, groupChat, names, blockedIds, onOpen = { onOpen(GROUP_THREAD) }, today = today) {
         Box(Modifier.size(28.dp).background(colors.accentContainer, RoundedCornerShape(Radius.sm)), contentAlignment = Alignment.Center) {
           Icon(painterResource(R.drawable.ic_forum), contentDescription = null, Modifier.size(16.dp), tint = colors.accentDefault)
         }
       }
-      for (member in talking) {
-        RowRule()
+    }
+    for (member in talking) {
+      row {
         val thread = directThread(me, member.userId)
-        ChatRow(groupId, thread, me, member.shownName(), names, blockedIds, onOpen = { onOpen(thread) }, today = today, onCard = true) {
+        ChatRow(groupId, thread, me, member.shownName(), names, blockedIds, onOpen = { onOpen(thread) }, today = today) {
           MemberAvatar(member.shownName(), if (member.deleted) "" else member.photoId, PhotoShelf.Group(groupId), 28.dp)
         }
       }
-      if (untouched.isNotEmpty()) {
-        RowRule()
-        ListItem(
-          headlineContent = { Text(stringResource(R.string.chat_start)) },
-          leadingContent = { Icon(painterResource(R.drawable.ic_add), contentDescription = null, Modifier.size(28.dp).padding(2.dp), tint = colors.accentDefault) },
-          colors = ListItemDefaults.colors(containerColor = colors.fillQuaternary),
-          modifier = Modifier.clickable { starting = true },
-        )
-      }
     }
-    // Alone in the group, why there is no one to talk to one to one.
-    if (writers != null && present.size <= 1) {
-      Text(
-        stringResource(R.string.chat_invite_to_talk),
-        Modifier.padding(horizontal = 16.dp),
-        style = MaterialTheme.typography.bodySmall,
-        color = colors.textTertiary,
-      )
-    }
+    if (untouched.isNotEmpty()) row { SettingsRow(start, R.drawable.ic_add, onClick = { starting = true }, end = RowEnd.None) }
   }
   if (starting) {
     StartChatSheet(untouched, groupId, groupName, onDismiss = { starting = false }) { member ->
@@ -120,15 +103,9 @@ fun ChatList(groupId: String, groupName: String, me: String, onOpen: (threadId: 
   }
 }
 
-/** A line between rows, from where the words start. */
-@Composable
-private fun RowRule() {
-  HorizontalDivider(Modifier.padding(start = 56.dp, end = 16.dp), color = LocalThemeColors.current.separator)
-}
-
 /**
- * A chat in a list of chats (/design's ChatRow): the hub's, on its card ([onCard]), and 設定's chat
- * with Pochical's people. Its mark, its name with a crossed-out bell while its notifications are off,
+ * A chat in a list of chats (/design's ChatRow), a row of its section's segments: the hub's, and
+ * 設定's chat with Pochical's people. Its mark, its name with a crossed-out bell while its notifications are off,
  * its latest line ([empty] while it has none), or 下書き： and the draft left in it, or the red ! of a
  * line of the member's not sent; its time, and how many of its lines are unread, @ before them when
  * one mentions the reader.
@@ -144,7 +121,6 @@ internal fun ChatRow(
   onOpen: () -> Unit,
   today: LocalDate = rememberToday(),
   empty: String = stringResource(R.string.chat_none),
-  onCard: Boolean = false,
   modifier: Modifier = Modifier,
   icon: @Composable () -> Unit,
 ) {
@@ -152,7 +128,12 @@ internal fun ChatRow(
   val colors = LocalThemeColors.current
   val summary by remember(chats, groupId, threadId, me) { chats.summary(groupId, threadId, me) }.collectAsStateWithLifecycle(ChatSummary())
   val time = summary.waiting?.madeAtMs ?: summary.last?.sentAtMs
-  ListItem(
+  SettingsRow(
+    label,
+    icon = null,
+    onClick = onOpen,
+    modifier = modifier,
+    end = RowEnd.None,
     headlineContent = {
       Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(label, Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -167,8 +148,8 @@ internal fun ChatRow(
       }
     },
     supportingContent = { RowWords(summary, me, names, blocked, empty) },
-    leadingContent = icon,
-    trailingContent =
+    leading = icon,
+    valueContent =
       if (time == null && summary.unread == 0) null
       else {
         {
@@ -191,8 +172,6 @@ internal fun ChatRow(
           }
         }
       },
-    colors = if (onCard) ListItemDefaults.colors(containerColor = colors.fillQuaternary) else ListItemDefaults.colors(),
-    modifier = modifier.clickable(onClick = onOpen),
   )
 }
 

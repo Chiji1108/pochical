@@ -1,5 +1,7 @@
 package app.pochical.chat
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -14,8 +16,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -24,11 +24,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -129,16 +127,7 @@ private fun PinItem(line: ChatLine, modifier: Modifier, onJump: (Long) -> Unit, 
     ) {
       content()
     }
-    DropdownMenu(menu, onDismissRequest = { menu = false }) {
-      DropdownMenuItem(
-        text = { Text(stringResource(R.string.chat_unpin)) },
-        leadingIcon = { Icon(painterResource(R.drawable.ic_keep_off), contentDescription = null) },
-        onClick = {
-          menu = false
-          onUnpin(line.seq)
-        },
-      )
-    }
+    GroupedMenu(menu, onDismiss = { menu = false }, listOf(listOf(MenuEntry(unpin, R.drawable.ic_keep_off) { onUnpin(line.seq) })))
   }
 }
 
