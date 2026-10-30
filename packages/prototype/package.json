@@ -6,7 +6,8 @@
   "exports": {
     "./assets/*": "./src/assets/*",
     "./components/*": "./src/components/*.tsx",
-    "./lib/*": "./src/lib/*.ts"
+    "./lib/*": "./src/lib/*.ts",
+    "./scripts/*": "./scripts/*.ts"
   },
   "scripts": {
     "icon:android": "tsx scripts/android-app-icons.ts",
@@ -42,6 +43,7 @@
     "@types/node": "catalog:",
     "@types/react": "~19.3.0",
     "@types/react-dom": "^19.2.0",
+    "playwright-core": "catalog:",
     "sharp": "0.35.5",
     "tsx": "catalog:",
     "typescript": "~7.0.2",
