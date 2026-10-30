@@ -5,7 +5,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewStub
 import android.widget.FrameLayout
-import androidx.compose.ui.unit.DpSize
 import androidx.test.core.app.ApplicationProvider
 import app.pochical.kit.DeviceSettings
 import app.pochical.kit.Look
@@ -33,15 +32,15 @@ import org.robolectric.annotation.Config
  * must stay under [MOST], leaving room for what a day may show later. Before Android 12 Glance
  * spends more views on a view of a set size, so the views are counted there too.
  *
- * Each kind at each size is a case of its own, so each draws its 18 widgets well inside runTest's
- * minute, on a slow runner as on a computer (#1078).
+ * Each kind at each size is a case of its own, so each case's widgets are drawn well inside
+ * runTest's minute, on a slow runner as on a computer (#1078). The cases are named by plain words,
+ * and each widget is made in the case, inside Robolectric's sandbox.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @Config(sdk = [30, 36])
-class WidgetViewCountTest(@Suppress("unused") private val case: String, kind: Pair<PochicalWidget, DpSize>) {
-  // A Pair, as DpSize alone is a value class, which the runner cannot hand a constructor.
-  private val widget = kind.first
-  private val size = kind.second
+class WidgetViewCountTest(kind: String, cells: String) {
+  private val widget = KINDS.getValue(kind)()
+  private val size = SIZES.getValue(cells)
   private val context = ApplicationProvider.getApplicationContext<Context>()
 
   @Test
@@ -85,13 +84,15 @@ class WidgetViewCountTest(@Suppress("unused") private val case: String, kind: Pa
     (if (this is ViewStub) 0 else 1) + ((this as? ViewGroup)?.let { group -> (0 until group.childCount).sumOf { group.getChildAt(it).views() } } ?: 0)
 
   companion object {
+    private val KINDS: Map<String, () -> PochicalWidget> =
+      mapOf("simple" to ::SimpleWidget, "next_off" to ::NextOffWidget, "upcoming" to ::UpcomingWidget, "calendar" to ::CalendarWidget, "now" to ::NowWidget)
+
+    private val SIZES = mapOf("2×2" to SMALL, "4×2" to MEDIUM, "4×4" to LARGE)
+
     /** Every kind at the 2×2, 4×2 and 4×4. */
     @JvmStatic
-    @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
-    fun cases(): List<Array<Any>> =
-      listOf(SimpleWidget(), NextOffWidget(), UpcomingWidget(), CalendarWidget(), NowWidget()).flatMap { widget ->
-        listOf(SMALL, MEDIUM, LARGE).map { arrayOf<Any>("${widget.javaClass.simpleName} ${it.width.value.toInt()}x${it.height.value.toInt()}", widget to it) }
-      }
+    @ParameterizedRobolectricTestRunner.Parameters(name = "{0} {1}")
+    fun cases(): List<Array<Any>> = KINDS.keys.flatMap { kind -> SIZES.keys.map { arrayOf<Any>(kind, it) } }
 
     /** A month of six weeks: August 2026, from Sunday. */
     val TODAY: LocalDate = LocalDate.of(2026, 8, 14)
