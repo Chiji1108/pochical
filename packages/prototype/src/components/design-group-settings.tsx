@@ -1,4 +1,6 @@
+import notificationsSymbol from "@iconify-icons/material-symbols/notifications-outline-rounded";
 import paletteSymbol from "@iconify-icons/material-symbols/palette-outline-rounded";
+import personAddSymbol from "@iconify-icons/material-symbols/person-add-outline-rounded";
 import { iconNames } from "@pochical/design/mark-icon-names";
 import {
   groupMarkEmojis,
@@ -8,7 +10,7 @@ import {
 } from "@pochical/design/patterns";
 import { css } from "@pochical/styled-system/css";
 import { UserPlus, X } from "lucide-react";
-import { useState } from "react";
+import { useContext, useState } from "react";
 
 import { groupChat, isMuted } from "../lib/design-group-data";
 import type {
@@ -53,7 +55,7 @@ import {
   IconButton,
   Note,
   Section,
-  SettingsLists,
+  SegmentedContext,
 } from "./design-ui";
 import { useMarkColors, nextColor } from "./shift-mark";
 
@@ -100,6 +102,7 @@ export function GroupSettingsPage({
   const [view, setView] = useState<"settings" | "edit" | "profile">("settings");
   const mentionsWhenMuted = useUser((state) => state.mentionsWhenMuted);
   const [leaving, setLeaving] = useState(false);
+  const segmented = useContext(SegmentedContext);
   const shown = profileIn(group, profile);
   if (view === "edit") {
     return (
@@ -130,7 +133,7 @@ export function GroupSettingsPage({
     );
   }
   return (
-    <SettingsLists>
+    <>
       <PageHeader back={group.name} onBack={onBack} title="グループの設定" />
       <Section title="グループ">
         <List>
@@ -174,6 +177,7 @@ export function GroupSettingsPage({
             onChange={(on) => {
               onMuted(!on);
             }}
+            symbol={notificationsSymbol}
           />
         </List>
         {mentionsWhenMuted && (
@@ -205,14 +209,15 @@ export function GroupSettingsPage({
             onClick={onInvite}
             label="メンバーを招待"
             leading={
-              <>
+              segmented ? undefined : (
                 <UserPlus
                   aria-hidden="true"
                   className={hub.rowIcon}
                   size={18}
                 />
-              </>
+              )
             }
+            symbol={personAddSymbol}
           />
         </List>
       </Section>
@@ -237,7 +242,7 @@ export function GroupSettingsPage({
           title="グループから抜けますか？"
         />
       )}
-    </SettingsLists>
+    </>
   );
 }
 
@@ -754,7 +759,7 @@ export function NewGroupPage({
     );
   }
   return (
-    <SettingsLists>
+    <>
       <PageHeader
         back="グループ"
         onBack={onBack}
@@ -810,7 +815,7 @@ export function NewGroupPage({
         />
       </List>
       <Note>アイコンはグループ名から自動で入ります。</Note>
-    </SettingsLists>
+    </>
   );
 }
 

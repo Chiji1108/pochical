@@ -20,7 +20,7 @@ import type {
 
 import { useReducedMotion } from "../lib/device-media";
 import { spring } from "../lib/motion";
-import { listRow, listStyle, segmentedListStyle } from "./design-list";
+import { listRow, useListLook, useRowClass } from "./design-list";
 import { SegmentedContext, srOnly } from "./design-ui";
 import type { ButtonProps } from "./design-ui";
 
@@ -171,6 +171,7 @@ export function ChoiceGrid<Value extends string>({
   disabled,
   ref,
   children,
+  "data-segmented": segmented,
 }: {
   // What is being picked; hidden unless labelClassName shows it.
   label: string;
@@ -181,10 +182,13 @@ export function ChoiceGrid<Value extends string>({
   disabled?: boolean;
   ref?: Ref<HTMLDivElement>;
   children: ReactNode;
+  // Set by a list of choices drawn as a segmented list (useListLook).
+  "data-segmented"?: string;
 }) {
   return (
     <RadioGroup.Root
       className={className}
+      data-segmented={segmented}
       disabled={disabled}
       ref={ref}
       onValueChange={(details) => {
@@ -432,10 +436,10 @@ export function ChoiceList<Value extends string>({
   onValueChange: (value: Value) => void;
   children: ReactNode;
 }) {
-  const segmented = useContext(SegmentedContext);
+  const look = useListLook();
   return (
     <ChoiceGrid
-      className={segmented ? segmentedListStyle : listStyle}
+      {...look}
       label={label}
       onValueChange={onValueChange}
       value={value}
@@ -470,8 +474,14 @@ const radioRow = {
     height: "20px",
     width: "20px",
   }),
-  selected: css({
-    "&[data-state=checked]": { bg: "accent.container" },
+  // Over the segment's own fill, which its list sets, so made the surer
+  // of the two.
+  row: css({
+    "&[data-list-row]": {
+      "&[data-state=checked]": { bg: "accent.container" },
+      _hover: { bg: "fill.tertiary" },
+    },
+    cursor: "pointer",
   }),
 };
 
@@ -485,12 +495,10 @@ export function ChoiceRow({
   leading?: ReactNode;
 }) {
   const segmented = useContext(SegmentedContext);
+  const frame = useRowClass();
   return (
     <Choice
-      className={cx(
-        segmented ? listRow.segmented : listRow.root,
-        segmented ? radioRow.selected : choiceRowHover
-      )}
+      className={cx(frame, segmented ? radioRow.row : choiceRowHover)}
       data-list-row=""
       ring="inside"
       value={value}

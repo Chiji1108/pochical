@@ -7,7 +7,7 @@ import type { Coworker } from "../lib/design-user-store";
 import { composing, limitText } from "../lib/text-limits";
 import { LimitedInput } from "./design-fields";
 import { BackButton, HeaderAction, PageHeader } from "./design-header";
-import { AddRow, List, ListRow, listRow } from "./design-list";
+import { AddRow, List, ListRow, listRow, useRowClass } from "./design-list";
 import { ConfirmDialog } from "./design-sheet";
 import { SortableList } from "./design-sortable-list";
 import { ToastContext } from "./design-toast";
@@ -72,6 +72,7 @@ export function CoworkersPage({
   const [view, setView] = useState<"list" | "sort">("list");
   const [editingID, setEditingID] = useState<string>();
   const [adding, setAdding] = useState(false);
+  const frame = useRowClass();
   const toast = useContext(ToastContext);
   const { list } = coworkers;
   const names = list.map(({ name }) => name);
@@ -164,7 +165,7 @@ export function CoworkersPage({
       {!sorting &&
         (adding ? (
           <List>
-            <div className={listRow.root} data-list-row="">
+            <div className={frame} data-list-row="">
               <LimitedInput
                 aria-label="追加する人の名前"
                 autoFocus

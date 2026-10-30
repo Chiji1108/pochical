@@ -46,6 +46,7 @@ import {
   listRow,
   SwitchRow,
   Toggle,
+  useRowClass,
 } from "./design-list";
 import { MenuPicker, PullDownMenu } from "./design-menu";
 import {
@@ -341,14 +342,9 @@ function ReminderRow({
       ? `次は ${firingText(firing.when)}・${shiftText(firing)}`
       : "この先、届くシフトがありません";
   }
+  const frame = useRowClass(detail !== undefined);
   return (
-    <div
-      className={cx(
-        detail === undefined ? listRow.root : listRow.twoLine,
-        listRow.pressable
-      )}
-      data-list-row=""
-    >
+    <div className={cx(frame, listRow.pressable)} data-list-row="">
       <button className={reminderRow.open} onClick={onOpen} type="button">
         <span
           className={cx(

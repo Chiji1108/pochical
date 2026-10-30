@@ -42,7 +42,6 @@ import {
   Screen,
   ScreenScroll,
   Section,
-  SettingsLists,
 } from "./design-ui";
 
 // Joining a group: reading a QR code, the invitation someone opens, and
@@ -442,107 +441,105 @@ export function JoinScreen({
     );
   }
   return (
-    <SettingsLists>
-      <Screen>
-        <ScreenScroll>
-          <PageHeader
-            leading={
-              <IconButton label="閉じる" onClick={onClose}>
-                <X aria-hidden="true" size={20} />
-              </IconButton>
-            }
-          />
-          <div className={joinScreen.head}>
-            <div className={joinScreen.group}>
-              <span className={markFrame({ size: "large" })}>
-                <GroupIcon mark={invite.mark} size={40} />
-              </span>
-              <h3 className={joinScreen.title}>{invite.group}</h3>
-            </div>
-            <button
-              className={cx(joinScreen.members, joinScreen.membersButton)}
-              onClick={() => {
-                setMembersOpen(true);
-              }}
-              type="button"
-            >
-              {members}
-            </button>
+    <Screen>
+      <ScreenScroll>
+        <PageHeader
+          leading={
+            <IconButton label="閉じる" onClick={onClose}>
+              <X aria-hidden="true" size={20} />
+            </IconButton>
+          }
+        />
+        <div className={joinScreen.head}>
+          <div className={joinScreen.group}>
+            <span className={markFrame({ size: "large" })}>
+              <GroupIcon mark={invite.mark} size={40} />
+            </span>
+            <h3 className={joinScreen.title}>{invite.group}</h3>
           </div>
-          <Section title={profileTitle(profile)}>
-            <List>
-              <GroupProfileRow
-                group={group}
-                onOpen={() => {
-                  setEditing(true);
-                }}
-                profile={profile}
-              />
-            </List>
-          </Section>
-        </ScreenScroll>
-        <div className={joinScreen.foot}>
-          <p className={joinScreen.consent}>
-            参加すると、あなたのシフトもメンバーに見えるようになります。
-          </p>
-          <Button
-            disabled={profileIn(group, profile).name === ""}
+          <button
+            className={cx(joinScreen.members, joinScreen.membersButton)}
             onClick={() => {
-              // Told here, so that joining from the hub's QR and from a
-              // link opened on the calendar both say so in the chat.
-              const { name } = profileIn(group, profile);
-              setChats((chats) =>
-                withNotice(chats, group.id, `${name}がグループに参加しました`)
-              );
-              // With no usual name yet, the name and face become the usual
-              // ones, which the group then shows as anyone's.
-              if (profile.name === "") {
-                setProfile({ name, photo: mine?.photo });
-                onJoin({ ...group, mine: undefined });
-                return;
-              }
-              onJoin(group);
+              setMembersOpen(true);
             }}
-            variant="primary"
+            type="button"
           >
-            参加する
-          </Button>
+            {members}
+          </button>
         </div>
-        <Sheet
-          label={`${invite.group}のメンバー`}
-          onOpenChange={setMembersOpen}
-          open={membersOpen}
+        <Section title={profileTitle(profile)}>
+          <List>
+            <GroupProfileRow
+              group={group}
+              onOpen={() => {
+                setEditing(true);
+              }}
+              profile={profile}
+            />
+          </List>
+        </Section>
+      </ScreenScroll>
+      <div className={joinScreen.foot}>
+        <p className={joinScreen.consent}>
+          参加すると、あなたのシフトもメンバーに見えるようになります。
+        </p>
+        <Button
+          disabled={profileIn(group, profile).name === ""}
+          onClick={() => {
+            // Told here, so that joining from the hub's QR and from a
+            // link opened on the calendar both say so in the chat.
+            const { name } = profileIn(group, profile);
+            setChats((chats) =>
+              withNotice(chats, group.id, `${name}がグループに参加しました`)
+            );
+            // With no usual name yet, the name and face become the usual
+            // ones, which the group then shows as anyone's.
+            if (profile.name === "") {
+              setProfile({ name, photo: mine?.photo });
+              onJoin({ ...group, mine: undefined });
+              return;
+            }
+            onJoin(group);
+          }}
+          variant="primary"
         >
-          <SheetHeading
-            eyebrow={invite.group}
-            onClose={() => {
-              setMembersOpen(false);
-            }}
-            title={`${invite.members.length}人のメンバー`}
-          />
-          <div className={sheetBody}>
-            <List>
-              {invite.members.map((member) => (
-                <ListRow
-                  key={member.name}
-                  label={member.name}
-                  truncate
-                  leading={
-                    <>
-                      <PhotoAvatar
-                        name={member.name}
-                        photo={member.photo}
-                        size={28}
-                      />
-                    </>
-                  }
-                />
-              ))}
-            </List>
-          </div>
-        </Sheet>
-      </Screen>
-    </SettingsLists>
+          参加する
+        </Button>
+      </div>
+      <Sheet
+        label={`${invite.group}のメンバー`}
+        onOpenChange={setMembersOpen}
+        open={membersOpen}
+      >
+        <SheetHeading
+          eyebrow={invite.group}
+          onClose={() => {
+            setMembersOpen(false);
+          }}
+          title={`${invite.members.length}人のメンバー`}
+        />
+        <div className={sheetBody}>
+          <List>
+            {invite.members.map((member) => (
+              <ListRow
+                key={member.name}
+                label={member.name}
+                truncate
+                leading={
+                  <>
+                    <PhotoAvatar
+                      name={member.name}
+                      photo={member.photo}
+                      size={28}
+                    />
+                  </>
+                }
+              />
+            ))}
+          </List>
+        </div>
+      </Sheet>
+    </Screen>
   );
 }
 
