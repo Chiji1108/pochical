@@ -274,7 +274,16 @@ fun ChatPage(
   val reducedMotion = rememberReducedMotion()
   // The lines moved by the chat itself, not the person: a screen reader hears nothing of these.
   val moves = remember { ListMoves() }
+  // The line gone to, which a screen reader reads on from (spec/chat.md, Screen readers): a jump's,
+  // or the first under ここから新着 once ↓ has brought it to the top.
+  val reading = rememberScreenReaderOn()
+  var readFrom by remember { mutableStateOf<Lit?>(null) }
   GoTo(going, items, list, reducedMotion, moves, enabled = placed && (going != Going.ToFoot || chat.atEnd)) { there ->
+    // The items run from the foot up: the first line under ここから新着 is the nearest before it.
+    val divider = items.indexOfFirst { it == ChatItem.Unread }
+    if (going == Going.ToUnreadAsked && reading && divider > 0) {
+      readFrom = (divider - 1 downTo 0).firstNotNullOfOrNull { (items[it] as? ChatItem.Line)?.line?.seq }?.let { Lit(it, System.nanoTime()) }
+    }
     following = there
     going = null
   }
@@ -437,6 +446,7 @@ fun ChatPage(
         following = false
         moves.run { list.showInMiddle(index, animated = !reducedMotion) }
         lit = Lit(seq, System.nanoTime())
+        if (reading) readFrom = lit
         jumping = null
       }
       // Held but not laid out: the lines are laid out from it.
@@ -574,6 +584,9 @@ fun ChatPage(
       reducedMotion = reducedMotion,
       lit = lit,
       litShown = { if (lit == it) lit = null },
+      reading = reading,
+      readFrom = readFrom,
+      readOn = { if (readFrom == it) readFrom = null },
       me = me,
       writers = writers,
       react = react,
@@ -677,7 +690,7 @@ fun ChatPage(
           }
           LatestButton(list, chat, me, items, Modifier.align(Alignment.BottomEnd)) { toUnread ->
             when {
-              toUnread -> going = Going.ToUnread
+              toUnread -> going = Going.ToUnreadAsked
               // The latest lines laid out as the chat opens, and gone to.
               !chat.atEnd -> {
                 from = null
@@ -1003,7 +1016,8 @@ internal fun GoTo(going: Going?, items: List<ChatItem>, list: LazyListState, red
     if (!enabled) return@LaunchedEffect
     val following =
       when (to) {
-        Going.ToUnread -> moves.run { list.showAtTop(items.indexOfFirst { it == ChatItem.Unread }) }
+        Going.ToUnread,
+        Going.ToUnreadAsked -> moves.run { list.showAtTop(items.indexOfFirst { it == ChatItem.Unread }) }
         Going.ToFoot -> {
           moves.run { list.toFoot(reducedMotion) }
           true
@@ -1033,6 +1047,9 @@ class ListMoves {
 internal enum class Going {
   /** ここから新着 at the top, or the foot when the lines under it fit. */
   ToUnread,
+
+  /** ↓'s: as [ToUnread], and a screen reader then reads on from the first line under ここから新着. */
+  ToUnreadAsked,
 
   /** The latest line, following it. */
   ToFoot,

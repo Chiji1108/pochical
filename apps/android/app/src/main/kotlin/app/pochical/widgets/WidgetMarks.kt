@@ -30,11 +30,11 @@ import androidx.glance.layout.size
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
-import app.pochical.calendar.Pattern
-import app.pochical.kit.TimeChange
 import app.pochical.kit.GroupMarkValue
 import app.pochical.kit.Look
 import app.pochical.kit.MarkStyle
+import app.pochical.kit.PatternRow
+import app.pochical.kit.TimeChange
 import app.pochical.kit.initialLetter
 import app.pochical.markLayers
 
@@ -163,7 +163,7 @@ private fun cornersPicture(context: Context, size: Dp, change: TimeChange): Bitm
  * empty comes back in a week of days.
  */
 @Composable
-fun WidgetShiftMark(pattern: Pattern, size: Dp, change: TimeChange?, look: Look, colors: WidgetColors, faint: Boolean = false) {
+fun WidgetShiftMark(pattern: PatternRow, size: Dp, change: TimeChange?, look: Look, colors: WidgetColors, faint: Boolean = false) {
   WidgetMarkOf(pattern.icon, pattern.emoji, pattern.symbol, if (look.colored) pattern.color else 0, size, change, look, colors, faint)
 }
 
