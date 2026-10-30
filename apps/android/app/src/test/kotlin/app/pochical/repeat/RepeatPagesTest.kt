@@ -4,7 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertIsEnabled
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithText
@@ -59,7 +59,7 @@ class RepeatPagesTest {
     test.edits.savePattern("day", markedPattern("日勤"))
     test.edits.savePattern("off", markedPattern("休み") { countsAsOff = true })
     test.edits.putOrder(RepeatOrder(listOf("day"), LocalDate.parse("2026-01-01"), holidayCountry = "JP"))
-    test.awaitCalendar { it.patterns.size == 2 && it.orders.isNotEmpty() }
+    test.awaitCalendar(compose) { it.patterns.size == 2 && it.orders.isNotEmpty() }
   }
 
   private fun show(at: List<RootPage>, page: @Composable () -> Unit) {
@@ -80,11 +80,10 @@ class RepeatPagesTest {
     compose.onAllNodesWithText("休み").onLast().performClick()
     compose.onNodeWithText("完了").performClick()
     compose.onNodeWithText("切り替える").performClick()
-    compose.waitForIdle()
-    val start = nextMonthStart()
-    val orders = test.awaitCalendar { it.orders.size == 2 }.orders
-    assertEquals(listOf("day", "off") to start, orders.last().sequence to orders.last().start)
     compose.awaitRoutes(navigator, Tabs, RootPage.Repeat)
+    val start = nextMonthStart()
+    val orders = test.awaitCalendar(compose) { it.orders.size == 2 }.orders
+    assertEquals(listOf("day", "off") to start, orders.last().sequence to orders.last().start)
   }
 
   /** The order's holidays on as 休み, which then stops counting as off, leaving none that does. */
@@ -92,7 +91,7 @@ class RepeatPagesTest {
     dayAndOffInAnOrder()
     test.edits.setHolidaysOff(true, start = LocalDate.parse("2026-01-01"))
     test.edits.savePattern("off", markedPattern("休み"))
-    test.awaitCalendar { calendar -> calendar.patterns.none { it.countsAsOff } && calendar.orders.single().holidaysOff }
+    test.awaitCalendar(compose) { calendar -> calendar.patterns.none { it.countsAsOff } && calendar.orders.single().holidaysOff }
   }
 
   @Test
@@ -101,7 +100,7 @@ class RepeatPagesTest {
     show(listOf(RootPage.Repeat, RootPage.RepeatPeriod("2026-01-01"))) { RepeatPeriodPage("2026-01-01", navigation) }
     compose.onNodeWithText("祝日は休みにする").assertIsEnabled().performClick()
     compose.waitForIdle()
-    assertEquals(listOf(false to "off"), test.awaitCalendar { !it.orders.single().holidaysOff }.orders.map { it.holidaysOff to it.holidayShift })
+    assertEquals(listOf(false to "off"), test.awaitCalendar(compose) { !it.orders.single().holidaysOff }.orders.map { it.holidaysOff to it.holidayShift })
   }
 
   @Test
@@ -111,10 +110,9 @@ class RepeatPagesTest {
     show(listOf(RootPage.Repeat, RootPage.RepeatEditor(fix))) { RepeatEditor(fix, navigation) }
     compose.onNodeWithText("完了").performClick()
     compose.onNodeWithText("入れ直す").performClick()
-    compose.waitForIdle()
     compose.awaitRoutes(navigator, Tabs, RootPage.Repeat)
     // Written again, the period now names its anchor.
-    assertEquals(listOf(true to "off"), test.awaitCalendar { it.orders.single().anchor != null }.orders.map { it.holidaysOff to it.holidayShift })
+    assertEquals(listOf(true to "off"), test.awaitCalendar(compose) { it.orders.single().anchor != null }.orders.map { it.holidaysOff to it.holidayShift })
   }
 
   @Test
@@ -127,16 +125,15 @@ class RepeatPagesTest {
       test.edits.savePattern("paid", markedPattern("有休") { countsAsOff = true })
       test.edits.savePattern("off", markedPattern("休み"))
     }
-    test.awaitCalendar { calendar -> calendar.patterns.single { it.id == "off" }.countsAsOff.not() && calendar.patterns.size == 3 }
+    test.awaitCalendar(compose) { calendar -> calendar.patterns.single { it.id == "off" }.countsAsOff.not() && calendar.patterns.size == 3 }
     val fix = RepeatMode.Fix("2026-01-01")
     show(listOf(RootPage.Repeat, RootPage.RepeatEditor(fix))) { RepeatEditor(fix, navigation) }
     compose.onNodeWithText("完了").performClick()
     compose.onNodeWithText("祝日は休みにする").performClick()
     compose.onNodeWithText("入れ直す").performClick()
-    compose.waitForIdle()
     compose.awaitRoutes(navigator, Tabs, RootPage.Repeat)
     // The period page turns it on the same way (spec/vectors/repeat.json, holidayChoice).
-    assertEquals(listOf(true to "paid"), test.awaitCalendar { it.orders.single().holidaysOff }.orders.map { it.holidaysOff to it.holidayShift })
+    assertEquals(listOf(true to "paid"), test.awaitCalendar(compose) { it.orders.single().holidaysOff }.orders.map { it.holidaysOff to it.holidayShift })
   }
 
   @Test
@@ -144,8 +141,8 @@ class RepeatPagesTest {
     dayAndOffInAnOrder()
     show(listOf(RootPage.Repeat, RootPage.StopRepeat)) { StopRepeatPage(navigation) }
     compose.onNodeWithText("から繰り返しをやめる", substring = true).performClick()
-    compose.waitForIdle()
-    val orders = test.awaitCalendar { it.orders.size == 2 }.orders
+    compose.awaitRoutes(navigator, Tabs, RootPage.Repeat)
+    val orders = test.awaitCalendar(compose) { it.orders.size == 2 }.orders
     assertEquals(emptyList<String>() to nextMonthStart(), orders.last().sequence to orders.last().start)
   }
 
@@ -159,12 +156,11 @@ class RepeatPagesTest {
     compose.onNodeWithText("次へ").performClick()
     compose.onNodeWithText("完了").performClick()
     compose.onNodeWithText("切り替える").performClick()
-    compose.waitForIdle()
+    compose.awaitRoutes(navigator, Tabs, RootPage.Patterns)
     // The patterns and the orders show from queries of their own, so the last to show is waited for.
-    val calendar = test.awaitCalendar { it.orders.size == 2 && it.patterns.size == 4 }
+    val calendar = test.awaitCalendar(compose) { it.orders.size == 2 && it.patterns.size == 4 }
     // 日勤 is still on the days before the switch, so it stays, archived; the person's 休み, on no day before, gives way.
     assertEquals(listOf("duty" to false, "offDuty" to false, "off" to false, "day" to true), calendar.patterns.map { it.id to it.archived })
     assertEquals(listOf("duty", "offDuty", "off") to nextMonthStart(), calendar.orders.last().sequence to calendar.orders.last().start)
-    compose.awaitRoutes(navigator, Tabs, RootPage.Patterns)
   }
 }

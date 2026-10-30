@@ -76,6 +76,7 @@ import app.pochical.kit.Week
 import app.pochical.kit.monthHolding
 import app.pochical.kit.stylePreviewDays
 import app.pochical.kit.styleSamples as sampleIds
+import app.pochical.kit.weekStartingOn
 import app.pochical.widgets.CalendarWidget
 import app.pochical.widgets.Drawn
 import app.pochical.widgets.MEDIUM

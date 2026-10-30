@@ -67,7 +67,6 @@ import app.pochical.calendar.monthWeeks
 import app.pochical.calendar.monthWithYear
 import app.pochical.calendar.shortMonth
 import app.pochical.calendar.slashText
-import app.pochical.calendar.weekday
 import app.pochical.calendar.weekdayColor
 import app.pochical.calendar.weekdayName
 import app.pochical.design.Chat
@@ -83,6 +82,7 @@ import app.pochical.groups.rememberGroupMembers
 import app.pochical.kit.GroupMember
 import app.pochical.kit.PhotoShelf
 import app.pochical.calendar.rememberToday
+import app.pochical.kit.weekday
 import java.time.LocalDate
 import java.time.YearMonth
 
