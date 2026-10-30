@@ -7,16 +7,16 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.core.content.edit
-import app.pochical.BuildConfig
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.updateAll
+import app.pochical.BuildConfig
+import app.pochical.PochicalApplication
 import app.pochical.kit.AppDatabase
 import app.pochical.kit.DeviceSettings
 import app.pochical.kit.OwnCalendar
 import app.pochical.kit.SyncedSettings
 import java.time.Duration
 import java.time.LocalDate
-import java.time.ZoneId
 import java.time.ZonedDateTime
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
@@ -38,7 +39,8 @@ import kotlinx.coroutines.withContext
 // When the widgets are drawn again (spec/widgets.md, When an entry is made), as iOS's
 // WidgetReloads and its timeline. A widget drawn by Glance follows its data itself while its
 // session runs (the flows below, collected in provideContent); outside one, Glance draws it again
-// only when asked (updateAll): as the data changes while the app runs, and as the date turns.
+// only when asked (updateAll): as the data changes while the app runs, and at its turns: as the
+// date turns, and いまのシフト's as its shifts start and end and its ring drains.
 
 /**
  * What every widget draws from, read from the kit's database and the device's settings, again as
@@ -61,19 +63,23 @@ class WidgetSources(
 
   /** The settings the widgets are drawn in. */
   val settings: Flow<DeviceSettings> = settings.settings.shareIn(scope, whileDrawn, replay = 1)
+}
 
-  /** Today, and the next day as the date turns at midnight, for a widget drawn across it. */
-  val today: Flow<LocalDate> = flow {
-    while (true) {
-      emit(LocalDate.now())
-      delay(untilMidnight().toMillis())
-    }
+/** The moment it is, and again at each [turn] after it, for a widget drawn across its turns. */
+fun moments(turn: (ZonedDateTime) -> ZonedDateTime): Flow<ZonedDateTime> = flow {
+  while (true) {
+    val at = ZonedDateTime.now()
+    emit(at)
+    delay(Duration.between(at, turn(at)).toMillis())
   }
 }
 
+/** The local midnight after [at]. */
+fun nextMidnight(at: ZonedDateTime): ZonedDateTime = at.toLocalDate().plusDays(1).atStartOfDay(at.zone)
+
 /** Every kind of widget, drawn again. */
 suspend fun updateAllWidgets(context: Context) {
-  for (widget in listOf(SimpleWidget(), UpcomingWidget(), CalendarWidget(), NextOffWidget())) widget.updateAll(context)
+  for (widget in listOf(SimpleWidget(), UpcomingWidget(), CalendarWidget(), NextOffWidget(), NowWidget())) widget.updateAll(context)
 }
 
 /**
@@ -104,7 +110,7 @@ suspend fun followForWidgetPreviews(
 suspend fun publishWidgetPreviews(context: Context): Boolean {
   if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) return true
   val manager = GlanceAppWidgetManager(context)
-  return listOf(SimpleWidgetReceiver::class, UpcomingWidgetReceiver::class, CalendarWidgetReceiver::class, NextOffWidgetReceiver::class)
+  return listOf(SimpleWidgetReceiver::class, UpcomingWidgetReceiver::class, CalendarWidgetReceiver::class, NextOffWidgetReceiver::class, NowWidgetReceiver::class)
     .map { manager.setWidgetPreviews(it) }
     .all { it == GlanceAppWidgetManager.SET_WIDGET_PREVIEWS_RESULT_SUCCESS }
 }
@@ -132,14 +138,11 @@ fun followForWidgets(context: Context, database: AppDatabase, settings: SyncedSe
   }
 }
 
-/** How long until the next local midnight. */
-private fun untilMidnight(): Duration =
-  Duration.between(ZonedDateTime.now(), LocalDate.now().plusDays(1).atStartOfDay(ZoneId.systemDefault()))
-
 /**
- * The date turning, the clock set or the time zone changed: the widgets are drawn for the day it
- * is now, and the next midnight is asked for. Midnight comes as an alarm the system delivers in
- * Doze too (setAndAllowWhileIdle), as a widget's day must turn with the clock's, not hours later.
+ * The widgets' turn, the clock set or the time zone changed: the widgets are drawn for the moment it
+ * is now, and the next turn is asked for: midnight, or sooner いまのシフト's while one is placed. A
+ * turn comes as an alarm the system delivers in Doze too (setAndAllowWhileIdle), as a widget's day
+ * must turn with the clock's, not hours later.
  */
 class WidgetDayReceiver : BroadcastReceiver() {
   override fun onReceive(context: Context, intent: Intent) {
@@ -147,7 +150,7 @@ class WidgetDayReceiver : BroadcastReceiver() {
     val pending = goAsync()
     CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
       try {
-        schedule(context)
+        schedule(context, (context.applicationContext as PochicalApplication).widgetSources.calendar.first())
         updateAllWidgets(context)
       } finally {
         pending.finish()
@@ -156,16 +159,20 @@ class WidgetDayReceiver : BroadcastReceiver() {
   }
 
   companion object {
-    private const val DAY_TURNED = "app.pochical.widgets.DAY_TURNED"
-    private val ACTIONS = setOf(DAY_TURNED, Intent.ACTION_TIME_CHANGED, Intent.ACTION_TIMEZONE_CHANGED)
+    private const val TURNED = "app.pochical.widgets.TURNED"
+    private val ACTIONS = setOf(TURNED, Intent.ACTION_TIME_CHANGED, Intent.ACTION_TIMEZONE_CHANGED)
 
-    /** Asks for the next midnight, in place of any asked for before: every widget drawn asks. */
-    fun schedule(context: Context) {
-      val turn = Intent(context, WidgetDayReceiver::class.java).setAction(DAY_TURNED)
+    /**
+     * Asks for the widgets' next turn from [calendar], in place of any asked for before: every
+     * widget drawn asks, and each works out the same one.
+     */
+    suspend fun schedule(context: Context, calendar: OwnCalendar) {
+      val at = ZonedDateTime.now()
+      val now = GlanceAppWidgetManager(context).getGlanceIds(NowWidget::class.java).isNotEmpty()
+      val next = if (now) NowWidget().turn(calendar, at) else nextMidnight(at)
+      val turn = Intent(context, WidgetDayReceiver::class.java).setAction(TURNED)
       val alarm = PendingIntent.getBroadcast(context, 0, turn, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-      context
-        .getSystemService(AlarmManager::class.java)
-        .setAndAllowWhileIdle(AlarmManager.RTC, System.currentTimeMillis() + untilMidnight().toMillis(), alarm)
+      context.getSystemService(AlarmManager::class.java).setAndAllowWhileIdle(AlarmManager.RTC, next.toInstant().toEpochMilli(), alarm)
     }
   }
 }
