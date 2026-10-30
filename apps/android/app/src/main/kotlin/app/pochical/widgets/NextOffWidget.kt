@@ -25,10 +25,10 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import app.pochical.R
-import app.pochical.calendar.weekday
 import app.pochical.calendar.weekdayName
 import app.pochical.kit.NextOff
 import app.pochical.kit.NoOff
+import app.pochical.kit.weekday
 
 /**
  * 次の休み (/design's NextOffSmall; spec/widgets.md, Views): how soon the next day off comes, in

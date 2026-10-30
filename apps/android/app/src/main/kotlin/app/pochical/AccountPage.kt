@@ -239,18 +239,15 @@ private fun summary(held: Holdings): String {
 /**
  * アカウントを削除 (spec/sync-protocol.md, Deleting an account), asked first, on the spot, and
  * offered only while the device has its session: an Apple account has Apple's page asked once more
- * for the code its tokens are revoked with. Once deleted, the app shows the device erasing in place
- * of every page (AccountRoot).
+ * for the code its tokens are revoked with. The deletion is the app's ([AccountDeletion]), so a page
+ * made anew while Apple is asked shows it going on and says how it went. Once deleted, the app shows
+ * the device erasing in place of every page (AccountRoot).
  */
 @Composable
 private fun DeleteRow(state: AccountState) {
-  val account = LocalAccount.current
-  val apple = LocalAppleSignIn.current
-  val scope = rememberCoroutineScope()
+  val deletion = LocalAccountDeletion.current
+  val deleting = deletion.deleting
   var confirming by remember { mutableStateOf(false) }
-  var failure by remember { mutableStateOf<DeletionFailure.Reason?>(null) }
-  // From the tap on, as the server and Apple are asked before the account begins changing.
-  var deleting by remember { mutableStateOf(false) }
   SettingsRow(
     stringResource(R.string.account_delete),
     R.drawable.ic_person_remove,
@@ -270,18 +267,7 @@ private fun DeleteRow(state: AccountState) {
         TextButton(
           onClick = {
             confirming = false
-            if (deleting) return@TextButton
-            deleting = true
-            scope.launch {
-              try {
-                account.deleteAccount(appleCode = apple::authorizationCode)
-              } catch (e: DeletionFailure) {
-                // A session the server does not know is said in place of the app, not here.
-                if (e.reason != DeletionFailure.Reason.SessionEnded) failure = e.reason
-              } finally {
-                deleting = false
-              }
-            }
+            deletion.delete()
           },
           colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
         ) {
@@ -290,10 +276,10 @@ private fun DeleteRow(state: AccountState) {
       },
     )
   }
-  failure?.let { reason ->
+  deletion.failure?.let { reason ->
     AlertDialog(
-      onDismissRequest = { failure = null },
-      confirmButton = { TextButton(onClick = { failure = null }) { Text(stringResource(R.string.ok)) } },
+      onDismissRequest = deletion::failureRead,
+      confirmButton = { TextButton(onClick = deletion::failureRead) { Text(stringResource(R.string.ok)) } },
       title = { Text(stringResource(R.string.account_not_deleted)) },
       text = { Text(stringResource(whatToDo(reason))) },
     )

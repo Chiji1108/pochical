@@ -1,0 +1,23 @@
+# mise for every workflow, at the one version set here. Without `version`,
+# mise-action downloads the newest mise on each run, the release jobs that
+# hold the signing and Play keys included. mise-action reads no version from
+# mise.toml (a min_version there would only make mise refuse an older
+# binary, not choose the one downloaded), so the version is pinned here
+# once, and Renovate raises it as it does the action.
+name: mise
+description: Install mise at the pinned version, and the tools a job asks for
+inputs:
+  install:
+    description: mise-action's install
+    default: "true"
+  install_args:
+    description: mise-action's install_args
+    default: ""
+runs:
+  using: composite
+  steps:
+    - uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5.2.4
+      with:
+        version: 2026.10.21
+        install: ${{ inputs.install }}
+        install_args: ${{ inputs.install_args }}

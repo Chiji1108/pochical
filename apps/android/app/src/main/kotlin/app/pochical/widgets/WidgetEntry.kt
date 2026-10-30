@@ -2,7 +2,6 @@ package app.pochical.widgets
 
 import app.pochical.calendar.monthWeeks
 import app.pochical.calendar.row
-import app.pochical.calendar.weekStartingOn
 import app.pochical.design.Widgets
 import app.pochical.groups.MemberShift
 import app.pochical.groups.shifts
@@ -19,6 +18,7 @@ import app.pochical.kit.WidgetPerson
 import app.pochical.kit.opens
 import app.pochical.kit.readyCopies
 import app.pochical.kit.soonest
+import app.pochical.kit.weekStartingOn
 import app.pochical.kit.widgetDay
 import app.pochical.kit.widgetNow
 import app.pochical.kit.widgetOffs

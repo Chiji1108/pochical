@@ -6,7 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -48,7 +48,7 @@ class CoworkerEditorTest {
   /** 佐藤's page, open until [open] is turned off, as leaving it takes it away. */
   private fun showSatou() {
     runBlocking { test.edits.addCoworker("佐藤", id = "satou") }
-    test.awaitCalendar { it.coworkers.isNotEmpty() }
+    test.awaitCalendar(compose) { it.coworkers.isNotEmpty() }
     val settings = DeviceSettings()
     compose.setContent {
       CompositionLocalProvider(

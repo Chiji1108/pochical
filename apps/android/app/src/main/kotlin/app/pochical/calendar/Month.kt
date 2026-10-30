@@ -15,13 +15,6 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.util.Locale
 
-/** 0 for Sunday through 6 for Saturday, as spec/ and the settings count weekdays. */
-val LocalDate.weekday: Int
-  get() = dayOfWeek.value % 7
-
-/** The first day of the week `this` is in, the week starting on `weekStart`. */
-fun LocalDate.weekStartingOn(weekStart: Int): LocalDate = minusDays(((weekday - weekStart + 7) % 7).toLong())
-
 /** The days `month`'s page shows, a week to a row from `weekStart` (:kit's Period.weeks). */
 fun monthWeeks(month: YearMonth, weekStart: Int): List<List<LocalDate>> = Period.of(month, 1).weeks(weekStart)
 
