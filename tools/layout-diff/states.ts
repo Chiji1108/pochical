@@ -890,6 +890,21 @@ const demoStates: State[] = [
     path: demo("scheduleSample=filled"),
     steps: tapOn("設定"),
   },
+  // Android's own controls: the segmented settings lists under the app
+  // bar, Material's switches and the connected button groups.
+  {
+    name: "android/settings",
+    path: demo("scheduleSample=filled&platform=android"),
+    steps: tapOn("設定"),
+  },
+  {
+    name: "android/settings/calendar",
+    path: demo("scheduleSample=filled&platform=android"),
+    steps: async (page) => {
+      await tap(page, "設定");
+      await tap(page, /^カレンダー/u);
+    },
+  },
 ];
 
 // The design documents' pages of pieces and of widgets

@@ -52,6 +52,7 @@ let samplePhoto = "sample:"
 /// usual one or deleting it when that applies. A photo taken or picked is
 /// moved and zoomed in its frame (`PhotoCrop`) before it is used.
 struct PhotoEditor<Picture: View>: View {
+  @Environment(\.themeColors) private var colors
   /// Said under the picture, as what tapping it does.
   let label: String
   /// Whether there is a photo to delete.
@@ -97,6 +98,20 @@ struct PhotoEditor<Picture: View>: View {
         picture()
           .overlay {
             if busy { ProgressView() }
+          }
+          // /design's corner: a camera saying tapping the picture picks a
+          // photo, as the system's contact cards have it, 2pt past the
+          // picture's corner.
+          .overlay(alignment: .bottomTrailing) {
+            Image(systemName: "camera.fill")
+              .font(.system(size: 14))
+              .foregroundStyle(colors.accentDefault)
+              .frame(width: 26, height: 26)
+              .background(colors.backgroundCard, in: .circle)
+              .shadow(Shadow.sm)
+              .alignmentGuide(.trailing) { $0[.trailing] - 2 }
+              .alignmentGuide(.bottom) { $0[.bottom] - 2 }
+              .accessibilityHidden(true)
           }
       }
     }

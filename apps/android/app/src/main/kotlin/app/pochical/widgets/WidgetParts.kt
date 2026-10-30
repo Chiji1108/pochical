@@ -20,6 +20,7 @@ import androidx.glance.ColorFilter
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
+import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
 import androidx.glance.LocalSize
@@ -29,7 +30,6 @@ import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.compose
-import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.appwidget.state.getAppWidgetState
 import androidx.glance.background
@@ -38,6 +38,7 @@ import androidx.glance.currentState
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
+import androidx.glance.layout.ContentScale
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
@@ -161,6 +162,35 @@ fun open(context: Context, link: String): Action =
 /** The modifier that opens [link] on a tap. */
 @Composable
 fun GlanceModifier.opening(link: String): GlanceModifier = clickable(open(LocalContext.current, link))
+
+/** The shapes a widget fills ([Fill]), white for the launcher to tint. */
+object WidgetShape {
+  /** A tile: a day off's, a day both are off. */
+  val tile = ImageProvider(R.drawable.widget_tile)
+
+  /** Today's frame, round a tile's edge. */
+  val frame = ImageProvider(R.drawable.widget_frame)
+
+  /** A circle: a face's, behind its letter. */
+  val round = ImageProvider(R.drawable.widget_round)
+
+  /** A memo's stroke under a date. */
+  val noteStroke = ImageProvider(R.drawable.widget_note_stroke)
+}
+
+/**
+ * [shape] (WidgetShape, or a picture) in [color], filling the Box it comes first in, behind what
+ * follows it. Glance's cornerRadius rounds a view only by clipping it to its outline, which a
+ * picture of the widget drawn without the GPU leaves square: the picker's pictures before Android
+ * 15 (WidgetPreviewImages) and its generated previews where a launcher draws them so (#1044). A
+ * drawable's shape is round wherever the widget is drawn. It goes in a Box the widget has anyway,
+ * as Glance's image background would wrap the view in one more: a month's days come near the 500
+ * views Glance gives a widget (#1059).
+ */
+@Composable
+fun Fill(shape: ImageProvider, color: ColorProvider) {
+  Image(shape, contentDescription = null, GlanceModifier.fillMaxSize(), contentScale = ContentScale.FillBounds, colorFilter = ColorFilter.tint(color))
+}
 
 /** The modifier that reads a whole day aloud as one, in [words]' language. */
 fun GlanceModifier.spoken(day: WidgetDay, words: WidgetWords): GlanceModifier = semantics { contentDescription = words.spoken(day) }
@@ -312,11 +342,20 @@ fun Drawn.strokeColor(day: WidgetDay, onTile: Boolean): ColorProvider = if (onTi
 /**
  * A day's mark, or a quiet dash where nothing is entered; with names on, the name small under it,
  * the two one group. [reserve] keeps the name's line on a day without one, so the marks of a row
- * stay level.
+ * stay level. In the middle of [modifier]'s room, where it has more than it takes.
  */
 @Composable
-fun DayMark(day: WidgetDay, drawn: Drawn, size: Dp, faint: Boolean = false, named: Boolean = false, reserve: Boolean = false, large: Boolean = false) {
-  Column(horizontalAlignment = Alignment.CenterHorizontally) {
+fun DayMark(
+  day: WidgetDay,
+  drawn: Drawn,
+  size: Dp,
+  faint: Boolean = false,
+  named: Boolean = false,
+  reserve: Boolean = false,
+  large: Boolean = false,
+  modifier: GlanceModifier = GlanceModifier,
+) {
+  Column(modifier, verticalAlignment = Alignment.CenterVertically, horizontalAlignment = Alignment.CenterHorizontally) {
     val pattern = day.pattern
     if (pattern != null) {
       WidgetShiftMark(pattern, size, day.timeChange, drawn.look, drawn.colors, faint)
@@ -340,11 +379,9 @@ fun DayMark(day: WidgetDay, drawn: Drawn, size: Dp, faint: Boolean = false, name
 @Composable
 fun NoteStroke(noted: Boolean, color: ColorProvider, content: @Composable () -> Unit) {
   if (!noted) return content()
-  Box(
-    GlanceModifier.background(ImageProvider(R.drawable.widget_note_stroke), colorFilter = ColorFilter.tint(color))
-      .padding(horizontal = 3.dp)
-  ) {
-    content()
+  Box {
+    Fill(WidgetShape.noteStroke, color)
+    Box(GlanceModifier.padding(horizontal = 3.dp)) { content() }
   }
 }
 

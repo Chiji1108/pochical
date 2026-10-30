@@ -41,12 +41,9 @@ public struct ChatPhotoItem: Hashable, Sendable, Identifiable {
   /// those of someone in `blocked` in the place's own chat, where their
   /// lines fold away.
   public static func items(of line: ChatLineRow, blocked: Set<String>) -> [ChatPhotoItem] {
-    guard
-      PhotoRun.seen(
-        line.content.kind, ownChat: line.threadID == groupThread,
-        writerBlocked: blocked.contains(line.authorID)),
-      case .photos(let photos) = line.content
-    else { return [] }
+    guard !line.folds(blocked: blocked), case .photos(let photos) = line.content else {
+      return []
+    }
     let sentAt = Date(timeIntervalSince1970: TimeInterval(line.sentAtMs) / 1000)
     return photos.enumerated().map { index, photo in
       ChatPhotoItem(
@@ -162,7 +159,7 @@ public struct PhotoRun: Sendable {
   /// place's own chat when they have blocked its writer, whose lines fold
   /// away there.
   public static func seen(_ kind: LineContent.Kind, ownChat: Bool, writerBlocked: Bool) -> Bool {
-    kind == .photos && !(ownChat && writerBlocked)
+    kind == .photos && !kind.folds(ownChat: ownChat, writerBlocked: writerBlocked)
   }
 
   /// Opened on `tapped`, among the photos `held` of the lines laid out.

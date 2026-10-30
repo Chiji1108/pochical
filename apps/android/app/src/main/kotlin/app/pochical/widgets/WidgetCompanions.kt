@@ -11,8 +11,6 @@ import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
-import androidx.glance.appwidget.cornerRadius
-import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.fillMaxSize
@@ -179,10 +177,8 @@ fun CompanionFace(with: WidgetWith, drawn: Drawn, size: Dp = 20.dp) {
 fun WidgetFace(name: String, size: Dp, me: Boolean = false, photo: Bitmap? = null) {
   if (photo != null) return Image(ImageProvider(photo), contentDescription = name, GlanceModifier.size(size))
   val colors = GlanceTheme.colors
-  Box(
-    GlanceModifier.size(size).background(if (me) colors.primary else colors.secondaryContainer).cornerRadius(size / 2),
-    contentAlignment = Alignment.Center,
-  ) {
+  Box(GlanceModifier.size(size), contentAlignment = Alignment.Center) {
+    Fill(WidgetShape.round, if (me) colors.primary else colors.secondaryContainer)
     Words(limitText(name.trim(), 1), if (me) colors.onPrimary else colors.onSecondaryContainer, (size.value * 0.45f).sp, bold = true)
   }
 }

@@ -10,7 +10,9 @@ export type Look = Record<string, number | string>;
 export type Screen = Record<string, Look>;
 
 // Playwright sends this function into the page as its source, so its
-// helpers have to live inside it.
+// helpers have to live inside it, and the tools here run on Node's own
+// type stripping rather than tsx, whose esbuild names functions by
+// wrapping them in a __name() the page does not have (#1028).
 /* oxlint-disable unicorn/consistent-function-scoping */
 export function measure(root: string): Screen {
   const phones = [...document.querySelectorAll(root)];

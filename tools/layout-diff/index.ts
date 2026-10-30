@@ -24,10 +24,10 @@ import { parseArgs } from "node:util";
 import { chromium } from "playwright-core";
 import type { Page } from "playwright-core";
 
-import { measure } from "./measure";
-import type { Screen } from "./measure";
-import { states } from "./states";
-import type { Pages, State } from "./states";
+import { measure } from "./measure.ts";
+import type { Screen } from "./measure.ts";
+import { states } from "./states.ts";
+import type { Pages, State } from "./states.ts";
 
 type Run = Record<string, Screen>;
 

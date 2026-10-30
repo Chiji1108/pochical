@@ -7,3 +7,12 @@
   <fields>;
   public static ** getDefaultInstance();
 }
+
+# Glance tells its widgets apart by their GlanceAppWidget's class name: each
+# receiver is filed under its widget's name, and updateAll(SimpleWidget)
+# updates every widget whose receiver is filed under SimpleWidget's. R8
+# merged the kinds that share PochicalWidget into one class, so updating one
+# kind drew it into the others (a placed いまのシフト showed シンプル). Their
+# names kept, each kind is its own class (and `is NextOffWidget` holds for
+# that kind alone).
+-keepnames class * extends app.pochical.widgets.PochicalWidget
