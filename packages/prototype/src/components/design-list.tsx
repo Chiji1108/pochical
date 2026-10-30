@@ -1,10 +1,15 @@
 import { Switch } from "@ark-ui/react";
+import addSymbol from "@iconify-icons/material-symbols/add-outline-rounded";
+import arrowOutwardSymbol from "@iconify-icons/material-symbols/arrow-outward-outline-rounded";
+import chevronRightSymbol from "@iconify-icons/material-symbols/chevron-right-outline-rounded";
 import { css, cva, cx } from "@pochical/styled-system/css";
-import { ChevronRight, Plus } from "lucide-react";
-import { createContext, useId } from "react";
+import { ArrowUpRight, ChevronRight, Plus } from "lucide-react";
+import { createContext, useContext, useId } from "react";
 import type { ReactNode } from "react";
 
-import { srOnly } from "./design-ui";
+import { MaterialSymbol } from "./design-symbol";
+import type { SymbolData } from "./design-symbol";
+import { SegmentedContext, srOnly } from "./design-ui";
 
 // Lists and their rows, a row's toggle, and the row that sums up days.
 
@@ -83,6 +88,45 @@ export const listStyle = css({
   overflow: "hidden",
 });
 
+// Android's settings lists (SegmentedContext): each row a segment of its
+// own on the rows' fill, as the app's SegmentedListItem, ListItemDefaults'
+// segmentedShapes and SegmentedGap draw them: 2dp apart, the inner
+// corners extra small and the group's outer ones large, a pressed row
+// rounding out to large all round. The rows draw no lines between them.
+// A group of choices' hidden name (a ChoiceList's) and a ListDivider's
+// words are not segments: they sit between them on the page.
+const segmentedListStyle = css({
+  "& > :not([data-part=label], [role=separator])": {
+    _active: { "&:is(button, label)": { borderRadius: "lg" } },
+    bg: "fill.quaternary",
+    borderRadius: "xs",
+    overflow: "hidden",
+    transition: "border-radius 0.15s",
+  },
+  "& > :nth-child(1 of :not([data-part=label], [role=separator]))": {
+    borderTopLeftRadius: "lg",
+    borderTopRightRadius: "lg",
+  },
+  "& > :nth-last-child(1 of :not([data-part=label], [role=separator]))": {
+    borderBottomLeftRadius: "lg",
+    borderBottomRightRadius: "lg",
+  },
+  display: "flex",
+  flexDirection: "column",
+  gap: "2px",
+});
+
+// What a list of rows is drawn as here, the one place it is decided for
+// every list (List, ChoiceList, SortableList): its ground, and the mark
+// its rows read to draw no lines between them in a segmented one.
+export function useListLook(className?: string) {
+  const segmented = useContext(SegmentedContext);
+  return {
+    className: cx(segmented ? segmentedListStyle : listStyle, className),
+    "data-segmented": segmented ? "" : undefined,
+  };
+}
+
 export function List({
   className,
   children,
@@ -90,7 +134,7 @@ export function List({
   className?: string;
   children: ReactNode;
 }) {
-  return <div className={cx(listStyle, className)}>{children}</div>;
+  return <div {...useListLook(className)}>{children}</div>;
 }
 
 // A quiet line inside a list, where its rows go on as something else, as
@@ -111,6 +155,7 @@ const listDividerStyle = css({
   "[data-list-row]:has(> [data-part=leading]) + &": {
     "&::before": { left: "56px" },
   },
+  "[data-segmented] > &": { "&::before": { display: "none" } },
   color: "text.tertiary",
   padding: "12px 16px 4px",
   position: "relative",
@@ -129,8 +174,9 @@ const listRowRoot = cva({
   base: {
     // A line between rows, not above the first: only a row that follows
     // another, whatever else the list holds, like a legend. As iOS draws
-    // it: from where the words start to 16px short of the right edge.
-    "[data-list-row] + &": {
+    // it: from where the words start to 16px short of the right edge. A
+    // segmented list's rows are apart already.
+    ":not([data-segmented]) > [data-list-row] + &": {
       "&::before": {
         borderTop: "1px solid token(colors.separator)",
         content: '""',
@@ -159,12 +205,84 @@ const listRowRoot = cva({
     textAlign: "left",
     width: "100%",
   },
-  variants: { twoLine: { true: { minHeight: "68px" } } },
+  // A segment of Android's settings list, as Material's list items: 56dp
+  // (72dp with a line under), its symbol 16dp before the words, which
+  // are bodyLarge.
+  compoundVariants: [
+    { css: { minHeight: "72px" }, segmented: true, twoLine: true },
+  ],
+  defaultVariants: { segmented: false, twoLine: false },
+  variants: {
+    segmented: {
+      false: {},
+      true: { gap: "16px", minHeight: "56px", textStyle: "callout" },
+    },
+    twoLine: { false: {}, true: { minHeight: "68px" } },
+  },
 });
+
+// A row's frame where it is drawn: a segment's in Android's settings
+// list, iOS's row everywhere else. Rows drawn by hand take it too.
+export function useRowClass(twoLine = false) {
+  const segmented = useContext(SegmentedContext);
+  return listRowRoot({ segmented, twoLine });
+}
+
+// A row's value and its › or ↗: quiet on iOS; in Android's settings, as
+// all a list item's trailing content, in onSurfaceVariant.
+const rowValue = cva({
+  base: {
+    flex: 1,
+    minWidth: 0,
+    overflow: "hidden",
+    textAlign: "right",
+    textOverflow: "ellipsis",
+    textStyle: "subheadline",
+    whiteSpace: "nowrap",
+  },
+  variants: {
+    segmented: {
+      false: { color: "text.tertiary" },
+      true: { color: "text.secondary" },
+    },
+  },
+});
+const rowArrow = cva({
+  base: { flexShrink: 0, marginRight: "-4px" },
+  variants: {
+    segmented: {
+      false: { color: "text.quaternary" },
+      true: { color: "text.secondary" },
+    },
+  },
+});
+
+// The symbol leading a row of Android's settings, in the accent
+// (Material's primary), or in danger's color with the row's words.
+const rowSymbol = css({ color: "accent.fill" });
+
+// What leads a row: what it brings (a face, a mark), else its symbol
+// where the platform leads every row with one.
+function useLead(
+  leading: ReactNode,
+  symbol: SymbolData | undefined,
+  danger = false
+): ReactNode {
+  const segmented = useContext(SegmentedContext);
+  if (leading !== undefined && leading !== null && leading !== false) {
+    return leading;
+  }
+  if (!segmented || symbol === undefined) {
+    return null;
+  }
+  return (
+    <MaterialSymbol className={danger ? undefined : rowSymbol} icon={symbol} />
+  );
+}
 
 // One row of a list, and its parts for rows drawn by hand.
 export const listRow = {
-  arrow: css({ color: "text.quaternary", flexShrink: 0, marginRight: "-4px" }),
+  arrow: rowArrow({ segmented: false }),
   // A row that adds one more to its list: its plus and words in the
   // accent, a page's chevron gray as on any row.
   adds: css({ "& > span": { color: "accent.default" } }),
@@ -213,17 +331,31 @@ export const listRow = {
     "& > *": { color: "danger.default" },
     color: "danger.default",
   }),
-  value: css({
-    color: "text.tertiary",
-    flex: 1,
-    minWidth: 0,
-    overflow: "hidden",
-    textAlign: "right",
-    textOverflow: "ellipsis",
-    textStyle: "subheadline",
-    whiteSpace: "nowrap",
-  }),
+  value: rowValue({ segmented: false }),
 };
+
+// How a row ends: the › of a row that goes on to a page, or the ↗ of one
+// that leaves the app (the site's pages, the store), in each platform's
+// symbols.
+function RowEnd({
+  outside,
+  segmented,
+}: {
+  outside: boolean;
+  segmented: boolean;
+}) {
+  if (segmented) {
+    return (
+      <MaterialSymbol
+        className={rowArrow({ segmented })}
+        icon={outside ? arrowOutwardSymbol : chevronRightSymbol}
+        size={outside ? 20 : 24}
+      />
+    );
+  }
+  const Arrow = outside ? ArrowUpRight : ChevronRight;
+  return <Arrow aria-hidden="true" className={listRow.arrow} size={17} />;
+}
 
 // A control that says its value, as a pull-down, is named by the row's
 // label and then the value, as the platforms read a Picker's row: シフト
@@ -236,13 +368,18 @@ export const RowLabelContext = createContext<string | undefined>(undefined);
 // one with htmlFor, it is that control's label. `danger` is for rows that
 // remove something, and `truncate` for a label that is a typed name.
 // `detail` is a line under the label, and makes it a two-line row.
+// `symbol` leads it in Android's settings lists, where every row has one
+// (spec/calendar.md), unless `leading` brings a face or a mark instead;
+// iOS's lists go without.
 export function ListRow({
   label,
   value,
   leading,
+  symbol,
   control,
   onClick,
   arrow,
+  leaves = false,
   danger = false,
   truncate = false,
   detail,
@@ -256,10 +393,13 @@ export function ListRow({
   label: ReactNode;
   value?: ReactNode;
   leading?: ReactNode;
+  symbol?: SymbolData;
   control?: ReactNode;
   onClick?: () => void;
   // Shown on pressable rows unless false; a node replaces the chevron.
   arrow?: ReactNode;
+  // A row that leaves the app ends in ↗ instead of the chevron.
+  leaves?: boolean;
   danger?: boolean;
   truncate?: boolean;
   detail?: ReactNode;
@@ -277,21 +417,18 @@ export function ListRow({
   const id = useId();
   // The label's id, for a control it names.
   const labelId = isLabel ? id : undefined;
+  const segmented = useContext(SegmentedContext);
+  const frame = useRowClass(detail !== undefined);
+  const lead = useLead(leading, symbol, danger);
   const shownArrow =
     arrow === undefined || arrow === true
-      ? pressable && (
-          <ChevronRight
-            aria-hidden="true"
-            className={listRow.arrow}
-            size={17}
-          />
-        )
+      ? pressable && <RowEnd outside={leaves} segmented={segmented} />
       : arrow || null;
   const content = (
     <>
-      {leading && (
+      {lead && (
         <span className={listRow.leading} data-part="leading">
-          {leading}
+          {lead}
         </span>
       )}
       <span
@@ -308,7 +445,7 @@ export function ListRow({
       {value !== undefined && (
         <span
           className={cx(
-            listRow.value,
+            rowValue({ segmented }),
             truncate && listRow.valueWhole,
             valueClassName
           )}
@@ -323,7 +460,7 @@ export function ListRow({
     </>
   );
   const rowClass = cx(
-    detail === undefined ? listRow.root : listRow.twoLine,
+    frame,
     (pressable || isLabel) && listRow.pressable,
     danger && listRow.danger,
     className
@@ -443,6 +580,7 @@ export function SwitchRow({
   onChange,
   swatch,
   leading,
+  symbol,
   className,
   disabled,
 }: {
@@ -452,15 +590,18 @@ export function SwitchRow({
   disabled?: boolean;
   onChange: (checked: boolean) => void;
   swatch?: string;
-  // Before the label, as a ListRow's: a group's mark.
+  // Before the label, as a ListRow's: a group's mark, or Android's symbol.
   leading?: ReactNode;
+  symbol?: SymbolData;
   className?: string;
 }) {
+  const frame = useRowClass(detail !== undefined);
+  const lead = useLead(leading, symbol);
   return (
     <Switch.Root
       checked={checked}
       className={cx(
-        detail === undefined ? listRow.root : listRow.twoLine,
+        frame,
         disabled === true ? listRow.disabled : listRow.pressable,
         className
       )}
@@ -479,9 +620,9 @@ export function SwitchRow({
           />
         </span>
       )}
-      {leading && (
+      {lead && (
         <span className={listRow.leading} data-part="leading">
-          {leading}
+          {lead}
         </span>
       )}
       <Switch.Label className={cx(listRow.label, listRow.labelGrow)}>
@@ -506,13 +647,15 @@ export function AddRow({
   onClick: () => void;
   opensPage?: boolean;
 }) {
+  const segmented = useContext(SegmentedContext);
   return (
     <ListRow
       arrow={opensPage}
       className={listRow.adds}
       label={label}
-      leading={<Plus aria-hidden="true" size={20} />}
+      leading={segmented ? undefined : <Plus aria-hidden="true" size={20} />}
       onClick={onClick}
+      symbol={addSymbol}
     />
   );
 }

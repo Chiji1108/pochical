@@ -4,6 +4,8 @@ import { Check, ChevronLeft, X } from "lucide-react";
 import { createContext, useContext, useEffect, useRef } from "react";
 import type { ReactNode, RefObject } from "react";
 
+import { SegmentedContext } from "./design-ui";
+
 // Sheet headings, in the two kinds the platforms' own sheets have. A sheet
 // to look at has its title and a × to close it. A sheet to decide
 // something in has キャンセル, its title and the action, as iOS and Android
@@ -285,7 +287,7 @@ export function Sheet({
               className={cx(sheet.center, className)}
               ref={contentRef}
             >
-              {children}
+              <SegmentedContext value={false}>{children}</SegmentedContext>
             </Dialog.Content>
           </Dialog.Positioner>
         </Portal>
@@ -305,7 +307,8 @@ export function Sheet({
             <Drawer.Grabber aria-hidden="true" className={sheet.grabber}>
               <Drawer.GrabberIndicator className={sheet.handle} />
             </Drawer.Grabber>
-            {children}
+            {/* A sheet's lists are its own, not the settings' under it. */}
+            <SegmentedContext value={false}>{children}</SegmentedContext>
           </Drawer.Content>
         </Drawer.Positioner>
       </Portal>

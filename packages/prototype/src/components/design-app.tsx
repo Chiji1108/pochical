@@ -24,6 +24,7 @@ import { PhoneContext } from "./design-sheet";
 import type { Tab } from "./design-tab-bar";
 import { useThemeStyle } from "./design-theme";
 import { PhoneToasts, ToastContext, usePhoneToaster } from "./design-toast";
+import { SettingsLists } from "./design-ui";
 
 // One person's phone. Their data comes from the nearest UserStoreContext,
 // so two phones under one store show the same person.
@@ -118,19 +119,21 @@ export function DesignApp({
                   />
                 )}
                 {joining && (
-                  <JoinScreen
-                    onClose={() => {
-                      setJoining(false);
-                    }}
-                    onJoin={(joined) => {
-                      setGroups([...groups, joined]);
-                      setJoining(false);
-                      setOpenGroup(joined.id);
-                      setTab("group");
-                      toast(`「${joined.name}」に参加しました`);
-                    }}
-                    profile={profile}
-                  />
+                  <SettingsLists>
+                    <JoinScreen
+                      onClose={() => {
+                        setJoining(false);
+                      }}
+                      onJoin={(joined) => {
+                        setGroups([...groups, joined]);
+                        setJoining(false);
+                        setOpenGroup(joined.id);
+                        setTab("group");
+                        toast(`「${joined.name}」に参加しました`);
+                      }}
+                      profile={profile}
+                    />
+                  </SettingsLists>
                 )}
                 <DesignCalendar
                   calendarAccess={variants.calendarAccess}

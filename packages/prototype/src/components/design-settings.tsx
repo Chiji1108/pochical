@@ -1,4 +1,10 @@
-import { ArrowUpRight } from "lucide-react";
+import descriptionSymbol from "@iconify-icons/material-symbols/description-outline-rounded";
+import handshakeSymbol from "@iconify-icons/material-symbols/handshake-outline-rounded";
+import helpSymbol from "@iconify-icons/material-symbols/help-outline-rounded";
+import privacyTipSymbol from "@iconify-icons/material-symbols/privacy-tip-outline-rounded";
+import rateReviewSymbol from "@iconify-icons/material-symbols/rate-review-outline-rounded";
+import repeatSymbol from "@iconify-icons/material-symbols/repeat-outline-rounded";
+import workSymbol from "@iconify-icons/material-symbols/work-outline-rounded";
 import { useContext, useState } from "react";
 
 import { site } from "../lib/brand";
@@ -11,7 +17,7 @@ import { designToday } from "../lib/design-today";
 import { CoworkersPage, useCoworkerList } from "./design-coworkers";
 import { PhotoAvatar } from "./design-group-parts";
 import { PageHeader } from "./design-header";
-import { ListRow, listRow } from "./design-list";
+import { ListRow } from "./design-list";
 import {
   ChatNotificationsPage,
   NotificationSection,
@@ -45,7 +51,12 @@ import { SupportChatPage, SupportRow } from "./design-support-chat";
 import { TabBar } from "./design-tab-bar";
 import type { Tab } from "./design-tab-bar";
 import { ToastContext } from "./design-toast";
-import { Screen, ScreenScroll } from "./design-ui";
+import {
+  Screen,
+  ScreenScroll,
+  SegmentedContext,
+  SettingsLists,
+} from "./design-ui";
 import { useWeek } from "./design-week";
 import { ShiftMark } from "./shift-mark";
 
@@ -179,164 +190,166 @@ export function DesignSettings({
   }
   return (
     <Screen>
-      <ScreenScroll fill={page === "job" && jobOrdering}>
-        {page === "top" && (
-          <SettingsTop
-            coworkerCount={coworkers.list.length}
-            current={current}
-            onOpen={setPage}
-            patternKeys={patternKeys}
-            profile={profile}
-          />
-        )}
-        {page === "profile" && (
-          <ProfilePage
-            onBack={() => {
-              setPage("top");
-            }}
-            onChange={onProfile}
-            profile={profile}
-          />
-        )}
-        {page === "job" && (
-          <JobChangePage
-            onApply={(job) => {
-              onChangeJob(job);
-              setPage("patterns");
-            }}
-            onBack={() => {
-              setPage("patterns");
-            }}
-            onOrdering={setJobOrdering}
-          />
-        )}
-        {page === "repeat" && (
-          <RepeatPage
-            onBack={() => {
-              setPage("top");
-            }}
-            onNew={() => {
-              setPage("repeat-new");
-            }}
-            onOpen={(start) => {
-              setPeriodStart(start);
-              setPage("repeat-period");
-            }}
-            onStop={() => {
-              setPage("stop-repeat");
-            }}
-            rules={rules}
-          />
-        )}
-        {page === "repeat-period" && period && (
-          <RepeatPeriodPage
-            onBack={() => {
-              setPage("repeat");
-            }}
-            onFix={() => {
-              setPage("repeat-fix");
-            }}
-            onMove={(start) => {
-              onPutRule(
-                { ...period, anchor: period.anchor ?? period.start, start },
-                period.start
-              );
-              setPeriodStart(start);
-            }}
-            onPut={(rule) => {
-              onPutRule(rule);
-            }}
-            onRemove={() => {
-              onRemoveRule(period.start);
-              setPage("repeat");
-            }}
-            rule={period}
-            rules={rules}
-          />
-        )}
-        {page === "stop-repeat" && (
-          <StopRepeatPage
-            onApply={(start) => {
-              onPutRule({ sequence: [], start });
-              setPage("repeat");
-            }}
-            onBack={() => {
-              setPage("repeat");
-            }}
-          />
-        )}
-        {page === "mark" && (
-          <MarkPage
-            onBack={() => {
-              setPage("top");
-            }}
-            preview={preview}
-          />
-        )}
-        {page === "week" && (
-          <WeekPage
-            onBack={() => {
-              setPage("top");
-            }}
-            preview={weekPreview}
-          />
-        )}
-        {page === "appIcon" && platform === "ios" && (
-          <AppIconPage
-            onBack={() => {
-              setPage("top");
-            }}
-          />
-        )}
-        {page === "account" && (
-          <AccountPage
-            onBack={() => {
-              setPage("top");
-            }}
-          />
-        )}
-        {page === "appearance" && (
-          <AppearancePage
-            onBack={() => {
-              setPage("top");
-            }}
-          />
-        )}
-        {page === "coworkers" && (
-          <CoworkersPage
-            coworkers={coworkers}
-            onBack={() => {
-              setPage("top");
-            }}
-            schedule={schedule}
-          />
-        )}
-        {page === "patterns" && (
-          <PatternsPage
-            onBack={() => {
-              setPage("top");
-            }}
-            onJob={() => {
-              setPage("job");
-            }}
-          />
-        )}
-        {page === "reminders" && (
-          <RemindersPage
-            onBack={() => {
-              setPage("top");
-            }}
-            schedule={schedule}
-          />
-        )}
-        {page === "chatNotifications" && (
-          <ChatNotificationsPage
-            onBack={() => {
-              setPage("top");
-            }}
-          />
-        )}
-      </ScreenScroll>
+      <SettingsLists>
+        <ScreenScroll fill={page === "job" && jobOrdering}>
+          {page === "top" && (
+            <SettingsTop
+              coworkerCount={coworkers.list.length}
+              current={current}
+              onOpen={setPage}
+              patternKeys={patternKeys}
+              profile={profile}
+            />
+          )}
+          {page === "profile" && (
+            <ProfilePage
+              onBack={() => {
+                setPage("top");
+              }}
+              onChange={onProfile}
+              profile={profile}
+            />
+          )}
+          {page === "job" && (
+            <JobChangePage
+              onApply={(job) => {
+                onChangeJob(job);
+                setPage("patterns");
+              }}
+              onBack={() => {
+                setPage("patterns");
+              }}
+              onOrdering={setJobOrdering}
+            />
+          )}
+          {page === "repeat" && (
+            <RepeatPage
+              onBack={() => {
+                setPage("top");
+              }}
+              onNew={() => {
+                setPage("repeat-new");
+              }}
+              onOpen={(start) => {
+                setPeriodStart(start);
+                setPage("repeat-period");
+              }}
+              onStop={() => {
+                setPage("stop-repeat");
+              }}
+              rules={rules}
+            />
+          )}
+          {page === "repeat-period" && period && (
+            <RepeatPeriodPage
+              onBack={() => {
+                setPage("repeat");
+              }}
+              onFix={() => {
+                setPage("repeat-fix");
+              }}
+              onMove={(start) => {
+                onPutRule(
+                  { ...period, anchor: period.anchor ?? period.start, start },
+                  period.start
+                );
+                setPeriodStart(start);
+              }}
+              onPut={(rule) => {
+                onPutRule(rule);
+              }}
+              onRemove={() => {
+                onRemoveRule(period.start);
+                setPage("repeat");
+              }}
+              rule={period}
+              rules={rules}
+            />
+          )}
+          {page === "stop-repeat" && (
+            <StopRepeatPage
+              onApply={(start) => {
+                onPutRule({ sequence: [], start });
+                setPage("repeat");
+              }}
+              onBack={() => {
+                setPage("repeat");
+              }}
+            />
+          )}
+          {page === "mark" && (
+            <MarkPage
+              onBack={() => {
+                setPage("top");
+              }}
+              preview={preview}
+            />
+          )}
+          {page === "week" && (
+            <WeekPage
+              onBack={() => {
+                setPage("top");
+              }}
+              preview={weekPreview}
+            />
+          )}
+          {page === "appIcon" && platform === "ios" && (
+            <AppIconPage
+              onBack={() => {
+                setPage("top");
+              }}
+            />
+          )}
+          {page === "account" && (
+            <AccountPage
+              onBack={() => {
+                setPage("top");
+              }}
+            />
+          )}
+          {page === "appearance" && (
+            <AppearancePage
+              onBack={() => {
+                setPage("top");
+              }}
+            />
+          )}
+          {page === "coworkers" && (
+            <CoworkersPage
+              coworkers={coworkers}
+              onBack={() => {
+                setPage("top");
+              }}
+              schedule={schedule}
+            />
+          )}
+          {page === "patterns" && (
+            <PatternsPage
+              onBack={() => {
+                setPage("top");
+              }}
+              onJob={() => {
+                setPage("job");
+              }}
+            />
+          )}
+          {page === "reminders" && (
+            <RemindersPage
+              onBack={() => {
+                setPage("top");
+              }}
+              schedule={schedule}
+            />
+          )}
+          {page === "chatNotifications" && (
+            <ChatNotificationsPage
+              onBack={() => {
+                setPage("top");
+              }}
+            />
+          )}
+        </ScreenScroll>
+      </SettingsLists>
       {/* Each page is pushed over the tabs, as the group's are. */}
       {page === "top" && <TabBar active="settings" onSelect={onTab} />}
     </Screen>
@@ -357,6 +370,14 @@ function SettingsTop({
   onOpen: (page: Page) => void;
 }) {
   const platform = useDevice((state) => state.platform);
+  const segmented = useContext(SegmentedContext);
+  const face = (
+    <PhotoAvatar
+      name={profile.name}
+      photo={profile.photo}
+      size={segmented ? 24 : 22}
+    />
+  );
   return (
     <>
       <PageHeader title="設定" />
@@ -366,6 +387,7 @@ function SettingsTop({
           onClick={() => {
             onOpen("patterns");
           }}
+          symbol={workSymbol}
           value={
             <>
               <span className={settingsParts.marks}>
@@ -382,6 +404,7 @@ function SettingsTop({
           onClick={() => {
             onOpen("repeat");
           }}
+          symbol={repeatSymbol}
           // How long it runs, in short: the order itself is on the page.
           value={current ? `${current.sequence.length}日ごと` : "なし"}
         />
@@ -390,6 +413,7 @@ function SettingsTop({
           onClick={() => {
             onOpen("coworkers");
           }}
+          symbol={handshakeSymbol}
           value={`${coworkerCount}人`}
         />
       </ListSection>
@@ -429,20 +453,23 @@ function SettingsTop({
         )}
       </ListSection>
       <ListSection title="アカウント">
+        {/* iOS shows the face beside the name; Android leads the row
+            with it, as its own Settings does the account's. */}
         <ListRow
           label="プロフィール"
+          leading={segmented ? face : undefined}
           onClick={() => {
             onOpen("profile");
           }}
           value={
-            <span className={settingsParts.inlineValue}>
-              <PhotoAvatar
-                name={profile.name}
-                photo={profile.photo}
-                size={22}
-              />
-              {profile.name}
-            </span>
+            segmented ? (
+              profile.name
+            ) : (
+              <span className={settingsParts.inlineValue}>
+                {face}
+                {profile.name}
+              </span>
+            )
           }
         />
         <AccountRow
@@ -478,39 +505,40 @@ function AboutSection() {
   const platform = useDevice((state) => state.platform);
   const toast = useContext(ToastContext);
   const store = platform === "ios" ? "App Store" : "Google Play";
-  const outside = (
-    <ArrowUpRight aria-hidden="true" className={listRow.arrow} size={17} />
-  );
   return (
     <div>
       <ListSection title={`${site.name}について`}>
         <ListRow
-          arrow={outside}
+          leaves
           label="ヘルプ"
           onClick={() => {
             openOutside("/support");
           }}
+          symbol={helpSymbol}
         />
         <ListRow
-          arrow={outside}
+          leaves
           label={`${store}でレビューを書く`}
           onClick={() => {
             toast("公開後はレビューを書く画面が開きます", "problem");
           }}
+          symbol={rateReviewSymbol}
         />
         <ListRow
-          arrow={outside}
+          leaves
           label="利用規約"
           onClick={() => {
             openOutside("/terms");
           }}
+          symbol={descriptionSymbol}
         />
         <ListRow
-          arrow={outside}
+          leaves
           label="プライバシーポリシー"
           onClick={() => {
             openOutside("/privacy");
           }}
+          symbol={privacyTipSymbol}
         />
       </ListSection>
       <p className={settingsParts.version}>

@@ -1,3 +1,4 @@
+import badgeSymbol from "@iconify-icons/material-symbols/badge-outline-rounded";
 import { PATTERNS_PER_PAGE } from "@pochical/design/limits";
 import { readyPatternOrder } from "@pochical/design/patterns";
 import { css } from "@pochical/styled-system/css";
@@ -323,6 +324,7 @@ export function PatternsPage({
               detail="シフトパターンと繰り返しを選び直す"
               label="新しい仕事にする"
               onClick={onJob}
+              symbol={badgeSymbol}
             />
           </List>
         </Section>

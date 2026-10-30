@@ -9,6 +9,8 @@ import { CardPieces, Rows } from "../../../src/components/inventory/lists";
 
 List に ListRow を並べます。ラベル、右の値、前の印、後ろの操作(スイッチや入力)を持てて、押せる行には矢印が付きます。
 
+設定の画面(設定とその下のページ、グループの設定、参加と作成)は SettingsLists で囲みます。Android ではそこのリストが Material 3 Expressive のセグメントのリストになり、Android 16 の設定アプリと同じく、行ごとに小さな隙間で分かれ、最初と最後の角が大きく、各行の先頭に symbol(Material Symbols Rounded)が付きます。iOS はどこでも同じ inset grouped のリストです。シートの中のリストはシートのものなので、設定の上に開いても元に戻ります。
+
 <Pieces>
   <Rows />
 </Pieces>
