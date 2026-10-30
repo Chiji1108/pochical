@@ -3,6 +3,12 @@ import Observation
 import PochicalDesign
 import SQLiteData
 
+/// How a weekday's name, or a day's date, is colored as the カレンダー
+/// settings have it (`DeviceSettings.Week.tone`).
+public enum DayTone: String, Sendable {
+  case holiday, saturday, plain
+}
+
 /// What the person set for their own screen, as /design's device settings
 /// are (packages/prototype/src/lib/design-settings-store.ts). Kept in the App Group,
 /// so the widgets draw the same week; the parts that are the person's own
@@ -30,6 +36,20 @@ public struct DeviceSettings: Codable, Equatable, Sendable {
       sunday = try container.decodeIfPresent(Bool.self, forKey: .sunday) ?? defaults.sunday
       saturday = try container.decodeIfPresent(Bool.self, forKey: .saturday) ?? defaults.saturday
       holiday = try container.decodeIfPresent(Bool.self, forKey: .holiday) ?? defaults.holiday
+    }
+
+    /// The weekday of the week's `column`, 0 its first, counted from the
+    /// day it starts on (spec/vectors/month.json, columns).
+    public func weekday(atColumn column: Int) -> Int {
+      (start + column) % 7
+    }
+
+    /// How `weekday` is colored, a national `holiday` when the day is one:
+    /// Sundays and holidays in Sunday's color, Saturdays in theirs, each
+    /// unless turned off (spec/vectors/month.json, tones).
+    public func tone(_ weekday: Int, holiday isHoliday: Bool = false) -> DayTone {
+      if (isHoliday && holiday) || (weekday == 0 && sunday) { return .holiday }
+      return weekday == 6 && saturday ? .saturday : .plain
     }
   }
 

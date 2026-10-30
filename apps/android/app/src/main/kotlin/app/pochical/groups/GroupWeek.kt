@@ -78,7 +78,7 @@ fun GroupWeekdays(modifier: Modifier = Modifier, compact: Boolean = false, days:
   Row(modifier.clearAndSetSemantics {}) {
     Spacer(Modifier.width(facesWidth(compact)))
     repeat(7) { index ->
-      val weekday = days?.get(index)?.weekday ?: ((week.start + index) % 7)
+      val weekday = days?.get(index)?.weekday ?: week.weekdayAt(index)
       Text(
         weekdayLetter(weekday),
         Modifier.weight(1f),

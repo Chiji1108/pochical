@@ -49,9 +49,11 @@ import {
   styleSamplesOf,
 } from "../src/components/design-settings-preview";
 import {
+  dayToneOf,
   defaultWeekSettings,
   monthDatesFrom,
   periodDatesFrom,
+  weekdayAt,
   weekdayHeadOf,
   weekdayLetterOf,
   weekdayNameOf,
@@ -323,6 +325,18 @@ describe("spec/vectors/month.json", () => {
         daysOff: summary.daysOff,
         unfilled: summary.unfilled,
       }).toEqual(vector.expected);
+    });
+  }
+  for (const { name, weekStart, expected } of monthWeeks.columns) {
+    test(name, () => {
+      expect(
+        Array.from({ length: 7 }, (_, column) => weekdayAt(weekStart, column))
+      ).toEqual(expected);
+    });
+  }
+  for (const { name, weekday, holiday, week, expected } of monthWeeks.tones) {
+    test(name, () => {
+      expect(dayToneOf(weekday, holiday, week)).toBe(expected);
     });
   }
 });

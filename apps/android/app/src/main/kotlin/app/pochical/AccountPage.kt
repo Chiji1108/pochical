@@ -1,5 +1,7 @@
 package app.pochical
 
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -35,7 +37,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
@@ -53,12 +54,9 @@ import app.pochical.kit.AccountState
 import app.pochical.kit.DeletionFailure
 import app.pochical.kit.Holdings
 import app.pochical.kit.LinkedAccount
-import app.pochical.kit.NotSignedIn
 import app.pochical.kit.SignInResult
 import app.pochical.kit.SyncAccount
 import app.pochical.kit.linked
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.launch
 
 /** The account the device syncs as, for the pages that show or change it. */
 val LocalAccount = staticCompositionLocalOf<SyncAccount> { error("No account provided") }
@@ -83,6 +81,7 @@ fun AccountRow(open: (RootPage) -> Unit) {
 @Composable
 fun AccountPage(onBack: () -> Unit) {
   val account = LocalAccount.current
+  val actions = LocalAccountActions.current
   val state by account.state.collectAsStateWithLifecycle()
   SettingsPage(stringResource(R.string.account), onBack) { padding ->
     LazyColumn(contentPadding = padding) {
@@ -109,9 +108,41 @@ fun AccountPage(onBack: () -> Unit) {
         // Each asks first, on the spot, so no arrow as for a page; offered once the session is up,
         // and said so meanwhile, as iOS does.
         item {
+          // One change of who the device is at a time.
+          val enabled = state is AccountState.SignedIn && !actions.running
           SettingsSection(footnote = stringResource(R.string.account_offline).takeIf { state !is AccountState.SignedIn }) {
-            row { SignOutRow(state) }
-            row { DeleteRow(state) }
+            // ログアウト (spec/sync-protocol.md, Signing out): what waits in the outbox goes, then
+            // the session ends on the server and the app shows the device erasing in place of every
+            // page (AccountRoot), then はじめの設定.
+            row {
+              AccountActionRow(
+                actions.signOut,
+                enabled,
+                R.string.account_sign_out,
+                R.drawable.ic_logout,
+                confirmTitle = R.string.account_sign_out_title,
+                confirmBody = R.string.account_sign_out_body,
+                confirm = R.string.account_sign_out,
+                notDone = R.string.account_not_signed_out,
+                whatToDo = { R.string.account_not_deleted_later },
+              )
+            }
+            // アカウントを削除 (spec/sync-protocol.md, Deleting an account): an Apple account has
+            // Apple's page asked once more for the code its tokens are revoked with. Once deleted,
+            // the app shows the device erasing in place of every page (AccountRoot).
+            row {
+              AccountActionRow(
+                actions.deletion,
+                enabled,
+                R.string.account_delete,
+                R.drawable.ic_person_remove,
+                confirmTitle = R.string.account_delete_title,
+                confirmBody = R.string.account_delete_body,
+                confirm = R.string.account_delete_confirm,
+                notDone = R.string.account_not_deleted,
+                whatToDo = ::whatToDo,
+              )
+            }
           }
         }
       } else {
@@ -237,114 +268,58 @@ private fun summary(held: Holdings): String {
 }
 
 /**
- * アカウントを削除 (spec/sync-protocol.md, Deleting an account), asked first, on the spot, and
- * offered only while the device has its session: an Apple account has Apple's page asked once more
- * for the code its tokens are revoked with. The deletion is the app's ([AccountDeletion]), so a page
- * made anew while Apple is asked shows it going on and says how it went. Once deleted, the app shows
- * the device erasing in place of every page (AccountRoot).
+ * A row of 設定 › アカウント changing the account, asked first, on the spot, offered while
+ * [enabled]. The change is the app's ([AccountAction]), so
+ * a page made anew meanwhile shows it going on and says how it went: titled [notDone], with what to
+ * do next.
  */
 @Composable
-private fun DeleteRow(state: AccountState) {
-  val deletion = LocalAccountDeletion.current
-  val deleting = deletion.deleting
+private fun <F : Any> AccountActionRow(
+  action: AccountAction<F>,
+  enabled: Boolean,
+  @StringRes title: Int,
+  @DrawableRes icon: Int,
+  @StringRes confirmTitle: Int,
+  @StringRes confirmBody: Int,
+  @StringRes confirm: Int,
+  @StringRes notDone: Int,
+  whatToDo: (F) -> Int,
+) {
   var confirming by remember { mutableStateOf(false) }
   SettingsRow(
-    stringResource(R.string.account_delete),
-    R.drawable.ic_person_remove,
+    stringResource(title),
+    icon,
     onClick = { confirming = true },
     end = RowEnd.None,
-    valueContent = if (deleting) ({ CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp) }) else null,
-    enabled = state is AccountState.SignedIn && !deleting,
+    valueContent = if (action.running) ({ CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp) }) else null,
+    enabled = enabled,
     danger = true,
   )
   if (confirming) {
     AlertDialog(
       onDismissRequest = { confirming = false },
-      title = { Text(stringResource(R.string.account_delete_title)) },
-      text = { Text(stringResource(R.string.account_delete_body)) },
+      title = { Text(stringResource(confirmTitle)) },
+      text = { Text(stringResource(confirmBody)) },
       dismissButton = { TextButton(onClick = { confirming = false }) { Text(stringResource(R.string.cancel)) } },
       confirmButton = {
         TextButton(
           onClick = {
             confirming = false
-            deletion.delete()
+            action.run()
           },
           colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
         ) {
-          Text(stringResource(R.string.account_delete_confirm))
+          Text(stringResource(confirm))
         }
       },
     )
   }
-  deletion.failure?.let { reason ->
+  action.failure?.let { failure ->
     AlertDialog(
-      onDismissRequest = deletion::failureRead,
-      confirmButton = { TextButton(onClick = deletion::failureRead) { Text(stringResource(R.string.ok)) } },
-      title = { Text(stringResource(R.string.account_not_deleted)) },
-      text = { Text(stringResource(whatToDo(reason))) },
-    )
-  }
-}
-
-/**
- * ログアウト (spec/sync-protocol.md, Signing out), asked first, on the spot, and offered only while
- * the device has its session: what waits in the outbox goes, then the session ends on the server and
- * the app shows the device erasing in place of every page (AccountRoot), then はじめの設定.
- */
-@Composable
-private fun SignOutRow(state: AccountState) {
-  val account = LocalAccount.current
-  val scope = rememberCoroutineScope()
-  var confirming by remember { mutableStateOf(false) }
-  var failed by remember { mutableStateOf(false) }
-  var signingOut by remember { mutableStateOf(false) }
-  SettingsRow(
-    stringResource(R.string.account_sign_out),
-    R.drawable.ic_logout,
-    onClick = { confirming = true },
-    end = RowEnd.None,
-    valueContent = if (signingOut) ({ CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp) }) else null,
-    enabled = state is AccountState.SignedIn && !signingOut,
-    danger = true,
-  )
-  if (confirming) {
-    AlertDialog(
-      onDismissRequest = { confirming = false },
-      title = { Text(stringResource(R.string.account_sign_out_title)) },
-      text = { Text(stringResource(R.string.account_sign_out_body)) },
-      dismissButton = { TextButton(onClick = { confirming = false }) { Text(stringResource(R.string.cancel)) } },
-      confirmButton = {
-        TextButton(
-          onClick = {
-            confirming = false
-            signingOut = true
-            scope.launch {
-              try {
-                account.signOut()
-              } catch (e: CancellationException) {
-                throw e
-              } catch (_: NotSignedIn) {
-                // A session the server does not know is said in place of the app, not here.
-              } catch (_: Exception) {
-                failed = true
-              } finally {
-                signingOut = false
-              }
-            }
-          },
-          colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
-        ) {
-          Text(stringResource(R.string.account_sign_out))
-        }
-      },
-    )
-  }
-  if (failed) {
-    AlertDialog(
-      onDismissRequest = { failed = false },
-      confirmButton = { TextButton(onClick = { failed = false }) { Text(stringResource(R.string.ok)) } },
-      title = { Text(stringResource(R.string.account_not_signed_out)) },
-      text = { Text(stringResource(R.string.account_not_deleted_later)) },
+      onDismissRequest = action::failureRead,
+      confirmButton = { TextButton(onClick = action::failureRead) { Text(stringResource(R.string.ok)) } },
+      title = { Text(stringResource(notDone)) },
+      text = { Text(stringResource(whatToDo(failure))) },
     )
   }
 }

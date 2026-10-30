@@ -58,7 +58,7 @@ class MainActivity(
   private val reminderAlarms: ReminderAlarms,
   private val appleSignIn: AppleSignIn,
   private val signIns: SignIns,
-  private val accountDeletion: AccountDeletion,
+  private val accountActions: AccountActions,
 ) : ComponentActivity() {
   private var settings by mutableStateOf<DeviceSettings?>(null)
 
@@ -109,7 +109,7 @@ class MainActivity(
         LocalAccount provides kit.account,
         LocalAppleSignIn provides appleSignIn,
         LocalSignIns provides signIns,
-        LocalAccountDeletion provides accountDeletion,
+        LocalAccountActions provides accountActions,
         LocalGroupCalls provides kit.groups,
         LocalValues provides kit.database.values(),
         LocalChats provides kit.chats,

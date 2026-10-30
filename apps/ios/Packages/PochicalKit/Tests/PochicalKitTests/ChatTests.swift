@@ -73,7 +73,28 @@ struct ChatVectors: Decodable, Sendable {
     }
   }
 
+  struct Folded: VectorCase {
+    let name: String
+    let kind: LineContent.Kind
+    let ownChat: Bool
+    let writerBlocked: Bool
+    let expected: Bool
+  }
+
+  struct Reportable: VectorCase {
+    enum Place: String, Decodable, Sendable {
+      case group, support
+    }
+    let name: String
+    let kind: LineContent.Kind
+    let mine: Bool
+    let place: Place
+    let expected: Bool
+  }
+
   let firstUnread: [FirstUnread]
+  let folded: [Folded]
+  let reportable: [Reportable]
   let writer: [Writer]
   let directThread: [DirectThread]
   let edited: [Edited]
@@ -394,6 +415,19 @@ func writerOfALine(_ vector: ChatVectors.Writer) {
     groupID: "g", threadID: groupThread, seq: 1, authorID: vector.author, sentAtMs: 0,
     opID: "op1", content: vector.content)
   #expect(row.writer(for: vector.me) == vector.expected)
+}
+
+@Test(arguments: try vectors("chat", as: ChatVectors.self).folded)
+func aBlockedWritersLineFolds(_ vector: ChatVectors.Folded) {
+  #expect(
+    vector.kind.folds(ownChat: vector.ownChat, writerBlocked: vector.writerBlocked)
+      == vector.expected)
+}
+
+@Test(arguments: try vectors("chat", as: ChatVectors.self).reportable)
+func aLineOffersAReport(_ vector: ChatVectors.Reportable) {
+  let rules = ChatPlace.rules(of: vector.place == .support ? ChatPlace.supportID : "g1")
+  #expect(vector.kind.reportable(mine: vector.mine, rules: rules) == vector.expected)
 }
 
 @Test(arguments: try vectors("chat", as: ChatVectors.self).firstUnread)

@@ -2,7 +2,6 @@ package app.pochical.kit
 
 import app.pochical.design.Holidays
 import app.pochical.v1.repeatOrder
-import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
@@ -109,7 +108,7 @@ fun ordersRemoving(orders: List<RepeatOrder>, start: LocalDate): List<RepeatOrde
 fun holidaysOffByDefault(sequence: List<String>, start: LocalDate, countsAsOff: (String) -> Boolean): Boolean =
   sequence.size == DAYS_A_WEEK &&
     sequence.withIndex().any { (index, shift) ->
-      countsAsOff(shift) && start.plusDays(index.toLong()).dayOfWeek in setOf(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY)
+      countsAsOff(shift) && start.plusDays(index.toLong()).isWeekend
     }
 
 private const val DAYS_A_WEEK = 7

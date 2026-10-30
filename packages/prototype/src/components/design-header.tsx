@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 
 import { useDevice } from "../lib/design-device";
 import { MaterialSymbol } from "./design-symbol";
-import { iconButtonStyle } from "./design-ui";
+import { iconButtonStyle, SCREEN_SCROLL_GAP } from "./design-ui";
 import type { ButtonProps } from "./design-ui";
 
 // A screen's top: the way back, its actions, 完了 and 今月.
@@ -243,6 +243,79 @@ const pageHeader = {
   }),
 };
 
+// Android's flexible app bar, which collapses as the page scrolls
+// (exitUntilCollapsedScrollBehavior): the bar of the way back and the
+// actions stays at the top of the ScreenScroll the header heads, the
+// title under it fades as it scrolls up under the bar, and comes into the
+// bar, small (titleLarge) after the way back, as the bar takes the
+// scrolled container's ground. The title's own passing under the bar
+// drives all three (its view timeline, --page-title, which ScreenScroll
+// scopes), where the browser can.
+const COLLAPSES = "@supports (timeline-scope: none)";
+const BAR_HEIGHT = "calc(token(sizes.touch) + var(--screen-scroll-top))";
+const onTitle = {
+  animationFillMode: "both",
+  animationTimeline: "--page-title",
+  animationTimingFunction: "linear",
+} as const;
+const appBar = {
+  bar: css({
+    [COLLAPSES]: {
+      ...onTitle,
+      animationName: "appBarScrolled",
+      animationRange: "exit 0% exit 100%",
+    },
+    alignItems: "center",
+    bg: "background.base",
+    display: "grid",
+    gridTemplateColumns: "auto minmax(0, 1fr) auto",
+    // Out to the phone's sides, so nothing scrolls past beside it, and up
+    // into the top padding of what scrolls, stuck at its top.
+    marginLeft: "calc(-1 * var(--screen-left))",
+    marginRight: "calc(-1 * var(--screen-right))",
+    marginTop: "calc(-1 * var(--screen-scroll-top))",
+    minHeight: BAR_HEIGHT,
+    paddingLeft: "var(--screen-left)",
+    paddingRight: "var(--screen-right)",
+    paddingTop: "var(--screen-scroll-top)",
+    position: "sticky",
+    top: "calc(-1 * var(--screen-scroll-top))",
+    zIndex: 1,
+  }),
+  collapsedTitle: css({
+    [COLLAPSES]: {
+      ...onTitle,
+      animationName: "fadeIn",
+      animationRange: "exit 50% exit 100%",
+    },
+    fontWeight: 400,
+    minWidth: 0,
+    opacity: 0,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    textStyle: "title2",
+    whiteSpace: "nowrap",
+  }),
+  // The title and what goes over it, as near the bar as the header's
+  // own gap, taking back the scrolling column's.
+  expanded: css({
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+    marginTop: `calc(4px - ${SCREEN_SCROLL_GAP})`,
+  }),
+  // Its timeline runs as it passes under the bar.
+  expandedTitle: css({
+    [COLLAPSES]: {
+      ...onTitle,
+      animationName: "fadeOut",
+      animationRange: "exit 0% exit 100%",
+      viewTimeline: "--page-title block",
+      viewTimelineInset: `${BAR_HEIGHT} 0px`,
+    },
+  }),
+};
+
 export function PageHeader({
   title,
   back,
@@ -263,9 +336,31 @@ export function PageHeader({
   const platform = useDevice((state) => state.platform);
   const start =
     leading ?? (onBack && <BackButton onClick={onBack}>{back}</BackButton>);
-  let titleSize: "ios" | "androidLarge" | "androidMedium" = "ios";
-  if (platform === "android") {
-    titleSize = start ? "androidMedium" : "androidLarge";
+  if (platform === "android" && title) {
+    return (
+      <>
+        <header className={appBar.bar} data-app-bar="">
+          <div>{start}</div>
+          <span aria-hidden="true" className={appBar.collapsedTitle}>
+            {title}
+          </span>
+          <div className={pageHeader.trailing}>{trailing}</div>
+        </header>
+        <div className={appBar.expanded}>
+          {children}
+          <h3
+            className={cx(
+              pageHeader.title({
+                size: start ? "androidMedium" : "androidLarge",
+              }),
+              appBar.expandedTitle
+            )}
+          >
+            {title}
+          </h3>
+        </div>
+      </>
+    );
   }
   return (
     <header className={pageHeader.root}>
@@ -283,9 +378,7 @@ export function PageHeader({
         start
       )}
       {children}
-      {title && (
-        <h3 className={pageHeader.title({ size: titleSize })}>{title}</h3>
-      )}
+      {title && <h3 className={pageHeader.title({ size: "ios" })}>{title}</h3>}
     </header>
   );
 }

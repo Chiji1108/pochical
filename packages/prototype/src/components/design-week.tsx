@@ -91,43 +91,48 @@ export function holidayNameOfKey(key: string) {
   return holidays[holidayCountry]?.[key];
 }
 
-// Sundays read red and Saturdays blue, each only while it is turned on.
-function weekdayClass(day: number, colored: WeekSettings["colored"]) {
-  if (day === SUNDAY && colored.sunday) {
-    return "dc-sunday";
-  }
-  if (day === SATURDAY && colored.saturday) {
-    return "dc-saturday";
-  }
-  return "";
-}
-
 // How a day's name or number is colored, for styles that take it as a
 // variant rather than the class.
 export type DayTone = "holiday" | "saturday" | "plain";
 
-function toneOf(className: string): DayTone {
-  if (className === "dc-sunday") {
+// How `day` (0 for Sunday) is colored as 色をつける日 has it: Sundays and,
+// given `holiday`, national holidays whatever day they fall on in Sunday's
+// red, Saturdays blue, each only while turned on (spec/vectors/month.json,
+// tones). A weekday's name over a column is never a holiday.
+export function dayToneOf(
+  day: number,
+  holiday: boolean,
+  colored: WeekSettings["colored"]
+): DayTone {
+  if ((holiday && colored.holiday) || (day === SUNDAY && colored.sunday)) {
     return "holiday";
   }
-  if (className === "dc-saturday") {
+  if (day === SATURDAY && colored.saturday) {
     return "saturday";
   }
   return "plain";
 }
 
-// A national holiday takes Sunday's red, whatever day it falls on.
-function dateClass(date: Date, colored: WeekSettings["colored"]) {
-  if (colored.holiday && holidayName(date)) {
-    return "dc-sunday";
-  }
-  return weekdayClass(date.getDay(), colored);
-}
+const toneClasses = {
+  holiday: "dc-sunday",
+  plain: "",
+  saturday: "dc-saturday",
+} as const satisfies Record<DayTone, string>;
 
 // How a date's number is colored, for those that take it as a variant: a
 // holiday or a Sunday red, a Saturday blue, each only while turned on.
 export function dateToneOf(date: Date, colored: WeekSettings["colored"]) {
-  return toneOf(dateClass(date, colored));
+  return dayToneOf(date.getDay(), holidayName(date) !== undefined, colored);
+}
+
+function dateClass(date: Date, colored: WeekSettings["colored"]) {
+  return toneClasses[dateToneOf(date, colored)];
+}
+
+// The weekday over a page's `column`, from the week's start
+// (spec/vectors/month.json, columns).
+export function weekdayAt(weekStart: number, column: number) {
+  return (weekStart + column) % weekLength;
 }
 
 // Days from the week start on or before `date`.
@@ -183,13 +188,13 @@ export function monthDatesFrom(month: Date, weekStart: number) {
 
 export function weekdaysFrom(week: WeekSettings, english = false) {
   return Array.from({ length: weekLength }, (_, index) => {
-    const day = (week.weekStart + index) % weekLength;
-    const className = weekdayClass(day, week.colored);
+    const day = weekdayAt(week.weekStart, index);
+    const tone = dayToneOf(day, false, week.colored);
     return {
-      className,
+      className: toneClasses[tone],
       day,
       label: weekdayLetterOf(day, english),
-      tone: toneOf(className),
+      tone,
     };
   });
 }

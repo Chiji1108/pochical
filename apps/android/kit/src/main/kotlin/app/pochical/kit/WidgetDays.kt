@@ -11,13 +11,10 @@ import java.time.temporal.ChronoUnit
 // PochicalKit), pinned by spec/vectors/widgets.json: the widgets' entry (:app's WidgetEntry) is
 // made of these days.
 
-/** How a day's date is colored where it stands alone. */
-enum class WidgetTone { Holiday, Saturday, Plain }
-
 /** One day of a widget's entry. */
 data class WidgetDay(
   val date: LocalDate,
-  val tone: WidgetTone,
+  val tone: DayTone,
   /** A national holiday while 祝日 coloring is on: the one date a grid of days colors, Sundays and Saturdays being colored in the weekdays. */
   val holiday: Boolean,
   /** The day's pattern, none where nothing is entered. */
@@ -46,12 +43,7 @@ data class WidgetDay(
       val isHoliday = week.holiday && holiday
       return WidgetDay(
         date = date,
-        tone =
-          when {
-            isHoliday || (date.weekday == 0 && week.sunday) -> WidgetTone.Holiday
-            date.weekday == 6 && week.saturday -> WidgetTone.Saturday
-            else -> WidgetTone.Plain
-          },
+        tone = week.tone(date.weekday, holiday),
         holiday = isHoliday,
         pattern = drawn,
         off = drawn?.countsAsOff ?: false,

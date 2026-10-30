@@ -1,5 +1,5 @@
 {
-  "about": "The days a month's page shows (spec/calendar.md, The month). weeks: whole weeks covering `month` (\"YYYY-MM\"), each starting on `weekStart` (0 for Sunday through 6 for Saturday), the days of the months around it filling the first and last; `expected` gives the first day shown, the last, and how many weeks, four to six. The page keeps room for six whatever the count. summary: what 今月のお休み and 今月の内訳 count on a page from `first` through `last` (a month, or a シフトの期間's period): `shown` the days that show a shift by date, as the calendar shows them (the days around the page among them), and `patterns` the person's, in their order, archived ones too. `daysOff` counts the page's days whose pattern counts as off; `counts` gives each pattern with its days on the page, in the patterns' order; `unfilled` the page's days that show no shift (未入力).",
+  "about": "The days a month's page shows (spec/calendar.md, The month). weeks: whole weeks covering `month` (\"YYYY-MM\"), each starting on `weekStart` (0 for Sunday through 6 for Saturday), the days of the months around it filling the first and last; `expected` gives the first day shown, the last, and how many weeks, four to six. The page keeps room for six whatever the count. summary: what 今月のお休み and 今月の内訳 count on a page from `first` through `last` (a month, or a シフトの期間's period): `shown` the days that show a shift by date, as the calendar shows them (the days around the page among them), and `patterns` the person's, in their order, archived ones too. `daysOff` counts the page's days whose pattern counts as off; `counts` gives each pattern with its days on the page, in the patterns' order; `unfilled` the page's days that show no shift (未入力). columns: the weekday (0 for Sunday through 6 for Saturday) over each of a page's seven columns, from `weekStart`. tones: how a weekday's name or a day's date is colored by 設定 › カレンダー's `week` (`sunday`, `saturday`, `holiday` each on or off): `holiday` (Sunday's red) for a Sunday or, given `holiday`, a national holiday whatever day it falls on, `saturday` for a Saturday, each only while turned on, else `plain`; a weekday's name over a column is never a holiday.",
   "weeks": [
     {
       "name": "a month from a Thursday, weeks from Sunday",
@@ -251,6 +251,146 @@
         ],
         "unfilled": 28
       }
+    }
+  ],
+  "columns": [
+    {
+      "name": "weeks from Sunday",
+      "weekStart": 0,
+      "expected": [0, 1, 2, 3, 4, 5, 6]
+    },
+    {
+      "name": "weeks from Monday end on Sunday",
+      "weekStart": 1,
+      "expected": [1, 2, 3, 4, 5, 6, 0]
+    },
+    {
+      "name": "weeks from Saturday",
+      "weekStart": 6,
+      "expected": [6, 0, 1, 2, 3, 4, 5]
+    }
+  ],
+  "tones": [
+    {
+      "name": "a Sunday",
+      "weekday": 0,
+      "holiday": false,
+      "week": {
+        "sunday": true,
+        "saturday": true,
+        "holiday": true
+      },
+      "expected": "holiday"
+    },
+    {
+      "name": "a Saturday",
+      "weekday": 6,
+      "holiday": false,
+      "week": {
+        "sunday": true,
+        "saturday": true,
+        "holiday": true
+      },
+      "expected": "saturday"
+    },
+    {
+      "name": "a weekday",
+      "weekday": 3,
+      "holiday": false,
+      "week": {
+        "sunday": true,
+        "saturday": true,
+        "holiday": true
+      },
+      "expected": "plain"
+    },
+    {
+      "name": "a holiday on a weekday",
+      "weekday": 3,
+      "holiday": true,
+      "week": {
+        "sunday": true,
+        "saturday": true,
+        "holiday": true
+      },
+      "expected": "holiday"
+    },
+    {
+      "name": "a holiday on a Saturday takes Sunday's red",
+      "weekday": 6,
+      "holiday": true,
+      "week": {
+        "sunday": true,
+        "saturday": true,
+        "holiday": true
+      },
+      "expected": "holiday"
+    },
+    {
+      "name": "Sundays turned off",
+      "weekday": 0,
+      "holiday": false,
+      "week": {
+        "sunday": false,
+        "saturday": true,
+        "holiday": true
+      },
+      "expected": "plain"
+    },
+    {
+      "name": "Saturdays turned off",
+      "weekday": 6,
+      "holiday": false,
+      "week": {
+        "sunday": true,
+        "saturday": false,
+        "holiday": true
+      },
+      "expected": "plain"
+    },
+    {
+      "name": "holidays turned off, a holiday on a weekday",
+      "weekday": 3,
+      "holiday": true,
+      "week": {
+        "sunday": true,
+        "saturday": true,
+        "holiday": false
+      },
+      "expected": "plain"
+    },
+    {
+      "name": "holidays turned off, a holiday on a Saturday",
+      "weekday": 6,
+      "holiday": true,
+      "week": {
+        "sunday": true,
+        "saturday": true,
+        "holiday": false
+      },
+      "expected": "saturday"
+    },
+    {
+      "name": "holidays turned off, a holiday on a Sunday",
+      "weekday": 0,
+      "holiday": true,
+      "week": {
+        "sunday": true,
+        "saturday": true,
+        "holiday": false
+      },
+      "expected": "holiday"
+    },
+    {
+      "name": "Saturdays turned off, a holiday on a Saturday",
+      "weekday": 6,
+      "holiday": true,
+      "week": {
+        "sunday": true,
+        "saturday": false,
+        "holiday": true
+      },
+      "expected": "holiday"
     }
   ]
 }
