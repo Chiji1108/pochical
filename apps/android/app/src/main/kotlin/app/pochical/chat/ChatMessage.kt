@@ -255,7 +255,7 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
           ReactionBar(chosen, onReact = { emoji -> handlers.react(seq, emoji, emoji !in chosen) }, onMore = { handlers.moreReactions(seq) })
         }
       val items = if (url != null) handlers.linkItems(url) else handlers.items(look)
-      menu.open(MenuLine(look.key, look.mine, look.waiting != null, items, bar) { LineBody(look, handlers, live = false, onQuote = {}) }, at.unclipped())
+      menu.open(MenuLine(look.key, look.mine, look.waiting != null, items, bar) { LineBody(look, handlers, live = false, onQuote = {}) }, at.unclipped(), drag.give.value)
     }
   }
   val gestures =
@@ -356,6 +356,11 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
               }
               .alpha(if (lifted) 0f else 1f)
               .lineGestures(gestures.takeIf { look.seq != null || look.waiting != null }, look.swipe, drag, { coordinates }, handlers.reducedMotion)
+              // The give under the finger, inside where the bubble is measured, so the menu lifts it from its own size.
+              .graphicsLayer {
+                scaleX = drag.give.value
+                scaleY = drag.give.value
+              }
           ) {
             LineBody(look, handlers, onQuote = { look.quote?.let { handlers.jump(it.seq) } }, links = links)
           }
