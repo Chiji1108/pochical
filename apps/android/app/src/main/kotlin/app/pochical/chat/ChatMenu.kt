@@ -11,7 +11,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -22,7 +21,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -119,6 +121,10 @@ class LineMenuState {
   /** The lifted line's bubble in the window, where its place in the chat is. */
   var bounds by mutableStateOf(Rect.Zero)
 
+  /** How large the line was drawn as it opened, given under a finger or not, which the lift grows from. */
+  internal var given = 1f
+    private set
+
   /** What is lit under the finger: an item (`item0`…), a reaction (`react👍`) or + (`more`). */
   var lit by mutableStateOf<String?>(null)
     private set
@@ -130,8 +136,9 @@ class LineMenuState {
   internal val visible
     get() = shown
 
-  fun open(line: MenuLine, at: Rect) {
+  fun open(line: MenuLine, at: Rect, given: Float = 1f) {
     targets.clear()
+    this.given = given
     lit = null
     bounds = at
     open = line
@@ -221,7 +228,7 @@ fun LineMenu(state: LineMenuState, reducedMotion: Boolean) {
   val reading = rememberScreenReaderOn()
   LaunchedEffect(line, reading) { if (reading) first.requestFocus() }
   // Lifted about its middle from the press's give as the menu opens, and back to its size as it goes.
-  val lift = remember(line) { Animatable(if (reducedMotion) 1f else PRESSED_SCALE) }
+  val lift = remember(line) { Animatable(if (reducedMotion) 1f else state.given) }
   val spatial = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
   LaunchedEffect(line, state.visible.targetState, reducedMotion) {
     if (reducedMotion) lift.snapTo(1f) else lift.animateTo(if (state.visible.targetState) LIFTED_SCALE else 1f, spatial)
@@ -240,6 +247,7 @@ fun LineMenu(state: LineMenuState, reducedMotion: Boolean) {
     // The menu's and the bar's heights kept as they fade out, so the line does not move as they go.
     val shownHeights = remember { intArrayOf(0, 0) }
     val corner = TransformOrigin(if (line.mine) 1f else 0f, 0f)
+    val barCorner = TransformOrigin(if (line.mine) 1f else 0f, 1f)
     Layout(
       content = {
         // Drawn whole at its size; a line too tall for the room is cut short at its end.
@@ -259,8 +267,8 @@ fun LineMenu(state: LineMenuState, reducedMotion: Boolean) {
         AnimatedVisibility(
           state.visible,
           Modifier.layoutId(MENU),
-          enter = fadeIn() + scaleIn(initialScale = 0.8f, transformOrigin = corner),
-          exit = fadeOut() + scaleOut(targetScale = 0.8f, transformOrigin = corner),
+          enter = if (reducedMotion) fadeIn() else fadeIn() + scaleIn(initialScale = 0.8f, transformOrigin = corner),
+          exit = if (reducedMotion) fadeOut() else fadeOut() + scaleOut(targetScale = 0.8f, transformOrigin = corner),
         ) {
           MenuSurface(line, state, first.takeIf { line.bar == null })
         }
@@ -268,8 +276,8 @@ fun LineMenu(state: LineMenuState, reducedMotion: Boolean) {
           AnimatedVisibility(
             state.visible,
             Modifier.layoutId(BAR),
-            enter = fadeIn() + scaleIn(initialScale = 0.8f, transformOrigin = TransformOrigin(if (line.mine) 1f else 0f, 1f)),
-            exit = fadeOut() + scaleOut(targetScale = 0.8f, transformOrigin = TransformOrigin(if (line.mine) 1f else 0f, 1f)),
+            enter = if (reducedMotion) fadeIn() else fadeIn() + scaleIn(initialScale = 0.8f, transformOrigin = barCorner),
+            exit = if (reducedMotion) fadeOut() else fadeOut() + scaleOut(targetScale = 0.8f, transformOrigin = barCorner),
           ) {
             BarSurface(bar, state, reducedMotion, first)
           }
@@ -287,8 +295,9 @@ fun LineMenu(state: LineMenuState, reducedMotion: Boolean) {
       val barHeight = if (line.bar != null) shownHeights[1] else 0
       val barRoom = if (barHeight > 0) barHeight + margin else 0
       // As tall as the room leaves it beside the bar and the least of the line, its items scrolled
-      // past that, as iOS's MenuPlacement gives it; never less than an item.
-      val menuRoom = maxOf(leastMenu, floor - ceiling - barRoom - leastBubble - 2 * margin)
+      // past that, as iOS's MenuPlacement gives it; never less than an item, as tall as the text makes it.
+      val item = state.targets[ITEM + 0]?.height?.roundToInt() ?: leastMenu
+      val menuRoom = maxOf(item, floor - ceiling - barRoom - leastBubble - 2 * margin)
       val menu = measurables.firstOrNull { it.layoutId == MENU }?.measure(loose.copy(maxHeight = menuRoom))
       if (menu != null) shownHeights[0] = menu.height
       val menuHeight = shownHeights[0]
@@ -347,19 +356,17 @@ private fun BarSurface(bar: ReactionBar, state: LineMenuState, reducedMotion: Bo
   fun Modifier.held(key: String, ground: Color): Modifier {
     val held = state.lit == key
     val grown by animateFloatAsState(if (held && !reducedMotion) HELD_SCALE else 1f, MaterialTheme.motionScheme.fastSpatialSpec(), label = "held")
-    return graphicsLayer {
-      scaleX = grown
-      scaleY = grown
-    }
+    return zIndex(if (held) 1f else 0f)
+      .graphicsLayer {
+        scaleX = grown
+        scaleY = grown
+      }
       .clip(CircleShape)
       .background(if (held && reducedMotion) lit else ground)
   }
-  Surface(
-    shape = RoundedCornerShape(50),
-    color = MenuDefaults.containerColor,
-    tonalElevation = MenuDefaults.TonalElevation,
-    shadowElevation = MenuDefaults.ShadowElevation,
-  ) {
+  // The menu's ground and shadow without its clip, so a reaction grown under the finger shows whole past it.
+  val shape = RoundedCornerShape(50)
+  Box(Modifier.shadow(MenuDefaults.ShadowElevation, shape, clip = false).background(MenuDefaults.containerColor, shape)) {
     Row(Modifier.padding(4.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
       for (emoji in reactionChoices) {
         val key = REACT + emoji
@@ -421,8 +428,12 @@ private fun MenuSurface(line: MenuLine, state: LineMenuState, first: FocusReques
   }
 }
 
-/** What a screen reader is put on as the menu opens: focusable in touch mode, as a screen reader's focus follows it there. */
-private fun Modifier.focusedFirst(requester: FocusRequester?): Modifier = if (requester == null) this else focusRequester(requester).focusable()
+/**
+ * What a screen reader is put on as the menu opens: its own focus taken in touch mode too, as a
+ * screen reader's focus follows it there; before its clickable, whose focus it is.
+ */
+private fun Modifier.focusedFirst(requester: FocusRequester?): Modifier =
+  if (requester == null) this else focusRequester(requester).focusProperties { canFocus = true }
 
 private const val SCRIM = 0.32f
 

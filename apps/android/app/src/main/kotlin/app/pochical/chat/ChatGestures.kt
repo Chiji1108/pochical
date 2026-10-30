@@ -5,14 +5,13 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -47,8 +46,7 @@ enum class ReplySwipe(val sign: Float) {
 @Stable
 class LineDrag {
   val offset = Animatable(0f)
-  var pressed by mutableStateOf(false)
-    internal set
+  val give = Animatable(1f)
 }
 
 /** How far a bubble gives under a finger down on it (spec/chat.md, Opening a message's menu). */
@@ -88,6 +86,7 @@ fun Modifier.lineGestures(
   val currentSwipe by rememberUpdatedState(swipe)
   val currentReduced by rememberUpdatedState(reducedMotion)
   val window = remember { { local: Offset -> coordinates()?.localToWindow(local) ?: local } }
+  val spatial = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
   return pointerInput(Unit) {
     val slop = viewConfiguration.touchSlop
     awaitEachGesture {
@@ -95,8 +94,9 @@ fun Modifier.lineGestures(
       val start = window(down.position)
       // Until the long press: a tap, a scroll, or a drag across to answer.
       var across: PointerInputChange? = null
-      // The bubble gives from the moment the finger goes down until the press is over, either way.
-      drag.pressed = true
+      // The bubble gives from the moment the finger goes down until the press is over, either way;
+      // with motion reduced it stays.
+      if (!currentReduced) scope.launch { drag.give.animateTo(PRESSED_SCALE, spatial) }
       val pressed =
         try {
           withTimeoutOrNull(Chat.longPressMs.toLong()) {
@@ -120,7 +120,7 @@ fun Modifier.lineGestures(
             @Suppress("UNREACHABLE_CODE") false
           } ?: true
         } finally {
-          drag.pressed = false
+          scope.launch { drag.give.animateTo(1f, spatial) }
         }
       val dragging = across
       when {

@@ -26,8 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.Stable
-import androidx.compose.runtime.mutableStateSetOf
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -81,10 +80,13 @@ fun ReactionRow(
   onChoosers: (LineReaction) -> Unit,
   modifier: Modifier = Modifier,
 ) {
-  // The emoji there as the line was drawn: only those coming after pop in.
-  val there = remember { reactions.map { it.emoji }.toSet() }
-  val drawn = withLeaving(reactions)
-  if (drawn.isEmpty()) return
+  // The emoji there as the line was drawn: only those coming after pop in, one that left and comes again too.
+  val there = remember { reactions.mapTo(HashSet()) { it.emoji } }
+  // Those drawn as of the last composition, those gone from the line kept where they were until they have left.
+  var drawn by remember { mutableStateOf(reactions) }
+  val shown = remember(drawn, reactions) { withLeaving(drawn, reactions) }
+  SideEffect { drawn = shown }
+  if (shown.isEmpty()) return
   val present = reactions.mapTo(HashSet()) { it.emoji }
   val motion = MaterialTheme.motionScheme
   FlowRow(
@@ -92,15 +94,21 @@ fun ReactionRow(
     horizontalArrangement = Arrangement.spacedBy(4.dp, if (mine) Alignment.End else Alignment.Start),
     verticalArrangement = Arrangement.spacedBy(4.dp),
   ) {
-    for (reaction in drawn.list) {
+    for (reaction in shown) {
       val own = me != null && me in reaction.userIds
+      val here = reaction.emoji in present
       key(reaction.emoji) {
-        val shown = remember { MutableTransitionState(true) }
-        shown.targetState = reaction.emoji in present
+        val visible = remember { MutableTransitionState(true) }
+        visible.targetState = here
         // Gone once it has shrunk away, so the row closes up after it.
-        if (shown.isIdle && !shown.currentState) LaunchedEffect(Unit) { drawn.gone(reaction.emoji) }
+        if (visible.isIdle && !visible.currentState) {
+          LaunchedEffect(Unit) {
+            there -= reaction.emoji
+            drawn = drawn.filterNot { it.emoji == reaction.emoji }
+          }
+        }
         AnimatedVisibility(
-          shown,
+          visible,
           enter = EnterTransition.None,
           exit =
             if (reducedMotion) fadeOut(motion.fastEffectsSpec())
@@ -114,7 +122,8 @@ fun ReactionRow(
             comes = reaction.emoji !in there,
             reducedMotion = reducedMotion,
             spray = spray?.takeIf { it.emoji == reaction.emoji && !reducedMotion },
-            onTap = { onToggle(reaction.emoji, !own) },
+            // One leaving takes no taps: what it held is gone.
+            onTap = { onToggle(reaction.emoji, !own) }.takeIf { here },
             onLongPress = { onChoosers(reaction) },
           )
         }
@@ -123,35 +132,12 @@ fun ReactionRow(
   }
 }
 
-/** The reactions drawn: those on the line in its order, and those just gone kept where they were until they have left. */
-@Stable
-private class Drawn(var list: List<LineReaction>) {
-  private val left = mutableStateSetOf<String>()
-
-  fun isEmpty() = list.isEmpty()
-
-  /** The one [emoji] has left: it is drawn no more. */
-  fun gone(emoji: String) {
-    left += emoji
-  }
-
-  /** [now] with those drawn before and gone from it, each where it was, but those already left. */
-  fun update(now: List<LineReaction>): Drawn {
-    val present = now.mapTo(HashSet()) { it.emoji }
-    left.removeAll(present)
-    val merged = now.toMutableList()
-    list.forEachIndexed { index, reaction ->
-      if (reaction.emoji !in present && reaction.emoji !in left) merged.add(minOf(index, merged.size), reaction)
-    }
-    list = merged
-    return this
-  }
-}
-
-@Composable
-private fun withLeaving(reactions: List<LineReaction>): Drawn {
-  val drawn = remember { Drawn(reactions) }
-  return drawn.update(reactions)
+/** The line's reactions [now] in its order, with those [drawn] before and gone from it, each kept where it was. */
+private fun withLeaving(drawn: List<LineReaction>, now: List<LineReaction>): List<LineReaction> {
+  val present = now.mapTo(HashSet()) { it.emoji }
+  val merged = now.toMutableList()
+  drawn.forEachIndexed { index, reaction -> if (reaction.emoji !in present) merged.add(minOf(index, merged.size), reaction) }
+  return merged
 }
 
 /**
@@ -170,7 +156,8 @@ private fun ReactionPill(
   comes: Boolean,
   reducedMotion: Boolean,
   spray: Spray?,
-  onTap: () -> Unit,
+  /** A tap puts the reader's on or takes it back; null on one leaving. */
+  onTap: (() -> Unit)?,
   onLongPress: () -> Unit,
 ) {
   val colors = LocalThemeColors.current
@@ -192,7 +179,7 @@ private fun ReactionPill(
       }
         .background(if (own) colors.accentContainer else MaterialTheme.colorScheme.surfaceContainerHigh, shape)
         .border(1.dp, if (own) colors.accentDefault else Color.Transparent, shape)
-        .combinedClickable(onClick = onTap, onLongClick = onLongPress)
+        .combinedClickable(enabled = onTap != null, onClick = { onTap?.invoke() }, onLongClick = onLongPress)
         .padding(horizontal = 8.dp, vertical = 3.dp)
         .clearAndSetSemantics {},
       verticalAlignment = Alignment.CenterVertically,

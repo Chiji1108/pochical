@@ -2,7 +2,6 @@ package app.pochical.chat
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -243,8 +242,6 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
   val haptics = LocalHapticFeedback.current
   val swipeWidth = with(LocalDensity.current) { Chat.replySwipe.dp.toPx() }
   val lifted = menu.open?.key == look.key
-  // A finger down on the bubble presses it in a little until the press is over; with motion reduced it stays.
-  val give by animateFloatAsState(if (drag.pressed && !handlers.reducedMotion) PRESSED_SCALE else 1f, MaterialTheme.motionScheme.fastSpatialSpec(), label = "give")
   // Where the words' links are, for a long press on one to open the link's menu instead.
   val links = remember { LinkHits() }
   // Its reactions and menu; at [pressed] in the window, on a link, the link's own menu where the line's goes.
@@ -258,7 +255,7 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
           ReactionBar(chosen, onReact = { emoji -> handlers.react(seq, emoji, emoji !in chosen) }, onMore = { handlers.moreReactions(seq) })
         }
       val items = if (url != null) handlers.linkItems(url) else handlers.items(look)
-      menu.open(MenuLine(look.key, look.mine, look.waiting != null, items, bar) { LineBody(look, handlers, live = false, onQuote = {}) }, at.unclipped())
+      menu.open(MenuLine(look.key, look.mine, look.waiting != null, items, bar) { LineBody(look, handlers, live = false, onQuote = {}) }, at.unclipped(), drag.give.value)
     }
   }
   val gestures =
@@ -361,8 +358,8 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
               .lineGestures(gestures.takeIf { look.seq != null || look.waiting != null }, look.swipe, drag, { coordinates }, handlers.reducedMotion)
               // The give under the finger, inside where the bubble is measured, so the menu lifts it from its own size.
               .graphicsLayer {
-                scaleX = give
-                scaleY = give
+                scaleX = drag.give.value
+                scaleY = drag.give.value
               }
           ) {
             LineBody(look, handlers, onQuote = { look.quote?.let { handlers.jump(it.seq) } }, links = links)
