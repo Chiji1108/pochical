@@ -273,7 +273,7 @@ export function Screen({
 // iPhone the foot never cleared the tab bar, and in a home screen app,
 // where everything else fits, the page did not scroll at all. The piece
 // takes back the gap before it.
-const SCREEN_SCROLL_GAP = "24px";
+export const SCREEN_SCROLL_GAP = "24px";
 const screenScrollStyle = cva({
   base: {
     "& > *": { flexShrink: 0 },
@@ -297,7 +297,16 @@ const screenScrollStyle = cva({
     overflowY: "auto",
     paddingLeft: "var(--screen-left)",
     paddingRight: "var(--screen-right)",
-    paddingTop: "8px",
+    // Its top padding by name, and its page's title's timeline in scope,
+    // for Android's app bar, which stays at its top and collapses as the
+    // title scrolls under it (PageHeader). What the keyboard brings into
+    // view stops clear of the bar.
+    "--screen-scroll-top": "8px",
+    "&:has(> [data-app-bar])": {
+      scrollPaddingTop: "calc(token(sizes.touch) + var(--screen-scroll-top))",
+    },
+    paddingTop: "var(--screen-scroll-top)",
+    timelineScope: "--page-title",
   },
   variants: {
     // Beside a rail on its left, like the group hub's list of groups: it
@@ -305,7 +314,9 @@ const screenScrollStyle = cva({
     beside: { true: { marginLeft: 0, minWidth: 0, paddingLeft: 0 } },
     // Holding a page that fills the screen and keeps its foot at the
     // bottom, like typing an order: nothing after its parts.
-    fill: { true: { "&::after": { display: "none" }, paddingTop: 0 } },
+    fill: {
+      true: { "&::after": { display: "none" }, "--screen-scroll-top": "0px" },
+    },
   },
 });
 

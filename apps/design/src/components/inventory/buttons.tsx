@@ -93,7 +93,7 @@ export function HeaderButtons() {
       <Item
         name="PageHeader"
         ios=".navigationTitle ＋ .navigationBarTitleDisplayMode(.large)"
-        android="LargeTopAppBar"
+        android="LargeFlexibleTopAppBar・MediumFlexibleTopAppBar（exitUntilCollapsedScrollBehavior、スクロールで見出しがバーに入る）"
         where="戻る+タイトル"
         wide
       >
@@ -102,7 +102,7 @@ export function HeaderButtons() {
       <Item
         name="PageHeader trailing=HeaderAction"
         ios="ToolbarItem(placement: .confirmationAction)"
-        android="LargeTopAppBar の actions"
+        android="FlexibleTopAppBar の actions"
         where="編集して保存するページ"
         wide
       >
