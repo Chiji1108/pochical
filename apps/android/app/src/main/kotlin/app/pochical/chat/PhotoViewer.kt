@@ -1,6 +1,21 @@
 package app.pochical.chat
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import coil3.compose.AsyncImagePainter
+import coil3.size.Size as CoilSize
+import me.saket.telephoto.zoomable.ZoomableContentLocation
+import me.saket.telephoto.zoomable.zoomable
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.fadeIn
@@ -85,8 +100,6 @@ import me.saket.telephoto.flick.FlickToDismissState
 import me.saket.telephoto.flick.rememberFlickToDismissState
 import me.saket.telephoto.zoomable.DoubleClickToZoomListener
 import me.saket.telephoto.zoomable.ZoomSpec
-import me.saket.telephoto.zoomable.coil3.ZoomableAsyncImage
-import me.saket.telephoto.zoomable.rememberZoomableImageState
 import me.saket.telephoto.zoomable.rememberZoomableState
 
 // A photo opened large (spec/chat.md, Photos), as iOS's PhotoViewer.swift shows one: whole on black,
@@ -209,6 +222,8 @@ fun PhotoViewer(
   var controls by remember { mutableStateOf(true) }
   val snackbar = remember { SnackbarHostState() }
   var pulled by remember { mutableFloatStateOf(0f) }
+  // The system bars go with the buttons; they come back as it goes.
+  if (!closing) MediaBars(shown = controls || reading)
   Box(Modifier.fillMaxSize().background(colors.mediaBackground.copy(alpha = 1f - pulled))) {
     HorizontalPager(pager, Modifier.fillMaxSize(), key = { photos.getOrNull(it)?.layoutKey ?: it }, beyondViewportPageCount = 1) { page ->
       val photo = photos.getOrNull(page) ?: return@HorizontalPager
@@ -223,7 +238,7 @@ fun PhotoViewer(
         onPulled = { if (page == pager.currentPage) pulled = it },
         onDismissed = { close() },
         // Only the photo shown goes back into its place.
-        Modifier.then(if (page == pager.settledPage) Modifier.largePhoto(photo.photo.id, zoom) else Modifier),
+        if (page == pager.settledPage) Modifier.largePhoto(photo.photo.id, zoom) else Modifier,
       )
     }
     // Always in reach with a screen reader on, hidden before or not.
@@ -317,19 +332,29 @@ private fun photoSaid(photo: ChatPhotoItem, place: Pair<Int, Int>?, nameOf: (Str
     .joinToString("、")
 
 /**
- * One of the chat's photos large: what the chat drew of it at once (its small version, else its
- * blur, else the system's spinner) under the photo itself as it comes.
+ * One of the chat's photos large: what the chat drew of it at once (its small version over its blur,
+ * else the system's spinner) under the photo itself as it comes, in the photo's own box as it is fit
+ * to the screen, which [place] takes, so it goes back into its line from where it is.
  */
 @Composable
-private fun LargePhoto(item: ChatPhotoItem, groupId: String, said: String, onTap: () -> Unit, onPulled: (Float) -> Unit, onDismissed: () -> Unit, modifier: Modifier = Modifier) {
-  LargeImage(ChatPhotoData(item.photo.id, groupId, small = false), said, onTap, onPulled, onDismissed, modifier) {
-    val blur = remember(item.photo.id) { blurOf(item.photo)?.asImageBitmap() }
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-      // What the chat drew of it, read from memory or the disk cache at once.
-      if (blur != null) Image(blur, contentDescription = null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
-      else CircularProgressIndicator(Modifier.size(40.dp), color = LocalThemeColors.current.mediaText)
-      AsyncImage(ChatPhotoData(item.photo.id, groupId, small = true), contentDescription = null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
-    }
+private fun LargePhoto(item: ChatPhotoItem, groupId: String, said: String, onTap: () -> Unit, onPulled: (Float) -> Unit, onDismissed: () -> Unit, place: Modifier) {
+  val context = LocalContext.current
+  val photo = item.photo
+  val size = Size(photo.width.toFloat(), photo.height.toFloat()).takeIf { it.width > 0f && it.height > 0f }
+  LargeImage(
+    { attempt -> ImageRequest.Builder(context).data(ChatPhotoData(photo.id, groupId, small = false, attempt = attempt)).size(CoilSize.ORIGINAL).build() },
+    said,
+    size,
+    onTap,
+    onPulled,
+    onDismissed,
+    place,
+  ) { failed ->
+    val blur = remember(photo.id) { blurOf(photo)?.asImageBitmap() }
+    // What the chat drew of it, read from memory or the disk cache at once.
+    if (blur != null) Image(blur, contentDescription = null, Modifier.fillMaxSize(), contentScale = ContentScale.FillBounds)
+    else if (!failed) CircularProgressIndicator(Modifier.align(Alignment.Center).size(40.dp), color = LocalThemeColors.current.mediaText)
+    AsyncImage(ChatPhotoData(photo.id, groupId, small = true), contentDescription = null, Modifier.fillMaxSize(), contentScale = ContentScale.FillBounds)
   }
 }
 
@@ -345,16 +370,21 @@ fun FaceViewer(photoId: String, shelf: PhotoShelf, name: String, onClose: () -> 
     var pulled by remember { mutableFloatStateOf(0f) }
     val reading = rememberScreenReaderOn()
     var controls by remember { mutableStateOf(true) }
+    MediaBars(shown = controls || reading)
     Box(Modifier.fillMaxSize().background(colors.mediaBackground.copy(alpha = 1f - pulled))) {
       // A face has no small version: the one the profile drew, from memory, shows until it is drawn
       // whole, which the disk keeps (a face is fetched once).
       val picture = Picture(photoId, shelf)
       val context = LocalContext.current
-      val request = remember(picture) { ImageRequest.Builder(context).data(picture).placeholderMemoryCacheKey(MemoryCache.Key(picture.key)).build() }
-      LargeImage(request, stringResource(R.string.profile_photo_of, name), onTap = { if (!reading) controls = !controls }, onPulled = { pulled = it }, onDismissed = onClose) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-          CircularProgressIndicator(Modifier.size(40.dp), color = colors.mediaText)
-        }
+      LargeImage(
+        { ImageRequest.Builder(context).data(picture).placeholderMemoryCacheKey(MemoryCache.Key(picture.key)).size(CoilSize.ORIGINAL).build() },
+        stringResource(R.string.profile_photo_of, name),
+        size = null,
+        onTap = { if (!reading) controls = !controls },
+        onPulled = { pulled = it },
+        onDismissed = onClose,
+      ) { failed ->
+        if (!failed) CircularProgressIndicator(Modifier.align(Alignment.Center).size(40.dp), color = colors.mediaText)
       }
       AnimatedVisibility((controls || reading) && pulled == 0f, enter = fadeIn(), exit = fadeOut()) {
         IconButton(onClick = onClose, Modifier.statusBarsPadding().padding(8.dp)) {
@@ -366,50 +396,115 @@ fun FaceViewer(photoId: String, shelf: PhotoShelf, name: String, onClose: () -> 
 }
 
 /**
- * An image large, whole and fit to the screen, [coming] under it until it is drawn. Zoomed with a
- * double tap (twice its size about the point tapped, and back) or a pinch (up to four times), moved
- * about while zoomed, and pulled down to close while it is not.
+ * An image large, whole and fit to the screen in a box of its own ([place] on it, as it is drawn
+ * there), [coming] in that box until it is drawn. Its [size] places the box at once; without one the
+ * box is the screen until the image tells its own. Zoomed with a double tap (twice its size about
+ * the point tapped, and back) or a pinch (up to four times), moved about while zoomed, and pulled
+ * down to close while it is not: let go to close, it closes from where it is ([onDismissed]) rather
+ * than after flying off the screen. One that cannot be fetched shows ↻ in the middle, which fetches
+ * it again, as iOS's viewer does (spec/chat.md, Photos).
  */
 @Composable
 @OptIn(ExperimentalTelephotoApi::class)
-private fun LargeImage(model: Any, said: String, onTap: () -> Unit, onPulled: (Float) -> Unit, onDismissed: () -> Unit, modifier: Modifier = Modifier, coming: @Composable () -> Unit) {
+private fun LargeImage(
+  request: (attempt: Int) -> ImageRequest,
+  said: String,
+  size: Size?,
+  onTap: () -> Unit,
+  onPulled: (Float) -> Unit,
+  onDismissed: () -> Unit,
+  place: Modifier = Modifier,
+  coming: @Composable BoxScope.(failed: Boolean) -> Unit,
+) {
   val zoom = rememberZoomableState(ZoomSpec(maxZoomFactor = MOST_ZOOM))
-  val image = rememberZoomableImageState(zoom)
   val flick = rememberFlickToDismissState(rotateOnDrag = false)
+  var attempt by remember { mutableIntStateOf(0) }
+  var failed by remember { mutableStateOf(false) }
+  var drawn by remember { mutableStateOf<Size?>(null) }
+  val box = size ?: drawn
+  LaunchedEffect(zoom, box) { if (box != null) zoom.setContentLocation(ZoomableContentLocation.scaledToFitAndCenterAligned(box)) }
   val pulled by rememberUpdatedState(onPulled)
   val dismissed by rememberUpdatedState(onDismissed)
   LaunchedEffect(flick) {
     snapshotFlow { flick.offsetFraction }.collect { pulled(it) }
   }
+  // As the finger lets it go to close, not once it has flown off the screen, so it goes back from there.
   LaunchedEffect(flick) {
-    snapshotFlow { flick.gestureState }.filter { it is FlickToDismissState.GestureState.Dismissed }.collect { dismissed() }
+    snapshotFlow { flick.gestureState }.filter { it is FlickToDismissState.GestureState.Dismissing }.collect { dismissed() }
   }
   val zoomed = (zoom.zoomFraction ?: 0f) > 0.01f
   val scope = rememberCoroutineScope()
   val zoomIn = stringResource(R.string.chat_photo_zoom_in)
   val zoomOut = stringResource(R.string.chat_photo_zoom_out)
-  FlickToDismiss(
-    flick,
-    modifier.fillMaxSize().semantics(mergeDescendants = true) {
-      contentDescription = said
-      // Zoomed in on its middle a step at a time, as far as it goes, and back.
-      customActions =
-        listOf(
-          CustomAccessibilityAction(zoomIn) { scope.launch { zoom.zoomBy(DOUBLE_TAP_ZOOM) }; true },
-          CustomAccessibilityAction(zoomOut) { scope.launch { zoom.resetZoom() }; true },
-        )
-    },
-    enabled = !zoomed,
-  ) {
-    if (!image.isImageDisplayed) coming()
-    ZoomableAsyncImage(
-      model,
-      contentDescription = null,
-      Modifier.fillMaxSize(),
-      state = image,
-      onClick = { onTap() },
-      onDoubleClick = DoubleClickToZoomListener.cycle(maxZoomFactor = DOUBLE_TAP_ZOOM),
-    )
+  Box(Modifier.fillMaxSize()) {
+    FlickToDismiss(
+      flick,
+      Modifier.fillMaxSize().semantics(mergeDescendants = true) {
+        contentDescription = said
+        // Zoomed in on its middle a step at a time, as far as it goes, and back.
+        customActions =
+          listOf(
+            CustomAccessibilityAction(zoomIn) { scope.launch { zoom.zoomBy(DOUBLE_TAP_ZOOM) }; true },
+            CustomAccessibilityAction(zoomOut) { scope.launch { zoom.resetZoom() }; true },
+          )
+      },
+      enabled = !zoomed,
+    ) {
+      Box(
+        Modifier.fillMaxSize().zoomable(zoom, onClick = { onTap() }, onDoubleClick = DoubleClickToZoomListener.cycle(maxZoomFactor = DOUBLE_TAP_ZOOM)),
+        contentAlignment = Alignment.Center,
+      ) {
+        Box((if (box != null) Modifier.aspectRatio(box.width / box.height) else Modifier.fillMaxSize()).then(place)) {
+          if (drawn == null) coming(failed)
+          key(attempt) {
+            AsyncImage(
+              request(attempt),
+              contentDescription = null,
+              Modifier.fillMaxSize(),
+              contentScale = ContentScale.Fit,
+              onState = { state ->
+                failed = state is AsyncImagePainter.State.Error
+                if (state is AsyncImagePainter.State.Success) drawn = state.painter.intrinsicSize
+              },
+            )
+          }
+        }
+      }
+    }
+    if (failed) {
+      PhotoRetry(
+        Modifier.align(Alignment.Center).clickable(onClickLabel = null) {
+          failed = false
+          attempt++
+        }
+      )
+    }
+  }
+}
+
+/**
+ * The system bars over a photo opened large: their icons light on its black, and hidden with its
+ * buttons, a swipe from the edge showing them for a moment, as Photos hides them; as they were once
+ * it goes.
+ */
+@Composable
+private fun MediaBars(shown: Boolean) {
+  val view = LocalView.current
+  val window = (view.parent as? DialogWindowProvider)?.window ?: LocalActivity.current?.window ?: return
+  val controller = remember(window, view) { WindowCompat.getInsetsController(window, view) }
+  DisposableEffect(controller) {
+    val light = controller.isAppearanceLightStatusBars to controller.isAppearanceLightNavigationBars
+    controller.isAppearanceLightStatusBars = false
+    controller.isAppearanceLightNavigationBars = false
+    controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+    onDispose {
+      controller.show(WindowInsetsCompat.Type.systemBars())
+      controller.isAppearanceLightStatusBars = light.first
+      controller.isAppearanceLightNavigationBars = light.second
+    }
+  }
+  LaunchedEffect(controller, shown) {
+    if (shown) controller.show(WindowInsetsCompat.Type.systemBars()) else controller.hide(WindowInsetsCompat.Type.systemBars())
   }
 }
 
