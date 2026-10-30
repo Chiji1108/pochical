@@ -158,18 +158,22 @@ fun widgetOffs(today: WidgetDay, people: List<WidgetPerson>, group: Boolean = fa
 /** The day off 次の休み counts from [today]: today on a day off, else the next one ahead; none ahead, none. */
 fun WidgetOffs.soonest(today: WidgetDay): NextOff? = if (this.today) NextOff(today, 0) else next
 
+/** The day 次の休み opens from [today] (spec/widgets.md, Opening the app): the day off it counts, else today. */
+fun WidgetOffs.opens(today: WidgetDay): LocalDate = soonest(today)?.day?.date ?: today.date
+
+/** The person's [date] as a widget shows it, of [shown], their days from [OwnCalendar.shown]. */
+fun OwnCalendar.widgetDay(date: LocalDate, shown: Map<LocalDate, ShownDay>, week: Week, holiday: Boolean): WidgetDay {
+  val entry = shown[date]
+  return WidgetDay.of(date, entry, entry?.let { pattern(it.shift) }, note(date) != null, week, holiday)
+}
+
 /**
  * The day the launcher's 次の休み opens from [today] (spec/shortcuts.md): the one 次の休み not set to
- * anyone opens (spec/widgets.md, Opening the app), the day off it counts, else today. The week and
- * the holidays only color the days, so any do.
+ * anyone opens. The week and the holidays only color the days, so any do.
  */
 fun OwnCalendar.nextDayOff(today: LocalDate): LocalDate {
   val shown = shown(today, today.plusDays(Widgets.offLookaheadDays.toLong()))
-  fun day(inDays: Int): WidgetDay {
-    val date = today.plusDays(inDays.toLong())
-    val entry = shown[date]
-    return WidgetDay.of(date, entry, entry?.let { pattern(it.shift) }, noted = false, week = Week(), holiday = false)
-  }
+  fun day(inDays: Int) = widgetDay(today.plusDays(inDays.toLong()), shown, Week(), holiday = false)
   val first = day(0)
-  return widgetOffs(first, people = emptyList(), dayAt = ::day).soonest(first)?.day?.date ?: today
+  return widgetOffs(first, people = emptyList(), dayAt = ::day).opens(first)
 }

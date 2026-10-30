@@ -62,7 +62,7 @@ class WidgetDaysTest {
   @Test
   fun theLaunchersNextOffOpensTheDayTheWidgetCounts() =
     // spec/shortcuts.md: the day 次の休み not set to anyone counts, today on a day off, else today.
-    widgets.offs.filter { it.with.isEmpty() }.checkEach({ case -> today.plusDays(if (case.expected.today) 0 else case.expected.next?.toLong() ?: 0) }) { case ->
+    widgets.offs.filter { it.with.isEmpty() && !it.group }.checkEach({ case -> today.plusDays(if (case.expected.today) 0 else case.expected.next?.toLong() ?: 0) }) { case ->
       val own = (0..Widgets.offLookaheadDays + 1).mapNotNull { inDays -> case.me.on(inDays)?.let { today.plusDays(inDays.toLong()) to OwnDay(it) } }
       OwnCalendar(listOf(pattern("work"), pattern("off")), own.toMap(), emptyList()).nextDayOff(today)
     }

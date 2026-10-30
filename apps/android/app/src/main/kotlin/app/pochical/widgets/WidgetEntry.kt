@@ -15,8 +15,10 @@ import app.pochical.kit.Week
 import app.pochical.kit.WidgetDay
 import app.pochical.kit.WidgetOffs
 import app.pochical.kit.WidgetPerson
+import app.pochical.kit.opens
 import app.pochical.kit.readyCopies
 import app.pochical.kit.soonest
+import app.pochical.kit.widgetDay
 import app.pochical.kit.widgetOffs
 import java.time.LocalDate
 import java.time.YearMonth
@@ -105,11 +107,7 @@ fun OwnCalendar.widgetEntry(
   val shown = shown(first, maxOf(reached, weeks.last().last(), weekStart.plusDays(13)))
   // Each day worked out once, though the views' days overlap.
   val days = HashMap<LocalDate, WidgetDay>()
-  fun day(date: LocalDate): WidgetDay =
-    days.getOrPut(date) {
-      val entry = shown[date]
-      WidgetDay.of(date, entry, entry?.let { pattern(it.shift) }, note(date) != null, week, holiday(date))
-    }
+  fun day(date: LocalDate): WidgetDay = days.getOrPut(date) { widgetDay(date, shown, week, holiday(date)) }
   // Whose days count with the person's, from today as far as 次の休み looks.
   val shifts = companion?.people.orEmpty().map { it to it.shifts(today, reached) }
   val people =
@@ -128,7 +126,7 @@ val WidgetEntry.soonestOff: NextOff?
 
 /** The day 次の休み opens (spec/widgets.md, Opening the app): the day off it counts, else today. */
 val WidgetEntry.offOpens: LocalDate
-  get() = soonestOff?.day?.date ?: date
+  get() = offs.opens(today)
 
 /** The entry for [today] of the days [day] gives, the week from [week]'s start, with [people] those 次の休み counts with. */
 private fun entryOf(today: LocalDate, week: Week, people: List<WidgetPerson>, group: Boolean, day: (LocalDate) -> WidgetDay): WidgetEntry {
