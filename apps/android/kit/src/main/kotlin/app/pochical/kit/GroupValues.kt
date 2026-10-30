@@ -32,13 +32,35 @@ internal suspend fun SyncDao.takeMembership(change: Change) {
   if (change.kindCase != KindCase.MEMBERSHIP) return
   val membership = change.membership
   if (membership.left) {
-    deleteGroup(membership.groupId)
-    resetGroup(membership.groupId)
-    dropChats(membership.groupId)
+    leaveGroup(membership.groupId)
     return
   }
   upsert(GroupRow(membership.groupId, membership.name, membership.joinedAtMs, membership.mark.value))
 }
+
+/** A group left goes from the device, with everything it holds of it. */
+internal suspend fun SyncDao.leaveGroup(groupId: String) {
+  deleteGroup(groupId)
+  resetGroup(groupId)
+  dropChats(groupId)
+}
+
+/**
+ * The groups the user is in as the device holds them, each with the photos it holds of it (its
+ * lines', its members' faces and its mark's), read before a Reset of the user's socket empties the
+ * list until its catch-up brings the groups again.
+ */
+internal suspend fun SyncDao.placesHeld(): Map<String, List<String>> = groupIds().associateWith { photosHeld(it) + groupFaces(it) }
+
+/**
+ * After a Reset's catch-up: the groups held before it ([held]) that did not come again were left
+ * while the user was away, as their `left` came before the Reset and never again. Each goes as a
+ * group left does, and is said with the photos the device held of it.
+ */
+internal suspend fun SyncDao.placesGone(held: Map<String, List<String>>): Map<String, List<String>> =
+  held.filterKeys { !isListed(it) }.mapValues { (groupId, photos) ->
+    (photos + photosHeld(groupId) + groupFaces(groupId)).distinct().also { leaveGroup(groupId) }
+  }
 
 /** A Reset of the user's socket: the groups and the profile come again with everything else. */
 internal suspend fun SyncDao.resetMemberships() {

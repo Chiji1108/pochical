@@ -114,6 +114,29 @@ private func change(_ cursor: UInt64, _ fill: (inout Pochical_V1_Change) -> Void
   }
 }
 
+@Test func aGroupLeftWhileAwayGoesOnceAResetsCatchUpDoesNotBringItAgain() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    try Sync.take(
+      [
+        change(1) { $0.membership.groupID = "g1"; $0.membership.name = "いとこ会" },
+        change(2) { $0.membership.groupID = "g2"; $0.membership.name = "仕事" },
+      ], in: db)
+    try GroupSync.take(
+      [change(1) { $0.member.userID = "u1"; $0.member.displayName = "さくら" }], of: "g1", in: db)
+
+    // The Reset empties the list; its catch-up brings g2 again, and g1
+    // never, left while away.
+    let held = try Groups.held(in: db)
+    try Sync.reset(in: db)
+    try Sync.take([change(3) { $0.membership.groupID = "g2"; $0.membership.name = "仕事" }], in: db)
+
+    #expect(try Groups.gone(since: held, in: db) == ["g1"])
+    #expect(try GroupMemberRow.fetchCount(db) == 0)
+    #expect(try GroupRow.fetchAll(db).map(\.id) == ["g2"])
+  }
+}
+
 @Test func aMemberSaysWhetherTheirNameAndPhotoAreTheGroupsOwn() throws {
   let database = try appDatabase()
   try database.write { db in

@@ -151,6 +151,12 @@ class SyncClient internal constructor(
 
   private var catchUpNonce = 0
 
+  /**
+   * The groups held before a Reset of the user's socket, with their photos, until its catch-up has
+   * come: kept over the sockets in between, as the catch-up starts again on each.
+   */
+  private var heldBeforeReset: Map<String, List<String>>? = null
+
   init {
     scope.launch { run() }
   }
@@ -347,10 +353,7 @@ class SyncClient internal constructor(
             // Not one joined again later in the same changes.
             leaving = leaving.filterKeys { !isListed(it) }
           }
-          for ((groupId, photos) in leaving) {
-            linePhotos.files.forgetPlace(groupId, photos)
-            left(groupId)
-          }
+          letGo(leaving)
         }
         log("Took ${changes.size} changes")
       }
@@ -364,7 +367,9 @@ class SyncClient internal constructor(
           }
           linePhotos.files.forget(place, letGo)
         } else {
-          write { reset() }
+          // Those held before an earlier Reset whose catch-up has not come yet are still to be found.
+          val before = heldBeforeReset.orEmpty()
+          heldBeforeReset = write { (before + placesHeld()).also { reset() } }
         }
       ServerFrame.KindCase.ACKED -> {
         val acked = frame.acked
@@ -381,7 +386,17 @@ class SyncClient internal constructor(
       ServerFrame.KindCase.CHAT_PAGE -> if (place != null) takeInto(place) { take(frame.chatPage, place) }
       ServerFrame.KindCase.TYPING -> mutableTyping.tryEmit(frame.typing)
       ServerFrame.KindCase.CHAT_PHOTOS -> mutablePhotoPages.tryEmit(ChatPhotosPage.of(frame.chatPhotos))
-      ServerFrame.KindCase.PONG -> if (frame.pong.nonce == catchUpNonce) on(SocketEvent.CaughtUp)
+      ServerFrame.KindCase.PONG ->
+        if (frame.pong.nonce == catchUpNonce) {
+          // A group left while away, before a Reset, comes again in no change: those held before it
+          // and not come again by its catch-up were left, and go as a group left does.
+          heldBeforeReset?.let { held ->
+            val gone = write { placesGone(held) }
+            heldBeforeReset = null
+            letGo(gone)
+          }
+          on(SocketEvent.CaughtUp)
+        }
       ServerFrame.KindCase.ERROR ->
         return when (frame.error.code) {
           ServerError.Code.CODE_PROTOCOL_TOO_OLD -> SocketEvent.Refused(Stop.ProtocolTooOld)
@@ -394,6 +409,14 @@ class SyncClient internal constructor(
       else -> {}
     }
     return null
+  }
+
+  /** The groups left, with the photos the device held of them: their files go, and the app is told. */
+  private suspend fun letGo(places: Map<String, List<String>>) {
+    for ((groupId, photos) in places) {
+      linePhotos.files.forgetPlace(groupId, photos)
+      left(groupId)
+    }
   }
 
   /**

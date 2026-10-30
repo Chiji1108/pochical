@@ -175,21 +175,39 @@ enum Groups {
       return
     }
     guard case .membership(let membership) = change.kind else { return }
-    // A group left goes, with what the device holds of it.
-    if membership.left {
-      try GroupRow.find(membership.groupID).delete().execute(db)
-      try GroupSync.reset(membership.groupID, in: db)
-      try Chats.dropWaiting(of: membership.groupID, in: db)
-      try Chats.dropDrafts(of: membership.groupID, in: db)
-      try Chats.dropUnread(of: membership.groupID, in: db)
-      return
-    }
+    if membership.left { return try leave(membership.groupID, in: db) }
     let mark = GroupMarkValue(membership.mark)
     let row = GroupRow(
       id: membership.groupID, name: membership.name, emoji: mark.emoji,
       joinedAtMs: membership.joinedAtMs, icon: mark.icon, letter: mark.letter, color: mark.color,
       photoID: mark.photoID)
     try GroupRow.upsert { row }.execute(db)
+  }
+
+  /// A group left goes, with what the device holds of it.
+  static func leave(_ groupID: String, in db: Database) throws {
+    try GroupRow.find(groupID).delete().execute(db)
+    try GroupSync.reset(groupID, in: db)
+    try Chats.dropWaiting(of: groupID, in: db)
+    try Chats.dropDrafts(of: groupID, in: db)
+    try Chats.dropUnread(of: groupID, in: db)
+  }
+
+  /// The groups the user is in as the device holds them, read before a
+  /// Reset of the user's socket empties the list until its catch-up brings
+  /// them again.
+  static func held(in db: Database) throws -> Set<String> {
+    Set(try GroupRow.fetchAll(db).map(\.id))
+  }
+
+  /// After a Reset's catch-up: the groups `held` before it that did not
+  /// come again were left while the user was away, as their `left` came
+  /// before the Reset and never again. Each goes as a group left does.
+  static func gone(since held: Set<String>, in db: Database) throws -> [String] {
+    let now = try Self.held(in: db)
+    let gone = held.subtracting(now).sorted()
+    for groupID in gone { try leave(groupID, in: db) }
+    return gone
   }
 
   /// The groups `changes` say the user left or was taken out of.
