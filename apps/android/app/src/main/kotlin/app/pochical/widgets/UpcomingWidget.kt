@@ -8,7 +8,6 @@ import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceModifier
 import androidx.glance.LocalSize
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
-import androidx.glance.appwidget.cornerRadius
 import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
@@ -129,7 +128,7 @@ private fun RowScope.ColumnDay(day: WidgetDay, drawn: Drawn, first: Boolean, siz
   column = column.opening(drawn.link(day.date)).spoken(day, drawn.words)
   Box(column) {
     var inner = GlanceModifier.fillMaxSize()
-    if (off.tile) inner = inner.background(drawn.tileColor(day)).cornerRadius(8.dp)
+    if (off.tile) inner = inner.background(drawn.tileColor(day), WidgetShape.tile)
     Column(inner, horizontalAlignment = Alignment.CenterHorizontally) {
       ColumnHead(day, drawn, first, onTile = off.tile)
       Box(GlanceModifier.fillMaxWidth().defaultWeight(), contentAlignment = Alignment.Center) {
@@ -208,7 +207,7 @@ private fun PairColumns(drawn: Drawn, pair: WidgetPair, count: Int) {
     days.forEachIndexed { index, (mine, shown) ->
       var column = GlanceModifier.defaultWeight().fillMaxHeight().padding(horizontal = 3.dp).opening(drawn.link(mine.date))
       // A day both are off: one band down the column.
-      if (shown.together) column = column.background(drawn.colors.groupTint).cornerRadius(8.dp)
+      if (shown.together) column = column.background(drawn.colors.groupTint, WidgetShape.tile)
       Column(column, horizontalAlignment = Alignment.CenterHorizontally) {
         ColumnHead(mine, drawn, first = index == 0, onTile = false, compact = true)
         PairCell(mine, shown.together, drawn, drawn.look, size, count + 1, GlanceModifier.defaultWeight().spoken(mine, drawn.words))
@@ -224,7 +223,7 @@ private fun PairColumns(drawn: Drawn, pair: WidgetPair, count: Int) {
 @Composable
 private fun PairCell(day: WidgetDay?, together: Boolean, drawn: Drawn, look: Look, size: Dp, columns: Int, modifier: GlanceModifier) {
   var cell = modifier.fillMaxWidth()
-  if (day != null && day.off && !together) cell = cell.padding(vertical = 3.dp).background(drawn.colors.groupTint).cornerRadius(8.dp)
+  if (day != null && day.off && !together) cell = cell.padding(vertical = 3.dp).background(drawn.colors.groupTint, WidgetShape.tile)
   Box(cell, contentAlignment = Alignment.Center) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
       val pattern = day?.pattern

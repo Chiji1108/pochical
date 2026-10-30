@@ -29,7 +29,6 @@ import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.compose
-import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.appwidget.state.getAppWidgetState
 import androidx.glance.background
@@ -161,6 +160,24 @@ fun open(context: Context, link: String): Action =
 /** The modifier that opens [link] on a tap. */
 @Composable
 fun GlanceModifier.opening(link: String): GlanceModifier = clickable(open(LocalContext.current, link))
+
+/**
+ * The rounded shapes a widget fills, white pictures for [background] to tint. Glance's
+ * cornerRadius rounds a view only by clipping it to its outline, which a picture of the widget
+ * drawn without the GPU leaves square, as the picker draws its generated previews (#1044); a shape
+ * drawn by a drawable is round wherever the widget is drawn. A mark's tile, rounded by its side,
+ * is a picture drawn as the marks are (WidgetMarks).
+ */
+object WidgetShape {
+  /** A tile's corners: a day off's, today's frame, a day both are off. */
+  val tile = ImageProvider(R.drawable.widget_tile)
+
+  /** A circle: a face's, behind its letter. */
+  val round = ImageProvider(R.drawable.widget_round)
+}
+
+/** The modifier that fills the view with [color] in [shape] (WidgetShape). */
+fun GlanceModifier.background(color: ColorProvider, shape: ImageProvider): GlanceModifier = background(shape, colorFilter = ColorFilter.tint(color))
 
 /** The modifier that reads a whole day aloud as one, in [words]' language. */
 fun GlanceModifier.spoken(day: WidgetDay, words: WidgetWords): GlanceModifier = semantics { contentDescription = words.spoken(day) }

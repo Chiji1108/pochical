@@ -7,7 +7,6 @@ import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceModifier
 import androidx.glance.LocalSize
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
-import androidx.glance.appwidget.cornerRadius
 import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
@@ -141,10 +140,10 @@ private fun androidx.glance.layout.RowScope.GridDay(
   val isToday = day.date == drawn.entry.date
   var cell = GlanceModifier.defaultWeight().fillMaxHeight().padding(1.dp)
   // Today's frame: the accent's, round the day, as the calendar frames it.
-  if (isToday) cell = cell.background(colors.accentFrame).cornerRadius(8.dp).padding(1.5.dp)
+  if (isToday) cell = cell.background(colors.accentFrame, WidgetShape.tile).padding(1.5.dp)
   Box(cell.opening(dayLink(day.date)).spoken(day, drawn.words)) {
-    var inner = GlanceModifier.fillMaxSize().cornerRadius(8.dp)
-    inner = if (off.tile && inMonth) inner.background(drawn.tileColor(day)) else if (isToday) inner.background(colors.ground) else inner
+    var inner = GlanceModifier.fillMaxSize()
+    inner = if (off.tile && inMonth) inner.background(drawn.tileColor(day), WidgetShape.tile) else if (isToday) inner.background(colors.ground, WidgetShape.tile) else inner
     Column(inner.padding(vertical = 3.dp), horizontalAlignment = Alignment.CenterHorizontally) {
       val faded = !inMonth || gone
       val dateColor = if (isToday) colors.accent else if (day.holiday) colors.holiday else colors.words
