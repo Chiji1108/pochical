@@ -135,6 +135,8 @@ internal interface SyncDao : ChatDao {
 
   @Query("SELECT EXISTS(SELECT 1 FROM groups WHERE id = :id)") suspend fun isListed(id: String): Boolean
 
+  @Query("SELECT id FROM groups") suspend fun groupIds(): List<String>
+
   @Query("DELETE FROM groups") suspend fun deleteGroups()
 
   @Query("SELECT COUNT(*) FROM groups") suspend fun groupCount(): Int

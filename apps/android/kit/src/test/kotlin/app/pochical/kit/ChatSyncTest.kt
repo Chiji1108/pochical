@@ -466,6 +466,36 @@ class ChatValuesTest {
   }
 
   @Test
+  fun aGroupAResetsCatchUpDoesNotMentionGoesAsOneLeft() = runTest {
+    database.listGroup("g1")
+    database.listGroup("g2")
+    database.listGroup("g3")
+    val album = chatLine {
+      threadId = GROUP_THREAD
+      seq = 2
+      authorId = "u2"
+      content = chatContent { photos = chatAlbum { photos += chatPhoto { id = "p1"; width = 1; height = 1 } } }
+    }
+    database.write {
+      takeChanges(listOf(album), "g1")
+      take(listOf(change { member = member { userId = "u2"; displayName = "さくら"; photoId = "face" } }), "g1")
+    }
+
+    // The Reset empties the list; its catch-up brings g2 again, says g3 was left, which goes with
+    // that change, and never mentions g1, which the DO restored from an older copy does not know.
+    val held = database.write { facesHeld().also { reset() } }
+    database.write {
+      take(listOf(change { membership = membership { groupId = "g2"; name = "仕事" } }, change { membership = membership { groupId = "g3"; left = true } }))
+    }
+    val gone = database.write { placesGone(held - "g3") }
+
+    assertEquals(mapOf("g1" to listOf("p1", "face")), gone)
+    assertTrue(database.read { photosHeld("g1") }.isEmpty())
+    assertTrue(database.read { groupFaces("g1") }.isEmpty())
+    assertTrue(database.read { isListed("g2") })
+  }
+
+  @Test
   fun aGroupLeftTakesEveryPhotoOfTheMembersKeptForIt() = runBlocking {
     val files = testLinePhotos().files
     files.keep("g1", "mine", ShrunkPhoto(byteArrayOf(1), 1, 1, byteArrayOf()))
