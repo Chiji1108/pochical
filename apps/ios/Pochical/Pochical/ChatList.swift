@@ -160,13 +160,16 @@ struct ChatRow<Icon: View>: View {
   let label: String
   /// Whom the user has blocked: their latest line is folded.
   var blocked: Set<String> = []
+  /// Said while the chat has no line yet.
+  let empty: String
   @ViewBuilder let icon: () -> Icon
   let onOpen: () -> Void
 
   /// The chat read as the row is made, so its latest line is there on the
-  /// first frame rather than まだメッセージはありません for a moment.
+  /// first frame rather than `empty` for a moment.
   init(
     placeID: String, threadID: String, me: String, label: String, blocked: Set<String> = [],
+    empty: String = "まだメッセージはありません",
     @ViewBuilder icon: @escaping () -> Icon, onOpen: @escaping () -> Void
   ) {
     self.placeID = placeID
@@ -174,6 +177,7 @@ struct ChatRow<Icon: View>: View {
     self.me = me
     self.label = label
     self.blocked = blocked
+    self.empty = empty
     self.icon = icon
     self.onOpen = onOpen
     _chat = Fetch(
@@ -278,7 +282,7 @@ struct ChatRow<Icon: View>: View {
     if let waiting = summary.waiting {
       return "自分：\(Self.words(waiting.content, nameOf: nameOf))"
     }
-    guard let last = summary.last else { return "まだメッセージはありません" }
+    guard let last = summary.last else { return empty }
     switch last.content {
     case .notice(let notice):
       return notice.words(
@@ -290,9 +294,9 @@ struct ChatRow<Icon: View>: View {
         deleted: chat.deleted.contains(last.authorID))
     case .hidden:
       // Never the latest line: not the reader's to see.
-      return "まだメッセージはありません"
+      return empty
     case .words, .photos, .days, .poll:
-      if blocked.contains(last.authorID) {
+      if last.folds(blocked: blocked) {
         return "ブロック中のメンバーのメッセージ"
       }
       let words = Self.words(last.content, nameOf: nameOf)

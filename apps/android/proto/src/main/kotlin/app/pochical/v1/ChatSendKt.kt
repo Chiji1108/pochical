@@ -117,9 +117,11 @@ public object ChatSendKt {
     /**
      * ```
      * The app's version and the device, as the chat's head says reach its
-     * readers (ポチカル 1.0・iPhone (iOS 26.0)): sent where the place's rules
-     * ask for it (design/src/chat.ts, chatPlaces' sendsDevice), and kept
-     * only there, cut short as an app's word on itself.
+     * readers: the app's name and version, the device and its system,
+     * joined by "・" (ポチカル 1.0・iPhone・iOS 26.0, or ポチカル 1.0・Pixel
+     * 10a・Android 17). Sent where the place's rules ask for it
+     * (design/src/chat.ts, chatPlaces' sendsDevice), and kept only there,
+     * cut short as an app's word on itself.
      * ```
      *
      * `string device = 9 [json_name = "device"];`
@@ -134,9 +136,11 @@ public object ChatSendKt {
     /**
      * ```
      * The app's version and the device, as the chat's head says reach its
-     * readers (ポチカル 1.0・iPhone (iOS 26.0)): sent where the place's rules
-     * ask for it (design/src/chat.ts, chatPlaces' sendsDevice), and kept
-     * only there, cut short as an app's word on itself.
+     * readers: the app's name and version, the device and its system,
+     * joined by "・" (ポチカル 1.0・iPhone・iOS 26.0, or ポチカル 1.0・Pixel
+     * 10a・Android 17). Sent where the place's rules ask for it
+     * (design/src/chat.ts, chatPlaces' sendsDevice), and kept only there,
+     * cut short as an app's word on itself.
      * ```
      *
      * `string device = 9 [json_name = "device"];`

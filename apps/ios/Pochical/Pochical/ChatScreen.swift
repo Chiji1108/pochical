@@ -62,6 +62,9 @@ struct ChatScreen: View {
   /// What the chat's place says first, over its first line once the lines
   /// reach it: who the chat with Pochical's people reaches, and what does.
   var head: AnyView?
+  /// Whose chats a line taken back leaves, said as 送信取消 is asked
+  /// (spec/chat.md, Editing and unsending).
+  var unsendNote: String
   /// `sharing` has been set over the composer, once.
   @State private var tookSharing = false
   /// The chat's draft was put back in the composer as it opened.
@@ -119,10 +122,11 @@ struct ChatScreen: View {
   /// arriving, oldest first, as it ends.
   init(
     place: ChatPlace, threadID: String, otherID: String?, sharing: Day? = nil,
-    head: AnyView? = nil
+    head: AnyView? = nil, unsendNote: String = "メンバー全員のチャットから消えます。"
   ) {
     self.place = place
     self.head = head
+    self.unsendNote = unsendNote
     self.threadID = threadID
     self.otherID = otherID
     self.sharing = sharing
@@ -478,7 +482,7 @@ struct ChatScreen: View {
       if case .waiting = unsending {
         Text("まだ送られていないメッセージです。")
       } else {
-        Text("メンバー全員のチャットから消えます。")
+        Text(unsendNote)
       }
     }
     .handles(lineActions) { act($0.action, on: $0.lineID) }
@@ -766,7 +770,8 @@ struct ChatScreen: View {
           // A blocked member's line shown at a tap stands alone between
           // the folded ones, with their face, the way to their profile.
           lineView(
-            line, startsRun: runStart || writerBlocked(line), showsTime: showsTime, names: names)
+            line, startsRun: runStart || line.folds(blocked: blocked), showsTime: showsTime,
+            names: names)
         }
       }
     case .waiting(let line, let startsRun):
@@ -833,7 +838,7 @@ struct ChatScreen: View {
     case .words, .days, .poll:
       words = lineWords(line.content, nameOf: nameOf)
     }
-    guard !writerBlocked(line) else { return nil }
+    guard !line.folds(blocked: blocked) else { return nil }
     return "\(name)、\(words)"
   }
 
@@ -1044,15 +1049,9 @@ struct ChatScreen: View {
     Set(chat.writers.filter(\.deleted).map(\.userID))
   }
 
-  /// The line's writer is blocked, in the place's own chat, where their
-  /// lines fold away; a one-to-one chat with them shows all it has.
-  private func writerBlocked(_ line: ChatLineRow) -> Bool {
-    otherID == nil && blocked.contains(line.authorID)
-  }
-
   /// The line is folded away for its blocked writer, not shown at a tap.
   private func folded(_ line: ChatLineRow) -> Bool {
-    writerBlocked(line) && !shownBlocked.contains(line.seq)
+    line.folds(blocked: blocked) && !shownBlocked.contains(line.seq)
   }
 
   /// A member's name in the group as it is now, for their mentions.
@@ -1654,7 +1653,7 @@ struct ChatScreen: View {
           title: "送信取消", systemImage: "arrow.uturn.backward", destructive: true,
           startsGroup: true
         ) { unsending = .line(line) })
-    } else if place.rules.reports {
+    } else if line.content.reportable(mine: mine, rules: place.rules) {
       // Last, apart and in the danger color (spec/chat.md).
       actions.append(
         MessageAction(

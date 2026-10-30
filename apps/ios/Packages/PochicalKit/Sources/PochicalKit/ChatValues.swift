@@ -57,6 +57,12 @@ public struct ChatLineRow: Hashable, Sendable, Identifiable {
     }
   }
 
+  /// Whether it shows folded to ブロック中のメンバーのメッセージ for a
+  /// reader who blocked those in `blocked` (`LineContent.folds`).
+  public func folds(blocked: Set<String>) -> Bool {
+    content.folds(ownChat: threadID == groupThread, writerBlocked: blocked.contains(authorID))
+  }
+
   /// Each emoji on the line, in the order first chosen, with who chose it.
   public var reactions: [LineReaction] {
     get { (try? JSONDecoder().decode([LineReaction].self, from: Data(reactionsJSON.utf8))) ?? [] }
@@ -1172,5 +1178,32 @@ public struct LineNotice: Codable, Hashable, Sendable {
         "\(by)がグループのアイコンを変更しました"
       }
     }
+  }
+}
+
+/// Reporting and blocking as every platform decides them (spec/chat.md,
+/// Reporting and blocking; spec/vectors/chat.json, folded and reportable).
+extension LineContent {
+  /// A line someone wrote and the reader sees: not the app's notice, one
+  /// taken back, or one not delivered to them.
+  public var isMessage: Bool {
+    switch self {
+    case .words, .photos, .days, .poll: true
+    case .notice, .unsent, .hidden: false
+    }
+  }
+
+  /// Whether it shows folded to ブロック中のメンバーのメッセージ: someone's
+  /// message in the place's own chat (`ownChat`) whose writer the reader
+  /// blocked. Their one-to-one lines sent while blocked come hidden
+  /// instead, and those sent before stay as they were.
+  public func folds(ownChat: Bool, writerBlocked: Bool) -> Bool {
+    ownChat && writerBlocked && isMessage
+  }
+
+  /// Whether its menu offers 通報: someone else's message (`mine` false),
+  /// where the place's `rules` take reports.
+  public func reportable(mine: Bool, rules: ChatPlaceRules) -> Bool {
+    !mine && rules.reports && isMessage
   }
 }
