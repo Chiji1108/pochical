@@ -45,7 +45,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.HorizontalDivider
 import app.pochical.notifications.rememberChatMuting
 import app.pochical.notifications.rememberChatNotifications
 import androidx.compose.foundation.lazy.LazyColumn
@@ -56,11 +55,10 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SmallFloatingActionButton
@@ -862,47 +860,26 @@ private fun ChatScaffold(
           }
         },
         navigationIcon = {
-          IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_back), stringResource(R.string.back)) }
+          IconButton(onClick = onBack, shapes = IconButtonDefaults.shapes()) { Icon(painterResource(R.drawable.ic_back), stringResource(R.string.back)) }
         },
         actions = {
           // ⋯, its menu Material's own from where it was opened (spec/chat.md, Photos: 写真).
           var more by remember { mutableStateOf(false) }
           Box {
-            IconButton(onClick = { more = true }) { Icon(painterResource(R.drawable.ic_more_vert), stringResource(R.string.chat_more)) }
-            DropdownMenu(more, onDismissRequest = { more = false }) {
-              // The group's own chat: everyone's shifts first, as the chat is the group's.
-              if (onShifts != null) {
-                DropdownMenuItem(
-                  text = { Text(stringResource(R.string.group_shifts)) },
-                  leadingIcon = { Icon(painterResource(R.drawable.ic_calendar), contentDescription = null) },
-                  onClick = {
-                    more = false
-                    onShifts()
-                  },
-                )
-              }
-              DropdownMenuItem(
-                text = { Text(stringResource(R.string.chat_photos_title)) },
-                leadingIcon = { Icon(painterResource(R.drawable.ic_photo_library), contentDescription = null) },
-                onClick = {
-                  more = false
-                  onPhotos()
-                },
-              )
-              if (muted != null) {
-                HorizontalDivider()
-                DropdownMenuItem(
-                  text = { Text(stringResource(if (muted) R.string.chat_unmute else R.string.chat_mute)) },
-                  leadingIcon = {
-                    Icon(painterResource(if (muted) R.drawable.ic_notifications else R.drawable.ic_notifications_off), contentDescription = null)
-                  },
-                  onClick = {
-                    more = false
-                    setMuted(!muted)
-                  },
-                )
-              }
-            }
+            IconButton(onClick = { more = true }, shapes = IconButtonDefaults.shapes()) { Icon(painterResource(R.drawable.ic_more_vert), stringResource(R.string.chat_more)) }
+            val shifts = stringResource(R.string.group_shifts)
+            val photos = stringResource(R.string.chat_photos_title)
+            val mute = stringResource(if (muted == true) R.string.chat_unmute else R.string.chat_mute)
+            GroupedMenu(
+              more,
+              onDismiss = { more = false },
+              listOfNotNull(
+                // The group's own chat: everyone's shifts first, as the chat is the group's.
+                onShifts?.let { LineMenuItem(shifts, R.drawable.ic_calendar, run = it) },
+                LineMenuItem(photos, R.drawable.ic_photo_library, run = onPhotos),
+                muted?.let { LineMenuItem(mute, if (it) R.drawable.ic_notifications else R.drawable.ic_notifications_off, startsGroup = true) { setMuted(!it) } },
+              ),
+            )
           }
         },
       )

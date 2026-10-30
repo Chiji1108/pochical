@@ -14,8 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -129,16 +127,7 @@ private fun PinItem(line: ChatLine, modifier: Modifier, onJump: (Long) -> Unit, 
     ) {
       content()
     }
-    DropdownMenu(menu, onDismissRequest = { menu = false }) {
-      DropdownMenuItem(
-        text = { Text(stringResource(R.string.chat_unpin)) },
-        leadingIcon = { Icon(painterResource(R.drawable.ic_keep_off), contentDescription = null) },
-        onClick = {
-          menu = false
-          onUnpin(line.seq)
-        },
-      )
-    }
+    GroupedMenu(menu, onDismiss = { menu = false }, listOf(LineMenuItem(unpin, R.drawable.ic_keep_off) { onUnpin(line.seq) }))
   }
 }
 
