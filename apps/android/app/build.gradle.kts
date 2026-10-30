@@ -94,6 +94,7 @@ dependencies {
   implementation(libs.activity.compose)
   implementation(libs.navigation3.runtime)
   implementation(libs.navigation3.ui)
+  implementation(libs.material3.adaptive.navigation3)
   implementation(libs.metrox.android)
   implementation(libs.kotlinx.serialization.json)
   implementation(libs.datastore)

@@ -17,6 +17,8 @@ compose-bom = "2026.09.00"
 material3 = "1.5.0-beta02"
 activity-compose = "1.13.0"
 navigation3 = "1.2.0"
+# Material's adaptive panes for Navigation 3: グループ's and 設定's pages beside the tabs on a wide window.
+material3-adaptive = "1.3.0"
 metro = "1.4.5"
 kotlinx-serialization = "1.12.0"
 junit = "4.13.2"
@@ -80,6 +82,7 @@ compose-material3-navigation-suite = { module = "androidx.compose.material3:mate
 activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity-compose" }
 navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "navigation3" }
 navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "navigation3" }
+material3-adaptive-navigation3 = { module = "androidx.compose.material3.adaptive:adaptive-navigation3", version.ref = "material3-adaptive" }
 metrox-android = { module = "dev.zacsweers.metro:metrox-android", version.ref = "metro" }
 junit = { module = "junit:junit", version.ref = "junit" }
 datastore = { module = "androidx.datastore:datastore", version.ref = "datastore" }

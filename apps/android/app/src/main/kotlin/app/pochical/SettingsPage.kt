@@ -2,11 +2,15 @@ package app.pochical
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.union
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MediumFlexibleTopAppBar
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -60,6 +64,14 @@ fun SettingsPage(
       }
     },
     snackbarHost = { if (snackbar != null) SnackbarHost(snackbar) },
+    contentWindowInsets = pageInsets,
     content = content,
   )
 }
+
+/**
+ * What a page's content keeps clear of: the system's bars and the keyboard, as the screens make
+ * room for it themselves (adjustResize), so a field low on a page scrolls up clear of it.
+ */
+val pageInsets: WindowInsets
+  @Composable get() = ScaffoldDefaults.contentWindowInsets.union(WindowInsets.ime)
