@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite dev --configLoader runner",
     "icon:app": "tsx scripts/app-assets.ts",
+    "image:screens": "tsx scripts/app-screenshots.ts",
     "build": "vite build --configLoader runner",
     "preview": "vite preview --configLoader runner",
     "deploy": "pnpm run build && wrangler deploy",
@@ -27,6 +28,7 @@
     "@types/react": "~19.3.0",
     "@types/react-dom": "^19.2.0",
     "@vite-pwa/assets-generator": "^2.0.0",
+    "playwright-core": "^1.64.1",
     "sharp": "0.35.5",
     "tsx": "catalog:",
     "typescript": "~7.0.2",
