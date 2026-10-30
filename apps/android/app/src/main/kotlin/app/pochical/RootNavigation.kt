@@ -23,18 +23,28 @@ import kotlinx.serialization.Serializable
 // The app's one navigation, as iOS's RootNavigation: every page is pushed
 // over the tabs rather than inside one, so the tab bar goes away with the
 // screen under it as the page comes, and comes back as it goes, a
-// predictive back included (spec/chat.md, The chat's page).
+// predictive back included (spec/chat.md, The chat's page). On a wide
+// window グループ's and 設定's pages open beside the tabs instead, the same
+// pages in the same order (TabPanes).
 
-/** The app's tabs, as /design's tab bar has them, the first the one the app opens on. */
+/**
+ * The app's tabs, as /design's tab bar has them, the first the one the app opens on. On a wide
+ * window a tab with [noneOpen] keeps its pages beside it, saying that until one is opened; the
+ * others' pages come over them, as on a phone (spec/chat.md, The chat's page).
+ */
 enum class RootTab(
   @param:StringRes val title: Int,
   @param:DrawableRes val icon: Int,
   @param:DrawableRes val selectedIcon: Int,
+  val noneOpen: NoneOpen? = null,
 ) {
   Calendar(R.string.tab_calendar, R.drawable.ic_calendar, R.drawable.ic_calendar_filled),
-  Groups(R.string.tab_groups, R.drawable.ic_groups, R.drawable.ic_groups_filled),
-  Settings(R.string.tab_settings, R.drawable.ic_settings, R.drawable.ic_settings_filled),
+  Groups(R.string.tab_groups, R.drawable.ic_groups, R.drawable.ic_groups_filled, NoneOpen(R.string.tab_groups_none_open, R.drawable.ic_forum)),
+  Settings(R.string.tab_settings, R.drawable.ic_settings, R.drawable.ic_settings_filled, NoneOpen(R.string.tab_settings_none_open, R.drawable.ic_settings)),
 }
+
+/** What the side beside a tab says, with its symbol, while no page is open there. */
+class NoneOpen(@param:StringRes val text: Int, @param:DrawableRes val icon: Int)
 
 /** What the navigation shows: the tabs at its root, and the pages over them. */
 sealed interface RootRoute
@@ -173,6 +183,17 @@ class RootNavigator(
   }
 
   /**
+   * Opens `page` from the tabs, in place of the pages open: on a wide window those beside the tabs,
+   * as a list's item takes the detail's place, so the same chat picked again stays the one open; on
+   * a phone none are open while the tabs show.
+   */
+  fun show(page: RootPage) {
+    if (pages.singleOrNull() == page) return
+    pages.clear()
+    pages.add(page)
+  }
+
+  /**
    * Opens the chat [chat] in place of a copy of it lower down, as 全体チャットで共有 does from
    * みんなのシフト opened from the chat: one chat, its draft kept as it was left, rather than two.
    */
@@ -266,6 +287,8 @@ class PageNavigation(private val navigator: RootNavigator, private val lifecycle
     get() = navigator.tab
 
   fun open(page: RootPage) = whenSettled { navigator.open(page) }
+
+  fun show(page: RootPage) = whenSettled { navigator.show(page) }
 
   fun replace(page: RootPage) = whenSettled { navigator.replace(page) }
 

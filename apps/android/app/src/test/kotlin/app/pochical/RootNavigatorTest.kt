@@ -71,4 +71,17 @@ class RootNavigatorTest {
     assertEquals(listOf(Tabs), navigator.routes)
     assertEquals("g2", navigator.openGroup)
   }
+
+  @Test
+  fun aPageOpenedFromTheTabsTakesThePlaceOfThoseOpen() {
+    navigator.select(RootTab.Groups)
+    navigator.show(RootPage.Chat("g1", "group"))
+    navigator.open(RootPage.ChatPhotos("g1", "group"))
+    navigator.show(RootPage.GroupShifts("g1"))
+    assertEquals(listOf(Tabs, RootPage.GroupShifts("g1")), navigator.routes)
+
+    // The same page picked again stays the one open, not a second copy of it.
+    navigator.show(RootPage.GroupShifts("g1"))
+    assertEquals(listOf(Tabs, RootPage.GroupShifts("g1")), navigator.routes)
+  }
 }

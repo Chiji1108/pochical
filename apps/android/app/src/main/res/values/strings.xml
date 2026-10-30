@@ -4,6 +4,8 @@
   <string name="tab_calendar">カレンダー</string>
   <string name="tab_groups">グループ</string>
   <string name="tab_settings">設定</string>
+  <string name="tab_groups_none_open">チャットを選んでください</string>
+  <string name="tab_settings_none_open">項目を選んでください</string>
   <string name="settings_display">表示</string>
   <string name="calendar_settings">カレンダー</string>
   <string name="picture">画像で保存</string>

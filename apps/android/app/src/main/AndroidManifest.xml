@@ -38,13 +38,17 @@
          One of it in its task: Sign in with Apple's page, in a Custom Tab
          where the browser has no Auth Tab, returns by the app's scheme
          (AppleSignIn), which comes back to the activity that opened it,
-         closing the tab above it. -->
+         closing the tab above it. The screens make room for the keyboard
+         themselves, from its insets (imePadding), as Compose asks: the window
+         is never panned over them, which would lift a composer already risen
+         a second time. -->
     <activity
       android:name=".MainActivity"
       android:configChanges="uiMode"
       android:exported="true"
       android:launchMode="singleTask"
       android:theme="@style/Theme.Pochical.Starting"
+      android:windowSoftInputMode="adjustResize"
       tools:ignore="Instantiatable">
       <intent-filter>
         <action android:name="android.intent.action.MAIN" />

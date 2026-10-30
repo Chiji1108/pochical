@@ -23,6 +23,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavEntry
+import androidx.navigation3.runtime.rememberDecoratedNavEntries
+import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import app.pochical.calendar.CalendarScreen
 import app.pochical.calendar.LocalOwnDays
@@ -63,6 +65,7 @@ import java.time.LocalDate
 /**
  * The tabs, under the pages `navigator` has over them: a page slides in from
  * the end over the screen under it, and a predictive back is Android's own.
+ * On a wide window グループ's and 設定's pages open beside the tabs instead (TabPanes).
  */
 @Composable
 fun RootScreen(navigator: RootNavigator) {
@@ -104,94 +107,106 @@ fun RootScreen(navigator: RootNavigator) {
   val push = remember(motion) { motion.push<RootRoute>() }
   val pop = remember(motion) { motion.pop<RootRoute>() }
   val predictivePop = remember(motion) { motion.predictivePop<RootRoute>() }
+  // Made again as the tab changes too, not only the pages, as where the tabs go on a wide window is the tab's.
+  val routes = navigator.routes
+  val tab = navigator.tab
+  val entries =
+    remember(routes, tab) {
+      routes.map { route -> NavEntry(route, metadata = paneOf(route, tab)) { Page(route, navigator) } }
+    }
   NavDisplay(
-    backStack = navigator.routes,
+    entries = rememberDecoratedNavEntries(entries, listOf(rememberSaveableStateHolderNavEntryDecorator())),
     onBack = navigator::back,
     // On the theme's ground, so what shows through as a page fades is the テーマ's, not the window's.
     modifier = Modifier.background(MaterialTheme.colorScheme.background),
+    sceneStrategies = listOf(rememberTabPanes()),
     transitionSpec = push,
     popTransitionSpec = pop,
     predictivePopTransitionSpec = predictivePop,
-  ) { route ->
-    when (route) {
-      Tabs -> NavEntry(route) { TabsScreen(navigator, rememberPageNavigation(navigator)) }
-      RootPage.Account -> NavEntry(route) { AccountPage(onBack = rememberPageNavigation(navigator)::back) }
-      RootPage.Appearance ->
-        NavEntry(route) { AppearancePage(onBack = rememberPageNavigation(navigator)::back) }
-      RootPage.Style -> NavEntry(route) { StylePage(onBack = rememberPageNavigation(navigator)::back) }
-      RootPage.ChatNotifications ->
-        NavEntry(route) { ChatNotificationsPage(onBack = rememberPageNavigation(navigator)::back) }
-      RootPage.Reminders -> NavEntry(route) { RemindersPage(rememberPageNavigation(navigator)) }
-      is RootPage.ReminderEditor -> NavEntry(route) { ReminderEditorPage(route.id, rememberPageNavigation(navigator)) }
-      RootPage.CalendarSettings -> NavEntry(route) { CalendarSettingsPage(onBack = rememberPageNavigation(navigator)::back) }
-      is RootPage.MonthPicture ->
-        NavEntry(route) { MonthPicturePage(java.time.YearMonth.parse(route.month), onBack = rememberPageNavigation(navigator)::back) }
-      is RootPage.DeviceCalendar ->
-        NavEntry(route) { DeviceCalendarPage(java.time.YearMonth.parse(route.month), rememberPageNavigation(navigator)) }
-      is RootPage.DeviceCalendarPatterns ->
-        NavEntry(route) { DeviceCalendarPatternsPage(java.time.YearMonth.parse(route.month), onBack = rememberPageNavigation(navigator)::back) }
-      RootPage.NewGroup ->
-        NavEntry(route) {
-          NewGroupPage(onBack = rememberPageNavigation(navigator)::back, onMade = { navigator.showGroup(it, RootPage.GroupInvite(it)) })
-        }
-      RootPage.Scan ->
-        NavEntry(route) {
-          val navigation = rememberPageNavigation(navigator)
-          ScanScreen(onClose = navigation::back, onInvite = { navigation.replace(RootPage.Join(it)) })
-        }
-      is RootPage.Join ->
-        NavEntry(route) {
-          JoinScreen(route.code, onClose = rememberPageNavigation(navigator)::back, onGroup = { navigator.showGroup(it) })
-        }
-      is RootPage.GroupInvite -> NavEntry(route) { InvitePage(route.groupId, onBack = rememberPageNavigation(navigator)::back) }
-      is RootPage.GroupSettings ->
-        NavEntry(route) {
-          val navigation = rememberPageNavigation(navigator)
-          GroupSettingsPage(
-            route.groupId,
-            onBack = navigation::back,
-            onEdit = { navigation.open(RootPage.GroupEdit(route.groupId)) },
-            onProfile = { navigation.open(RootPage.GroupProfile(route.groupId)) },
-            onInvite = { navigation.open(RootPage.GroupInvite(route.groupId)) },
-            onLeft = navigator::closePages,
-            onMessage = { thread -> navigation.open(RootPage.Chat(route.groupId, thread)) },
-          )
-        }
-      is RootPage.GroupShifts ->
-        NavEntry(route) {
-          val navigation = rememberPageNavigation(navigator)
-          GroupShiftsPage(
-            route.groupId,
-            route.date?.let(LocalDate::parse),
-            onBack = navigation::back,
-            onShare = { day -> navigation.openChat(RootPage.Chat(route.groupId, GROUP_THREAD, sharing = day.toString())) },
-          )
-        }
-      is RootPage.Chat ->
-        NavEntry(route) {
-          val navigation = rememberPageNavigation(navigator)
-          ChatPage(route.groupId, route.threadId, onBack = navigation::back, open = navigation::open, sharing = route.sharing?.let(LocalDate::parse))
-        }
-      is RootPage.ChatPhotos -> NavEntry(route) { ChatPhotosPage(route.groupId, route.threadId, onBack = rememberPageNavigation(navigator)::back) }
-      is RootPage.GroupEdit ->NavEntry(route) { GroupEditPage(route.groupId, onBack = rememberPageNavigation(navigator)::back) }
-      is RootPage.GroupProfile -> NavEntry(route) { GroupProfilePage(route.groupId, onBack = rememberPageNavigation(navigator)::back) }
-      is RootPage.ShiftChoice ->
-        NavEntry(route) {
-          ShiftChoicePage(LocalDate.parse(route.date), onBack = rememberPageNavigation(navigator)::back)
-        }
-      RootPage.Patterns -> NavEntry(route) { PatternsPage(rememberPageNavigation(navigator)) }
-      RootPage.AddPattern -> NavEntry(route) { AddPatternPage(rememberPageNavigation(navigator)) }
-      is RootPage.PatternEditor ->
-        NavEntry(route) { PatternEditor(route.id, route.isNew, rememberPageNavigation(navigator)) }
-      RootPage.Repeat -> NavEntry(route) { RepeatPage(rememberPageNavigation(navigator)) }
-      is RootPage.RepeatPeriod -> NavEntry(route) { RepeatPeriodPage(route.start, rememberPageNavigation(navigator)) }
-      is RootPage.RepeatEditor -> NavEntry(route) { RepeatEditor(route.mode, rememberPageNavigation(navigator)) }
-      RootPage.StopRepeat -> NavEntry(route) { StopRepeatPage(rememberPageNavigation(navigator)) }
-      RootPage.JobChange -> NavEntry(route) { JobChangePage(rememberPageNavigation(navigator)) }
-      RootPage.Coworkers -> NavEntry(route) { CoworkersPage(rememberPageNavigation(navigator)) }
-      RootPage.Profile -> NavEntry(route) { ProfilePage(rememberPageNavigation(navigator)) }
-      is RootPage.CoworkerEditor -> NavEntry(route) { CoworkerEditorPage(route.id, rememberPageNavigation(navigator)) }
-    }
+  )
+}
+
+/** What [route] shows. */
+@Composable
+private fun Page(route: RootRoute, navigator: RootNavigator) {
+  when (route) {
+    Tabs -> TabsScreen(navigator, rememberPageNavigation(navigator))
+    RootPage.Account -> AccountPage(onBack = rememberPageNavigation(navigator)::back)
+    RootPage.Appearance ->
+      AppearancePage(onBack = rememberPageNavigation(navigator)::back)
+    RootPage.Style -> StylePage(onBack = rememberPageNavigation(navigator)::back)
+    RootPage.ChatNotifications ->
+      ChatNotificationsPage(onBack = rememberPageNavigation(navigator)::back)
+    RootPage.Reminders -> RemindersPage(rememberPageNavigation(navigator))
+    is RootPage.ReminderEditor -> ReminderEditorPage(route.id, rememberPageNavigation(navigator))
+    RootPage.CalendarSettings -> CalendarSettingsPage(onBack = rememberPageNavigation(navigator)::back)
+    is RootPage.MonthPicture ->
+      MonthPicturePage(java.time.YearMonth.parse(route.month), onBack = rememberPageNavigation(navigator)::back)
+    is RootPage.DeviceCalendar ->
+      DeviceCalendarPage(java.time.YearMonth.parse(route.month), rememberPageNavigation(navigator))
+    is RootPage.DeviceCalendarPatterns ->
+      DeviceCalendarPatternsPage(java.time.YearMonth.parse(route.month), onBack = rememberPageNavigation(navigator)::back)
+    RootPage.NewGroup ->
+      {
+        NewGroupPage(onBack = rememberPageNavigation(navigator)::back, onMade = { navigator.showGroup(it, RootPage.GroupInvite(it)) })
+      }
+    RootPage.Scan ->
+      {
+        val navigation = rememberPageNavigation(navigator)
+        ScanScreen(onClose = navigation::back, onInvite = { navigation.replace(RootPage.Join(it)) })
+      }
+    is RootPage.Join ->
+      {
+        JoinScreen(route.code, onClose = rememberPageNavigation(navigator)::back, onGroup = { navigator.showGroup(it) })
+      }
+    is RootPage.GroupInvite -> InvitePage(route.groupId, onBack = rememberPageNavigation(navigator)::back)
+    is RootPage.GroupSettings ->
+      {
+        val navigation = rememberPageNavigation(navigator)
+        GroupSettingsPage(
+          route.groupId,
+          onBack = navigation::back,
+          onEdit = { navigation.open(RootPage.GroupEdit(route.groupId)) },
+          onProfile = { navigation.open(RootPage.GroupProfile(route.groupId)) },
+          onInvite = { navigation.open(RootPage.GroupInvite(route.groupId)) },
+          onLeft = navigator::closePages,
+          onMessage = { thread -> navigation.open(RootPage.Chat(route.groupId, thread)) },
+        )
+      }
+    is RootPage.GroupShifts ->
+      {
+        val navigation = rememberPageNavigation(navigator)
+        GroupShiftsPage(
+          route.groupId,
+          route.date?.let(LocalDate::parse),
+          onBack = navigation::back,
+          onShare = { day -> navigation.openChat(RootPage.Chat(route.groupId, GROUP_THREAD, sharing = day.toString())) },
+        )
+      }
+    is RootPage.Chat ->
+      {
+        val navigation = rememberPageNavigation(navigator)
+        ChatPage(route.groupId, route.threadId, onBack = navigation::back, open = navigation::open, sharing = route.sharing?.let(LocalDate::parse))
+      }
+    is RootPage.ChatPhotos -> ChatPhotosPage(route.groupId, route.threadId, onBack = rememberPageNavigation(navigator)::back)
+    is RootPage.GroupEdit -> GroupEditPage(route.groupId, onBack = rememberPageNavigation(navigator)::back)
+    is RootPage.GroupProfile -> GroupProfilePage(route.groupId, onBack = rememberPageNavigation(navigator)::back)
+    is RootPage.ShiftChoice ->
+      {
+        ShiftChoicePage(LocalDate.parse(route.date), onBack = rememberPageNavigation(navigator)::back)
+      }
+    RootPage.Patterns -> PatternsPage(rememberPageNavigation(navigator))
+    RootPage.AddPattern -> AddPatternPage(rememberPageNavigation(navigator))
+    is RootPage.PatternEditor ->
+      PatternEditor(route.id, route.isNew, rememberPageNavigation(navigator))
+    RootPage.Repeat -> RepeatPage(rememberPageNavigation(navigator))
+    is RootPage.RepeatPeriod -> RepeatPeriodPage(route.start, rememberPageNavigation(navigator))
+    is RootPage.RepeatEditor -> RepeatEditor(route.mode, rememberPageNavigation(navigator))
+    RootPage.StopRepeat -> StopRepeatPage(rememberPageNavigation(navigator))
+    RootPage.JobChange -> JobChangePage(rememberPageNavigation(navigator))
+    RootPage.Coworkers -> CoworkersPage(rememberPageNavigation(navigator))
+    RootPage.Profile -> ProfilePage(rememberPageNavigation(navigator))
+    is RootPage.CoworkerEditor -> CoworkerEditorPage(route.id, rememberPageNavigation(navigator))
   }
 }
 
@@ -234,14 +249,14 @@ private fun TabsScreen(navigator: RootNavigator, navigation: PageNavigation) {
         when (navigation.tab) {
           RootTab.Calendar ->
             CalendarScreen(
-              open = navigation::open,
+              open = navigation::show,
               hidesTabBar = { barHidden = it },
               opening = navigator.openingDay,
               onOpening = { navigator.openingDay = null },
             )
           RootTab.Groups ->
-            GroupsScreen(navigator.openGroup, navigation::pickGroup, GroupsActions(onNew = { navigation.open(RootPage.NewGroup) }, onScan = { navigation.open(RootPage.Scan) }, onShifts = { id, day -> navigation.open(RootPage.GroupShifts(id, day?.toString())) }, onChat = { id, thread -> navigation.open(RootPage.Chat(id, thread)) }) { group -> GroupButtons(group.id, navigation::open) })
-          RootTab.Settings -> SettingsScreen(open = navigation::open)
+            GroupsScreen(navigator.openGroup, navigation::pickGroup, GroupsActions(onNew = { navigation.show(RootPage.NewGroup) }, onScan = { navigation.show(RootPage.Scan) }, onShifts = { id, day -> navigation.show(RootPage.GroupShifts(id, day?.toString())) }, onChat = { id, thread -> navigation.show(RootPage.Chat(id, thread)) }) { group -> GroupButtons(group.id, navigation::show) })
+          RootTab.Settings -> SettingsScreen(open = navigation::show)
         }
       }
     }
