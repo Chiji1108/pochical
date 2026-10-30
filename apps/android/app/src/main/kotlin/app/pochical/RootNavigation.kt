@@ -161,6 +161,7 @@ class RootNavigator(
 
   /** The group open in グループ, picked there; the first while none is, or once the one picked is gone. */
   var openGroup by openGroup
+    private set
 
   /** The tabs, then the pages over them, as the navigation shows them. */
   val routes: List<RootRoute>
@@ -191,9 +192,19 @@ class RootNavigator(
     pages.add(page)
   }
 
-  /** Goes to `tab`, as a tap on it does; the pages, none while the tab bar shows, stay. */
+  /**
+   * Goes to `tab`, as a tap on it does, without the pages of the tab left: none are open while the
+   * tab bar shows on a phone, and on a wide screen those beside the tabs close with it.
+   */
   fun select(tab: RootTab) {
+    if (tab != this.tab) pages.clear()
     this.tab = tab
+  }
+
+  /** Opens the group [groupId] in グループ, as its tab in the rail does, without the pages of the one left. */
+  fun pickGroup(groupId: String) {
+    pages.clear()
+    openGroup = groupId
   }
 
   /**
