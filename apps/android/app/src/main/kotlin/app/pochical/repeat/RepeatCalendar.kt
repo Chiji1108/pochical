@@ -13,34 +13,46 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.pochical.LocalDeviceSettings
+import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.calendar.DAY_FULL_HEIGHT
 import app.pochical.calendar.DayCell
 import app.pochical.calendar.DayEntry
 import app.pochical.calendar.DayLook
 import app.pochical.calendar.MonthGrid
+import app.pochical.calendar.MonthPicker
 import app.pochical.calendar.OffShown
 import app.pochical.calendar.OwnCalendar
+import app.pochical.calendar.PagerMonthName
 import app.pochical.calendar.Pattern
 import app.pochical.calendar.PatternKeys
 import app.pochical.calendar.TrayAction
@@ -106,6 +118,7 @@ fun RepeatCalendar(
   fun pageOf(month: YearMonth): Int = (ChronoUnit.MONTHS.between(origin, month).toInt() + MONTHS_AROUND).coerceIn(0, MONTHS_AROUND * 2)
   val shown = monthAt(pages.currentPage)
   val firstMonth = YearMonth.from(typing.anchor)
+  var choosingMonth by rememberSaveable { mutableStateOf(false) }
 
   // The frame's day comes into sight when a key or 翌日へ moves it past the month shown.
   LaunchedEffect(typing.cursorDay) {
@@ -120,11 +133,14 @@ fun RepeatCalendar(
 
   Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
     Row(Modifier.fillMaxWidth().heightIn(min = Metrics.touch), verticalAlignment = Alignment.CenterVertically) {
-      Text(
-        shown.monthWithYear(LocalDeviceSettings.current.device.heading.english),
-        style = MaterialTheme.typography.titleLarge,
-        modifier = Modifier.weight(1f),
-      )
+      // The month, which opens 月を選ぶ, rolling with the finger as the months go by (iOS's MonthTitleButton).
+      val english = LocalDeviceSettings.current.device.heading.english
+      val choose = stringResource(R.string.month_choose_hint)
+      TextButton(onClick = { choosingMonth = true }, Modifier.semantics { onClick(label = choose, action = null) }) {
+        PagerMonthName(pages, ::monthAt, { it.monthWithYear(english) }, MaterialTheme.typography.titleLarge.copy(color = LocalThemeColors.current.textPrimary))
+        Icon(painterResource(R.drawable.ic_expand_more), contentDescription = null, Modifier.padding(start = 4.dp).size(18.dp), tint = LocalThemeColors.current.textTertiary)
+      }
+      Spacer(Modifier.weight(1f))
       AnimatedVisibility(shown != firstMonth, enter = fadeIn(), exit = fadeOut()) {
         val label = stringResource(R.string.repeat_first_day_label)
         OutlinedButton(
@@ -137,6 +153,14 @@ fun RepeatCalendar(
           Text(stringResource(R.string.repeat_first_day))
         }
       }
+    }
+    if (choosingMonth) {
+      MonthPicker(
+        shown,
+        monthAt(0)..monthAt(MONTHS_AROUND * 2),
+        onPick = { scope.launch { pages.animateScrollToPage(pageOf(it), animationSpec = Springs.standard()) } },
+        onDismiss = { choosingMonth = false },
+      )
     }
     WeekdayRow(week)
     BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {

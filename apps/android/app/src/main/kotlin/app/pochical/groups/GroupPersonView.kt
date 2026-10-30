@@ -45,6 +45,8 @@ import app.pochical.calendar.WeekdayRow
 import app.pochical.calendar.holidayName
 import app.pochical.calendar.monthGridHeight
 import app.pochical.calendar.monthWeeks
+import app.pochical.calendar.PagerMonthName
+import app.pochical.calendar.yearMonthText
 import app.pochical.design.PochicalTextStyles
 import app.pochical.design.Radius
 import app.pochical.kit.GroupMember
@@ -112,7 +114,14 @@ fun GroupPersonView(
       back = if (month == thisMonth) null else stringResource(R.string.calendar_this_month),
       onChoose = { choosingMonth = true },
       onBack = { turnTo(thisMonth) },
-    )
+    ) {
+      PagerMonthName(
+        pages,
+        { thisMonth.plusMonths((it - PERSON_SPAN).toLong()) },
+        { it.yearMonthText },
+        PochicalTextStyles.headline.copy(color = LocalThemeColors.current.textPrimary),
+      )
+    }
     WeekdayRow(settings.device.week, Modifier.padding(horizontal = 16.dp))
     // Their marks in their own shape, the rest of the look the viewer's; shift names and days off
     // always shown, whatever the viewer's look, so no list of their patterns is needed.

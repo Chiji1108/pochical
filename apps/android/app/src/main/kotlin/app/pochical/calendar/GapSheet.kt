@@ -71,7 +71,24 @@ fun GapSheet(
   val offersBlank = picked.id !in blankAtOpen
   val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
   val scope = rememberCoroutineScope()
-  ListSheet(onDismiss, sheetState = sheet) {
+  // 〇〇にする at the sheet's foot, however many days are listed above it, as iOS's.
+  val fill: @Composable () -> Unit = {
+    Button(
+      shapes = ButtonDefaults.shapes(),
+      onClick = {
+        // The look first, so the days never show highlighted on their way to blank.
+        if (blank && offersBlank) {
+          settings.change { it.copy(look = it.look.withOffLook(OffLook.Blank, picked.id, offPatterns.map(Pattern::id))) }
+        }
+        onFill(picked)
+        scope.launch { sheet.hide() }.invokeOnCompletion { onDismiss() }
+      },
+      modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control),
+    ) {
+      Text(stringResource(R.string.gaps_fill, picked.name), style = MaterialTheme.typography.titleMedium)
+    }
+  }
+  ListSheet(onDismiss, sheetState = sheet, footer = fill) {
     item {
       Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(
@@ -115,20 +132,6 @@ fun GapSheet(
             on = blank,
             onChange = { blank = it },
           )
-        }
-        Button(
-          shapes = ButtonDefaults.shapes(),
-          onClick = {
-            // The look first, so the days never show highlighted on their way to blank.
-            if (blank && offersBlank) {
-              settings.change { it.copy(look = it.look.withOffLook(OffLook.Blank, picked.id, offPatterns.map(Pattern::id))) }
-            }
-            onFill(picked)
-            scope.launch { sheet.hide() }.invokeOnCompletion { onDismiss() }
-          },
-          modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control).padding(bottom = 8.dp),
-        ) {
-          Text(stringResource(R.string.gaps_fill, picked.name), style = MaterialTheme.typography.titleMedium)
         }
       }
     }

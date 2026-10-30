@@ -1,6 +1,16 @@
 package app.pochical.repeat
 
-import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.SeekableTransitionState
+import androidx.compose.animation.core.rememberTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,6 +29,7 @@ import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -48,6 +59,7 @@ import app.pochical.SettingsRow
 import app.pochical.SettingsSection
 import app.pochical.calendar.LocalOwnDays
 import app.pochical.calendar.pattern
+import app.pochical.calendar.rememberReducedMotion
 import app.pochical.calendar.slashText
 import app.pochical.design.JobTemplate
 import app.pochical.design.Metrics
@@ -60,6 +72,7 @@ import app.pochical.patterns.chosenPatterns
 import app.pochical.rowColors
 import app.pochical.segmentShapes
 import java.time.LocalDate
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 
@@ -120,7 +133,21 @@ fun JobChangePage(navigation: PageNavigation) {
   }
   // A step back is a question back, the first one leaving.
   val back = { if (steps.size > 1) steps = steps.dropLast(1) else navigation.back() }
-  BackHandler(enabled = steps.size > 1) { back() }
+  // The questions move in and out as iOS's do, a step back following the back gesture.
+  val reduceMotion = rememberReducedMotion()
+  val shownSteps = remember { SeekableTransitionState(steps) }
+  val moving = rememberTransition(shownSteps, label = "steps")
+  LaunchedEffect(steps) { if (reduceMotion) shownSteps.snapTo(steps) else shownSteps.animateTo(steps) }
+  PredictiveBackHandler(enabled = steps.size > 1) { gesture ->
+    val before = steps.dropLast(1)
+    try {
+      gesture.collect { if (!reduceMotion) shownSteps.seekTo(it.progress, before) }
+      steps = before
+    } catch (e: CancellationException) {
+      shownSteps.snapTo(steps)
+      throw e
+    }
+  }
 
   fun finish(ids: List<String>, sequence: List<String>, anchor: LocalDate, period: ShiftPeriod? = null) {
     if (finishing) return
@@ -148,114 +175,126 @@ fun JobChangePage(navigation: PageNavigation) {
       onPeriod = { go(JobStep.Period(ids)) },
     )
 
-  if (step is JobStep.Order) {
-    SettingsPage(
-      jobOrderTitle(jobTemplate(step.template)),
-      onBack = back,
-      collapsing = false,
-      actions = { TextButton(onClick = { confirming = true }, enabled = typing.sequence.isNotEmpty()) { Text(stringResource(R.string.entering_done)) } },
-    ) { padding ->
-      JobOrderCalendar(
-        typing,
-        { typing = it },
-        step.patterns,
-        cover = OrderCover.From(first),
-        before = calendar,
-        modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
-      )
-    }
-    if (confirming) {
-      AlertDialog(
-        onDismissRequest = { confirming = false },
-        title = { Text(stringResource(R.string.job_confirm_title, first.slashText)) },
-        text = { Text(stringResource(R.string.job_day_note)) },
-        confirmButton = {
-          TextButton(
-            onClick = {
-              confirming = false
-              finish(step.patterns, typing.sequence, typing.anchor)
+  moving.AnimatedContent(
+    transitionSpec = {
+      val on = if (targetState.size > initialState.size) 1 else -1
+      if (reduceMotion) {
+        EnterTransition.None togetherWith ExitTransition.None
+      } else {
+        (slideInHorizontally { it * on } + fadeIn()) togetherWith (slideOutHorizontally { -it * on / 4 } + fadeOut())
+      }
+    },
+    contentKey = { it.size },
+  ) { shown ->
+    val step = shown.last()
+    if (step is JobStep.Order) {
+      SettingsPage(
+        jobOrderTitle(jobTemplate(step.template)),
+        onBack = back,
+        collapsing = false,
+        actions = { TextButton(onClick = { confirming = true }, enabled = typing.sequence.isNotEmpty()) { Text(stringResource(R.string.entering_done)) } },
+      ) { padding ->
+        JobOrderCalendar(
+          typing,
+          { typing = it },
+          step.patterns,
+          cover = OrderCover.From(first),
+          before = calendar,
+          modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
+        )
+      }
+    } else {
+      SettingsPage(if (shown.size == 1) stringResource(R.string.job_change) else "", onBack = back, collapsing = false) { padding ->
+        LazyColumn(contentPadding = padding) {
+          when (step) {
+            JobStep.Day -> {
+              item { Footnote(stringResource(R.string.job_day_header)) }
+              item {
+                SettingsSection(footnote = stringResource(R.string.job_day_note)) {
+                  row { SettingsRow(stringResource(R.string.job_first_day), R.drawable.ic_event, onClick = { pickingDay = true }, value = first.slashText, end = RowEnd.None) }
+                }
+              }
+              item { Next(stringResource(R.string.job_next)) { go(JobStep.Kind) } }
             }
-          ) {
-            Text(stringResource(R.string.job_confirm))
-          }
-        },
-        dismissButton = { TextButton(onClick = { confirming = false }) { Text(stringResource(R.string.cancel)) } },
-      )
-    }
-    return
-  }
-
-  SettingsPage(if (steps.size == 1) stringResource(R.string.job_change) else "", onBack = back, collapsing = false) { padding ->
-    LazyColumn(contentPadding = padding) {
-      when (step) {
-        JobStep.Day -> {
-          item { Footnote(stringResource(R.string.job_day_header)) }
-          item {
-            SettingsSection(footnote = stringResource(R.string.job_day_note)) {
-              row { SettingsRow(stringResource(R.string.job_first_day), R.drawable.ic_event, onClick = { pickingDay = true }, value = first.slashText, end = RowEnd.None) }
+            JobStep.Kind -> {
+              item { Question(stringResource(R.string.job_repeats_title), stringResource(R.string.job_repeats_note)) }
+              item { SectionRow(0, 2) { Option("🔁", stringResource(R.string.job_repeats_yes), stringResource(R.string.job_repeats_yes_note)) { go(JobStep.Templates(rotation = true)) } } }
+              item { SectionRow(1, 2) { Option("📋", stringResource(R.string.job_repeats_no), stringResource(R.string.job_repeats_no_note)) { go(JobStep.Templates(rotation = false)) } } }
             }
-          }
-          item { Next(stringResource(R.string.job_next)) { go(JobStep.Kind) } }
-        }
-        JobStep.Kind -> {
-          item { Question(stringResource(R.string.job_repeats_title), stringResource(R.string.job_repeats_note)) }
-          item { SectionRow(0, 2) { Option("🔁", stringResource(R.string.job_repeats_yes), stringResource(R.string.job_repeats_yes_note)) { go(JobStep.Templates(rotation = true)) } } }
-          item { SectionRow(1, 2) { Option("📋", stringResource(R.string.job_repeats_no), stringResource(R.string.job_repeats_no_note)) { go(JobStep.Templates(rotation = false)) } } }
-        }
-        is JobStep.Templates -> {
-          item { Question(stringResource(R.string.job_kind_title), stringResource(R.string.job_kind_note)) }
-          val templates = if (step.rotation) ReadyPatterns.rotationTemplates else ReadyPatterns.rosterTemplates
-          templates.forEachIndexed { index, template ->
-            item(key = template.id) {
-              SectionRow(index, templates.size) {
-                TemplateRow(template) {
-                  picked = template.patternIds.toSet()
-                  go(JobStep.Patterns(template.id))
+            is JobStep.Templates -> {
+              item { Question(stringResource(R.string.job_kind_title), stringResource(R.string.job_kind_note)) }
+              val templates = if (step.rotation) ReadyPatterns.rotationTemplates else ReadyPatterns.rosterTemplates
+              templates.forEachIndexed { index, template ->
+                item(key = template.id) {
+                  SectionRow(index, templates.size) {
+                    TemplateRow(template) {
+                      picked = template.patternIds.toSet()
+                      go(JobStep.Patterns(template.id))
+                    }
+                  }
                 }
               }
             }
-          }
-        }
-        is JobStep.Patterns -> {
-          val template = jobTemplate(step.template)
-          item {
-            val (title, note) = patternsQuestion(template)
-            Question(title, note)
-          }
-          item { ReadyPatternChips(picked, { picked = it }, Modifier.fillMaxWidth().padding(16.dp), needed = template.needed) }
-          if (template.needed.isNotEmpty()) item { Footnote(stringResource(R.string.job_patterns_needed)) }
-          item {
-            Next(stringResource(if (template.asksMore) R.string.job_next else R.string.job_done), enabled = picked.isNotEmpty()) {
-              choose(template, chosenPatterns(picked))
-            }
-          }
-        }
-        // By the month first, ending the questions in one tap.
-        is JobStep.Period -> {
-          item { Question(stringResource(R.string.period_question_title), stringResource(R.string.period_question_note)) }
-          item {
-            SectionRow(0, 2) {
-              Option("🗓️", stringResource(R.string.period_question_month), stringResource(R.string.period_question_month_note)) {
-                finish(step.patterns, emptyList(), first, ShiftPeriod())
+            is JobStep.Patterns -> {
+              val template = jobTemplate(step.template)
+              item {
+                val (title, note) = patternsQuestion(template)
+                Question(title, note)
+              }
+              item { ReadyPatternChips(picked, { picked = it }, Modifier.fillMaxWidth().padding(16.dp), needed = template.needed) }
+              if (template.needed.isNotEmpty()) item { Footnote(stringResource(R.string.job_patterns_needed)) }
+              item {
+                Next(stringResource(if (template.asksMore) R.string.job_next else R.string.job_done), enabled = picked.isNotEmpty()) {
+                  choose(template, chosenPatterns(picked))
+                }
               }
             }
-          }
-          item {
-            SectionRow(1, 2) {
-              Option("📌", stringResource(R.string.period_question_mid_month), stringResource(R.string.period_question_mid_month_note)) {
-                go(JobStep.PeriodDay(step.patterns))
+            // By the month first, ending the questions in one tap.
+            is JobStep.Period -> {
+              item { Question(stringResource(R.string.period_question_title), stringResource(R.string.period_question_note)) }
+              item {
+                SectionRow(0, 2) {
+                  Option("🗓️", stringResource(R.string.period_question_month), stringResource(R.string.period_question_month_note)) {
+                    finish(step.patterns, emptyList(), first, ShiftPeriod())
+                  }
+                }
+              }
+              item {
+                SectionRow(1, 2) {
+                  Option("📌", stringResource(R.string.period_question_mid_month), stringResource(R.string.period_question_mid_month_note)) {
+                    go(JobStep.PeriodDay(step.patterns))
+                  }
+                }
               }
             }
+            is JobStep.PeriodDay -> {
+              item { Question(stringResource(R.string.period_question_day_title), stringResource(R.string.period_question_day_note)) }
+              item { PeriodChoices(periodStart, { periodStart = it }, starts = MID_MONTH_STARTS) }
+              item { Next(stringResource(R.string.job_done)) { finish(step.patterns, emptyList(), first, ShiftPeriod(periodStart)) } }
+            }
+            is JobStep.Order -> Unit
           }
         }
-        is JobStep.PeriodDay -> {
-          item { Question(stringResource(R.string.period_question_day_title), stringResource(R.string.period_question_day_note)) }
-          item { PeriodChoices(periodStart, { periodStart = it }, starts = MID_MONTH_STARTS) }
-          item { Next(stringResource(R.string.job_done)) { finish(step.patterns, emptyList(), first, ShiftPeriod(periodStart)) } }
-        }
-        is JobStep.Order -> Unit
       }
     }
+  }
+  if (confirming && step is JobStep.Order) {
+    AlertDialog(
+      onDismissRequest = { confirming = false },
+      title = { Text(stringResource(R.string.job_confirm_title, first.slashText)) },
+      text = { Text(stringResource(R.string.job_day_note)) },
+      confirmButton = {
+        TextButton(
+          onClick = {
+            confirming = false
+            finish(step.patterns, typing.sequence, typing.anchor)
+          }
+        ) {
+          Text(stringResource(R.string.job_confirm))
+        }
+      },
+      dismissButton = { TextButton(onClick = { confirming = false }) { Text(stringResource(R.string.cancel)) } },
+    )
   }
   if (pickingDay) DayPickerDialog(first, onPick = { start = it.toString() }, onDismiss = { pickingDay = false })
 }

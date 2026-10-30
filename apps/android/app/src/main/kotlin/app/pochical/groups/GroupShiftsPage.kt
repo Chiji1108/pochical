@@ -36,6 +36,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
@@ -51,6 +52,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -226,7 +228,9 @@ private fun ShiftsPage(group: GroupRow, opening: LocalDate?, onBack: () -> Unit,
   fun daysOf(month: YearMonth) = monthDays.getOrPut(month) { groupDays(shown, month.atDay(1), month.atEndOfMonth()) }
   val monthInSight by remember(places) { derivedStateOf { places.getOrNull(list.firstVisibleItemIndex)?.month ?: thisMonth } }
 
+  val bar = TopAppBarDefaults.pinnedScrollBehavior()
   BottomSheetScaffold(
+    modifier = Modifier.nestedScroll(bar.nestedScrollConnection),
     scaffoldState = sheet,
     sheetPeekHeight = 0.dp,
     sheetContent = {
@@ -235,7 +239,7 @@ private fun ShiftsPage(group: GroupRow, opening: LocalDate?, onBack: () -> Unit,
       }
     },
     topBar = {
-      PageBar(group.name, onBack) {
+      PageBar(group.name, onBack, bar) {
         if (members != null) {
           LayoutMenu(layout, onLayout = { pickedLayout = it }, onLegend = { legendOf = (shown.firstOrNull { it.userId != meId } ?: shown.firstOrNull())?.userId })
         }
@@ -338,26 +342,38 @@ fun togetherTitle(month: YearMonth, thisMonth: YearMonth): String =
 
 /**
  * The month in sight, which opens 月を選ぶ, its chevron saying so, and the way back ([back], 今日 or
- * 今月) while what it goes back to is out of sight (/design's MonthRow): over みんなのシフト's list and
- * over one person's month.
+ * 今月) while what it goes back to is out of sight (/design's MonthRow): over みんなのシフト's list,
+ * its name rolling to the next month as the list reaches it, and over one person's month, where
+ * [title] rolls it with the finger instead.
  */
+/** The month's name as a heading, rolling to the next month as it changes, up as the months go on and down as they go back. */
 @Composable
-fun MonthRow(month: YearMonth, back: String?, onChoose: () -> Unit, onBack: () -> Unit) {
+private fun RollingMonth(month: YearMonth) {
+  AnimatedContent(
+    month,
+    transitionSpec = {
+      val on = if (targetState > initialState) 1 else -1
+      (slideInVertically { it * on } + fadeIn()) togetherWith (slideOutVertically { -it * on } + fadeOut())
+    },
+    label = "month",
+  ) {
+    Text(it.yearMonthText, style = PochicalTextStyles.headline, color = LocalThemeColors.current.textPrimary)
+  }
+}
+
+@Composable
+fun MonthRow(
+  month: YearMonth,
+  back: String?,
+  onChoose: () -> Unit,
+  onBack: () -> Unit,
+  title: @Composable () -> Unit = { RollingMonth(month) },
+) {
   val colors = LocalThemeColors.current
   val choose = stringResource(R.string.month_choose_hint)
   Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(start = 8.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
     TextButton(onClick = onChoose, Modifier.semantics { onClick(label = choose, action = null) }) {
-      // The name rolls to the next month, up as the months go on and down as they go back.
-      AnimatedContent(
-        month,
-        transitionSpec = {
-          val on = if (targetState > initialState) 1 else -1
-          (slideInVertically { it * on } + fadeIn()) togetherWith (slideOutVertically { -it * on } + fadeOut())
-        },
-        label = "month",
-      ) {
-        Text(it.yearMonthText, style = PochicalTextStyles.headline, color = colors.textPrimary)
-      }
+      title()
       Icon(painterResource(R.drawable.ic_expand_more), contentDescription = null, Modifier.padding(start = 4.dp).size(18.dp), tint = colors.textTertiary)
     }
     Box(Modifier.weight(1f))

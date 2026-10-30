@@ -13,6 +13,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -30,14 +31,18 @@ import app.pochical.R
 import app.pochical.kit.GroupMemberRow
 import app.pochical.kit.GroupRow
 
-/** A page's bar over the tabs: [title], the way back and its [actions]. */
+/**
+ * A page's bar over the tabs: [title], the way back and its [actions]; over what scrolls, pinned and
+ * taking the scrolled color as it goes under ([scrollBehavior], its page's nestedScroll).
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PageBar(title: String, onBack: () -> Unit, actions: @Composable () -> Unit = {}) {
+fun PageBar(title: String, onBack: () -> Unit, scrollBehavior: TopAppBarScrollBehavior? = null, actions: @Composable () -> Unit = {}) {
   TopAppBar(
     title = { Text(title) },
     navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_back), stringResource(R.string.back)) } },
     actions = { actions() },
+    scrollBehavior = scrollBehavior,
   )
 }
 

@@ -12,6 +12,12 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
@@ -481,18 +487,26 @@ fun CalendarScreen(
           }
         }
         if (opened != null && !closing) {
-          DayDetail(
-            day = opened,
-            calendar = calendar,
-            days = days,
-            peopleOpen = peopleOpen,
-            onPeopleOpenChange = { peopleOpen = it },
-            onStep = { step -> openDay(opened.plusDays(step.toLong())) },
-            canStep = { step -> opened.plusDays(step.toLong()) in reachable },
-            onClose = { scope.launch { unfold() } },
-            onPickShift = { open(RootPage.ShiftChoice(opened.toString())) },
-            modifier = Modifier.weight(1f).padding(top = 8.dp).graphicsLayer { alpha = folding },
-          )
+          // Another day crossfades in, as iOS's; with reduced motion it just changes.
+          AnimatedContent(
+            opened,
+            Modifier.weight(1f).padding(top = 8.dp).graphicsLayer { alpha = folding },
+            transitionSpec = { if (reduceMotion) EnterTransition.None togetherWith ExitTransition.None else fadeIn() togetherWith fadeOut() },
+            label = "day",
+          ) { day ->
+            DayDetail(
+              day = day,
+              calendar = calendar,
+              days = days,
+              peopleOpen = peopleOpen,
+              onPeopleOpenChange = { peopleOpen = it },
+              onStep = { step -> openDay(day.plusDays(step.toLong())) },
+              canStep = { step -> day.plusDays(step.toLong()) in reachable },
+              onClose = { scope.launch { unfold() } },
+              onPickShift = { open(RootPage.ShiftChoice(day.toString())) },
+              modifier = Modifier.fillMaxSize(),
+            )
+          }
         }
       }
     }

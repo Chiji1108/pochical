@@ -47,6 +47,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -64,6 +65,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -373,9 +375,12 @@ private fun GroupHub(group: GroupRow, actions: GroupsActions) {
   val today = rememberToday()
   val members = rememberGroupMembers(group.id, today, today.plusDays(NEXT_TOGETHER_DAYS - 1))
   val me = rememberMeId()
+  val bar = TopAppBarDefaults.pinnedScrollBehavior()
   Scaffold(
+    Modifier.nestedScroll(bar.nestedScrollConnection),
     topBar = {
       TopAppBar(
+        scrollBehavior = bar,
         title = {
           Row(verticalAlignment = Alignment.CenterVertically) {
             GroupMarkBadge(
