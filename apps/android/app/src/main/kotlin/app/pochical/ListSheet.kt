@@ -29,7 +29,8 @@ import androidx.compose.ui.unit.dp
  * screen with its last rows out of reach (a whole group of GROUP_MAX_MEMBERS, a poll's days, a
  * month of blank days): its [title] as a heading, then [content], over the navigation bar. A
  * [footer], the sheet's one action, stays at its foot under the rows as they scroll, as iOS keeps a
- * sheet's button at its bottom.
+ * sheet's button at its bottom: with a [sheetState] that opens whole (skipPartiallyExpanded), as a
+ * half-open sheet would leave its foot below the screen.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

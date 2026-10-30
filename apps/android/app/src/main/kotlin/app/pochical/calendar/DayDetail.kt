@@ -1,6 +1,12 @@
 package app.pochical.calendar
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -59,9 +65,9 @@ import app.pochical.design.COWORKERS_MAX
 import app.pochical.design.TextLimits
 import app.pochical.kit.ShiftTime
 import app.pochical.kit.hoursText
+import app.pochical.kit.limitText
 import app.pochical.kit.minutes
 import app.pochical.kit.timeChange
-import app.pochical.kit.limitText
 import app.pochical.limited
 import java.time.LocalDate
 
@@ -82,10 +88,9 @@ fun DayDetail(
   canStep: (Int) -> Boolean,
   onClose: () -> Unit,
   onPickShift: () -> Unit,
+  reduceMotion: Boolean,
   modifier: Modifier = Modifier,
 ) {
-  val entry = calendar.shown(day, day)[day]
-  val pattern = entry?.let { shown -> calendar.patterns.find { it.id == shown.shift } }
   // Above the keyboard, so the memo being written scrolls into sight.
   Column(modifier.imePadding().verticalScroll(rememberScrollState()).navigationBarsPadding()) {
     Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -102,6 +107,31 @@ fun DayDetail(
       }
       IconButton(onClick = onClose) { Icon(painterResource(R.drawable.ic_close), stringResource(R.string.close)) }
     }
+    // Another day's crossfades in under the bar, as iOS's, the bar and its ‹ › staying put; with
+    // reduced motion it just changes.
+    AnimatedContent(
+      day,
+      transitionSpec = { if (reduceMotion) EnterTransition.None togetherWith ExitTransition.None else fadeIn() togetherWith fadeOut() },
+      label = "day",
+    ) { shown ->
+      DayHolds(shown, calendar, days, peopleOpen, onPeopleOpenChange, onPickShift)
+    }
+  }
+}
+
+/** What [day] holds under its bar: its shift, its own hours, the people on it and a memo. */
+@Composable
+private fun DayHolds(
+  day: LocalDate,
+  calendar: OwnCalendar,
+  days: OwnDays,
+  peopleOpen: Boolean,
+  onPeopleOpenChange: (Boolean) -> Unit,
+  onPickShift: () -> Unit,
+) {
+  val entry = calendar.shown(day, day)[day]
+  val pattern = entry?.let { shown -> calendar.patterns.find { it.id == shown.shift } }
+  Column {
     ListItem(
       headlineContent = { Text(stringResource(R.string.day_shift)) },
       trailingContent = {

@@ -73,7 +73,9 @@ import app.pochical.rowColors
 import app.pochical.segmentShapes
 import java.time.LocalDate
 import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 
 /** Where 新しい仕事にする's questions are. */
@@ -144,7 +146,8 @@ fun JobChangePage(navigation: PageNavigation) {
       gesture.collect { if (!reduceMotion) shownSteps.seekTo(it.progress, before) }
       steps = before
     } catch (e: CancellationException) {
-      shownSteps.snapTo(steps)
+      // The gesture let go short: back to the question shown, though its own job is done.
+      withContext(NonCancellable) { shownSteps.snapTo(steps) }
       throw e
     }
   }

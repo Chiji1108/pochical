@@ -65,6 +65,7 @@ import app.pochical.calendar.monthWithYear
 import app.pochical.calendar.pageCount
 import app.pochical.design.Metrics
 import app.pochical.design.Springs
+import app.pochical.groups.MonthChooser
 import app.pochical.kit.repeatSchedule
 import java.time.LocalDate
 import java.time.YearMonth
@@ -133,12 +134,10 @@ fun RepeatCalendar(
 
   Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
     Row(Modifier.fillMaxWidth().heightIn(min = Metrics.touch), verticalAlignment = Alignment.CenterVertically) {
-      // The month, which opens 月を選ぶ, rolling with the finger as the months go by (iOS's MonthTitleButton).
+      // The month, which opens 月を選ぶ, rolling with the finger as the months go by.
       val english = LocalDeviceSettings.current.device.heading.english
-      val choose = stringResource(R.string.month_choose_hint)
-      TextButton(onClick = { choosingMonth = true }, Modifier.semantics { onClick(label = choose, action = null) }) {
+      MonthChooser({ choosingMonth = true }, Modifier.weight(1f, fill = false)) {
         PagerMonthName(pages, ::monthAt, { it.monthWithYear(english) }, MaterialTheme.typography.titleLarge.copy(color = LocalThemeColors.current.textPrimary))
-        Icon(painterResource(R.drawable.ic_expand_more), contentDescription = null, Modifier.padding(start = 4.dp).size(18.dp), tint = LocalThemeColors.current.textTertiary)
       }
       Spacer(Modifier.weight(1f))
       AnimatedVisibility(shown != firstMonth, enter = fadeIn(), exit = fadeOut()) {

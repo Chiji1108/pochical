@@ -108,12 +108,18 @@ fun MonthName(pages: Float, monthAt: (Int) -> YearMonth, reduceMotion: Boolean, 
 fun PagerMonthName(pages: PagerState, monthAt: (Int) -> YearMonth, name: (YearMonth) -> String, style: TextStyle) {
   val reduceMotion = rememberReducedMotion()
   val toward by remember { derivedStateOf { pages.currentPageOffsetFraction.sign.toInt() } }
+  val shown = name(monthAt(pages.currentPage))
   BlendingText(
-    name(monthAt(pages.currentPage)),
+    shown,
     name(monthAt(pages.currentPage + toward)),
     { if (reduceMotion) 0f else pages.currentPageOffsetFraction },
     rolls = true,
     style,
+    // Read as the one month shown, as a heading, not the two names rolling.
+    Modifier.clearAndSetSemantics {
+      heading()
+      contentDescription = shown
+    },
   )
 }
 

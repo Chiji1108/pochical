@@ -230,7 +230,6 @@ private fun ShiftsPage(group: GroupRow, opening: LocalDate?, onBack: () -> Unit,
 
   val bar = TopAppBarDefaults.pinnedScrollBehavior()
   BottomSheetScaffold(
-    modifier = Modifier.nestedScroll(bar.nestedScrollConnection),
     scaffoldState = sheet,
     sheetPeekHeight = 0.dp,
     sheetContent = {
@@ -262,11 +261,12 @@ private fun ShiftsPage(group: GroupRow, opening: LocalDate?, onBack: () -> Unit,
         onPick = { pickedDay = if (it == picked) null else it.toString() },
         onTogether = { togetherOf = it.toString() },
         daysOf = ::daysOf,
-        modifier = Modifier.padding(padding).padding(bottom = bottom),
+        modifier = Modifier.nestedScroll(bar.nestedScrollConnection).padding(padding).padding(bottom = bottom),
       )
       return@BottomSheetScaffold
     }
-    Column(Modifier.padding(padding).fillMaxSize()) {
+    // The bar takes the scrolled color from the days, not from the sheet's rows.
+    Column(Modifier.nestedScroll(bar.nestedScrollConnection).padding(padding).fillMaxSize()) {
       MonthRow(monthInSight, back = if (todayInSight) null else stringResource(R.string.today), onChoose = { choosingMonth = true }, onBack = { go(today) })
       when (layout) {
         ShiftsLayout.Days ->
@@ -340,12 +340,6 @@ private fun ShiftsPage(group: GroupRow, opening: LocalDate?, onBack: () -> Unit,
 fun togetherTitle(month: YearMonth, thisMonth: YearMonth): String =
   stringResource(R.string.together_of, if (month == thisMonth) stringResource(R.string.calendar_this_month) else month.shortText(thisMonth))
 
-/**
- * The month in sight, which opens 月を選ぶ, its chevron saying so, and the way back ([back], 今日 or
- * 今月) while what it goes back to is out of sight (/design's MonthRow): over みんなのシフト's list,
- * its name rolling to the next month as the list reaches it, and over one person's month, where
- * [title] rolls it with the finger instead.
- */
 /** The month's name as a heading, rolling to the next month as it changes, up as the months go on and down as they go back. */
 @Composable
 private fun RollingMonth(month: YearMonth) {
@@ -361,6 +355,25 @@ private fun RollingMonth(month: YearMonth) {
   }
 }
 
+/**
+ * A month's name that opens 月を選ぶ ([onChoose]), its chevron saying so (iOS's MonthTitleButton):
+ * over みんなのシフト's list, one person's month and a repeating order's.
+ */
+@Composable
+fun MonthChooser(onChoose: () -> Unit, modifier: Modifier = Modifier, title: @Composable () -> Unit) {
+  val choose = stringResource(R.string.month_choose_hint)
+  TextButton(onClick = onChoose, modifier.semantics { onClick(label = choose, action = null) }) {
+    title()
+    Icon(painterResource(R.drawable.ic_expand_more), contentDescription = null, Modifier.padding(start = 4.dp).size(18.dp), tint = LocalThemeColors.current.textTertiary)
+  }
+}
+
+/**
+ * The month in sight, which opens 月を選ぶ, and the way back ([back], 今日 or 今月) while what it goes
+ * back to is out of sight (/design's MonthRow): over みんなのシフト's list, its name rolling to the
+ * next month as the list reaches it, and over one person's month, where [title] rolls it with the
+ * finger instead.
+ */
 @Composable
 fun MonthRow(
   month: YearMonth,
@@ -369,13 +382,8 @@ fun MonthRow(
   onBack: () -> Unit,
   title: @Composable () -> Unit = { RollingMonth(month) },
 ) {
-  val colors = LocalThemeColors.current
-  val choose = stringResource(R.string.month_choose_hint)
   Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(start = 8.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-    TextButton(onClick = onChoose, Modifier.semantics { onClick(label = choose, action = null) }) {
-      title()
-      Icon(painterResource(R.drawable.ic_expand_more), contentDescription = null, Modifier.padding(start = 4.dp).size(18.dp), tint = colors.textTertiary)
-    }
+    MonthChooser(onChoose, Modifier.weight(1f, fill = false), title)
     Box(Modifier.weight(1f))
     // Fades in and out as what it goes back to leaves sight and comes back, keeping its words as it
     // goes and pressed no more once going.

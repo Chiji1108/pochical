@@ -92,7 +92,8 @@ fun GroupPersonView(
   val pages = rememberPagerState(initialPage = pageOf(picked?.let(YearMonth::from) ?: thisMonth)) { PERSON_SPAN * 2 + 1 }
   val scope = rememberCoroutineScope()
   var choosingMonth by rememberSaveable { mutableStateOf(false) }
-  val month = thisMonth.plusMonths((pages.currentPage - PERSON_SPAN).toLong())
+  fun monthAt(page: Int): YearMonth = thisMonth.plusMonths((page - PERSON_SPAN).toLong())
+  val month = monthAt(pages.currentPage)
   fun turnTo(target: YearMonth) = scope.launch { pages.animateScrollToPage(pageOf(target)) }
 
   Column(modifier.verticalScroll(rememberScrollState()).padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -117,7 +118,7 @@ fun GroupPersonView(
     ) {
       PagerMonthName(
         pages,
-        { thisMonth.plusMonths((it - PERSON_SPAN).toLong()) },
+        ::monthAt,
         { it.yearMonthText },
         PochicalTextStyles.headline.copy(color = LocalThemeColors.current.textPrimary),
       )
