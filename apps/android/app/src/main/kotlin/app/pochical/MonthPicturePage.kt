@@ -212,9 +212,13 @@ fun MonthPicturePage(month: YearMonth, onBack: () -> Unit) {
               for (off in offs) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                   if (offs.size > 1) Text(off.name, fontWeight = FontWeight.SemiBold)
-                  ChoiceButtons(OffLook.entries, device.picture.options.offLook(off.id), { stringResource(it.title) }, modifier = Modifier) { look ->
-                    changeOptions(settings) { it.withOffLook(look, off.id, offs.map(Pattern::id)) }
-                  }
+                  // Inside the column's inset, which the pattern's name above it shares.
+                  ChoiceButtons(
+                    OffLook.entries,
+                    device.picture.options.offLook(off.id),
+                    { stringResource(it.title) },
+                    modifier = Modifier,
+                  ) { look -> changeOptions(settings) { it.withOffLook(look, off.id, offs.map(Pattern::id)) } }
                 }
               }
             }

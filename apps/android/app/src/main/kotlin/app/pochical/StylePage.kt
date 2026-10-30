@@ -250,9 +250,8 @@ private fun Sample(pattern: Pattern, look: Look) {
 /**
  * Choices side by side, each drawing what it does over its name, the one picked outlined in the
  * accent: Material's selection cards rather than iOS's segments, as a connected button group holds
- * a word and an icon, not a day; words alone are [ChoiceButtons]. A choice has no [sample] only
- * while there is no pattern to draw it on, and its name then sits in the middle, with no gap left
- * above it for a drawing that is not there.
+ * a word and an icon, not a day. With no [sample], while there is no pattern to draw them on, they
+ * are words alone, and so the connected button group, [ChoiceButtons].
  */
 @Composable
 fun <T> Choices(
@@ -263,6 +262,10 @@ fun <T> Choices(
   tall: Boolean = false,
   sample: (@Composable (T) -> Unit)?,
 ) {
+  if (sample == null) {
+    ChoiceButtons(options, picked, label, modifier = Modifier, onPick = onPick)
+    return
+  }
   val colors = LocalThemeColors.current
   Row(Modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
     for (option in options) {
@@ -282,7 +285,7 @@ fun <T> Choices(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
       ) {
-        if (sample != null) Box(Modifier.clearAndSetSemantics {}) { sample(option) }
+        Box(Modifier.clearAndSetSemantics {}) { sample(option) }
         Text(
           label(option),
           style = PochicalTextStyles.subheadline.copy(fontWeight = if (isPicked) FontWeight.SemiBold else FontWeight.Normal),
