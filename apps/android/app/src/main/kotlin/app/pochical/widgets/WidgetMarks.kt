@@ -147,6 +147,31 @@ private fun corners(canvas: Canvas, px: Float, change: TimeChange?, paint: Paint
   if (change.late) canvas.drawPath(Path().apply { moveTo(px, 0f); lineTo(px - side, 0f); lineTo(px, side); close() }, paint)
 }
 
+/** The width of いまのシフト's ring, a share of its side. */
+private const val RING_WIDTH = 0.08f
+
+/**
+ * いまのシフト's ring, [size] across, white on clear for the launcher to tint: [share] of it from the
+ * top round clockwise, what is left of the shift, the whole of it for its track.
+ */
+fun ringPicture(context: Context, size: Dp, share: Float): Bitmap {
+  val side = (size.value * context.resources.displayMetrics.density).toInt().coerceAtLeast(1)
+  val key = "ring|$side|$share"
+  drawn.get(key)?.let { return it }
+  val picture = createBitmap(side, side)
+  val paint =
+    Paint(Paint.ANTI_ALIAS_FLAG).apply {
+      color = android.graphics.Color.WHITE
+      style = Paint.Style.STROKE
+      strokeWidth = side * RING_WIDTH
+      strokeCap = Paint.Cap.ROUND
+    }
+  val inset = paint.strokeWidth / 2
+  Canvas(picture).drawArc(RectF(inset, inset, side - inset, side - inset), -90f, 360f * share, false, paint)
+  drawn.put(key, picture)
+  return picture
+}
+
 /** An emoji mark's corners alone, which take secondary words' color, as the app's do. */
 private fun cornersPicture(context: Context, size: Dp, change: TimeChange): Bitmap {
   val side = (size.value * context.resources.displayMetrics.density).toInt().coerceAtLeast(1)

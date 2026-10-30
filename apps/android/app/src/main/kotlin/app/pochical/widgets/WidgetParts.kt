@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -62,12 +63,14 @@ import app.pochical.design.Theme
 import app.pochical.design.ThemeColors
 import app.pochical.kit.DeviceSettings
 import app.pochical.kit.OffLook
+import app.pochical.kit.OwnCalendar
 import app.pochical.kit.WidgetDay
 import app.pochical.kit.WidgetTone
 import app.pochical.kit.dayName
 import app.pochical.mark
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.ZonedDateTime
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -186,11 +189,13 @@ abstract class PochicalWidget(
     val settings = sources.settings.first()
     val firstChoice = choiceIn(getAppWidgetState(context, stateDefinition, id))
     val firstRead = Companion(firstChoice, firstChoice?.let { sources.values.companion(it, LocalDate.now()).first() })
-    WidgetDayReceiver.schedule(context)
     provideContent {
       val shownCalendar by sources.calendar.collectAsState(calendar)
+      // The next turn, asked for again as the calendar changes while the session runs.
+      LaunchedEffect(shownCalendar) { WidgetDayReceiver.schedule(context, shownCalendar) }
       val shownSettings by sources.settings.collectAsState(settings)
-      val today by sources.today.collectAsState(LocalDate.now())
+      val at by remember(shownCalendar) { moments { turn(shownCalendar, it) } }.collectAsState(ZonedDateTime.now())
+      val today = at.toLocalDate()
       val choice = choiceIn(currentState())
       val read by
         remember(choice, today) {
@@ -204,8 +209,9 @@ abstract class PochicalWidget(
       val photos = companion?.let { WidgetPhotos.of(it, ownFace = chooses == Choosing.People) }
       val faces by remember(photos) { flow { emit(photos?.let { widgetFaces(context, it) } ?: WidgetFaces()) } }.collectAsState(WidgetFaces())
       val drawn =
-        remember(shownCalendar, shownSettings, today, read, faces) {
-          val entry = shownCalendar.widgetEntry(today, shownSettings.week, { it.holidayName(country) != null }, companion)
+        remember(shownCalendar, shownSettings, at, read, faces) {
+          // At the moment it is drawn, whatever brought it: `at` is only when it is drawn again by itself.
+          val entry = shownCalendar.widgetEntry(ZonedDateTime.now(), shownSettings.week, { it.holidayName(country) != null }, companion)
           // Picked, but no longer there: what the widget shows changes only when the person changes it.
           val gone = choice != null && read.choice == choice && companion == null
           Drawn(entry.copy(pickAgain = choice?.groupId?.takeIf { gone }), shownSettings, faces.takeIf { it.photos == photos } ?: WidgetFaces())
@@ -222,7 +228,7 @@ abstract class PochicalWidget(
 
   override suspend fun providePreview(context: Context, widgetCategory: Int) {
     val settings = (context.applicationContext as PochicalApplication).widgetSources.settings.first()
-    val drawn = Drawn(sampleWidgetEntry(LocalDate.now(), settings.week), settings)
+    val drawn = Drawn(sampleWidgetEntry(ZonedDateTime.now(), settings.week), settings)
     provideContent { Framed(drawn) }
   }
 
@@ -254,6 +260,9 @@ abstract class PochicalWidget(
     }
 
   @Composable protected abstract fun Content(drawn: Drawn)
+
+  /** When this kind next changes by itself after [at], of [calendar]: the next midnight, unless it says the hour. */
+  open fun turn(calendar: OwnCalendar, at: ZonedDateTime): ZonedDateTime = nextMidnight(at)
 
   /** Who a kind of widget can be set to. */
   enum class Choosing { Nobody, People, PeopleAndGroups }

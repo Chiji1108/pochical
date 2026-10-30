@@ -2,7 +2,11 @@ package app.pochical.kit
 
 import app.pochical.design.Widgets
 import java.time.DayOfWeek
+import java.time.Duration
 import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZonedDateTime
+import java.time.temporal.ChronoUnit
 
 // What a widget's entry says of a day and of days off (spec/widgets.md; iOS's WidgetEntry.swift in
 // PochicalKit), pinned by spec/vectors/widgets.json: the widgets' entry (:app's WidgetEntry) is
@@ -23,6 +27,8 @@ data class WidgetDay(
   val off: Boolean,
   /** "9:00 – 18:00", for a shift with a time: read aloud, not shown. */
   val time: String?,
+  /** The day's own start and end, else its pattern's, for a shift with hours: いまのシフト counts by them. */
+  val hours: ShiftTime?,
   /** What is shown instead, only on a day whose hours differ from its pattern's: 早出 7:00〜, 残業 〜20:00, or the hours alone. */
   val change: String?,
   /** 早出 and 残業, drawn on the mark's corners. */
@@ -36,7 +42,8 @@ data class WidgetDay(
       val drawn = pattern?.takeIf { shown != null }
       val standard = drawn?.time
       val moved = timeChange(shown?.start, shown?.end, standard)
-      val time = standard?.let { hoursText(shown?.start ?: it.start, shown?.end ?: it.end) }
+      val hours = standard?.let { ShiftTime(shown?.start ?: it.start, shown?.end ?: it.end) }
+      val time = hours?.let { hoursText(it.start, it.end) }
       val isHoliday = week.holiday && holiday
       return WidgetDay(
         date = date,
@@ -50,6 +57,7 @@ data class WidgetDay(
         pattern = drawn,
         off = drawn?.countsAsOff ?: false,
         time = time,
+        hours = hours,
         change = time?.let { widgetChange(it, moved) },
         timeChange = moved,
         noted = noted,
@@ -176,4 +184,46 @@ fun OwnCalendar.nextDayOff(today: LocalDate): LocalDate {
   fun day(inDays: Int) = widgetDay(today.plusDays(inDays.toLong()), shown, Week(), holiday = false)
   val first = day(0)
   return widgetOffs(first, people = emptyList(), dayAt = ::day).opens(first)
+}
+
+/** A shift with hours as a stretch of the clock: from its day's start to its end, the next day where the end comes at or before the start. */
+data class WidgetSpan(val day: WidgetDay, val start: ZonedDateTime, val end: ZonedDateTime)
+
+/**
+ * いまのシフト at [at]: the shift on, else the next with hours, as far as widgetRules.shiftLookaheadDays.
+ * Days off and shifts without hours are time off.
+ */
+data class WidgetNow(
+  val at: ZonedDateTime,
+  val on: WidgetSpan?,
+  val next: WidgetSpan?,
+  /** Whole days to the next shift's day, when it is more than countdownHours away; within them the words count down instead. */
+  val nextInDays: Int?,
+  /** When the entry is made again: as the shift on ends, as the next starts, countdownHours before it starts, else at midnight. */
+  val refresh: ZonedDateTime,
+)
+
+/** [day]'s shift as a stretch of the clock in [at]'s zone; none for a day off, a shift without hours or hours that are not a time. */
+private fun span(day: WidgetDay, at: ZonedDateTime): WidgetSpan? {
+  val hours = day.hours?.takeUnless { day.off } ?: return null
+  val from = minutesOrNull(hours.start) ?: return null
+  val to = minutesOrNull(hours.end) ?: return null
+  fun clock(date: LocalDate, minutes: Int) = date.atTime(LocalTime.ofSecondOfDay(minutes * 60L)).atZone(at.zone)
+  val start = clock(day.date, from)
+  val end = clock(day.date, to).let { if (it <= start) clock(day.date.plusDays(1), to) else it }
+  return WidgetSpan(day, start, end)
+}
+
+/** いまのシフト at [at], [dayAt] giving each day by how many days it is from [at]'s: yesterday's shift may still be on past midnight. */
+fun widgetNow(at: ZonedDateTime, dayAt: (Int) -> WidgetDay): WidgetNow {
+  val spans = (-1..Widgets.shiftLookaheadDays).mapNotNull { span(dayAt(it), at) }
+  val on = spans.firstOrNull { it.start <= at && at < it.end }
+  val next = spans.firstOrNull { it.start > at }
+  val midnight = at.toLocalDate().plusDays(1).atStartOfDay(at.zone)
+  val countdown = Duration.ofHours(Widgets.countdownHours.toLong())
+  val turns = listOfNotNull(on?.end, next?.start, next?.start?.minus(countdown))
+  val refresh = turns.filter { it > at && it < midnight }.minOrNull() ?: midnight
+  val far = next != null && Duration.between(at, next.start) > countdown
+  val inDays = next?.let { ChronoUnit.DAYS.between(at.toLocalDate(), it.day.date).toInt() }
+  return WidgetNow(at, on, next, nextInDays = inDays?.takeIf { far }, refresh = refresh)
 }

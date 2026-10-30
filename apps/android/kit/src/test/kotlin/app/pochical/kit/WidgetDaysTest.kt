@@ -2,11 +2,15 @@ package app.pochical.kit
 
 import app.pochical.design.Widgets
 import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
+import java.time.ZonedDateTime
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonPrimitive
 import org.junit.Test
 
 @Serializable
-private data class WidgetVectors(val day: List<Day>, val offs: List<Offs>) {
+private data class WidgetVectors(val day: List<Day>, val offs: List<Offs>, val now: List<Now>) {
   @Serializable data class DayWords(val time: String?, val change: String?, val column: String?, val columnShort: String?)
 
   @Serializable
@@ -31,6 +35,14 @@ private data class WidgetVectors(val day: List<Day>, val offs: List<Offs>) {
   @Serializable
   data class Offs(override val name: String, val me: Days, val with: List<Days>, val group: Boolean = false, val expected: Counted) :
     VectorCase
+
+  @Serializable data class Shift(val shift: String, val start: String? = null, val end: String? = null)
+
+  /** Moments as [offset, "HH:MM", ...] from the Monday of offset 0. */
+  @Serializable
+  data class CountedNow(val on: List<JsonPrimitive>?, val next: List<JsonPrimitive>?, val nextInDays: Int?, val refresh: List<JsonPrimitive>)
+
+  @Serializable data class Now(override val name: String, val at: String, val days: Map<Int, Shift>, val expected: CountedNow) : VectorCase
 }
 
 /** What a widget's entry says of a day and of days off, as spec/vectors/widgets.json pins it for every platform. */
@@ -66,6 +78,41 @@ class WidgetDaysTest {
       val own = (0..Widgets.offLookaheadDays + 1).mapNotNull { inDays -> case.me.on(inDays)?.let { today.plusDays(inDays.toLong()) to OwnDay(it) } }
       OwnCalendar(listOf(pattern("work"), pattern("off")), own.toMap(), emptyList()).nextDayOff(today)
     }
+
+  @Test
+  fun countsTheShiftOnAndTheNext() =
+    widgets.now.checkEach({ it.expected }) { case ->
+      // Offset 0 is the Monday today is.
+      val patterns =
+        mapOf(
+          "day" to pattern("day", ShiftTime("09:00", "18:00")),
+          "night" to pattern("night", ShiftTime("16:30", "09:30")),
+          "duty" to pattern("duty", ShiftTime("08:30", "08:30")),
+          "after" to pattern("after"),
+          "offDuty" to pattern("offDuty"),
+          "off" to pattern("off"),
+        )
+      fun dayAt(inDays: Int): WidgetDay {
+        val shift = case.days[inDays]
+        val shown = shift?.let { ShownDay(it.shift, it.start, it.end) }
+        return WidgetDay.of(today.plusDays(inDays.toLong()), shown, shift?.let { patterns[it.shift] }, false, Week(), false)
+      }
+      val now = widgetNow(moment(0, case.at), ::dayAt)
+      fun stamps(start: ZonedDateTime, end: ZonedDateTime) = stamp(start) + stamp(end)
+      WidgetVectors.CountedNow(
+        on = now.on?.let { stamps(it.start, it.end) },
+        next = now.next?.let { stamps(it.start, it.end) },
+        nextInDays = now.nextInDays,
+        refresh = stamp(now.refresh),
+      )
+    }
+
+  private val tokyo = ZoneId.of("Asia/Tokyo")
+
+  private fun moment(inDays: Int, time: String) = today.plusDays(inDays.toLong()).atTime(LocalTime.parse(time)).atZone(tokyo)
+
+  /** [moment] as the vectors write one: its offset from today and its "HH:MM". */
+  private fun stamp(moment: ZonedDateTime) = listOf(JsonPrimitive(inDays(moment.toLocalDate())), JsonPrimitive(moment.toLocalTime().toString()))
 
   private fun inDays(date: LocalDate) = (date.toEpochDay() - today.toEpochDay()).toInt()
 
