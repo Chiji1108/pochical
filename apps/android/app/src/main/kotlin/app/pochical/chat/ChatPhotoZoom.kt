@@ -91,11 +91,12 @@ fun Modifier.largePhoto(photoId: String, scope: AnimatedVisibilityScope?): Modif
 }
 
 /**
- * Matched to its place only while the viewer [viewer] comes or goes. A match that outlives its
- * transition keeps the bounds the transition left it at, the photo's place on the screen not followed
- * after it, so the next transition would start from there, not from where a pull has taken the
- * photo since. Matched anew as the viewer goes, the transition takes the photo's bounds as it is laid
- * out then, the pull's offset among them.
+ * Matched to its place only while the viewer [viewer] comes or goes: a match takes two enabled
+ * entries of a key, so the place, enabled throughout, is matched only while this one is. A match
+ * that outlives its transition keeps the bounds the transition left it at, the photo's place on the
+ * screen not followed after it, so the next transition would start from there, not from where a
+ * pull has taken the photo since. Matched anew as the viewer goes, the transition takes the photo's
+ * bounds as it is laid out then, the pull's offset among them.
  */
 @OptIn(ExperimentalSharedTransitionApi::class)
 private class WhileComingOrGoing(private val viewer: AnimatedVisibilityScope) : SharedTransitionScope.SharedContentConfig {
