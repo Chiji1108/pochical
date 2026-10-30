@@ -12,22 +12,9 @@ val LocalDate.weekday: Int
 /** The first day of the week `this` is in, the week starting on [weekStart]. */
 fun LocalDate.weekStartingOn(weekStart: Int): LocalDate = minusDays(((weekday - weekStart + 7) % 7).toLong())
 
-/** The weekday of the week's [column], 0 its first, counted from the day it starts on. */
-fun Week.weekdayAt(column: Int): Int = (start + column) % 7
-
-/** How a weekday's name, or a day's date, is colored as the カレンダー settings have it. */
-enum class DayTone { Holiday, Saturday, Plain }
-
-/**
- * The tone of [weekday], a national [holiday] when the day is one: Sundays and holidays in
- * Sunday's color, Saturdays in theirs, each unless turned off.
- */
-fun Week.tone(weekday: Int, holiday: Boolean = false): DayTone =
-  when {
-    (holiday && this.holiday) || (weekday == 0 && sunday) -> DayTone.Holiday
-    weekday == 6 && saturday -> DayTone.Saturday
-    else -> DayTone.Plain
-  }
+/** Whether the day is a Saturday or a Sunday. */
+val LocalDate.isWeekend: Boolean
+  get() = weekday == 0 || weekday == 6
 
 /**
  * A page of the calendar's days (spec/calendar.md, The shift period; spec/vectors/periods.json), as

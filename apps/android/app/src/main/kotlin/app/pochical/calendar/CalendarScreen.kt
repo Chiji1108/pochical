@@ -95,9 +95,9 @@ import app.pochical.RootPage
 import app.pochical.design.Metrics
 import app.pochical.design.PochicalTextStyles
 import app.pochical.design.Springs
+import app.pochical.kit.DayTone
 import app.pochical.kit.Period
 import app.pochical.kit.ShiftPeriod
-import app.pochical.kit.DayTone
 import app.pochical.kit.Week
 import app.pochical.kit.byPeriod
 import app.pochical.kit.firstBlankDay
@@ -106,9 +106,7 @@ import app.pochical.kit.monthHolding
 import app.pochical.kit.page
 import app.pochical.kit.pageHolding
 import app.pochical.kit.selectedAfterEntering
-import app.pochical.kit.tone
 import app.pochical.kit.weekStartingOn
-import app.pochical.kit.weekdayAt
 import app.pochical.notifications.LocalNotificationAsking
 import app.pochical.reminders.ReminderOfferDialog
 import app.pochical.reminders.reminderOfferTime

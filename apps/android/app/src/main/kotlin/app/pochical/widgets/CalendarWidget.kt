@@ -27,8 +27,6 @@ import app.pochical.calendar.monthText
 import app.pochical.calendar.weekdayLetter
 import app.pochical.kit.Week
 import app.pochical.kit.WidgetDay
-import app.pochical.kit.tone
-import app.pochical.kit.weekdayAt
 import java.time.YearMonth
 
 /**

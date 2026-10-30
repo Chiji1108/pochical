@@ -55,7 +55,6 @@ import app.pochical.design.Radius
 import app.pochical.kit.GroupMember
 import app.pochical.kit.PhotoShelf
 import app.pochical.kit.weekday
-import app.pochical.kit.weekdayAt
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 

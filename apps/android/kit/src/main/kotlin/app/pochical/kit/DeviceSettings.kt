@@ -182,7 +182,24 @@ data class Week(
   val sunday: Boolean = true,
   val saturday: Boolean = true,
   val holiday: Boolean = true,
-)
+) {
+  /** The weekday of the week's [column], 0 its first, counted from the day it starts on. */
+  fun weekdayAt(column: Int): Int = (start + column) % 7
+
+  /**
+   * How [weekday] is colored, a national [holiday] when the day is one: Sundays and holidays in
+   * Sunday's color, Saturdays in theirs, each unless turned off.
+   */
+  fun tone(weekday: Int, holiday: Boolean = false): DayTone =
+    when {
+      (holiday && this.holiday) || (weekday == 0 && sunday) -> DayTone.Holiday
+      weekday == 6 && saturday -> DayTone.Saturday
+      else -> DayTone.Plain
+    }
+}
+
+/** How a weekday's name, or a day's date, is colored as the カレンダー settings have it ([Week.tone]). */
+enum class DayTone { Holiday, Saturday, Plain }
 
 /**
  * シフトの期間 (spec/calendar.md, The shift period): the day of the month a page starts on, 1 for

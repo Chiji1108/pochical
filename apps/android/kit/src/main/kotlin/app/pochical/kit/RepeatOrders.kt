@@ -108,7 +108,7 @@ fun ordersRemoving(orders: List<RepeatOrder>, start: LocalDate): List<RepeatOrde
 fun holidaysOffByDefault(sequence: List<String>, start: LocalDate, countsAsOff: (String) -> Boolean): Boolean =
   sequence.size == DAYS_A_WEEK &&
     sequence.withIndex().any { (index, shift) ->
-      countsAsOff(shift) && start.plusDays(index.toLong()).weekday.let { it == 0 || it == 6 }
+      countsAsOff(shift) && start.plusDays(index.toLong()).isWeekend
     }
 
 private const val DAYS_A_WEEK = 7

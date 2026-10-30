@@ -60,11 +60,11 @@ import app.pochical.calendar.shortMonth
 import app.pochical.calendar.weekdayName
 import app.pochical.design.Theme
 import app.pochical.design.ThemeColors
+import app.pochical.kit.DayTone
 import app.pochical.kit.DeviceSettings
 import app.pochical.kit.OffLook
 import app.pochical.kit.OwnCalendar
 import app.pochical.kit.WidgetDay
-import app.pochical.kit.DayTone
 import app.pochical.kit.dayName
 import app.pochical.kit.weekday
 import app.pochical.mark
