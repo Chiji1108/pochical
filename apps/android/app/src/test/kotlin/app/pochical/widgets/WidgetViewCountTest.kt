@@ -21,7 +21,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
+import org.robolectric.ParameterizedRobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
@@ -31,16 +31,21 @@ import org.robolectric.annotation.Config
  * off on its tile, its hours moved at both ends, in a month of six weeks with today in it. Each
  * must stay under [MOST], leaving room for what a day may show later. Before Android 12 Glance
  * spends more views on a view of a set size, so the views are counted there too.
+ *
+ * Each kind at each size is a case of its own, so each case's widgets are drawn well inside
+ * runTest's minute, on a slow runner as on a computer (#1078). The cases are named by plain words,
+ * and each widget is made in the case, inside Robolectric's sandbox.
  */
-@RunWith(RobolectricTestRunner::class)
+@RunWith(ParameterizedRobolectricTestRunner::class)
 @Config(sdk = [30, 36])
-class WidgetViewCountTest {
+class WidgetViewCountTest(kind: String, cells: String) {
+  private val widget = KINDS.getValue(kind)()
+  private val size = SIZES.getValue(cells)
   private val context = ApplicationProvider.getApplicationContext<Context>()
 
   @Test
-  fun everyKindStaysWellUnderGlancesViews() = runTest {
-    val kinds = listOf(SimpleWidget(), NextOffWidget(), UpcomingWidget(), CalendarWidget(), NowWidget())
-    for (widget in kinds) for (size in listOf(SMALL, MEDIUM, LARGE)) for (settings in settings()) for (entry in entries()) {
+  fun staysWellUnderGlancesViews() = runTest {
+    for (settings in settings()) for (entry in entries()) {
       val count = widget.preview(context, Drawn(entry, settings), size).apply(context, FrameLayout(context)).views()
       val drawn = "${widget.javaClass.simpleName} at $size in ${settings.look.style}, names ${settings.look.options.names}, with ${entry.with?.kind}"
       assertTrue("$drawn draws $count views, past $MOST of Glance's $GLANCE_VIEWS", count <= MOST)
@@ -78,7 +83,17 @@ class WidgetViewCountTest {
   private fun View.views(): Int =
     (if (this is ViewStub) 0 else 1) + ((this as? ViewGroup)?.let { group -> (0 until group.childCount).sumOf { group.getChildAt(it).views() } } ?: 0)
 
-  private companion object {
+  companion object {
+    private val KINDS: Map<String, () -> PochicalWidget> =
+      mapOf("simple" to ::SimpleWidget, "next_off" to ::NextOffWidget, "upcoming" to ::UpcomingWidget, "calendar" to ::CalendarWidget, "now" to ::NowWidget)
+
+    private val SIZES = mapOf("2×2" to SMALL, "4×2" to MEDIUM, "4×4" to LARGE)
+
+    /** Every kind at the 2×2, 4×2 and 4×4. */
+    @JvmStatic
+    @ParameterizedRobolectricTestRunner.Parameters(name = "{0} {1}")
+    fun cases(): List<Array<Any>> = KINDS.keys.flatMap { kind -> SIZES.keys.map { arrayOf<Any>(kind, it) } }
+
     /** A month of six weeks: August 2026, from Sunday. */
     val TODAY: LocalDate = LocalDate.of(2026, 8, 14)
 
