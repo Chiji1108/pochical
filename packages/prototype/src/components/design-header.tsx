@@ -264,14 +264,14 @@ const appBar = {
     bg: "background.base",
     display: "grid",
     gridTemplateColumns: "auto minmax(0, 1fr) auto",
-    // Out to the phone's sides, so nothing scrolls past beside it.
+    // Out to the phone's sides, so nothing scrolls past beside it, and up
+    // into the top padding of what scrolls, stuck at its top.
     marginLeft: "calc(-1 * var(--screen-left))",
     marginRight: "calc(-1 * var(--screen-right))",
+    marginTop: "calc(-1 * var(--screen-scroll-top))",
     minHeight: "calc(token(sizes.touch) + var(--screen-scroll-top))",
     paddingLeft: "var(--screen-left)",
     paddingRight: "var(--screen-right)",
-    // Up into the top padding of what scrolls, and stuck at its top.
-    marginTop: "calc(-1 * var(--screen-scroll-top))",
     paddingTop: "var(--screen-scroll-top)",
     position: "sticky",
     top: "calc(-1 * var(--screen-scroll-top))",
