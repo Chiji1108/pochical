@@ -35,6 +35,7 @@ import app.pochical.calendar.weekdayName
 import app.pochical.kit.ShiftPeriod
 import app.pochical.kit.Week
 import app.pochical.kit.byPeriod
+import app.pochical.kit.weekday
 import app.pochical.patterns.SwitchRow
 import java.time.YearMonth
 
@@ -84,7 +85,7 @@ fun CalendarSettingsPage(onBack: () -> Unit) {
       item {
         SectionHeader(stringResource(R.string.calendar_names))
         val month = YearMonth.from(today)
-        val weekday = today.dayOfWeek.value % 7
+        val weekday = today.weekday
         ChoiceButtons(
           listOf(false, true),
           device.heading.english,

@@ -48,13 +48,13 @@ import app.pochical.calendar.holidayName
 import app.pochical.calendar.holidayCountry
 import app.pochical.calendar.monthDayText
 import app.pochical.calendar.slashText
-import app.pochical.calendar.weekday
 import app.pochical.calendar.weekdayColor
 import app.pochical.calendar.weekdayLetter
 import app.pochical.design.PochicalTextStyles
 import app.pochical.design.Radius
 import app.pochical.kit.GroupMember
 import app.pochical.kit.PhotoShelf
+import app.pochical.kit.weekday
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 

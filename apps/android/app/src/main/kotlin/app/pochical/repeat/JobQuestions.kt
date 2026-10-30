@@ -6,10 +6,10 @@ import androidx.compose.ui.res.stringResource
 import app.pochical.R
 import app.pochical.calendar.OwnCalendar
 import app.pochical.calendar.holidayCountry
-import app.pochical.calendar.weekday
 import app.pochical.design.JobTemplate
 import app.pochical.kit.holidayShift
 import app.pochical.kit.holidaysOffByDefault
+import app.pochical.kit.weekday
 import java.time.LocalDate
 
 // The questions はじめの設定 and 新しい仕事にする both ask (spec/shift-patterns.md, Changing jobs),

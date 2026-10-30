@@ -30,11 +30,11 @@ import androidx.glance.semantics.contentDescription
 import androidx.glance.semantics.semantics
 import app.pochical.R
 import app.pochical.calendar.slashText
-import app.pochical.calendar.weekday
 import app.pochical.calendar.weekdayName
 import app.pochical.kit.OwnCalendar
 import app.pochical.kit.WidgetNow
 import app.pochical.kit.WidgetSpan
+import app.pochical.kit.weekday
 import java.time.Duration
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit

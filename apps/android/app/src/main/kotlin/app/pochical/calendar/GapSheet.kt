@@ -36,6 +36,7 @@ import app.pochical.ShiftMark
 import app.pochical.design.Metrics
 import app.pochical.design.Radius
 import app.pochical.kit.OffLook
+import app.pochical.kit.weekday
 import app.pochical.patterns.SwitchRow
 import java.time.LocalDate
 import kotlinx.coroutines.launch

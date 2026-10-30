@@ -6,7 +6,7 @@ How the prototype at try.pochical.app (`apps/try`) behaves once it is opened, as
 
 - Once the app has been opened online and its service worker has installed, it opens and works without the network: the calendar, the patterns, the groups and the chat as the prototype draws them, from the data it keeps on the device. On iOS an app added to the home screen keeps its own storage, apart from Safari's, so it must itself be opened online once.
 - Offline, every path draws the app, as online (`not_found_handling: single-page-application`), whatever its query. A path whose last part has a dot is taken for a file and goes to the network.
-- The service worker (Workbox's, written by vite-plugin-pwa at build time) keeps the app shell and its build: `index.html`, the scripts and styles, the images the app draws (the icon, the poodle), the manifest and its icons. The prototype uses no web fonts. iOS's launch images are not kept, as iOS reads them only when the app is added.
+- The service worker (Workbox's, written by vite-plugin-pwa at build time) keeps the app shell and its build: `index.html`, the scripts and styles, the images the app draws (the icon, the poodle), the manifest and its icons. The prototype uses no web fonts. iOS's launch images are not kept, as iOS reads them only when the app is added, nor are the manifest's screenshots, which a browser shows only as it offers to install the app.
 - Nothing from other sites is kept. Offline, the sample photos (picsum.photos) show as missing, and the emoji picker shows what it last kept itself, or nothing if it never loaded.
 
 ## Updates
