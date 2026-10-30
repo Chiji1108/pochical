@@ -201,6 +201,7 @@ private struct NowSmall: View {
             .font(.footnote.monospacedDigit())
             .foregroundStyle(colors.textSecondary)
         }
+        .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
       }
       .frame(maxHeight: .infinity)

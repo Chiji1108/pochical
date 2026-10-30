@@ -108,7 +108,7 @@ private fun On(span: WidgetSpan, now: WidgetNow, drawn: Drawn, words: NowWords) 
     Spacer(GlanceModifier.height(8.dp))
     // The words centered under it, one group with it.
     Countdown(now.at, span.end, words.left, 15.sp)
-    Words(words.until(span), drawn.colors.secondary, 13.sp)
+    Words(words.until(span), drawn.colors.secondary, 13.sp, center = true)
   }
 }
 
