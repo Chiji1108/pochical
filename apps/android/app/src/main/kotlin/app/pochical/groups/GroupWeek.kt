@@ -55,6 +55,7 @@ import app.pochical.design.Radius
 import app.pochical.kit.GroupMember
 import app.pochical.kit.PhotoShelf
 import app.pochical.kit.weekday
+import app.pochical.kit.weekdayAt
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
@@ -78,7 +79,7 @@ fun GroupWeekdays(modifier: Modifier = Modifier, compact: Boolean = false, days:
   Row(modifier.clearAndSetSemantics {}) {
     Spacer(Modifier.width(facesWidth(compact)))
     repeat(7) { index ->
-      val weekday = days?.get(index)?.weekday ?: ((week.start + index) % 7)
+      val weekday = days?.get(index)?.weekday ?: week.weekdayAt(index)
       Text(
         weekdayLetter(weekday),
         Modifier.weight(1f),

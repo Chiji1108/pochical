@@ -27,7 +27,8 @@ import app.pochical.calendar.monthText
 import app.pochical.calendar.weekdayLetter
 import app.pochical.kit.Week
 import app.pochical.kit.WidgetDay
-import app.pochical.kit.WidgetTone
+import app.pochical.kit.tone
+import app.pochical.kit.weekdayAt
 import java.time.YearMonth
 
 /**
@@ -108,15 +109,9 @@ private fun MonthView(drawn: Drawn) {
 private fun WeekdayHeads(week: Week, drawn: Drawn) {
   Row(GlanceModifier.fillMaxWidth()) {
     for (index in 0 until 7) {
-      val weekday = (week.start + index) % 7
-      val tone =
-        when {
-          weekday == 0 && week.sunday -> WidgetTone.Holiday
-          weekday == 6 && week.saturday -> WidgetTone.Saturday
-          else -> WidgetTone.Plain
-        }
+      val weekday = week.weekdayAt(index)
       Box(GlanceModifier.defaultWeight(), contentAlignment = Alignment.Center) {
-        Words(weekdayLetter(weekday, drawn.english), drawn.colors.weekday(tone), 11.sp)
+        Words(weekdayLetter(weekday, drawn.english), drawn.colors.weekday(week.tone(weekday)), 11.sp)
       }
     }
   }

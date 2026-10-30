@@ -64,7 +64,7 @@ import app.pochical.kit.DeviceSettings
 import app.pochical.kit.OffLook
 import app.pochical.kit.OwnCalendar
 import app.pochical.kit.WidgetDay
-import app.pochical.kit.WidgetTone
+import app.pochical.kit.DayTone
 import app.pochical.kit.dayName
 import app.pochical.kit.weekday
 import app.pochical.mark
@@ -126,11 +126,11 @@ class WidgetColors(theme: Theme) {
 
   /** A weekday's color over a column of days: Sunday's and Saturday's as the person colors them, else quiet. */
   @Composable
-  fun weekday(tone: WidgetTone): ColorProvider =
+  fun weekday(tone: DayTone): ColorProvider =
     when (tone) {
-      WidgetTone.Holiday -> holiday
-      WidgetTone.Saturday -> saturday
-      WidgetTone.Plain -> quiet
+      DayTone.Holiday -> holiday
+      DayTone.Saturday -> saturday
+      DayTone.Plain -> quiet
     }
 }
 

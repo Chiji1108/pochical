@@ -97,6 +97,7 @@ import app.pochical.design.PochicalTextStyles
 import app.pochical.design.Springs
 import app.pochical.kit.Period
 import app.pochical.kit.ShiftPeriod
+import app.pochical.kit.DayTone
 import app.pochical.kit.Week
 import app.pochical.kit.byPeriod
 import app.pochical.kit.firstBlankDay
@@ -105,7 +106,9 @@ import app.pochical.kit.monthHolding
 import app.pochical.kit.page
 import app.pochical.kit.pageHolding
 import app.pochical.kit.selectedAfterEntering
+import app.pochical.kit.tone
 import app.pochical.kit.weekStartingOn
+import app.pochical.kit.weekdayAt
 import app.pochical.notifications.LocalNotificationAsking
 import app.pochical.reminders.ReminderOfferDialog
 import app.pochical.reminders.reminderOfferTime
@@ -763,10 +766,10 @@ internal fun MonthPicker(
 @Composable
 fun weekdayColor(weekday: Int, holiday: Boolean, week: Week, plain: Color): Color {
   val colors = LocalThemeColors.current
-  return when {
-    (holiday && week.holiday) || (weekday == 0 && week.sunday) -> colors.calendarHoliday
-    weekday == 6 && week.saturday -> colors.calendarSaturday
-    else -> plain
+  return when (week.tone(weekday, holiday)) {
+    DayTone.Holiday -> colors.calendarHoliday
+    DayTone.Saturday -> colors.calendarSaturday
+    DayTone.Plain -> plain
   }
 }
 
@@ -780,7 +783,7 @@ fun WeekdayRow(week: Week, modifier: Modifier = Modifier) {
   val english = LocalDeviceSettings.current.device.heading.english
   Row(modifier.clearAndSetSemantics {}, horizontalArrangement = Arrangement.spacedBy(DAY_GAP)) {
     repeat(7) { index ->
-      val weekday = (week.start + index) % 7
+      val weekday = week.weekdayAt(index)
       Text(
         weekdayLetter(weekday, english),
         Modifier.weight(1f),
