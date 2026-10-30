@@ -112,8 +112,9 @@ class DeviceCalendars(private val context: Context) {
       .query(
         Events.CONTENT_URI,
         arrayOf(Events._ID, Events.DESCRIPTION),
-        "${Events.DELETED} = 0 AND ${Events.CALENDAR_ACCESS_LEVEL} >= ? AND ${Events.DTSTART} >= ? AND ${Events.DTSTART} < ?",
-        arrayOf(Calendars.CAL_ACCESS_CONTRIBUTOR.toString(), from.toString(), to.toString()),
+        "${Events.DELETED} = 0 AND ${Events.CALENDAR_ACCESS_LEVEL} >= ? AND ${Events.DTSTART} >= ? AND ${Events.DTSTART} < ? AND " +
+          "${Events.DESCRIPTION} LIKE ?",
+        arrayOf(Calendars.CAL_ACCESS_CONTRIBUTOR.toString(), from.toString(), to.toString(), "%pochical://day/%"),
         null,
       )
       ?.use { rows ->

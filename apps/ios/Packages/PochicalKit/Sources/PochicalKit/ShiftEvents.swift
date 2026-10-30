@@ -24,6 +24,12 @@ public struct ShiftEvent: Hashable, Sendable {
 /// keeps, Google's sync too, where a link or a property of the app's own
 /// may not survive (spec/calendar.md, Adding a month to the device
 /// calendar).
+/// The link that opens the app on a day: the calendar on its week with
+/// that day picked (spec/widgets.md, Opening the app).
+public func dayLink(_ day: Day) -> URL {
+  URL(string: "pochical://day/\(day.key)")!
+}
+
 public struct EventMark: Hashable, Sendable {
   public let day: Day
   public let user: String
@@ -33,7 +39,7 @@ public struct EventMark: Hashable, Sendable {
     self.user = user
   }
 
-  public var link: String { "pochical://day/\(day.key)?by=\(user)" }
+  public var link: String { "\(dayLink(day).absoluteString)?by=\(user)" }
 
   /// The notes an event goes in with: its own, then the mark on a line of
   /// its own.
@@ -42,10 +48,13 @@ public struct EventMark: Hashable, Sendable {
   }
 
   /// The mark on a line of its own in an event's notes, whoever's; nil
-  /// for an event not Pochical's.
+  /// for an event not Pochical's. The last such line, as the mark goes in
+  /// last, after a memo that may hold one copied from another event.
+  /// Lines end at a line feed, each taken without the spaces, tabs and
+  /// carriage return around it, as Android reads them.
   public init?(notes: String?) {
-    let found = notes?.split(whereSeparator: \.isNewline).lazy.compactMap { line in
-      line.trimmingCharacters(in: .whitespaces)
+    let found = notes?.components(separatedBy: "\n").reversed().lazy.compactMap { line in
+      line.trimmingCharacters(in: CharacterSet(charactersIn: " \t\r"))
         .wholeMatch(of: /pochical:\/\/day\/(\d{4}-\d{2}-\d{2})\?by=([A-Za-z0-9]+)/)
         .flatMap { match in Day(String(match.1)).map { (day: $0, user: String(match.2)) } }
     }.first

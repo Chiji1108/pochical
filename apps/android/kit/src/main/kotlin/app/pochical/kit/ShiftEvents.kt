@@ -92,7 +92,7 @@ private fun shiftEvent(
  */
 data class EventMark(val day: LocalDate, val user: String) {
   val link: String
-    get() = "pochical://day/$day?by=$user"
+    get() = "${dayLink(day)}?by=$user"
 
   /** The notes an event goes in with: its own, then the mark on a line of its own. */
   fun appendedTo(notes: String?): String = listOfNotNull(notes, link).joinToString("\n")
@@ -100,10 +100,15 @@ data class EventMark(val day: LocalDate, val user: String) {
   companion object {
     private val LINE = Regex("""pochical://day/(\d{4}-\d{2}-\d{2})\?by=([A-Za-z0-9]+)""")
 
-    /** The mark on a line of its own in an event's [notes], whoever's; none for an event not Pochical's. */
+    /**
+     * The mark on a line of its own in an event's [notes], whoever's; none for an event not
+     * Pochical's. The last such line, as the mark goes in last, after a memo that may hold one copied
+     * from another event. Lines end at a line feed, each taken without the spaces, tabs and carriage
+     * return around it, as iOS reads them.
+     */
     fun inNotes(notes: String?): EventMark? =
-      notes?.lineSequence()?.firstNotNullOfOrNull { line ->
-        val (day, user) = LINE.matchEntire(line.trim())?.destructured ?: return@firstNotNullOfOrNull null
+      notes?.split('\n')?.asReversed()?.firstNotNullOfOrNull { line ->
+        val (day, user) = LINE.matchEntire(line.trim(' ', '\t', '\r'))?.destructured ?: return@firstNotNullOfOrNull null
         try {
           EventMark(LocalDate.parse(day), user)
         } catch (_: DateTimeParseException) {
