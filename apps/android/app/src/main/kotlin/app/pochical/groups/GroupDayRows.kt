@@ -39,12 +39,12 @@ import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.calendar.holidayName
 import app.pochical.calendar.monthDayText
-import app.pochical.calendar.weekday
 import app.pochical.calendar.weekdayColor
 import app.pochical.calendar.weekdayLetter
 import app.pochical.design.PochicalTextStyles
 import app.pochical.kit.GroupMember
 import app.pochical.kit.PhotoShelf
+import app.pochical.kit.weekday
 import java.time.LocalDate
 
 /** How much of a member fits across 一覧 (/design's densityOf): names up to four people, marks alone up to seven; more scroll sideways. */

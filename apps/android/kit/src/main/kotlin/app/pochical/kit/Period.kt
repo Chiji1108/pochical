@@ -5,6 +5,13 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.temporal.ChronoUnit
 
+/** 0 for Sunday through 6 for Saturday, as spec/ and the settings count weekdays. */
+val LocalDate.weekday: Int
+  get() = dayOfWeek.value % 7
+
+/** The first day of the week `this` is in, the week starting on [weekStart]. */
+fun LocalDate.weekStartingOn(weekStart: Int): LocalDate = minusDays(((weekday - weekStart + 7) % 7).toLong())
+
 /**
  * A page of the calendar's days (spec/calendar.md, The shift period; spec/vectors/periods.json), as
  * iOS's Period: a month, or with a シフトの期間 the period starting on its day in a month and running
@@ -34,9 +41,8 @@ data class Period(val first: LocalDate, val last: LocalDate) {
    * Saturday): whole weeks holding it, the days before and after filling the first and last.
    */
   fun weeks(weekStart: Int): List<List<LocalDate>> {
-    val lead = (first.dayOfWeek.value % 7 - weekStart + 7) % 7
-    val from = first.minusDays(lead.toLong())
-    val count = (lead + length + 6) / 7
+    val from = first.weekStartingOn(weekStart)
+    val count = (ChronoUnit.DAYS.between(from, last).toInt() + 7) / 7
     return List(count) { week -> List(7) { from.plusDays((week * 7 + it).toLong()) } }
   }
 

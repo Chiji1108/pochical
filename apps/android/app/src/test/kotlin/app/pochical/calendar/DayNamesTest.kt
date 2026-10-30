@@ -1,5 +1,6 @@
 package app.pochical.calendar
 
+import app.pochical.kit.weekday
 import app.pochical.name
 import app.pochical.string
 import app.pochical.vectors
