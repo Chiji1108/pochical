@@ -96,27 +96,6 @@ private struct NoteStroke: ViewModifier {
   }
 }
 
-extension ThemeColors {
-  /// A weekday's color over a column of days: Sunday's and Saturday's as
-  /// the person colors them, else quiet.
-  func weekday(_ tone: WidgetTone) -> Color {
-    switch tone {
-    case .holiday: calendarHoliday
-    case .saturday: calendarSaturday
-    case .plain: textTertiary
-    }
-  }
-
-  /// A weekday's color in a week's heading, from the person's settings.
-  func weekday(_ weekday: Int, week: DeviceSettings.Week) -> Color {
-    switch weekday {
-    case 0 where week.sunday: calendarHoliday
-    case 6 where week.saturday: calendarSaturday
-    default: textTertiary
-    }
-  }
-}
-
 /// A day as one element for screen readers, read as `spoken`.
 struct SpokenDay: ViewModifier {
   @Environment(\.english) private var english

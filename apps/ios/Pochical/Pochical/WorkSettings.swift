@@ -340,12 +340,7 @@ struct SequenceTiles: View {
   /// A weekday's color as the person's カレンダー settings color it.
   private func tone(_ index: Int) -> Color {
     guard weekly else { return colors.textTertiary }
-    let week = settings.device.week
-    switch index % 7 {
-    case 0 where week.sunday: return colors.calendarHoliday
-    case 6 where week.saturday: return colors.calendarSaturday
-    default: return colors.textTertiary
-    }
+    return colors.color(settings.device.week.tone(index % 7), plain: colors.textTertiary)
   }
 }
 

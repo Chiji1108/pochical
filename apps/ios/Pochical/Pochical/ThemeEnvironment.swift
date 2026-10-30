@@ -12,6 +12,16 @@ extension ThemeColors {
   func mark(_ slot: Int) -> MarkColor {
     marks[min(max(slot, 0), marks.count - 1)]
   }
+
+  /// A weekday's or a date's tone (`DeviceSettings.Week.tone`) as this
+  /// テーマ colors it, `plain` for a day colored by neither.
+  func color(_ tone: DayTone, plain: Color) -> Color {
+    switch tone {
+    case .holiday: calendarHoliday
+    case .saturday: calendarSaturday
+    case .plain: plain
+    }
+  }
 }
 
 /// Puts the テーマ's colors in the environment for the screens under it,

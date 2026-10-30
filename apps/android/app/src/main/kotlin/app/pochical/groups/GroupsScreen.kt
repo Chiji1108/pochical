@@ -100,6 +100,7 @@ import app.pochical.kit.OwnCalendar
 import app.pochical.kit.OwnDay
 import app.pochical.kit.PatternRow
 import app.pochical.kit.PhotoShelf
+import app.pochical.kit.isWeekend
 import app.pochical.kit.readyCopies
 import app.pochical.kit.weekday
 import java.time.LocalDate
@@ -244,7 +245,7 @@ private fun sampleMembers(days: List<LocalDate>, country: String): List<GroupMem
   val part = samplePattern("part", "パート", "🛒", "shoppingBag", 2)
   // Sunday on: 明け, 休み, 日勤, 日勤, 夜勤, 明け, 休み.
   val nurseWeek = listOf("after", "off", "day", "day", "night", "after", "off")
-  val rests = { day: LocalDate -> day.weekday == 0 || day.weekday == 6 || day.holidayName(country) != null }
+  val rests = { day: LocalDate -> day.isWeekend || day.holidayName(country) != null }
   fun member(id: String, name: String, face: Int, patterns: List<PatternRow>, shift: (LocalDate) -> String) =
     GroupMember(
       userId = id,

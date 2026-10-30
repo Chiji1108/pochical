@@ -95,6 +95,7 @@ import app.pochical.RootPage
 import app.pochical.design.Metrics
 import app.pochical.design.PochicalTextStyles
 import app.pochical.design.Springs
+import app.pochical.kit.DayTone
 import app.pochical.kit.Period
 import app.pochical.kit.ShiftPeriod
 import app.pochical.kit.Week
@@ -763,10 +764,10 @@ internal fun MonthPicker(
 @Composable
 fun weekdayColor(weekday: Int, holiday: Boolean, week: Week, plain: Color): Color {
   val colors = LocalThemeColors.current
-  return when {
-    (holiday && week.holiday) || (weekday == 0 && week.sunday) -> colors.calendarHoliday
-    weekday == 6 && week.saturday -> colors.calendarSaturday
-    else -> plain
+  return when (week.tone(weekday, holiday)) {
+    DayTone.Holiday -> colors.calendarHoliday
+    DayTone.Saturday -> colors.calendarSaturday
+    DayTone.Plain -> plain
   }
 }
 
@@ -780,7 +781,7 @@ fun WeekdayRow(week: Week, modifier: Modifier = Modifier) {
   val english = LocalDeviceSettings.current.device.heading.english
   Row(modifier.clearAndSetSemantics {}, horizontalArrangement = Arrangement.spacedBy(DAY_GAP)) {
     repeat(7) { index ->
-      val weekday = (week.start + index) % 7
+      val weekday = week.weekdayAt(index)
       Text(
         weekdayLetter(weekday, english),
         Modifier.weight(1f),

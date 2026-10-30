@@ -784,23 +784,15 @@ struct WeekdayRow: View {
   var body: some View {
     HStack(spacing: 4) {
       ForEach(0..<7, id: \.self) { index in
-        let weekday = (week.start + index) % 7
+        let weekday = week.weekday(atColumn: index)
         Text(Day.weekdayLetter(weekday, english: english))
           .font(.system(size: 11))
-          .foregroundStyle(color(of: weekday))
+          .foregroundStyle(colors.color(week.tone(weekday), plain: colors.textTertiary))
           .frame(maxWidth: .infinity)
       }
     }
     .padding(.bottom, compact ? 8 : 12)
     .accessibilityHidden(true)
-  }
-
-  private func color(of weekday: Int) -> Color {
-    switch weekday {
-    case 0 where week.sunday: colors.calendarHoliday
-    case 6 where week.saturday: colors.calendarSaturday
-    default: colors.textTertiary
-    }
   }
 }
 

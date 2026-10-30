@@ -6,15 +6,10 @@ import PochicalDesign
 // WidgetKit's TimelineEntry draws only from this, never from the person's
 // database. How each field is worked out is pinned by spec/vectors/widgets.json.
 
-/// How a day's date is colored where it stands alone.
-public enum WidgetTone: String, Sendable {
-  case holiday, saturday, plain
-}
-
 /// One day of a widget's entry.
 public struct WidgetDay: Hashable, Sendable {
   public var date: Day
-  public var tone: WidgetTone
+  public var tone: DayTone
   /// A national holiday while 祝日 coloring is on: the one date a grid of
   /// days colors, Sundays and Saturdays being colored in the weekdays.
   public var holiday: Bool
@@ -179,9 +174,7 @@ extension WidgetDay {
     let time = hours.map { widgetHoursText($0.start, $0.end) }
     self.date = date
     self.holiday = week.holiday && isHoliday
-    tone =
-      self.holiday || (date.weekday == 0 && week.sunday)
-      ? .holiday : date.weekday == 6 && week.saturday ? .saturday : .plain
+    tone = week.tone(date.weekday, holiday: isHoliday)
     self.pattern = shown
     off = shown?.countsAsOff ?? false
     self.time = time

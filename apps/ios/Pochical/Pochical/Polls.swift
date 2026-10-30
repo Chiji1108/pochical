@@ -156,13 +156,8 @@ struct PollCard: View {
   }
 
   private func dayTone(_ day: Day) -> Color {
-    let week = settings.device.week
-    let holiday = week.holiday && day.holidayName != nil
-    return switch day.weekday {
-    case 0 where week.sunday: colors.calendarHoliday
-    case 6 where week.saturday: colors.calendarSaturday
-    default: holiday ? colors.calendarHoliday : colors.textPrimary
-    }
+    let tone = settings.device.week.tone(day.weekday, holiday: day.holidayName != nil)
+    return colors.color(tone, plain: colors.textPrimary)
   }
 }
 

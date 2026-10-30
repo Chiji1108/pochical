@@ -34,26 +34,18 @@ struct GroupWeekdays: View {
     HStack(spacing: 0) {
       Color.clear.frame(width: facesWidth(compact: compact), height: 1)
       ForEach(0..<7, id: \.self) { index in
-        let weekday = days.map { $0[index].weekday } ?? (week.start + index) % 7
+        let weekday = days.map { $0[index].weekday } ?? week.weekday(atColumn: index)
         // Run from today, a column's letter could not tell T from T.
         Text(
           days.map { $0[index].weekdayHead(english: english) }
             ?? Day.weekdayLetter(weekday, english: english)
         )
         .font(.system(size: 10))
-          .foregroundStyle(color(of: weekday, week: week))
+          .foregroundStyle(colors.color(week.tone(weekday), plain: colors.textQuaternary))
           .frame(maxWidth: .infinity)
       }
     }
     .accessibilityHidden(true)
-  }
-
-  private func color(of weekday: Int, week: DeviceSettings.Week) -> Color {
-    switch weekday {
-    case 0 where week.sunday: colors.calendarHoliday
-    case 6 where week.saturday: colors.calendarSaturday
-    default: colors.textQuaternary
-    }
   }
 }
 
@@ -166,15 +158,8 @@ struct GroupWeek: View, @MainActor Equatable {
     if marksToday, day == today {
       return colors.accentDefault
     }
-    let week = drawing.week
-    if week.holiday, day.holidayName != nil {
-      return colors.calendarHoliday
-    }
-    switch day.weekday {
-    case 0 where week.sunday: return colors.calendarHoliday
-    case 6 where week.saturday: return colors.calendarSaturday
-    default: return colors.textPrimary
-    }
+    let tone = drawing.week.tone(day.weekday, holiday: day.holidayName != nil)
+    return colors.color(tone, plain: colors.textPrimary)
   }
 
   private var dateHeight: CGFloat { compact ? 24 : 26 }

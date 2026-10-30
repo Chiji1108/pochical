@@ -12,6 +12,10 @@ val LocalDate.weekday: Int
 /** The first day of the week `this` is in, the week starting on [weekStart]. */
 fun LocalDate.weekStartingOn(weekStart: Int): LocalDate = minusDays(((weekday - weekStart + 7) % 7).toLong())
 
+/** Whether the day is a Saturday or a Sunday. */
+val LocalDate.isWeekend: Boolean
+  get() = weekday == 0 || weekday == 6
+
 /**
  * A page of the calendar's days (spec/calendar.md, The shift period; spec/vectors/periods.json), as
  * iOS's Period: a month, or with a シフトの期間 the period starting on its day in a month and running
