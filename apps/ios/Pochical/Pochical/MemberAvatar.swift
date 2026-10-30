@@ -93,7 +93,7 @@ struct PhotoEditor<Picture: View>: View {
         Button("写真を削除", systemImage: "trash", role: .destructive) { run(onRemove) }
       }
     } label: {
-      PictureHeader(label: label) {
+      PictureHeader(label: label, camera: true) {
         picture()
           .overlay {
             if busy { ProgressView() }
@@ -216,11 +216,26 @@ private func shrunkPicture(_ image: UIImage) async -> ShrunkPhoto? {
 struct PictureHeader<Picture: View>: View {
   @Environment(\.themeColors) private var colors
   let label: String
+  /// A camera on the picture's bottom right (/design's corner), saying
+  /// tapping it picks a photo, as the system's contact cards have it.
+  var camera = false
   @ViewBuilder let picture: () -> Picture
 
   var body: some View {
     VStack(spacing: 8) {
       picture()
+        .overlay(alignment: .bottomTrailing) {
+          if camera {
+            Image(systemName: "camera.fill")
+              .font(.system(size: 12, weight: .semibold))
+              .foregroundStyle(colors.accentDefault)
+              .frame(width: 26, height: 26)
+              .background(colors.backgroundCard, in: .circle)
+              .shadow(Shadow.sm)
+              .offset(x: 2, y: 2)
+              .accessibilityHidden(true)
+          }
+        }
       Text(label)
         .font(.subheadline)
         .foregroundStyle(colors.accentDefault)
