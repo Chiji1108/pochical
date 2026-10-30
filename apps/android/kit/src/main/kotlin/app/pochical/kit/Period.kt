@@ -42,7 +42,7 @@ data class Period(val first: LocalDate, val last: LocalDate) {
    */
   fun weeks(weekStart: Int): List<List<LocalDate>> {
     val from = first.weekStartingOn(weekStart)
-    val count = (ChronoUnit.DAYS.between(from, last).toInt() + 7) / 7
+    val count = (ChronoUnit.DAYS.between(from, first).toInt() + length + 6) / 7
     return List(count) { week -> List(7) { from.plusDays((week * 7 + it).toLong()) } }
   }
 
