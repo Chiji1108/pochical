@@ -466,9 +466,10 @@ class ChatValuesTest {
   }
 
   @Test
-  fun aGroupLeftWhileAwayGoesOnceAResetsCatchUpDoesNotBringItAgain() = runTest {
+  fun aGroupAResetsCatchUpDoesNotMentionGoesAsOneLeft() = runTest {
     database.listGroup("g1")
     database.listGroup("g2")
+    database.listGroup("g3")
     val album = chatLine {
       threadId = GROUP_THREAD
       seq = 2
@@ -480,10 +481,13 @@ class ChatValuesTest {
       take(listOf(change { member = member { userId = "u2"; displayName = "さくら"; photoId = "face" } }), "g1")
     }
 
-    // The Reset empties the list; its catch-up brings g2 again, and g1 never, left while away.
-    val held = database.write { placesHeld().also { reset() } }
-    database.write { take(listOf(change { membership = membership { groupId = "g2"; name = "仕事" } })) }
-    val gone = database.write { placesGone(held) }
+    // The Reset empties the list; its catch-up brings g2 again, says g3 was left, which goes with
+    // that change, and never mentions g1, which the DO restored from an older copy does not know.
+    val held = database.write { facesHeld().also { reset() } }
+    database.write {
+      take(listOf(change { membership = membership { groupId = "g2"; name = "仕事" } }, change { membership = membership { groupId = "g3"; left = true } }))
+    }
+    val gone = database.write { placesGone(held - "g3") }
 
     assertEquals(mapOf("g1" to listOf("p1", "face")), gone)
     assertTrue(database.read { photosHeld("g1") }.isEmpty())

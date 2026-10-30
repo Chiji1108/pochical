@@ -197,12 +197,13 @@ enum Groups {
   /// Reset of the user's socket empties the list until its catch-up brings
   /// them again.
   static func held(in db: Database) throws -> Set<String> {
-    Set(try GroupRow.fetchAll(db).map(\.id))
+    Set(try GroupRow.select(\.id).fetchAll(db))
   }
 
-  /// After a Reset's catch-up: the groups `held` before it that did not
-  /// come again were left while the user was away, as their `left` came
-  /// before the Reset and never again. Each goes as a group left does.
+  /// After a Reset's catch-up: the groups `held` before it that it did not
+  /// mention at all, as one the User DO, restored from an older copy, does
+  /// not know. Each goes as a group left does; one it said was left went
+  /// with that change.
   static func gone(since held: Set<String>, in db: Database) throws -> [String] {
     let now = try Self.held(in: db)
     let gone = held.subtracting(now).sorted()

@@ -152,8 +152,8 @@ class SyncClient internal constructor(
   private var catchUpNonce = 0
 
   /**
-   * The groups held before a Reset of the user's socket, with their photos, until its catch-up has
-   * come: kept over the sockets in between, as the catch-up starts again on each.
+   * The groups held before a Reset of the user's socket, with their faces then, until its catch-up
+   * has come: kept over the sockets in between, as the catch-up starts again on each.
    */
   private var heldBeforeReset: Map<String, List<String>>? = null
 
@@ -353,6 +353,11 @@ class SyncClient internal constructor(
             // Not one joined again later in the same changes.
             leaving = leaving.filterKeys { !isListed(it) }
           }
+          // One a Reset's catch-up says was left goes now, with its mark's photo from before the Reset.
+          heldBeforeReset?.let { held ->
+            leaving = leaving.mapValues { (groupId, photos) -> (photos + held[groupId].orEmpty()).distinct() }
+            heldBeforeReset = held - leaving.keys
+          }
           letGo(leaving)
         }
         log("Took ${changes.size} changes")
@@ -369,7 +374,8 @@ class SyncClient internal constructor(
         } else {
           // Those held before an earlier Reset whose catch-up has not come yet are still to be found.
           val before = heldBeforeReset.orEmpty()
-          heldBeforeReset = write { (before + placesHeld()).also { reset() } }
+          val held = write { facesHeld().also { reset() } }
+          heldBeforeReset = (before.keys + held.keys).associateWith { (before[it].orEmpty() + held[it].orEmpty()).distinct() }
         }
       ServerFrame.KindCase.ACKED -> {
         val acked = frame.acked
@@ -388,8 +394,8 @@ class SyncClient internal constructor(
       ServerFrame.KindCase.CHAT_PHOTOS -> mutablePhotoPages.tryEmit(ChatPhotosPage.of(frame.chatPhotos))
       ServerFrame.KindCase.PONG ->
         if (frame.pong.nonce == catchUpNonce) {
-          // A group left while away, before a Reset, comes again in no change: those held before it
-          // and not come again by its catch-up were left, and go as a group left does.
+          // A group a Reset's catch-up did not mention at all (the User DO restored from an older
+          // copy that does not know it) comes again in no change: it goes as a group left does.
           heldBeforeReset?.let { held ->
             val gone = write { placesGone(held) }
             heldBeforeReset = null
