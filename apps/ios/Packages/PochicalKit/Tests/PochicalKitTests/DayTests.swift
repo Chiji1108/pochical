@@ -77,8 +77,46 @@ struct MonthVectors: Decodable, Sendable {
     let expected: Expected
   }
 
+  struct Columns: VectorCase {
+    let name: String
+    let weekStart: Int
+    let expected: [Int]
+  }
+
+  struct Tones: VectorCase {
+    struct Colored: Decodable, Sendable {
+      let sunday: Bool
+      let saturday: Bool
+      let holiday: Bool
+    }
+
+    let name: String
+    let weekday: Int
+    let holiday: Bool
+    let week: Colored
+    let expected: String
+  }
+
   let weeks: [Case]
   let summary: [Summary]
+  let columns: [Columns]
+  let tones: [Tones]
+}
+
+@Test(arguments: try vectors("month", as: MonthVectors.self).columns)
+func numbersAPagesColumnsFromTheWeekStart(_ vector: MonthVectors.Columns) {
+  var week = DeviceSettings.Week()
+  week.start = vector.weekStart
+  #expect((0..<7).map { week.weekday(atColumn: $0) } == vector.expected)
+}
+
+@Test(arguments: try vectors("month", as: MonthVectors.self).tones)
+func colorsADayAsTheWeekHasIt(_ vector: MonthVectors.Tones) {
+  var week = DeviceSettings.Week()
+  week.sunday = vector.week.sunday
+  week.saturday = vector.week.saturday
+  week.holiday = vector.week.holiday
+  #expect(week.tone(vector.weekday, holiday: vector.holiday).rawValue == vector.expected)
 }
 
 @Test(arguments: try vectors("month", as: MonthVectors.self).summary)

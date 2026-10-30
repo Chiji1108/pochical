@@ -48,10 +48,10 @@ struct WeekdayHeads: View {
   var body: some View {
     HStack(spacing: 2) {
       ForEach(0..<7, id: \.self) { index in
-        let weekday = (week.start + index) % 7
+        let weekday = week.weekday(atColumn: index)
         Text(Day.weekdayLetter(weekday, english: english))
           .font(.caption2)
-          .foregroundStyle(colors.weekday(weekday, week: week))
+          .foregroundStyle(colors.weekday(week.tone(weekday)))
           .frame(maxWidth: .infinity)
       }
     }

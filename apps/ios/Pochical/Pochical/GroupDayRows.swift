@@ -343,15 +343,11 @@ struct GroupDayRow: View, @MainActor Equatable {
   }
 
   private func date() -> some View {
-    let week = drawing.week
-    let holiday = week.holiday && day.holidayName != nil
-    let tone: Color =
-      switch day.weekday {
-      case _ where day == today: colors.accentDefault
-      case 0 where week.sunday: colors.calendarHoliday
-      case 6 where week.saturday: colors.calendarSaturday
-      default: holiday ? colors.calendarHoliday : colors.textPrimary
-      }
+    let tone =
+      day == today
+      ? colors.accentDefault
+      : colors.color(
+        drawing.week.tone(day.weekday, holiday: day.holidayName != nil), plain: colors.textPrimary)
     return HStack(alignment: .firstTextBaseline, spacing: 3) {
       Text("\(day.day)")
         .font(.system(size: 12, weight: day == today ? .heavy : .semibold))

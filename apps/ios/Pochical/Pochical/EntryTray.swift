@@ -70,11 +70,7 @@ struct TrayDateLabel: View {
   }
 
   private var weekdayColor: Color {
-    let isHoliday = day.holidayName != nil
-    if (isHoliday && week.holiday) || (day.weekday == 0 && week.sunday) {
-      return colors.calendarHoliday
-    }
-    return day.weekday == 6 && week.saturday ? colors.calendarSaturday : colors.textTertiary
+    colors.color(week.tone(day.weekday, holiday: day.holidayName != nil), plain: colors.textTertiary)
   }
 }
 

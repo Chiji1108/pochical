@@ -30,12 +30,7 @@ func lineWords(_ content: LineContent, nameOf: (String) -> String) -> String {
 /// The date's color by the week's: Sundays and holidays in red, Saturdays
 /// in blue, as the person has them.
 private func dateTone(_ day: Day, week: DeviceSettings.Week, colors: ThemeColors) -> Color {
-  let holiday = week.holiday && day.holidayName != nil
-  return switch day.weekday {
-  case 0 where week.sunday: colors.calendarHoliday
-  case 6 where week.saturday: colors.calendarSaturday
-  default: holiday ? colors.calendarHoliday : colors.textPrimary
-  }
+  colors.color(week.tone(day.weekday, holiday: day.holidayName != nil), plain: colors.textPrimary)
 }
 
 /// Shared days with each person's shift (/design's DayCard). One day

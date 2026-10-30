@@ -6,11 +6,24 @@ import kotlinx.serialization.Serializable
 import org.junit.Test
 
 @Serializable
-private data class MonthVectors(val weeks: List<Weeks>, val summary: List<Summary>) {
+private data class MonthVectors(
+  val weeks: List<Weeks>,
+  val summary: List<Summary>,
+  val columns: List<Columns>,
+  val tones: List<Tones>,
+) {
   @Serializable data class Laid(val first: String, val last: String, val weeks: Int)
 
   @Serializable
   data class Weeks(override val name: String, val month: String, val weekStart: Int, val expected: Laid) : VectorCase
+
+  @Serializable data class Columns(override val name: String, val weekStart: Int, val expected: List<Int>) : VectorCase
+
+  @Serializable data class Colored(val sunday: Boolean, val saturday: Boolean, val holiday: Boolean)
+
+  @Serializable
+  data class Tones(override val name: String, val weekday: Int, val holiday: Boolean, val week: Colored, val expected: String) :
+    VectorCase
 
   @Serializable data class Pattern(val id: String, val countsAsOff: Boolean, val archived: Boolean = false)
 
@@ -29,7 +42,8 @@ private data class MonthVectors(val weeks: List<Weeks>, val summary: List<Summar
   ) : VectorCase
 }
 
-// A month's page (spec/vectors/month.json): its whole weeks, and what it counts.
+// A month's page (spec/vectors/month.json): its whole weeks, its columns' weekdays, how its days
+// are colored, and what it counts.
 class PageSummaryTest {
   @Test
   fun weeks() =
@@ -52,5 +66,20 @@ class PageSummaryTest {
           patterns,
         )
       MonthVectors.Expected(summary.daysOff, summary.counts.map { (id, days) -> MonthVectors.Count(id, days) }, summary.unfilled)
+    }
+
+  @Test
+  fun columns() =
+    vectors<MonthVectors>("month").columns.checkEach({ it.expected }) { case ->
+      (0 until 7).map { Week(start = case.weekStart).weekdayAt(it) }
+    }
+
+  @Test
+  fun tones() =
+    vectors<MonthVectors>("month").tones.checkEach({ it.expected }) { case ->
+      Week(sunday = case.week.sunday, saturday = case.week.saturday, holiday = case.week.holiday)
+        .tone(case.weekday, case.holiday)
+        .name
+        .lowercase()
     }
 }
