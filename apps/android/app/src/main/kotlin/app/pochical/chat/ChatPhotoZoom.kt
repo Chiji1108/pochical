@@ -15,6 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 
 // A photo opened large opens out of its place and closes back into the place of the photo then
 // shown (spec/chat.md, Photos), as Photos does and iOS's zoom transition: one shared element between
@@ -63,20 +64,42 @@ fun <T : Any> PhotoZoomLayout(
 
 /**
  * The place of the photo [photoId] in a line or the grid: the photo opened large comes out of it and
- * goes back into it, and it stands empty while the photo is shown large.
+ * goes back into it, and it stands empty while the photo is shown large, matched to the photo large
+ * or not ([largePhoto]).
  */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun Modifier.photoPlace(photoId: String): Modifier {
   val zoom = LocalPhotoZoom.current ?: return this
-  return with(zoom.scope) { sharedElementWithCallerManagedVisibility(rememberSharedContentState(photoId), visible = zoom.shown() != photoId) }
+  val empty = zoom.shown() == photoId
+  return with(zoom.scope) {
+    drawWithContent { if (!empty) drawContent() }.sharedElementWithCallerManagedVisibility(rememberSharedContentState(photoId), visible = !empty)
+  }
 }
 
-/** The photo [photoId] large, coming out of its place as the viewer [scope] opens and back into it as it closes. */
+/**
+ * The photo [photoId] large, coming out of its place as the viewer [scope] opens and back into it as
+ * it closes, from wherever it is then: pulled down, it goes back from where the finger let it go.
+ */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun Modifier.largePhoto(photoId: String, scope: AnimatedVisibilityScope?): Modifier {
   val zoom = LocalPhotoZoom.current ?: return this
   scope ?: return this
-  return with(zoom.scope) { sharedElement(rememberSharedContentState(photoId), scope) }
+  val config = remember(scope) { WhileComingOrGoing(scope) }
+  return with(zoom.scope) { sharedElement(rememberSharedContentState(photoId, config), scope) }
+}
+
+/**
+ * Matched to its place only while the viewer [viewer] comes or goes: a match takes two enabled
+ * entries of a key, so the place, enabled throughout, is matched only while this one is. A match
+ * that outlives its transition keeps the bounds the transition left it at, the photo's place on the
+ * screen not followed after it, so the next transition would start from there, not from where a
+ * pull has taken the photo since. Matched anew as the viewer goes, the transition takes the photo's
+ * bounds as it is laid out then, the pull's offset among them.
+ */
+@OptIn(ExperimentalSharedTransitionApi::class)
+private class WhileComingOrGoing(private val viewer: AnimatedVisibilityScope) : SharedTransitionScope.SharedContentConfig {
+  override val SharedTransitionScope.SharedContentState.isEnabled: Boolean
+    get() = viewer.transition.currentState != viewer.transition.targetState
 }
