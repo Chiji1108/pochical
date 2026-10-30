@@ -48,7 +48,7 @@ class CoworkerEditorTest {
   /** 佐藤's page, open until [open] is turned off, as leaving it takes it away. */
   private fun showSatou() {
     runBlocking { test.edits.addCoworker("佐藤", id = "satou") }
-    test.awaitCalendar { it.coworkers.isNotEmpty() }
+    test.awaitCalendar(compose) { it.coworkers.isNotEmpty() }
     val settings = DeviceSettings()
     compose.setContent {
       CompositionLocalProvider(
