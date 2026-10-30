@@ -61,6 +61,7 @@ import app.pochical.design.Metrics
 import app.pochical.design.PATTERNS_PER_PAGE
 import app.pochical.design.Radius
 import app.pochical.kit.Week
+import app.pochical.kit.weekday
 import java.time.LocalDate
 import kotlin.math.abs
 import kotlinx.coroutines.launch

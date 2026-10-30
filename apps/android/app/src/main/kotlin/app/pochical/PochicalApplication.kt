@@ -72,6 +72,12 @@ interface AppGraph : MetroAppComponentProviders {
   fun signIns(kit: PochicalKit, apple: AppleSignIn): SignIns =
     SignIns(kit.account, kit.firstRun, apple, CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate))
 
+  /** アカウントを削除 under way, kept through the activities made while Apple is asked for its code. */
+  @Provides
+  @SingleIn(AppScope::class)
+  fun accountDeletion(kit: PochicalKit, apple: AppleSignIn): AccountDeletion =
+    AccountDeletion(kit.account::deleteAccount, apple::authorizationCode, kit.account.state, CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate))
+
   /** The notifications from the server. */
   @Provides
   @SingleIn(AppScope::class)
