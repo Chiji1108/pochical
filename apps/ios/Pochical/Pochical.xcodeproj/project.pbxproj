@@ -130,7 +130,9 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				CompanionIntents.swift,
+				DayParts.swift,
 				Opening.swift,
+				TwoWeeks.swift,
 				WidgetWords.swift,
 			);
 			target = C6C382E1307343AF00C0C5B8 /* Pochical */;
