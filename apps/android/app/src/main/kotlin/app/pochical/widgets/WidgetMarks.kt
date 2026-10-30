@@ -27,6 +27,7 @@ import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
+import androidx.glance.layout.ContentScale
 import androidx.glance.layout.padding
 import androidx.glance.unit.ColorProvider
 import app.pochical.MARK_CORNER
@@ -213,13 +214,15 @@ private fun line(context: Context, text: String, sp: Float): StaticLayout {
 }
 
 /**
- * [text] at [sp] in the middle of a box [size] across, cut to the box, as a line of words in the
- * middle of a Box draws it: an emoji mark in its own colors, a dash for the launcher to tint.
+ * [text] at [sp] in a box [size] across, as a line of words in the middle of a Box that size draws
+ * it: in the middle where it fits, else from the box's top and start, cut to the box. An emoji mark
+ * in its own colors, a dash for the launcher to tint.
  */
 private fun textPicture(context: Context, size: Dp, text: String, sp: Float): Bitmap {
   val line = line(context, text, sp)
-  return picture(context, size, "text|$text|${line.paint.textSize}") { canvas, px ->
-    canvas.translate((px - line.width) / 2, (px - line.height) / 2)
+  val side = side(context, size)
+  return picture(context, "text|$text|${line.paint.textSize}", side, side) { canvas ->
+    canvas.translate(maxOf(0, (side - line.width) / 2).toFloat(), maxOf(0, (side - line.height) / 2).toFloat())
     line.draw(canvas)
   }
 }
@@ -236,11 +239,11 @@ private fun underPicture(context: Context, size: Dp, change: TimeChange?, name: 
   return picture(context, "under|${change?.early}|${change?.late}|$name|${line.paint.textSize}|$side", width, side + line.height) { canvas ->
     if (change != null) {
       canvas.save()
-      canvas.translate((width - side) / 2f, 0f)
+      canvas.translate(((width - side) / 2).toFloat(), 0f)
       corners(canvas, side.toFloat(), change, white())
       canvas.restore()
     }
-    canvas.translate((width - line.width) / 2f, side.toFloat())
+    canvas.translate(((width - line.width) / 2).toFloat(), side.toFloat())
     line.draw(canvas)
   }
 }
@@ -329,6 +332,9 @@ fun MarkParts(parts: List<MarkPart>) {
       ImageProvider(part.picture),
       contentDescription = null,
       modifier = if (part.below > 0.dp) GlanceModifier.padding(bottom = part.below) else GlanceModifier,
+      // Its own size where the room is smaller, running over its edges as a view of a set size
+      // would, rather than shrunk to fit.
+      contentScale = ContentScale.Crop,
       alpha = part.alpha,
       colorFilter = part.color?.let { ColorFilter.tint(it) },
     )
