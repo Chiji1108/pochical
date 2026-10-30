@@ -1,6 +1,7 @@
 import { runInDurableObject } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { MockInstance } from "vitest";
 
 import { runAlarm } from "./alarms";
 import { call, ORIGIN, userIdOf } from "./helpers";
@@ -28,6 +29,35 @@ const retriesOf = async (session: string) =>
 const retriesLeft = async (session: string): Promise<number> => {
   const rows = await retriesOf(session);
   return rows.length;
+};
+
+/**
+ * Waits until a push was logged as not sent, then expects the user's DO to
+ * keep `kept` to try again. sendPush (push.ts) logs it and returns, and
+ * UserDO.deliver, resumed a microtask later, keeps the try or lets it go
+ * before it awaits anything; this poll looks again only in a later task,
+ * so the DO's rows are settled by then. They are read once, not polled
+ * against a deadline, as a read inside the DO goes through the pool's
+ * main process, which a busy runner can stall past expect.poll's second
+ * (#1031).
+ */
+const expectKept = async (
+  warned: MockInstance<typeof console.warn>,
+  session: string,
+  kept: number
+): Promise<void> => {
+  await expect
+    .poll(() =>
+      warned.mock.calls.some(
+        ([logged]: unknown[]) =>
+          typeof logged === "object" &&
+          logged !== null &&
+          "message" in logged &&
+          logged.message === "Push not sent"
+      )
+    )
+    .toBeTruthy();
+  await expect(retriesLeft(session)).resolves.toBe(kept);
 };
 
 /**
@@ -493,7 +523,7 @@ describe("a device's push token", () => {
       })
       .toStrictEqual([{ token: OTHER_TOKEN }]);
     // The push APNs failed is kept to try again, the other not.
-    await expect.poll(async () => await retriesLeft(guest)).toBe(1);
+    await expect(retriesLeft(guest)).resolves.toBe(1);
     await retryNow(guest, true);
   });
 
@@ -529,7 +559,7 @@ describe("a device's push token", () => {
       .bind(TOKEN)
       .all<{ token: string }>();
     expect(kept.results).toStrictEqual([{ token: TOKEN }]);
-    await expect.poll(async () => await retriesLeft(guest)).toBe(1);
+    await expect(retriesLeft(guest)).resolves.toBe(1);
     await retryNow(guest, true);
   });
 });
@@ -784,9 +814,7 @@ describe("an Android phone's notifications", () => {
           return rows.results.length;
         })
         .toBe(sent === "gone" ? 0 : 1);
-      await expect
-        .poll(async () => await retriesLeft(guest))
-        .toBe(sent === "later" ? 1 : 0);
+      await expectKept(warned, guest, sent === "later" ? 1 : 0);
       await retryNow(guest, true);
     }
   );
@@ -894,7 +922,7 @@ describe("a push refused for a while", () => {
   it("is tried again after the service's Retry-After, under the same collapse id, until it goes through", async () => {
     const { groupId, guest, maker } = await pair();
     await registerToken(TOKEN, guest);
-    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warned = vi.spyOn(console, "warn").mockImplementation(() => {});
     const calls = apnsAnswering((_, nth) =>
       nth === 1
         ? Response.json(
@@ -906,7 +934,7 @@ describe("a push refused for a while", () => {
     const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
     const before = Date.now();
     say(mine.socket, "a", "今週どう？");
-    await expect.poll(async () => await retriesLeft(guest)).toBe(1);
+    await expectKept(warned, guest, 1);
     // No sooner than APNs asked, though backoff alone would come back in
     // seconds.
     const [kept] = await retriesOf(guest);
@@ -931,7 +959,7 @@ describe("a push refused for a while", () => {
     );
     const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
     say(mine.socket, "a", "今週どう？");
-    await expect.poll(async () => await retriesLeft(guest)).toBe(1);
+    await expectKept(warned, guest, 1);
     const waits: number[] = [];
     for (let tries = 2; tries <= 6; tries += 1) {
       // oxlint-disable-next-line no-await-in-loop -- one try after another
@@ -957,16 +985,14 @@ describe("a push refused for a while", () => {
   it("is never tried again when refused for good", async () => {
     const { groupId, guest, maker } = await pair();
     await registerToken(TOKEN, guest);
-    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warned = vi.spyOn(console, "warn").mockImplementation(() => {});
     const calls = apnsAnswering(() =>
       Response.json({ reason: "PayloadTooLarge" }, { status: 413 })
     );
     const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
     say(mine.socket, "a", "今週どう？");
-    await expect.poll(() => calls.length).toBe(1);
-    // Time for a retry that should not be kept.
-    await scheduler.wait(50);
-    await expect(retriesOf(guest)).resolves.toStrictEqual([]);
+    await expectKept(warned, guest, 0);
+    expect(calls).toHaveLength(1);
   });
 
   it("is given up when the service asks to be left past the longest wait", async () => {
@@ -991,7 +1017,7 @@ describe("a push refused for a while", () => {
   it("is not tried again once its line is read", async () => {
     const { groupId, guest, maker } = await pair();
     await registerToken(TOKEN, guest);
-    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warned = vi.spyOn(console, "warn").mockImplementation(() => {});
     const calls = apnsAnswering((type) =>
       type === "alert"
         ? new Response(null, { status: 429 })
@@ -1000,7 +1026,7 @@ describe("a push refused for a while", () => {
     const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
     const theirs = await syncSocket(`/v1/groups/${groupId}/socket`, guest);
     say(mine.socket, "a", "今週どう？");
-    await expect.poll(async () => await retriesLeft(guest)).toBe(1);
+    await expectKept(warned, guest, 1);
     read(theirs.socket, "r1", 2);
     await expect
       .poll(() => calls.map(({ type }) => type))
@@ -1017,7 +1043,7 @@ describe("a push refused for a while", () => {
   it("through FCM, waits a minute at least after a quota refusal that names no wait", async () => {
     const { groupId, guest, maker } = await pair();
     await registerFcm(guest);
-    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warned = vi.spyOn(console, "warn").mockImplementation(() => {});
     googleCalls(() =>
       Response.json(
         { error: { code: 429, status: "RESOURCE_EXHAUSTED" } },
@@ -1027,7 +1053,7 @@ describe("a push refused for a while", () => {
     const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
     const before = Date.now();
     say(mine.socket, "a", "今週どう？");
-    await expect.poll(async () => await retriesLeft(guest)).toBe(1);
+    await expectKept(warned, guest, 1);
     const [kept] = await retriesOf(guest);
     expect(kept?.due_at).toBeGreaterThanOrEqual(before + 60_000);
     await retryNow(guest, true);
@@ -1036,7 +1062,7 @@ describe("a push refused for a while", () => {
   it("through FCM, is tried again on UNAVAILABLE, a Retry-After date gone by adding no wait", async () => {
     const { groupId, guest, maker } = await pair();
     await registerFcm(guest);
-    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warned = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { grants, sends } = googleCalls((send) =>
       send === 1
         ? Response.json(
@@ -1051,7 +1077,7 @@ describe("a push refused for a while", () => {
     const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
     const before = Date.now();
     say(mine.socket, "a", "今週どう？");
-    await expect.poll(async () => await retriesLeft(guest)).toBe(1);
+    await expectKept(warned, guest, 1);
     const [kept] = await retriesOf(guest);
     // Backoff's first wait alone, jittered: 5 to 10 seconds.
     expect(kept?.due_at).toBeLessThanOrEqual(Date.now() + 10_000);
