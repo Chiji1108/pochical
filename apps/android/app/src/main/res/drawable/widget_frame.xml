@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Today's frame in the calendar widget, round a tile's edge (WidgetParts' WidgetShape.frame),
+     white for the widget to tint. The stroke is drawn on the line half its width in, so the line
+     rounds at the tile's 8dp less that, and the ring's outer edge is the tile's. Its inside is
+     clear on purpose: a shape with no color inside fills it when tinted. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+  <corners android:radius="7.25dp" />
+  <solid android:color="#00FFFFFF" />
+  <stroke
+    android:width="@dimen/widget_frame_width"
+    android:color="#FFFFFFFF" />
+</shape>
