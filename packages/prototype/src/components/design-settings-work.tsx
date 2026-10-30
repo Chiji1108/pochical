@@ -1,3 +1,5 @@
+import editSymbol from "@iconify-icons/material-symbols/edit-outline-rounded";
+import repeatSymbol from "@iconify-icons/material-symbols/repeat-outline-rounded";
 import { css, cx } from "@pochical/styled-system/css";
 import { ArrowRight, ChevronRight, CircleSlash } from "lucide-react";
 import { useContext, useState } from "react";
@@ -240,7 +242,11 @@ export function RepeatPeriodPage({
             </span>
             <SequenceTiles sequence={rule.sequence} />
           </div>
-          <ListRow label="カレンダーで直す" onClick={onFix} />
+          <ListRow
+            label="カレンダーで直す"
+            onClick={onFix}
+            symbol={editSymbol}
+          />
         </List>
       )}
       <List>
@@ -638,7 +644,12 @@ export function RepeatPage({
       ) : (
         <>
           <List>
-            <ListRow label="繰り返しを設定する" onClick={onNew} value="なし" />
+            <ListRow
+              label="繰り返しを設定する"
+              onClick={onNew}
+              symbol={repeatSymbol}
+              value="なし"
+            />
           </List>
           <Note>
             当番・非番や交代勤務のように順番で回るシフトを、カレンダーに自動で入れられます。違う日だけ、カレンダーで変えられます。

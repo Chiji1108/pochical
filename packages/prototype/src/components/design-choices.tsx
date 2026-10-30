@@ -20,8 +20,8 @@ import type {
 
 import { useReducedMotion } from "../lib/device-media";
 import { spring } from "../lib/motion";
-import { listRow, listStyle } from "./design-list";
-import { srOnly } from "./design-ui";
+import { listRow, listStyle, segmentedListStyle } from "./design-list";
+import { SegmentedContext, srOnly } from "./design-ui";
 import type { ButtonProps } from "./design-ui";
 
 // Picking one of a few: segments, grids of choices, rows, chips and tags,
@@ -419,7 +419,8 @@ export function Choice({
 }
 
 // One of several as rows with a check on the picked one, as iOS's
-// inset list picker and Android's list of radio items.
+// inset list picker; in Android's settings, its segmented list of radio
+// items, the picked one on the selected container (SettingsRadioRow).
 export function ChoiceList<Value extends string>({
   label,
   value,
@@ -431,9 +432,10 @@ export function ChoiceList<Value extends string>({
   onValueChange: (value: Value) => void;
   children: ReactNode;
 }) {
+  const segmented = useContext(SegmentedContext);
   return (
     <ChoiceGrid
-      className={listStyle}
+      className={segmented ? segmentedListStyle : listStyle}
       label={label}
       onValueChange={onValueChange}
       value={value}
@@ -453,6 +455,26 @@ const choiceRowCheck = css({
   visibility: "hidden",
 });
 
+// Material's radio button, led by the row: a ring in onSurfaceVariant, in
+// the accent with its dot when picked; the row picked is on the selected
+// container, secondaryContainer in the app's scheme.
+const radioRow = {
+  radio: css({
+    "[data-state=checked] > * > &": {
+      bg: "accent.fill",
+      borderColor: "accent.fill",
+      boxShadow: "inset 0 0 0 3px token(colors.accent.container)",
+    },
+    border: "2px solid token(colors.text.secondary)",
+    borderRadius: "circle",
+    height: "20px",
+    width: "20px",
+  }),
+  selected: css({
+    "&[data-state=checked]": { bg: "accent.container" },
+  }),
+};
+
 export function ChoiceRow({
   value,
   label,
@@ -462,20 +484,31 @@ export function ChoiceRow({
   label: ReactNode;
   leading?: ReactNode;
 }) {
+  const segmented = useContext(SegmentedContext);
   return (
     <Choice
-      className={cx(listRow.root, choiceRowHover)}
+      className={cx(
+        segmented ? listRow.segmented : listRow.root,
+        segmented ? radioRow.selected : choiceRowHover
+      )}
       data-list-row=""
       ring="inside"
       value={value}
     >
+      {segmented && (
+        <span className={listRow.leading}>
+          <span aria-hidden="true" className={radioRow.radio} />
+        </span>
+      )}
       {leading && (
         <span className={listRow.leading} data-part="leading">
           {leading}
         </span>
       )}
       <span className={cx(listRow.label, listRow.labelGrow)}>{label}</span>
-      <Check aria-hidden="true" className={choiceRowCheck} size={20} />
+      {!segmented && (
+        <Check aria-hidden="true" className={choiceRowCheck} size={20} />
+      )}
     </Choice>
   );
 }

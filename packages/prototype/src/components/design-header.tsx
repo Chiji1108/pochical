@@ -1,8 +1,10 @@
+import arrowBackSymbol from "@iconify-icons/material-symbols/arrow-back-outline-rounded";
 import { css, cva, cx } from "@pochical/styled-system/css";
 import { Check, ChevronLeft } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { useDevice } from "../lib/design-device";
+import { MaterialSymbol } from "./design-symbol";
 import { iconButtonStyle } from "./design-ui";
 import type { ButtonProps } from "./design-ui";
 
@@ -103,21 +105,30 @@ export function ReturnButton({ className, ...props }: ButtonProps) {
 // キャンセル without the chevron where leaving drops what was entered.
 // Without children it is the chevron alone, labelled 戻る. Disabled, it
 // keeps its place but hides, as while a list is being sorted.
-// The way back, as iOS 26 and Android draw it: an arrow alone, here in
-// iOS's round of glass, naming where it goes only to a screen reader.
-const backButtonStyle = css({
-  _disabled: { visibility: "hidden" },
-  alignItems: "center",
-  alignSelf: "flex-start",
-  bg: "fill.quaternary",
-  border: 0,
-  borderRadius: "full",
-  color: "text.primary",
-  display: "inline-flex",
-  flexShrink: 0,
-  height: "touch",
-  justifyContent: "center",
-  width: "touch",
+// The way back, as iOS 26 and Android draw it: an arrow alone, naming
+// where it goes only to a screen reader. iOS's chevron sits in a round of
+// glass; Android's ← (Material's arrow_back) is a standard icon button,
+// on no ground of its own.
+const backButtonStyle = cva({
+  base: {
+    _disabled: { visibility: "hidden" },
+    alignItems: "center",
+    alignSelf: "flex-start",
+    border: 0,
+    borderRadius: "full",
+    color: "text.primary",
+    display: "inline-flex",
+    flexShrink: 0,
+    height: "touch",
+    justifyContent: "center",
+    width: "touch",
+  },
+  variants: {
+    platform: {
+      android: { bg: "transparent", marginLeft: "-8px" },
+      ios: { bg: "fill.quaternary" },
+    },
+  },
 });
 
 export function BackButton({
@@ -126,16 +137,21 @@ export function BackButton({
   "aria-label": ariaLabel,
   ...props
 }: ButtonProps) {
+  const platform = useDevice((state) => state.platform);
   const name =
     ariaLabel ?? (typeof children === "string" ? `${children}に戻る` : "戻る");
   return (
     <button
       aria-label={name}
-      className={cx(backButtonStyle, className)}
+      className={cx(backButtonStyle({ platform }), className)}
       type="button"
       {...props}
     >
-      <ChevronLeft aria-hidden="true" size={24} />
+      {platform === "android" ? (
+        <MaterialSymbol icon={arrowBackSymbol} />
+      ) : (
+        <ChevronLeft aria-hidden="true" size={24} />
+      )}
     </button>
   );
 }
@@ -212,7 +228,19 @@ const pageHeader = {
   }),
   trailing: css({ display: "flex", justifyContent: "flex-end" }),
   root: css({ display: "flex", flexDirection: "column", gap: "4px" }),
-  title: css({ fontWeight: 600, margin: 0, textStyle: "largeTitle" }),
+  // iOS's large title. Android's is a flexible app bar's, in its regular
+  // weight: the large one's (displaySmall) on a tab's own page, like 設定,
+  // and the medium one's (headlineMedium) on a page pushed over it.
+  title: cva({
+    base: { margin: 0 },
+    variants: {
+      size: {
+        androidLarge: { fontWeight: 400, textStyle: "largeTitle" },
+        androidMedium: { fontWeight: 400, textStyle: "title1" },
+        ios: { fontWeight: 600, textStyle: "largeTitle" },
+      },
+    },
+  }),
 };
 
 export function PageHeader({
@@ -232,8 +260,13 @@ export function PageHeader({
   inlineTitle?: ReactNode;
   children?: ReactNode;
 }) {
+  const platform = useDevice((state) => state.platform);
   const start =
     leading ?? (onBack && <BackButton onClick={onBack}>{back}</BackButton>);
+  let titleSize: "ios" | "androidLarge" | "androidMedium" = "ios";
+  if (platform === "android") {
+    titleSize = start ? "androidMedium" : "androidLarge";
+  }
   return (
     <header className={pageHeader.root}>
       {trailing || inlineTitle ? (
@@ -250,7 +283,9 @@ export function PageHeader({
         start
       )}
       {children}
-      {title && <h3 className={pageHeader.title}>{title}</h3>}
+      {title && (
+        <h3 className={pageHeader.title({ size: titleSize })}>{title}</h3>
+      )}
     </header>
   );
 }

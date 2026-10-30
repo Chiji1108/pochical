@@ -1,3 +1,4 @@
+import paletteSymbol from "@iconify-icons/material-symbols/palette-outline-rounded";
 import { iconNames } from "@pochical/design/mark-icon-names";
 import {
   groupMarkEmojis,
@@ -52,6 +53,7 @@ import {
   IconButton,
   Note,
   Section,
+  SettingsLists,
 } from "./design-ui";
 import { useMarkColors, nextColor } from "./shift-mark";
 
@@ -128,7 +130,7 @@ export function GroupSettingsPage({
     );
   }
   return (
-    <>
+    <SettingsLists>
       <PageHeader back={group.name} onBack={onBack} title="グループの設定" />
       <Section title="グループ">
         <List>
@@ -235,7 +237,7 @@ export function GroupSettingsPage({
           title="グループから抜けますか？"
         />
       )}
-    </>
+    </SettingsLists>
   );
 }
 
@@ -752,7 +754,7 @@ export function NewGroupPage({
     );
   }
   return (
-    <>
+    <SettingsLists>
       <PageHeader
         back="グループ"
         onBack={onBack}
@@ -808,7 +810,7 @@ export function NewGroupPage({
         />
       </List>
       <Note>アイコンはグループ名から自動で入ります。</Note>
-    </>
+    </SettingsLists>
   );
 }
 
@@ -817,6 +819,7 @@ function MarkRow({ mark, onOpen }: { mark: GroupMark; onOpen: () => void }) {
     <ListRow
       onClick={onOpen}
       label="アイコン"
+      symbol={paletteSymbol}
       value={
         <>
           <span className={smallMarkFrame}>
