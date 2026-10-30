@@ -57,15 +57,34 @@ private val drawn =
     override fun sizeOf(key: String, value: Bitmap) = value.byteCount
   }
 
-/** What is in the mark's own color, white on clear, [size] across, for the launcher to tint. */
-private fun markPicture(context: Context, icon: String, symbol: String, look: Look, size: Dp, change: TimeChange?): Bitmap {
+/**
+ * The picture [key] names, [size] across, white on clear for the launcher to tint: drawn by [draw]
+ * on its canvas, given its side in pixels, the first time it is asked for.
+ */
+private fun picture(context: Context, size: Dp, key: String, draw: (Canvas, Float) -> Unit): Bitmap {
   val side = (size.value * context.resources.displayMetrics.density).toInt().coerceAtLeast(1)
-  val key = listOf(look.style, look.fill, icon, symbol, side, change?.early, change?.late).joinToString("|")
-  drawn.get(key)?.let { return it }
-  val picture = createBitmap(side, side)
-  val canvas = Canvas(picture)
-  val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.WHITE }
-  val px = side.toFloat()
+  val sized = "$key|$side"
+  drawn.get(sized)?.let { return it }
+  return createBitmap(side, side).also {
+    draw(Canvas(it), side.toFloat())
+    drawn.put(sized, it)
+  }
+}
+
+/** White paint, smoothed, for the pictures. */
+private fun white() = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.WHITE }
+
+/** What is in the mark's own color, [size] across, for the launcher to tint. */
+private fun markPicture(context: Context, icon: String, symbol: String, look: Look, size: Dp, change: TimeChange?): Bitmap =
+  picture(context, size, listOf("mark", look.style, look.fill, icon, symbol, change?.early, change?.late).joinToString("|")) { canvas, px ->
+    drawMark(canvas, px, icon, symbol, look, change)
+  }
+
+/** [markPicture]'s drawing on [canvas], [px] across. */
+private fun drawMark(canvas: Canvas, px: Float, icon: String, symbol: String, look: Look, change: TimeChange?) {
+  val paint = white()
+  // A badge's corners go no further than its tile (tilePicture).
+  if (look.style == MarkStyle.Badge) canvas.clipPath(Path().apply { addRoundRect(0f, 0f, px, px, px * MARK_CORNER, px * MARK_CORNER, Path.Direction.CW) })
   fun letter(symbol: String, share: Float, bold: Boolean) {
     paint.style = Paint.Style.FILL
     paint.textSize = px * share
@@ -98,8 +117,6 @@ private fun markPicture(context: Context, icon: String, symbol: String, look: Lo
     }
   }
   if (look.style != MarkStyle.Emoji) corners(canvas, px, change, paint)
-  drawn.put(key, picture)
-  return picture
 }
 
 /**
@@ -150,46 +167,25 @@ private const val RING_WIDTH = 0.08f
  * いまのシフト's ring, [size] across, white on clear for the launcher to tint: [share] of it from the
  * top round clockwise, what is left of the shift, the whole of it for its track.
  */
-fun ringPicture(context: Context, size: Dp, share: Float): Bitmap {
-  val side = (size.value * context.resources.displayMetrics.density).toInt().coerceAtLeast(1)
-  val key = "ring|$side|$share"
-  drawn.get(key)?.let { return it }
-  val picture = createBitmap(side, side)
-  val paint =
-    Paint(Paint.ANTI_ALIAS_FLAG).apply {
-      color = android.graphics.Color.WHITE
-      style = Paint.Style.STROKE
-      strokeWidth = side * RING_WIDTH
-      strokeCap = Paint.Cap.ROUND
-    }
-  val inset = paint.strokeWidth / 2
-  Canvas(picture).drawArc(RectF(inset, inset, side - inset, side - inset), -90f, 360f * share, false, paint)
-  drawn.put(key, picture)
-  return picture
-}
+fun ringPicture(context: Context, size: Dp, share: Float): Bitmap =
+  picture(context, size, "ring|$share") { canvas, px ->
+    val paint =
+      white().apply {
+        style = Paint.Style.STROKE
+        strokeWidth = px * RING_WIDTH
+        strokeCap = Paint.Cap.ROUND
+      }
+    val inset = paint.strokeWidth / 2
+    canvas.drawArc(RectF(inset, inset, px - inset, px - inset), -90f, 360f * share, false, paint)
+  }
 
-/** A mark's tile, [size] across, rounded as the app's (markShape), white on clear for the launcher to tint (Fill). */
-private fun tilePicture(context: Context, size: Dp): Bitmap {
-  val side = (size.value * context.resources.displayMetrics.density).toInt().coerceAtLeast(1)
-  val key = "tile|$side"
-  drawn.get(key)?.let { return it }
-  val picture = createBitmap(side, side)
-  val px = side.toFloat()
-  Canvas(picture).drawRoundRect(0f, 0f, px, px, px * MARK_CORNER, px * MARK_CORNER, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.WHITE })
-  drawn.put(key, picture)
-  return picture
-}
+/** A mark's tile, [size] across, rounded as the app's (markShape), for the launcher to tint (Fill). */
+private fun tilePicture(context: Context, size: Dp): Bitmap =
+  picture(context, size, "tile") { canvas, px -> canvas.drawRoundRect(0f, 0f, px, px, px * MARK_CORNER, px * MARK_CORNER, white()) }
 
 /** An emoji mark's corners alone, which take secondary words' color, as the app's do. */
-private fun cornersPicture(context: Context, size: Dp, change: TimeChange): Bitmap {
-  val side = (size.value * context.resources.displayMetrics.density).toInt().coerceAtLeast(1)
-  val key = "corners|$side|${change.early}|${change.late}"
-  drawn.get(key)?.let { return it }
-  val picture = createBitmap(side, side)
-  corners(Canvas(picture), side.toFloat(), change, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.WHITE })
-  drawn.put(key, picture)
-  return picture
-}
+private fun cornersPicture(context: Context, size: Dp, change: TimeChange): Bitmap =
+  picture(context, size, "corners|${change.early}|${change.late}") { canvas, px -> corners(canvas, px, change, white()) }
 
 /**
  * A pattern's mark, [size] across, in [look] and the テーマ's colors, faint where a day off left

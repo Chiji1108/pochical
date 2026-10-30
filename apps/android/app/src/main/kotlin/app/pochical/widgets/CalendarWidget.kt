@@ -20,6 +20,7 @@ import androidx.glance.layout.padding
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import app.pochical.R
 import app.pochical.calendar.headingMonth
 import app.pochical.calendar.monthText
 import app.pochical.calendar.weekdayLetter
@@ -143,7 +144,7 @@ private fun androidx.glance.layout.RowScope.GridDay(
     // Today's frame: the accent's, round the day, as the calendar frames it.
     if (isToday) Fill(WidgetShape.frame, colors.accentFrame)
     var inner = GlanceModifier.fillMaxSize().padding(vertical = 3.dp)
-    if (isToday) inner = inner.padding(1.5.dp)
+    if (isToday) inner = inner.padding(R.dimen.widget_frame_width)
     Column(inner, horizontalAlignment = Alignment.CenterHorizontally) {
       val faded = !inMonth || gone
       val dateColor = if (isToday) colors.accent else if (day.holiday) colors.holiday else colors.words
