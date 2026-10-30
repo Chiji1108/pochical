@@ -5,7 +5,7 @@
 // scrolling up and down leaves the month, and the お休み summary under the
 // calendar shows the month landed on. A trackpad's sideways swipe,
 // coasting on well past a page, turns one month too.
-// pnpm exec tsx tools/layout-diff/pager-gestures.ts [url]
+// node tools/layout-diff/pager-gestures.ts [url]
 
 import { setTimeout as wait } from "node:timers/promises";
 

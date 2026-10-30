@@ -8,6 +8,8 @@
     "types": ["node"],
     "verbatimModuleSyntax": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
     "skipLibCheck": true,
     "strict": true,
     "noUnusedLocals": true,

@@ -2,7 +2,7 @@
 // month its heading names, as a stylesheet arriving late could bring it
 // up on the month before, or a change of width after it loads (--resize),
 // or going to another tab and back (--tabs), which hides the calendar.
-// pnpm exec tsx tools/layout-diff/pager-check.ts [url] [runs] [--resize] [--slow-css] [--tabs]
+// node tools/layout-diff/pager-check.ts [url] [runs] [--resize] [--slow-css] [--tabs]
 
 import { setTimeout as wait } from "node:timers/promises";
 
