@@ -192,17 +192,15 @@ fun MonthPicturePage(month: YearMonth, onBack: () -> Unit) {
           }
         }
         // The style page's choices in its order, with the picture's own values: it goes to people
-        // who do not know the marks, so names start on.
+        // who do not know the marks, so names start on. Words alone, in Material's connected button
+        // group, as the picture above shows what each does.
         item {
           SectionHeader(stringResource(R.string.style_names))
-          Box(Modifier.padding(horizontal = 16.dp)) {
-            Choices(
-              listOf(false, true),
-              device.picture.options.names,
-              { stringResource(if (it) R.string.style_names_on else R.string.style_names_off) },
-              { names -> changeOptions(settings) { it.copy(names = names) } },
-            ) {}
-          }
+          ChoiceButtons(
+            listOf(false, true),
+            device.picture.options.names,
+            { stringResource(if (it) R.string.style_names_on else R.string.style_names_off) },
+          ) { names -> changeOptions(settings) { it.copy(names = names) } }
           if (offs.isEmpty()) Footnote(stringResource(R.string.picture_only))
         }
         // Each day off its own, those of a job left too, as an older month holds them: 有休 may be
@@ -214,12 +212,9 @@ fun MonthPicturePage(month: YearMonth, onBack: () -> Unit) {
               for (off in offs) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                   if (offs.size > 1) Text(off.name, fontWeight = FontWeight.SemiBold)
-                  Choices(
-                    OffLook.entries,
-                    device.picture.options.offLook(off.id),
-                    { stringResource(it.title) },
-                    { look -> changeOptions(settings) { it.withOffLook(look, off.id, offs.map(Pattern::id)) } },
-                  ) {}
+                  ChoiceButtons(OffLook.entries, device.picture.options.offLook(off.id), { stringResource(it.title) }, modifier = Modifier) { look ->
+                    changeOptions(settings) { it.withOffLook(look, off.id, offs.map(Pattern::id)) }
+                  }
                 }
               }
             }

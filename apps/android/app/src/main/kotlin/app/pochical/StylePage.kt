@@ -117,10 +117,13 @@ fun StylePage(onBack: () -> Unit) {
       item { StylePreview(scheme, today, Modifier.padding(horizontal = 16.dp)) }
       item {
         Section(stringResource(R.string.style_shape), note = stringResource(R.string.style_shape_note)) {
-          Choices(Shape.entries, Shape.of(look), { stringResource(it.title) }, { shape -> settings.change { it.copy(look = shape.look(it.look)) } }) {
-            shape ->
-            if (work != null) PatternMark(work, 20, shape.look(look))
-          }
+          Choices(
+            Shape.entries,
+            Shape.of(look),
+            { stringResource(it.title) },
+            { shape -> settings.change { it.copy(look = shape.look(it.look)) } },
+            sample = if (work == null) null else { shape -> PatternMark(work, 20, shape.look(look)) },
+          )
         }
       }
       item {
@@ -136,11 +139,14 @@ fun StylePage(onBack: () -> Unit) {
               { stringResource(if (it) R.string.style_colored else R.string.style_one_tone) },
               { colored -> settings.change { it.copy(look = it.look.copy(colored = colored)) } },
               tall = true,
-            ) { colored ->
-              Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                for (pattern in samples) PatternMark(pattern, 18, look.copy(colored = colored))
-              }
-            }
+              sample =
+                if (samples.isEmpty()) null
+                else { colored ->
+                  Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    for (pattern in samples) PatternMark(pattern, 18, look.copy(colored = colored))
+                  }
+                },
+            )
           }
         }
       }
@@ -152,9 +158,8 @@ fun StylePage(onBack: () -> Unit) {
             { stringResource(if (it) R.string.style_names_on else R.string.style_names_off) },
             { names -> settings.change { it.copy(look = it.look.withOptions { options -> options.copy(names = names) }) } },
             tall = true,
-          ) { names ->
-            Sample(work, look.withOptions { it.copy(names = names) })
-          }
+            sample = if (work == null) null else { names -> Sample(work, look.withOptions { it.copy(names = names) }) },
+          )
         }
       }
       // Each day off its own, so 休み can be left blank while 有休 is tinted; named once there is more
@@ -230,8 +235,7 @@ private fun PatternMark(pattern: Pattern, size: Int, look: Look) =
 
 /** A day drawn small in [look], with the pattern's mark on it, as the month would show it. */
 @Composable
-private fun Sample(pattern: Pattern?, look: Look) {
-  if (pattern == null) return
+private fun Sample(pattern: Pattern, look: Look) {
   DayCell(
     DayLook(day = SAMPLE_DAY, entry = DayEntry(pattern.id), pattern = pattern, note = null, holiday = null, outside = false, isToday = false),
     height = 64.dp,
@@ -245,8 +249,10 @@ private fun Sample(pattern: Pattern?, look: Look) {
 
 /**
  * Choices side by side, each drawing what it does over its name, the one picked outlined in the
- * accent: Material's selection cards rather than iOS's segments, as segmented buttons hold a word
- * and an icon, not a day.
+ * accent: Material's selection cards rather than iOS's segments, as a connected button group holds
+ * a word and an icon, not a day; words alone are [ChoiceButtons]. A choice has no [sample] only
+ * while there is no pattern to draw it on, and its name then sits in the middle, with no gap left
+ * above it for a drawing that is not there.
  */
 @Composable
 fun <T> Choices(
@@ -255,7 +261,7 @@ fun <T> Choices(
   label: @Composable (T) -> String,
   onPick: (T) -> Unit,
   tall: Boolean = false,
-  sample: @Composable (T) -> Unit,
+  sample: (@Composable (T) -> Unit)?,
 ) {
   val colors = LocalThemeColors.current
   Row(Modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -276,7 +282,7 @@ fun <T> Choices(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
       ) {
-        Box(Modifier.clearAndSetSemantics {}) { sample(option) }
+        if (sample != null) Box(Modifier.clearAndSetSemantics {}) { sample(option) }
         Text(
           label(option),
           style = PochicalTextStyles.subheadline.copy(fontWeight = if (isPicked) FontWeight.SemiBold else FontWeight.Normal),
