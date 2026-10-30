@@ -177,7 +177,7 @@ class MessageHandlers(
   val lit: Lit?,
   /** [lit] has shone, so the line is not lit again as it is drawn again (scrolled back to, lifted for its menu). */
   val litShown: (Lit) -> Unit,
-  /** Whether a screen reader reads the screen: each line is then a focus target, for [readFrom]. */
+  /** Whether a screen reader reads the screen: each line is then focusable, for [readFrom]. */
   val reading: Boolean = false,
   /** The line gone to (a jump, ↓ to ここから新着), each time it is, until a screen reader has been put on it. */
   val readFrom: Lit? = null,
