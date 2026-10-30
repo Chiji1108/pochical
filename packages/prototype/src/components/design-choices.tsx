@@ -9,7 +9,13 @@ import {
   useTransform,
 } from "motion/react";
 import type { MotionValue } from "motion/react";
-import { createContext, useContext, useLayoutEffect, useRef } from "react";
+import {
+  createContext,
+  useContext,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+} from "react";
 import type {
   ComponentProps,
   CSSProperties,
@@ -18,6 +24,7 @@ import type {
   Ref,
 } from "react";
 
+import { useDevice } from "../lib/design-device";
 import { useReducedMotion } from "../lib/device-media";
 import { spring } from "../lib/motion";
 import { listRow, useListLook, useRowClass } from "./design-list";
@@ -28,44 +35,91 @@ import type { ButtonProps } from "./design-ui";
 // and the dots under a pager.
 
 // A segmented control: a few choices side by side, the picked one raised,
-// as SwiftUI's segmented Picker and Compose's SegmentedButton. Each
-// Segment brings its own content, a sample of what it picks or a word.
-// Compact for words alone, tall for large samples.
+// as SwiftUI's segmented Picker. Each Segment brings its own content, a
+// sample of what it picks or a word. Compact for words alone, tall for
+// large samples. On Android a choice among a few words is Material 3
+// Expressive's connected button group, as the app's ChoiceButtons:
+// toggle buttons a small gap apart, the picked one filled. Choices of
+// samples keep the segments there.
 type SegmentSize = "compact" | "regular" | "tall";
-const SegmentSizeContext = createContext<SegmentSize>("regular");
-
-// Round-ended, track and picked segment alike, as iOS 26's.
-const segmentedStyle = css({
-  bg: "fill.tertiary",
-  border: 0,
-  borderRadius: "full",
-  display: "grid",
-  gap: "4px",
-  gridAutoColumns: "minmax(0, 1fr)",
-  gridAutoFlow: "column",
-  margin: 0,
-  padding: "4px",
-  position: "relative",
+type SegmentLook = "segments" | "buttons";
+const SegmentContext = createContext<{ look: SegmentLook; size: SegmentSize }>({
+  look: "segments",
+  size: "regular",
 });
 
+const segmentedStyle = cva({
+  base: {
+    border: 0,
+    display: "grid",
+    gridAutoColumns: "minmax(0, 1fr)",
+    gridAutoFlow: "column",
+    margin: 0,
+    position: "relative",
+  },
+  variants: {
+    look: {
+      buttons: { gap: "2px" },
+      // Round-ended, track and picked segment alike, as iOS 26's.
+      segments: {
+        bg: "fill.tertiary",
+        borderRadius: "full",
+        gap: "4px",
+        padding: "4px",
+      },
+    },
+  },
+});
+
+// Material's connected toggle buttons: the inner corners small and the
+// group's ends round, on the rows' fill; picked, fully round in the
+// accent; pressed, the inner corners square a little.
+const BUTTON_ROUND = "20px";
 const segmentStyle = cva({
   base: {
-    _checked: { color: "text.primary", fontWeight: 600 },
     _focusVisible: {
       outline: "2px solid token(colors.accent.default)",
       outlineOffset: "-2px",
     },
     alignItems: "center",
-    borderRadius: "full",
     color: "text.secondary",
     cursor: "pointer",
     display: "flex",
     justifyContent: "center",
     position: "relative",
     textStyle: "subheadline",
-    zIndex: 1,
   },
   variants: {
+    look: {
+      buttons: {
+        "&:first-of-type": {
+          borderEndStartRadius: BUTTON_ROUND,
+          borderStartStartRadius: BUTTON_ROUND,
+        },
+        "&:last-of-type": {
+          borderEndEndRadius: BUTTON_ROUND,
+          borderStartEndRadius: BUTTON_ROUND,
+        },
+        "--inner": "8px",
+        _active: { "--inner": "4px" },
+        _checked: {
+          "--inner": BUTTON_ROUND,
+          bg: "accent.fill",
+          color: "accent.onFill",
+        },
+        bg: "fill.quaternary",
+        borderRadius: "var(--inner)",
+        fontWeight: 500,
+        minHeight: "action",
+        paddingInline: "4px",
+        transition: "border-radius 0.2s, background 0.2s, color 0.2s",
+      },
+      segments: {
+        _checked: { color: "text.primary", fontWeight: 600 },
+        borderRadius: "full",
+        zIndex: 1,
+      },
+    },
     size: {
       compact: { minHeight: "action" },
       regular: { minHeight: "62px" },
@@ -74,11 +128,16 @@ const segmentStyle = cva({
   },
 });
 
-const segmentText = css({
-  alignItems: "center",
-  display: "flex",
-  flexDirection: "column",
-  gap: "4px",
+// A sample over its word in a segment; an icon before its word on a
+// button.
+const segmentText = cva({
+  base: { alignItems: "center", display: "flex", gap: "4px" },
+  variants: {
+    look: {
+      buttons: { flexDirection: "row" },
+      segments: { flexDirection: "column" },
+    },
+  },
 });
 
 // The raised ground under the picked segment, which slides to the next
@@ -99,6 +158,7 @@ export function SegmentedControl<Value extends string>({
   value,
   onValueChange,
   size = "regular",
+  samples = false,
   className,
   children,
 }: {
@@ -108,12 +168,18 @@ export function SegmentedControl<Value extends string>({
   value: Value | null;
   onValueChange: (value: Value) => void;
   size?: SegmentSize;
+  // Whether the segments show samples of what they pick rather than
+  // words: Android draws those as selection cards, not buttons.
+  samples?: boolean;
   className?: string;
   children: ReactNode;
 }) {
+  const android = useDevice((state) => state.platform === "android");
+  const look: SegmentLook = android && !samples ? "buttons" : "segments";
+  const segment = useMemo(() => ({ look, size }), [look, size]);
   return (
     <SegmentGroup.Root
-      className={cx(segmentedStyle, className)}
+      className={cx(segmentedStyle({ look }), className)}
       orientation="horizontal"
       onValueChange={(details) => {
         if (details.value !== null) {
@@ -123,8 +189,10 @@ export function SegmentedControl<Value extends string>({
       value={value}
     >
       <SegmentGroup.Label className={srOnly}>{label}</SegmentGroup.Label>
-      <SegmentGroup.Indicator className={segmentIndicator} />
-      <SegmentSizeContext value={size}>{children}</SegmentSizeContext>
+      {look === "segments" && (
+        <SegmentGroup.Indicator className={segmentIndicator} />
+      )}
+      <SegmentContext value={segment}>{children}</SegmentContext>
     </SegmentGroup.Root>
   );
 }
@@ -142,13 +210,17 @@ export function Segment({
   className?: string;
   children: ReactNode;
 }) {
-  const size = useContext(SegmentSizeContext);
+  const { look, size } = useContext(SegmentContext);
   return (
     <SegmentGroup.Item
-      className={cx(segmentStyle({ size }), className)}
+      // A button is as tall as Material's, whatever the segments' size.
+      className={cx(
+        segmentStyle({ look, size: look === "segments" ? size : undefined }),
+        className
+      )}
       value={value}
     >
-      <SegmentGroup.ItemText className={segmentText}>
+      <SegmentGroup.ItemText className={segmentText({ look })}>
         {children}
       </SegmentGroup.ItemText>
       <SegmentGroup.ItemHiddenInput aria-label={label} />

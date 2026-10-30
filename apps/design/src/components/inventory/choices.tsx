@@ -68,7 +68,7 @@ export function Switches() {
       <Item
         name="SegmentedControl + Segment size=tall"
         ios="Picker を独自の見た目で（.segmented は文字だけのため）"
-        android="SingleChoiceSegmentedButtonRow（中身は独自）"
+        android="見本を並べた選択カード（StylePage の Choices）。/design は iOS の形のまま（samples）"
         where="スタイルの休みの見せ方"
         wide
       >
@@ -77,7 +77,7 @@ export function Switches() {
       <Item
         name="SegmentedControl + Segment size=tall"
         ios="Picker を独自の見た目で（.segmented は文字だけのため）"
-        android="SingleChoiceSegmentedButtonRow（中身は独自）"
+        android="見本を並べた選択カード（StylePage の Choices）。/design は iOS の形のまま（samples）"
         where="スタイルのシフト名"
         wide
       >
@@ -86,7 +86,7 @@ export function Switches() {
       <Item
         name="SegmentedControl + Segment size=compact"
         ios="Picker ＋ .pickerStyle(.segmented)"
-        android="SingleChoiceSegmentedButtonRow"
+        android="ToggleButton の connected button group（ChoiceButtons）。/design の Android も同じ"
         where="カレンダーの週の始まり"
         wide
       >

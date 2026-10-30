@@ -103,6 +103,9 @@ export const config = defineConfig({
       keyframes: {
         fadeIn: { from: { opacity: 0 }, to: { opacity: 1 } },
         fadeOut: { from: { opacity: 1 }, to: { opacity: 0 } },
+        // Android's app bar taking the scrolled container's ground as the
+        // page scrolls under it.
+        appBarScrolled: { to: { background: "var(--background-elevated)" } },
         // A message jumped to from a reply: ringed, then the ring fades.
         flash: {
           "0%, 40%": { boxShadow: "0 0 0 3px var(--accent-border)" },

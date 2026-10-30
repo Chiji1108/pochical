@@ -39,7 +39,7 @@ export function Rows() {
       <Item
         name="List + ListRow / SwitchRow(Toggle)"
         ios="List ＋ .listStyle(.insetGrouped)、行は LabeledContent・NavigationLink"
-        android="Card の中に ListItem を並べる（設定のリストは下の SettingsLists）"
+        android="Card の中に ListItem を並べる（設定のリストは下の SettingsLists）。スイッチは Material 3 の Switch"
         where="グループのハブ、日の詳細など"
         wide
       >
