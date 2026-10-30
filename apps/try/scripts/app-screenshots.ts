@@ -1,10 +1,13 @@
 // Takes the manifest's screenshots (src/lib/app-screenshots.ts) of the app
 // as a phone shows it, on a dev server of its own, into public/app. Run
 // again after changing those screens: pnpm run image:screens
-// It drives the installed Google Chrome.
-import { chromium } from "playwright-core";
+import { fileURLToPath } from "node:url";
+
+import {
+  photographDevServer,
+  waitUntilDrawn,
+} from "@pochical/prototype/scripts/photograph";
 import type { Browser, Page } from "playwright-core";
-import { createServer } from "vite";
 
 import {
   APP_SCREENSHOT,
@@ -12,13 +15,14 @@ import {
   appScreenshots,
 } from "../src/lib/app-screenshots";
 import type { AppScreenshotName } from "../src/lib/app-screenshots";
-import { firstLaunchNotedKey } from "../src/lib/first-launch-note";
 
-const ROOT = new URL("..", import.meta.url).pathname;
-const FOLDER = new URL("../public/app/", import.meta.url).pathname;
+const FOLDER = fileURLToPath(new URL("../public/app/", import.meta.url));
 
+// Japanese text has a <wbr> between its phrases (packages/jsx), which
+// Playwright reads as a space in a button's name, so a name of more than
+// one phrase is matched by a pattern.
 const tap = async (page: Page, name: string | RegExp) => {
-  await page.getByRole("button", { name }).first().click();
+  await page.getByRole("button", { exact: true, name }).click();
 };
 
 // The taps from the calendar, as the app opens, to each screen.
@@ -32,8 +36,6 @@ const steps: Record<AppScreenshotName, (page: Page) => Promise<void>> = {
   group: async (page) => {
     await tap(page, "グループ");
   },
-  // Japanese text has a <wbr> between its phrases (packages/jsx), which
-  // Playwright reads as a space in a button's name.
   "group-chat": async (page) => {
     await tap(page, "グループ");
     await tap(page, /^全体\s*チャット/u);
@@ -50,24 +52,14 @@ const steps: Record<AppScreenshotName, (page: Page) => Promise<void>> = {
   },
 };
 
-// On any free port and with its own prebundled modules, so it never meets
-// a dev server already running. head.ts imports the workspace's
-// TypeScript, so the config loads as package.json's scripts load it.
-const server = await createServer({
-  cacheDir: "node_modules/.vite-app-screenshots",
-  configLoader: "runner",
-  root: ROOT,
-  server: { port: 0, strictPort: false },
-});
-await server.listen();
-const [origin] = server.resolvedUrls?.local ?? [];
-if (!origin) {
-  throw new Error("The dev server has no address");
-}
-
 // A fresh phone for each screen, starting from the sample as the app does
-// on each opening, with the first launch's note already read.
-const photograph = async (browser: Browser, name: AppScreenshotName) => {
+// on each opening. Its first launch's note is read and closed first, as a
+// person does.
+const photograph = async (
+  browser: Browser,
+  origin: string,
+  name: AppScreenshotName
+) => {
   const context = await browser.newContext({
     colorScheme: "light",
     deviceScaleFactor: APP_SCREENSHOT.scale,
@@ -83,24 +75,11 @@ const photograph = async (browser: Browser, name: AppScreenshotName) => {
     },
   });
   try {
-    await context.addInitScript((key) => {
-      localStorage.setItem(key, "1");
-    }, firstLaunchNotedKey);
     const page = await context.newPage();
     await page.goto(origin, { waitUntil: "networkidle" });
+    await tap(page, "はじめる");
     await steps[name](page);
-    await page.waitForLoadState("networkidle");
-    // Every picture on the screen drawn. A lazy one below it, as in the
-    // chat, does not load until scrolled to.
-    await page.waitForFunction(() =>
-      [...document.images].every((image) => {
-        const { bottom, top } = image.getBoundingClientRect();
-        return image.complete || bottom <= 0 || top >= innerHeight;
-      })
-    );
-    await page.evaluate(async () => {
-      await document.fonts.ready;
-    });
+    await waitUntilDrawn(page);
     await page.screenshot({
       animations: "disabled",
       path: `${FOLDER}${appScreenshotFile(name)}`,
@@ -110,14 +89,20 @@ const photograph = async (browser: Browser, name: AppScreenshotName) => {
   }
 };
 
-const browser = await chromium.launch({ channel: "chrome" });
-try {
-  await Promise.all(
-    appScreenshots.map(async ({ name }) => {
-      await photograph(browser, name);
-    })
-  );
-} finally {
-  await browser.close();
-  await server.close();
-}
+// head.ts imports the workspace's TypeScript, so the config loads as
+// package.json's scripts load it.
+await photographDevServer(
+  {
+    cacheDir: "node_modules/.vite-app-screenshots",
+    configLoader: "runner",
+    root: fileURLToPath(new URL("..", import.meta.url)),
+  },
+  async ({ browser, origin }) => {
+    // One after another: a screen that reaches a module the dev server has
+    // yet to prebundle reloads every open page.
+    for (const { name } of appScreenshots) {
+      // oxlint-disable-next-line no-await-in-loop
+      await photograph(browser, origin, name);
+    }
+  }
+);

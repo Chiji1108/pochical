@@ -19,8 +19,6 @@ import { css, cx } from "@pochical/styled-system/css";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
-import { firstLaunchNotedKey } from "./lib/first-launch-note";
-
 // The current proposal for each open design choice.
 const variants = parseDesignVariants({});
 
@@ -158,7 +156,7 @@ function OpenOnPhone() {
 
 // Whether this browser has been told what this is. Storage a browser
 // refuses, as some private windows do, tells it again on each opening.
-const NOTED = firstLaunchNotedKey;
+const NOTED = "pochical-try-noted";
 
 function wasNoted() {
   try {
