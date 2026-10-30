@@ -141,18 +141,19 @@ private fun RowScope.GridDay(
     // Today's frame: the accent's, round the day, as the calendar frames it.
     Box(cell) {
       Fill(WidgetShape.frame, drawn.colors.accentFrame)
-      DayFace(day, drawn, markSize, inMonth, gone, off, tiled, GlanceModifier.fillMaxSize().padding(R.dimen.widget_frame_width))
+      DayFace(day, drawn, markSize, inMonth, gone, off, GlanceModifier.fillMaxSize().padding(R.dimen.widget_frame_width))
     }
   } else {
-    DayFace(day, drawn, markSize, inMonth, gone, off, tiled, cell)
+    DayFace(day, drawn, markSize, inMonth, gone, off, cell)
   }
 }
 
 /** A day's date over its mark, inside [modifier]. */
 @Composable
-private fun DayFace(day: WidgetDay, drawn: Drawn, markSize: Dp, inMonth: Boolean, gone: Boolean, off: OffDrawing, tiled: Boolean, modifier: GlanceModifier) {
+private fun DayFace(day: WidgetDay, drawn: Drawn, markSize: Dp, inMonth: Boolean, gone: Boolean, off: OffDrawing, modifier: GlanceModifier) {
   val colors = drawn.colors
   val isToday = day.date == drawn.entry.date
+  val tiled = off.tile && inMonth
   Column(modifier.padding(vertical = 3.dp), horizontalAlignment = Alignment.CenterHorizontally) {
     val faded = !inMonth || gone
     val dateColor = if (isToday) colors.accent else if (day.holiday) colors.holiday else colors.words

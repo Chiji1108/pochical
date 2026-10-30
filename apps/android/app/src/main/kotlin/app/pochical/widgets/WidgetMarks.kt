@@ -197,20 +197,22 @@ fun ringPicture(context: Context, size: Dp, share: Float): Bitmap =
 private fun tilePicture(context: Context, size: Dp): Bitmap =
   picture(context, size, "tile") { canvas, px -> canvas.drawRoundRect(0f, 0f, px, px, px * MARK_CORNER, px * MARK_CORNER, white()) }
 
-
 /** An emoji mark's corners alone, which take secondary words' color, as the app's do. */
 private fun cornersPicture(context: Context, size: Dp, change: TimeChange): Bitmap =
   picture(context, size, "corners|${change.early}|${change.late}") { canvas, px -> corners(canvas, px, change, white()) }
 
-/** [text] at [sp] on one line, in white, as a widget's line of words lays it out: its fallback fonts' room and all. */
-private fun line(context: Context, text: String, sp: Float): StaticLayout {
+/**
+ * [text] at [sp] on one line, in [color] (white for the launcher to tint), as a widget's line of
+ * words lays it out: its fallback fonts' room and all.
+ */
+private fun line(context: Context, text: String, sp: Float, color: Int = android.graphics.Color.WHITE): StaticLayout {
   val paint =
     TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-      color = android.graphics.Color.WHITE
+      this.color = color
       textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, sp, context.resources.displayMetrics)
     }
   val width = ceil(Layout.getDesiredWidth(text, paint)).toInt()
-  return StaticLayout.Builder.obtain(text, 0, text.length, paint, width).setIncludePad(true).setUseLineSpacingFromFallbacks(true).build()
+  return StaticLayout.Builder.obtain(text, 0, text.length, paint, width).setIncludePad(true).setUseLineSpacingFromFallbacks(true).setMaxLines(1).build()
 }
 
 /**
@@ -218,10 +220,10 @@ private fun line(context: Context, text: String, sp: Float): StaticLayout {
  * it: in the middle where it fits, else from the box's top and start, cut to the box. An emoji mark
  * in its own colors, a dash for the launcher to tint.
  */
-private fun textPicture(context: Context, size: Dp, text: String, sp: Float): Bitmap {
-  val line = line(context, text, sp)
+private fun textPicture(context: Context, size: Dp, text: String, sp: Float, color: Int = android.graphics.Color.WHITE): Bitmap {
+  val line = line(context, text, sp, color)
   val side = side(context, size)
-  return picture(context, "text|$text|${line.paint.textSize}", side, side) { canvas ->
+  return picture(context, "text|$text|$color|${line.paint.textSize}", side, side) { canvas ->
     canvas.translate(maxOf(0, (side - line.width) / 2).toFloat(), maxOf(0, (side - line.height) / 2).toFloat())
     line.draw(canvas)
   }
@@ -282,9 +284,12 @@ fun nothingParts(size: Dp, colors: WidgetColors, name: String? = null, nameSp: F
   return listOfNotNull(MarkPart(textPicture(context, size, "–", size.value * 0.5f), colors.quiet, below = below(context, size, under)), under?.let { MarkPart(it, colors.secondary) })
 }
 
-/** The room under a mark [size] across that [under] takes. */
+/**
+ * The room under a mark [size] across that [under] takes, to the pixel: Glance cuts a padding's
+ * pixels short, so half of one more keeps it the line's whole height.
+ */
 private fun below(context: Context, size: Dp, under: Bitmap?): Dp =
-  under?.let { ((it.height - side(context, size)) / context.resources.displayMetrics.density).dp } ?: 0.dp
+  under?.let { ((it.height - side(context, size) + 0.5f) / context.resources.displayMetrics.density).dp } ?: 0.dp
 
 /** A mark of [icon], [emoji] or [symbol] as [look] draws it, in the テーマ's color [slot] (shiftParts). */
 @Composable
@@ -310,7 +315,8 @@ private fun partsOf(
   val below = below(context, size, under.takeIf { name != null })
   val mark =
     when (look.style) {
-      MarkStyle.Emoji -> listOf(MarkPart(textPicture(context, size, emoji, size.value * 0.8f), null, below = below))
+      // In a line of words' own black, which an emoji's colors leave alone.
+      MarkStyle.Emoji -> listOf(MarkPart(textPicture(context, size, emoji, size.value * 0.8f, android.graphics.Color.BLACK), null, below = below))
       MarkStyle.Badge ->
         listOfNotNull(
           MarkPart(tilePicture(context, size), colors.markTint(slot), below = below).takeUnless { onItsTile },
