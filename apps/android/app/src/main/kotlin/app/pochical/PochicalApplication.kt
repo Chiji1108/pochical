@@ -76,7 +76,7 @@ interface AppGraph : MetroAppComponentProviders {
   @Provides
   @SingleIn(AppScope::class)
   fun accountDeletion(kit: PochicalKit, apple: AppleSignIn): AccountDeletion =
-    AccountDeletion(kit.account::deleteAccount, apple::authorizationCode, CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate))
+    AccountDeletion(kit.account::deleteAccount, apple::authorizationCode, kit.account.state, CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate))
 
   /** The notifications from the server. */
   @Provides

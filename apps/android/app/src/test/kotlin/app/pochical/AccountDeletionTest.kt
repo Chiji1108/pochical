@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Looper
 import androidx.activity.ComponentActivity
+import app.pochical.kit.AccountState
 import app.pochical.kit.AppleWebSignIn
 import app.pochical.kit.DeletionFailure
 import kotlinx.coroutines.CompletableDeferred
@@ -12,6 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import org.junit.After
@@ -36,6 +38,8 @@ class AccountDeletionTest {
   private val apple = AppleSignIn(AppleWebSignIn("http://localhost/".toHttpUrl(), lazyOf(OkHttpClient())))
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
+  private val account = MutableStateFlow<AccountState>(AccountState.SignedIn("user-1", null))
+
   /** What Apple answered the deletion, once it did. */
   private val answered = CompletableDeferred<String?>()
 
@@ -52,6 +56,7 @@ class AccountDeletionTest {
         code != null
       },
       appleCode = apple::authorizationCode,
+      account = account,
       scope = scope,
     )
 
@@ -126,11 +131,24 @@ class AccountDeletionTest {
   @Test
   fun anEndedSessionIsSaidInPlaceOfTheAppNotHere() {
     val ended =
-      AccountDeletion({ throw DeletionFailure(DeletionFailure.Reason.SessionEnded) }, { null }, scope)
+      AccountDeletion({ throw DeletionFailure(DeletionFailure.Reason.SessionEnded) }, { null }, account, scope)
     ended.delete()
     idle()
 
     assertFalse(ended.deleting)
     assertNull(ended.failure)
+  }
+
+  @Test
+  fun aFailureGoesWithTheUserTheDeviceLetsGoOf() {
+    val failing = AccountDeletion({ throw DeletionFailure(DeletionFailure.Reason.Offline) }, { null }, account, scope)
+    failing.delete()
+    idle()
+    assertEquals(DeletionFailure.Reason.Offline, failing.failure)
+
+    account.value = AccountState.Erasing(AccountState.Erasing.Why.SignedOut, failed = false)
+    idle()
+
+    assertNull(failing.failure)
   }
 }
