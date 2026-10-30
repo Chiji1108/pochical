@@ -13,7 +13,7 @@ import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.StateRestorationTester
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -198,10 +198,10 @@ class CalendarScreenTest {
     // shown on another day after it shows that nothing was written before.
     val other = today.withDayOfMonth(1).minusMonths(1)
     days.setNote(other, "先月")
-    assertNull(test.awaitCalendar { it.note(other) != null }.note(day))
+    assertNull(test.awaitCalendar(compose) { it.note(other) != null }.note(day))
     compose.onNodeWithContentDescription("閉じる").performClick()
     compose.waitForIdle()
-    assertEquals("早めに出る", test.awaitCalendar { it.note(day) != null }.note(day))
+    assertEquals("早めに出る", test.awaitCalendar(compose) { it.note(day) != null }.note(day))
   }
 
   @Test
@@ -213,7 +213,7 @@ class CalendarScreenTest {
     compose.onNodeWithText("時間の変更も消えます。").assertIsDisplayed()
     compose.onNodeWithText("消す").performClick()
     compose.waitForIdle()
-    val calendar = test.awaitCalendar { it.shown(day, day).isEmpty() }
+    val calendar = test.awaitCalendar(compose) { it.shown(day, day).isEmpty() }
     assertEquals("棚卸し", calendar.note(day))
   }
 
@@ -263,7 +263,7 @@ class CalendarScreenTest {
     compose.onNodeWithText("夜勤").performClick()
     compose.waitForIdle()
     val after = night.plusDays(1)
-    val calendar = test.awaitCalendar { it.shown(night, after)[night]?.shift == "night" }
+    val calendar = test.awaitCalendar(compose) { it.shown(night, after)[night]?.shift == "night" }
     assertEquals("after", calendar.shown(after, after)[after]?.shift)
     traySays("${night.monthDayText}、夜勤を入力しました。翌日は明けです。${night.dayOfMonth + 2}日を選択中")
   }
@@ -281,7 +281,7 @@ class CalendarScreenTest {
         })
       }
     }
-    test.awaitCalendar { it.patterns.size == 11 }
+    test.awaitCalendar(compose) { it.patterns.size == 11 }
     show()
     startEntering()
     // Further than the key itself, which is narrower than half a page.
@@ -336,7 +336,7 @@ class CalendarScreenTest {
     compose.onNodeWithText("この2日はお休みですか？").assertIsDisplayed()
     compose.onNodeWithText("休みにする").performClick()
     compose.waitForIdle()
-    val calendar = test.awaitCalendar { calendar -> blanks.all { calendar.shown(it, it).isNotEmpty() } }
+    val calendar = test.awaitCalendar(compose) { calendar -> blanks.all { calendar.shown(it, it).isNotEmpty() } }
     assertEquals(listOf("off", "off"), blanks.map { calendar.shown(it, it).getValue(it).shift })
     compose.onNodeWithText("この2日はお休みですか？").assertDoesNotExist()
   }

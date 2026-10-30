@@ -26,5 +26,35 @@
       "type": "image/png",
       "purpose": "maskable"
     }
+  ],
+  "screenshots": [
+    {
+      "form_factor": "narrow",
+      "label": "ひと月のシフトが並ぶカレンダー",
+      "sizes": "1080x1920",
+      "src": "screenshot-calendar-1080x1920.png",
+      "type": "image/png"
+    },
+    {
+      "form_factor": "narrow",
+      "label": "シフトをポチポチ押して入力する",
+      "sizes": "1080x1920",
+      "src": "screenshot-entering-1080x1920.png",
+      "type": "image/png"
+    },
+    {
+      "form_factor": "narrow",
+      "label": "グループのみんなのシフトとチャット",
+      "sizes": "1080x1920",
+      "src": "screenshot-group-1080x1920.png",
+      "type": "image/png"
+    },
+    {
+      "form_factor": "narrow",
+      "label": "グループのチャット",
+      "sizes": "1080x1920",
+      "src": "screenshot-group-chat-1080x1920.png",
+      "type": "image/png"
+    }
   ]
 }

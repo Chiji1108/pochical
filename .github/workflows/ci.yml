@@ -51,6 +51,7 @@ jobs:
               - "*.config.ts"
               - "lint-ignores.ts"
               - "mise.toml"
+              - ".github/actions/mise/**"
               - ".github/workflows/ci.yml"
             proto:
               - "proto/**"
@@ -64,6 +65,7 @@ jobs:
               - "apps/android/kit/sync-wire.json"
               - "tools/sync-schema/**"
               - "mise.toml"
+              - ".github/actions/mise/**"
               - ".github/workflows/ci.yml"
             # design/ and proto/ reach the app through the code generated
             # into apps/android; :kit's tests read spec/vectors.
@@ -71,6 +73,7 @@ jobs:
               - "apps/android/**"
               - "spec/vectors/**"
               - "mise.toml"
+              - ".github/actions/mise/**"
               - ".github/workflows/ci.yml"
             # design/ and proto/ reach the app through the code generated
             # into apps/ios; PochicalKit's tests read spec/vectors.
@@ -79,6 +82,7 @@ jobs:
               - "spec/vectors/**"
               - ".xcode-version"
               - "mise.toml"
+              - ".github/actions/mise/**"
               - ".github/workflows/ci.yml"
 
   # apps/web, apps/design, apps/try, apps/server, apps/admin,
@@ -91,7 +95,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5.2.4
+      - uses: ./.github/actions/mise
         with:
           install_args: node pnpm
       - run: pnpm install --frozen-lockfile
@@ -132,7 +136,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5.2.4
+      - uses: ./.github/actions/mise
         with:
           install_args: buf node pnpm
       - run: mise run proto:lint
@@ -166,7 +170,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5.2.4
+      - uses: ./.github/actions/mise
         with:
           install_args: java
       # basic is the MIT-licensed cache over actions/cache; the default,
@@ -217,7 +221,7 @@ jobs:
             ${{ runner.temp }}/ios
             apps/ios/Packages/*/.build
           key: ios-${{ hashFiles('.xcode-version', 'apps/ios/**/Package.resolved') }}
-      - uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5.2.4
+      - uses: ./.github/actions/mise
         with:
           install: false
       # -skipMacroValidation and -skipPackagePluginValidation: no one is
