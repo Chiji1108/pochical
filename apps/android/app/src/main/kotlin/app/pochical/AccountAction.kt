@@ -1,5 +1,6 @@
 package app.pochical
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -31,36 +32,47 @@ class AccountActions(
    * ログアウト: any failure said as one, as the device is signed in as before; a session the server
    * does not know is said in place of the app, not here.
    */
-  val signOut = AccountAction(signOut, { if (it is NotSignedIn) null else Unit }, account, scope)
+  val signOut = AccountAction(signOut, { if (it is NotSignedIn) null else Unit }, scope)
 
   /** アカウントを削除, saying why it did not go, an ended session again in place of the app. */
   val deletion =
     AccountAction(
       deleteAccount,
       { e ->
-        ((e as? DeletionFailure)?.reason ?: DeletionFailure.Reason.ServerFailed).takeIf {
-          it != DeletionFailure.Reason.SessionEnded
+        when (e) {
+          is DeletionFailure -> e.reason.takeUnless { it == DeletionFailure.Reason.SessionEnded }
+          else -> DeletionFailure.Reason.ServerFailed
         }
       },
-      account,
       scope,
     )
 
   /** Either under way, as one change of who the device is goes at a time. */
   val running get() = signOut.running || deletion.running
+
+  init {
+    // The device letting go of the user, or its session ended, a failure of theirs goes too, as
+    // SignIns' answers do: it was of an account no longer here.
+    scope.launch {
+      account.collect {
+        if (it is AccountState.Erasing || it == AccountState.SessionEnded) {
+          this@AccountActions.signOut.failureRead()
+          deletion.failureRead()
+        }
+      }
+    }
+  }
 }
 
 /**
  * One change of the account the person asked for, kept by the app rather than the page that asked:
  * an activity made anew meanwhile, as it is turned or while Apple's page is open for a deletion's code
  * ([AppleSignIn.authorizationCode]), shows the same change going on, and hears how it went. [act] is
- * the account's own call, and [failureOf] what is said of what it threw, null for nothing; [account]
- * is the account's state.
+ * the account's own call, and [failureOf] what is said of what it threw, null for nothing.
  */
 class AccountAction<F : Any>(
   private val act: suspend () -> Unit,
   private val failureOf: (Exception) -> F?,
-  account: Flow<AccountState>,
   private val scope: CoroutineScope,
 ) {
   /** From the tap on, as the outbox, the server and Apple are asked before the account begins changing. */
@@ -70,14 +82,6 @@ class AccountAction<F : Any>(
   /** Why it did not go, until the person has read it. */
   var failure by mutableStateOf<F?>(null)
     private set
-
-  init {
-    // The device letting go of the user, or its session ended, a failure of theirs goes too, as
-    // SignIns' answers do: it was of an account no longer here.
-    scope.launch {
-      account.collect { if (it is AccountState.Erasing || it == AccountState.SessionEnded) failure = null }
-    }
-  }
 
   /** Asked once, one at a time. */
   fun run() {
@@ -89,6 +93,7 @@ class AccountAction<F : Any>(
       } catch (e: CancellationException) {
         throw e
       } catch (e: Exception) {
+        Log.w("PochicalAccount", "The account did not change", e)
         failure = failureOf(e)
       } finally {
         running = false

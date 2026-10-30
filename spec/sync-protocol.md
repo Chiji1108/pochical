@@ -43,7 +43,7 @@ What the device holds may be a few taps tried before signing in, or months of sh
 
 ### Signing out
 
-設定 › アカウント's ログアウト, asked first (ログアウトしますか？ / この端末からデータが消えます。もう一度ログインすれば、同じデータを使えます。), sends what waits in the outbox, ends the session on the server (`/sign-out`, which closes its sockets and drops its push token, Push), erases what the device holds of the user as deleting does, and goes on as a new anonymous user, starting from はじめの設定's welcome as a new phone does (spec/shift-patterns.md, The first run). Signing in with Apple or Google again brings the account's data back, through the switch above, as the device then holds nothing. On Android the sign-out is the app's, not the screen's, as deleting the account is (`AccountActions`): an activity made anew while the outbox or the server is waited on, as it is turned, shows it going on and says how it went, and neither ログアウト nor アカウントを削除 is offered while the other runs.
+設定 › アカウント's ログアウト, asked first (ログアウトしますか？ / この端末からデータが消えます。もう一度ログインすれば、同じデータを使えます。), sends what waits in the outbox, ends the session on the server (`/sign-out`, which closes its sockets and drops its push token, Push), erases what the device holds of the user as deleting does, and goes on as a new anonymous user, starting from はじめの設定's welcome as a new phone does (spec/shift-patterns.md, The first run). Signing in with Apple or Google again brings the account's data back, through the switch above, as the device then holds nothing. Neither ログアウト nor アカウントを削除 is offered while the other runs. On Android the sign-out is the app's, not the screen's, as deleting the account is: an activity made anew while the outbox or the server is waited on, as it is turned, shows it going on and says how it went.
 
 ### Deleting an account
 

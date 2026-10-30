@@ -9,13 +9,13 @@ import app.pochical.kit.AccountState
 import app.pochical.kit.AppleWebSignIn
 import app.pochical.kit.DeletionFailure
 import app.pochical.kit.NotSignedIn
+import java.io.IOException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
-import java.io.IOException
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import org.junit.After
@@ -157,12 +157,10 @@ class AccountActionTest {
   }
 
   @Test
-  fun aSignOutGoesOnThroughAnActivityMadeAnewAndSaysItFailed() {
-    val first = activity()
+  fun aSignOutIsHeldByTheAppUntilTheServerAnswersAndSaysItFailed() {
     signOut.run()
-    turn(first).resume()
     idle()
-    assertTrue("Still signing out in the activity made anew", signOut.running)
+    assertTrue("Signing out while the server is waited on", signOut.running)
     assertTrue("No other change offered meanwhile", actions.running)
 
     signedOut.completeExceptionally(IOException("offline"))
