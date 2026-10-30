@@ -1,6 +1,7 @@
 package app.pochical.widgets
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -21,18 +22,20 @@ import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.width
+import androidx.glance.semantics.contentDescription
+import androidx.glance.semantics.semantics
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import app.pochical.calendar.weekday
-import androidx.compose.ui.graphics.Color
 import androidx.glance.unit.ColorProvider
+import app.pochical.calendar.weekday
+import app.pochical.calendar.weekdayHead
 import app.pochical.groups.drawing
 import app.pochical.kit.Look
+import app.pochical.kit.WidgetDay
+import app.pochical.kit.columnHours
 import app.pochical.kit.dayName
-import androidx.glance.semantics.contentDescription
-import androidx.glance.semantics.semantics
-import app.pochical.calendar.weekdayHead
+import app.pochical.kit.withoutWholeHours
 
 /**
  * これから (/design's UpcomingSmall and UpcomingMedium; spec/widgets.md, Views): today's mark over

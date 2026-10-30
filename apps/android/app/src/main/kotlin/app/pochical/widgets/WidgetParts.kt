@@ -62,6 +62,8 @@ import app.pochical.design.Theme
 import app.pochical.design.ThemeColors
 import app.pochical.kit.DeviceSettings
 import app.pochical.kit.OffLook
+import app.pochical.kit.WidgetDay
+import app.pochical.kit.WidgetTone
 import app.pochical.kit.dayName
 import app.pochical.mark
 import java.time.LocalDate
