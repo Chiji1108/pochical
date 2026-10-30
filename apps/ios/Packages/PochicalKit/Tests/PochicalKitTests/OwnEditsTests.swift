@@ -119,6 +119,24 @@ private func outbox(_ db: Database) throws -> [Pochical_V1_DayValue] {
   }
 }
 
+@Test func theCalendarHoldsTheCoworkersItsDaysNote() throws {
+  let database = try calendarWithAnOrder()
+  let day = Day("2026-10-05")!
+  let aya = try database.write { db in
+    let aya = try OwnValues.addCoworker(named: "あや", now: 1, in: db)
+    try OwnValues.set(day, to: DayEntry(shift: "night", people: [aya]), now: 2, in: db)
+    return aya
+  }
+  // Read in one transaction, the day naming someone holds their name too.
+  let calendar = try database.read { db in try OwnCalendarRequest().fetch(db) }
+  #expect(calendar.shown(from: day, through: day)[day]?.people == [aya])
+  #expect(calendar.coworkers == [Coworker(id: aya, name: "あや")])
+  // With a range, only the own days in it: the day outside shows its order's.
+  let next = day.adding(days: 1)
+  let ranged = try database.read { db in try OwnCalendar(db, days: next...next) }
+  #expect(ranged.shown(from: day, through: day)[day]?.shift == "day")
+}
+
 @Test func aMemoIsSetOnADayWithoutAShift() throws {
   let database = try appDatabase()
   try database.write { db in

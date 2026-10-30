@@ -15,8 +15,6 @@ struct CalendarScreen: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.write) private var write
   @Fetch(OwnCalendarRequest()) private var calendar = OwnCalendar.empty
-  @FetchAll private var coworkerRows: [CoworkerRow]
-  @FetchAll private var coworkerOrder: [CoworkerOrderRow]
   @State private var today = Day.today
   /// The month naming the page shown; none for the page holding today,
   /// which the calendar opens on.
@@ -258,7 +256,7 @@ struct CalendarScreen: View {
       ZStack {
         DayDetail(
           day: day, entry: entry, note: calendar.note(on: day), patterns: calendar.patterns,
-          coworkers: ordered(coworkerRows, by: coworkerOrder),
+          coworkers: calendar.coworkers,
           onChange: { entry in
             keep { db, now in try OwnValues.set(day, to: entry, now: now, in: db) }
           },
@@ -304,7 +302,7 @@ struct CalendarScreen: View {
     .sheet(item: $addingToCalendar, id: \.self) { month in
       DeviceCalendarSheet(
         page: period.page(month), byPeriod: period.byPeriod, calendar: calendar,
-        coworkers: Dictionary(uniqueKeysWithValues: coworkerRows.map { ($0.id, $0.name) }))
+        coworkers: Dictionary(uniqueKeysWithValues: calendar.coworkers.map { ($0.id, $0.name) }))
     }
     .onChange(of: gaps) { _, gaps in
       if gaps.isEmpty {

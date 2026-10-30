@@ -12,7 +12,7 @@ extension OwnValues {
     _ shift: PatternID?, on day: Day, now: Int64, in db: Database
   ) throws {
     let next = day.adding(days: 1)
-    let calendar = try ownCalendar(from: day, through: next, in: db)
+    let calendar = try OwnCalendar(db, days: day...next)
     let shown = calendar.shown(from: day, through: next)
     let entered = enteringShift(shift, on: day, in: shown, patterns: calendar.patternsByID)
     var edits: [Day: DayEntry?] = [:]
@@ -30,7 +30,7 @@ extension OwnValues {
     guard let first = days.min(), let last = days.max() else {
       return
     }
-    let calendar = try ownCalendar(from: first, through: last, in: db)
+    let calendar = try OwnCalendar(db, days: first...last)
     let edits = Dictionary(
       days.map { ($0, Optional(DayEntry(shift: shift))) }, uniquingKeysWith: { _, new in new })
     try setShown(edits, calendar: calendar, now: now, in: db)
@@ -38,7 +38,7 @@ extension OwnValues {
 
   /// Sets a day to show `entry`, or nothing, as its detail changes it.
   public static func set(_ day: Day, to entry: DayEntry?, now: Int64, in db: Database) throws {
-    let calendar = try ownCalendar(from: day, through: day, in: db)
+    let calendar = try OwnCalendar(db, days: day...day)
     try setShown([day: entry], calendar: calendar, now: now, in: db)
   }
 
@@ -108,16 +108,6 @@ extension OwnValues {
         try edit(change, opID: UUID().uuidString.lowercased(), in: db)
       }
     }
-  }
-
-  /// The calendar with the own days from `from` through `through`.
-  private static func ownCalendar(from: Day, through: Day, in db: Database) throws
-    -> OwnCalendar
-  {
-    try OwnCalendar(
-      days: DayRow.where { $0.date >= from.key && $0.date <= through.key }.fetchAll(db),
-      patterns: PatternRow.fetchAll(db), patternOrder: PatternOrderRow.fetchAll(db),
-      orders: RepeatOrderRow.fetchAll(db))
   }
 
   /// The clock of a local edit (spec/sync-protocol.md, HLC), from the

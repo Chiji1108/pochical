@@ -78,13 +78,9 @@ extension OwnValues {
   /// order's start, past which only own days could show one the order in
   /// use does not repeat.
   public static func daysShowing(_ id: PatternID, in db: Database) throws -> Int {
-    let days = try DayRow.fetchAll(db)
-    let orders = try RepeatOrderRow.fetchAll(db)
-    let edges = days.compactMap { Day($0.date) } + orders.compactMap { Day($0.start) }
+    let calendar = try OwnCalendar(db)
+    let edges = Array(calendar.own.keys) + calendar.orders.map(\.start)
     guard let first = edges.min(), let last = edges.max() else { return 0 }
-    let calendar = OwnCalendar(
-      days: days, patterns: try PatternRow.fetchAll(db),
-      patternOrder: try PatternOrderRow.fetchAll(db), orders: orders)
     return calendar.shown(from: first, through: last).values.count { $0.shift == id }
   }
 }

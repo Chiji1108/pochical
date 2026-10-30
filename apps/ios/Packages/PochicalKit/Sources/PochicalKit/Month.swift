@@ -5,21 +5,24 @@ public func monthWeeks(_ month: Day, weekStart: Int) -> [[Day]] {
   Period(of: month, start: 1).weeks(weekStart: weekStart)
 }
 
-/// The person's own calendar as the device holds it: their days, patterns
-/// and repeating orders, read from the tables that show them.
+/// The person's own calendar as the device holds it: their days, patterns,
+/// repeating orders and the coworkers their days note, read from the tables
+/// that show them.
 public struct OwnCalendar: Hashable, Sendable {
-  /// Nothing entered: no days, patterns or orders.
+  /// Nothing entered: no days, patterns, orders or coworkers.
   public static let empty = OwnCalendar(days: [], patterns: [], patternOrder: [], orders: [])
 
   /// The patterns in their order.
   public let patterns: [Pattern]
   public let patternsByID: [PatternID: Pattern]
+  /// The coworkers in their order, as `ordered(_:by:)` has it.
+  public let coworkers: [Coworker]
   let own: [Day: OwnDay]
   let orders: [RepeatOrder]
 
   public init(
     days: [DayRow], patterns: [PatternRow], patternOrder: [PatternOrderRow],
-    orders: [RepeatOrderRow]
+    orders: [RepeatOrderRow], coworkers: [Coworker] = []
   ) {
     var own: [Day: OwnDay] = [:]
     for row in days {
@@ -32,6 +35,7 @@ public struct OwnCalendar: Hashable, Sendable {
     self.patternsByID = Dictionary(
       self.patterns.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
     self.orders = orders.sorted { $0.position < $1.position }.compactMap(\.order)
+    self.coworkers = coworkers
   }
 
   /// Every day from `from` through `through` that shows a shift: its own,

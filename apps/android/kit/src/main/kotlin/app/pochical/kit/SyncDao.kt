@@ -58,6 +58,8 @@ internal interface SyncDao : ChatDao {
 
   @Query("SELECT coworkers.id $COWORKERS_IN_ORDER") suspend fun coworkerIds(): List<String>
 
+  @Query("SELECT coworkers.* $COWORKERS_IN_ORDER") suspend fun coworkers(): List<CoworkerRow>
+
   @Insert suspend fun insertCoworkerOrder(rows: List<CoworkerOrderRow>)
 
   @Query("DELETE FROM coworkerOrder") suspend fun deleteCoworkerOrder()

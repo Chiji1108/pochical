@@ -67,6 +67,15 @@ class SyncedDaysTest {
   }
 
   @Test
+  fun aDayNotingSomeoneJustAddedShowsTheirName() {
+    val coworker = days.addCoworker("佐藤")
+    days.set(day, DayEntry("day", people = listOf(coworker.id)))
+    // Read with the days in one transaction: the day naming them never shows before they do.
+    val calendar = test.awaitCalendar { it.shown(day, day)[day]?.people?.isNotEmpty() == true }
+    assertEquals(listOf(coworker), calendar.coworkers)
+  }
+
+  @Test
   fun anEntryAndAMemoShowOnTheirDayAlone() {
     days.set(day, DayEntry("night", end = "10:00"))
     days.setNote(day, "早めに出る")
