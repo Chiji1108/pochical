@@ -90,6 +90,6 @@ class SetDaysTest {
   @Test
   fun someoneNamedBeforeTheyAreWrittenKeepsTheirId() = runTest {
     edits.addCoworker("佐藤", id = "satou")
-    assertEquals(listOf(CoworkerRow("satou", "佐藤")), database.values().coworkers().first())
+    assertEquals(listOf(CoworkerRow("satou", "佐藤")), calendar().coworkers)
   }
 }

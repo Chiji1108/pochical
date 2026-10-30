@@ -53,7 +53,7 @@ class OwnCalendar(
       days: List<DayRow>,
       patterns: List<PatternRow>,
       orders: List<RepeatOrderRow>,
-      coworkers: List<CoworkerRow> = emptyList(),
+      coworkers: List<CoworkerRow>,
     ) = OwnCalendar(patterns, days.associate { LocalDate.parse(it.date) to it.ownDay }, orders.map { it.order }, coworkers)
   }
 }
@@ -112,5 +112,5 @@ internal suspend fun SyncDao.shownSoFar(through: LocalDate? = null): Collection<
   val first = edges.minOrNull() ?: return emptyList()
   val last = through ?: edges.max()
   if (first > last) return emptyList()
-  return OwnCalendar.of(days, patterns(), orders).shown(first, last).values
+  return OwnCalendar.of(days, patterns(), orders, coworkers = emptyList()).shown(first, last).values
 }
