@@ -1,6 +1,8 @@
 plugins {
   alias(libs.plugins.android.application) apply false
   alias(libs.plugins.android.library) apply false
+  alias(libs.plugins.android.test) apply false
+  alias(libs.plugins.baselineprofile) apply false
   alias(libs.plugins.kotlin.jvm) apply false
   alias(libs.plugins.kotlin.compose) apply false
   alias(libs.plugins.kotlin.serialization) apply false
@@ -9,6 +11,11 @@ plugins {
   alias(libs.plugins.room) apply false
   alias(libs.plugins.google.services) apply false
 }
+
+// The app's release builds the Baseline Profile plugin makes for :baselineprofile, which talk to
+// `mise run server` as debug builds do: :kit declares them with that server, and :app fails to
+// configure should the plugin make any other, which would fall back to :kit's release, production.
+extra["profileBuildTypes"] = listOf("nonMinifiedRelease", "benchmarkRelease")
 
 // What every module's unit tests run with.
 subprojects {

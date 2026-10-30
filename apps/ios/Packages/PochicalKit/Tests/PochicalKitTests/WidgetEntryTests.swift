@@ -136,6 +136,9 @@ func widgetOffsCount(_ vector: WidgetVectors.OffsCase) {
   let offs = widgetOffs(today: day(0), people: people, group: vector.group ?? false, dayAt: day)
   #expect(offs.today == vector.expected.today)
   #expect(offs.next?.inDays == vector.expected.next)
+  // Where 次の休み opens (spec/shortcuts.md): today on a day off, else the
+  // next, else today.
+  #expect(offs.opensInDays == (vector.expected.today ? 0 : vector.expected.next ?? 0))
   let none: WidgetNoOff? =
     switch vector.expected.none?.kind {
     case "waiting": .waiting(vector.expected.none?.names ?? [])
@@ -180,4 +183,15 @@ func widgetNowCounts(_ vector: WidgetVectors.NowCase) {
   #expect(now.next?.end == moment(vector.expected.next, at: 2))
   #expect(now.nextInDays == vector.expected.nextInDays)
   #expect(now.refresh == moment(vector.expected.refresh))
+}
+
+/// Before the app has made its database, nothing is entered and no day is
+/// off: a control or a shortcut says so, never the sample week's days.
+@Test func nothingYetHasNoDays() {
+  let entry = WidgetEntry.nothingYet(at: .now, week: DeviceSettings().week)
+  #expect(entry.nothingEntered)
+  #expect(entry.today.pattern == nil)
+  #expect(!entry.offs.today)
+  #expect(entry.offs.next == nil)
+  #expect(entry.offs.none == .notEntered)
 }

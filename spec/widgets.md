@@ -108,6 +108,10 @@ Each kind is one widget in the gallery, offering the sizes in the table above; o
 
 What a gallery shows of a kind before it is placed: on the iPhone the person's own entry once they have entered days (WidgetKit's snapshot), else the sample week the pages under /design/widgets show on an ordinary day (ふつう), which is also the placeholder while an entry loads. Android's picker shows the sample, as a generated preview where the launcher supports it (Android 15), else as a picture of it (`android:previewImage`), drawn from the widgets themselves through Glance in light and dark (`drawable-night`) by `mise run android:widget-previews`, run again whenever a widget's look changes.
 
+## Shortcuts and controls
+
+On the iPhone the same entry also answers the app's shortcuts and its controls (Control Center, the lock screen and the Action button): `spec/shortcuts.md`, iPhone.
+
 ## Colors
 
 - **iPhone**: the widgets use the person's テーマ in the light or dark 外観 picks, as the app's screens do: the system's on 端末に合わせる, and always light or always dark when set so (dark whatever it says for a テーマ drawn dark). Where the system recolors a widget (the lock screen, 色合い and クリア), it reads the system's light or dark whatever 外観 says, as the system's recoloring works from it and dark words would fade there. Changing 外観 asks the widgets for new entries at once, as any setting they are drawn in does. In the 色合い (tinted) and クリア (clear) looks, the system recolors them itself.

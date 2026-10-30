@@ -300,7 +300,7 @@ private fun GroupRail(groups: List<GroupRow>, openId: String, onOpen: (String) -
       for (group in groups) key(group.id) {
         val count = unread[group.id] ?: 0
         val label = if (count > 0) stringResource(R.string.group_unread_label, group.name, count) else group.name
-        RailTab(group, group.id == openId, label, count) { onOpen(group.id) }
+        RailTab(group, group.id == openId, label, count) { if (group.id != openId) onOpen(group.id) }
       }
     }
     Box(Modifier.size(28.dp, 2.dp).background(colors.borderDefault, CircleShape))

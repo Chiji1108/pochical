@@ -5,10 +5,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -69,7 +67,7 @@ fun ProfilePage(navigation: PageNavigation) {
     if (saved == null) {
       Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
     } else {
-      ProfileForm(saved, Modifier.consumeWindowInsets(padding).imePadding().verticalScroll(rememberScrollState()).padding(padding))
+      ProfileForm(saved, Modifier.verticalScroll(rememberScrollState()).padding(padding))
     }
   }
 }

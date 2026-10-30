@@ -64,7 +64,7 @@ enum DayMoments {
   /// week, as the gallery shows before a widget is placed.
   static func snapshot(choice: WidgetChoice?) -> DayEntryMoment {
     let settings = DeviceSettings.kept()
-    guard let read = read(choice: choice),
+    guard let read = readWidget(choice: choice),
       case let entry = read.entry(at: .now, settings), !entry.nothingEntered
     else { return sample(at: .now, settings: settings) }
     return DayEntryMoment(date: .now, entry: entry, settings: settings)
@@ -73,11 +73,9 @@ enum DayMoments {
   static func timeline(choice: WidgetChoice?) -> Timeline<DayEntryMoment> {
     let now = Date.now
     let settings = DeviceSettings.kept()
-    guard let read = read(choice: choice) else {
-      // No database yet: as before anything is entered, until the app
-      // makes one and asks again.
-      var empty = WidgetEntry.sample(at: now, week: settings.week)
-      empty.nothingEntered = true
+    guard let read = readWidget(choice: choice) else {
+      // No database yet: until the app makes one and asks again.
+      let empty = WidgetEntry.nothingYet(at: now, week: settings.week)
       return Timeline(
         entries: [DayEntryMoment(date: now, entry: empty, settings: settings)], policy: .never)
     }
@@ -96,35 +94,6 @@ enum DayMoments {
 
   static func sample(at date: Date, settings: DeviceSettings) -> DayEntryMoment {
     DayEntryMoment(date: date, entry: .sample(at: date, week: settings.week), settings: settings)
-  }
-
-  /// What one read of the database gives: the person's calendar, and who
-  /// the widget is set to as they are now.
-  private struct Read {
-    let calendar: OwnCalendar
-    let choice: WidgetChoice?
-    let companion: WidgetCompanion?
-
-    func entry(at date: Date, _ settings: DeviceSettings) -> WidgetEntry {
-      var entry = calendar.widgetEntry(at: date, week: settings.week, companion: companion)
-      // Picked, but no longer there: what the widget shows changes only
-      // when the person changes it.
-      if let choice, companion == nil {
-        entry.pickAgain = choice.groupID
-      }
-      return entry
-    }
-  }
-
-  /// Nil until the app has made its database.
-  private static func read(choice: WidgetChoice?) -> Read? {
-    try? readWidgetDatabase { db in
-      let calendar = try OwnCalendar(db)
-      let companion = try choice.flatMap {
-        try widgetCompanion($0, me: widgetMeID(), around: Day(.now, in: .current), in: db)
-      }
-      return Read(calendar: calendar, choice: choice, companion: companion)
-    }
   }
 }
 
@@ -168,10 +137,4 @@ extension WidgetFamily {
   var onLockScreen: Bool {
     self == .accessoryCircular || self == .accessoryRectangular || self == .accessoryInline
   }
-}
-
-/// The link that opens the app on a day (spec/widgets.md, Opening the
-/// app).
-func dayLink(_ day: Day) -> URL {
-  URL(string: "pochical://day/\(day.key)")!
 }

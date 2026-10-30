@@ -28,6 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.Footnote
 import app.pochical.LimitedTextField
 import app.pochical.LocalThemeColors
+import app.pochical.pageInsets
 import app.pochical.R
 import app.pochical.ReviewPrompt
 import app.pochical.SectionRow
@@ -120,7 +121,8 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
           TextButton(onClick = ::make, enabled = canMake) { Text(stringResource(R.string.new_group_make)) }
         }
       }
-    }
+    },
+    contentWindowInsets = pageInsets,
   ) { padding ->
     LazyColumn(contentPadding = padding) {
       item {
