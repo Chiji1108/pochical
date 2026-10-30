@@ -61,12 +61,11 @@ private fun SimpleDay(day: WidgetDay, drawn: Drawn, modifier: GlanceModifier, la
   val base = if (LocalSize.current.height >= ROOMY) 64.dp else 48.dp
   val size = (if (said != null) base else base + 12.dp) - (if (named) NAME_ROOM + 2.dp else 0.dp)
   Column(modifier.spoken(day, drawn.words), verticalAlignment = Alignment.CenterVertically, horizontalAlignment = Alignment.CenterHorizontally) {
-    NoteStroke(day.noted, colors.noteMarker) {
-      if (label != null) {
-        Words(if (drawn.english) label.uppercase() else label, colors.secondary, if (drawn.english) 11.sp else 13.sp, bold = !drawn.english)
-      } else {
-        Words(drawn.words.shortDate(day.date), colors.words, 17.sp, bold = true)
-      }
+    val stroke = GlanceModifier.noteStroke(day.noted, colors.noteMarker)
+    if (label != null) {
+      Words(if (drawn.english) label.uppercase() else label, colors.secondary, if (drawn.english) 11.sp else 13.sp, bold = !drawn.english, modifier = stroke)
+    } else {
+      Words(drawn.words.shortDate(day.date), colors.words, 17.sp, bold = true, modifier = stroke)
     }
     Spacer(GlanceModifier.height(12.dp))
     DayMark(day, drawn, size, named = named, large = true)

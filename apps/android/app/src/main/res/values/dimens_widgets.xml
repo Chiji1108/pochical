@@ -2,4 +2,6 @@
 <resources>
   <!-- Today's frame in the calendar widget (widget_frame), which the day's date and mark keep inside (CalendarWidget). -->
   <dimen name="widget_frame_width">1.5dp</dimen>
+  <!-- The room round each day in the calendar widget's grid, inside which its tile and frame are drawn (widget_day_tile, CalendarWidget). -->
+  <dimen name="widget_day_gap">1dp</dimen>
 </resources>

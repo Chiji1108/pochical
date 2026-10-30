@@ -10,11 +10,14 @@ import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.graphics.RectF
 import android.graphics.Typeface
+import android.text.Layout
+import android.text.StaticLayout
+import android.text.TextPaint
 import android.util.LruCache
+import android.util.TypedValue
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.graphics.PathParser
 import androidx.core.graphics.createBitmap
 import androidx.glance.ColorFilter
@@ -24,9 +27,7 @@ import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
-import androidx.glance.layout.size
-import androidx.glance.text.Text
-import androidx.glance.text.TextStyle
+import androidx.glance.layout.padding
 import androidx.glance.unit.ColorProvider
 import app.pochical.MARK_CORNER
 import app.pochical.kit.GroupMarkValue
@@ -36,6 +37,7 @@ import app.pochical.kit.PatternRow
 import app.pochical.kit.TimeChange
 import app.pochical.kit.initialLetter
 import app.pochical.markLayers
+import kotlin.math.ceil
 
 // A pattern's mark as a widget draws it, as the app's ShiftMark draws it: its icon, its emoji, or
 // its letter on a tile of its color's tint, 早出 and 残業 as small triangles in its top corners.
@@ -57,18 +59,29 @@ private val drawn =
     override fun sizeOf(key: String, value: Bitmap) = value.byteCount
   }
 
+/** How many pixels a picture [size] across is on a side. */
+private fun side(context: Context, size: Dp): Int = (size.value * context.resources.displayMetrics.density).toInt().coerceAtLeast(1)
+
 /**
- * The picture [key] names, [size] across, white on clear for the launcher to tint: drawn by [draw]
- * on its canvas, given its side in pixels, the first time it is asked for.
+ * The picture [key] names, [width] by [height] pixels, white on clear for the launcher to tint:
+ * drawn by [draw] the first time it is asked for. It is at the screen's density, so a view takes
+ * its size from the picture without a size of its own, which costs Glance more views before
+ * Android 12 (#1059).
  */
-private fun picture(context: Context, size: Dp, key: String, draw: (Canvas, Float) -> Unit): Bitmap {
-  val side = (size.value * context.resources.displayMetrics.density).toInt().coerceAtLeast(1)
-  val sized = "$key|$side"
+private fun picture(context: Context, key: String, width: Int, height: Int, draw: (Canvas) -> Unit): Bitmap {
+  val sized = "$key|$width|$height"
   drawn.get(sized)?.let { return it }
-  return createBitmap(side, side).also {
-    draw(Canvas(it), side.toFloat())
+  return createBitmap(width, height).also {
+    it.density = context.resources.displayMetrics.densityDpi
+    draw(Canvas(it))
     drawn.put(sized, it)
   }
+}
+
+/** The picture [key] names, [size] across, drawn by [draw] given its side in pixels. */
+private fun picture(context: Context, size: Dp, key: String, draw: (Canvas, Float) -> Unit): Bitmap {
+  val side = side(context, size)
+  return picture(context, key, side, side) { draw(it, side.toFloat()) }
 }
 
 /** White paint, smoothed, for the pictures. */
@@ -183,17 +196,155 @@ fun ringPicture(context: Context, size: Dp, share: Float): Bitmap =
 private fun tilePicture(context: Context, size: Dp): Bitmap =
   picture(context, size, "tile") { canvas, px -> canvas.drawRoundRect(0f, 0f, px, px, px * MARK_CORNER, px * MARK_CORNER, white()) }
 
+
 /** An emoji mark's corners alone, which take secondary words' color, as the app's do. */
 private fun cornersPicture(context: Context, size: Dp, change: TimeChange): Bitmap =
   picture(context, size, "corners|${change.early}|${change.late}") { canvas, px -> corners(canvas, px, change, white()) }
 
+/** [text] at [sp] on one line, in white, as a widget's line of words lays it out: its fallback fonts' room and all. */
+private fun line(context: Context, text: String, sp: Float): StaticLayout {
+  val paint =
+    TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+      color = android.graphics.Color.WHITE
+      textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, sp, context.resources.displayMetrics)
+    }
+  val width = ceil(Layout.getDesiredWidth(text, paint)).toInt()
+  return StaticLayout.Builder.obtain(text, 0, text.length, paint, width).setIncludePad(true).setUseLineSpacingFromFallbacks(true).build()
+}
+
+/**
+ * [text] at [sp] in the middle of a box [size] across, cut to the box, as a line of words in the
+ * middle of a Box draws it: an emoji mark in its own colors, a dash for the launcher to tint.
+ */
+private fun textPicture(context: Context, size: Dp, text: String, sp: Float): Bitmap {
+  val line = line(context, text, sp)
+  return picture(context, size, "text|$text|${line.paint.textSize}") { canvas, px ->
+    canvas.translate((px - line.width) / 2, (px - line.height) / 2)
+    line.draw(canvas)
+  }
+}
+
+/**
+ * What a mark draws in secondary words' color: an emoji's corners over the mark's side, [size]
+ * across, and [name] under it as a line of words at [sp] would stand under the mark, as wide as the
+ * wider of the two.
+ */
+private fun underPicture(context: Context, size: Dp, change: TimeChange?, name: String, sp: Float): Bitmap {
+  val side = side(context, size)
+  val line = line(context, name, sp)
+  val width = maxOf(side, line.width)
+  return picture(context, "under|${change?.early}|${change?.late}|$name|${line.paint.textSize}|$side", width, side + line.height) { canvas ->
+    if (change != null) {
+      canvas.save()
+      canvas.translate((width - side) / 2f, 0f)
+      corners(canvas, side.toFloat(), change, white())
+      canvas.restore()
+    }
+    canvas.translate((width - line.width) / 2f, side.toFloat())
+    line.draw(canvas)
+  }
+}
+
+/**
+ * One picture of a mark: its pieces of one color, which the launcher tints [color], or its own
+ * colors where none; [below] clear under it, where the name's line is.
+ */
+class MarkPart(val picture: Bitmap, val color: ColorProvider?, val alpha: Float = 1f, val below: Dp = 0.dp)
+
 /**
  * A pattern's mark, [size] across, in [look] and the テーマ's colors, faint where a day off left
- * empty comes back in a week of days.
+ * empty comes back in a week of days, with [name] under it at [nameSp]: its pictures, one for each
+ * color, laid over each other. [onItsTile], a day off on its tile, which is a badge's own tile's
+ * color, so the badge draws no tile of its own over it.
  */
 @Composable
+fun shiftParts(
+  pattern: PatternRow,
+  size: Dp,
+  change: TimeChange?,
+  look: Look,
+  colors: WidgetColors,
+  faint: Boolean = false,
+  name: String? = null,
+  nameSp: Float = 9f,
+  onItsTile: Boolean = false,
+): List<MarkPart> =
+  partsOf(pattern.icon, pattern.emoji, pattern.symbol, if (look.colored) pattern.color else 0, size, change, look, colors, faint, name, nameSp, onItsTile)
+
+/** A dash where nothing is entered, as quiet as the calendar's, [size] across, with [name]'s line under it at [nameSp]. */
+@Composable
+fun nothingParts(size: Dp, colors: WidgetColors, name: String? = null, nameSp: Float = 9f): List<MarkPart> {
+  val context = LocalContext.current
+  val under = name?.let { underPicture(context, size, null, it, nameSp) }
+  return listOfNotNull(MarkPart(textPicture(context, size, "–", size.value * 0.5f), colors.quiet, below = below(context, size, under)), under?.let { MarkPart(it, colors.secondary) })
+}
+
+/** The room under a mark [size] across that [under] takes. */
+private fun below(context: Context, size: Dp, under: Bitmap?): Dp =
+  under?.let { ((it.height - side(context, size)) / context.resources.displayMetrics.density).dp } ?: 0.dp
+
+/** A mark of [icon], [emoji] or [symbol] as [look] draws it, in the テーマ's color [slot] (shiftParts). */
+@Composable
+private fun partsOf(
+  icon: String,
+  emoji: String,
+  symbol: String,
+  slot: Int,
+  size: Dp,
+  change: TimeChange?,
+  look: Look,
+  colors: WidgetColors,
+  faint: Boolean = false,
+  name: String? = null,
+  nameSp: Float = 9f,
+  onItsTile: Boolean = false,
+): List<MarkPart> {
+  val context = LocalContext.current
+  val alpha = if (faint) 0.35f else 1f
+  // An emoji's corners take secondary words' color, as its name does: one picture.
+  val corners = change?.takeIf { look.style == MarkStyle.Emoji }
+  val under = name?.let { underPicture(context, size, corners, it, nameSp) } ?: corners?.let { cornersPicture(context, size, it) }
+  val below = below(context, size, under.takeIf { name != null })
+  val mark =
+    when (look.style) {
+      MarkStyle.Emoji -> listOf(MarkPart(textPicture(context, size, emoji, size.value * 0.8f), null, below = below))
+      MarkStyle.Badge ->
+        listOfNotNull(
+          MarkPart(tilePicture(context, size), colors.markTint(slot), below = below).takeUnless { onItsTile },
+          MarkPart(markPicture(context, icon, symbol, look, size, change), colors.mark(slot), alpha, below),
+        )
+      MarkStyle.Icon -> listOf(MarkPart(markPicture(context, icon, symbol, look, size, change), colors.mark(slot), alpha, below))
+    }
+  return mark + listOfNotNull(under?.let { MarkPart(it, colors.secondary) })
+}
+
+/**
+ * [parts] over each other in the middle of the Box they are drawn in, a view a picture, with no Box
+ * of their own: a month draws many (#1059).
+ */
+@Composable
+fun MarkParts(parts: List<MarkPart>) {
+  for (part in parts) {
+    Image(
+      ImageProvider(part.picture),
+      contentDescription = null,
+      modifier = if (part.below > 0.dp) GlanceModifier.padding(bottom = part.below) else GlanceModifier,
+      alpha = part.alpha,
+      colorFilter = part.color?.let { ColorFilter.tint(it) },
+    )
+  }
+}
+
+/** A mark of [parts] by itself, in a Box of its own where it has more than one. */
+@Composable
+private fun Mark(parts: List<MarkPart>) {
+  if (parts.size == 1) MarkParts(parts) else Box(contentAlignment = Alignment.Center) { MarkParts(parts) }
+}
+
+/** A pattern's mark by itself (shiftParts). */
+@Composable
 fun WidgetShiftMark(pattern: PatternRow, size: Dp, change: TimeChange?, look: Look, colors: WidgetColors, faint: Boolean = false) {
-  WidgetMarkOf(pattern.icon, pattern.emoji, pattern.symbol, if (look.colored) pattern.color else 0, size, change, look, colors, faint)
+  Mark(shiftParts(pattern, size, change, look, colors, faint))
 }
 
 /**
@@ -210,52 +361,13 @@ fun WidgetGroupMark(mark: GroupMarkValue, name: String, size: Dp, colors: Widget
       else -> MarkStyle.Badge
     }
   val letter = mark.letter.takeIf { mark.photoId.isEmpty() }?.ifEmpty { null } ?: initialLetter(name)
-  WidgetMarkOf(mark.icon, mark.emoji, letter, mark.color, size, null, Look(style = style, fill = true), colors)
+  Mark(partsOf(mark.icon, mark.emoji, letter, mark.color, size, null, Look(style = style, fill = true), colors))
 }
 
-/** A mark of [icon], [emoji] or [symbol] as [look] draws it, in the テーマ's color [slot]. */
-@Composable
-private fun WidgetMarkOf(
-  icon: String,
-  emoji: String,
-  symbol: String,
-  slot: Int,
-  size: Dp,
-  change: TimeChange?,
-  look: Look,
-  colors: WidgetColors,
-  faint: Boolean = false,
-) {
-  val context = LocalContext.current
-  val alpha = if (faint) 0.35f else 1f
-  when (look.style) {
-    MarkStyle.Emoji ->
-      Box(GlanceModifier.size(size), contentAlignment = Alignment.Center) {
-        Text(emoji, style = TextStyle(fontSize = (size.value * 0.8f).sp))
-        if (change != null) {
-          Image(provider = ImageProvider(cornersPicture(context, size, change)), contentDescription = null, modifier = GlanceModifier.size(size), colorFilter = ColorFilter.tint(colors.secondary))
-        }
-      }
-    MarkStyle.Badge ->
-      Box(GlanceModifier.size(size), contentAlignment = Alignment.Center) {
-        Fill(ImageProvider(tilePicture(context, size)), colors.markTint(slot))
-        MarkImage(markPicture(context, icon, symbol, look, size, change), size, colors.mark(slot), alpha)
-      }
-    MarkStyle.Icon -> MarkImage(markPicture(context, icon, symbol, look, size, change), size, colors.mark(slot), alpha)
-  }
-}
-
-@Composable
-private fun MarkImage(picture: Bitmap, size: Dp, color: ColorProvider, alpha: Float) {
-  Image(provider = ImageProvider(picture), contentDescription = null, modifier = GlanceModifier.size(size), alpha = alpha, colorFilter = ColorFilter.tint(color))
-}
-
-/** A dash where nothing is entered, as quiet as the calendar's. */
+/** A dash by itself where nothing is entered (nothingParts). */
 @Composable
 fun NothingMark(size: Dp, colors: WidgetColors) {
-  Box(GlanceModifier.size(size), contentAlignment = Alignment.Center) {
-    Text("–", style = TextStyle(color = colors.quiet, fontSize = (size.value * 0.5f).sp))
-  }
+  Mark(nothingParts(size, colors))
 }
 
 /** How much smaller a mark draws with its name under it. */

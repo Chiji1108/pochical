@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A day off's tile in the calendar widget's grid (WidgetParts' WidgetShape.dayTile): the widget's
+     tile inside its day by the room between days, as the day's background, white for the widget to
+     tint. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+  android:drawable="@drawable/widget_tile"
+  android:inset="@dimen/widget_day_gap" />
