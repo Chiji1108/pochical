@@ -81,7 +81,7 @@ private struct UpcomingSmall: View {
           VStack(spacing: 2) {
             Text(day.date.weekdayHead(english: english))
               .font(.caption2)
-              .foregroundStyle(colors.weekday(day.tone))
+              .foregroundStyle(colors.color(day.tone, plain: colors.textTertiary))
               .noteStroke(day.noted)
             WidgetMark(
               day: day, size: look.options.names ? 24 - nameRoom : 24,
@@ -212,7 +212,7 @@ private struct ColumnHead: View {
     VStack(spacing: 0) {
       Text(day.date.weekdayHead(english: english))
         .font(.caption2)
-        .foregroundStyle(colors.weekday(day.tone))
+        .foregroundStyle(colors.color(day.tone, plain: colors.textTertiary))
       date
         .noteStroke(day.noted, onTile: onTile ? day.pattern : nil)
     }

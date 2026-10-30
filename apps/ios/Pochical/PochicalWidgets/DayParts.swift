@@ -96,14 +96,6 @@ private struct NoteStroke: ViewModifier {
   }
 }
 
-extension ThemeColors {
-  /// A weekday's color over a column of days: Sunday's and Saturday's as
-  /// the person colors them, else quiet.
-  func weekday(_ tone: DayTone) -> Color {
-    color(tone, plain: textTertiary)
-  }
-}
-
 /// A day as one element for screen readers, read as `spoken`.
 struct SpokenDay: ViewModifier {
   @Environment(\.english) private var english

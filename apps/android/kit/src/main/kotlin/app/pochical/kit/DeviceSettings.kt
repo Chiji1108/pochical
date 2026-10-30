@@ -183,12 +183,15 @@ data class Week(
   val saturday: Boolean = true,
   val holiday: Boolean = true,
 ) {
-  /** The weekday of the week's [column], 0 its first, counted from the day it starts on. */
+  /**
+   * The weekday of the week's [column], 0 its first, counted from the day it starts on
+   * (spec/vectors/month.json, columns).
+   */
   fun weekdayAt(column: Int): Int = (start + column) % 7
 
   /**
    * How [weekday] is colored, a national [holiday] when the day is one: Sundays and holidays in
-   * Sunday's color, Saturdays in theirs, each unless turned off.
+   * Sunday's color, Saturdays in theirs, each unless turned off (spec/vectors/month.json, tones).
    */
   fun tone(weekday: Int, holiday: Boolean = false): DayTone =
     when {

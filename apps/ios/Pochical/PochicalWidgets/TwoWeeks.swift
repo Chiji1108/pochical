@@ -51,7 +51,7 @@ struct WeekdayHeads: View {
         let weekday = week.weekday(atColumn: index)
         Text(Day.weekdayLetter(weekday, english: english))
           .font(.caption2)
-          .foregroundStyle(colors.weekday(week.tone(weekday)))
+          .foregroundStyle(colors.color(week.tone(weekday), plain: colors.textTertiary))
           .frame(maxWidth: .infinity)
       }
     }
