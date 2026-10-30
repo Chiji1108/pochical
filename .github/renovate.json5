@@ -57,8 +57,12 @@
       groupSlug: "all-minor-patch",
     },
     {
-      description: "The same wait as npm's, for Actions, Swift, mise's tools and buf's plugins, which the BSR publishes after the tag",
-      matchDatasources: ["github-tags", "github-releases"],
+      description: "The same wait as npm's, for Actions, Swift, mise and its tools and buf's plugins, which the BSR publishes after the tag",
+      matchDatasources: [
+        "github-tags",
+        "github-releases",
+        "github-release-attachments",
+      ],
       minimumReleaseAge: "3 days",
       internalChecksFilter: "strict",
     },

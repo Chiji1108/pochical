@@ -1,7 +1,9 @@
 // Makes what apps/try needs to open from the home screen as an app of its own:
 // the icons, the manifest, and iOS's launch images in light and dark, all
-// from the site icon (@pochical/prototype's assets/icon.png).
-// Run again after changing the icon: pnpm run icon:app
+// from the site icon (@pochical/prototype's assets/icon.png). The manifest
+// also lists the screens src/lib/app-screenshots.ts names, which pnpm run
+// image:screens photographs.
+// Run again after changing the icon or that list: pnpm run icon:app
 import { writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
@@ -15,6 +17,11 @@ import { createAppleSplashScreens } from "@vite-pwa/assets-generator/config";
 import type { Preset } from "@vite-pwa/assets-generator/config";
 import sharp from "sharp";
 
+import {
+  APP_SCREENSHOT,
+  appScreenshotFile,
+  appScreenshots,
+} from "../src/lib/app-screenshots";
 import { screenColor } from "../src/lib/screen-color";
 
 const SOURCE = fileURLToPath(
@@ -112,6 +119,14 @@ const manifest = {
   start_url: "/",
   theme_color: light,
   ...generateManifestIconsEntry("object", icons),
+  // pnpm run image:screens takes them.
+  screenshots: appScreenshots.map(({ label, name }) => ({
+    form_factor: "narrow",
+    label,
+    sizes: `${APP_SCREENSHOT.width}x${APP_SCREENSHOT.height}`,
+    src: appScreenshotFile(name),
+    type: "image/png",
+  })),
 };
 await writeFile(
   `${FOLDER}manifest.webmanifest`,

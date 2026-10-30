@@ -1,7 +1,6 @@
 package app.pochical.kit
 
 import app.pochical.design.Widgets
-import java.time.DayOfWeek
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalTime
@@ -49,8 +48,8 @@ data class WidgetDay(
         date = date,
         tone =
           when {
-            isHoliday || (date.dayOfWeek == DayOfWeek.SUNDAY && week.sunday) -> WidgetTone.Holiday
-            date.dayOfWeek == DayOfWeek.SATURDAY && week.saturday -> WidgetTone.Saturday
+            isHoliday || (date.weekday == 0 && week.sunday) -> WidgetTone.Holiday
+            date.weekday == 6 && week.saturday -> WidgetTone.Saturday
             else -> WidgetTone.Plain
           },
         holiday = isHoliday,

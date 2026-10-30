@@ -182,7 +182,7 @@ private struct NowSmall: View {
     case .on(let span):
       // The ring says 勤務中 and its mark which shift, so no heading says
       // them again; in the shift's own color unless the system draws the
-      // widget in one.
+      // widget in one. The words centered under it, one group with it.
       VStack(spacing: 8) {
         ZStack {
           Ring(span: span, tint: renderingMode == .fullColor ? tint(of: span) : nil)
@@ -191,7 +191,7 @@ private struct NowSmall: View {
             day: span.day, size: look.options.names ? 34 - nameRoom : 34,
             named: look.options.names)
         }
-        VStack(alignment: .leading, spacing: 1) {
+        VStack(spacing: 1) {
           leftText(until: span.end, english: words.english)
             .font(.system(size: 15, weight: .bold).monospacedDigit())
             .foregroundStyle(colors.textPrimary)
@@ -201,7 +201,8 @@ private struct NowSmall: View {
             .font(.footnote.monospacedDigit())
             .foregroundStyle(colors.textSecondary)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
       }
       .frame(maxHeight: .infinity)
     case .next(let span, let inDays):
