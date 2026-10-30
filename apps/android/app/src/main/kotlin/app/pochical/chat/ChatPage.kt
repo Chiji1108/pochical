@@ -85,6 +85,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -632,7 +633,8 @@ fun ChatPage(
       takenTitle = { floatingDay.taken },
     )
   PhotoZoomLayout(viewing, reducedMotion, shownOf = OpenPhotos::shownPhoto, places = {
-    ChatScaffold(groupId, threadId, support, members, groups, socket, onBack, onPhotos, onShifts, say, onTitle) {
+    // While a line's menu is open, a screen reader goes into it alone, as iOS makes it modal.
+    ChatScaffold(groupId, threadId, support, members, groups, socket, onBack, onPhotos, onShifts, say, onTitle, if (menu.open != null) Modifier.clearAndSetSemantics {} else Modifier) {
       Column(Modifier.fillMaxSize().imePadding()) {
         Box(Modifier.weight(1f).fillMaxWidth()) {
           // What floats over the lines' top keeps its room there, so the first of them scrolls out from under it.
@@ -708,7 +710,7 @@ fun ChatPage(
         )
       }
     }
-    LineMenu(menu)
+    LineMenu(menu, reducedMotion)
   }) { open, closing ->
     if (!closing) FollowPhotos(groupId, threadId, open)
     PhotoViewer(groupId, threadId, open, nameOf, onClose = { viewing = null }, zoom = this, closing = closing)
@@ -810,6 +812,7 @@ private fun ChatScaffold(
   say: (String) -> Unit,
   /** A tap on the title: what the chat is of; null while it opens nothing. */
   onTitle: (() -> Unit)?,
+  modifier: Modifier = Modifier,
   content: @Composable () -> Unit,
 ) {
   val me = rememberMeId()
@@ -821,6 +824,7 @@ private fun ChatScaffold(
   val muted = rememberChatNotifications()?.isMuted(groupId, threadId)
   val setMuted = rememberChatMuting(groupId, threadId, say)
   Scaffold(
+    modifier,
     topBar = {
       TopAppBar(
         title = {

@@ -1,3 +1,5 @@
+import alarmSymbol from "@iconify-icons/material-symbols/alarm-outline-rounded";
+import notificationsSymbol from "@iconify-icons/material-symbols/notifications-outline-rounded";
 import { css, cx } from "@pochical/styled-system/css";
 import { Bell, BellOff, Check } from "lucide-react";
 import { useContext, useEffect, useState } from "react";
@@ -44,6 +46,7 @@ import {
   listRow,
   SwitchRow,
   Toggle,
+  useRowClass,
 } from "./design-list";
 import { MenuPicker, PullDownMenu } from "./design-menu";
 import {
@@ -282,9 +285,15 @@ export function NotificationSection({
         <ListRow
           label="リマインド"
           onClick={onReminders}
+          symbol={alarmSymbol}
           value={remindersValue}
         />
-        <ListRow label="チャット" onClick={onChats} value={chatsValue} />
+        <ListRow
+          label="チャット"
+          onClick={onChats}
+          symbol={notificationsSymbol}
+          value={chatsValue}
+        />
       </List>
     </Section>
   );
@@ -333,14 +342,9 @@ function ReminderRow({
       ? `次は ${firingText(firing.when)}・${shiftText(firing)}`
       : "この先、届くシフトがありません";
   }
+  const frame = useRowClass(detail !== undefined);
   return (
-    <div
-      className={cx(
-        detail === undefined ? listRow.root : listRow.twoLine,
-        listRow.pressable
-      )}
-      data-list-row=""
-    >
+    <div className={cx(frame, listRow.pressable)} data-list-row="">
       <button className={reminderRow.open} onClick={onOpen} type="button">
         <span
           className={cx(

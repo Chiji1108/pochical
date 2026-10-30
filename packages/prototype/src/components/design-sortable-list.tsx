@@ -21,7 +21,7 @@ import { GripVertical } from "lucide-react";
 import { Fragment, useId } from "react";
 import type { ReactNode } from "react";
 
-import { listRow, listStyle } from "./design-list";
+import { useListLook, useRowClass } from "./design-list";
 
 // A list put in order by dragging, kept apart so only the screens that
 // sort carry dnd-kit.
@@ -48,6 +48,7 @@ export function SortableList<Item extends { id: string }>({
   // dnd kit numbers its screen reader notes itself, which counts apart on
   // the server and in the browser; React's id is the same on both.
   const dndId = useId();
+  const look = useListLook();
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -90,7 +91,7 @@ export function SortableList<Item extends { id: string }>({
       sensors={sensors}
     >
       <SortableContext items={items} strategy={verticalListSortingStrategy}>
-        <div className={listStyle}>
+        <div {...look}>
           {items.map((item, index) => (
             <Fragment key={item.id}>
               {divider?.(index)}
@@ -149,9 +150,10 @@ function SortableRow({
     transform,
     transition,
   } = useSortable({ id });
+  const frame = useRowClass();
   return (
     <div
-      className={cx(listRow.root, isDragging && sortable.dragging)}
+      className={cx(frame, isDragging && sortable.dragging)}
       data-list-row=""
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}

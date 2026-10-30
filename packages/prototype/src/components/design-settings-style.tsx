@@ -1,3 +1,4 @@
+import paletteSymbol from "@iconify-icons/material-symbols/palette-outline-rounded";
 import type { ColorScheme } from "@pochical/design/colors";
 import { presets } from "@pochical/design/themes";
 import type { Preset } from "@pochical/design/themes";
@@ -456,6 +457,7 @@ export function StyleRow({
     <ListRow
       label="スタイル"
       onClick={onOpen}
+      symbol={paletteSymbol}
       value={
         <span className={settingsParts.inlineValue}>
           <ShiftMark shift={shift} size={20} />

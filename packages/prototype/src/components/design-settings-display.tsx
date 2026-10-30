@@ -1,3 +1,5 @@
+import calendarSymbol from "@iconify-icons/material-symbols/calendar-month-outline-rounded";
+import contrastSymbol from "@iconify-icons/material-symbols/contrast-outline-rounded";
 import type { ColorScheme } from "@pochical/design/colors";
 import { css } from "@pochical/styled-system/css";
 import { Check } from "lucide-react";
@@ -129,6 +131,7 @@ export function AppearanceRow({ onOpen }: { onOpen: () => void }) {
     <ListRow
       label="外観"
       onClick={onOpen}
+      symbol={contrastSymbol}
       value={
         alwaysDark ? `ダーク（${alwaysDark.name}）` : appearanceName(appearance)
       }
@@ -329,6 +332,7 @@ export function WeekRow({ onOpen }: { onOpen: () => void }) {
     <ListRow
       label="カレンダー"
       onClick={onOpen}
+      symbol={calendarSymbol}
       value={[
         `${weekdayNames[week.weekStart]}曜はじまり`,
         month,
