@@ -41,14 +41,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -399,31 +395,18 @@ private fun BarSurface(bar: ReactionBar, state: LineMenuState, reducedMotion: Bo
   }
 }
 
-/** The menu's items on Material's menu surface, each lit while the finger that opened it is over it. */
+/**
+ * The menu's items in Material 3 Expressive's groups, as the chat's other menus (MenuGroups), each
+ * lit while the finger that opened it is over it; room kept round them for their shadows within the
+ * scroll, when taller than the room.
+ */
 @Composable
 private fun MenuSurface(line: MenuLine, state: LineMenuState, first: FocusRequester?) {
-  val colors = LocalThemeColors.current
-  Surface(
-    shape = MenuDefaults.shape,
-    color = MenuDefaults.containerColor,
-    tonalElevation = MenuDefaults.TonalElevation,
-    shadowElevation = MenuDefaults.ShadowElevation,
-    modifier = Modifier.widthIn(min = MENU_WIDTH),
-  ) {
-    Column(Modifier.width(MENU_WIDTH).verticalScroll(rememberScrollState())) {
-      line.items.forEachIndexed { index, item ->
-        if (item.startsGroup && index > 0) HorizontalDivider()
-        val tint = if (item.destructive) colors.dangerDefault else MaterialTheme.colorScheme.onSurface
-        DropdownMenuItem(
-          text = { Text(item.label, color = tint) },
-          leadingIcon = { Icon(painterResource(item.icon), contentDescription = null, tint = tint) },
-          onClick = { state.pick(item) },
-          modifier =
-            Modifier.focusedFirst(first.takeIf { index == 0 })
-              .onGloballyPositioned { state.targets[ITEM + index] = it.boundsInWindow() }
-              .background(if (state.lit == ITEM + index) MaterialTheme.colorScheme.onSurface.copy(alpha = LIT) else Color.Transparent),
-        )
-      }
+  Column(Modifier.width(MENU_WIDTH).verticalScroll(rememberScrollState()).padding(MenuDefaults.ShadowElevation)) {
+    MenuGroups(line.items, onPick = state::pick) { index, shape ->
+      Modifier.focusedFirst(first.takeIf { index == 0 })
+        .onGloballyPositioned { state.targets[ITEM + index] = it.boundsInWindow() }
+        .background(if (state.lit == ITEM + index) MaterialTheme.colorScheme.onSurface.copy(alpha = LIT) else Color.Transparent, shape)
     }
   }
 }

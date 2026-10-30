@@ -19,12 +19,14 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -58,9 +60,12 @@ fun ShiftChoicePage(day: LocalDate, onBack: () -> Unit) {
   val patterns = calendar.patterns.filterNot { it.archived }
   var query by rememberSaveable { mutableStateOf("") }
   val shown = patterns.filter { query.isBlank() || it.name.contains(query.trim(), ignoreCase = true) }
+  val bar = TopAppBarDefaults.pinnedScrollBehavior()
   Scaffold(
+    Modifier.nestedScroll(bar.nestedScrollConnection),
     topBar = {
       TopAppBar(
+        scrollBehavior = bar,
         title = { Text(stringResource(R.string.day_shift)) },
         navigationIcon = {
           IconButton(onClick = onBack) {

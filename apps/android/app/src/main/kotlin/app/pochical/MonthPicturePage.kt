@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
@@ -25,7 +26,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -106,84 +106,12 @@ fun MonthPicturePage(month: YearMonth, onBack: () -> Unit) {
 
   fun say(words: Int) = scope.launch { snackbar.showSnackbar(resources.getString(words)) }
 
-  SettingsPage(stringResource(R.string.picture), onBack) { padding ->
-    Box(Modifier.padding(padding)) {
-      // The picture as it goes out, drawn apart from the page at one size on every phone, as iOS's
-      // 390 points at three times: recorded, never shown, so what is saved is the look as it is now
-      // however far the page has scrolled.
-      CompositionLocalProvider(LocalDensity provides Density(PICTURE_SCALE)) {
-        MonthPicture(
-          month,
-          calendar,
-          device,
-          dark,
-          Modifier.requiredWidth(PICTURE_WIDTH).wrapContentHeight(unbounded = true).clearAndSetSemantics {}.drawWithContent {
-            layer.record { this@drawWithContent.drawContent() }
-          },
-        )
-      }
-      LazyColumn(Modifier.fillMaxWidth()) {
-        item {
-          Box(Modifier.padding(start = 16.dp, end = 16.dp, top = 22.dp)) {
-            val shape = RoundedCornerShape(Radius.xxl)
-            MonthPicture(
-              month,
-              calendar,
-              device,
-              dark,
-              Modifier.clip(shape)
-                .border(1.dp, LocalThemeColors.current.separator, shape)
-                .clearAndSetSemantics { contentDescription = resources.getString(R.string.picture_label, named) },
-            )
-            SchemeSwitch(
-              dark = dark,
-              enabled = !device.theme.isAlwaysDark,
-              onChange = { picked -> settings.change { it.copy(picture = it.picture.copy(dark = picked)) } },
-              modifier = Modifier.offset(x = 12.dp, y = -Metrics.touch / 2),
-            )
-          }
-        }
-        // The style page's choices in its order, with the picture's own values: it goes to people
-        // who do not know the marks, so names start on.
-        item {
-          SectionHeader(stringResource(R.string.style_names))
-          Box(Modifier.padding(horizontal = 16.dp)) {
-            Choices(
-              listOf(false, true),
-              device.picture.options.names,
-              { stringResource(if (it) R.string.style_names_on else R.string.style_names_off) },
-              { names -> changeOptions(settings) { it.copy(names = names) } },
-            ) {}
-          }
-          if (offs.isEmpty()) Footnote(stringResource(R.string.picture_only))
-        }
-        // Each day off its own, those of a job left too, as an older month holds them: 有休 may be
-        // worth showing while 休み is left blank.
-        if (offs.isNotEmpty()) {
-          item {
-            SectionHeader(stringResource(R.string.style_off_look))
-            Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-              for (off in offs) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                  if (offs.size > 1) Text(off.name, fontWeight = FontWeight.SemiBold)
-                  Choices(
-                    OffLook.entries,
-                    device.picture.options.offLook(off.id),
-                    { stringResource(it.title) },
-                    { look -> changeOptions(settings) { it.withOffLook(look, off.id, offs.map(Pattern::id)) } },
-                  ) {}
-                }
-              }
-            }
-            Footnote(stringResource(R.string.picture_only))
-          }
-        }
-        item { Spacer(Modifier.heightIn(min = Metrics.control * 2)) }
-      }
+  // 共有 and 保存 under the choices, which end above them however large the words are.
+  val buttons: @Composable () -> Unit = {
       Row(
-        Modifier.align(Alignment.BottomCenter)
-          .fillMaxWidth()
+        Modifier.fillMaxWidth()
           .background(LocalThemeColors.current.backgroundBase)
+          .navigationBarsPadding()
           .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
       ) {
@@ -225,7 +153,79 @@ fun MonthPicturePage(month: YearMonth, onBack: () -> Unit) {
           Text(stringResource(R.string.picture_save))
         }
       }
-      SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(bottom = Metrics.control + 24.dp))
+  }
+  SettingsPage(stringResource(R.string.picture), onBack, snackbar = snackbar, bottomBar = buttons) { padding ->
+    Box(Modifier.padding(padding)) {
+      // The picture as it goes out, drawn apart from the page at one size on every phone, as iOS's
+      // 390 points at three times: recorded, never shown, so what is saved is the look as it is now
+      // however far the page has scrolled.
+      CompositionLocalProvider(LocalDensity provides Density(PICTURE_SCALE)) {
+        MonthPicture(
+          month,
+          calendar,
+          device,
+          dark,
+          Modifier.requiredWidth(PICTURE_WIDTH).wrapContentHeight(unbounded = true).clearAndSetSemantics {}.drawWithContent {
+            layer.record { this@drawWithContent.drawContent() }
+          },
+        )
+      }
+      LazyColumn(Modifier.fillMaxWidth()) {
+        item {
+          Box(Modifier.padding(start = 16.dp, end = 16.dp, top = 22.dp)) {
+            val shape = RoundedCornerShape(Radius.xxl)
+            MonthPicture(
+              month,
+              calendar,
+              device,
+              dark,
+              Modifier.clip(shape)
+                .border(1.dp, LocalThemeColors.current.separator, shape)
+                .clearAndSetSemantics { contentDescription = resources.getString(R.string.picture_label, named) },
+            )
+            SchemeSwitch(
+              dark = dark,
+              enabled = !device.theme.isAlwaysDark,
+              onChange = { picked -> settings.change { it.copy(picture = it.picture.copy(dark = picked)) } },
+              modifier = Modifier.offset(x = 12.dp, y = -Metrics.touch / 2),
+            )
+          }
+        }
+        // The style page's choices in its order, with the picture's own values: it goes to people
+        // who do not know the marks, so names start on. Words alone, in Material's connected button
+        // group, as the picture above shows what each does.
+        item {
+          SectionHeader(stringResource(R.string.style_names))
+          ChoiceButtons(
+            listOf(false, true),
+            device.picture.options.names,
+            { stringResource(if (it) R.string.style_names_on else R.string.style_names_off) },
+          ) { names -> changeOptions(settings) { it.copy(names = names) } }
+          if (offs.isEmpty()) Footnote(stringResource(R.string.picture_only))
+        }
+        // Each day off its own, those of a job left too, as an older month holds them: 有休 may be
+        // worth showing while 休み is left blank.
+        if (offs.isNotEmpty()) {
+          item {
+            SectionHeader(stringResource(R.string.style_off_look))
+            Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+              for (off in offs) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                  if (offs.size > 1) Text(off.name, fontWeight = FontWeight.SemiBold)
+                  // Inside the column's inset, which the pattern's name above it shares.
+                  ChoiceButtons(
+                    OffLook.entries,
+                    device.picture.options.offLook(off.id),
+                    { stringResource(it.title) },
+                    modifier = Modifier,
+                  ) { look -> changeOptions(settings) { it.withOffLook(look, off.id, offs.map(Pattern::id)) } }
+                }
+              }
+            }
+            Footnote(stringResource(R.string.picture_only))
+          }
+        }
+      }
     }
   }
 }

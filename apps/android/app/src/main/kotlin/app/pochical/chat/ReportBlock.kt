@@ -1,5 +1,7 @@
 package app.pochical.chat
 
+import androidx.compose.foundation.selection.selectableGroup
+import app.pochical.SettingsRadioRow
 import android.content.res.Resources
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -10,23 +12,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -46,7 +40,6 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalResources
@@ -67,7 +60,6 @@ import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.ReviewPrompt
 import app.pochical.RowEnd
-import app.pochical.SectionHeader
 import app.pochical.SettingsRow
 import app.pochical.SettingsSection
 import app.pochical.design.Chat
@@ -217,14 +209,12 @@ fun ReportSheet(target: ReportTarget, groupId: String, onDismiss: () -> Unit, on
   val sends = if (target is ReportTarget.Line) stringResource(R.string.report_sends_line) else stringResource(R.string.report_sends_member, target.name)
   // Open whole, so 送信 at its foot is in sight with the reasons.
   ListSheet(onDismiss, stringResource(R.string.report), sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-    item { SectionHeader(stringResource(R.string.report_why, what)) }
-    items(reasons, key = { it.first.number }) { (choice, words) ->
-      ListItem(
-        headlineContent = { Text(stringResource(words)) },
-        leadingContent = { RadioButton(selected = reason == choice, onClick = null) },
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        modifier = Modifier.selectable(selected = reason == choice, role = Role.RadioButton) { reason = choice },
-      )
+    // Material 3 Expressive's segments, the one picked on the selected container, one selectable
+    // group as the settings' choices are.
+    item {
+      SettingsSection(stringResource(R.string.report_why, what), Modifier.selectableGroup()) {
+        for ((choice, words) in reasons) row { SettingsRadioRow(stringResource(words), selected = reason == choice, onClick = { reason = choice }) }
+      }
     }
     item {
       Text(
@@ -301,28 +291,16 @@ fun MemberProfileSheet(
       Box(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
         var menu by remember { mutableStateOf(false) }
         Box(Modifier.align(Alignment.TopEnd)) {
-          IconButton(onClick = { menu = true }) {
+          IconButton(onClick = { menu = true }, shapes = IconButtonDefaults.shapes()) {
             Icon(painterResource(R.drawable.ic_more_vert), stringResource(R.string.profile_menu, person.name))
           }
-          DropdownMenu(menu, onDismissRequest = { menu = false }) {
-            DropdownMenuItem(
-              text = { Text(stringResource(if (blocked) R.string.unblock else R.string.block)) },
-              leadingIcon = { Icon(painterResource(R.drawable.ic_block), contentDescription = null) },
-              onClick = {
-                menu = false
-                onBlock(!blocked)
-              },
-            )
-            HorizontalDivider()
-            DropdownMenuItem(
-              text = { Text(stringResource(R.string.report), color = colors.dangerDefault) },
-              leadingIcon = { Icon(painterResource(R.drawable.ic_flag), contentDescription = null, tint = colors.dangerDefault) },
-              onClick = {
-                menu = false
-                onReport()
-              },
-            )
-          }
+          val block = stringResource(if (blocked) R.string.unblock else R.string.block)
+          val report = stringResource(R.string.report)
+          GroupedMenu(
+            menu,
+            onDismiss = { menu = false },
+            listOf(LineMenuItem(block, R.drawable.ic_block) { onBlock(!blocked) }, LineMenuItem(report, R.drawable.ic_flag, destructive = true, startsGroup = true, run = onReport)),
+          )
         }
       }
     }

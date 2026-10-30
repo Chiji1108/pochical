@@ -114,6 +114,35 @@ private func change(_ cursor: UInt64, _ fill: (inout Pochical_V1_Change) -> Void
   }
 }
 
+@Test func aGroupAResetsCatchUpDoesNotMentionGoesAsOneLeft() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    try Sync.take(
+      [
+        change(1) { $0.membership.groupID = "g1"; $0.membership.name = "いとこ会" },
+        change(2) { $0.membership.groupID = "g2"; $0.membership.name = "仕事" },
+        change(3) { $0.membership.groupID = "g3"; $0.membership.name = "趣味" },
+      ], in: db)
+    try GroupSync.take(
+      [change(1) { $0.member.userID = "u1"; $0.member.displayName = "さくら" }], of: "g1", in: db)
+
+    // The Reset empties the list; its catch-up brings g2 again, says g3
+    // was left, which goes with that change, and never mentions g1, which
+    // the DO restored from an older copy does not know.
+    let held = try Groups.held(in: db)
+    try Sync.reset(in: db)
+    let changes = [
+      change(4) { $0.membership.groupID = "g2"; $0.membership.name = "仕事" },
+      change(5) { $0.membership.groupID = "g3"; $0.membership.left = true },
+    ]
+    try Sync.take(changes, in: db)
+
+    #expect(try Groups.gone(since: held.subtracting(Groups.left(in: changes)), in: db) == ["g1"])
+    #expect(try GroupMemberRow.fetchCount(db) == 0)
+    #expect(try GroupRow.fetchAll(db).map(\.id) == ["g2"])
+  }
+}
+
 @Test func aMemberSaysWhetherTheirNameAndPhotoAreTheGroupsOwn() throws {
   let database = try appDatabase()
   try database.write { db in

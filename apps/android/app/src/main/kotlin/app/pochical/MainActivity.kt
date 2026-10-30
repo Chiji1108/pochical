@@ -58,6 +58,7 @@ class MainActivity(
   private val reminderAlarms: ReminderAlarms,
   private val appleSignIn: AppleSignIn,
   private val signIns: SignIns,
+  private val accountDeletion: AccountDeletion,
 ) : ComponentActivity() {
   private var settings by mutableStateOf<DeviceSettings?>(null)
 
@@ -70,7 +71,8 @@ class MainActivity(
   private val links = OpenedLinks()
 
   override fun onCreate(savedInstanceState: Bundle?) {
-    // The splash stays until the first frame can be drawn in the person's テーマ, with their days.
+    // The splash stays until the first frame can be drawn in the person's テーマ, with their days:
+    // what the device keeps alone, never the network or sync (Benchmarks' offline starts, #939).
     installSplashScreen().setKeepOnScreenCondition { settings == null || !calendarRead || firstRunDone == null }
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
@@ -107,6 +109,7 @@ class MainActivity(
         LocalAccount provides kit.account,
         LocalAppleSignIn provides appleSignIn,
         LocalSignIns provides signIns,
+        LocalAccountDeletion provides accountDeletion,
         LocalGroupCalls provides kit.groups,
         LocalValues provides kit.database.values(),
         LocalChats provides kit.chats,

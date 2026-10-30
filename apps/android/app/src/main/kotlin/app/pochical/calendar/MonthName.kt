@@ -4,7 +4,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.Text
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.drawscope.clipRect
@@ -93,6 +97,30 @@ fun MonthName(pages: Float, monthAt: (Int) -> YearMonth, reduceMotion: Boolean, 
       }
     }
   }
+}
+
+/**
+ * The name of the month [pages] shows, as [name] writes it, rolling with the finger toward the month
+ * coming in, as iOS's RollingMonthTitle; with reduced motion it just changes. Over a pager of
+ * months other than the calendar's: one person's month, a repeating order's.
+ */
+@Composable
+fun PagerMonthName(pages: PagerState, monthAt: (Int) -> YearMonth, name: (YearMonth) -> String, style: TextStyle) {
+  val reduceMotion = rememberReducedMotion()
+  val toward by remember { derivedStateOf { pages.currentPageOffsetFraction.sign.toInt() } }
+  val shown = name(monthAt(pages.currentPage))
+  BlendingText(
+    shown,
+    name(monthAt(pages.currentPage + toward)),
+    { if (reduceMotion) 0f else pages.currentPageOffsetFraction },
+    rolls = true,
+    style,
+    // Read as the one month shown, as a heading, not the two names rolling.
+    Modifier.clearAndSetSemantics {
+      heading()
+      contentDescription = shown
+    },
+  )
 }
 
 /** How much later each letter of an English month starts, of the whole roll. */

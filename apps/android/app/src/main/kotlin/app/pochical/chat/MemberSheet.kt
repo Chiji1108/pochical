@@ -1,18 +1,14 @@
 package app.pochical.chat
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.fillMaxWidth
+import app.pochical.sectionRows
+import app.pochical.SettingsRow
+import app.pochical.RowEnd
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.pochical.ListSheet
 import app.pochical.LocalThemeColors
@@ -32,12 +28,15 @@ data class SheetMember(val id: String, val name: String, val photoId: String, va
 fun MemberSheet(title: String, members: List<SheetMember>, onDismiss: () -> Unit, note: String? = null, onPick: ((SheetMember) -> Unit)? = null) {
   val colors = LocalThemeColors.current
   ListSheet(onDismiss, title) {
-    items(members, key = { it.id }) { member ->
-      ListItem(
-        headlineContent = { Text(member.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        leadingContent = { Face(member.id, member.name, member.photoId, member.shelf, 40.dp) },
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        modifier = Modifier.fillMaxWidth().then(if (onPick != null) Modifier.clickable { onPick(member) } else Modifier),
+    // Material 3 Expressive's segments, as the settings' lists draw their rows.
+    sectionRows(members, key = { it.id }) { member ->
+      SettingsRow(
+        member.name,
+        icon = null,
+        onClick = onPick?.let { pick -> { pick(member) } },
+        end = RowEnd.None,
+        leading = { Face(member.id, member.name, member.photoId, member.shelf, 40.dp) },
+        oneLine = true,
       )
     }
     if (note != null) {

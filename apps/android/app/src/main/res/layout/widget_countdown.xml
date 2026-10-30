@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- いまのシフト's countdown (NowWidget), which the launcher keeps going by itself: Glance has no
+     chronometer of its own. The words' color is Glance's, light or dark as the launcher draws. -->
+<Chronometer xmlns:android="http://schemas.android.com/apk/res/android"
+  android:id="@+id/countdown"
+  android:layout_width="wrap_content"
+  android:layout_height="wrap_content"
+  android:fontFeatureSettings="tnum"
+  android:includeFontPadding="false"
+  android:maxLines="1"
+  android:textColor="@color/glance_colorOnSurface"
+  android:textStyle="bold" />

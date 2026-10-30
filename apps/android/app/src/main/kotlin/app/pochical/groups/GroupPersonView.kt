@@ -45,6 +45,8 @@ import app.pochical.calendar.WeekdayRow
 import app.pochical.calendar.holidayName
 import app.pochical.calendar.monthGridHeight
 import app.pochical.calendar.monthWeeks
+import app.pochical.calendar.PagerMonthName
+import app.pochical.calendar.yearMonthText
 import app.pochical.design.PochicalTextStyles
 import app.pochical.design.Radius
 import app.pochical.kit.GroupMember
@@ -90,7 +92,8 @@ fun GroupPersonView(
   val pages = rememberPagerState(initialPage = pageOf(picked?.let(YearMonth::from) ?: thisMonth)) { PERSON_SPAN * 2 + 1 }
   val scope = rememberCoroutineScope()
   var choosingMonth by rememberSaveable { mutableStateOf(false) }
-  val month = thisMonth.plusMonths((pages.currentPage - PERSON_SPAN).toLong())
+  fun monthAt(page: Int): YearMonth = thisMonth.plusMonths((page - PERSON_SPAN).toLong())
+  val month = monthAt(pages.currentPage)
   fun turnTo(target: YearMonth) = scope.launch { pages.animateScrollToPage(pageOf(target)) }
 
   Column(modifier.verticalScroll(rememberScrollState()).padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -112,7 +115,14 @@ fun GroupPersonView(
       back = if (month == thisMonth) null else stringResource(R.string.calendar_this_month),
       onChoose = { choosingMonth = true },
       onBack = { turnTo(thisMonth) },
-    )
+    ) {
+      PagerMonthName(
+        pages,
+        ::monthAt,
+        { it.yearMonthText },
+        PochicalTextStyles.headline.copy(color = LocalThemeColors.current.textPrimary),
+      )
+    }
     WeekdayRow(settings.device.week, Modifier.padding(horizontal = 16.dp))
     // Their marks in their own shape, the rest of the look the viewer's; shift names and days off
     // always shown, whatever the viewer's look, so no list of their patterns is needed.

@@ -22,11 +22,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -343,7 +342,7 @@ fun Composer(
         if (editing == null) {
           if (onShareDays != null) AttachMenu(pickPhotos, onShareDays, onPollDays, Modifier.padding(bottom = 4.dp))
           else {
-            IconButton(onClick = pickPhotos, Modifier.padding(bottom = 4.dp)) {
+            IconButton(onClick = pickPhotos, modifier = Modifier.padding(bottom = 4.dp), shapes = IconButtonDefaults.shapes()) {
               Icon(painterResource(R.drawable.ic_image), stringResource(R.string.chat_photo_send))
             }
           }
@@ -427,6 +426,8 @@ fun Composer(
           },
           enabled = sendable,
           modifier = Modifier.padding(start = 8.dp, bottom = 4.dp),
+          // Material 3 Expressive's press: its round squares off under the finger.
+          shapes = IconButtonDefaults.shapes(),
         ) {
           if (editing != null) Icon(painterResource(R.drawable.ic_check), stringResource(R.string.chat_save))
           else Icon(painterResource(R.drawable.ic_send), stringResource(R.string.chat_send))
@@ -444,22 +445,19 @@ fun Composer(
 private fun AttachMenu(onPhotos: () -> Unit, onShareDays: () -> Unit, onPollDays: (() -> Unit)?, modifier: Modifier = Modifier) {
   var open by remember { mutableStateOf(false) }
   Box(modifier) {
-    IconButton(onClick = { open = true }) { Icon(painterResource(R.drawable.ic_add), stringResource(R.string.chat_attach)) }
-    DropdownMenu(open, onDismissRequest = { open = false }) {
-      val item = @Composable { label: Int, icon: Int, run: () -> Unit ->
-        DropdownMenuItem(
-          text = { Text(stringResource(label)) },
-          leadingIcon = { Icon(painterResource(icon), contentDescription = null) },
-          onClick = {
-            open = false
-            run()
-          },
-        )
-      }
-      item(R.string.chat_attach_photo, R.drawable.ic_image, onPhotos)
-      item(R.string.chat_share_days, R.drawable.ic_calendar, onShareDays)
-      onPollDays?.let { item(R.string.chat_poll_days, R.drawable.ic_event_available, it) }
-    }
+    IconButton(onClick = { open = true }, shapes = IconButtonDefaults.shapes()) { Icon(painterResource(R.drawable.ic_add), stringResource(R.string.chat_attach)) }
+    val photo = stringResource(R.string.chat_attach_photo)
+    val share = stringResource(R.string.chat_share_days)
+    val poll = stringResource(R.string.chat_poll_days)
+    GroupedMenu(
+      open,
+      onDismiss = { open = false },
+      listOfNotNull(
+        LineMenuItem(photo, R.drawable.ic_image, run = onPhotos),
+        LineMenuItem(share, R.drawable.ic_calendar, run = onShareDays),
+        onPollDays?.let { LineMenuItem(poll, R.drawable.ic_event_available, run = it) },
+      ),
+    )
   }
 }
 

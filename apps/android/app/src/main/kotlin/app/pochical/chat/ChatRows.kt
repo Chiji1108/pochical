@@ -20,8 +20,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -30,14 +28,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -53,7 +49,6 @@ import app.pochical.calendar.fullText
 import app.pochical.calendar.rememberToday
 import app.pochical.design.Chat
 import app.pochical.design.Radius
-import app.pochical.kit.ChatLine
 import app.pochical.kit.GroupMemberRow
 import app.pochical.kit.LineContent
 import app.pochical.kit.PhotoShelf
@@ -64,7 +59,6 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.coroutines.cancellation.CancellationException
-import kotlinx.coroutines.launch
 
 // How each of a chat's items is drawn (spec/chat.md, In a message; Notices; Lines on their way):
 // lines of words with their writer's face and name over a run, and what stands for the parts the
@@ -209,24 +203,13 @@ private fun NotSentMark(items: List<LineMenuItem>, photos: Boolean) {
       Modifier.size(20.dp).clip(CircleShape).clickable { open = true },
       tint = colors.dangerDefault,
     )
-    DropdownMenu(open, onDismissRequest = { open = false }) {
-      Text(
-        stringResource(if (photos) R.string.chat_photo_not_sent_menu else R.string.chat_not_sent_menu),
-        Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-        style = MaterialTheme.typography.labelMedium,
-        color = colors.textSecondary,
-      )
-      // The same items as the line's long press, one list for both.
-      for (item in items) {
-        DropdownMenuItem(
-          text = { Text(item.label, color = if (item.destructive) colors.dangerDefault else Color.Unspecified) },
-          onClick = {
-            open = false
-            item.run()
-          },
-        )
-      }
-    }
+    // The same items as the line's long press, one list for both.
+    GroupedMenu(
+      open,
+      onDismiss = { open = false },
+      items,
+      title = stringResource(if (photos) R.string.chat_photo_not_sent_menu else R.string.chat_not_sent_menu),
+    )
   }
 }
 

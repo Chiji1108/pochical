@@ -76,12 +76,14 @@ import app.pochical.kit.Week
 import app.pochical.kit.monthHolding
 import app.pochical.kit.stylePreviewDays
 import app.pochical.kit.styleSamples as sampleIds
+import app.pochical.kit.weekStartingOn
 import app.pochical.widgets.CalendarWidget
 import app.pochical.widgets.Drawn
 import app.pochical.widgets.MEDIUM
 import app.pochical.widgets.WidgetEntry
 import app.pochical.widgets.widgetEntry
 import java.time.LocalDate
+import java.time.ZoneId
 
 /**
  * The light or dark a style page's preview, and its テーマ cards, are seen in: ☀︎ / ☾'s pick, kept
@@ -120,7 +122,7 @@ data class StylePreviewInput(val today: LocalDate, val patterns: List<Pattern>, 
   /** The widgets' entry for the fortnight, as the calendar's page shows it, with or without the person's days entered. */
   fun widgetEntry(week: Week): WidgetEntry =
     OwnCalendar(patterns.map { it.row }, shown.mapValues { OwnDay(it.value) }, emptyList())
-      .widgetEntry(today, week, { false })
+      .widgetEntry(today.atStartOfDay(ZoneId.systemDefault()), week, { false })
       .copy(nothingEntered = false)
 
   companion object {

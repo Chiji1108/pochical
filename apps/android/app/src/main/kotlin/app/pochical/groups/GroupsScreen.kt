@@ -47,6 +47,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -64,6 +65,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -87,7 +89,6 @@ import app.pochical.UnreadBadge
 import app.pochical.calendar.holidayCountry
 import app.pochical.calendar.holidayName
 import app.pochical.calendar.rememberToday
-import app.pochical.calendar.weekday
 import app.pochical.chat.ChatList
 import app.pochical.design.Metrics
 import app.pochical.design.Radius
@@ -100,6 +101,7 @@ import app.pochical.kit.OwnDay
 import app.pochical.kit.PatternRow
 import app.pochical.kit.PhotoShelf
 import app.pochical.kit.readyCopies
+import app.pochical.kit.weekday
 import java.time.LocalDate
 
 /** What the グループ tab's buttons open. */
@@ -373,9 +375,12 @@ private fun GroupHub(group: GroupRow, actions: GroupsActions) {
   val today = rememberToday()
   val members = rememberGroupMembers(group.id, today, today.plusDays(NEXT_TOGETHER_DAYS - 1))
   val me = rememberMeId()
+  val bar = TopAppBarDefaults.pinnedScrollBehavior()
   Scaffold(
+    Modifier.nestedScroll(bar.nestedScrollConnection),
     topBar = {
       TopAppBar(
+        scrollBehavior = bar,
         title = {
           Row(verticalAlignment = Alignment.CenterVertically) {
             GroupMarkBadge(
@@ -407,7 +412,6 @@ private fun GroupHub(group: GroupRow, actions: GroupsActions) {
       }
       val me = me
       if (me != null) {
-        item { SectionHeader(stringResource(R.string.chat_heading)) }
         item { ChatList(group.id, group.name, me, onOpen = { actions.onChat(group.id, it) }) }
       }
       item { Spacer(Modifier.height(24.dp)) }
