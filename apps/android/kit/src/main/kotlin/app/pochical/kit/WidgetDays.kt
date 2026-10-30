@@ -203,12 +203,14 @@ data class WidgetNow(
   val refresh: ZonedDateTime,
 )
 
-/** [day]'s shift as a stretch of the clock in [at]'s zone; none for a day off or a shift without hours. */
+/** [day]'s shift as a stretch of the clock in [at]'s zone; none for a day off, a shift without hours or hours that are not a time. */
 private fun span(day: WidgetDay, at: ZonedDateTime): WidgetSpan? {
   val hours = day.hours?.takeUnless { day.off } ?: return null
-  fun clock(date: LocalDate, time: String) = date.atTime(LocalTime.parse(time)).atZone(at.zone)
-  val start = clock(day.date, hours.start)
-  val end = clock(day.date, hours.end).let { if (it <= start) clock(day.date.plusDays(1), hours.end) else it }
+  val from = minutesOrNull(hours.start) ?: return null
+  val to = minutesOrNull(hours.end) ?: return null
+  fun clock(date: LocalDate, minutes: Int) = date.atTime(LocalTime.ofSecondOfDay(minutes * 60L)).atZone(at.zone)
+  val start = clock(day.date, from)
+  val end = clock(day.date, to).let { if (it <= start) clock(day.date.plusDays(1), to) else it }
   return WidgetSpan(day, start, end)
 }
 

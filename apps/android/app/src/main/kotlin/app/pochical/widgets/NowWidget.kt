@@ -4,6 +4,7 @@ import android.os.SystemClock
 import android.util.TypedValue
 import android.widget.RemoteViews
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -37,6 +38,7 @@ import app.pochical.kit.WidgetSpan
 import java.time.Duration
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
+import kotlin.math.roundToInt
 
 // いまのシフト (iOS's NowWidget.swift; /design's NowSmall; spec/widgets.md, Views): how long the
 // shift on now runs, else how soon the next one with hours starts, for long shifts like 当番. The
@@ -85,20 +87,23 @@ val WidgetNow.redrawn: ZonedDateTime
     return minOf(refresh, on.start.plus(RING_STEP.multipliedBy(steps)))
   }
 
-/** What is left of [span] at [at], 1 as it starts and 0 as it ends. */
-private fun left(span: WidgetSpan, at: ZonedDateTime): Float =
-  (Duration.between(at, span.end).toMillis().toFloat() / Duration.between(span.start, span.end).toMillis()).coerceIn(0f, 1f)
+/** What is left of [span] at [at], 1 as it starts and 0 as it ends, to the hundredth, so its pictures are a few. */
+private fun ringShare(span: WidgetSpan, at: ZonedDateTime): Float {
+  val left = Duration.between(at, span.end).toMillis().toFloat() / Duration.between(span.start, span.end).toMillis()
+  return (left.coerceIn(0f, 1f) * 100).roundToInt() / 100f
+}
 
 /** On a shift: what is left of it as a ring round its mark, and under it the time left and when it ends. */
 @Composable
 private fun On(span: WidgetSpan, now: WidgetNow, drawn: Drawn, words: NowWords) {
   val context = LocalContext.current
-  val side = 76.dp
+  // Smaller where a launcher's 2×2 is short, so the words under it keep their room.
+  val side = (innerSize.height - 46.dp).coerceIn(48.dp, 76.dp)
   Column(GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically, horizontalAlignment = Alignment.CenterHorizontally) {
     // The ring says 勤務中 and its mark which shift, so no heading says them again.
     Box(GlanceModifier.size(side), contentAlignment = Alignment.Center) {
       Image(ImageProvider(ringPicture(context, side, 1f)), null, GlanceModifier.size(side), colorFilter = ColorFilter.tint(drawn.colors.line))
-      Image(ImageProvider(ringPicture(context, side, left(span, now.at))), null, GlanceModifier.size(side), colorFilter = ColorFilter.tint(drawn.colors.mark(drawn.slot(span.day))))
+      Image(ImageProvider(ringPicture(context, side, ringShare(span, now.at))), null, GlanceModifier.size(side), colorFilter = ColorFilter.tint(drawn.colors.mark(drawn.slot(span.day))))
       DayMark(span.day, drawn, if (drawn.named) 34.dp - NAME_ROOM else 34.dp, named = drawn.named)
     }
     Spacer(GlanceModifier.height(8.dp))
@@ -137,14 +142,16 @@ private fun Next(span: WidgetSpan, now: WidgetNow, drawn: Drawn, words: NowWords
 /**
  * The time from [at], the entry's moment, until [end], counting down by itself as the launcher's
  * chronometer keeps it (Glance has none of its own), in [format] round it, bold in the words' color.
+ * The entry is made as it is drawn, so its moment is the clock's as the chronometer is set; kept
+ * for that moment, so drawing the same entry again later does not count the time since twice.
  */
 @Composable
 private fun Countdown(at: ZonedDateTime, end: ZonedDateTime, format: String, size: TextUnit) {
   val context = LocalContext.current
+  val base = remember(at, end) { SystemClock.elapsedRealtime() + Duration.between(at, end).toMillis() }
   val views =
     RemoteViews(context.packageName, R.layout.widget_countdown).apply {
-      val left = Duration.between(at, end).toMillis()
-      setChronometer(R.id.countdown, SystemClock.elapsedRealtime() + left, format, true)
+      setChronometer(R.id.countdown, base, format, true)
       setChronometerCountDown(R.id.countdown, true)
       setTextViewTextSize(R.id.countdown, TypedValue.COMPLEX_UNIT_SP, size.value)
     }

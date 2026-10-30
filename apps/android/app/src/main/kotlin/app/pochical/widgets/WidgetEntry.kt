@@ -109,10 +109,8 @@ fun OwnCalendar.widgetEntry(
   val weeks = monthWeeks(YearMonth.from(today), week.start)
   val weekStart = today.weekStartingOn(week.start)
   val reached = today.plusDays(Widgets.offLookaheadDays.toLong())
-  // From yesterday, whose shift may still be on, as far as いまのシフト looks too.
-  val first = minOf(weekStart, weeks.first().first(), today.minusDays(1))
-  val last = maxOf(reached, weeks.last().last(), weekStart.plusDays(13), today.plusDays(Widgets.shiftLookaheadDays.toLong()))
-  val shown = shown(first, last)
+  val first = minOf(weekStart, weeks.first().first())
+  val shown = shown(first, maxOf(reached, weeks.last().last(), weekStart.plusDays(13)))
   // Each day worked out once, though the views' days overlap.
   val days = HashMap<LocalDate, WidgetDay>()
   fun day(date: LocalDate): WidgetDay = days.getOrPut(date) { widgetDay(date, shown, week, holiday(date)) }
@@ -124,7 +122,7 @@ fun OwnCalendar.widgetEntry(
       WidgetPerson(member.name) { offs[it] }
     }
   val group = companion?.with?.kind == WidgetWith.Kind.Group
-  val entry = entryOf(at, week, people, group, ::day).copy(nothingEntered = !hasEnteredDays, with = companion?.with)
+  val entry = entryOf(at, week, people, group, widgetNow(at), ::day).copy(nothingEntered = !hasEnteredDays, with = companion?.with)
   return entry.copy(pair = companion?.let { pair(it, shifts.firstOrNull(), entry.upcoming, week, holiday) })
 }
 
@@ -137,7 +135,7 @@ val WidgetEntry.offOpens: LocalDate
   get() = offs.opens(today)
 
 /** The entry at [at] of the days [day] gives, the week from [week]'s start, with [people] those 次の休み counts with. */
-private fun entryOf(at: ZonedDateTime, week: Week, people: List<WidgetPerson>, group: Boolean, day: (LocalDate) -> WidgetDay): WidgetEntry {
+private fun entryOf(at: ZonedDateTime, week: Week, people: List<WidgetPerson>, group: Boolean, now: WidgetNow, day: (LocalDate) -> WidgetDay): WidgetEntry {
   val today = at.toLocalDate()
   val weekStart = today.weekStartingOn(week.start)
   val todayDay = day(today)
@@ -149,7 +147,7 @@ private fun entryOf(at: ZonedDateTime, week: Week, people: List<WidgetPerson>, g
     upcoming = List(7) { day(today.plusDays(it.toLong())) },
     twoWeeks = List(14) { day(weekStart.plusDays(it.toLong())) },
     month = monthWeeks(YearMonth.from(today), week.start).map { it.map(day) },
-    now = widgetNow(at) { day(today.plusDays(it.toLong())) },
+    now = now,
   )
 }
 
@@ -183,13 +181,14 @@ fun sampleWidgetEntry(at: ZonedDateTime, week: Week): WidgetEntry {
   val ids = listOf("day", "day", "night", "after", "off", "off", "day")
   // As iOS's sample: the ready-made patterns, their next days left aside.
   val patterns = readyCopies(ids.distinct(), keeping = emptySet()).associateBy { it.id }
-  return entryOf(at, week, emptyList(), group = false) { date ->
+  fun day(date: LocalDate): WidgetDay {
     val id = ids[Math.floorMod(date.toEpochDay() - today.toEpochDay(), ids.size)]
-    WidgetDay.of(date, ShownDay(id), patterns[id], noted = false, week = week, holiday = false)
+    return WidgetDay.of(date, ShownDay(id), patterns[id], noted = false, week = week, holiday = false)
   }
+  return entryOf(at, week, emptyList(), group = false, widgetNow(at) { day(today.plusDays(it.toLong())) }, ::day)
 }
 
-/** いまのシフト at [at] alone, as the entry works it out: what its turns are counted from. The week only colors the days, so any does. */
+/** いまのシフト at [at], the entry's and what its turns are counted from. The week and the holidays only color the days, so any do. */
 fun OwnCalendar.widgetNow(at: ZonedDateTime): WidgetNow {
   val today = at.toLocalDate()
   val shown = shown(today.minusDays(1), today.plusDays(Widgets.shiftLookaheadDays.toLong()))

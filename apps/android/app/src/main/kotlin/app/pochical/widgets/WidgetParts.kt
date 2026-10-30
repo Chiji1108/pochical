@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -188,9 +189,10 @@ abstract class PochicalWidget(
     val settings = sources.settings.first()
     val firstChoice = choiceIn(getAppWidgetState(context, stateDefinition, id))
     val firstRead = Companion(firstChoice, firstChoice?.let { sources.values.companion(it, LocalDate.now()).first() })
-    WidgetDayReceiver.schedule(context, calendar)
     provideContent {
       val shownCalendar by sources.calendar.collectAsState(calendar)
+      // The next turn, asked for again as the calendar changes while the session runs.
+      LaunchedEffect(shownCalendar) { WidgetDayReceiver.schedule(context, shownCalendar) }
       val shownSettings by sources.settings.collectAsState(settings)
       val at by remember(shownCalendar) { moments { turn(shownCalendar, it) } }.collectAsState(ZonedDateTime.now())
       val today = at.toLocalDate()
@@ -208,7 +210,8 @@ abstract class PochicalWidget(
       val faces by remember(photos) { flow { emit(photos?.let { widgetFaces(context, it) } ?: WidgetFaces()) } }.collectAsState(WidgetFaces())
       val drawn =
         remember(shownCalendar, shownSettings, at, read, faces) {
-          val entry = shownCalendar.widgetEntry(at, shownSettings.week, { it.holidayName(country) != null }, companion)
+          // At the moment it is drawn, whatever brought it: `at` is only when it is drawn again by itself.
+          val entry = shownCalendar.widgetEntry(ZonedDateTime.now(), shownSettings.week, { it.holidayName(country) != null }, companion)
           // Picked, but no longer there: what the widget shows changes only when the person changes it.
           val gone = choice != null && read.choice == choice && companion == null
           Drawn(entry.copy(pickAgain = choice?.groupId?.takeIf { gone }), shownSettings, faces.takeIf { it.photos == photos } ?: WidgetFaces())
