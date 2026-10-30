@@ -5,6 +5,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
@@ -38,11 +39,18 @@ enum class ReplySwipe(val sign: Float) {
   Leftward(-1f),
 }
 
-/** How far a line is dragged to answer it, and its springing back, for the row to draw it by. */
+/**
+ * How far a line is dragged to answer it, and its springing back, and whether a finger is down on
+ * it before its long press, for the row to draw it by: the bubble gives a little under the finger.
+ */
 @Stable
 class LineDrag {
   val offset = Animatable(0f)
+  val give = Animatable(1f)
 }
+
+/** How far a bubble gives under a finger down on it (spec/chat.md, Opening a message's menu). */
+internal const val PRESSED_SCALE = 0.96f
 
 /** What the line's gestures tell, by where the finger is in the window. */
 class LineGestureHandler(
@@ -78,6 +86,7 @@ fun Modifier.lineGestures(
   val currentSwipe by rememberUpdatedState(swipe)
   val currentReduced by rememberUpdatedState(reducedMotion)
   val window = remember { { local: Offset -> coordinates()?.localToWindow(local) ?: local } }
+  val spatial = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
   return pointerInput(Unit) {
     val slop = viewConfiguration.touchSlop
     awaitEachGesture {
@@ -85,27 +94,34 @@ fun Modifier.lineGestures(
       val start = window(down.position)
       // Until the long press: a tap, a scroll, or a drag across to answer.
       var across: PointerInputChange? = null
+      // The bubble gives from the moment the finger goes down until the press is over, either way;
+      // with motion reduced it stays.
+      if (!currentReduced) scope.launch { drag.give.animateTo(PRESSED_SCALE, spatial) }
       val pressed =
-        withTimeoutOrNull(Chat.longPressMs.toLong()) {
-          while (true) {
-            val event = awaitPointerEvent()
-            val change = event.changes.firstOrNull { it.id == down.id } ?: return@withTimeoutOrNull false
-            if (change.isConsumed) return@withTimeoutOrNull false
-            if (change.changedToUpIgnoreConsumed()) {
-              // A tap is the line's own: nothing under it (the list putting the keyboard away) takes it.
-              change.consume()
-              return@withTimeoutOrNull false
+        try {
+          withTimeoutOrNull(Chat.longPressMs.toLong()) {
+            while (true) {
+              val event = awaitPointerEvent()
+              val change = event.changes.firstOrNull { it.id == down.id } ?: return@withTimeoutOrNull false
+              if (change.isConsumed) return@withTimeoutOrNull false
+              if (change.changedToUpIgnoreConsumed()) {
+                // A tap is the line's own: nothing under it (the list putting the keyboard away) takes it.
+                change.consume()
+                return@withTimeoutOrNull false
+              }
+              val moved = change.position - down.position
+              if (moved.getDistance() > slop) {
+                val sign = currentSwipe?.sign
+                // Mostly across, toward the middle: the line answers it; else the list's scroll.
+                if (sign != null && abs(moved.x) > 2 * abs(moved.y) && moved.x * sign > 0) across = change
+                return@withTimeoutOrNull false
+              }
             }
-            val moved = change.position - down.position
-            if (moved.getDistance() > slop) {
-              val sign = currentSwipe?.sign
-              // Mostly across, toward the middle: the line answers it; else the list's scroll.
-              if (sign != null && abs(moved.x) > 2 * abs(moved.y) && moved.x * sign > 0) across = change
-              return@withTimeoutOrNull false
-            }
-          }
-          @Suppress("UNREACHABLE_CODE") false
-        } ?: true
+            @Suppress("UNREACHABLE_CODE") false
+          } ?: true
+        } finally {
+          scope.launch { drag.give.animateTo(1f, spatial) }
+        }
       val dragging = across
       when {
         pressed -> {
