@@ -12,13 +12,12 @@ import android.provider.CalendarContract.Calendars
 import android.provider.CalendarContract.Events
 import android.provider.CalendarContract
 import androidx.core.content.ContextCompat
-import androidx.core.net.toUri
+import app.pochical.kit.EventMark
 import app.pochical.kit.Period
 import app.pochical.kit.ShiftEvent
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZoneOffset
-import java.time.format.DateTimeParseException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -34,13 +33,13 @@ data class DeviceCalendar(val id: Long, val name: String, val color: Int, val ac
 /**
  * The device's calendars, through Android's calendar provider (CalendarContract), as iOS's
  * DeviceCalendars through EventKit: listed for 追加先 and written to (spec/calendar.md, Adding a
- * month to the device calendar). Each event Pochical puts in carries its mark: the app's own link to
- * its day and whose shift it is (`pochical://day/YYYY-MM-DD?by=<user id>`), in the event's columns
- * for an app's own link ([Events.CUSTOM_APP_URI]), so a calendar app opens the day from it.
+ * month to the device calendar). Each event Pochical puts in carries its mark ([EventMark]), the
+ * app's link to its day and whose shift it is, on a line of the event's description, which Google's
+ * sync keeps; not in the columns for an app's own link ([Events.CUSTOM_APP_URI]), which Google's
+ * sync drops and Google Calendar does not open (#950).
  */
 class DeviceCalendars(private val context: Context) {
   private val resolver: ContentResolver = context.contentResolver
-  private val packageName = context.packageName
 
   /** Whether the person let the app read and write the device's calendars. */
   val allowed: Boolean
@@ -101,7 +100,7 @@ class DeviceCalendars(private val context: Context) {
   /**
    * The events Pochical put in for the page's days as [user]'s, in any calendar that takes changes,
    * by their ids: those adding again replaces, and ポチカルで入れた〇月の予定を消す takes out. Found by
-   * the day each mark names, so they are found whichever device put them in.
+   * the mark on a line of each one's description, so they are found whichever device put them in.
    */
   fun marked(page: Period, user: String): List<Long> {
     // From the day before the page's first to two past its last, at midnight in UTC, which all-day
@@ -112,16 +111,16 @@ class DeviceCalendars(private val context: Context) {
     resolver
       .query(
         Events.CONTENT_URI,
-        arrayOf(Events._ID, Events.CUSTOM_APP_URI),
-        "${Events.CUSTOM_APP_PACKAGE} = ? AND ${Events.DELETED} = 0 AND ${Events.CALENDAR_ACCESS_LEVEL} >= ? AND " +
-          "${Events.DTSTART} >= ? AND ${Events.DTSTART} < ?",
-        arrayOf(packageName, Calendars.CAL_ACCESS_CONTRIBUTOR.toString(), from.toString(), to.toString()),
+        arrayOf(Events._ID, Events.DESCRIPTION),
+        "${Events.DELETED} = 0 AND ${Events.CALENDAR_ACCESS_LEVEL} >= ? AND ${Events.DTSTART} >= ? AND ${Events.DTSTART} < ? AND " +
+          "${Events.DESCRIPTION} LIKE ?",
+        arrayOf(Calendars.CAL_ACCESS_CONTRIBUTOR.toString(), from.toString(), to.toString(), "%pochical://day/%"),
         null,
       )
       ?.use { rows ->
         while (rows.moveToNext()) {
-          val mark = markOf(rows.getString(1)) ?: continue
-          if (mark.second == user && mark.first in page) ids += rows.getLong(0)
+          val mark = EventMark.inNotes(rows.getString(1)) ?: continue
+          if (mark.user == user && mark.day in page) ids += rows.getLong(0)
         }
       }
     return ids
@@ -141,13 +140,12 @@ class DeviceCalendars(private val context: Context) {
     for (event in events) {
       val start = event.start
       val end = event.end
+      val mark = EventMark(event.day, user)
       val insert =
         ContentProviderOperation.newInsert(Events.CONTENT_URI)
           .withValue(Events.CALENDAR_ID, calendar)
           .withValue(Events.TITLE, event.title)
-          .withValue(Events.DESCRIPTION, event.notes)
-          .withValue(Events.CUSTOM_APP_PACKAGE, packageName)
-          .withValue(Events.CUSTOM_APP_URI, dayLink(event.day, user))
+          .withValue(Events.DESCRIPTION, mark.appendedTo(event.notes))
       if (start != null && end != null) {
         // By the clock of the day, so a change to summer time moves nothing.
         insert
@@ -190,23 +188,5 @@ class DeviceCalendars(private val context: Context) {
 
     /** What the calendar's full access is on Android: reading to list them and find its own, writing to put them in. */
     val PERMISSIONS = arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR)
-
-    /** The mark Pochical leaves on an event: its link to the day it is for, and whose shift it is. */
-    fun dayLink(day: LocalDate, user: String): String =
-      "pochical://day/$day".toUri().buildUpon().appendQueryParameter("by", user).build().toString()
-
-    /** The day and the user a mark names; none for an event not Pochical's. */
-    fun markOf(link: String?): Pair<LocalDate, String>? {
-      val uri = link?.toUri() ?: return null
-      if (uri.scheme != "pochical" || uri.host != "day") return null
-      val user = uri.getQueryParameter("by") ?: return null
-      val day =
-        try {
-          LocalDate.parse(uri.pathSegments.singleOrNull() ?: return null)
-        } catch (_: DateTimeParseException) {
-          return null
-        }
-      return day to user
-    }
   }
 }

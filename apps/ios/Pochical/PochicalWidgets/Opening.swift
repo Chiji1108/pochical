@@ -7,12 +7,6 @@ import PochicalKit
 // links, and the intent the controls open them by. Built into the app as
 // well as the widgets, as the intent runs in the app.
 
-/// The link that opens the app on a day: the calendar on its week with
-/// that day picked.
-nonisolated func dayLink(_ day: Day) -> URL {
-  URL(string: "pochical://day/\(day.key)")!
-}
-
 /// The group's table at a day, where whose days make it count can be
 /// seen.
 nonisolated func groupLink(_ groupID: String, day: Day? = nil) -> URL {

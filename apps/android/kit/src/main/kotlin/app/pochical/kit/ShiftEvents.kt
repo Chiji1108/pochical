@@ -1,10 +1,11 @@
 package app.pochical.kit
 
 import java.time.LocalDate
+import java.time.format.DateTimeParseException
 
 // 端末カレンダーに追加 (spec/calendar.md, Adding a month to the device calendar), as iOS's
-// ShiftEvents.swift: which days go in as events, and which patterns are picked to.
-// spec/vectors/device-calendar.json pins both.
+// ShiftEvents.swift: which days go in as events, which patterns are picked to, and Pochical's mark
+// on its events. spec/vectors/device-calendar.json pins them.
 
 /**
  * A day's shift as an event in the device's calendar: its name, at its time on that day, or all day
@@ -80,6 +81,41 @@ private fun shiftEvent(
   if (start == null || end == null) return ShiftEvent(day, pattern.name, null, null, said)
   // A shift ending at or before its start ends the next day.
   return ShiftEvent(day, pattern.name, start, if (end > start) end else end + MINUTES_A_DAY, said)
+}
+
+/**
+ * Pochical's mark on an event it puts in: the app's link to the event's day and whose shift it is,
+ * `pochical://day/YYYY-MM-DD?by=<user id>` (spec/widgets.md's link to a day), user ids being of
+ * letters and digits alone. It goes in the event's notes, which every calendar keeps, Google's sync
+ * too, where an app's own columns do not survive (spec/calendar.md, Adding a month to the device
+ * calendar).
+ */
+data class EventMark(val day: LocalDate, val user: String) {
+  val link: String
+    get() = "${dayLink(day)}?by=$user"
+
+  /** The notes an event goes in with: its own, then the mark on a line of its own. */
+  fun appendedTo(notes: String?): String = listOfNotNull(notes, link).joinToString("\n")
+
+  companion object {
+    private val LINE = Regex("""pochical://day/(\d{4}-\d{2}-\d{2})\?by=([A-Za-z0-9]+)""")
+
+    /**
+     * The mark on a line of its own in an event's [notes], whoever's; none for an event not
+     * Pochical's. The last such line, as the mark goes in last, after a memo that may hold one copied
+     * from another event. Lines end at a line feed, each taken without the spaces, tabs and carriage
+     * return around it, as iOS reads them.
+     */
+    fun inNotes(notes: String?): EventMark? =
+      notes?.split('\n')?.asReversed()?.firstNotNullOfOrNull { line ->
+        val (day, user) = LINE.matchEntire(line.trim(' ', '\t', '\r'))?.destructured ?: return@firstNotNullOfOrNull null
+        try {
+          EventMark(LocalDate.parse(day), user)
+        } catch (_: DateTimeParseException) {
+          null
+        }
+      }
+  }
 }
 
 /** A memo on a day with no shift's event: all day, named by its first line, the whole memo in its notes when it runs longer. */

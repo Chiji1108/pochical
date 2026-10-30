@@ -17,6 +17,7 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.height
 import androidx.glance.layout.width
 import app.pochical.kit.WidgetDay
+import app.pochical.kit.dayLink
 
 /**
  * シンプル (/design's SimpleSmallView and SimpleMediumView; spec/widgets.md, Views): today alone,

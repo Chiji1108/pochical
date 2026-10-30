@@ -65,6 +65,7 @@ import app.pochical.kit.DeviceSettings
 import app.pochical.kit.OffLook
 import app.pochical.kit.OwnCalendar
 import app.pochical.kit.WidgetDay
+import app.pochical.kit.dayLink
 import app.pochical.kit.dayName
 import app.pochical.kit.weekday
 import app.pochical.mark
@@ -148,8 +149,6 @@ class Drawn(val entry: WidgetEntry, val settings: DeviceSettings, val faces: Wid
   fun link(day: LocalDate): String = entry.with?.let { groupLink(it.groupId, day) } ?: dayLink(day)
 }
 
-/** The link that opens the app on a day (spec/widgets.md, Opening the app). */
-fun dayLink(day: LocalDate) = "pochical://day/$day"
 
 /** The group's table at a day, or its top, where whose days make it count can be seen. */
 fun groupLink(groupId: String, day: LocalDate? = null) = "pochical://group/$groupId" + (day?.let { "/day/$it" } ?: "")
