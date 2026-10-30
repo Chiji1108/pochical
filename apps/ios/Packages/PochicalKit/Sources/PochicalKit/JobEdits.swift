@@ -104,13 +104,9 @@ extension OwnValues {
   /// The patterns some day before `day` shows, of its own or from an
   /// order.
   private static func patternsShown(before day: Day, in db: Database) throws -> Set<PatternID> {
-    let days = try DayRow.where { $0.date < day.key }.fetchAll(db)
-    let orders = try RepeatOrderRow.fetchAll(db)
-    let edges = days.compactMap { Day($0.date) } + orders.compactMap { Day($0.start) }
+    let calendar = try OwnCalendar(db)
+    let edges = Array(calendar.own.keys) + calendar.orders.map(\.start)
     guard let first = edges.min(), first < day else { return [] }
-    let calendar = OwnCalendar(
-      days: days, patterns: try PatternRow.fetchAll(db),
-      patternOrder: try PatternOrderRow.fetchAll(db), orders: orders)
     return Set(calendar.shown(from: first, through: day.adding(days: -1)).values.map(\.shift))
   }
 }

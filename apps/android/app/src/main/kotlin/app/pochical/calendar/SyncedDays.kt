@@ -3,7 +3,6 @@ package app.pochical.calendar
 import android.util.Log
 import app.pochical.ReviewPrompt
 import app.pochical.kit.AppDatabase
-import app.pochical.kit.CoworkerRow
 import app.pochical.kit.OwnCalendar as KitCalendar
 import app.pochical.kit.OwnEdits
 import app.pochical.kit.PageSummary
@@ -32,8 +31,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -49,12 +48,9 @@ class SyncedDays(
   own: Flow<KitCalendar>,
   scope: CoroutineScope,
 ) : OwnDays {
-  private val values = database.values()
+  private val unread = Synced(KitCalendar.empty)
 
-  private val unread = Synced(KitCalendar.empty, emptyList())
-
-  override val calendar: StateFlow<OwnCalendar> =
-    combine(own, values.coworkers(), ::Synced).stateIn(scope, SharingStarted.Lazily, unread)
+  override val calendar: StateFlow<OwnCalendar> = own.map(::Synced).stateIn(scope, SharingStarted.Lazily, unread)
 
   override suspend fun awaitRead() {
     calendar.first { it !== unread }
@@ -166,9 +162,9 @@ class SyncedDays(
     writes.trySend { edits.orderCoworkers(ids) }
   }
 
-  private class Synced(private val own: KitCalendar, coworkers: List<CoworkerRow>) : OwnCalendar {
+  private class Synced(private val own: KitCalendar) : OwnCalendar {
     override val patterns = own.patterns.map { it.pattern }
-    override val coworkers = coworkers.map { Coworker(it.id, it.name) }
+    override val coworkers = own.coworkers.map { Coworker(it.id, it.name) }
 
     override fun shown(from: LocalDate, through: LocalDate): Map<LocalDate, DayEntry> =
       own.shown(from, through).mapValues { (_, day) -> DayEntry(day.shift, day.start, day.end, day.people.orEmpty()) }

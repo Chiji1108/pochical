@@ -22,6 +22,7 @@ import app.pochical.RootTab
 import app.pochical.calendar.LocalOwnDays
 import app.pochical.calendar.TestDays
 import app.pochical.groups.LocalValues
+import app.pochical.kit.ownCalendar
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -65,7 +66,7 @@ class CoworkerEditorTest {
   /** The names kept once every edit the page made is written. */
   private fun coworkersOnceWritten(): List<String> = runBlocking {
     test.days.daysShowing("none")
-    test.database.values().coworkers().first().map { it.name }
+    test.database.ownCalendar().first().coworkers.map { it.name }
   }
 
   @Test

@@ -26,7 +26,7 @@ class CoworkersTest {
 
     edits.orderCoworkers(listOf("takahashi", "satou", "suzuki"))
 
-    assertEquals(listOf("高橋", "佐藤", "鈴木"), values.coworkers().first().map { it.name })
+    assertEquals(listOf("高橋", "佐藤", "鈴木"), database.ownCalendar().first().coworkers.map { it.name })
   }
 
   @Test
@@ -37,7 +37,7 @@ class CoworkersTest {
     edits.deleteCoworker("satou")
     edits.addCoworker("高橋", id = "takahashi")
 
-    assertEquals(listOf("鈴木", "高橋"), values.coworkers().first().map { it.name })
+    assertEquals(listOf("鈴木", "高橋"), database.ownCalendar().first().coworkers.map { it.name })
   }
 
   @Test
@@ -47,7 +47,7 @@ class CoworkersTest {
 
     edits.renameCoworker("satou", "佐藤さん")
 
-    assertEquals(emptyList<CoworkerRow>(), values.coworkers().first())
+    assertEquals(emptyList<CoworkerRow>(), database.ownCalendar().first().coworkers)
     assertEquals(0, database.write { outbox() }.count { Change.parseFrom(it.change).coworker.name == "佐藤さん" })
   }
 

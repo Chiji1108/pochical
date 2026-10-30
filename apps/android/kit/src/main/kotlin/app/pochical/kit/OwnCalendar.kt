@@ -7,12 +7,14 @@ import kotlinx.coroutines.flow.map
 
 /**
  * The person's own calendar as the device holds it, as iOS's OwnCalendar: their patterns in their
- * order, their own days and their repeating orders, read from the tables that show them.
+ * order, their own days, their repeating orders and the coworkers their days note, in their order,
+ * read from the tables that show them.
  */
 class OwnCalendar(
   val patterns: List<PatternRow>,
   internal val own: Map<LocalDate, OwnDay>,
   val orders: List<RepeatOrder>,
+  val coworkers: List<CoworkerRow> = emptyList(),
 ) {
   private val known = patterns.mapTo(HashSet()) { it.id }
 
@@ -47,8 +49,12 @@ class OwnCalendar(
   companion object {
     val empty = OwnCalendar(emptyList(), emptyMap(), emptyList())
 
-    internal fun of(days: List<DayRow>, patterns: List<PatternRow>, orders: List<RepeatOrderRow>) =
-      OwnCalendar(patterns, days.associate { LocalDate.parse(it.date) to it.ownDay }, orders.map { it.order })
+    internal fun of(
+      days: List<DayRow>,
+      patterns: List<PatternRow>,
+      orders: List<RepeatOrderRow>,
+      coworkers: List<CoworkerRow>,
+    ) = OwnCalendar(patterns, days.associate { LocalDate.parse(it.date) to it.ownDay }, orders.map { it.order }, coworkers)
   }
 }
 
@@ -78,18 +84,21 @@ fun OwnCalendar.summary(first: LocalDate, last: LocalDate): PageSummary =
 
 /**
  * The person's own calendar, again whenever sync or an edit changes the tables it is read from,
- * each one read in one transaction, as Room reads a `@Transaction` query: its days, patterns and
- * orders are the database's at one moment, never new days beside the patterns before them.
+ * each one read in one transaction, as Room reads a `@Transaction` query: its days, patterns,
+ * orders and coworkers are the database's at one moment, never new days beside the patterns or the
+ * coworkers before them.
  */
 fun AppDatabase.ownCalendar(): Flow<OwnCalendar> =
-  invalidationTracker.createFlow("days", "patterns", "patternOrder", "repeatOrders").map { read { ownCalendar() } }
+  invalidationTracker
+    .createFlow("days", "patterns", "patternOrder", "repeatOrders", "coworkers", "coworkerOrder")
+    .map { read { ownCalendar() } }
 
 /** The person's own calendar, read in the transaction it runs in. */
-internal suspend fun SyncDao.ownCalendar(): OwnCalendar = OwnCalendar.of(days(), patterns(), repeatOrders())
+internal suspend fun SyncDao.ownCalendar(): OwnCalendar = OwnCalendar.of(days(), patterns(), repeatOrders(), coworkers())
 
 /** The calendar with the own days from [from] through [through], read in the transaction it runs in. */
 internal suspend fun SyncDao.ownCalendar(from: LocalDate, through: LocalDate): OwnCalendar =
-  OwnCalendar.of(days(from.toString(), through.toString()), patterns(), repeatOrders())
+  OwnCalendar.of(days(from.toString(), through.toString()), patterns(), repeatOrders(), coworkers())
 
 /**
  * The shifts every day shows, from the first own day or order's start through [through], else
@@ -103,5 +112,5 @@ internal suspend fun SyncDao.shownSoFar(through: LocalDate? = null): Collection<
   val first = edges.minOrNull() ?: return emptyList()
   val last = through ?: edges.max()
   if (first > last) return emptyList()
-  return OwnCalendar.of(days, patterns(), orders).shown(first, last).values
+  return OwnCalendar.of(days, patterns(), orders, coworkers = emptyList()).shown(first, last).values
 }
