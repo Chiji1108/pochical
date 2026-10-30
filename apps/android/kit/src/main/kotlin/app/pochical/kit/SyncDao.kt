@@ -20,6 +20,8 @@ internal interface SyncDao : ChatDao {
 
   @Query("SELECT * FROM days WHERE date = :date") suspend fun day(date: String): DayRow?
 
+  @Query("SELECT * FROM days") suspend fun days(): List<DayRow>
+
   @Query("SELECT * FROM days WHERE date >= :from AND date <= :through")
   suspend fun days(from: String, through: String): List<DayRow>
 

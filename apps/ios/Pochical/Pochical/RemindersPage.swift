@@ -11,10 +11,7 @@ import UIKit
 struct RemindersPage: View {
   @Environment(Settings.self) private var settings
   @Environment(\.themeColors) private var colors
-  @FetchAll private var days: [DayRow]
-  @FetchAll private var patternRows: [PatternRow]
-  @FetchAll private var patternOrder: [PatternOrderRow]
-  @FetchAll private var orders: [RepeatOrderRow]
+  @Fetch(OwnCalendarRequest()) private var calendar = OwnCalendar.empty
   /// The reminder open in the sheet, or a new one.
   @State private var editing: Editing?
 
@@ -25,8 +22,6 @@ struct RemindersPage: View {
 
   var body: some View {
     @Bindable var settings = settings
-    let calendar = OwnCalendar(
-      days: days, patterns: patternRows, patternOrder: patternOrder, orders: orders)
     List {
       PermissionCard()
       Section {

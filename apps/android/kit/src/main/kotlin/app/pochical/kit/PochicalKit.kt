@@ -47,7 +47,6 @@ class PochicalKit(context: Context) {
    */
   val ownCalendar: SharedFlow<OwnCalendar> =
     database
-      .values()
       .ownCalendar()
       .shareIn(
         CoroutineScope(SupervisorJob() + Dispatchers.Default),

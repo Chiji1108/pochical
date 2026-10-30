@@ -74,7 +74,7 @@ class EnteringTest {
     edits.savePattern("after", markedPattern("明け"))
   }
 
-  private suspend fun calendar() = database.values().ownCalendar().first()
+  private suspend fun calendar() = database.ownCalendar().first()
 
   @Test
   fun aKeyFillsTheNextDayAndKeepsBothMemos() = runTest {

@@ -14,10 +14,7 @@ struct CalendarScreen: View {
   @Environment(Settings.self) private var settings
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.write) private var write
-  @FetchAll private var days: [DayRow]
-  @FetchAll private var patterns: [PatternRow]
-  @FetchAll private var patternOrder: [PatternOrderRow]
-  @FetchAll private var orders: [RepeatOrderRow]
+  @Fetch(OwnCalendarRequest()) private var calendar = OwnCalendar.empty
   @FetchAll private var coworkerRows: [CoworkerRow]
   @FetchAll private var coworkerOrder: [CoworkerOrderRow]
   @State private var today = Day.today
@@ -109,8 +106,6 @@ struct CalendarScreen: View {
   private var period: ShiftPeriod { settings.device.period }
 
   var body: some View {
-    let calendar = OwnCalendar(
-      days: days, patterns: patterns, patternOrder: patternOrder, orders: orders)
     VStack(spacing: 0) {
       heading
         .padding(.horizontal, Self.screenEdge)
@@ -206,7 +201,7 @@ struct CalendarScreen: View {
     .onChange(of: shownMonth) { _, month in
       if let month, let day = entering, !period.page(month).contains(day) {
         let page = period.page(month)
-        entering = firstBlankDay(in: page, days: pageDays(page, currentCalendar))
+        entering = firstBlankDay(in: page, days: pageDays(page, calendar))
       }
     }
     // A シフトの期間 changed, here or on another device, turns to the page
@@ -215,7 +210,7 @@ struct CalendarScreen: View {
       shownMonth = nil
       if entering != nil {
         let page = period.page(thisMonth)
-        entering = firstBlankDay(in: page, days: pageDays(page, currentCalendar))
+        entering = firstBlankDay(in: page, days: pageDays(page, calendar))
       }
     }
     // A widget's day: its month, the day open in its week; from a day
@@ -304,11 +299,11 @@ struct CalendarScreen: View {
     }
     .sheet(item: $picturing, id: \.self) { month in
       MonthPicturePage(
-        page: period.page(month), byPeriod: period.byPeriod, calendar: currentCalendar)
+        page: period.page(month), byPeriod: period.byPeriod, calendar: calendar)
     }
     .sheet(item: $addingToCalendar, id: \.self) { month in
       DeviceCalendarSheet(
-        page: period.page(month), byPeriod: period.byPeriod, calendar: currentCalendar,
+        page: period.page(month), byPeriod: period.byPeriod, calendar: calendar,
         coworkers: Dictionary(uniqueKeysWithValues: coworkerRows.map { ($0.id, $0.name) }))
     }
     .onChange(of: gaps) { _, gaps in
@@ -357,10 +352,6 @@ struct CalendarScreen: View {
   /// The month naming the page holding today.
   private var thisMonth: Day {
     period.month(holding: today)
-  }
-
-  private var currentCalendar: OwnCalendar {
-    OwnCalendar(days: days, patterns: patterns, patternOrder: patternOrder, orders: orders)
   }
 
   /// The days off on the page `month` names.
@@ -591,7 +582,6 @@ struct CalendarScreen: View {
     // With the tabs coming back, so the month's foot and the tab bar move
     // as one rather than the tab bar a frame after.
     withAnimation(entryChange) { entering = nil }
-    let calendar = currentCalendar
     // With no pattern that counts as off there is nothing to offer.
     guard holidayShift(of: calendar.patterns.inUse) != nil else {
       return

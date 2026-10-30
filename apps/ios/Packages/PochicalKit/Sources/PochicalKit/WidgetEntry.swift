@@ -428,7 +428,6 @@ extension WidgetEntry {
   public static func nothingYet(
     at now: Date, week: DeviceSettings.Week, calendar: Calendar = .current
   ) -> WidgetEntry {
-    OwnCalendar(days: [], patterns: [], patternOrder: [], orders: [])
-      .widgetEntry(at: now, week: week, calendar: calendar)
+    OwnCalendar.empty.widgetEntry(at: now, week: week, calendar: calendar)
   }
 }

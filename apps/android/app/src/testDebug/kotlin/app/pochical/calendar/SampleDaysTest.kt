@@ -14,9 +14,8 @@ import org.robolectric.RobolectricTestRunner
 fun sampleDays(today: LocalDate): TestDays {
   val test = TestDays()
   runBlocking { putSampleDays(test.database, test.edits, today) }
-  // The calendar combines the days, the patterns and the orders, each read as its own query, so one
-  // can show before another catches up: the sample shows once each holds its last edit.
-  test.awaitCalendar { it.patterns.size == 4 && it.orders.isNotEmpty() && it.note(today.withDayOfMonth(16)) != null }
+  // The sample's last edit: the calendar is read whole in one transaction, so showing it shows the rest.
+  test.awaitCalendar { it.note(today.withDayOfMonth(16)) != null }
   return test
 }
 
@@ -56,11 +55,10 @@ class SampleDaysTest {
         runBlocking {
           test.edits.savePattern("mine", markedPattern("出勤"))
           putSampleDays(test.database, test.edits, today)
-          // Written last, so the days showing it show whatever the sample put in.
+          // Written last, so the calendar showing it shows whatever the sample put in.
           test.edits.setDay(marker.toString(), DayField.DAY_FIELD_NOTE, "end")
         }
-        // The patterns are a query of their own, which may catch up after the days.
-        test.awaitCalendar { it.patterns.isNotEmpty() && it.note(marker) != null }
+        test.awaitCalendar { it.note(marker) != null }
       }
     assertEquals(listOf("mine"), calendar.patterns.map { it.id })
     assertNull(calendar.note(today.withDayOfMonth(16)))

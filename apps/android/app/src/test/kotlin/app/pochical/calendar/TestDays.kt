@@ -34,7 +34,7 @@ class TestDays : Closeable {
   val database = AppDatabase.open(RuntimeEnvironment.getApplication(), inMemory = true)
   val edits = OwnEdits(database)
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-  val days: OwnDays = SyncedDays(database, edits, database.values().ownCalendar(), scope)
+  val days: OwnDays = SyncedDays(database, edits, database.ownCalendar(), scope)
 
   init {
     // Read from the start, as the app's screens read it, so there is a calendar to wait on.

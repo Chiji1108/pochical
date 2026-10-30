@@ -23,18 +23,12 @@ internal const val COWORKERS_IN_ORDER =
  */
 @Dao
 interface Values {
-  /** The person's own days, few: only those that differ from their repeating orders. */
-  @Query("SELECT * FROM days") fun days(): Flow<List<DayRow>>
-
   /** The person's own days from [from] through [through], "YYYY-MM-DD", in date order. */
   @Query("SELECT * FROM days WHERE date >= :from AND date <= :through ORDER BY date")
   fun days(from: String, through: String): Flow<List<DayRow>>
 
   /** The person's patterns in their order; one the order does not name yet comes after those it does. */
   @Query("SELECT patterns.* $PATTERNS_IN_ORDER") fun patterns(): Flow<List<PatternRow>>
-
-  /** The person's repeating orders, in their timeline's order. */
-  @Query("SELECT * FROM repeatOrders ORDER BY position") fun repeatOrders(): Flow<List<RepeatOrderRow>>
 
   /** The person's coworkers in their order; one the order does not name yet comes after, by name. */
   @Query("SELECT coworkers.* $COWORKERS_IN_ORDER") fun coworkers(): Flow<List<CoworkerRow>>

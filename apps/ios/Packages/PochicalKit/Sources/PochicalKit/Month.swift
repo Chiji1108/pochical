@@ -7,7 +7,11 @@ public func monthWeeks(_ month: Day, weekStart: Int) -> [[Day]] {
 
 /// The person's own calendar as the device holds it: their days, patterns
 /// and repeating orders, read from the tables that show them.
-public struct OwnCalendar: Sendable {
+public struct OwnCalendar: Hashable, Sendable {
+  /// Nothing entered: no days, patterns or orders.
+  public static let empty = OwnCalendar(days: [], patterns: [], patternOrder: [], orders: [])
+
+
   /// The patterns in their order.
   public let patterns: [Pattern]
   public let patternsByID: [PatternID: Pattern]

@@ -3,7 +3,7 @@ package app.pochical.kit
 import app.pochical.design.Days
 import java.time.LocalDate
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 
 /**
  * The person's own calendar as the device holds it, as iOS's OwnCalendar: their patterns in their
@@ -76,8 +76,16 @@ data class PageSummary(val daysOff: Int, val counts: List<Pair<String, Int>>, va
 fun OwnCalendar.summary(first: LocalDate, last: LocalDate): PageSummary =
   PageSummary.of(first, last, shown(first, last).mapValues { it.value.shift }, patterns)
 
-/** The person's own calendar, again whenever sync or an edit changes it. */
-fun Values.ownCalendar(): Flow<OwnCalendar> = combine(days(), patterns(), repeatOrders(), OwnCalendar::of)
+/**
+ * The person's own calendar, again whenever sync or an edit changes the tables it is read from,
+ * each one read in one transaction, as Room reads a `@Transaction` query: its days, patterns and
+ * orders are the database's at one moment, never new days beside the patterns before them.
+ */
+fun AppDatabase.ownCalendar(): Flow<OwnCalendar> =
+  invalidationTracker.createFlow("days", "patterns", "patternOrder", "repeatOrders").map { read { ownCalendar() } }
+
+/** The person's own calendar, read in the transaction it runs in. */
+internal suspend fun SyncDao.ownCalendar(): OwnCalendar = OwnCalendar.of(days(), patterns(), repeatOrders())
 
 /** The calendar with the own days from [from] through [through], read in the transaction it runs in. */
 internal suspend fun SyncDao.ownCalendar(from: LocalDate, through: LocalDate): OwnCalendar =
