@@ -2,7 +2,6 @@ package app.pochical.chat
 
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.runtime.DisposableEffect
@@ -27,10 +26,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBarsIgnoringVisibility
+import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import app.pochical.kit.PhotoShelf
@@ -157,6 +160,8 @@ internal val ChatPhotoItem.layoutKey: String
  * goes) or with ×, it closes ([onClose]), as it does once no photo is left. [onShown] is told of
  * the photo shown, for a list to keep its square in sight.
  */
+// The buttons keep their place as the system bars hide and show (statusBarsIgnoringVisibility).
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PhotoViewer(
   groupId: String,
@@ -222,8 +227,9 @@ fun PhotoViewer(
   var controls by remember { mutableStateOf(true) }
   val snackbar = remember { SnackbarHostState() }
   var pulled by remember { mutableFloatStateOf(0f) }
-  // The system bars go with the buttons; they come back as it goes.
-  if (!closing) MediaBars(shown = controls || reading)
+  // The system bars go with the buttons; they come back as it is pulled or goes, while the photo
+  // still covers the page, which takes their room back under it.
+  if (!closing) MediaBars(shown = controls || reading || pulled > 0f)
   Box(Modifier.fillMaxSize().background(colors.mediaBackground.copy(alpha = 1f - pulled))) {
     HorizontalPager(pager, Modifier.fillMaxSize(), key = { photos.getOrNull(it)?.layoutKey ?: it }, beyondViewportPageCount = 1) { page ->
       val photo = photos.getOrNull(page) ?: return@HorizontalPager
@@ -244,7 +250,7 @@ fun PhotoViewer(
     // Always in reach with a screen reader on, hidden before or not.
     AnimatedVisibility((controls || reading) && pulled == 0f, enter = fadeIn(), exit = fadeOut()) {
       Box(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().statusBarsPadding().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
           IconButton(onClick = { close() }) {
             Icon(painterResource(R.drawable.ic_close), stringResource(R.string.chat_photo_close), tint = colors.mediaText)
           }
@@ -263,7 +269,7 @@ fun PhotoViewer(
             )
           }
         }
-        Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+        Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBarsIgnoringVisibility).padding(8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
           val photo = photos.getOrNull(pager.currentPage)
           val notShared = stringResource(R.string.chat_photo_not_shared)
           IconButton(
@@ -292,7 +298,7 @@ fun PhotoViewer(
       }
     }
     // What saving and sharing came to, over the foot's buttons.
-    SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 64.dp))
+    SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.navigationBarsIgnoringVisibility).padding(bottom = 64.dp))
   }
 }
 
@@ -342,7 +348,7 @@ private fun LargePhoto(item: ChatPhotoItem, groupId: String, said: String, onTap
   val photo = item.photo
   val size = Size(photo.width.toFloat(), photo.height.toFloat()).takeIf { it.width > 0f && it.height > 0f }
   LargeImage(
-    { attempt -> ImageRequest.Builder(context).data(ChatPhotoData(photo.id, groupId, small = false, attempt = attempt)).size(CoilSize.ORIGINAL).build() },
+    { attempt -> ImageRequest.Builder(context).data(ChatPhotoData(photo.id, groupId, small = false, attempt = attempt)).large().build() },
     said,
     size,
     onTap,
@@ -363,6 +369,8 @@ private fun LargePhoto(item: ChatPhotoItem, groupId: String, said: String, onTap
  * black with × alone, zoomed and pulled down to close as a chat's photo is, over the profile's sheet
  * as a dialog of the whole screen, the sheet still under it as it closes.
  */
+// The buttons keep their place as the system bars hide and show (statusBarsIgnoringVisibility).
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun FaceViewer(photoId: String, shelf: PhotoShelf, name: String, onClose: () -> Unit) {
   val colors = LocalThemeColors.current
@@ -370,14 +378,14 @@ fun FaceViewer(photoId: String, shelf: PhotoShelf, name: String, onClose: () -> 
     var pulled by remember { mutableFloatStateOf(0f) }
     val reading = rememberScreenReaderOn()
     var controls by remember { mutableStateOf(true) }
-    MediaBars(shown = controls || reading)
+    MediaBars(shown = controls || reading || pulled > 0f)
     Box(Modifier.fillMaxSize().background(colors.mediaBackground.copy(alpha = 1f - pulled))) {
       // A face has no small version: the one the profile drew, from memory, shows until it is drawn
       // whole, which the disk keeps (a face is fetched once).
       val picture = Picture(photoId, shelf)
       val context = LocalContext.current
       LargeImage(
-        { ImageRequest.Builder(context).data(picture).placeholderMemoryCacheKey(MemoryCache.Key(picture.key)).size(CoilSize.ORIGINAL).build() },
+        { ImageRequest.Builder(context).data(picture).placeholderMemoryCacheKey(MemoryCache.Key(picture.key)).large().build() },
         stringResource(R.string.profile_photo_of, name),
         size = null,
         onTap = { if (!reading) controls = !controls },
@@ -387,7 +395,7 @@ fun FaceViewer(photoId: String, shelf: PhotoShelf, name: String, onClose: () -> 
         if (!failed) CircularProgressIndicator(Modifier.align(Alignment.Center).size(40.dp), color = colors.mediaText)
       }
       AnimatedVisibility((controls || reading) && pulled == 0f, enter = fadeIn(), exit = fadeOut()) {
-        IconButton(onClick = onClose, Modifier.statusBarsPadding().padding(8.dp)) {
+        IconButton(onClick = onClose, Modifier.windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility).padding(8.dp)) {
           Icon(painterResource(R.drawable.ic_close), stringResource(R.string.chat_photo_close), tint = colors.mediaText)
         }
       }
@@ -458,7 +466,7 @@ private fun LargeImage(
           if (drawn == null) coming(failed)
           key(attempt) {
             AsyncImage(
-              request(attempt),
+              remember { request(attempt) },
               contentDescription = null,
               Modifier.fillMaxSize(),
               contentScale = ContentScale.Fit,
@@ -472,41 +480,47 @@ private fun LargeImage(
       }
     }
     if (failed) {
-      PhotoRetry(
-        Modifier.align(Alignment.Center).clickable(onClickLabel = null) {
-          failed = false
-          attempt++
-        }
-      )
+      PhotoRetry(Modifier.align(Alignment.Center)) {
+        failed = false
+        attempt++
+      }
     }
   }
 }
 
 /**
  * The system bars over a photo opened large: their icons light on its black, and hidden with its
- * buttons, a swipe from the edge showing them for a moment, as Photos hides them; as they were once
- * it goes.
+ * buttons, a swipe from the edge showing them for a moment, as Photos hides them. Once it goes they
+ * show again, their icons as the theme draws them then and their behavior as it was.
  */
 @Composable
 private fun MediaBars(shown: Boolean) {
   val view = LocalView.current
   val window = (view.parent as? DialogWindowProvider)?.window ?: LocalActivity.current?.window ?: return
   val controller = remember(window, view) { WindowCompat.getInsetsController(window, view) }
+  val lightTheme by rememberUpdatedState(MaterialTheme.colorScheme.background.luminance() > 0.5f)
   DisposableEffect(controller) {
-    val light = controller.isAppearanceLightStatusBars to controller.isAppearanceLightNavigationBars
+    val behavior = controller.systemBarsBehavior
     controller.isAppearanceLightStatusBars = false
     controller.isAppearanceLightNavigationBars = false
     controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
     onDispose {
       controller.show(WindowInsetsCompat.Type.systemBars())
-      controller.isAppearanceLightStatusBars = light.first
-      controller.isAppearanceLightNavigationBars = light.second
+      controller.systemBarsBehavior = behavior
+      controller.isAppearanceLightStatusBars = lightTheme
+      controller.isAppearanceLightNavigationBars = lightTheme
     }
   }
   LaunchedEffect(controller, shown) {
     if (shown) controller.show(WindowInsetsCompat.Type.systemBars()) else controller.hide(WindowInsetsCompat.Type.systemBars())
   }
 }
+
+/**
+ * An image opened large, read whole for the zoom (at most `chatRules.photoMaxEdge` on a side), from
+ * memory when the lines' memory holds it but never kept there, so it lets go of no line's photo.
+ */
+private fun ImageRequest.Builder.large(): ImageRequest.Builder = size(CoilSize.ORIGINAL).memoryCachePolicy(CachePolicy.READ_ONLY)
 
 /** A pinch zooms up to this many times, as Signal's; a double tap to twice. */
 private const val MOST_ZOOM = 4f

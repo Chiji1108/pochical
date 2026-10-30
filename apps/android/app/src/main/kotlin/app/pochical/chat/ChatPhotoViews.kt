@@ -36,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
@@ -253,9 +254,12 @@ fun ChatPhotoImage(photo: ChatPhoto, groupId: String, retries: Boolean, onOpen: 
 
 /** ↻ in a dark circle over a photo that could not be fetched, as Signal and Telegram mark one; the photo's tap, or opened large its own, fetches it again. */
 @Composable
-internal fun PhotoRetry(modifier: Modifier) {
+internal fun PhotoRetry(modifier: Modifier, onClick: (() -> Unit)? = null) {
   val colors = LocalThemeColors.current
-  Box(modifier.size(48.dp).background(colors.mediaShade, CircleShape), contentAlignment = Alignment.Center) {
+  Box(
+    modifier.size(48.dp).clip(CircleShape).background(colors.mediaShade).then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+    contentAlignment = Alignment.Center,
+  ) {
     Icon(painterResource(R.drawable.ic_refresh), stringResource(R.string.chat_photo_retry), Modifier.size(24.dp), tint = colors.mediaText)
   }
 }
