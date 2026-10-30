@@ -24,9 +24,11 @@ export default defineConfig({
       manifest: false,
       registerType: "prompt",
       workbox: {
-        globIgnores: ["app/apple-splash-*"],
-        // The app, its images and icons; iOS reads the launch images only
-        // as the app is added, so they are left to the network.
+        globIgnores: ["app/apple-splash-*", "app/screenshot-*"],
+        // The app, its images and icons. iOS reads the launch images only
+        // as the app is added, and a browser shows the manifest's
+        // screenshots only as it offers to install the app, so both are
+        // left to the network.
         globPatterns: ["**/*.{css,html,js,png,webmanifest}"],
         // Above the largest file (the app's script, about 1.5 MB), which
         // Workbox would otherwise leave out with only a warning.

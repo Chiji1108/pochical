@@ -163,7 +163,7 @@ const now = {
     whiteSpace: "pre-line",
   }),
   // On a shift, what is left of it as a ring round its mark in the
-  // middle, the words under it.
+  // middle, the words centered under it, one group with it.
   left: css({
     display: "block",
     fontVariantNumeric: "tabular-nums",
@@ -187,7 +187,12 @@ const now = {
     height: "100%",
     justifyContent: "space-between",
   }),
-  under: css({ display: "flex", flexDirection: "column", gap: "1px" }),
+  under: css({
+    display: "flex",
+    flexDirection: "column",
+    gap: "1px",
+    textAlign: "center",
+  }),
 };
 
 // What いまのシフト says now: on, with its end, or the next, with its

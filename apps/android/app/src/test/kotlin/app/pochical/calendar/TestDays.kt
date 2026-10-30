@@ -7,12 +7,14 @@ import app.pochical.kit.ownCalendar
 import app.pochical.v1.Pattern
 import app.pochical.v1.PatternKt
 import app.pochical.v1.pattern
+import androidx.compose.ui.test.junit4.ComposeTestRule
 import java.io.Closeable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.job
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -34,9 +36,23 @@ class TestDays : Closeable {
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
   val days: OwnDays = SyncedDays(database, edits, database.values().ownCalendar(), scope)
 
+  init {
+    // Read from the start, as the app's screens read it, so there is a calendar to wait on.
+    scope.launch { days.calendar.collect {} }
+  }
+
   /** The calendar once it shows what [shows] asks for: edits reach it a moment after they are made. */
   fun awaitCalendar(shows: (OwnCalendar) -> Boolean): OwnCalendar = runBlocking {
     withTimeout(5_000) { days.calendar.first(shows) }
+  }
+
+  /**
+   * The calendar once it shows what [shows] asks for, waited on with [compose]'s main thread going
+   * on: a page's coroutine resumes there between its writes, as it does in the app.
+   */
+  fun awaitCalendar(compose: ComposeTestRule, shows: (OwnCalendar) -> Boolean): OwnCalendar {
+    compose.waitUntil(5_000) { shows(days.calendar.value) }
+    return days.calendar.value
   }
 
   // The calendar's reads end before the database closes: one still running on another thread would
