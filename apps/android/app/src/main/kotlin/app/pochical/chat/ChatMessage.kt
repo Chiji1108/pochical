@@ -29,6 +29,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusTarget
 import androidx.compose.ui.draw.alpha
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.draw.clip
@@ -174,6 +178,8 @@ class MessageHandlers(
   val lit: Lit?,
   /** [lit] has shone, so the line is not lit again as it is drawn again (scrolled back to, lifted for its menu). */
   val litShown: (Lit) -> Unit,
+  /** The line gone to (a jump, ↓ to ここから新着), each time it is, which a screen reader reads on from; null with no screen reader. */
+  val readFrom: Lit? = null,
   val me: String?,
   val writers: Map<String, GroupMemberRow>,
   /** The member's reaction on a line put on or taken back. */
@@ -291,8 +297,14 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
   val photoSeq = look.seq?.takeIf { look.content is LineContent.Photos }
   val menuLabel = stringResource(if (photoSeq != null) R.string.chat_photo_open else R.string.chat_menu)
   val activate = { if (photoSeq != null) handlers.openPhoto(photoSeq, 0) else openMenu(null) }
+  // Gone to, a screen reader reads on from it (spec/chat.md, Screen readers): its focus put on the
+  // line, which a screen reader's follows; only then is the line a focus target at all.
+  val focus = remember { FocusRequester() }
+  val readHere = look.seq != null && handlers.readFrom?.seq == look.seq
+  LaunchedEffect(handlers.readFrom) { if (readHere) focus.requestFocus() }
   Box(
     modifier
+      .then(if (readHere) Modifier.focusRequester(focus).focusProperties { canFocus = true }.focusTarget() else Modifier)
       .zIndex(if (handlers.spray?.seq == look.seq && look.seq != null) 1f else 0f)
       .fillMaxWidth()
       .padding(top = (if (look.startsRun) Chat.runGap else Chat.lineGap).dp)

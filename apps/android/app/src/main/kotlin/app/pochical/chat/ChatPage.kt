@@ -276,7 +276,17 @@ fun ChatPage(
   val reducedMotion = rememberReducedMotion()
   // The lines moved by the chat itself, not the person: a screen reader hears nothing of these.
   val moves = remember { ListMoves() }
+  // The line gone to, which a screen reader reads on from (spec/chat.md, Screen readers): a jump's,
+  // or the first under ここから新着 once ↓ has brought it to the top.
+  val reading = rememberScreenReaderOn()
+  var readFrom by remember { mutableStateOf<Lit?>(null) }
+  var unreadAsked by remember { mutableStateOf(false) }
   GoTo(going, items, list, reducedMotion, moves, enabled = placed && (going != Going.ToFoot || chat.atEnd)) { there ->
+    if (going == Going.ToUnread && unreadAsked) {
+      val divider = items.indexOfFirst { it == ChatItem.Unread }
+      readFrom = items.drop(divider + 1).firstNotNullOfOrNull { (it as? ChatItem.Line)?.line?.seq }?.let { Lit(it, System.nanoTime()) }
+    }
+    unreadAsked = false
     following = there
     going = null
   }
@@ -439,6 +449,7 @@ fun ChatPage(
         following = false
         moves.run { list.showInMiddle(index, animated = !reducedMotion) }
         lit = Lit(seq, System.nanoTime())
+        readFrom = lit
         jumping = null
       }
       // Held but not laid out: the lines are laid out from it.
@@ -576,6 +587,7 @@ fun ChatPage(
       reducedMotion = reducedMotion,
       lit = lit,
       litShown = { if (lit == it) lit = null },
+      readFrom = readFrom.takeIf { reading },
       me = me,
       writers = writers,
       react = react,
@@ -679,7 +691,10 @@ fun ChatPage(
           }
           LatestButton(list, chat, me, items, Modifier.align(Alignment.BottomEnd)) { toUnread ->
             when {
-              toUnread -> going = Going.ToUnread
+              toUnread -> {
+                going = Going.ToUnread
+                unreadAsked = true
+              }
               // The latest lines laid out as the chat opens, and gone to.
               !chat.atEnd -> {
                 from = null
