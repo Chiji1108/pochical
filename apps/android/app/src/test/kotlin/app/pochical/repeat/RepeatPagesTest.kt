@@ -4,7 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertIsEnabled
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithText
@@ -80,11 +80,10 @@ class RepeatPagesTest {
     compose.onAllNodesWithText("休み").onLast().performClick()
     compose.onNodeWithText("完了").performClick()
     compose.onNodeWithText("切り替える").performClick()
-    compose.waitForIdle()
+    compose.awaitRoutes(navigator, Tabs, RootPage.Repeat)
     val start = nextMonthStart()
     val orders = test.awaitCalendar { it.orders.size == 2 }.orders
     assertEquals(listOf("day", "off") to start, orders.last().sequence to orders.last().start)
-    compose.awaitRoutes(navigator, Tabs, RootPage.Repeat)
   }
 
   /** The order's holidays on as 休み, which then stops counting as off, leaving none that does. */
@@ -159,12 +158,11 @@ class RepeatPagesTest {
     compose.onNodeWithText("次へ").performClick()
     compose.onNodeWithText("完了").performClick()
     compose.onNodeWithText("切り替える").performClick()
-    compose.waitForIdle()
+    compose.awaitRoutes(navigator, Tabs, RootPage.Patterns)
     // The patterns and the orders show from queries of their own, so the last to show is waited for.
     val calendar = test.awaitCalendar { it.orders.size == 2 && it.patterns.size == 4 }
     // 日勤 is still on the days before the switch, so it stays, archived; the person's 休み, on no day before, gives way.
     assertEquals(listOf("duty" to false, "offDuty" to false, "off" to false, "day" to true), calendar.patterns.map { it.id to it.archived })
     assertEquals(listOf("duty", "offDuty", "off") to nextMonthStart(), calendar.orders.last().sequence to calendar.orders.last().start)
-    compose.awaitRoutes(navigator, Tabs, RootPage.Patterns)
   }
 }

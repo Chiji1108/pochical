@@ -5,7 +5,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasSetTextAction
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
@@ -97,10 +97,9 @@ class PatternPagesTest {
     show(listOf(RootPage.Patterns, RootPage.AddPattern)) { AddPatternPage(navigation) }
     compose.onNodeWithText("当番").performClick()
     compose.onNodeWithText("追加").performClick()
-    compose.waitForIdle()
+    compose.awaitRoutes(navigator, Tabs, RootPage.Patterns)
     val calendar = test.awaitCalendar { it.patterns.size == 2 }
     assertEquals(listOf("duty" to "offDuty", "offDuty" to null), calendar.patterns.map { it.id to it.nextDay })
-    compose.awaitRoutes(navigator, Tabs, RootPage.Patterns)
   }
 
   @Test
@@ -120,9 +119,8 @@ class PatternPagesTest {
     scrollTo("入力に出す")
     compose.onNodeWithText("入力に出す").performClick()
     compose.onNodeWithText("保存").performClick()
-    compose.waitForIdle()
-    assertEquals(true, test.awaitCalendar { it.patterns.find { p -> p.id == "late" }?.archived == true }.patterns.last().archived)
     compose.awaitRoutes(navigator, Tabs, RootPage.Patterns)
+    assertEquals(true, test.awaitCalendar { it.patterns.find { p -> p.id == "late" }?.archived == true }.patterns.last().archived)
   }
 
   @Test
@@ -144,9 +142,8 @@ class PatternPagesTest {
     }
     compose.onNode(hasSetTextAction()).performTextReplacement("夜勤")
     compose.onNodeWithText("追加").performClick()
-    compose.waitForIdle()
+    compose.awaitRoutes(navigator, Tabs, RootPage.Patterns)
     val made = test.awaitCalendar { it.patterns.isNotEmpty() }.patterns.single()
     assertEquals(listOf("夜勤", "🌙", "moon", "夜"), listOf(made.name, made.emoji, made.icon, made.symbol))
-    compose.awaitRoutes(navigator, Tabs, RootPage.Patterns)
   }
 }
