@@ -1,3 +1,6 @@
+import accountSymbol from "@iconify-icons/material-symbols/account-circle-outline-rounded";
+import logoutSymbol from "@iconify-icons/material-symbols/logout-outline-rounded";
+import personRemoveSymbol from "@iconify-icons/material-symbols/person-remove-outline-rounded";
 import { css } from "@pochical/styled-system/css";
 import { CloudCheck } from "lucide-react";
 import { useState } from "react";
@@ -29,6 +32,7 @@ export function AccountRow({ onOpen }: { onOpen: () => void }) {
     <ListRow
       label="アカウント"
       onClick={onOpen}
+      symbol={accountSymbol}
       value={
         account ? (
           <span className={settingsParts.inlineValue}>
@@ -156,6 +160,7 @@ export function AccountPage({ onBack }: { onBack: () => void }) {
           }}
           label="ログアウト"
           danger
+          symbol={logoutSymbol}
         />
       </List>
       <List className={accountPage.delete}>
@@ -166,6 +171,7 @@ export function AccountPage({ onBack }: { onBack: () => void }) {
           }}
           label="アカウントを削除"
           danger
+          symbol={personRemoveSymbol}
         />
       </List>
       {confirm === "signOut" && (

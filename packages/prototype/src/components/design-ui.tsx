@@ -1,6 +1,9 @@
 import { css, cva, cx } from "@pochical/styled-system/css";
 import { ChevronRight } from "lucide-react";
+import { createContext, useContext } from "react";
 import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react";
+
+import { useDevice } from "../lib/design-device";
 
 // The shared pieces the screens are built from, each the one place its
 // look is decided. They map one to one onto the SwiftUI views and Compose
@@ -323,16 +326,37 @@ export function ScreenScroll({
   );
 }
 
+// Whether the lists here are settings lists as Android draws them:
+// Material 3 Expressive's, as Android 16's Settings (spec/calendar.md),
+// each list a rounded group of segments a small gap apart, its rows led
+// by their symbols, and its sections named in the accent. iOS keeps its
+// inset grouped lists, and so does every other list on both.
+export const SegmentedContext = createContext(false);
+
+// Around a page of settings (設定 and the pages under it, the group's
+// settings, joining or making a group), as the app draws them with its
+// SettingsList. A sheet over them sets it back: its lists are its own.
+export function SettingsLists({ children }: { children: ReactNode }) {
+  const android = useDevice((state) => state.platform === "android");
+  return <SegmentedContext value={android}>{children}</SegmentedContext>;
+}
+
 // A titled part of a screen, its name small over it as over the
 // platforms' grouped lists, with an aside after the name when it needs
 // one. A section drawing its own heading styles a direct h4 with
-// sectionTitle.
-export const sectionTitle = css({
-  color: "text.tertiary",
-  fontWeight: 600,
-  margin: "0 0 8px 16px",
-  textStyle: "subheadline",
+// sectionTitle. Over Android's settings lists the name is in the accent,
+// as Material's list headings are (titleSmall in primary).
+const sectionTitleStyle = cva({
+  base: { margin: "0 0 8px 16px", textStyle: "subheadline" },
+  defaultVariants: { segmented: false },
+  variants: {
+    segmented: {
+      false: { color: "text.tertiary", fontWeight: 600 },
+      true: { color: "accent.fill", fontWeight: 500 },
+    },
+  },
 });
+export const sectionTitle = sectionTitleStyle();
 const sectionNote = css({
   color: "text.quaternary",
   fontWeight: 400,
@@ -361,8 +385,9 @@ export function Section({
   trailing?: ReactNode;
   children: ReactNode;
 }) {
+  const segmented = useContext(SegmentedContext);
   const heading = (
-    <h4 className={sectionTitle}>
+    <h4 className={sectionTitleStyle({ segmented })}>
       {title}
       {note && <small className={sectionNote}>{note}</small>}
     </h4>

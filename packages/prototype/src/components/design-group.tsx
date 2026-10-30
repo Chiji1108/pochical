@@ -43,7 +43,7 @@ import { ReportSheet } from "./design-report";
 import { TabBar } from "./design-tab-bar";
 import type { Tab } from "./design-tab-bar";
 import { ToastContext } from "./design-toast";
-import { Screen, ScreenScroll } from "./design-ui";
+import { Screen, ScreenScroll, SettingsLists } from "./design-ui";
 
 // The グループ tab: which of its screens shows and how one leads to the
 // next. The screens have files of their own, as the native apps' views:
@@ -165,18 +165,20 @@ export function DesignGroup({
   );
   // It takes the scanner's place, as LINE goes on from a read code.
   const joinPage = (
-    <JoinScreen
-      onClose={() => {
-        setPage((page.name === "join" && page.back) || { name: "hub" });
-      }}
-      onJoin={(joined) => {
-        setGroups([...groups, joined]);
-        setGroupId(joined.id);
-        setPage({ name: "hub" });
-        toast(`「${joined.name}」に参加しました`);
-      }}
-      profile={profile}
-    />
+    <SettingsLists>
+      <JoinScreen
+        onClose={() => {
+          setPage((page.name === "join" && page.back) || { name: "hub" });
+        }}
+        onJoin={(joined) => {
+          setGroups([...groups, joined]);
+          setGroupId(joined.id);
+          setPage({ name: "hub" });
+          toast(`「${joined.name}」に参加しました`);
+        }}
+        profile={profile}
+      />
+    </SettingsLists>
   );
   const onScan = () => {
     setPage({ name: "scan" });
@@ -212,20 +214,22 @@ export function DesignGroup({
   };
 
   const newGroupPage = (
-    <NewGroupPage
-      onBack={() => {
-        setPage({ name: "hub" });
-      }}
-      onCreate={({ myName, ...created }) => {
-        const id = `group-${groups.length}`;
-        const mine = myName === profile.name ? undefined : { name: myName };
-        setGroups([...groups, { ...created, id, mine }]);
-        setGroupId(id);
-        setPage({ name: "invite" });
-      }}
-      freeColor={nextGroupColor(groups.map((item) => item.mark))}
-      profile={profile}
-    />
+    <SettingsLists>
+      <NewGroupPage
+        onBack={() => {
+          setPage({ name: "hub" });
+        }}
+        onCreate={({ myName, ...created }) => {
+          const id = `group-${groups.length}`;
+          const mine = myName === profile.name ? undefined : { name: myName };
+          setGroups([...groups, { ...created, id, mine }]);
+          setGroupId(id);
+          setPage({ name: "invite" });
+        }}
+        freeColor={nextGroupColor(groups.map((item) => item.mark))}
+        profile={profile}
+      />
+    </SettingsLists>
   );
 
   // In no group yet, or none left: what sharing looks like, and the two
@@ -517,58 +521,60 @@ export function DesignGroup({
             />
           )}
           {page.name === "settings" && (
-            <GroupSettingsPage
-              group={group}
-              freeColor={nextGroupColor(
-                groups
-                  .filter((item) => item.id !== group.id)
-                  .map((item) => item.mark)
-              )}
-              onLeave={() => {
-                const rest = groups.filter((item) => item.id !== group.id);
-                setGroups(rest);
-                if (rest.length > 0) {
-                  setGroupId(rest[0].id);
-                }
-                setPage({ name: "hub" });
-                toast(`「${group.name}」から抜けました`);
-              }}
-              onMember={onMember}
-              onBack={() => {
-                setPage(
-                  page.from
-                    ? { chatId: page.from, name: "chat" }
-                    : { name: "hub" }
-                );
-              }}
-              onChange={(mine) => {
-                setGroups(
-                  groups.map((item) =>
-                    item.id === group.id ? { ...item, mine } : item
-                  )
-                );
-              }}
-              onMuted={(muted) => {
-                setMuted(groupChat, muted);
-              }}
-              onInvite={() => {
-                setPage({ name: "invite" });
-              }}
-              onEdit={(edit) => {
-                setGroups(
-                  groups.map((item) =>
-                    item.id === group.id ? { ...item, ...edit } : item
-                  )
-                );
-                const notice = editNotice(
-                  profileIn(group, profile).name,
-                  group,
-                  edit
-                );
-                addNotice(group.id, notice);
-              }}
-              profile={profile}
-            />
+            <SettingsLists>
+              <GroupSettingsPage
+                group={group}
+                freeColor={nextGroupColor(
+                  groups
+                    .filter((item) => item.id !== group.id)
+                    .map((item) => item.mark)
+                )}
+                onLeave={() => {
+                  const rest = groups.filter((item) => item.id !== group.id);
+                  setGroups(rest);
+                  if (rest.length > 0) {
+                    setGroupId(rest[0].id);
+                  }
+                  setPage({ name: "hub" });
+                  toast(`「${group.name}」から抜けました`);
+                }}
+                onMember={onMember}
+                onBack={() => {
+                  setPage(
+                    page.from
+                      ? { chatId: page.from, name: "chat" }
+                      : { name: "hub" }
+                  );
+                }}
+                onChange={(mine) => {
+                  setGroups(
+                    groups.map((item) =>
+                      item.id === group.id ? { ...item, mine } : item
+                    )
+                  );
+                }}
+                onMuted={(muted) => {
+                  setMuted(groupChat, muted);
+                }}
+                onInvite={() => {
+                  setPage({ name: "invite" });
+                }}
+                onEdit={(edit) => {
+                  setGroups(
+                    groups.map((item) =>
+                      item.id === group.id ? { ...item, ...edit } : item
+                    )
+                  );
+                  const notice = editNotice(
+                    profileIn(group, profile).name,
+                    group,
+                    edit
+                  );
+                  addNotice(group.id, notice);
+                }}
+                profile={profile}
+              />
+            </SettingsLists>
           )}
           {page.name === "invite" && (
             <InvitePage

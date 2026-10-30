@@ -1,3 +1,6 @@
+import alarmSymbol from "@iconify-icons/material-symbols/alarm-outline-rounded";
+import eventSymbol from "@iconify-icons/material-symbols/event-outline-rounded";
+import helpSymbol from "@iconify-icons/material-symbols/help-outline-rounded";
 import { SampleTag } from "@pochical/prototype/components/design-fields";
 import {
   ListDivider,
@@ -11,6 +14,7 @@ import {
   OptionCard,
   Note,
   Section,
+  SegmentedContext,
 } from "@pochical/prototype/components/design-ui";
 import { css } from "@pochical/styled-system/css";
 import { useState } from "react";
@@ -35,8 +39,8 @@ export function Rows() {
       <Item
         name="List + ListRow / SwitchRow(Toggle)"
         ios="List ＋ .listStyle(.insetGrouped)、行は LabeledContent・NavigationLink"
-        android="Card の中に ListItem を並べる"
-        where="設定の一覧など"
+        android="Card の中に ListItem を並べる（設定のリストは下の SettingsLists）"
+        where="グループのハブ、日の詳細など"
         wide
       >
         <List>
@@ -70,6 +74,38 @@ export function Rows() {
           </List>
         </Section>
         <Note>ポチポチ入力のボタンを長押ししても、その場で直せます。</Note>
+      </Item>
+      <Item
+        name="SettingsLists + List（Android）"
+        ios="（iOS は上の List のまま）"
+        android="SettingsSection ＋ SettingsRow（SegmentedListItem、先頭に Material Symbols Rounded）"
+        where="設定とその下のページ、グループの設定、参加と作成"
+        wide
+      >
+        <SegmentedContext value>
+          <Section title="通知">
+            <List>
+              <ListRow
+                label="リマインド"
+                onClick={() => undefined}
+                symbol={alarmSymbol}
+                value="オフ"
+              />
+              <SwitchRow
+                checked={on}
+                label="休みの日も入れる"
+                onChange={setOn}
+                symbol={eventSymbol}
+              />
+              <ListRow
+                label="ヘルプ"
+                leaves
+                onClick={() => undefined}
+                symbol={helpSymbol}
+              />
+            </List>
+          </Section>
+        </SegmentedContext>
       </Item>
     </Items>
   );

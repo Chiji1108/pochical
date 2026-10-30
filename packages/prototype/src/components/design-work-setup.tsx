@@ -14,7 +14,7 @@ import {
 import type { PresetShift, Shift } from "../lib/design-patterns";
 import { designMonth } from "../lib/design-today";
 import { BackButton, DoneButton, PageHeader } from "./design-header";
-import { List, ListRow, listRow } from "./design-list";
+import { List, ListRow, listRow, useRowClass } from "./design-list";
 import { MenuPicker, PullDownMenu } from "./design-menu";
 import { inChipOrder, ReadyPatternChips, toggled } from "./design-ready-chips";
 import {
@@ -475,6 +475,7 @@ function TemplateStep({
   onBack: () => void;
   onChoose: (template: Template) => void;
 }) {
+  const frame = useRowClass();
   return (
     <>
       <StepHeader
@@ -487,11 +488,7 @@ function TemplateStep({
           {templates.map((template) => (
             // Drawn by hand: the order or keys go under the note.
             <button
-              className={cx(
-                listRow.root,
-                listRow.pressable,
-                answerRow.template
-              )}
+              className={cx(frame, listRow.pressable, answerRow.template)}
               data-list-row=""
               key={template.id}
               onClick={() => {

@@ -13,6 +13,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@iconify-icons/material-symbols": "^2.0.8",
     "@pochical/design": "workspace:*",
     "@pochical/jsx": "workspace:*",
     "@pochical/prototype": "workspace:*",
