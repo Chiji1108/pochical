@@ -118,7 +118,7 @@ class LocalServerTest {
     tablet.account.foreground()
     val shown =
       withTimeout(20_000) {
-        tablet.database.values().ownCalendar().first { it.shown(night, after).size == 2 }.shown(night, after)
+        tablet.database.ownCalendar().first { it.shown(night, after).size == 2 }.shown(night, after)
       }
     assertEquals(mapOf(night to ShownDay("night"), after to ShownDay("after")), shown)
     Log.i(TAG, "Tablet shows 夜勤 and 明け")
@@ -173,7 +173,7 @@ class LocalServerTest {
     val tablet = Device("orders-tablet")
     tablet.sessions.write(phone.sessions.read()!!)
     tablet.account.foreground()
-    val calendar = withTimeout(20_000) { tablet.database.values().ownCalendar().first { it.orders.isNotEmpty() && it.patterns.size == 3 } }
+    val calendar = withTimeout(20_000) { tablet.database.ownCalendar().first { it.orders.isNotEmpty() && it.patterns.size == 3 } }
     val shown = calendar.shown(start, start.plusDays(3))
     assertEquals(listOf("duty", "offDuty", "off", "duty"), (0L..3L).map { shown.getValue(start.plusDays(it)).shift })
     assertEquals(listOf(true to "off"), calendar.orders.map { it.holidaysOff to it.holidayShift })

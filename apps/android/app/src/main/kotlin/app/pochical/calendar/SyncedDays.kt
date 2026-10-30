@@ -100,7 +100,7 @@ class SyncedDays(
   }
 
   override suspend fun shownOnceWritten(from: LocalDate, through: LocalDate): Set<LocalDate> =
-    inTurn { values.ownCalendar().first().shown(from, through).keys }
+    inTurn { database.ownCalendar().first().shown(from, through).keys }
 
   override suspend fun savePattern(pattern: Pattern): PatternRefusal? = inTurn { edits.savePattern(pattern.id, pattern.wire) }
 

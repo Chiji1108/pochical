@@ -43,7 +43,7 @@ class SetDaysTest {
       .filter { it.kindCase == Change.KindCase.DAY }
       .map { it.day.field to it.day.value.takeIf { _ -> it.day.hasValue() } }
 
-  private suspend fun calendar() = database.values().ownCalendar().first()
+  private suspend fun calendar() = database.ownCalendar().first()
 
   @Test
   fun aDayGivenAnotherShiftShowsItAndSendsItsFields() = runTest {

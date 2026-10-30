@@ -468,10 +468,7 @@ private struct RepeatEditor: View {
   @Environment(\.write) private var write
   @Fetch(WorkValues()) private var values = WorkValues.Value()
   /// The days as they show now, for those the order leaves.
-  @FetchAll private var days: [DayRow]
-  @FetchAll private var patternRows: [PatternRow]
-  @FetchAll private var patternOrder: [PatternOrderRow]
-  @FetchAll private var orderRows: [RepeatOrderRow]
+  @Fetch(OwnCalendarRequest()) private var shown = OwnCalendar.empty
   let mode: RepeatMode
   @State private var sequence: [PatternID]?
   @State private var day: Day?
@@ -499,8 +496,6 @@ private struct RepeatEditor: View {
       picked: holidayPick)
     let offShift = setting.shift
     let holidays = turnedOn && offShift != nil
-    let shown = OwnCalendar(
-      days: days, patterns: patternRows, patternOrder: patternOrder, orders: orderRows)
     RepeatCalendar(
       sequence: Binding(get: { steps }, set: { sequence = $0 }),
       anchor: Binding(get: { picked }, set: { day = $0 }),

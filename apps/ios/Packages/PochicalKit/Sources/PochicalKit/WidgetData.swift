@@ -18,15 +18,6 @@ public func readWidgetDatabase<T>(_ read: (Database) throws -> T?) throws -> T? 
   }
 }
 
-extension OwnCalendar {
-  /// The person's own calendar as the database holds it.
-  public init(_ db: Database) throws {
-    self.init(
-      days: try DayRow.fetchAll(db), patterns: try PatternRow.fetchAll(db),
-      patternOrder: try PatternOrderRow.fetchAll(db), orders: try RepeatOrderRow.fetchAll(db))
-  }
-}
-
 extension DeviceSettings {
   /// The settings as the app last kept them, its defaults before then.
   public static func kept(

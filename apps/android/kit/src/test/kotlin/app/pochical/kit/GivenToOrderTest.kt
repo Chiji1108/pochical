@@ -3,7 +3,6 @@ package app.pochical.kit
 import app.pochical.v1.DayField
 import app.pochical.v1.repeatOrder
 import java.time.LocalDate
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.Serializable
 import org.junit.Assert.assertEquals
@@ -54,7 +53,7 @@ class GivenToOrderTest {
         }),
         clearFrom = case.start,
       )
-      val days = database.values().days().first().associate { LocalDate.parse(it.date) to it.ownDay }
+      val days = database.read { days() }.associate { LocalDate.parse(it.date) to it.ownDay }
       database.close()
       case.name to days
     }

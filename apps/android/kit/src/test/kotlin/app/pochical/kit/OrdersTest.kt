@@ -114,11 +114,11 @@ class OrdersTest {
     edits.setHolidaysOff(true, start = start)
     edits.savePattern("off", markedPattern("休み"))
     edits.setHolidaysOff(true, start = start)
-    assertEquals(listOf(true to "off"), database.values().ownCalendar().first().orders.map { it.holidaysOff to it.holidayShift })
+    assertEquals(listOf(true to "off"), database.ownCalendar().first().orders.map { it.holidaysOff to it.holidayShift })
     edits.setHolidaysOff(false, start = start)
     edits.setHolidaysOff(true, start = start)
     // With none that counts as off it is not turned on again.
-    assertEquals(listOf(false to "off"), database.values().ownCalendar().first().orders.map { it.holidaysOff to it.holidayShift })
+    assertEquals(listOf(false to "off"), database.ownCalendar().first().orders.map { it.holidaysOff to it.holidayShift })
     database.close()
   }
 
@@ -131,7 +131,7 @@ class OrdersTest {
     val entered = LocalDate.parse("2026-10-05")
     edits.setDays(mapOf(entered to ShownDay("night")))
     edits.putOrder(RepeatOrder(listOf("day"), LocalDate.parse("2026-10-01"), holidayCountry = "JP"))
-    val calendar = database.values().ownCalendar().first()
+    val calendar = database.ownCalendar().first()
     assertEquals("night", calendar.shown(entered, entered)[entered]?.shift)
     assertEquals("day", calendar.shown(entered.plusDays(1), entered.plusDays(1)).values.single().shift)
     database.close()
@@ -147,7 +147,7 @@ class OrdersTest {
     assertEquals(false, edits.moveOrder(starts[1], starts[2]))
     assertEquals(false, edits.moveOrder(starts[1], LocalDate.parse("2025-12-31")))
     assertEquals(true, edits.moveOrder(starts[1], LocalDate.parse("2026-07-01")))
-    val orders = database.values().ownCalendar().first().orders
+    val orders = database.ownCalendar().first().orders
     assertEquals(listOf("2026-01-01", "2026-07-01", "2026-10-01"), orders.map { it.start.toString() })
     assertEquals(starts[1], orders[1].anchor)
     database.close()
@@ -168,10 +168,10 @@ class OrdersTest {
     val start = LocalDate.parse("2026-01-01")
     edits.putOrder(RepeatOrder(listOf("day"), start, holidayCountry = "JP"))
     edits.setHolidaysOff(true, start = start)
-    assertEquals("off", database.values().ownCalendar().first().orders.single().holidayShift)
+    assertEquals("off", database.ownCalendar().first().orders.single().holidayShift)
     edits.setHolidaysOff(false, start = start)
     // Off, it keeps the pattern holidays took, for when it is turned on again.
-    assertEquals(listOf(false to "off"), database.values().ownCalendar().first().orders.map { it.holidaysOff to it.holidayShift })
+    assertEquals(listOf(false to "off"), database.ownCalendar().first().orders.map { it.holidaysOff to it.holidayShift })
     database.close()
   }
 
@@ -188,7 +188,7 @@ class OrdersTest {
     edits.setDay("2026-11-03", DayField.DAY_FIELD_NOTE, "健診")
     val start = LocalDate.parse("2026-11-01")
     edits.changeJob(readyCopies(listOf("duty", "offDuty", "off")), listOf("duty", "offDuty", "off"), start, start, "JP")
-    val calendar = database.values().ownCalendar().first()
+    val calendar = database.ownCalendar().first()
     assertEquals(
       listOf("duty" to false, "offDuty" to false, "off" to false, "office" to true),
       calendar.patterns.map { it.id to it.archived },

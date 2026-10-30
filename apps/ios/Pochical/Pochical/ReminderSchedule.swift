@@ -68,16 +68,10 @@ enum ReminderSchedule {
 struct ReminderUpdates: ViewModifier {
   @Environment(Settings.self) private var settings
   @Environment(\.scenePhase) private var scenePhase
-  @FetchAll private var days: [DayRow]
-  @FetchAll private var patterns: [PatternRow]
-  @FetchAll private var patternOrder: [PatternOrderRow]
-  @FetchAll private var orders: [RepeatOrderRow]
+  @Fetch(OwnCalendarRequest()) private var calendar = OwnCalendar.empty
 
   private struct Key: Hashable {
-    let days: [DayRow]
-    let patterns: [PatternRow]
-    let patternOrder: [PatternOrderRow]
-    let orders: [RepeatOrderRow]
+    let calendar: OwnCalendar
     let reminders: [Reminder]
     let allowed: Bool
     let today: Day
@@ -88,13 +82,10 @@ struct ReminderUpdates: ViewModifier {
     let allowed = Notifications.shared.permission == .allowed
     content.task(
       id: Key(
-        days: days, patterns: patterns, patternOrder: patternOrder, orders: orders,
-        reminders: settings.device.reminders, allowed: allowed, today: .today,
+        calendar: calendar, reminders: settings.device.reminders, allowed: allowed, today: .today,
         active: scenePhase == .active)
     ) {
       guard scenePhase == .active else { return }
-      let calendar = OwnCalendar(
-        days: days, patterns: patterns, patternOrder: patternOrder, orders: orders)
       await ReminderSchedule.update(
         calendar: calendar, reminders: settings.device.reminders, allowed: allowed)
     }

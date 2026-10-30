@@ -60,7 +60,7 @@ class SyncedDaysTest {
   @Test
   fun onceReadTheCalendarHoldsWhatTheDeviceKeeps() = runBlocking {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    val opened = SyncedDays(test.database, test.edits, test.database.values().ownCalendar(), scope)
+    val opened = SyncedDays(test.database, test.edits, test.database.ownCalendar(), scope)
     opened.awaitRead()
     assertEquals(listOf("day", "night"), opened.calendar.value.patterns.map { it.id })
     scope.cancel()
