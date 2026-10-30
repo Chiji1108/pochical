@@ -127,9 +127,8 @@ private fun RowScope.ColumnDay(day: WidgetDay, drawn: Drawn, first: Boolean, siz
   var column = GlanceModifier.defaultWeight().fillMaxHeight().padding(horizontal = 3.dp)
   column = column.opening(drawn.link(day.date)).spoken(day, drawn.words)
   Box(column) {
-    var inner = GlanceModifier.fillMaxSize()
-    if (off.tile) inner = inner.background(drawn.tileColor(day), WidgetShape.tile)
-    Column(inner, horizontalAlignment = Alignment.CenterHorizontally) {
+    if (off.tile) Fill(WidgetShape.tile, drawn.tileColor(day))
+    Column(GlanceModifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
       ColumnHead(day, drawn, first, onTile = off.tile)
       Box(GlanceModifier.fillMaxWidth().defaultWeight(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -205,15 +204,16 @@ private fun PairColumns(drawn: Drawn, pair: WidgetPair, count: Int) {
       Box(GlanceModifier.defaultWeight(), contentAlignment = Alignment.Center) { WidgetFace(pair.with.name, 24.dp, photo = drawn.faces.with) }
     }
     days.forEachIndexed { index, (mine, shown) ->
-      var column = GlanceModifier.defaultWeight().fillMaxHeight().padding(horizontal = 3.dp).opening(drawn.link(mine.date))
-      // A day both are off: one band down the column.
-      if (shown.together) column = column.background(drawn.colors.groupTint, WidgetShape.tile)
-      Column(column, horizontalAlignment = Alignment.CenterHorizontally) {
-        ColumnHead(mine, drawn, first = index == 0, onTile = false, compact = true)
-        PairCell(mine, shown.together, drawn, drawn.look, size, count + 1, GlanceModifier.defaultWeight().spoken(mine, drawn.words))
-        val theirName = shown.theirs?.pattern?.name ?: if (drawn.english) "not entered" else "未入力"
-        val spoken = if (drawn.english) "${pair.with.name}, $theirName" else "${pair.with.name}さん、$theirName"
-        PairCell(shown.theirs, shown.together, drawn, theirLook, size, count + 1, GlanceModifier.defaultWeight().semantics { contentDescription = spoken })
+      Box(GlanceModifier.defaultWeight().fillMaxHeight().opening(drawn.link(mine.date))) {
+        // A day both are off: one band down the column.
+        if (shown.together) Fill(WidgetShape.tile, drawn.colors.groupTint)
+        Column(GlanceModifier.fillMaxSize().padding(horizontal = 3.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+          ColumnHead(mine, drawn, first = index == 0, onTile = false, compact = true)
+          PairCell(mine, shown.together, drawn, drawn.look, size, count + 1, GlanceModifier.defaultWeight().spoken(mine, drawn.words))
+          val theirName = shown.theirs?.pattern?.name ?: if (drawn.english) "not entered" else "未入力"
+          val spoken = if (drawn.english) "${pair.with.name}, $theirName" else "${pair.with.name}さん、$theirName"
+          PairCell(shown.theirs, shown.together, drawn, theirLook, size, count + 1, GlanceModifier.defaultWeight().semantics { contentDescription = spoken })
+        }
       }
     }
   }
@@ -222,10 +222,10 @@ private fun PairColumns(drawn: Drawn, pair: WidgetPair, count: Int) {
 /** A day's mark and its one line in the middle of its cell, on the group tables' tile when it is off; a dash where not entered. */
 @Composable
 private fun PairCell(day: WidgetDay?, together: Boolean, drawn: Drawn, look: Look, size: Dp, columns: Int, modifier: GlanceModifier) {
-  var cell = modifier.fillMaxWidth()
-  if (day != null && day.off && !together) cell = cell.padding(vertical = 3.dp).background(drawn.colors.groupTint, WidgetShape.tile)
-  Box(cell, contentAlignment = Alignment.Center) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+  val tiled = day != null && day.off && !together
+  Box(modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+    if (tiled) Fill(WidgetShape.tile, drawn.colors.groupTint)
+    Column(if (tiled) GlanceModifier.padding(vertical = 3.dp) else GlanceModifier, horizontalAlignment = Alignment.CenterHorizontally) {
       val pattern = day?.pattern
       if (pattern == null) {
         NothingMark(size, drawn.colors)

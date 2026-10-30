@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- A widget's circle, behind a face's letter (WidgetParts' WidgetShape.Round), white for the
+<!-- A widget's circle, behind a face's letter (WidgetParts' WidgetShape.round), white for the
      widget to tint. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
   <solid android:color="#FFFFFFFF" />

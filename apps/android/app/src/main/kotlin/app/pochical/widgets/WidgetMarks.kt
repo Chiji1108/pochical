@@ -22,20 +22,19 @@ import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
-import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.size
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
+import app.pochical.MARK_CORNER
 import app.pochical.kit.GroupMarkValue
 import app.pochical.kit.Look
 import app.pochical.kit.MarkStyle
 import app.pochical.kit.PatternRow
 import app.pochical.kit.TimeChange
 import app.pochical.kit.initialLetter
-import app.pochical.MARK_CORNER
 import app.pochical.markLayers
 
 // A pattern's mark as a widget draws it, as the app's ShiftMark draws it: its icon, its emoji, or
@@ -169,7 +168,7 @@ fun ringPicture(context: Context, size: Dp, share: Float): Bitmap {
   return picture
 }
 
-/** A mark's tile, [size] across, rounded as the app's (markShape), white on clear for the launcher to tint (WidgetShape). */
+/** A mark's tile, [size] across, rounded as the app's (markShape), white on clear for the launcher to tint (Fill). */
 private fun tilePicture(context: Context, size: Dp): Bitmap {
   val side = (size.value * context.resources.displayMetrics.density).toInt().coerceAtLeast(1)
   val key = "tile|$side"
@@ -242,7 +241,8 @@ private fun WidgetMarkOf(
         }
       }
     MarkStyle.Badge ->
-      Box(GlanceModifier.size(size).background(colors.markTint(slot), ImageProvider(tilePicture(context, size))), contentAlignment = Alignment.Center) {
+      Box(GlanceModifier.size(size), contentAlignment = Alignment.Center) {
+        Fill(ImageProvider(tilePicture(context, size)), colors.markTint(slot))
         MarkImage(markPicture(context, icon, symbol, look, size, change), size, colors.mark(slot), alpha)
       }
     MarkStyle.Icon -> MarkImage(markPicture(context, icon, symbol, look, size, change), size, colors.mark(slot), alpha)
