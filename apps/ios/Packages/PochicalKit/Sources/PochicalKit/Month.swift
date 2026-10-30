@@ -11,7 +11,6 @@ public struct OwnCalendar: Hashable, Sendable {
   /// Nothing entered: no days, patterns or orders.
   public static let empty = OwnCalendar(days: [], patterns: [], patternOrder: [], orders: [])
 
-
   /// The patterns in their order.
   public let patterns: [Pattern]
   public let patternsByID: [PatternID: Pattern]
