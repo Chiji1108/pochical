@@ -5,6 +5,7 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,9 +35,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusTarget
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -302,7 +301,9 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
   val menuLabel = stringResource(if (photoSeq != null) R.string.chat_photo_open else R.string.chat_menu)
   val activate = { if (photoSeq != null) handlers.openPhoto(photoSeq, 0) else openMenu(null) }
   // Gone to, a screen reader reads on from it (spec/chat.md, Screen readers): the focus put on the
-  // line once, which a screen reader's follows. Lines are focus targets only with a screen reader on.
+  // line once, which a screen reader's follows. Lines are focusable only with a screen reader on:
+  // focusable, not a bare focus target, so the line's node says it is focused and Compose tells
+  // TalkBack (TYPE_VIEW_FOCUSED), which it hears of no other way.
   val focus = remember { FocusRequester() }
   val readHere = handlers.readFrom?.takeIf { look.seq != null && it.seq == look.seq }
   LaunchedEffect(readHere) {
@@ -313,7 +314,7 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
   }
   Box(
     modifier
-      .then(if (handlers.reading) Modifier.focusRequester(focus).focusProperties { canFocus = true }.focusTarget() else Modifier)
+      .then(if (handlers.reading) Modifier.focusRequester(focus).focusable() else Modifier)
       .zIndex(if (handlers.spray?.seq == look.seq && look.seq != null) 1f else 0f)
       .fillMaxWidth()
       .padding(top = (if (look.startsRun) Chat.runGap else Chat.lineGap).dp)

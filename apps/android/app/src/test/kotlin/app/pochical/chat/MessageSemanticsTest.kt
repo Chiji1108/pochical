@@ -3,6 +3,7 @@ package app.pochical.chat
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -33,6 +34,7 @@ class MessageSemanticsTest {
     jump: (Long) -> Unit = {},
     openLink: (String) -> Unit = {},
     openProfile: ((GroupMemberRow) -> Unit)? = null,
+    readFrom: Lit? = null,
   ) =
     MessageHandlers(
       menu = LineMenuState(),
@@ -44,6 +46,8 @@ class MessageSemanticsTest {
       reducedMotion = true,
       lit = null,
       litShown = {},
+      reading = readFrom != null,
+      readFrom = readFrom,
       me = "me",
       writers = emptyMap(),
       react = { _, _, _ -> },
@@ -67,6 +71,17 @@ class MessageSemanticsTest {
   /** The line's actions, by their labels, as TalkBack offers them. */
   private fun actionsOf(said: String) =
     compose.onNode(SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription, listOf(said))).fetchSemanticsNode().config[SemanticsActions.CustomActions]
+
+  /**
+   * A line gone to says it is focused, as only a node that does is told to TalkBack
+   * (TYPE_VIEW_FOCUSED), which then reads on from it (spec/chat.md, Screen readers).
+   */
+  @Test
+  fun aLineGoneToSaysItIsFocused() {
+    val line = look(LineContent.Words("明日休み？"), emptyList(), "あや、明日休み？")
+    compose.setContent { Message(line, handlers(readFrom = Lit(1, 0))) }
+    compose.onNode(SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription, listOf(line.said))).assertIsFocused()
+  }
 
   @Test
   fun theWritersProfileIsAnActionOfTheirLine() {
