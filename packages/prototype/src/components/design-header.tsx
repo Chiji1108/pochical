@@ -245,20 +245,25 @@ const pageHeader = {
 
 // Android's flexible app bar, which collapses as the page scrolls
 // (exitUntilCollapsedScrollBehavior): the bar of the way back and the
-// actions stays at the top of what scrolls, the title under it scrolls
-// away fading out, and the title comes into the bar, small (titleLarge)
-// after the way back, as the bar takes the scrolled container's ground.
-// The scroll drives it (ScreenScroll's timeline, --screen-scroll), where
-// the browser can.
-const COLLAPSES = "@supports (animation-timeline: scroll())";
+// actions stays at the top of the ScreenScroll the header heads, the
+// title under it fades as it scrolls up under the bar, and comes into the
+// bar, small (titleLarge) after the way back, as the bar takes the
+// scrolled container's ground. The title's own passing under the bar
+// drives all three (its view timeline, --page-title, which ScreenScroll
+// scopes), where the browser can.
+const COLLAPSES = "@supports (timeline-scope: none)";
+const BAR_HEIGHT = "calc(token(sizes.touch) + var(--screen-scroll-top))";
+const onTitle = {
+  animationFillMode: "both",
+  animationTimeline: "--page-title",
+  animationTimingFunction: "linear",
+} as const;
 const appBar = {
   bar: css({
     [COLLAPSES]: {
-      animationFillMode: "both",
+      ...onTitle,
       animationName: "appBarScrolled",
-      animationRange: "40px 64px",
-      animationTimeline: "--screen-scroll",
-      animationTimingFunction: "linear",
+      animationRange: "exit 0% exit 100%",
     },
     alignItems: "center",
     bg: "background.base",
@@ -269,7 +274,7 @@ const appBar = {
     marginLeft: "calc(-1 * var(--screen-left))",
     marginRight: "calc(-1 * var(--screen-right))",
     marginTop: "calc(-1 * var(--screen-scroll-top))",
-    minHeight: "calc(token(sizes.touch) + var(--screen-scroll-top))",
+    minHeight: BAR_HEIGHT,
     paddingLeft: "var(--screen-left)",
     paddingRight: "var(--screen-right)",
     paddingTop: "var(--screen-scroll-top)",
@@ -279,11 +284,9 @@ const appBar = {
   }),
   collapsedTitle: css({
     [COLLAPSES]: {
-      animationFillMode: "both",
+      ...onTitle,
       animationName: "fadeIn",
-      animationRange: "40px 64px",
-      animationTimeline: "--screen-scroll",
-      animationTimingFunction: "linear",
+      animationRange: "exit 50% exit 100%",
     },
     fontWeight: 400,
     minWidth: 0,
@@ -301,13 +304,14 @@ const appBar = {
     gap: "4px",
     marginTop: `calc(4px - ${SCREEN_SCROLL_GAP})`,
   }),
+  // Its timeline runs as it passes under the bar.
   expandedTitle: css({
     [COLLAPSES]: {
-      animationFillMode: "both",
+      ...onTitle,
       animationName: "fadeOut",
-      animationRange: "0px 48px",
-      animationTimeline: "--screen-scroll",
-      animationTimingFunction: "linear",
+      animationRange: "exit 0% exit 100%",
+      viewTimeline: "--page-title block",
+      viewTimelineInset: `${BAR_HEIGHT} 0px`,
     },
   }),
 };
@@ -335,7 +339,7 @@ export function PageHeader({
   if (platform === "android" && title) {
     return (
       <>
-        <header className={appBar.bar}>
+        <header className={appBar.bar} data-app-bar="">
           <div>{start}</div>
           <span aria-hidden="true" className={appBar.collapsedTitle}>
             {title}

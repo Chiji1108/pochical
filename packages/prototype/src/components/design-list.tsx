@@ -521,13 +521,14 @@ const toggle = {
           _checked: {
             "--center": "34px",
             "--size": "24px",
+            _active: { "--size": "28px" },
             bg: "accent.onFill",
           },
           bg: "border.strong",
           height: "var(--size)",
           transform: "translateX(calc(var(--center) - var(--size) / 2))",
-          transition:
-            "0.2s, width 0.2s, height 0.2s, background 0.2s transform",
+          transitionDuration: "0.2s",
+          transitionProperty: "transform, width, height, background",
           width: "var(--size)",
         },
         ios: {

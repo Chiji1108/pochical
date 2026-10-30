@@ -54,6 +54,8 @@ const segmentedStyle = cva({
     display: "grid",
     gridAutoColumns: "minmax(0, 1fr)",
     gridAutoFlow: "column",
+    // The raised segments above the indicator, and nothing else.
+    isolation: "isolate",
     margin: 0,
     position: "relative",
   },
