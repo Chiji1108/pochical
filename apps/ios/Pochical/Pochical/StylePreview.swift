@@ -68,7 +68,7 @@ struct StylePreview: View {
       // Room for the switch over the edge.
       .padding(.top, 10)
       PageDots(
-        count: Self.pageNames.count, current: $page, label: "プレビュー（カレンダー、ホーム画面）")
+        count: Self.pageNames.count, current: $page, label: "プレビュー（カレンダー、ウィジェット）")
     }
   }
 
@@ -184,7 +184,8 @@ private struct HomePreview: View {
 }
 
 /// Which page of the preview is shown, on the card's top end (/design's
-/// SampleTag); the dots under the pages say it to VoiceOver.
+/// SampleTag), in the page's colors as ☀︎ / ☾ beside it; VoiceOver hears the
+/// pages named in order on the dots under them.
 private struct PageName: View {
   @Environment(\.themeColors) private var colors
   let name: String
