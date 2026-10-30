@@ -8,6 +8,8 @@ import androidx.activity.ComponentActivity
 import app.pochical.kit.AccountState
 import app.pochical.kit.AppleWebSignIn
 import app.pochical.kit.DeletionFailure
+import app.pochical.kit.NotSignedIn
+import java.io.IOException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -29,12 +31,12 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.android.controller.ActivityController
 
 /**
- * アカウントを削除 goes on through an activity made anew while Apple is asked for its code (#985),
- * as a sign-in does. The account's deletion stands in for SyncAccount's, asking Apple as it does
- * and failing as it does when Apple gives no code.
+ * ログアウト and アカウントを削除 go on through an activity made anew (#985, #1057), as a sign-in
+ * does. The account's calls stand in for SyncAccount's: the deletion asks Apple as it does and fails as
+ * it does when Apple gives no code, and signing out waits on [signedOut] as on the outbox and server.
  */
 @RunWith(RobolectricTestRunner::class)
-class AccountDeletionTest {
+class AccountActionTest {
   private val apple = AppleSignIn(AppleWebSignIn("http://localhost/".toHttpUrl(), lazyOf(OkHttpClient())))
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
@@ -43,22 +45,25 @@ class AccountDeletionTest {
   /** What Apple answered the deletion, once it did. */
   private val answered = CompletableDeferred<String?>()
 
-  private val deletion =
-    AccountDeletion(
-      deleteAccount = { appleCode ->
-        val code =
-          try {
-            appleCode()
-          } catch (e: Exception) {
-            throw DeletionFailure(DeletionFailure.Reason.AppleUnconfirmed, e)
-          }
-        answered.complete(code)
-        code != null
-      },
-      appleCode = apple::authorizationCode,
-      account = account,
-      scope = scope,
-    )
+  /** How the server answered signing out, once it does. */
+  private val signedOut = CompletableDeferred<Unit>()
+
+  private fun actions(deleteAccount: suspend () -> Unit = ::deleteWithApple) =
+    AccountActions(signOut = { signedOut.await() }, deleteAccount = deleteAccount, account = account, scope = scope)
+
+  private suspend fun deleteWithApple() {
+    val code =
+      try {
+        apple.authorizationCode()
+      } catch (e: Exception) {
+        throw DeletionFailure(DeletionFailure.Reason.AppleUnconfirmed, e)
+      }
+    answered.complete(code)
+  }
+
+  private val actions = actions()
+  private val deletion = actions.deletion
+  private val signOut = actions.signOut
 
   @After fun cancel() = scope.cancel()
 
@@ -86,17 +91,17 @@ class AccountDeletionTest {
   @Test
   fun aDeletionWhosePageFailsAfterTheActivityIsTurnedSaysSo() {
     val first = activity()
-    deletion.delete()
+    deletion.run()
     val opened = checkNotNull(shadowOf(first.get()).nextStartedActivity?.data) { "No page opened" }
     val returnTo = Uri.parse("pochical://apple-sign-in?state=${opened.getQueryParameter("challenge")}&error=failed")
 
     val turned = turn(first)
-    assertTrue("Still deleting in the activity made anew", deletion.deleting)
+    assertTrue("Still deleting in the activity made anew", deletion.running)
     turned.newIntent(Intent(Intent.ACTION_VIEW, returnTo))
     turned.resume()
     idle()
 
-    assertFalse(deletion.deleting)
+    assertFalse(deletion.running)
     assertEquals(DeletionFailure.Reason.AppleUnconfirmed, deletion.failure)
     deletion.failureRead()
     assertNull(deletion.failure)
@@ -105,44 +110,43 @@ class AccountDeletionTest {
   @Test
   fun aPageClosedAfterTheActivityIsTurnedDeletesNothingAndSaysNothing() {
     val first = activity()
-    deletion.delete()
+    deletion.run()
 
     val turned = turn(first)
-    assertTrue("Still deleting in the activity made anew", deletion.deleting)
+    assertTrue("Still deleting in the activity made anew", deletion.running)
     turned.resume()
     idle()
 
     assertTrue(answered.isCompleted)
     assertNull(answered.getCompleted())
-    assertFalse(deletion.deleting)
+    assertFalse(deletion.running)
     assertNull(deletion.failure)
   }
 
   @Test
   fun aSecondTapWhileDeletingAsksNothingMore() {
     val first = activity()
-    deletion.delete()
+    deletion.run()
     shadowOf(first.get()).nextStartedActivity
-    deletion.delete()
+    deletion.run()
 
     assertNull("Apple's page opened once", shadowOf(first.get()).nextStartedActivity)
   }
 
   @Test
   fun anEndedSessionIsSaidInPlaceOfTheAppNotHere() {
-    val ended =
-      AccountDeletion({ throw DeletionFailure(DeletionFailure.Reason.SessionEnded) }, { null }, account, scope)
-    ended.delete()
+    val ended = actions { throw DeletionFailure(DeletionFailure.Reason.SessionEnded) }.deletion
+    ended.run()
     idle()
 
-    assertFalse(ended.deleting)
+    assertFalse(ended.running)
     assertNull(ended.failure)
   }
 
   @Test
   fun aFailureGoesWithTheUserTheDeviceLetsGoOf() {
-    val failing = AccountDeletion({ throw DeletionFailure(DeletionFailure.Reason.Offline) }, { null }, account, scope)
-    failing.delete()
+    val failing = actions { throw DeletionFailure(DeletionFailure.Reason.Offline) }.deletion
+    failing.run()
     idle()
     assertEquals(DeletionFailure.Reason.Offline, failing.failure)
 
@@ -150,5 +154,55 @@ class AccountDeletionTest {
     idle()
 
     assertNull(failing.failure)
+  }
+
+  @Test
+  fun aSignOutIsHeldByTheAppUntilTheServerAnswersAndSaysItFailed() {
+    signOut.run()
+    idle()
+    assertTrue("Signing out while the server is waited on", signOut.running)
+    assertTrue("No other change offered meanwhile", actions.running)
+
+    signedOut.completeExceptionally(IOException("offline"))
+    idle()
+
+    assertFalse(signOut.running)
+    assertEquals(Unit, signOut.failure)
+    signOut.failureRead()
+    assertNull(signOut.failure)
+  }
+
+  @Test
+  fun aSecondTapWhileSigningOutAsksNothingMore() {
+    var asked = 0
+    val counting = AccountActions({ asked++; signedOut.await() }, {}, account, scope).signOut
+    counting.run()
+    counting.run()
+    idle()
+
+    assertEquals(1, asked)
+  }
+
+  @Test
+  fun aSignOutWhoseSessionTheServerDoesNotKnowIsSaidInPlaceOfTheApp() {
+    signedOut.completeExceptionally(NotSignedIn())
+    signOut.run()
+    idle()
+
+    assertFalse(signOut.running)
+    assertNull(signOut.failure)
+  }
+
+  @Test
+  fun aSignOutFailureGoesWithTheEndedSession() {
+    signedOut.completeExceptionally(IOException("offline"))
+    signOut.run()
+    idle()
+    assertEquals(Unit, signOut.failure)
+
+    account.value = AccountState.SessionEnded
+    idle()
+
+    assertNull(signOut.failure)
   }
 }
