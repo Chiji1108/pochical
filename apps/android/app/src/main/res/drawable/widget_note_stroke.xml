@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- A memo's stroke under a widget's date, the calendar's highlighter (WidgetParts' NoteStroke,
+<!-- A memo's stroke under a widget's date, the calendar's highlighter (WidgetParts' noteStroke,
      WidgetShape.noteStroke): the lower part of the date's box, white for the widget to tint. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
   <item

@@ -78,7 +78,7 @@ private fun UpcomingSmall(drawn: Drawn) {
     Row(GlanceModifier.fillMaxWidth()) {
       for (day in entry.upcoming.subList(1, 4)) {
         Column(GlanceModifier.defaultWeight().spoken(day, drawn.words), horizontalAlignment = Alignment.CenterHorizontally) {
-          NoteStroke(day.noted, colors.noteMarker) { Words(weekdayHead(day.date.weekday, drawn.english), colors.weekday(day.tone), 11.sp) }
+          Words(weekdayHead(day.date.weekday, drawn.english), colors.weekday(day.tone), 11.sp, modifier = GlanceModifier.noteStroke(day.noted, colors.noteMarker))
           Spacer(GlanceModifier.height(2.dp))
           DayMark(day, drawn, if (drawn.named) 24.dp - NAME_ROOM else 24.dp, named = drawn.named, reserve = true)
         }
@@ -97,7 +97,7 @@ private fun UpcomingHead(day: WidgetDay, drawn: Drawn) {
     DayMark(day, drawn, size, named = drawn.named, large = true)
     Spacer(GlanceModifier.width(8.dp))
     Column {
-      NoteStroke(day.noted, colors.noteMarker) { Words(drawn.words.shortDate(day.date), colors.words, 17.sp, bold = true) }
+      Words(drawn.words.shortDate(day.date), colors.words, 17.sp, bold = true, modifier = GlanceModifier.noteStroke(day.noted, colors.noteMarker))
       if (said != null) Words(said, colors.secondary, 13.sp)
     }
   }
@@ -132,7 +132,7 @@ private fun RowScope.ColumnDay(day: WidgetDay, drawn: Drawn, first: Boolean, siz
       ColumnHead(day, drawn, first, onTile = off.tile)
       Box(GlanceModifier.fillMaxWidth().defaultWeight(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-          if (!off.hidden || day.pattern == null) DayMark(day, drawn, size, faint = off.faint, named = drawn.named, reserve = true)
+          if (!off.hidden || day.pattern == null) DayMark(day, drawn, size, faint = off.faint, named = drawn.named, reserve = true, onItsTile = off.tile)
           ColumnLine(day.columnHours(), drawn, columns = 5)
         }
       }
@@ -152,14 +152,12 @@ private fun ColumnHead(day: WidgetDay, drawn: Drawn, first: Boolean, onTile: Boo
   val clear = ColorProvider(Color.Transparent)
   Column(GlanceModifier.padding(top = 4.dp, bottom = 2.dp), horizontalAlignment = Alignment.CenterHorizontally) {
     Words(weekdayHead(day.date.weekday, drawn.english), if (hidden) clear else colors.weekday(day.tone), 11.sp)
-    NoteStroke(day.noted && !hidden, drawn.strokeColor(day, onTile)) {
-      Row(verticalAlignment = Alignment.Bottom) {
-        val color = if (hidden) clear else if (day.holiday) colors.holiday else colors.words
-        if (first) {
-          Words(drawn.words.columnMonth(day.date), color, 10.sp)
-        }
-        Text(day.date.dayOfMonth.toString(), style = TextStyle(color = color, fontSize = if (compact) 13.sp else 15.sp, fontWeight = FontWeight.Medium))
+    Row(GlanceModifier.noteStroke(day.noted && !hidden, drawn.strokeColor(day, onTile)), verticalAlignment = Alignment.Bottom) {
+      val color = if (hidden) clear else if (day.holiday) colors.holiday else colors.words
+      if (first) {
+        Words(drawn.words.columnMonth(day.date), color, 10.sp)
       }
+      Text(day.date.dayOfMonth.toString(), style = TextStyle(color = color, fontSize = if (compact) 13.sp else 15.sp, fontWeight = FontWeight.Medium))
     }
   }
 }
