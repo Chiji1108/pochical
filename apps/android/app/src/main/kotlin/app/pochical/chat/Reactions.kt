@@ -1,10 +1,15 @@
 package app.pochical.chat
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -21,6 +26,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -57,7 +64,8 @@ data class Spray(val seq: Long, val emoji: String, val time: Long)
 /**
  * A line's reactions under its bubble, wrapping to more rows. One coming while the line is drawn
  * pops in; the reader's own choice ([spray]) sprays its emoji up from its pill, over the lines above.
- * Those there as the line is drawn are simply there; with animations off each just shows.
+ * One going shrinks and fades where it was. Those there as the line is drawn are simply there; with
+ * motion reduced each fades in and out where it is (spec/chat.md, Reactions; Reduced motion).
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -75,28 +83,75 @@ fun ReactionRow(
 ) {
   // The emoji there as the line was drawn: only those coming after pop in.
   val there = remember { reactions.map { it.emoji }.toSet() }
-  if (reactions.isEmpty()) return
+  val drawn = withLeaving(reactions)
+  if (drawn.isEmpty()) return
+  val present = reactions.mapTo(HashSet()) { it.emoji }
+  val motion = MaterialTheme.motionScheme
   FlowRow(
     modifier.padding(top = 4.dp),
     horizontalArrangement = Arrangement.spacedBy(4.dp, if (mine) Alignment.End else Alignment.Start),
     verticalArrangement = Arrangement.spacedBy(4.dp),
   ) {
-    for (reaction in reactions) {
+    for (reaction in drawn.list) {
       val own = me != null && me in reaction.userIds
       key(reaction.emoji) {
-      ReactionPill(
-        reaction,
-        own,
-        writers,
-        counted,
-        pops = reaction.emoji !in there && !reducedMotion,
-        spray = spray?.takeIf { it.emoji == reaction.emoji && !reducedMotion },
-        onTap = { onToggle(reaction.emoji, !own) },
-        onLongPress = { onChoosers(reaction) },
-      )
+        val shown = remember { MutableTransitionState(true) }
+        shown.targetState = reaction.emoji in present
+        // Gone once it has shrunk away, so the row closes up after it.
+        if (shown.isIdle && !shown.currentState) LaunchedEffect(Unit) { drawn.gone(reaction.emoji) }
+        AnimatedVisibility(
+          shown,
+          enter = EnterTransition.None,
+          exit =
+            if (reducedMotion) fadeOut(motion.fastEffectsSpec())
+            else scaleOut(motion.fastSpatialSpec(), targetScale = LEAVING_SCALE) + fadeOut(motion.fastEffectsSpec()),
+        ) {
+          ReactionPill(
+            reaction,
+            own,
+            writers,
+            counted,
+            comes = reaction.emoji !in there,
+            reducedMotion = reducedMotion,
+            spray = spray?.takeIf { it.emoji == reaction.emoji && !reducedMotion },
+            onTap = { onToggle(reaction.emoji, !own) },
+            onLongPress = { onChoosers(reaction) },
+          )
+        }
       }
     }
   }
+}
+
+/** The reactions drawn: those on the line in its order, and those just gone kept where they were until they have left. */
+@Stable
+private class Drawn(var list: List<LineReaction>) {
+  private val left = mutableStateSetOf<String>()
+
+  fun isEmpty() = list.isEmpty()
+
+  /** The one [emoji] has left: it is drawn no more. */
+  fun gone(emoji: String) {
+    left += emoji
+  }
+
+  /** [now] with those drawn before and gone from it, each where it was, but those already left. */
+  fun update(now: List<LineReaction>): Drawn {
+    val present = now.mapTo(HashSet()) { it.emoji }
+    left.removeAll(present)
+    val merged = now.toMutableList()
+    list.forEachIndexed { index, reaction ->
+      if (reaction.emoji !in present && reaction.emoji !in left) merged.add(minOf(index, merged.size), reaction)
+    }
+    list = merged
+    return this
+  }
+}
+
+@Composable
+private fun withLeaving(reactions: List<LineReaction>): Drawn {
+  val drawn = remember { Drawn(reactions) }
+  return drawn.update(reactions)
 }
 
 /**
@@ -111,20 +166,29 @@ private fun ReactionPill(
   own: Boolean,
   writers: Map<String, GroupMemberRow>,
   counted: Boolean,
-  pops: Boolean,
+  /** It came while the line was drawn: it pops in, or with motion reduced fades in. */
+  comes: Boolean,
+  reducedMotion: Boolean,
   spray: Spray?,
   onTap: () -> Unit,
   onLongPress: () -> Unit,
 ) {
   val colors = LocalThemeColors.current
   val shape = RoundedCornerShape(50)
-  val scale = remember { Animatable(if (pops) 0f else 1f) }
-  LaunchedEffect(Unit) { if (pops) scale.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy)) }
+  val coming = remember { Animatable(if (comes) 0f else 1f) }
+  val fade = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
+  LaunchedEffect(Unit) {
+    if (comes) coming.animateTo(1f, if (reducedMotion) fade else spring(dampingRatio = Spring.DampingRatioMediumBouncy))
+  }
   Box(contentAlignment = Alignment.Center) {
     Row(
       Modifier.graphicsLayer {
-        scaleX = scale.value
-        scaleY = scale.value
+        if (reducedMotion) {
+          alpha = coming.value
+        } else {
+          scaleX = coming.value
+          scaleY = coming.value
+        }
       }
         .background(if (own) colors.accentContainer else MaterialTheme.colorScheme.surfaceContainerHigh, shape)
         .border(1.dp, if (own) colors.accentDefault else Color.Transparent, shape)
@@ -205,5 +269,8 @@ fun reactionWords(reactions: List<LineReaction>, me: String?): String? {
 }
 
 private val FACE_SIZE = 16.dp
+
+/** How small a pill going shrinks as it fades, as iOS's does. */
+private const val LEAVING_SCALE = 0.5f
 private const val SPRAY_DROPS = 5
 internal const val SPRAY_MS = 900
