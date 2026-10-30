@@ -13,10 +13,10 @@ import java.util.regex.Pattern
 
 const val PACKAGE = "app.pochical"
 
-private const val WAIT = 10_000L
+const val WAIT = 10_000L
 
 /** What [selector] finds once it shows; failing, what the screen shows instead. */
-private fun MacrobenchmarkScope.find(selector: BySelector): UiObject2 =
+fun MacrobenchmarkScope.find(selector: BySelector): UiObject2 =
   checkNotNull(device.wait(Until.findObject(selector), WAIT)) {
     val shown = device.findObjects(By.pkg(PACKAGE)).mapNotNull { runCatching { it.text ?: it.contentDescription }.getOrNull() }
     "Not on the screen: $selector; shown: $shown"
@@ -49,6 +49,8 @@ private val groupShown = By.text("全体チャット")
  * the emulator's host as the local network Android 17 asks the person to allow.
  */
 fun MacrobenchmarkScope.prepare() {
+  // Online, though a run cut off left the emulator in airplane mode (Benchmarks' offline starts).
+  device.executeShellCommand("cmd connectivity airplane-mode disable")
   device.executeShellCommand("pm grant $PACKAGE android.permission.ACCESS_LOCAL_NETWORK")
   killProcess()
   startActivityAndWait()

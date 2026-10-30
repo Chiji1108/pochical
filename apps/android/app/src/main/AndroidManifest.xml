@@ -192,8 +192,19 @@
         android:name="android.appwidget.provider"
         android:resource="@xml/widget_calendar" />
     </receiver>
-    <!-- Midnight's alarm, the clock set or the time zone changed: the widgets' day turns
-         (WidgetUpdates). -->
+    <receiver
+      android:name=".widgets.NowWidgetReceiver"
+      android:exported="true"
+      android:label="@string/widget_now">
+      <intent-filter>
+        <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+      </intent-filter>
+      <meta-data
+        android:name="android.appwidget.provider"
+        android:resource="@xml/widget_now" />
+    </receiver>
+    <!-- Midnight's alarm and いまのシフト's turns, the clock set or the time zone changed: the
+         widgets are drawn for the moment it is (WidgetUpdates). -->
     <receiver
       android:name=".widgets.WidgetDayReceiver"
       android:exported="false">

@@ -70,8 +70,6 @@ fun SupportRow(open: (RootPage) -> Unit) {
       blocked = emptySet(),
       empty = stringResource(R.string.support_empty),
       onOpen = { open(RootPage.Chat(Chat.supportPlace, GROUP_THREAD)) },
-      onCard = true,
-      modifier = Modifier.clip(MaterialTheme.shapes.large),
     ) {
       AppIcon(28.dp)
     }

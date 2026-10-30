@@ -122,6 +122,11 @@ public actor SyncClient {
   private var caughtUp = false
   /// The nonce of that Ping.
   private var catchUpNonce: UInt32 = 0
+  /// The groups held before a Reset of the user's socket, until its
+  /// catch-up has come: kept over the sockets in between, as the catch-up
+  /// starts again on each; the user's own, so another signing in starts
+  /// without them.
+  private var heldBeforeReset: (userID: String, groups: Set<String>)?
   /// Screens waiting for the catch-up, each for a while at most.
   private var catchUpWaiters: [UUID: CheckedContinuation<Void, Never>] = [:]
   /// Where the socket is, for the screens to say while it is not current.
@@ -516,17 +521,29 @@ public actor SyncClient {
         try GroupSync.take(changes.changes, of: placeID, in: db)
       }
       if peer.placeID == nil {
-        for groupID in Groups.left(in: changes.changes) {
-          NotificationCenter.default.post(
-            name: groupLeft, object: nil, userInfo: ["groupID": groupID])
-        }
+        let left = Groups.left(in: changes.changes)
+        // One a Reset's catch-up says was left went with that change.
+        heldBeforeReset?.groups.subtract(left)
+        Self.tellLeft(left)
       }
       Logger.sync.info("Took \(changes.changes.count) changes")
     case .reset:
-      try await database.write { [peer] db in
-        try Self.owned(by: credentials, db)
-        guard let placeID = peer.placeID else { return try Sync.reset(in: db) }
-        try GroupSync.reset(placeID, in: db)
+      if let placeID = peer.placeID {
+        try await database.write { db in
+          try Self.owned(by: credentials, db)
+          try GroupSync.reset(placeID, in: db)
+        }
+      } else {
+        // Those held before an earlier Reset whose catch-up has not come
+        // yet are still to be found.
+        let before = heldBeforeReset.flatMap { $0.userID == credentials.userID ? $0.groups : nil } ?? []
+        let groups = try await database.write { db in
+          try Self.owned(by: credentials, db)
+          let held = try Groups.held(in: db)
+          try Sync.reset(in: db)
+          return before.union(held)
+        }
+        heldBeforeReset = (credentials.userID, groups)
       }
     case .acked(let acked):
       try await database.write { [peer] db in
@@ -565,6 +582,17 @@ public actor SyncClient {
       }
     case .pong(let pong):
       if pong.nonce == catchUpNonce {
+        // A group a Reset's catch-up did not mention at all (the User DO
+        // restored from an older copy that does not know it) goes as a group
+        // left does.
+        if let held = heldBeforeReset, held.userID == credentials.userID {
+          let gone = try await database.write { db in
+            try Self.owned(by: credentials, db)
+            return try Groups.gone(since: held.groups, in: db)
+          }
+          heldBeforeReset = nil
+          Self.tellLeft(gone)
+        }
         tries.caughtUp()
         caughtUp = true
         status = .current
@@ -611,6 +639,14 @@ public actor SyncClient {
     var frame = Pochical_V1_ClientFrame()
     frame.ping.nonce = catchUpNonce
     try await socket.send(.data(frame.serializedData()))
+  }
+
+  /// Tells the app of the groups left, for what it keeps of them beside
+  /// the database (their notifications) to go too.
+  private static func tellLeft(_ groupIDs: [String]) {
+    for groupID in groupIDs {
+      NotificationCenter.default.post(name: groupLeft, object: nil, userInfo: ["groupID": groupID])
+    }
   }
 
   /// Waits until what the DO had at Welcome has been taken, or `limit`

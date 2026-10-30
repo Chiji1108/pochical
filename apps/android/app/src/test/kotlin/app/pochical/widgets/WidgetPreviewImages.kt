@@ -13,6 +13,7 @@ import app.pochical.kit.DeviceSettings
 import app.pochical.kit.Week
 import java.io.File
 import java.time.LocalDate
+import java.time.ZoneId
 import kotlinx.coroutines.test.runTest
 import org.junit.Assume.assumeTrue
 import org.junit.Test
@@ -46,8 +47,10 @@ class WidgetPreviewImages {
         "next_off" to NextOffWidget(),
         "upcoming" to UpcomingWidget(),
         "calendar" to CalendarWidget(),
+        "now" to NowWidget(),
       )
-    val drawn = Drawn(sampleWidgetEntry(today, Week()), DeviceSettings())
+    // Midday, the sample's 日勤 on, as いまのシフト's ring shows it.
+    val drawn = Drawn(sampleWidgetEntry(today.atTime(13, 0).atZone(ZoneId.systemDefault()), Week()), DeviceSettings())
     for (dark in listOf(false, true)) {
       val context = RuntimeEnvironment.getApplication().let { app ->
         val configuration = Configuration(app.resources.configuration)

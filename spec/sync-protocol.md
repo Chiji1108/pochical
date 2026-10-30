@@ -202,6 +202,7 @@ What a device shows of a value while its edits wait (`spec/vectors/local-edits.j
 - So a device never compares clocks to choose between the server's value and its own; the server has done that.
 - A new job's orders edit waiting in the outbox also hides the days' own values it takes back, comparing each value's clock with the edit's (`givesWay`, spec/vectors/order-clears.json): those set before it show cleared, while one set after it, by this device or another, shows. The server's clears for them come as `Changes` before its `Acked`; at the `Acked` the days show the server's values again, so orders that lost to newer ones take nothing back.
 - A `Reset` drops the server's values and keeps the outbox.
+- A `Reset` of the user's socket drops the groups too, and its catch-up brings each again, as one the user is in or one left. A group the catch-up does not mention at all (the User DO restored from an older copy that does not know it) would never come again, so the device keeps the groups it held before the `Reset`, with their faces (the mark's goes with the list), until its catch-up has come (`Pong`, Keepalive), over the sockets in between while the app runs, and lets go of those not mentioned as of a group left (spec/chat.md, Photos; Notifications).
 
 ### On the wire
 
