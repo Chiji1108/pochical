@@ -21,7 +21,6 @@ import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
-import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.size
 import androidx.glance.layout.width
@@ -93,7 +92,7 @@ private fun ringShare(span: WidgetSpan, at: ZonedDateTime): Float {
   return (left.coerceIn(0f, 1f) * 100).roundToInt() / 100f
 }
 
-/** On a shift: what is left of it as a ring round its mark, and under it the time left and when it ends. */
+/** On a shift: what is left of it as a ring round its mark, and centered under it the time left and when it ends. */
 @Composable
 private fun On(span: WidgetSpan, now: WidgetNow, drawn: Drawn, words: NowWords) {
   val context = LocalContext.current
@@ -107,10 +106,9 @@ private fun On(span: WidgetSpan, now: WidgetNow, drawn: Drawn, words: NowWords) 
       DayMark(span.day, drawn, if (drawn.named) 34.dp - NAME_ROOM else 34.dp, named = drawn.named)
     }
     Spacer(GlanceModifier.height(8.dp))
-    Column(GlanceModifier.fillMaxWidth()) {
-      Countdown(now.at, span.end, words.left, 15.sp)
-      Words(words.until(span), drawn.colors.secondary, 13.sp)
-    }
+    // The words centered under it, one group with it.
+    Countdown(now.at, span.end, words.left, 15.sp)
+    Words(words.until(span), drawn.colors.secondary, 13.sp, center = true)
   }
 }
 
