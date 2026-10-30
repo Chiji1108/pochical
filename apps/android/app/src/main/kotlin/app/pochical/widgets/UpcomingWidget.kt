@@ -27,13 +27,13 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
-import app.pochical.calendar.weekday
 import app.pochical.calendar.weekdayHead
 import app.pochical.groups.drawing
 import app.pochical.kit.Look
 import app.pochical.kit.WidgetDay
 import app.pochical.kit.columnHours
 import app.pochical.kit.dayName
+import app.pochical.kit.weekday
 import app.pochical.kit.withoutWholeHours
 
 /**

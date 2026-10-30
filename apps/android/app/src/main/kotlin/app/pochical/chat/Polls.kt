@@ -52,7 +52,6 @@ import app.pochical.calendar.fullText
 import app.pochical.calendar.holidayCountry
 import app.pochical.calendar.holidayName
 import app.pochical.calendar.slashText
-import app.pochical.calendar.weekday
 import app.pochical.calendar.weekdayColor
 import app.pochical.calendar.weekdayName
 import app.pochical.design.Radius
@@ -60,6 +59,7 @@ import app.pochical.groups.MemberAvatar
 import app.pochical.kit.GroupMemberRow
 import app.pochical.kit.PhotoShelf
 import app.pochical.kit.voters
+import app.pochical.kit.weekday
 import app.pochical.v1.ChatPoll
 import java.time.LocalDate
 

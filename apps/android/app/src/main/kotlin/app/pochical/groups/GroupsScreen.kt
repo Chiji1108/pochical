@@ -89,7 +89,6 @@ import app.pochical.UnreadBadge
 import app.pochical.calendar.holidayCountry
 import app.pochical.calendar.holidayName
 import app.pochical.calendar.rememberToday
-import app.pochical.calendar.weekday
 import app.pochical.chat.ChatList
 import app.pochical.design.Metrics
 import app.pochical.design.Radius
@@ -102,6 +101,7 @@ import app.pochical.kit.OwnDay
 import app.pochical.kit.PatternRow
 import app.pochical.kit.PhotoShelf
 import app.pochical.kit.readyCopies
+import app.pochical.kit.weekday
 import java.time.LocalDate
 
 /** What the グループ tab's buttons open. */

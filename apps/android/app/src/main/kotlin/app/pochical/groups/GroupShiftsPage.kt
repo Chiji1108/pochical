@@ -70,11 +70,11 @@ import app.pochical.calendar.MonthPicker
 import app.pochical.calendar.holidayCountry
 import app.pochical.calendar.rememberToday
 import app.pochical.calendar.shortText
-import app.pochical.calendar.weekStartingOn
 import app.pochical.calendar.yearMonthText
 import app.pochical.design.PochicalTextStyles
 import app.pochical.design.Radius
 import app.pochical.kit.GroupRow
+import app.pochical.kit.weekStartingOn
 import java.time.LocalDate
 import java.time.YearMonth
 import kotlinx.coroutines.flow.dropWhile

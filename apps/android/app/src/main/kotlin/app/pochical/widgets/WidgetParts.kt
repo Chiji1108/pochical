@@ -58,7 +58,6 @@ import app.pochical.calendar.fullText
 import app.pochical.calendar.holidayCountry
 import app.pochical.calendar.holidayName
 import app.pochical.calendar.shortMonth
-import app.pochical.calendar.weekday
 import app.pochical.calendar.weekdayName
 import app.pochical.design.Theme
 import app.pochical.design.ThemeColors
@@ -68,6 +67,7 @@ import app.pochical.kit.OwnCalendar
 import app.pochical.kit.WidgetDay
 import app.pochical.kit.WidgetTone
 import app.pochical.kit.dayName
+import app.pochical.kit.weekday
 import app.pochical.mark
 import java.time.LocalDate
 import java.time.YearMonth

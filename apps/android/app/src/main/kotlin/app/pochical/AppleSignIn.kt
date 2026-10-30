@@ -19,7 +19,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
 
-/** Appleで続ける for the pages that offer it, and アカウントを削除 for Apple's code. */
+/** Appleで続ける for the pages that offer it. */
 val LocalAppleSignIn = staticCompositionLocalOf<AppleSignIn> { error("No Apple sign-in provided") }
 
 /**
