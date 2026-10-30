@@ -29,14 +29,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusTarget
 import androidx.compose.ui.draw.alpha
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusTarget
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -178,8 +178,12 @@ class MessageHandlers(
   val lit: Lit?,
   /** [lit] has shone, so the line is not lit again as it is drawn again (scrolled back to, lifted for its menu). */
   val litShown: (Lit) -> Unit,
-  /** The line gone to (a jump, ↓ to ここから新着), each time it is, which a screen reader reads on from; null with no screen reader. */
+  /** Whether a screen reader reads the screen: each line is then a focus target, for [readFrom]. */
+  val reading: Boolean = false,
+  /** The line gone to (a jump, ↓ to ここから新着), each time it is, until a screen reader has been put on it. */
   val readFrom: Lit? = null,
+  /** [readFrom] has taken the focus, so it is not taken again as the line is drawn again. */
+  val readOn: (Lit) -> Unit = {},
   val me: String?,
   val writers: Map<String, GroupMemberRow>,
   /** The member's reaction on a line put on or taken back. */
@@ -297,14 +301,19 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
   val photoSeq = look.seq?.takeIf { look.content is LineContent.Photos }
   val menuLabel = stringResource(if (photoSeq != null) R.string.chat_photo_open else R.string.chat_menu)
   val activate = { if (photoSeq != null) handlers.openPhoto(photoSeq, 0) else openMenu(null) }
-  // Gone to, a screen reader reads on from it (spec/chat.md, Screen readers): its focus put on the
-  // line, which a screen reader's follows; only then is the line a focus target at all.
+  // Gone to, a screen reader reads on from it (spec/chat.md, Screen readers): the focus put on the
+  // line once, which a screen reader's follows. Lines are focus targets only with a screen reader on.
   val focus = remember { FocusRequester() }
-  val readHere = look.seq != null && handlers.readFrom?.seq == look.seq
-  LaunchedEffect(handlers.readFrom) { if (readHere) focus.requestFocus() }
+  val readHere = handlers.readFrom?.takeIf { look.seq != null && it.seq == look.seq }
+  LaunchedEffect(readHere) {
+    if (readHere != null) {
+      focus.requestFocus()
+      handlers.readOn(readHere)
+    }
+  }
   Box(
     modifier
-      .then(if (readHere) Modifier.focusRequester(focus).focusProperties { canFocus = true }.focusTarget() else Modifier)
+      .then(if (handlers.reading) Modifier.focusRequester(focus).focusProperties { canFocus = true }.focusTarget() else Modifier)
       .zIndex(if (handlers.spray?.seq == look.seq && look.seq != null) 1f else 0f)
       .fillMaxWidth()
       .padding(top = (if (look.startsRun) Chat.runGap else Chat.lineGap).dp)
