@@ -1,6 +1,8 @@
 package app.pochical.groups
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -43,6 +45,7 @@ import app.pochical.RowEnd
 import app.pochical.SectionHeader
 import app.pochical.SectionRow
 import app.pochical.SettingsPage
+import app.pochical.pageInsets
 import app.pochical.SettingsRow
 import app.pochical.SettingsSection
 import app.pochical.chat.ProfileOf
@@ -335,11 +338,11 @@ fun GroupProfilePage(groupId: String, onBack: () -> Unit) {
   GroupPage(groupId, stringResource(R.string.group_me), onBack) { group ->
     val meId = rememberMeId()
     val me = members(groupId).firstOrNull { it.userId == meId }
-    Scaffold(topBar = { PageBar(stringResource(R.string.group_me), onBack) }) { padding ->
+    Scaffold(topBar = { PageBar(stringResource(R.string.group_me), onBack) }, contentWindowInsets = pageInsets) { padding ->
       if (me == null) {
         CircularProgressIndicator(Modifier.padding(padding).padding(24.dp))
       } else {
-        ProfileForm(group.name, me, Modifier.padding(padding)) {
+        ProfileForm(group.name, me, Modifier.verticalScroll(rememberScrollState()).padding(padding)) {
           ReviewPrompt.troubled = true
           failed = true
         }

@@ -44,18 +44,14 @@ class PageMotion(private val shift: Int) {
 
   /** A page pushed: the shared axis forward, the new page over the old. */
   fun <T : Any> push(): AnimatedContentTransitionScope<Scene<T>>.() -> ContentTransform = {
-    if (laidOutAnew) {
-      STILL
-    } else {
+    unlessLaidOutAnew {
       (slideInHorizontally(spatial) { shift } + fadeIn(fade)) togetherWith slideOutHorizontally(spatial) { -shift }
     }
   }
 
   /** A page popped by the back button: the shared axis backward, the page leaving over the one coming back. */
   fun <T : Any> pop(): AnimatedContentTransitionScope<Scene<T>>.() -> ContentTransform = {
-    if (laidOutAnew) {
-      STILL
-    } else {
+    unlessLaidOutAnew {
       (slideInHorizontally(spatial) { -shift } togetherWith (slideOutHorizontally(spatial) { shift } + fadeOut(fade))).apply {
         targetContentZIndex = -1f
       }
@@ -64,9 +60,7 @@ class PageMotion(private val shift: Int) {
 
   /** A page popped by a predictive back from [edge]: it shrinks and moves the finger's way, opaque, over the one coming back. */
   fun <T : Any> predictivePop(): AnimatedContentTransitionScope<Scene<T>>.(Int) -> ContentTransform = { edge ->
-    if (laidOutAnew) {
-      STILL
-    } else {
+    unlessLaidOutAnew {
       val away = if (edge == NavigationEvent.EDGE_RIGHT) -shift else shift
       (slideInHorizontally(spatial) { -shift } togetherWith (scaleOut(shrink, targetScale = SHRUNK) + slideOutHorizontally(spatial) { away })).apply {
         targetContentZIndex = -1f
@@ -74,16 +68,16 @@ class PageMotion(private val shift: Int) {
     }
   }
 
-  /** Whether the scenes are of two kinds, a page alone and the tabs with their pages beside them. */
-  private val AnimatedContentTransitionScope<out Scene<*>>.laidOutAnew: Boolean
-    get() = initialState::class != targetState::class
+  /**
+   * [move], unless the scenes are of two kinds, a page alone and the tabs with their pages beside
+   * them: then the new one in the old one's place at once.
+   */
+  private inline fun AnimatedContentTransitionScope<out Scene<*>>.unlessLaidOutAnew(move: () -> ContentTransform): ContentTransform =
+    if (initialState::class != targetState::class) EnterTransition.None togetherWith ExitTransition.None else move()
 
   private companion object {
     /** How small a page shrinks as a predictive back takes it, as the system's own. */
     const val SHRUNK = 0.9f
-
-    /** Nothing moving: the new scene in the old one's place at once. */
-    val STILL = EnterTransition.None togetherWith ExitTransition.None
   }
 }
 

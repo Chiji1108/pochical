@@ -5,10 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -132,7 +130,7 @@ fun CoworkersPage(navigation: PageNavigation) {
     },
   ) { padding ->
     // Under the system's bars, the list's foot rising clear of the keyboard as a name is typed.
-    LazyColumn(Modifier.consumeWindowInsets(padding).imePadding(), state = list, contentPadding = padding) {
+    LazyColumn(state = list, contentPadding = padding) {
       // The people, then 人を追加, one rounded group of segments.
       val count = order.rows.size + if (sorting) 0 else 1
       item { Spacer(Modifier.height(8.dp)) }
@@ -246,7 +244,7 @@ private fun CoworkerForm(person: Coworker, count: Int?, taken: List<String>, nav
   }
 
   SettingsPage(person.name, onBack = navigation::back) { padding ->
-    Column(Modifier.consumeWindowInsets(padding).imePadding().verticalScroll(rememberScrollState()).padding(padding)) {
+    Column(Modifier.verticalScroll(rememberScrollState()).padding(padding)) {
       LimitedTextField(
         name.field.value,
         { name.field.value = it },
