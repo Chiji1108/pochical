@@ -240,7 +240,7 @@ private fun TabsScreen(navigator: RootNavigator, navigation: PageNavigation) {
               onOpening = { navigator.openingDay = null },
             )
           RootTab.Groups ->
-            GroupsScreen(navigator.openGroup, navigator::pickGroup, GroupsActions(onNew = { navigation.open(RootPage.NewGroup) }, onScan = { navigation.open(RootPage.Scan) }, onShifts = { id, day -> navigation.open(RootPage.GroupShifts(id, day?.toString())) }, onChat = { id, thread -> navigation.open(RootPage.Chat(id, thread)) }) { group -> GroupButtons(group.id, navigation::open) })
+            GroupsScreen(navigator.openGroup, navigation::pickGroup, GroupsActions(onNew = { navigation.open(RootPage.NewGroup) }, onScan = { navigation.open(RootPage.Scan) }, onShifts = { id, day -> navigation.open(RootPage.GroupShifts(id, day?.toString())) }, onChat = { id, thread -> navigation.open(RootPage.Chat(id, thread)) }) { group -> GroupButtons(group.id, navigation::open) })
           RootTab.Settings -> SettingsScreen(open = navigation::open)
         }
       }

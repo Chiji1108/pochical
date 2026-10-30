@@ -273,6 +273,8 @@ class PageNavigation(private val navigator: RootNavigator, private val lifecycle
 
   fun select(tab: RootTab) = whenSettled { navigator.select(tab) }
 
+  fun pickGroup(groupId: String) = whenSettled { navigator.pickGroup(groupId) }
+
   fun back() = whenSettled { navigator.back() }
 
   fun back(count: Int) = whenSettled { navigator.back(count) }
