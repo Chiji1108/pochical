@@ -8,6 +8,7 @@ import android.database.MatrixCursor
 import android.net.Uri
 import android.provider.CalendarContract
 import android.provider.CalendarContract.Events
+import app.pochical.kit.EventMark
 import app.pochical.kit.Period
 import app.pochical.kit.ShiftEvent
 import java.time.LocalDate
@@ -63,30 +64,48 @@ class DeviceCalendarsTest {
       ShiftEvent(LocalDate.of(2026, 11, 7), "休み", null, null),
     )
 
-  private fun marks() = provider.rows.map { it[Events.CUSTOM_APP_URI] }
+  private fun descriptions() = provider.rows.map { it[Events.DESCRIPTION] as String? }
+
+  private fun link(day: LocalDate, user: String) = EventMark(day, user).link
+
+  /** An event as another calendar app or a sync left it: its description alone, the app's own columns gone. */
+  private fun putDescribed(description: String) {
+    provider.insert(Events.CONTENT_URI, ContentValues().apply { put(Events.DESCRIPTION, description) })
+  }
+
+  @Test
+  fun eachEventCarriesTheMarkInItsDescription() = runBlocking {
+    calendars.add(events.take(1).map { it.copy(notes = "申し送りあり") }, page, "me", 1)
+
+    assertEquals(listOf("申し送りあり\n${link(LocalDate.of(2026, 11, 2), "me")}"), descriptions())
+  }
 
   @Test
   fun twoAddsAtOnceLeaveThePageInOnce() = runBlocking {
     // As two quick taps, or two pages: each takes out what the other put in, never both in at once.
     coroutineScope { repeat(2) { launch(Dispatchers.Default) { calendars.add(events, page, "me", 1) } } }
 
-    assertEquals(events.map { DeviceCalendars.dayLink(it.day, "me") }.sortedBy { it }, marks().sortedBy { it as String })
+    assertEquals(events.map { link(it.day, "me") }.sorted(), descriptions().map { it.orEmpty() }.sorted())
   }
 
   @Test
   fun addingAgainAndTakingOutLeaveOthersEvents() = runBlocking {
-    // Someone else's event of the month in a calendar shared with family, and the user's own of another month.
-    provider.insert(Events.CONTENT_URI, ContentValues().apply { put(Events.CUSTOM_APP_URI, DeviceCalendars.dayLink(LocalDate.of(2026, 11, 2), "family")) })
-    provider.insert(Events.CONTENT_URI, ContentValues().apply { put(Events.CUSTOM_APP_URI, DeviceCalendars.dayLink(LocalDate.of(2026, 12, 1), "me")) })
+    // As Google's sync downloads them, with the description alone: the user's own of the month, put
+    // in on another phone; someone else's in a calendar shared with family; the user's own of another
+    // month; and the person's own event that names the day's link in a sentence.
+    putDescribed("申し送りあり\n${link(LocalDate.of(2026, 11, 3), "me")}")
+    putDescribed(link(LocalDate.of(2026, 11, 2), "family"))
+    putDescribed(link(LocalDate.of(2026, 12, 1), "me"))
+    putDescribed("${link(LocalDate.of(2026, 11, 2), "me")} を見る")
 
     calendars.add(events, page, "me", 1)
     calendars.add(events.take(1), page, "me", 2)
-    assertEquals(3, provider.rows.size)
+    assertEquals(4, provider.rows.size)
 
     assertEquals(1, calendars.remove(page, "me"))
     assertEquals(
-      listOf(DeviceCalendars.dayLink(LocalDate.of(2026, 11, 2), "family"), DeviceCalendars.dayLink(LocalDate.of(2026, 12, 1), "me")),
-      marks(),
+      listOf(link(LocalDate.of(2026, 11, 2), "family"), link(LocalDate.of(2026, 12, 1), "me"), "${link(LocalDate.of(2026, 11, 2), "me")} を見る"),
+      descriptions(),
     )
   }
 }

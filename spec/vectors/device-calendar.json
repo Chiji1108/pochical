@@ -1,5 +1,5 @@
 {
-  "about": "A month's shifts as events in the device's calendar (spec/calendar.md, Adding a month to the device calendar). The page is `month`'s, or with `start` (a シフトの期間's first day, spec/vectors/periods.json) the period starting in that month. `days` are the month's days as they show, a pattern id and any hours of the day's own; `patterns` give each pattern's name and its time (none is all day); `shown` are the patterns picked under 入れるシフト, the only ones put in. Each event is the pattern's name, `start` and `end` in minutes from the day's midnight, past 1440 when the shift ends the next day (at or before its start), or null for all day. Optional `notes` (each day's memo) and `people` (each day's names, in order) are given only when the person asks for them; an event's `notes` is the memo, then 一緒に働く人：A、B on its own line, left out without either. A day with a memo and no shift's event (no shift, or a pattern not picked) gets an all-day event of its own, named by the memo's first line, the whole memo in its notes only when it runs longer. `shownAtFirst` gives the patterns picked until the person picks otherwise: those with a time, and of those without, all but the days off (`off`) and a pattern another names as its next day (`nextDay`), like 明け after 夜勤, whose night shows on that day already. `picks` pin what is kept of the person's picks (`chosen`, a pattern id to put in or left out, only where it differs from the first pick): `pick`, when given, picks one pattern (`id`) in or out (`on`) first, which drops any choice of a pattern no longer there and keeps none for one picked back to its first pick; `expectedChosen` is what is kept then, and `expectedShown` the patterns put in.",
+  "about": "A month's shifts as events in the device's calendar (spec/calendar.md, Adding a month to the device calendar). The page is `month`'s, or with `start` (a シフトの期間's first day, spec/vectors/periods.json) the period starting in that month. `days` are the month's days as they show, a pattern id and any hours of the day's own; `patterns` give each pattern's name and its time (none is all day); `shown` are the patterns picked under 入れるシフト, the only ones put in. Each event is the pattern's name, `start` and `end` in minutes from the day's midnight, past 1440 when the shift ends the next day (at or before its start), or null for all day. Optional `notes` (each day's memo) and `people` (each day's names, in order) are given only when the person asks for them; an event's `notes` is the memo, then 一緒に働く人：A、B on its own line, left out without either. A day with a memo and no shift's event (no shift, or a pattern not picked) gets an all-day event of its own, named by the memo's first line, the whole memo in its notes only when it runs longer. `shownAtFirst` gives the patterns picked until the person picks otherwise: those with a time, and of those without, all but the days off (`off`) and a pattern another names as its next day (`nextDay`), like 明け after 夜勤, whose night shows on that day already. `picks` pin what is kept of the person's picks (`chosen`, a pattern id to put in or left out, only where it differs from the first pick): `pick`, when given, picks one pattern (`id`) in or out (`on`) first, which drops any choice of a pattern no longer there and keeps none for one picked back to its first pick; `expectedChosen` is what is kept then, and `expectedShown` the patterns put in. `marks` pin Pochical's mark on each event it puts in, a line of its own at the end of the event's notes, the app's link to the day and whose shift it is: `notes` is what the event says without it, `day` and `user` the mark's; `expected` is the notes it goes in with. `marksRead` pin finding it again in an event's notes, whatever else they say and however their lines end: `expected` is the day and the user the mark names, or null for an event that is not Pochical's: no line that is the link alone, another link, or a day that is none.",
   "events": [
     {
       "name": "work at its pattern's time, a pattern not picked left out",
@@ -266,6 +266,78 @@
       "pick": { "id": "off", "on": true },
       "expectedChosen": { "day": false, "off": true },
       "expectedShown": ["off"]
+    }
+  ],
+  "marks": [
+    {
+      "name": "an event with no notes carries the mark alone",
+      "day": "2026-11-02",
+      "user": "u7Hk2Qx",
+      "expected": "pochical://day/2026-11-02?by=u7Hk2Qx"
+    },
+    {
+      "name": "the mark follows the memo and the people on its own line",
+      "day": "2026-11-05",
+      "user": "u7Hk2Qx",
+      "notes": "申し送りあり\n一緒に働く人：佐藤、田中",
+      "expected": "申し送りあり\n一緒に働く人：佐藤、田中\npochical://day/2026-11-05?by=u7Hk2Qx"
+    }
+  ],
+  "marksRead": [
+    {
+      "name": "the mark alone",
+      "notes": "pochical://day/2026-11-02?by=u7Hk2Qx",
+      "expected": { "day": "2026-11-02", "user": "u7Hk2Qx" }
+    },
+    {
+      "name": "after the memo",
+      "notes": "申し送りあり\npochical://day/2026-11-05?by=u7Hk2Qx",
+      "expected": { "day": "2026-11-05", "user": "u7Hk2Qx" }
+    },
+    {
+      "name": "lines ended as another calendar ends them, spaces around",
+      "notes": "申し送りあり\r\n  pochical://day/2026-11-05?by=u7Hk2Qx \r\n",
+      "expected": { "day": "2026-11-05", "user": "u7Hk2Qx" }
+    },
+    {
+      "name": "someone else's mark is read as theirs",
+      "notes": "pochical://day/2026-11-02?by=family1",
+      "expected": { "day": "2026-11-02", "user": "family1" }
+    },
+    {
+      "name": "no notes",
+      "notes": "",
+      "expected": null
+    },
+    {
+      "name": "the link inside a sentence of the person's",
+      "notes": "pochical://day/2026-11-02?by=u7Hk2Qx を見る",
+      "expected": null
+    },
+    {
+      "name": "the site's link, not the app's",
+      "notes": "https://pochical.app/day/2026-11-02?by=u7Hk2Qx",
+      "expected": null
+    },
+    {
+      "name": "a link to a day with no user",
+      "notes": "pochical://day/2026-11-02",
+      "expected": null
+    },
+    {
+      "name": "a link with more than the user",
+      "notes": "pochical://day/2026-11-02?by=u7Hk2Qx&x=1",
+      "expected": null
+    },
+    {
+      "name": "a date that is no day",
+      "notes": "pochical://day/2026-02-30?by=u7Hk2Qx",
+      "expected": null
+    },
+    {
+      "name": "a group's link",
+      "notes": "pochical://group/g1/day/2026-11-02",
+      "expected": null
     }
   ]
 }

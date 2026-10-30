@@ -77,13 +77,6 @@
         <data android:host="day" />
         <data android:host="group" />
       </intent-filter>
-      <!-- An event 端末カレンダーに追加 put in, opened from a calendar app by the app's own link it
-           carries (CalendarContract's EXTRA_CUSTOM_APP_URI): its day, as the link opens it. -->
-      <intent-filter>
-        <action android:name="android.provider.calendar.action.HANDLE_CUSTOM_EVENT" />
-        <category android:name="android.intent.category.DEFAULT" />
-        <data android:mimeType="vnd.android.cursor.item/event" />
-      </intent-filter>
       <!-- An invitation's own link, an App Link once Android has verified the site's
            /.well-known/assetlinks.json names this app (apps/web). -->
       <intent-filter android:autoVerify="true">
