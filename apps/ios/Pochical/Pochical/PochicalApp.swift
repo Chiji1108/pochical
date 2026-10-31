@@ -86,8 +86,8 @@ struct PochicalApp: App {
         // Another day of use, for when to ask for a review.
         ReviewPrompt.opened()
         // Notifications may have been allowed or refused in the system's
-        // settings meanwhile.
-        Task { await Notifications.shared.readPermission() }
+        // settings meanwhile, and a token not taken goes again.
+        Task { await Notifications.shared.register() }
         session.cameToFront()
       default:
         break
