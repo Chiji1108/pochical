@@ -60,9 +60,30 @@ struct DeviceCalendarVectors: Decodable {
     let on: Bool
   }
 
+  struct MarkCase: VectorCase {
+    let name: String
+    let day: String
+    let user: String
+    let notes: String?
+    let expected: String
+  }
+
+  struct Mark: Decodable, Sendable, Equatable {
+    let day: String
+    let user: String
+  }
+
+  struct ReadCase: VectorCase {
+    let name: String
+    let notes: String
+    let expected: Mark?
+  }
+
   let events: [Case]
   let shownAtFirst: [FirstCase]
   let picks: [PickCase]
+  let marks: [MarkCase]
+  let marksRead: [ReadCase]
 }
 
 private func patterns(_ cases: [String: DeviceCalendarVectors.FirstPattern]) -> [Pattern] {
@@ -117,4 +138,16 @@ func patternsPicked(_ vector: DeviceCalendarVectors.PickCase) {
   }
   #expect(putting.chosen == vector.expectedChosen)
   #expect(putting.shown(of: all) == Set(vector.expectedShown))
+}
+
+@Test(arguments: try vectors("device-calendar", as: DeviceCalendarVectors.self).marks)
+func eventsMarked(_ vector: DeviceCalendarVectors.MarkCase) throws {
+  let mark = EventMark(day: try #require(Day(vector.day)), user: vector.user)
+  #expect(mark.appended(to: vector.notes) == vector.expected)
+}
+
+@Test(arguments: try vectors("device-calendar", as: DeviceCalendarVectors.self).marksRead)
+func marksRead(_ vector: DeviceCalendarVectors.ReadCase) {
+  let mark = EventMark(notes: vector.notes)
+  #expect(mark.map { .init(day: $0.day.key, user: $0.user) } == vector.expected)
 }

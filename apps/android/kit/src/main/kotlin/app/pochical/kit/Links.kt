@@ -34,6 +34,9 @@ sealed interface AppLink {
   data class Chat(val groupId: String, val threadId: String) : AppLink
 }
 
+/** The link that opens the app on a day (spec/widgets.md, Opening the app). */
+fun dayLink(day: LocalDate): String = "pochical://day/$day"
+
 /**
  * The place [url] names, or none for a link the app does not open. As iOS's openedGroup, a group
  * link whose day cannot be read opens the group's top.

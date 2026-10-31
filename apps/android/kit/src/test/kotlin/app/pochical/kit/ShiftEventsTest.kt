@@ -6,7 +6,13 @@ import kotlinx.serialization.Serializable
 import org.junit.Test
 
 @Serializable
-private data class DeviceCalendarVectors(val events: List<Events>, val shownAtFirst: List<AtFirst>, val picks: List<Picks>) {
+private data class DeviceCalendarVectors(
+  val events: List<Events>,
+  val shownAtFirst: List<AtFirst>,
+  val picks: List<Picks>,
+  val marks: List<Marking>,
+  val marksRead: List<Reading>,
+) {
   @Serializable
   data class Pattern(
     val name: String = "",
@@ -50,6 +56,14 @@ private data class DeviceCalendarVectors(val events: List<Events>, val shownAtFi
     val expectedChosen: Map<String, Boolean>,
     val expectedShown: List<String>,
   ) : VectorCase
+
+  @Serializable
+  data class Marking(override val name: String, val day: String, val user: String, val notes: String? = null, val expected: String) :
+    VectorCase
+
+  @Serializable data class Mark(val day: String, val user: String)
+
+  @Serializable data class Reading(override val name: String, val notes: String, val expected: Mark?) : VectorCase
 }
 
 private fun rows(patterns: Map<String, DeviceCalendarVectors.Pattern>): List<PatternRow> =
@@ -85,5 +99,15 @@ class ShiftEventsTest {
       val start = CalendarAdd(chosen = case.chosen)
       val picked = case.pick?.let { start.picking(it.id, it.on, patterns) } ?: start
       DeviceCalendarVectors.Kept(picked.chosen, picked.shown(patterns).sorted())
+    }
+
+  @Test
+  fun marks() =
+    cases.marks.checkEach({ it.expected }) { EventMark(LocalDate.parse(it.day), it.user).appendedTo(it.notes) }
+
+  @Test
+  fun marksRead() =
+    cases.marksRead.checkEach({ it.expected }) { case ->
+      EventMark.inNotes(case.notes)?.let { DeviceCalendarVectors.Mark(it.day.toString(), it.user) }
     }
 }

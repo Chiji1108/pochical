@@ -32,6 +32,7 @@ import app.pochical.groups.drawing
 import app.pochical.kit.Look
 import app.pochical.kit.WidgetDay
 import app.pochical.kit.columnHours
+import app.pochical.kit.dayLink
 import app.pochical.kit.dayName
 import app.pochical.kit.weekday
 import app.pochical.kit.withoutWholeHours

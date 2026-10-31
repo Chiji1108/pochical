@@ -73,8 +73,11 @@ import UIKit
 
   /// Puts the page's events in the calendar. Those Pochical put in for its
   /// days before go first, from any device and any calendar, found by the
-  /// day each names (`dayURL`), so a page added again is put in anew
-  /// rather than twice, whatever was reinstalled or synced since.
+  /// mark on a line of each one's notes (`EventMark`), so a page added
+  /// again is put in anew rather than twice, whatever was reinstalled or
+  /// synced since, and whichever app, iOS's or Android's, put them in.
+  /// The mark's link goes in the event's URL too, which Calendar opens
+  /// the day by, but which a calendar's sync need not keep.
   func add(_ events: [ShiftEvent], of page: Period, by user: String, to calendarID: String) throws {
     guard let target = store.calendar(withIdentifier: calendarID) else { return }
     do {
@@ -93,8 +96,9 @@ import UIKit
           event.startDate = date(of: shift.day, at: 0)
           event.endDate = date(of: shift.day, at: 0)
         }
-        event.url = Self.dayURL(shift.day, by: user)
-        event.notes = shift.notes
+        let mark = EventMark(day: shift.day, user: user)
+        event.url = URL(string: mark.link)
+        event.notes = mark.appended(to: shift.notes)
         try store.save(event, span: .thisEvent, commit: false)
       }
       try store.commit()
@@ -110,14 +114,14 @@ import UIKit
   /// any calendar that takes changes: those adding again replaces, and
   /// ポチカルで入れた〇月の予定を消す takes out.
   func marked(_ page: Period, by user: String) -> [EKEvent] {
-    let days = Set(page.days.map(\.key))
+    let days = Set(page.days)
     // From the page's first day to two past its last: a night's event
     // ends the day after it.
     let range = store.predicateForEvents(
       withStart: date(of: page.first, at: 0),
       end: date(of: page.last, at: 2 * 24 * 60), calendars: nil)
     return store.events(matching: range).filter { event in
-      guard let mark = Self.mark(of: event.url) else { return false }
+      guard let mark = EventMark(notes: event.notes) else { return false }
       return mark.user == user && days.contains(mark.day)
         && event.calendar.allowsContentModifications
     }
@@ -137,29 +141,6 @@ import UIKit
       throw error
     }
     return old.count
-  }
-
-  /// The mark Pochical leaves on an event it puts in: the app's own link
-  /// to the day it is for (spec/widgets.md's pochical://day), and whose
-  /// shift it is, so a calendar shared with family keeps theirs.
-  static func dayURL(_ day: Day, by user: String) -> URL? {
-    var parts = URLComponents()
-    parts.scheme = "pochical"
-    parts.host = "day"
-    parts.path = "/\(day.key)"
-    parts.queryItems = [URLQueryItem(name: "by", value: user)]
-    return parts.url
-  }
-
-  /// The day and the user an event's mark names, nil for an event not
-  /// Pochical's.
-  private static func mark(of url: URL?) -> (day: String, user: String)? {
-    guard let url, url.scheme == "pochical", url.host() == "day",
-      let user = URLComponents(url: url, resolvingAgainstBaseURL: false)?
-        .queryItems?.first(where: { $0.name == "by" })?.value
-    else { return nil }
-    let key = url.path(percentEncoded: false).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-    return Day(key) == nil ? nil : (key, user)
   }
 
   /// The clock time `minutes` after the start of `day`, a day on past
