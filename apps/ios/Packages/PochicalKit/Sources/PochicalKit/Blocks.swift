@@ -107,8 +107,8 @@ extension GroupCalls {
 }
 
 extension GroupCalls {
-  /// Keeps this device's push token for the user's notifications, sent
-  /// each launch as iOS may change it.
+  /// Keeps this device's push token for the user's notifications under
+  /// the session the device has now (`PushTokens` decides when).
   public func registerPushToken(_ token: Data) async throws {
     var request = Pochical_V1_RegisterPushTokenRequest()
     request.token = token.map { String(format: "%02x", $0) }.joined()

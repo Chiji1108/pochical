@@ -22,10 +22,9 @@ nonisolated struct OpenedChat: Hashable, Sendable {
 {
   static let shared = Notifications()
 
-  /// The calls the token goes through, once the app has made them.
-  var groupCalls: GroupCalls? {
-    didSet { sendToken() }
-  }
+  /// What keeps the server told of the device's token, once the app has
+  /// made it.
+  @ObservationIgnored var pushTokens: PushTokens?
   /// What an answer written on a notification is sent through, once the
   /// app has made it.
   var replies: Replies?
@@ -36,12 +35,6 @@ nonisolated struct OpenedChat: Hashable, Sendable {
   var opening: OpenedChat?
   /// Whether the person has let Pochical notify, as the system last said.
   private(set) var permission = Permission.notAsked
-  private var token: Data?
-  /// Whether the server took the token under the session the device has
-  /// now; until it does, the app asks again as it comes to the front.
-  private var taken = false
-  /// Counts the tokens sent, for an answer to count only for the last.
-  private var sends = 0
 
   /// Whether notifications may be shown (/design's PermissionCard).
   enum Permission {
@@ -52,8 +45,7 @@ nonisolated struct OpenedChat: Hashable, Sendable {
     case allowed
   }
 
-  /// Becomes the notification center's delegate, at launch; the token is
-  /// asked for as the app comes to the front (`register`).
+  /// Registers for notifications when they are allowed, each launch.
   func start() {
     let center = UNUserNotificationCenter.current()
     center.delegate = self
@@ -66,6 +58,7 @@ nonisolated struct OpenedChat: Hashable, Sendable {
       UNNotificationCategory(
         identifier: chatLineCategory, actions: [reply], intentIdentifiers: [], options: [])
     ])
+    Task { await register() }
     // A group left takes its chats' notifications with it (spec/chat.md,
     // Notifications).
     Task {
@@ -86,17 +79,25 @@ nonisolated struct OpenedChat: Hashable, Sendable {
       case .denied: .denied
       default: .allowed
       }
+    pushTokens?.allowed(permission == .allowed)
   }
 
   /// Reads the permission again and, while notifications are allowed and
-  /// the server has not taken the token, asks iOS for it, which sends it:
-  /// each time the app comes to the front, launches included, for a token
-  /// iOS or the server failed to take before, or notifications allowed in
-  /// the system's settings meanwhile, and once they are allowed.
+  /// iOS has given no token yet, asks iOS for one, which sends it: at
+  /// launch, once they are allowed, and as the app comes to the front, for
+  /// one iOS failed to give or notifications allowed in the system's
+  /// settings meanwhile.
   func register() async {
     await readPermission()
-    guard permission == .allowed, !taken else { return }
+    guard permission == .allowed, pushTokens?.hasToken == false else { return }
     UIApplication.shared.registerForRemoteNotifications()
+  }
+
+  /// The app came to the front: the permission may have changed, and a
+  /// token iOS or the server did not take is asked for or sent again.
+  func cameToFront() async {
+    await register()
+    pushTokens?.foreground()
   }
 
   /// Asks the system once, the first time a notification is wanted: when
@@ -112,15 +113,13 @@ nonisolated struct OpenedChat: Hashable, Sendable {
   }
 
   func took(_ token: Data) {
-    self.token = token
-    sendToken()
+    pushTokens?.took(token)
   }
 
   /// iOS gave no token: logged, never silent, and asked again as the app
-  /// next comes to the front.
+  /// next comes to the front. Nothing personal is in the error.
   func failedToRegister(_ error: any Error) {
-    Logger.notifications.error(
-      "iOS gave no push token: \(error, privacy: .public)")
+    Logger.notifications.error("iOS gave no push token: \(error, privacy: .public)")
   }
 
   /// The device going on as another user (spec/sync-protocol.md,
@@ -131,25 +130,6 @@ nonisolated struct OpenedChat: Hashable, Sendable {
     let center = UNUserNotificationCenter.current()
     center.removeAllDeliveredNotifications()
     try? await center.setBadgeCount(0)
-  }
-
-  /// The token sent under the session the device has now, for the user it
-  /// is now to hear at once; nothing while it has none. One the server did
-  /// not take is logged and goes again as the app comes to the front.
-  func sendToken() {
-    guard let token, let groupCalls else { return }
-    taken = false
-    sends += 1
-    let send = sends
-    Task {
-      do {
-        try await groupCalls.registerPushToken(token)
-        if send == sends { taken = true }
-      } catch {
-        Logger.notifications.error(
-          "The server did not take the push token: \(error, privacy: .public)")
-      }
-    }
   }
 
   // MARK: UNUserNotificationCenterDelegate
@@ -361,7 +341,3 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
   private static let catchUpMost = 5
 }
 
-extension Logger {
-  /// The push token iOS or the server did not take.
-  static let notifications = Logger(subsystem: "app.pochical", category: "notifications")
-}

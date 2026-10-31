@@ -38,7 +38,7 @@ struct PochicalApp: App {
     openPlace = OpenPlaceSocket(session: session)
     // The notifications shown and the badge were the user before's.
     session.onErase = { await Notifications.shared.forgetAccount() }
-    Notifications.shared.groupCalls = groupCalls
+    Notifications.shared.pushTokens = PushTokens(register: groupCalls.registerPushToken)
     Notifications.shared.replies = Replies(database: database, session: session)
     // The controls and the shortcuts open their places as a widget's link
     // does.
@@ -57,10 +57,11 @@ struct PochicalApp: App {
         // scheme (its reversed iOS client id) rather than to its web session.
         .onOpenURL { _ = GIDSignIn.sharedInstance.handle($0) }
         // Someone else from now, or signed in at last: the widgets show
-        // them, and the push token goes under their session.
-        .onChange(of: session.userID) {
-          reloadWidgets()
-          Notifications.shared.sendToken()
+        // them.
+        .onChange(of: session.userID) { reloadWidgets() }
+        // The push token goes under the session of whoever the device is.
+        .onChange(of: session.userID, initial: true) {
+          Notifications.shared.pushTokens?.user(session.userID)
         }
     }
     // The socket is open only in the foreground (spec/sync-protocol.md,
@@ -87,7 +88,7 @@ struct PochicalApp: App {
         ReviewPrompt.opened()
         // Notifications may have been allowed or refused in the system's
         // settings meanwhile, and a token not taken goes again.
-        Task { await Notifications.shared.register() }
+        Task { await Notifications.shared.cameToFront() }
         session.cameToFront()
       default:
         break
