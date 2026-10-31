@@ -346,5 +346,5 @@ public struct GroupCalls: Sendable {
 
 /// The link an invitation code opens (design/src/invite.ts).
 public func inviteLink(code: String) -> URL {
-  URL(string: "https://pochical.app/invite/\(code)")!
+  URL(string: "https://\(siteHost)/invite/\(code)")!
 }

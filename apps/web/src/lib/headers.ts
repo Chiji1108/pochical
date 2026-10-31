@@ -8,9 +8,9 @@ export const SECURITY_HEADERS = {
   "X-Frame-Options": "DENY",
 } as const;
 
-// The pages for one person only, which search leaves out: an invitation
-// and the account's.
-export const PRIVATE_PATHS = ["/account/", "/invite/"] as const;
+// The pages for one person only, which search leaves out: an invitation,
+// a day's link and the account's.
+export const PRIVATE_PATHS = ["/account/", "/day/", "/invite/"] as const;
 
 // Workers' _headers file: every static file with the headers above, and the
 // private pages kept out of search.

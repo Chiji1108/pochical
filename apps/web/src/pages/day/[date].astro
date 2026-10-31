@@ -1,0 +1,52 @@
+---
+import { tryUrl } from "@pochical/prototype/lib/try-url";
+import { ArrowUpRight } from "lucide-react";
+
+import AppDownload from "../../components/app-download.astro";
+import Link from "../../components/link.astro";
+import Site from "../../layouts/site.astro";
+import { linkedDay, openInApp } from "../../lib/app-links";
+
+// A day's link, as a device calendar's event carries it (spec/calendar.md),
+// opens here without the app. Drawn on request, for its アプリで開く, and
+// from the day alone: the mark's `#by=` is the link's fragment, which the
+// browser keeps to itself.
+export const prerender = false;
+
+const { date = "" } = Astro.params;
+const day = linkedDay(date);
+if (day === undefined) {
+  return Astro.rewrite("/404");
+}
+const named = new Intl.DateTimeFormat("ja-JP", {
+  dateStyle: "full",
+  timeZone: "UTC",
+}).format(day);
+---
+
+<Site
+  description="ポチカルで日付を開くリンクです。"
+  path={`/day/${date}`}
+  privatePage
+  title={`${named}を開く`}
+>
+  <main class="link-page" id="main">
+    <p class="eyebrow">OPEN IN POCHICAL</p>
+    <h1>{named}</h1>
+    <p>ポチカルのアプリで、この日のシフトを開くリンクです。</p>
+    <a
+      class="button"
+      href={openInApp(`day/${date}`, Astro.request.headers.get("User-Agent"))}
+    >
+      アプリで開く <ArrowUpRight aria-hidden="true" size={18} />
+    </a>
+    <AppDownload>
+      <a class="text-link" href={tryUrl}>
+        自分のスマホで試す →
+      </a>
+      <Link class="text-link" href="/">
+        ポチカルについて →
+      </Link>
+    </AppDownload>
+  </main>
+</Site>

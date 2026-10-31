@@ -12,7 +12,11 @@ sealed interface AppLink {
    */
   data class Invite(val code: String) : AppLink
 
-  /** A day of the calendar, as a widget opens it: pochical://day/{yyyy-mm-dd} (spec/widgets.md, Opening the app). */
+  /**
+   * A day of the calendar: pochical://day/{yyyy-mm-dd}, as a widget opens it (spec/widgets.md,
+   * Opening the app), or the site's https://pochical.app/day/{yyyy-mm-dd}, which the app holds as an
+   * App Link, as a device calendar's event carries it (spec/calendar.md).
+   */
   data class Day(val day: LocalDate) : AppLink
 
   /** A group's table at a day, or its top: pochical://group/{groupId}, with /day/{yyyy-mm-dd} after it. */
@@ -37,6 +41,19 @@ sealed interface AppLink {
 /** The link that opens the app on a day (spec/widgets.md, Opening the app). */
 fun dayLink(day: LocalDate): String = "pochical://day/$day"
 
+/** The site, whose invitations' and days' links the app holds as App Links. */
+internal const val SITE_HOST = "pochical.app"
+
+/** Where the site's links to a day begin. */
+const val SITE_DAY_LINKS = "https://$SITE_HOST/day/"
+
+/**
+ * The site's link to a day, which opens the app on it as [dayLink] does, and elsewhere the site's
+ * page saying so: for text another app shows, which makes it a link, as a device calendar's event
+ * notes (spec/calendar.md).
+ */
+fun siteDayLink(day: LocalDate): String = "$SITE_DAY_LINKS$day"
+
 /**
  * The place [url] names, or none for a link the app does not open. As iOS's openedGroup, a group
  * link whose day cannot be read opens the group's top.
@@ -44,8 +61,11 @@ fun dayLink(day: LocalDate): String = "pochical://day/$day"
 fun appLink(url: String): AppLink? {
   openedInviteCode(url)?.let { return AppLink.Invite(it) }
   val uri = parsed(url) ?: return null
-  if (!uri.scheme.equals("pochical", ignoreCase = true)) return null
   val parts = uri.path.orEmpty().split("/").filter { it.isNotEmpty() }
+  if (uri.scheme.equals("https", ignoreCase = true) && uri.host.equals(SITE_HOST, ignoreCase = true)) {
+    return parts.takeIf { it.size == 2 && it[0] == "day" }?.let { dayOf(it[1]) }?.let(AppLink::Day)
+  }
+  if (!uri.scheme.equals("pochical", ignoreCase = true)) return null
   return when (uri.host?.lowercase()) {
     "today" -> AppLink.Today.takeIf { parts.isEmpty() }
     "next-off" -> AppLink.NextOff.takeIf { parts.isEmpty() }

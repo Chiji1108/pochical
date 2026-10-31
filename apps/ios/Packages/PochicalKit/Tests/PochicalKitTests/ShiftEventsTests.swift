@@ -1,3 +1,4 @@
+import Foundation
 import PochicalKit
 import Testing
 
@@ -79,11 +80,18 @@ struct DeviceCalendarVectors: Decodable {
     let expected: Mark?
   }
 
+  struct OpenCase: VectorCase {
+    let name: String
+    let url: String
+    let expected: String?
+  }
+
   let events: [Case]
   let shownAtFirst: [FirstCase]
   let picks: [PickCase]
   let marks: [MarkCase]
   let marksRead: [ReadCase]
+  let daysOpened: [OpenCase]
 }
 
 private func patterns(_ cases: [String: DeviceCalendarVectors.FirstPattern]) -> [Pattern] {
@@ -150,4 +158,14 @@ func eventsMarked(_ vector: DeviceCalendarVectors.MarkCase) throws {
 func marksRead(_ vector: DeviceCalendarVectors.ReadCase) {
   let mark = EventMark(notes: vector.notes)
   #expect(mark.map { .init(day: $0.day.key, user: $0.user) } == vector.expected)
+}
+
+@Test(arguments: try vectors("device-calendar", as: DeviceCalendarVectors.self).daysOpened)
+func daysOpened(_ vector: DeviceCalendarVectors.OpenCase) throws {
+  #expect(openedDay(of: try #require(URL(string: vector.url)))?.key == vector.expected)
+}
+
+@Test func anEventsMarkOpensItsDay() throws {
+  let day = try #require(Day("2026-09-24"))
+  #expect(openedDay(of: try #require(URL(string: EventMark(day: day, user: "u7Hk2Qx").link))) == day)
 }

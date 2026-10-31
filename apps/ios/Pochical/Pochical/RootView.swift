@@ -288,17 +288,11 @@ struct RootView: View {
   }
 }
 
-/// A day a widget asks to open, pochical://day/{yyyy-mm-dd}, for the
-/// calendar to open as a tap does.
+/// A day a link asks to open (`openedDay(of:)`): a widget's, or a device
+/// calendar's event's, for the calendar to open as a tap does.
 @MainActor @Observable final class OpenedDay {
   static let shared = OpenedDay()
   var day: Day?
-}
-
-/// The day a link names, pochical://day/2026-09-24.
-func openedDay(of url: URL) -> Day? {
-  guard url.scheme == "pochical", url.host() == "day" else { return nil }
-  return Day(url.path(percentEncoded: false).trimmingCharacters(in: CharacterSet(charactersIn: "/")))
 }
 
 /// A group a widget set to someone asks to open: its table at a day, or

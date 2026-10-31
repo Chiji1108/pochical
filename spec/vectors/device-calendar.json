@@ -1,5 +1,5 @@
 {
-  "about": "A month's shifts as events in the device's calendar (spec/calendar.md, Adding a month to the device calendar). The page is `month`'s, or with `start` (a シフトの期間's first day, spec/vectors/periods.json) the period starting in that month. `days` are the month's days as they show, a pattern id and any hours of the day's own; `patterns` give each pattern's name and its time (none is all day); `shown` are the patterns picked under 入れるシフト, the only ones put in. Each event is the pattern's name, `start` and `end` in minutes from the day's midnight, past 1440 when the shift ends the next day (at or before its start), or null for all day. Optional `notes` (each day's memo) and `people` (each day's names, in order) are given only when the person asks for them; an event's `notes` is the memo, then 一緒に働く人：A、B on its own line, left out without either. A day with a memo and no shift's event (no shift, or a pattern not picked) gets an all-day event of its own, named by the memo's first line, the whole memo in its notes only when it runs longer. `shownAtFirst` gives the patterns picked until the person picks otherwise: those with a time, and of those without, all but the days off (`off`) and a pattern another names as its next day (`nextDay`), like 明け after 夜勤, whose night shows on that day already. `picks` pin what is kept of the person's picks (`chosen`, a pattern id to put in or left out, only where it differs from the first pick): `pick`, when given, picks one pattern (`id`) in or out (`on`) first, which drops any choice of a pattern no longer there and keeps none for one picked back to its first pick; `expectedChosen` is what is kept then, and `expectedShown` the patterns put in. `marks` pin Pochical's mark on each event it puts in, a line of its own at the end of the event's notes, the app's link to the day and whose shift it is: `notes` is what the event says without it, `day` and `user` the mark's; `expected` is the notes it goes in with. `marksRead` pin finding it again in an event's notes, whatever else they say and however their lines end (a line feed alone ends one, a carriage return before it, spaces and tabs around the link aside): `expected` is the day and the user the mark names, or null for an event that is not Pochical's: no line that is the link alone, another link, or a day that is none. Of two such lines, the last is the event's own.",
+  "about": "A month's shifts as events in the device's calendar (spec/calendar.md, Adding a month to the device calendar). The page is `month`'s, or with `start` (a シフトの期間's first day, spec/vectors/periods.json) the period starting in that month. `days` are the month's days as they show, a pattern id and any hours of the day's own; `patterns` give each pattern's name and its time (none is all day); `shown` are the patterns picked under 入れるシフト, the only ones put in. Each event is the pattern's name, `start` and `end` in minutes from the day's midnight, past 1440 when the shift ends the next day (at or before its start), or null for all day. Optional `notes` (each day's memo) and `people` (each day's names, in order) are given only when the person asks for them; an event's `notes` is the memo, then 一緒に働く人：A、B on its own line, left out without either. A day with a memo and no shift's event (no shift, or a pattern not picked) gets an all-day event of its own, named by the memo's first line, the whole memo in its notes only when it runs longer. `shownAtFirst` gives the patterns picked until the person picks otherwise: those with a time, and of those without, all but the days off (`off`) and a pattern another names as its next day (`nextDay`), like 明け after 夜勤, whose night shows on that day already. `picks` pin what is kept of the person's picks (`chosen`, a pattern id to put in or left out, only where it differs from the first pick): `pick`, when given, picks one pattern (`id`) in or out (`on`) first, which drops any choice of a pattern no longer there and keeps none for one picked back to its first pick; `expectedChosen` is what is kept then, and `expectedShown` the patterns put in. `marks` pin Pochical's mark on each event it puts in, a line of its own at the end of the event's notes, the site's link to the day (`https://pochical.app/day/YYYY-MM-DD`, which opens the app there) and whose shift it is, in the fragment (`#by=<user id>`): `notes` is what the event says without it, `day` and `user` the mark's; `expected` is the notes it goes in with. `marksRead` pin finding it again in an event's notes, whatever else they say and however their lines end (a line feed alone ends one, a carriage return before it, spaces and tabs around the link aside): `expected` is the day and the user the mark names, or null for an event that is not Pochical's: no line that is the link alone, another link, or a day that is none. Of two such lines, the last is the event's own. `daysOpened` pin the day a link opening the app names: a widget's `pochical://day/{yyyy-mm-dd}` or the site's `https://pochical.app/day/{yyyy-mm-dd}` (a mark's), the host in any case, a trailing `/`, a query and a fragment allowed; `expected` is the day, or null for a link that opens none.",
   "events": [
     {
       "name": "work at its pattern's time, a pattern not picked left out",
@@ -273,45 +273,45 @@
       "name": "an event with no notes carries the mark alone",
       "day": "2026-11-02",
       "user": "u7Hk2Qx",
-      "expected": "pochical://day/2026-11-02?by=u7Hk2Qx"
+      "expected": "https://pochical.app/day/2026-11-02#by=u7Hk2Qx"
     },
     {
       "name": "the mark follows the memo and the people on its own line",
       "day": "2026-11-05",
       "user": "u7Hk2Qx",
       "notes": "申し送りあり\n一緒に働く人：佐藤、田中",
-      "expected": "申し送りあり\n一緒に働く人：佐藤、田中\npochical://day/2026-11-05?by=u7Hk2Qx"
+      "expected": "申し送りあり\n一緒に働く人：佐藤、田中\nhttps://pochical.app/day/2026-11-05#by=u7Hk2Qx"
     }
   ],
   "marksRead": [
     {
       "name": "the mark alone",
-      "notes": "pochical://day/2026-11-02?by=u7Hk2Qx",
+      "notes": "https://pochical.app/day/2026-11-02#by=u7Hk2Qx",
       "expected": { "day": "2026-11-02", "user": "u7Hk2Qx" }
     },
     {
       "name": "after the memo",
-      "notes": "申し送りあり\npochical://day/2026-11-05?by=u7Hk2Qx",
+      "notes": "申し送りあり\nhttps://pochical.app/day/2026-11-05#by=u7Hk2Qx",
       "expected": { "day": "2026-11-05", "user": "u7Hk2Qx" }
     },
     {
       "name": "lines ended as another calendar ends them, spaces around",
-      "notes": "申し送りあり\r\n  pochical://day/2026-11-05?by=u7Hk2Qx \r\n",
+      "notes": "申し送りあり\r\n  https://pochical.app/day/2026-11-05#by=u7Hk2Qx \r\n",
       "expected": { "day": "2026-11-05", "user": "u7Hk2Qx" }
     },
     {
       "name": "a mark copied into the memo gives way to the event's own, the last",
-      "notes": "pochical://day/2026-12-01?by=u7Hk2Qx\npochical://day/2026-11-05?by=u7Hk2Qx",
+      "notes": "https://pochical.app/day/2026-12-01#by=u7Hk2Qx\nhttps://pochical.app/day/2026-11-05#by=u7Hk2Qx",
       "expected": { "day": "2026-11-05", "user": "u7Hk2Qx" }
     },
     {
       "name": "only a line feed ends a line",
-      "notes": "申し送りあり\u2028pochical://day/2026-11-05?by=u7Hk2Qx",
+      "notes": "申し送りあり\u2028https://pochical.app/day/2026-11-05#by=u7Hk2Qx",
       "expected": null
     },
     {
       "name": "someone else's mark is read as theirs",
-      "notes": "pochical://day/2026-11-02?by=family1",
+      "notes": "https://pochical.app/day/2026-11-02#by=family1",
       "expected": { "day": "2026-11-02", "user": "family1" }
     },
     {
@@ -321,32 +321,109 @@
     },
     {
       "name": "the link inside a sentence of the person's",
-      "notes": "pochical://day/2026-11-02?by=u7Hk2Qx を見る",
+      "notes": "https://pochical.app/day/2026-11-02#by=u7Hk2Qx を見る",
       "expected": null
     },
     {
-      "name": "the site's link, not the app's",
-      "notes": "https://pochical.app/day/2026-11-02?by=u7Hk2Qx",
+      "name": "the app's own link to the day, not the site's",
+      "notes": "pochical://day/2026-11-02#by=u7Hk2Qx",
+      "expected": null
+    },
+    {
+      "name": "the site's link without https",
+      "notes": "http://pochical.app/day/2026-11-02#by=u7Hk2Qx",
+      "expected": null
+    },
+    {
+      "name": "the site's name written otherwise",
+      "notes": "https://Pochical.app/day/2026-11-02#by=u7Hk2Qx",
       "expected": null
     },
     {
       "name": "a link to a day with no user",
-      "notes": "pochical://day/2026-11-02",
+      "notes": "https://pochical.app/day/2026-11-02",
+      "expected": null
+    },
+    {
+      "name": "the user in the query, not the fragment",
+      "notes": "https://pochical.app/day/2026-11-02?by=u7Hk2Qx",
       "expected": null
     },
     {
       "name": "a link with more than the user",
-      "notes": "pochical://day/2026-11-02?by=u7Hk2Qx&x=1",
+      "notes": "https://pochical.app/day/2026-11-02#by=u7Hk2Qx&x=1",
       "expected": null
     },
     {
       "name": "a date that is no day",
-      "notes": "pochical://day/2026-02-30?by=u7Hk2Qx",
+      "notes": "https://pochical.app/day/2026-02-30#by=u7Hk2Qx",
       "expected": null
     },
     {
       "name": "a group's link",
       "notes": "pochical://group/g1/day/2026-11-02",
+      "expected": null
+    }
+  ],
+  "daysOpened": [
+    {
+      "name": "a widget's link",
+      "url": "pochical://day/2026-09-24",
+      "expected": "2026-09-24"
+    },
+    {
+      "name": "an event's mark",
+      "url": "https://pochical.app/day/2026-09-24#by=u7Hk2Qx",
+      "expected": "2026-09-24"
+    },
+    {
+      "name": "the site's link, the host in another case and a trailing slash",
+      "url": "https://Pochical.app/day/2026-09-24/",
+      "expected": "2026-09-24"
+    },
+    {
+      "name": "the site's link with a query",
+      "url": "https://pochical.app/day/2026-09-24?utm_source=x",
+      "expected": "2026-09-24"
+    },
+    {
+      "name": "no day",
+      "url": "pochical://day/",
+      "expected": null
+    },
+    {
+      "name": "a date that is no day",
+      "url": "pochical://day/2026-13-01",
+      "expected": null
+    },
+    {
+      "name": "the site's link with no day",
+      "url": "https://pochical.app/day/",
+      "expected": null
+    },
+    {
+      "name": "the site's link to a date that is no day",
+      "url": "https://pochical.app/day/2026-02-30",
+      "expected": null
+    },
+    {
+      "name": "the site's link without https",
+      "url": "http://pochical.app/day/2026-09-24",
+      "expected": null
+    },
+    {
+      "name": "another site",
+      "url": "https://example.com/day/2026-09-24",
+      "expected": null
+    },
+    {
+      "name": "a group's table at a day",
+      "url": "pochical://group/g1/day/2026-09-24",
+      "expected": null
+    },
+    {
+      "name": "an invitation",
+      "url": "https://pochical.app/invite/Toko2345",
       "expected": null
     }
   ]

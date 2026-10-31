@@ -12,6 +12,7 @@ private data class DeviceCalendarVectors(
   val picks: List<Picks>,
   val marks: List<Marking>,
   val marksRead: List<Reading>,
+  val daysOpened: List<Opening>,
 ) {
   @Serializable
   data class Pattern(
@@ -64,6 +65,8 @@ private data class DeviceCalendarVectors(
   @Serializable data class Mark(val day: String, val user: String)
 
   @Serializable data class Reading(override val name: String, val notes: String, val expected: Mark?) : VectorCase
+
+  @Serializable data class Opening(override val name: String, val url: String, val expected: String?) : VectorCase
 }
 
 private fun rows(patterns: Map<String, DeviceCalendarVectors.Pattern>): List<PatternRow> =
@@ -110,4 +113,7 @@ class ShiftEventsTest {
     cases.marksRead.checkEach({ it.expected }) { case ->
       EventMark.inNotes(case.notes)?.let { DeviceCalendarVectors.Mark(it.day.toString(), it.user) }
     }
+
+  @Test
+  fun daysOpened() = cases.daysOpened.checkEach({ it.expected }) { (appLink(it.url) as? AppLink.Day)?.day?.toString() }
 }

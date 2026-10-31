@@ -14,6 +14,7 @@ import android.provider.CalendarContract
 import androidx.core.content.ContextCompat
 import app.pochical.kit.EventMark
 import app.pochical.kit.Period
+import app.pochical.kit.SITE_DAY_LINKS
 import app.pochical.kit.ShiftEvent
 import java.time.LocalDate
 import java.time.ZoneId
@@ -114,7 +115,7 @@ class DeviceCalendars(private val context: Context) {
         arrayOf(Events._ID, Events.DESCRIPTION),
         "${Events.DELETED} = 0 AND ${Events.CALENDAR_ACCESS_LEVEL} >= ? AND ${Events.DTSTART} >= ? AND ${Events.DTSTART} < ? AND " +
           "${Events.DESCRIPTION} LIKE ?",
-        arrayOf(Calendars.CAL_ACCESS_CONTRIBUTOR.toString(), from.toString(), to.toString(), "%pochical://day/%"),
+        arrayOf(Calendars.CAL_ACCESS_CONTRIBUTOR.toString(), from.toString(), to.toString(), "%$SITE_DAY_LINKS%"),
         null,
       )
       ?.use { rows ->
