@@ -1,5 +1,6 @@
 import Foundation
 import PochicalDesign
+import Synchronization
 
 // A chat message's words as spec/chat.md has them: its links, and the
 // members it mentions (spec/vectors/chat-text.json). Ids and the
@@ -22,10 +23,12 @@ public struct TextPart: Hashable, Sendable, Decodable {
 }
 
 /// A link (http:// or https://, any case, over the characters a URL is
-/// written in) or a mention. Made for each use: a regex is not Sendable.
-private var linkOrMention: Regex<(Substring, id: Substring?, link: Substring?)> {
+/// written in) or a mention. Made once, as parsing it is what costs: a
+/// regex is not Sendable, so it is used under a lock, and a message is
+/// cut in a moment.
+private let linkOrMention = Mutex(
   /<@(?<id>[A-Za-z0-9_-]+)>|(?<link>(?i:https?):\/\/[A-Za-z0-9_\-.~:\/?#\[\]@!$&'()*+,;=%]+)/
-}
+)
 
 /// What closes a sentence rather than the address when it comes last.
 private let trailing: Set<Character> = [".", ",", "!", "?", ":", ";", "'", "*"]
@@ -60,12 +63,17 @@ private func hasHost(_ link: Substring) -> Bool {
 public func textParts(_ text: String) -> [TextPart] {
   var parts: [TextPart] = []
   var at = text.startIndex
-  for match in text.matches(of: linkOrMention) {
+  let found = linkOrMention.withLock { regex in
+    text.matches(of: regex).map { match in
+      (range: match.range, whole: match.output.0, id: match.output.id, link: match.output.link)
+    }
+  }
+  for match in found {
     let part: TextPart
     let start = match.range.lowerBound
-    if let id = match.output.id {
-      part = TextPart(text: String(match.output.0), mention: String(id))
-    } else if let found = match.output.link {
+    if let id = match.id {
+      part = TextPart(text: String(match.whole), mention: String(id))
+    } else if let found = match.link {
       let link = trimLink(found)
       guard hasHost(link) else { continue }
       part = TextPart(text: String(link), url: String(link))

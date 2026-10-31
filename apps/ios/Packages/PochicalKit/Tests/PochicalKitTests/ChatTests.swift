@@ -720,14 +720,15 @@ func chatNotificationsSummaryOfTheGroups(_ vector: UnreadVectors.Summary) {
   #expect(summary == vector.expected)
 }
 
-private func unreadCount(_ cursor: UInt64, _ count: UInt32, in groupID: String = "g")
-  -> Pochical_V1_Change
-{
+private func unreadCount(
+  _ cursor: UInt64, _ count: UInt32, mentions: UInt32 = 0, in groupID: String = "g"
+) -> Pochical_V1_Change {
   var change = Pochical_V1_Change()
   change.cursor = cursor
   change.unreadCount.groupID = groupID
   change.unreadCount.threadID = groupThread
   change.unreadCount.count = count
+  change.unreadCount.mentions = mentions
   return change
 }
 
@@ -854,13 +855,34 @@ func theNamesToListWhileWriting(_ vector: MessageTextVectors.Query) {
   #expect(pickingMention(vector.text, name: "あや") == vector.picked)
 }
 
-@Test func aChatsSummaryMarksAnUnreadMentionOfTheReader() throws {
+@Test func aChatsSummaryMarksAnUnreadMentionOfTheReaderAsTheGroupCountedIt() throws {
   let database = try appDatabase()
   try database.write { db in
+    // The group's count, not the lines, says so: they are not read again.
     try GroupSync.take([line(1, "<@me> 来れる？"), line(2, "どう？")], of: "g", in: db)
     try Sync.take([unreadCount(1, 2)], in: db)
+    #expect(try !Chats.summary(of: groupThread, in: "g", me: "me", now: early, db: db).mentioned)
+    try Sync.take([unreadCount(2, 2, mentions: 1)], in: db)
     #expect(try Chats.summary(of: groupThread, in: "g", me: "me", now: early, db: db).mentioned)
+  }
+}
+
+@Test func whileAReadWaitsAChatsSummaryFindsAMentionInTheLinesPastIt() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    try GroupSync.take(
+      [line(1, "<@me> 来れる？"), line(2, "どう？"), line(3, "<@me> 見た？")], of: "g", in: db)
+    try Sync.take([unreadCount(1, 3, mentions: 2)], in: db)
+    var read = Pochical_V1_ChatRead()
+    read.threadID = groupThread
+    read.lastReadSeq = 2
+    try Chats.edit(.read(read), in: "g", now: 5, db: db)
+    #expect(try Chats.summary(of: groupThread, in: "g", me: "me", now: early, db: db).mentioned)
+    // Another reader's own read, the line past it not theirs.
     #expect(try !Chats.summary(of: groupThread, in: "g", me: "aya", now: early, db: db).mentioned)
+    read.lastReadSeq = 3
+    try Chats.edit(.read(read), in: "g", now: 6, db: db)
+    #expect(try !Chats.summary(of: groupThread, in: "g", me: "me", now: early, db: db).mentioned)
   }
 }
 

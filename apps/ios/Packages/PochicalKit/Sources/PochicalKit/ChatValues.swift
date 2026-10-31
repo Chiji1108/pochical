@@ -965,7 +965,9 @@ public struct ChatSummary: Hashable, Sendable {
   /// with none.
   public var failsAt: Int64?
   public var unread: Int
-  /// An unread line the device holds mentions the reader.
+  /// An unread line mentions the reader: as the group counted them, or,
+  /// while a read of theirs waits, among the lines the device holds past
+  /// it.
   public var mentioned: Bool
   /// What is being written in it, kept as it was left (spec/chat.md,
   /// Drafts).
@@ -1010,12 +1012,18 @@ extension Chats {
       sent: last.map { [TimedLine(id: nil, at: $0.sentAtMs)] } ?? [],
       waiting: waiting.map { TimedLine(id: Optional($0), at: $0.madeAtMs, failed: $0.failed) }
     ).last
-    let unread = try unread(of: threadID, in: groupID, me: me, ownRead: ownRead, db: db)
+    // As the group counted them, mentions and all, or, while a read of the
+    // member's waits, others' lines the device holds past it: those that
+    // came since the read, which goes first on the group's socket.
+    let past =
+      ownRead > 0
+      ? try unreadLines(of: threadID, in: groupID, me: me, ownRead: ownRead, db: db) : nil
+    let counted = past == nil ? try countRow(of: threadID, in: groupID, db: db) : nil
+    let unread = past?.count ?? counted?.count ?? 0
     let mentioned =
-      unread > 0
-      ? try unreadLines(of: threadID, in: groupID, me: me, ownRead: ownRead, db: db)
-        .contains { mentions(in: $0).contains(me) }
-      : false
+      if let past { past.contains { mentions(in: $0).contains(me) } } else {
+        (counted?.mentions ?? 0) > 0
+      }
     return ChatSummary(
       last: last, waiting: latest ?? nil, failsAt: failsAt, unread: unread,
       mentioned: mentioned, draft: try keptDraft(of: threadID, in: groupID, db: db))
@@ -1055,10 +1063,7 @@ extension Chats {
   ) throws -> Int {
     let muted = notifications.isMuted(threadID, in: groupID)
     guard ownRead > 0 else {
-      let row = try UnreadCountRow.where {
-        $0.groupID.eq(groupID) && $0.threadID.eq(threadID)
-      }
-      .fetchOne(db)
+      let row = try countRow(of: threadID, in: groupID, db: db)
       return notifyingCount(
         count: row?.count ?? 0, mentions: row?.mentions ?? 0, muted: muted,
         mentionsWhenMuted: notifications.mentionsWhenMuted)
@@ -1066,6 +1071,13 @@ extension Chats {
     let lines = try unreadLines(of: threadID, in: groupID, me: me, ownRead: ownRead, db: db)
     return notifyingUnread(
       lines, muted: muted, mentionsWhenMuted: notifications.mentionsWhenMuted, me: me)
+  }
+
+  /// The chat's unread count as the group last sent it.
+  private static func countRow(
+    of threadID: String, in groupID: String, db: Database
+  ) throws -> UnreadCountRow? {
+    try UnreadCountRow.where { $0.groupID.eq(groupID) && $0.threadID.eq(threadID) }.fetchOne(db)
   }
 
   /// The words of others' lines the device holds past the reader's read,
