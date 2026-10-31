@@ -41,8 +41,8 @@ sealed interface AppLink {
 /** The link that opens the app on a day (spec/widgets.md, Opening the app). */
 fun dayLink(day: LocalDate): String = "pochical://day/$day"
 
-/** The site, whose links to a day the app holds as App Links. */
-private const val SITE_HOST = "pochical.app"
+/** The site, whose invitations' and days' links the app holds as App Links. */
+internal const val SITE_HOST = "pochical.app"
 
 /** Where the site's links to a day begin. */
 const val SITE_DAY_LINKS = "https://$SITE_HOST/day/"

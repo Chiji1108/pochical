@@ -87,7 +87,7 @@
         <data android:scheme="https" />
         <data android:host="pochical.app" />
         <data android:pathPrefix="/invite/" />
-        <data android:pathPrefix="/day/" />
+        <data android:pathPattern="/day/....-..-.." />
       </intent-filter>
     </activity>
     <!-- The server's notifications and the device's token, from FCM (notifications/Push). -->

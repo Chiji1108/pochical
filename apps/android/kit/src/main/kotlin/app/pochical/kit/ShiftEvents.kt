@@ -85,20 +85,20 @@ private fun shiftEvent(
 
 /**
  * Pochical's mark on an event it puts in: the site's link to the event's day and whose shift it is,
- * `https://pochical.app/day/YYYY-MM-DD?by=<user id>` ([siteDayLink]), user ids being of letters and
- * digits alone. It goes in the event's notes, which every calendar keeps, Google's sync too, where
+ * `https://pochical.app/day/YYYY-MM-DD#by=<user id>` ([siteDayLink]), user ids being of letters and
+ * digits alone, in the fragment, which a browser opening the link never sends to the site. It goes in the event's notes, which every calendar keeps, Google's sync too, where
  * an app's own columns do not survive, and which calendars make a link opening the day in the app
  * (spec/calendar.md, Adding a month to the device calendar).
  */
 data class EventMark(val day: LocalDate, val user: String) {
   val link: String
-    get() = "${siteDayLink(day)}?by=$user"
+    get() = "${siteDayLink(day)}#by=$user"
 
   /** The notes an event goes in with: its own, then the mark on a line of its own. */
   fun appendedTo(notes: String?): String = listOfNotNull(notes, link).joinToString("\n")
 
   companion object {
-    private val LINE = Regex(Regex.escape(SITE_DAY_LINKS) + """(\d{4}-\d{2}-\d{2})\?by=([A-Za-z0-9]+)""")
+    private val LINE = Regex(Regex.escape(SITE_DAY_LINKS) + """(\d{4}-\d{2}-\d{2})#by=([A-Za-z0-9]+)""")
 
     /**
      * The mark on a line of its own in an event's [notes], whoever's; none for an event not

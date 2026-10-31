@@ -14,8 +14,8 @@ export const ANDROID_PACKAGE = "app.pochical";
 export const APPLE_APP_ID = "6KC44WPYLJ.app.pochical";
 
 // The site's paths the app opens, as the Android manifest's App Link filter
-// names them too.
-const APP_PATHS = ["/invite/*", "/day/*"] as const;
+// names them too: a day's only in a date's shape.
+const APP_PATHS = ["/invite/*", "/day/????-??-??"] as const;
 
 type AppleAppSiteAssociation = {
   applinks: {

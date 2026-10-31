@@ -68,9 +68,8 @@ class OpenedLinksTest {
   @Test
   fun aCalendarEventsLinkOpensItsDay() {
     val links = OpenedLinks()
-    links.take(opening("https://pochical.app/day/2026-09-24?by=u7Hk2Qx"))
+    links.take(opening("https://pochical.app/day/2026-09-24#by=u7Hk2Qx"))
     assertEquals(AppLink.Day(LocalDate.of(2026, 9, 24)), links.consume())
-    assertEquals(AppLink.Day(LocalDate.of(2026, 9, 24)), appLink("https://Pochical.app/day/2026-09-24/"))
   }
 
   @Test
@@ -89,11 +88,8 @@ class OpenedLinksTest {
         "pochical://day/2026-13-01",
         "pochical://group/",
         "https://example.com/day/2026-09-24",
-        "https://pochical.app/day/2026-13-01",
-        "https://pochical.app/day/",
         "https://pochical.app/today",
         "https://pochical.app/group/g1",
-        "http://pochical.app/day/2026-09-24",
       )
     for (url in urls) assertNull(url, appLink(url))
   }

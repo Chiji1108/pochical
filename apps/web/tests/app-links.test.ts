@@ -56,7 +56,7 @@ test("the iOS app is named for the invitations' and the days' links", () => {
       details: [
         {
           appIDs: ["6KC44WPYLJ.app.pochical"],
-          components: [{ "/": "/invite/*" }, { "/": "/day/*" }],
+          components: [{ "/": "/invite/*" }, { "/": "/day/????-??-??" }],
         },
       ],
     },

@@ -9,7 +9,8 @@ import { linkedDay, openInApp } from "../../lib/app-links";
 
 // A day's link, as a device calendar's event carries it (spec/calendar.md),
 // opens here without the app. Drawn on request, for its アプリで開く, and
-// from the day alone: the link's `by` marks the event and is never read.
+// from the day alone: the mark's `#by=` is the link's fragment, which the
+// browser keeps to itself.
 export const prerender = false;
 
 const { date = "" } = Astro.params;

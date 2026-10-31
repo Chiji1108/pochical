@@ -8,7 +8,7 @@ import PochicalProto
 /// links; spec/vectors/chat-text.json): the host in any case, a trailing
 /// `/`, a query and a fragment allowed.
 public func inviteCode(of url: URL) -> String? {
-  guard url.scheme?.lowercased() == "https", url.host()?.lowercased() == "pochical.app" else {
+  guard url.scheme?.lowercased() == "https", url.host()?.lowercased() == siteHost else {
     return nil
   }
   return codeIn(path: url.path(percentEncoded: false), after: "/invite/")

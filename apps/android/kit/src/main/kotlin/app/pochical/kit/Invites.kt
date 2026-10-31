@@ -4,11 +4,8 @@ import app.pochical.design.Invite
 import java.net.URI
 import java.net.URISyntaxException
 
-/** The site invitation links name, https://pochical.app/invite/{code} (design/src/invite.ts). */
-private const val INVITE_HOST = "pochical.app"
-
-/** The link an invitation code opens. */
-fun inviteLink(code: String): String = "https://$INVITE_HOST/invite/$code"
+/** The link an invitation code opens, on the site (design/src/invite.ts). */
+fun inviteLink(code: String): String = "https://$SITE_HOST/invite/$code"
 
 /**
  * The invitation code a link carries when it is one of Pochical's own (spec/vectors/chat-text.json,
@@ -16,7 +13,7 @@ fun inviteLink(code: String): String = "https://$INVITE_HOST/invite/$code"
  */
 fun inviteCode(url: String): String? {
   val uri = parsed(url) ?: return null
-  if (!uri.scheme.equals("https", ignoreCase = true) || !uri.host.equals(INVITE_HOST, ignoreCase = true)) return null
+  if (!uri.scheme.equals("https", ignoreCase = true) || !uri.host.equals(SITE_HOST, ignoreCase = true)) return null
   return codeIn(uri.path, after = "/invite/")
 }
 

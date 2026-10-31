@@ -80,11 +80,18 @@ struct DeviceCalendarVectors: Decodable {
     let expected: Mark?
   }
 
+  struct OpenCase: VectorCase {
+    let name: String
+    let url: String
+    let expected: String?
+  }
+
   let events: [Case]
   let shownAtFirst: [FirstCase]
   let picks: [PickCase]
   let marks: [MarkCase]
   let marksRead: [ReadCase]
+  let daysOpened: [OpenCase]
 }
 
 private func patterns(_ cases: [String: DeviceCalendarVectors.FirstPattern]) -> [Pattern] {
@@ -153,20 +160,12 @@ func marksRead(_ vector: DeviceCalendarVectors.ReadCase) {
   #expect(mark.map { .init(day: $0.day.key, user: $0.user) } == vector.expected)
 }
 
-@Test func anEventsMarkOpensItsDay() throws {
-  let day = try #require(Day("2026-09-24"))
-  let mark = try #require(URL(string: EventMark(day: day, user: "u7Hk2Qx").link))
-  #expect(openedDay(of: mark) == day)
-  #expect(openedDay(of: dayLink(day)) == day)
-  #expect(openedDay(of: try #require(URL(string: "https://Pochical.app/day/2026-09-24/"))) == day)
+@Test(arguments: try vectors("device-calendar", as: DeviceCalendarVectors.self).daysOpened)
+func daysOpened(_ vector: DeviceCalendarVectors.OpenCase) throws {
+  #expect(openedDay(of: try #require(URL(string: vector.url)))?.key == vector.expected)
 }
 
-@Test(arguments: [
-  "pochical://day/", "pochical://day/2026-13-01", "pochical://group/g1/day/2026-09-24",
-  "https://pochical.app/day/", "https://pochical.app/day/2026-13-01",
-  "https://pochical.app/invite/Toko2345", "https://example.com/day/2026-09-24",
-  "http://pochical.app/day/2026-09-24",
-])
-func linksOpeningNoDay(_ link: String) throws {
-  #expect(openedDay(of: try #require(URL(string: link))) == nil)
+@Test func anEventsMarkOpensItsDay() throws {
+  let day = try #require(Day("2026-09-24"))
+  #expect(openedDay(of: try #require(URL(string: EventMark(day: day, user: "u7Hk2Qx").link))) == day)
 }
