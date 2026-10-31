@@ -1,3 +1,4 @@
+import Foundation
 import PochicalKit
 import Testing
 
@@ -150,4 +151,22 @@ func eventsMarked(_ vector: DeviceCalendarVectors.MarkCase) throws {
 func marksRead(_ vector: DeviceCalendarVectors.ReadCase) {
   let mark = EventMark(notes: vector.notes)
   #expect(mark.map { .init(day: $0.day.key, user: $0.user) } == vector.expected)
+}
+
+@Test func anEventsMarkOpensItsDay() throws {
+  let day = try #require(Day("2026-09-24"))
+  let mark = try #require(URL(string: EventMark(day: day, user: "u7Hk2Qx").link))
+  #expect(openedDay(of: mark) == day)
+  #expect(openedDay(of: dayLink(day)) == day)
+  #expect(openedDay(of: try #require(URL(string: "https://Pochical.app/day/2026-09-24/"))) == day)
+}
+
+@Test(arguments: [
+  "pochical://day/", "pochical://day/2026-13-01", "pochical://group/g1/day/2026-09-24",
+  "https://pochical.app/day/", "https://pochical.app/day/2026-13-01",
+  "https://pochical.app/invite/Toko2345", "https://example.com/day/2026-09-24",
+  "http://pochical.app/day/2026-09-24",
+])
+func linksOpeningNoDay(_ link: String) throws {
+  #expect(openedDay(of: try #require(URL(string: link))) == nil)
 }

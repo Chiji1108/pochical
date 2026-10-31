@@ -1,0 +1,14 @@
+---
+import StoreLinks from "./store-links.astro";
+
+// What a page a link to the app opens offers someone without it: the app's
+// store pages, then the page's own links.
+---
+
+<div class="app-download">
+  <h2>アプリをまだお持ちでない方へ</h2>
+  <StoreLinks />
+  <div class="app-download-links">
+    <slot />
+  </div>
+</div>

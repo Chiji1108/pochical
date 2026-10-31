@@ -77,8 +77,9 @@
         <data android:host="day" />
         <data android:host="group" />
       </intent-filter>
-      <!-- An invitation's own link, an App Link once Android has verified the site's
-           /.well-known/assetlinks.json names this app (apps/web). -->
+      <!-- The site's links the app opens, App Links once Android has verified the site's
+           /.well-known/assetlinks.json names this app (apps/web): an invitation's own, and a
+           day's, as a device calendar's event carries it (OpenedLinks; spec/calendar.md). -->
       <intent-filter android:autoVerify="true">
         <action android:name="android.intent.action.VIEW" />
         <category android:name="android.intent.category.DEFAULT" />
@@ -86,6 +87,7 @@
         <data android:scheme="https" />
         <data android:host="pochical.app" />
         <data android:pathPrefix="/invite/" />
+        <data android:pathPrefix="/day/" />
       </intent-filter>
     </activity>
     <!-- The server's notifications and the device's token, from FCM (notifications/Push). -->

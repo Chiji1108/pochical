@@ -17,19 +17,42 @@ public struct ShiftEvent: Hashable, Sendable {
   public var notes: String? = nil
 }
 
-/// Pochical's mark on an event it puts in: the app's link to the event's
-/// day and whose shift it is, `pochical://day/YYYY-MM-DD?by=<user id>`
-/// (spec/widgets.md's link to a day), user ids being of letters and
-/// digits alone. It goes in the event's notes, which every calendar
-/// keeps, Google's sync too, where a link or a property of the app's own
-/// may not survive (spec/calendar.md, Adding a month to the device
-/// calendar).
 /// The link that opens the app on a day: the calendar on its week with
 /// that day picked (spec/widgets.md, Opening the app).
 public func dayLink(_ day: Day) -> URL {
   URL(string: "pochical://day/\(day.key)")!
 }
 
+/// The site's link to a day, which opens the app on it as `dayLink` does,
+/// as a Universal Link, and elsewhere the site's page saying so: for text
+/// another app shows, which makes it a link, as a device calendar's event
+/// notes (spec/calendar.md).
+public func siteDayLink(_ day: Day) -> URL {
+  URL(string: "https://pochical.app/day/\(day.key)")!
+}
+
+/// The day a link opening the app names: pochical://day/2026-09-24, or
+/// the site's https://pochical.app/day/2026-09-24, the host in any case,
+/// a trailing `/` and a query allowed.
+public func openedDay(of url: URL) -> Day? {
+  let path = url.path(percentEncoded: false).split(separator: "/").map(String.init)
+  switch (url.scheme?.lowercased(), url.host()?.lowercased()) {
+  case ("pochical", "day"):
+    return path.count == 1 ? Day(path[0]) : nil
+  case ("https", "pochical.app"):
+    return path.count == 2 && path[0] == "day" ? Day(path[1]) : nil
+  default:
+    return nil
+  }
+}
+
+/// Pochical's mark on an event it puts in: the site's link to the event's
+/// day and whose shift it is, `https://pochical.app/day/YYYY-MM-DD?by=<user id>`
+/// (`siteDayLink`), user ids being of letters and digits alone. It goes
+/// in the event's notes, which every calendar keeps, Google's sync too,
+/// where a link or a property of the app's own may not survive, and which
+/// calendars make a link opening the day in the app (spec/calendar.md,
+/// Adding a month to the device calendar).
 public struct EventMark: Hashable, Sendable {
   public let day: Day
   public let user: String
@@ -39,7 +62,7 @@ public struct EventMark: Hashable, Sendable {
     self.user = user
   }
 
-  public var link: String { "\(dayLink(day).absoluteString)?by=\(user)" }
+  public var link: String { "\(siteDayLink(day).absoluteString)?by=\(user)" }
 
   /// The notes an event goes in with: its own, then the mark on a line of
   /// its own.
@@ -55,7 +78,7 @@ public struct EventMark: Hashable, Sendable {
   public init?(notes: String?) {
     let found = notes?.components(separatedBy: "\n").reversed().lazy.compactMap { line in
       line.trimmingCharacters(in: CharacterSet(charactersIn: " \t\r"))
-        .wholeMatch(of: /pochical:\/\/day\/(\d{4}-\d{2}-\d{2})\?by=([A-Za-z0-9]+)/)
+        .wholeMatch(of: /https:\/\/pochical\.app\/day\/(\d{4}-\d{2}-\d{2})\?by=([A-Za-z0-9]+)/)
         .flatMap { match in Day(String(match.1)).map { (day: $0, user: String(match.2)) } }
     }.first
     guard let found else { return nil }

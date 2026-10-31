@@ -302,7 +302,7 @@
     line-height: 1.9;
     color: var(--muted);
   }
-  .invite-page {
+  .link-page {
     max-width: 620px;
     min-height: 70vh;
     padding: 75px 26px;
@@ -321,12 +321,12 @@
     background: var(--soft-green);
     border-radius: 22px;
   }
-  .invite-page h1 {
+  .link-page h1 {
     margin: 12px 0 4px;
     font-size: 30px;
     line-height: 1.6;
   }
-  .invite-page > p:not(.eyebrow) {
+  .link-page > p:not(.eyebrow) {
     font-size: 13px;
     line-height: 2;
     color: var(--muted);
@@ -350,21 +350,27 @@
     color: white;
     background: #304d3f;
   }
-  .invite-page > .button {
+  .link-page > .button {
     margin: 28px 0 17px;
   }
-  .invite-download {
+  .app-download {
     padding-top: 30px;
     margin-top: 45px;
     border-top: 1px solid var(--line);
   }
-  .invite-download h2 {
+  .app-download h2 {
     margin-bottom: 23px;
     font-size: 13px;
     font-weight: 550;
   }
-  .invite-download .text-link {
+  .app-download-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 28px;
+    justify-content: center;
     margin-top: 25px;
+  }
+  .app-download-links .text-link {
     font-size: 11px;
   }
   .deletion-explanation h2 {
@@ -500,10 +506,10 @@
     .deletion-panel h2 {
       font-size: 18px;
     }
-    .invite-page {
+    .link-page {
       padding-top: 45px;
     }
-    .invite-page h1 {
+    .link-page h1 {
       font-size: 25px;
     }
   }

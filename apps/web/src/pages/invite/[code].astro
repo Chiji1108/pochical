@@ -2,8 +2,8 @@
 import { InviteMark } from "@pochical/prototype/components/invite-mark";
 import { ArrowUpRight, RefreshCw } from "lucide-react";
 
+import AppDownload from "../../components/app-download.astro";
 import Link from "../../components/link.astro";
-import StoreLinks from "../../components/store-links.astro";
 import Site from "../../layouts/site.astro";
 import { openInApp } from "../../lib/app-links";
 import {
@@ -43,7 +43,7 @@ const group =
   privatePage
   title={group === undefined ? "グループへの招待" : `${group}への招待`}
 >
-  <main class="invite-page" id="main">
+  <main class="link-page" id="main">
     {invite.status === "valid" ? (
       <>
         {/* The group is what the page is about, so its mark leads, in a
@@ -62,7 +62,10 @@ const group =
         )}
         <a
           class="button"
-          href={openInApp(code, Astro.request.headers.get("User-Agent"))}
+          href={openInApp(
+            `invite/${encodeURIComponent(code)}`,
+            Astro.request.headers.get("User-Agent")
+          )}
         >
           アプリで開く <ArrowUpRight aria-hidden="true" size={18} />
         </a>
@@ -88,13 +91,11 @@ const group =
         )}
       </>
     )}
-    <div class="invite-download">
-      <h2>アプリをまだお持ちでない方へ</h2>
-      <StoreLinks />
+    <AppDownload>
       <Link class="text-link" href="/">
         ポチカルについて →
       </Link>
-    </div>
+    </AppDownload>
   </main>
 </Site>
 
