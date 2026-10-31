@@ -965,7 +965,9 @@ public struct ChatSummary: Hashable, Sendable {
   /// with none.
   public var failsAt: Int64?
   public var unread: Int
-  /// An unread line the device holds mentions the reader.
+  /// An unread line mentions the reader: as the group counted them, or,
+  /// while a read of theirs waits, among the lines the device holds past
+  /// it.
   public var mentioned: Bool
   /// What is being written in it, kept as it was left (spec/chat.md,
   /// Drafts).
@@ -1010,20 +1012,18 @@ extension Chats {
       sent: last.map { [TimedLine(id: nil, at: $0.sentAtMs)] } ?? [],
       waiting: waiting.map { TimedLine(id: Optional($0), at: $0.madeAtMs, failed: $0.failed) }
     ).last
-    let unread = try unread(of: threadID, in: groupID, me: me, ownRead: ownRead, db: db)
-    // As the count: the group's, which counted the mentions as the lines
-    // came, and only while a read of the member's waits the lines the
-    // device holds past it, few as they are, rather than every unread line
-    // read again on each change of the chat.
-    let mentioned: Bool
-    if unread == 0 {
-      mentioned = false
-    } else if ownRead > 0 {
-      mentioned = try unreadLines(of: threadID, in: groupID, me: me, ownRead: ownRead, db: db)
-        .contains { mentions(in: $0).contains(me) }
-    } else {
-      mentioned = try (countRow(of: threadID, in: groupID, db: db)?.mentions ?? 0) > 0
-    }
+    // As the group counted them, mentions and all, or, while a read of the
+    // member's waits, others' lines the device holds past it: those that
+    // came since the read, which goes first on the group's socket.
+    let past =
+      ownRead > 0
+      ? try unreadLines(of: threadID, in: groupID, me: me, ownRead: ownRead, db: db) : nil
+    let counted = past == nil ? try countRow(of: threadID, in: groupID, db: db) : nil
+    let unread = past?.count ?? counted?.count ?? 0
+    let mentioned =
+      if let past { past.contains { mentions(in: $0).contains(me) } } else {
+        (counted?.mentions ?? 0) > 0
+      }
     return ChatSummary(
       last: last, waiting: latest ?? nil, failsAt: failsAt, unread: unread,
       mentioned: mentioned, draft: try keptDraft(of: threadID, in: groupID, db: db))

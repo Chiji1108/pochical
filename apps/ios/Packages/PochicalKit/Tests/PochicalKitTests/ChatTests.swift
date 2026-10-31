@@ -878,6 +878,8 @@ func theNamesToListWhileWriting(_ vector: MessageTextVectors.Query) {
     read.lastReadSeq = 2
     try Chats.edit(.read(read), in: "g", now: 5, db: db)
     #expect(try Chats.summary(of: groupThread, in: "g", me: "me", now: early, db: db).mentioned)
+    // Another reader's own read, the line past it not theirs.
+    #expect(try !Chats.summary(of: groupThread, in: "g", me: "aya", now: early, db: db).mentioned)
     read.lastReadSeq = 3
     try Chats.edit(.read(read), in: "g", now: 6, db: db)
     #expect(try !Chats.summary(of: groupThread, in: "g", me: "me", now: early, db: db).mentioned)

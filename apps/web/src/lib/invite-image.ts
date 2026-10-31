@@ -65,6 +65,8 @@ export const drawInviteImage = async (
           photo === undefined
             ? []
             : [{ cache: "none", data: photo, src: PHOTO }],
+        // An emoji whose picture fails to load is left out, not the image.
+        throwOnError: false,
       },
       width: SHARE_IMAGE.width,
     }
