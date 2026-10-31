@@ -1011,11 +1011,19 @@ extension Chats {
       waiting: waiting.map { TimedLine(id: Optional($0), at: $0.madeAtMs, failed: $0.failed) }
     ).last
     let unread = try unread(of: threadID, in: groupID, me: me, ownRead: ownRead, db: db)
-    let mentioned =
-      unread > 0
-      ? try unreadLines(of: threadID, in: groupID, me: me, ownRead: ownRead, db: db)
+    // As the count: the group's, which counted the mentions as the lines
+    // came, and only while a read of the member's waits the lines the
+    // device holds past it, few as they are, rather than every unread line
+    // read again on each change of the chat.
+    let mentioned: Bool
+    if unread == 0 {
+      mentioned = false
+    } else if ownRead > 0 {
+      mentioned = try unreadLines(of: threadID, in: groupID, me: me, ownRead: ownRead, db: db)
         .contains { mentions(in: $0).contains(me) }
-      : false
+    } else {
+      mentioned = try (countRow(of: threadID, in: groupID, db: db)?.mentions ?? 0) > 0
+    }
     return ChatSummary(
       last: last, waiting: latest ?? nil, failsAt: failsAt, unread: unread,
       mentioned: mentioned, draft: try keptDraft(of: threadID, in: groupID, db: db))
@@ -1055,10 +1063,7 @@ extension Chats {
   ) throws -> Int {
     let muted = notifications.isMuted(threadID, in: groupID)
     guard ownRead > 0 else {
-      let row = try UnreadCountRow.where {
-        $0.groupID.eq(groupID) && $0.threadID.eq(threadID)
-      }
-      .fetchOne(db)
+      let row = try countRow(of: threadID, in: groupID, db: db)
       return notifyingCount(
         count: row?.count ?? 0, mentions: row?.mentions ?? 0, muted: muted,
         mentionsWhenMuted: notifications.mentionsWhenMuted)
@@ -1066,6 +1071,13 @@ extension Chats {
     let lines = try unreadLines(of: threadID, in: groupID, me: me, ownRead: ownRead, db: db)
     return notifyingUnread(
       lines, muted: muted, mentionsWhenMuted: notifications.mentionsWhenMuted, me: me)
+  }
+
+  /// The chat's unread count as the group last sent it.
+  private static func countRow(
+    of threadID: String, in groupID: String, db: Database
+  ) throws -> UnreadCountRow? {
+    try UnreadCountRow.where { $0.groupID.eq(groupID) && $0.threadID.eq(threadID) }.fetchOne(db)
   }
 
   /// The words of others' lines the device holds past the reader's read,
