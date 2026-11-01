@@ -28,7 +28,7 @@ final class NotificationTapTests: XCTestCase {
   @MainActor
   func test1JoinsAndAllowsNotifications() throws {
     app.launch()
-    for step in ["はじめる", "繰り返しはない", "パート・アルバイト", "はじめる"] {
+    for step in ["はじめる", "繰り返しはない", "パート・アルバイト", "次へ", "毎月1日から末日まで"] {
       let button = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", step)).firstMatch
       XCTAssertTrue(button.waitForExistence(timeout: 10), "はじめの設定 offers \(step)")
       button.tap()
