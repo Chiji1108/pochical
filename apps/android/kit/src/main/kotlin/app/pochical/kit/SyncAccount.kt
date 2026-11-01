@@ -646,7 +646,12 @@ class SyncAccount internal constructor(
       is Command.EraseFailed -> {
         (state.value as? AccountState.Erasing)?.let { mutableState.value = it.copy(failed = true) }
       }
-      is Command.Erasing -> if (state.value == AccountState.SigningIn) beginErasing(command.userId, command.why)
+      is Command.Erasing -> if (state.value == AccountState.SigningIn) {
+        // The signing in that found the note ends with it, erasing taking over: done, it signs in anew
+        // (Erased), never left waiting for that one, which may not have ended by then.
+        signingIn = null
+        beginErasing(command.userId, command.why)
+      }
       is Command.Erased -> {
         if (command.why == AccountState.Erasing.Why.Deleted) mutableDeleted.value += 1
         mutableState.value = AccountState.SigningIn
