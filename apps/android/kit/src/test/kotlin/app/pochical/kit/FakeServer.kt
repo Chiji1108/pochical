@@ -82,6 +82,9 @@ class FakeServer : AutoCloseable {
   /** What the anonymous sign-in answers in its body, null for the user as better-auth gives it. */
   @Volatile var signInBody: String? = null
 
+  /** The status the anonymous sign-in answers with. */
+  @Volatile var signInStatus = 200
+
   /** How long `GetMe` takes to answer, in milliseconds, read as each call comes in. */
   @Volatile var getMeDelayMs = 0L
 
@@ -243,6 +246,7 @@ class FakeServer : AutoCloseable {
               MockResponse.Builder()
                 .also { anotherAnonymous() }
                 .headersDelay(signInDelayMs, TimeUnit.MILLISECONDS)
+                .code(signInStatus)
                 .addHeader("set-auth-token", token)
                 .body(signInBody ?: """{"token":"$token","user":{"id":"$userId","isAnonymous":true}}""")
                 .build()

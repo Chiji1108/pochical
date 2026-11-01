@@ -21,6 +21,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -893,16 +894,27 @@ class SyncAccount internal constructor(
    * Signs in, one sign-in at a time: under way until the queue takes its end ([Command.SignInEnded]),
    * handed over once its job is over however it ended, cancelled too, even before it began. One
    * cancelled is over only once the user it made is kept ([newSession]), so the next starts from it.
+   * One that failed, whatever the cause, is [SignInOutcome.Failed], never the app's crash: as iOS's
+   * AccountSession, the device logs it and stays signing in until the app comes to the foreground.
    */
   private fun startSigningIn() {
     if (signingIn != null || state.value != AccountState.SigningIn) return
     var outcome: SignInOutcome? = null
-    val job = scope.launch(SIGN_IN) { outcome = signIn() }
-    signingIn = job
-    job.invokeOnCompletion { cause ->
-      // One that failed goes on to the scope's handler, never begun again at once.
-      if (cause == null || cause is CancellationException) commands.trySend(Command.SignInEnded(outcome))
+    val job = scope.launch(SIGN_IN) {
+      outcome =
+        try {
+          signIn()
+        } catch (e: CancellationException) {
+          throw e
+        } catch (e: Exception) {
+          // One that failed as it was cancelled was cancelled.
+          ensureActive()
+          Log.e(TAG, "Signing in failed, tried again in the foreground", e)
+          SignInOutcome.Failed
+        }
     }
+    signingIn = job
+    job.invokeOnCompletion { commands.trySend(Command.SignInEnded(outcome)) }
   }
 
   /** What a sign-in came to ([signIn]), for the queue to take on while the device is still signing in. */
@@ -922,7 +934,7 @@ class SyncAccount internal constructor(
       is SignInOutcome.Erasing -> beginErasing(outcome.userId, outcome.why)
       SignInOutcome.KeptEnded -> mutableState.value = AccountState.SessionEnded
       // Tried again in the foreground.
-      SignInOutcome.Unreachable -> Unit
+      SignInOutcome.Failed -> Unit
     }
   }
 
@@ -947,7 +959,7 @@ class SyncAccount internal constructor(
         sessions.read()
       } catch (e: StoreUnreachable) {
         Log.i(TAG, "The kept session cannot be reached, tried again in the foreground: $e")
-        return SignInOutcome.Unreachable
+        return SignInOutcome.Failed
       }
     // Erasing cut off part way goes on, as the database noted it.
     val noted = database.write { state() }
@@ -964,22 +976,23 @@ class SyncAccount internal constructor(
         Log.i(TAG, "Signed in anonymously as ${session.userId}")
       } catch (e: StoreUnreachable) {
         Log.i(TAG, "The new session could not be kept, tried again in the foreground: $e")
-        return SignInOutcome.Unreachable
+        return SignInOutcome.Failed
       } catch (e: IOException) {
         tries += 1
         Log.i(TAG, "Signing in failed: $e")
         delay(random.nextLong(reconnectWaitMost(tries, SyncSocket.reconnectFirstMs, SyncSocket.reconnectMostMs) + 1L))
       }
     }
+    // Another user's photos go before their database, so an erase cut off (the sign-in cancelled or
+    // failed) is still to do at the next try, which finds the database still theirs.
     val userId = session.userId
-    val erased =
-      database.write {
-        if (claim(userId)) return@write false
+    if (database.owner().let { it != null && it != userId }) linePhotos.eraseAll()
+    database.write {
+      if (!claim(userId)) {
         eraseUserData()
         claim(userId)
-        true
       }
-    if (erased) linePhotos.eraseAll()
+    }
     return SignInOutcome.SignedIn(session, kept = kept != null)
   }
 
@@ -1060,8 +1073,11 @@ class SyncAccount internal constructor(
     /** The session kept was ended, the server not knowing it: it stays so until the person chooses. */
     data object KeptEnded : SignInOutcome
 
-    /** The kept session's store could not be reached: tried again in the foreground. */
-    data object Unreachable : SignInOutcome
+    /**
+     * Not signed in, as when the session's store could not be reached, or anything else failed: tried
+     * again in the foreground.
+     */
+    data object Failed : SignInOutcome
   }
 
   private sealed interface Command {

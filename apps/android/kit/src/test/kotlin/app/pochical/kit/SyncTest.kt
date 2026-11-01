@@ -381,6 +381,42 @@ class SyncTest {
   }
 
   @Test
+  fun aStoreFailingUnforeseenIsTriedAgainInTheForeground() = runBlocking {
+    val phone = device()
+    phone.sessions.write(StoredSession(server.token, server.userId))
+    phone.kept.failure = IllegalStateException("Block Store failed")
+    phone.account.foreground()
+    delay(500)
+    assertEquals(AccountState.SigningIn, phone.account.state.value)
+
+    phone.kept.failure = null
+    phone.account.background()
+    phone.account.foreground()
+    withTimeout(10_000) { phone.current() }
+    assertEquals(AccountState.SignedIn(server.userId, linked = null), phone.account.state.value)
+    assertEquals(0, server.signIns.get())
+  }
+
+  @Test
+  fun aSignInTheServerRefusesIsTriedAgainInTheForeground() = runBlocking {
+    server.signInStatus = 403
+    server.signInBody = """{"code":"USER_SUSPENDED"}"""
+    val phone = device()
+    phone.account.foreground()
+    eventually { server.signIns.get() == 1 }
+    delay(500)
+    assertEquals("not tried again until the foreground", 1, server.signIns.get())
+    assertEquals(AccountState.SigningIn, phone.account.state.value)
+
+    server.signInStatus = 200
+    server.signInBody = null
+    phone.account.background()
+    phone.account.foreground()
+    withTimeout(10_000) { phone.current() }
+    assertEquals(StoredSession(server.token, server.userId), phone.sessions.read())
+  }
+
+  @Test
   fun aSessionTheServerDoesNotKnowWhenLinkingEndsIt() = runBlocking {
     val phone = device()
     phone.account.foreground()
@@ -463,9 +499,11 @@ class SyncTest {
       claim("someone-before")
       takeOwn(app.pochical.v1.change { day = app.pochical.v1.dayValue { date = "2026-10-06"; field = DayField.DAY_FIELD_NOTE; value = "前の人" } })
     }
+    val photo = phone.linePhotos.files.pending("g1", "photo-before").apply { parentFile!!.mkdirs(); writeBytes(byteArrayOf(1)) }
     phone.account.foreground()
     withTimeout(10_000) { phone.current() }
     assertNull(phone.note("2026-10-06"))
+    assertFalse(photo.exists())
     assertEquals(server.userId, phone.database.write { state().owner })
   }
 
