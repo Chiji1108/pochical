@@ -84,10 +84,7 @@ struct GroupWeek: View, @MainActor Equatable {
 
   var body: some View {
     let shown = members.map { $0.calendar.shown(from: days[0], through: days[6]) }
-    let offs = members.indices.map { index in
-      shown[index].compactMapValues { members[index].calendar.patternsByID[$0.shift]?.countsAsOff }
-    }
-    let together = members.count > 1 ? Set(Together.days(offs, from: days[0], through: days[6]).days) : []
+    let together = Set(Together.days(of: members, from: days[0], through: days[6]).days)
     HStack(alignment: .top, spacing: 0) {
       VStack(spacing: 0) {
         Color.clear.frame(height: dateHeight)
@@ -232,15 +229,18 @@ struct MemberWeek: View {
   /// everyone is off, which opens on the month; else なし, or 未入力の日あり
   /// when days someone has not entered may yet be one.
   @ViewBuilder private func next(today: Day) -> some View {
-    let through = today.adding(days: nextTogetherDays - 1)
-    let offs = members.map { $0.offDays(from: today, through: through) }
-    let ahead = members.count > 1 ? Together.days(offs, from: today, through: through) : (days: [], unsure: false)
+    let ahead = Together.days(
+      of: members, from: today, through: today.adding(days: nextTogetherDays - 1))
     let next = ahead.days.first
+    // Days someone has not entered may yet be one, so it does not say
+    // there are none.
+    let label = next.map { "\($0.fullText)・\(fromToday($0, today: today))" }
+      ?? (ahead.unsure ? "未入力の日あり" : "なし")
     let row = HStack(spacing: 8) {
       Text("次のみんな休み")
         .foregroundStyle(colors.textSecondary)
       Spacer()
-      Text(next.map { "\($0.fullText)・\(fromToday($0, today: today))" } ?? (ahead.unsure ? "未入力の日あり" : "なし"))
+      Text(label)
         .fontWeight(.semibold)
         .foregroundStyle(next == nil ? colors.textTertiary : colors.accentDefault)
       if next != nil {

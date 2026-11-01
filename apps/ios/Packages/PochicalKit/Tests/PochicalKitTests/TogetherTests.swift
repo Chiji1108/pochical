@@ -37,3 +37,20 @@ func daysEveryoneIsOff(_ vector: TogetherVectors.Case) throws {
   #expect(result.days.map(\.key) == vector.expected.days)
   #expect(result.unsure == vector.expected.unsure)
 }
+
+@Test func aGroupOfOneHasNoDaysEveryoneIsOff() throws {
+  let off = Pattern(
+    id: "off", name: "休み", emoji: "🌿", symbol: "休", icon: "leaf", color: 0, countsAsOff: true)
+  let day = try #require(Day("2026-11-01"))
+  let next = day.adding(days: 1)
+  // Off on the 1st; the 2nd not entered.
+  let member = { (id: String) in
+    GroupMember(userID: id, name: id, calendar: MemberCalendar(patterns: [off], days: [day: "off"]))
+  }
+  let alone = Together.days(of: [member("aya")], from: day, through: next)
+  #expect(alone.days.isEmpty)
+  #expect(!alone.unsure)
+  let two = Together.days(of: [member("aya"), member("ken")], from: day, through: next)
+  #expect(two.days == [day])
+  #expect(two.unsure)
+}
