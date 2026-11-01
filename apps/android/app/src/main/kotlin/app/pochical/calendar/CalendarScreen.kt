@@ -44,8 +44,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -92,6 +90,8 @@ import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.ReviewPrompt
 import app.pochical.RootPage
+import app.pochical.chat.GroupedMenu
+import app.pochical.chat.LineMenuItem
 import app.pochical.design.Metrics
 import app.pochical.design.PochicalTextStyles
 import app.pochical.design.Springs
@@ -683,24 +683,15 @@ private fun Heading(
             tint = colors.textPrimary,
           )
         }
-        DropdownMenu(expanded = saving, onDismissRequest = { saving = false }) {
-          DropdownMenuItem(
-            text = { Text(stringResource(R.string.picture)) },
-            leadingIcon = { Icon(painterResource(R.drawable.ic_image), null) },
-            onClick = {
-              saving = false
-              onPicture()
-            },
-          )
-          DropdownMenuItem(
-            text = { Text(stringResource(R.string.calendar_add)) },
-            leadingIcon = { Icon(painterResource(R.drawable.ic_calendar_add), null) },
-            onClick = {
-              saving = false
-              onDeviceCalendar()
-            },
-          )
-        }
+        GroupedMenu(
+          saving,
+          onDismiss = { saving = false },
+          items =
+            listOf(
+              LineMenuItem(stringResource(R.string.picture), R.drawable.ic_image, run = onPicture),
+              LineMenuItem(stringResource(R.string.calendar_add), R.drawable.ic_calendar_add, run = onDeviceCalendar),
+            ),
+        )
       }
     }
   }

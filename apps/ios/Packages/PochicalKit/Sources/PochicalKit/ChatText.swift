@@ -161,7 +161,9 @@ public func pickingMention(_ draft: String, name: String) -> String {
 /// flag, or a keycap (1️⃣, #️⃣), which starts with its plain digit or sign
 /// (spec/text-limits.md; spec/vectors/text.json, isEmoji).
 public func isEmoji(_ text: String) -> Bool {
-  guard text.count == 1, let first = text.unicodeScalars.first else { return false }
+  guard withinLimit(text, 1), text.count == 1, let first = text.unicodeScalars.first else {
+    return false
+  }
   // A keycap starts with its plain digit or sign, which alone is no emoji.
   let keycapBase = "#*0123456789".unicodeScalars.contains(first)
   if keycapBase {
@@ -171,6 +173,23 @@ public func isEmoji(_ text: String) -> Bool {
   // Extended_Pictographic, and the Emoji property covers the same first
   // characters once the keycaps' bases are set apart.
   return first.properties.isEmoji
+}
+
+/// The most UTF-16 code units one character may take on average
+/// (design/src/text.ts), so text counted within its limit is bounded in
+/// size too.
+private let unitsPerCharacterMost = 32
+
+/// Whether the text has at most `limit` characters as a reader sees them
+/// and is no larger than that many can be (spec/text-limits.md).
+public func withinLimit(_ text: String, _ limit: Int) -> Bool {
+  text.utf16.count <= limit * unitsPerCharacterMost && text.count <= limit
+}
+
+/// What the server takes for a field limited to `limit` characters: 1 to
+/// `limit`, not only spaces (spec/vectors/text.json, fitsText).
+public func fitsText(_ text: String, limit: Int) -> Bool {
+  !text.allSatisfy(\.isWhitespace) && withinLimit(text, limit)
 }
 
 /// A mark's letter after an edit: within `limit`, the text as it is; past

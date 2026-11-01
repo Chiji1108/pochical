@@ -46,7 +46,7 @@ Many people leave days off blank, moving on with 翌日へ. Rather than stop the
 
 ## A pattern's page
 
-パターンを編集 and パターンを追加 have no section titles. At the top is the pattern's mark alone, as it is being changed, with 印と色を変える under it in the accent, drawn as a group's アイコン and a face's 写真を編集 head their pages: the same header, the mark on the frame a group's mark stands on. The name and time are in the rows below, so the top does not say them again. The mark and its words open 印と色, one button to VoiceOver that names the mark. Below come 名前, 時間なし and the time; then 休みとして数える and 翌日のパターン; then, on a saved pattern's page, 入力に出す with its footer (Patterns no longer used); and このパターンを削除 last, alone.
+パターンを編集 and パターンを追加 have no section titles. At the top is the pattern's mark alone, as it is being changed, with 印と色を変える under it in the accent, drawn as a group's アイコン and a face's 写真を編集 head their pages: the same header, the mark on the frame a group's mark stands on. The name and time are in the rows below, so the top does not say them again. The mark and its words open 印と色, one button to VoiceOver that names the mark. Below come 名前, 時間なし and the time; then 休みとして数える and 翌日のパターン; then, on a saved pattern's page, 入力に出す with its footer (Patterns no longer used); and このパターンを削除 last, alone. 追加 and 保存 stay off until the pattern is one the server takes (`spec/vectors/patterns.json`, fits), and the apps check the same where the pattern is written, so a pattern saved never goes back on the next sync with the page's other changes.
 
 ## Picking a mark's icon
 

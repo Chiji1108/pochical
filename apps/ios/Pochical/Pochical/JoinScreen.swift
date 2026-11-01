@@ -323,11 +323,14 @@ extension JoinScreen {
   /// who has none yet; false when they could not be kept.
   fileprivate func keepAsUsual() async -> Bool {
     do {
-      var photoID = ""
-      if case .picked(let jpeg) = face {
-        photoID = try await groupCalls.sendPhoto(jpeg, to: .mine)
+      // The usual photo, if there is one, stays as the account has it.
+      var photoID: String?
+      switch face {
+      case .usual: photoID = nil
+      case .picked(let jpeg): photoID = try await groupCalls.sendPhoto(jpeg, to: .mine)
+      case .none: photoID = ""
       }
-      try await groupCalls.setProfile(UsualProfile(name: myName, photoID: photoID))
+      try await groupCalls.setProfile(name: myName, photoID: photoID)
       return true
     } catch {
       return false

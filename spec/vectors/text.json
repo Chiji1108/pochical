@@ -279,6 +279,11 @@
       "name": "an emoji and a letter",
       "text": "🍉a",
       "expected": false
+    },
+    {
+      "name": "an emoji stacked with more marks than any character takes is too large, though it counts as one",
+      "text": "🍉́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́",
+      "expected": false
     }
   ],
   "fitsText": [

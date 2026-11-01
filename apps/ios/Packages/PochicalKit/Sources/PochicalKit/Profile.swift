@@ -120,13 +120,15 @@ public struct ProfileNameRequest: FetchKeyRequest, Hashable {
 public struct MarkPhotoGone: Error {}
 
 extension GroupCalls {
-  /// Sets the usual name and photo, each empty for none; the device hears
-  /// of them from the user's socket. A photo goes up first
-  /// (`ChatPhotos.send` to `PhotoShelf.mine`).
-  public func setProfile(_ profile: UsualProfile) async throws {
+  /// Sets the usual name, the usual photo or both, each empty for none;
+  /// nil keeps the one the account has, so changing one never undoes
+  /// another device's change to the other (spec/sync-protocol.md,
+  /// Profile). The device hears of them from the user's socket. A photo
+  /// goes up first (`ChatPhotos.send` to `PhotoShelf.mine`).
+  public func setProfile(name: String?, photoID: String?) async throws {
     var request = Pochical_V1_SetProfileRequest()
-    request.name = profile.name
-    request.photoID = profile.photoID
+    if let name { request.name = name }
+    if let photoID { request.photoID = photoID }
     _ = try await users.setProfile(request: request, headers: headers()).result.get()
   }
 

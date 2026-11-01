@@ -2,7 +2,7 @@
 // spec/text-limits.md sets it for every platform. Counted as a reader sees
 // characters, so an emoji or a letter with its accent counts as one.
 import { textFields } from "@pochical/design/limits";
-import { characterCount } from "@pochical/design/text";
+import { characterCount, withinLimit } from "@pochical/design/text";
 
 const graphemes = new Intl.Segmenter("ja", { granularity: "grapheme" });
 
@@ -42,7 +42,7 @@ const EMOJI =
   /^\p{Extended_Pictographic}|^\p{Regional_Indicator}|^[#*0-9]\uFE0F?\u20E3/u;
 
 export function isEmoji(text: string) {
-  return characterCount(text) === 1 && EMOJI.test(text);
+  return withinLimit(text, 1) && characterCount(text) === 1 && EMOJI.test(text);
 }
 
 // A name's first character, as a mark's letter or a face without a photo
