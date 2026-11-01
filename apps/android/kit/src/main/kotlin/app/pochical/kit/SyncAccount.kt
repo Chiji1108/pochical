@@ -890,17 +890,20 @@ class SyncAccount internal constructor(
 
   /**
    * Signs in, one sign-in at a time: under way until the queue takes its end ([Command.SignInEnded]),
-   * which it hands over however it ends, cancelled too. One cancelled ends only once it is over, the
-   * user it made kept ([newSession]), so the next starts from what it kept.
+   * which it hands over cancelled too. One cancelled ends only once it is over, the user it made
+   * kept ([newSession]), so the next starts from what it kept.
    */
   private fun startSigningIn() {
     if (signingIn != null || state.value != AccountState.SigningIn) return
     signingIn = scope.launch {
-      var outcome: SignInOutcome? = null
-      try {
-        outcome = signIn()
-      } finally {
-        commands.trySend(Command.SignInEnded(outcome))      }
+      val outcome =
+        try {
+          signIn()
+        } catch (e: CancellationException) {
+          commands.trySend(Command.SignInEnded(null))
+          throw e
+        }
+      commands.send(Command.SignInEnded(outcome))
     }
   }
 
@@ -1086,7 +1089,10 @@ class SyncAccount internal constructor(
     /** The server's answer to the change begun in the stretch [generation], [settled] once the device is done with it. */
     class Settle(val generation: Long, val outcome: Outcome, val settled: CompletableDeferred<Unit>) : Command
 
-    /** The sign-in under way is over: what it came to, or null when it was cancelled. */
+    /**
+     * The sign-in under way is over: what it came to, or null when it was cancelled before it came
+     * to anything; one cancelled only after that hands over what it came to.
+     */
     data class SignInEnded(val outcome: SignInOutcome?) : Command
 
     /** A try at erasing failed; another follows. */
