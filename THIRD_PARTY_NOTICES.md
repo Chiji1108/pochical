@@ -58,6 +58,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+## Material Symbols
+
+The symbols of the Android app (`apps/android/app/src/main/res/drawable/ic_*.xml`) and of the prototype are [Material Symbols](https://github.com/google/material-design-icons) Rounded, under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
+
+## The apps' libraries
+
+The libraries the iOS and Android apps are built with keep their own licenses, which each app lists under 設定 › ライセンス (spec/calendar.md, ライセンス), from the packages its build resolves.
+
 ## Sample photos
 
 The sample faces in the iOS app (`apps/ios/Pochical/Pochical/Assets.xcassets/SampleFace*.imageset`) are photos from [Unsplash](https://unsplash.com), served by [Lorem Picsum](https://picsum.photos), under the [Unsplash License](https://unsplash.com/license).

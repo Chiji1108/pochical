@@ -77,3 +77,7 @@ Each platform writes a day, its weekday and its month through one set of helpers
 ## Text fields
 
 Free text (a day's memo, a name) is kept when the field is left, its screen closes or the app goes to the background, not on each change, so a memo typed is one edit in the outbox (spec/sync-protocol.md, Outbox) rather than one a letter.
+
+## ライセンス
+
+設定's ポチカルについて ends in ライセンス, after プライバシーポリシー: a row that goes on inside the app (›, not ↗), as the licenses of what the app is built with ask that their notices travel with every copy. Its page lists, by name, everything from other projects the app carries, each row opening that one's license, its text selectable: the packages the build resolves, read as each app builds so the list is never kept by hand (on iOS by LicenseList's build plugin from the Swift packages' checkouts, each package's own LICENSE; on Android by AboutLibraries' Gradle plugin from the variant's dependencies, its license's name under each, and its text from SPDX, or a ↗ row to read it on the web where the license is a terms of service with no text, as Google Play services' are), with what design/ writes into both apps from other projects (Phosphor Icons' marks and holiday_jp's holidays, `design/scripts/notices.ts`, their LICENSE as their package ships it) and, on Android, the Material Symbols its rows are led by. Fonts are the system's, so none is listed. /design draws the row and the page with design/'s notices alone, having no build of the apps' packages.
