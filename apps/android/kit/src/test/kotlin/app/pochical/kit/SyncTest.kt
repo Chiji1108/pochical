@@ -8,7 +8,11 @@ import app.pochical.v1.SignInProvider
 import java.time.LocalDate
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.random.Random
+import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -86,6 +90,30 @@ internal class FakeNetwork : NetworkWatch {
   override fun watch(lost: () -> Unit, changed: () -> Unit) {
     this.lost = lost
     this.changed = changed
+  }
+}
+
+/** Runs on Dispatchers.Default, holding the account's first sign-in ([SIGN_IN]) back until [release]. */
+private class HoldingSignIn : CoroutineDispatcher() {
+  /** The sign-in held. */
+  val job = CompletableDeferred<Job>()
+  private var held: Pair<CoroutineContext, Runnable>? = null
+  private var holding = true
+
+  override fun dispatch(context: CoroutineContext, block: Runnable) {
+    synchronized(this) {
+      if (holding && held == null && context[CoroutineName] == SIGN_IN) {
+        held = context to block
+        job.complete(context.job)
+        return
+      }
+    }
+    Dispatchers.Default.dispatch(context, block)
+  }
+
+  fun release() {
+    val (context, block) = synchronized(this) { holding = false; held } ?: return
+    Dispatchers.Default.dispatch(context, block)
   }
 }
 
@@ -315,6 +343,28 @@ class SyncTest {
 
     assertEquals(1, server.signIns.get())
     assertEquals(StoredSession(server.token, server.userId), phone.sessions.read())
+  }
+
+  @Test
+  fun aSignInCancelledBeforeItBeganLetsTheNextOneBegin() = runBlocking<Unit> {
+    val phone = device()
+    val held = HoldingSignIn()
+    val scope = CoroutineScope(SupervisorJob() + held)
+    try {
+      val account = SyncAccount(phone.database, phone.sessions, server.url, lazyOf(OkHttpClient()), scope, linePhotos = phone.linePhotos)
+      account.foreground()
+      val signingIn = withTimeout(10_000) { held.job.await() }
+      account.background()
+      eventually { signingIn.isCancelled }
+      // Let go of only once cancelled: the sign-in ends without having begun.
+      held.release()
+      assertEquals(0, server.signIns.get())
+
+      account.foreground()
+      withTimeout(10_000) { account.state.first { it is AccountState.SignedIn } }
+    } finally {
+      scope.coroutineContext.job.cancelAndJoin()
+    }
   }
 
   @Test

@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicLong
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.random.Random
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -890,20 +891,17 @@ class SyncAccount internal constructor(
 
   /**
    * Signs in, one sign-in at a time: under way until the queue takes its end ([Command.SignInEnded]),
-   * which it hands over cancelled too. One cancelled ends only once it is over, the user it made
-   * kept ([newSession]), so the next starts from what it kept.
+   * handed over once its job is over however it ended, cancelled too, even before it began. One
+   * cancelled is over only once the user it made is kept ([newSession]), so the next starts from it.
    */
   private fun startSigningIn() {
     if (signingIn != null || state.value != AccountState.SigningIn) return
-    signingIn = scope.launch {
-      val outcome =
-        try {
-          signIn()
-        } catch (e: CancellationException) {
-          commands.trySend(Command.SignInEnded(null))
-          throw e
-        }
-      commands.send(Command.SignInEnded(outcome))
+    var outcome: SignInOutcome? = null
+    val job = scope.launch(SIGN_IN) { outcome = signIn() }
+    signingIn = job
+    job.invokeOnCompletion { cause ->
+      // One that failed goes on to the scope's handler, never begun again at once.
+      if (cause == null || cause is CancellationException) commands.trySend(Command.SignInEnded(outcome))
     }
   }
 
@@ -1133,6 +1131,9 @@ class SyncAccount internal constructor(
     const val SIGN_IN_WAIT_MS = 15_000L
   }
 }
+
+/** The name the account's sign-in runs under, as a debugger or a test tells it. */
+internal val SIGN_IN = CoroutineName("PochicalSignIn")
 
 /** A hold on a group's socket, let go of once. */
 fun interface GroupHold {
