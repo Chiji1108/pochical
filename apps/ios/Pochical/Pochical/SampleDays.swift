@@ -5,9 +5,10 @@
   import SQLiteData
 
   /// A month to look at before entering is built: some of Pochical's
-  /// ready-made patterns, an order of them from last month, a memo on two
-  /// days and changed hours on two 日勤, put in when the app is launched
-  /// with `-sample` and has none, as Android's sample is.
+  /// ready-made patterns, an order of them from last month with the
+  /// device's holidays off, a memo on two days and changed hours on two
+  /// 日勤, put in when the app is launched with `-sample` and has none, as
+  /// Android's sample is.
   enum SampleDays {
     static func putIfAsked(in database: any DatabaseWriter) throws {
       guard CommandLine.arguments.contains("-sample") else {
@@ -64,7 +65,7 @@
         repeatOrder.sequence = ["day", "day", "night", "after", "off", "off"]
         repeatOrder.holidaysOff = true
         repeatOrder.holidayShift = "off"
-        repeatOrder.holidayCountry = "JP"
+        repeatOrder.holidayCountry = HolidayCountry.current
         var orders = Pochical_V1_RepeatOrders()
         orders.orders = [repeatOrder]
         orders.hlc = try OwnValues.nextClock(now: now, in: db)
@@ -77,10 +78,10 @@
         // becomes 日勤 rather than keeping that shift with the hours.
         let first = Day.today.firstOfMonth
         try OwnValues.set(
-          first.adding(days: 7), to: DayEntry(shift: "day", end: "20:00"), now: now, in: db)
+          first.adding(days: 7), to: DayEntry(shift: "day", end: "20:00", note: "棚卸し"),
+          now: now, in: db)
         try OwnValues.set(
           first.adding(days: 12), to: DayEntry(shift: "day", start: "08:00"), now: now, in: db)
-        try OwnValues.setNote(first.adding(days: 7), to: "棚卸し", now: now, in: db)
         try OwnValues.setNote(first.adding(days: 15), to: "歯医者", now: now, in: db)
       }
     }
