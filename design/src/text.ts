@@ -28,3 +28,22 @@ const withinSize = (text: string, limit: number): boolean =>
  */
 export const withinLimit = (text: string, limit: number): boolean =>
   withinSize(text, limit) && characterCount(text) <= limit;
+
+/**
+ * What the server takes for a field limited to `limit` characters: 1 to
+ * `limit`, not only spaces (spec/vectors/text.json, fitsText).
+ */
+export const fitsText = (text: string, limit: number): boolean =>
+  text.trim() !== "" && withinLimit(text, limit);
+
+// One emoji, as the picker and the system keyboards give: a single
+// character that starts as a pictograph or a flag, or a keycap (1️⃣, #️⃣),
+// which starts with the plain digit or sign under its combining keycap.
+const EMOJI = /^\p{Extended_Pictographic}|^\p{Regional_Indicator}|^[#*0-9]️?⃣/u;
+
+/**
+ * Whether the text is exactly one character that is an emoji
+ * (spec/vectors/text.json, isEmoji).
+ */
+export const isEmoji = (text: string): boolean =>
+  withinLimit(text, 1) && characterCount(text) === 1 && EMOJI.test(text);

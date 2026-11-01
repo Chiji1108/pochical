@@ -1,10 +1,10 @@
 import { markColors } from "@pochical/design/colors";
 import { syncLimits, textLimits } from "@pochical/design/limits";
+import { fitsText, isEmoji } from "@pochical/design/text";
+import { isId, isIdList } from "@pochical/design/values";
 
 import { isTime } from "./day-values";
 import type { Pattern } from "./gen/pochical/v1/sync_pb";
-import { isId, isIdList } from "./ids";
-import { fitsText, isEmoji } from "./text-limits";
 
 // What a pattern and the patterns' order may hold (spec/shift-patterns.md),
 // checked as the owner's edits arrive.

@@ -3,6 +3,7 @@ import {
   PATTERNS_PER_PAGE,
   textLimits,
 } from "@pochical/design/limits";
+import { fitsCoworkerName, fitsDayPeople } from "@pochical/design/values";
 import { css, cva, cx } from "@pochical/styled-system/css";
 import { Check, ChevronRight, CircleX, Plus } from "lucide-react";
 import { useContext, useEffect, useEffectEvent, useState } from "react";
@@ -126,7 +127,7 @@ function MemberChips({
   function add(name: string) {
     const trimmed = limitText(name.trim(), textLimits.personName);
     setAdding(false);
-    if (!trimmed) {
+    if (!fitsCoworkerName(trimmed)) {
       return;
     }
     // Someone of that name already listed is picked rather than added.
@@ -139,7 +140,8 @@ function MemberChips({
       }
       id = members.onAdd(trimmed);
     }
-    if (!selected.includes(id)) {
+    // On the day too, while it takes one more.
+    if (!selected.includes(id) && fitsDayPeople([...selected, id])) {
       onChange([...selected, id]);
     }
   }
@@ -148,6 +150,10 @@ function MemberChips({
       {members.list.map(({ id, name }) => (
         <Chip
           selected={selected.includes(id)}
+          // A day with all the people it takes takes no one more.
+          disabled={
+            !(selected.includes(id) || fitsDayPeople([...selected, id]))
+          }
           key={id}
           onClick={() => {
             onChange(
