@@ -161,7 +161,9 @@ public func pickingMention(_ draft: String, name: String) -> String {
 /// flag, or a keycap (1️⃣, #️⃣), which starts with its plain digit or sign
 /// (spec/text-limits.md; spec/vectors/text.json, isEmoji).
 public func isEmoji(_ text: String) -> Bool {
-  guard text.count == 1, let first = text.unicodeScalars.first else { return false }
+  guard withinLimit(text, 1), text.count == 1, let first = text.unicodeScalars.first else {
+    return false
+  }
   // A keycap starts with its plain digit or sign, which alone is no emoji.
   let keycapBase = "#*0123456789".unicodeScalars.contains(first)
   if keycapBase {

@@ -498,6 +498,13 @@ func fits(_ vector: PatternsVectors.Fits) {
   #expect(fitsPattern(vector.pattern.wire, id: vector.pattern.id) == vector.expected)
 }
 
+@Test func everyReadyMadePatternFits() {
+  let ids = Set(ReadyPatterns.all.map(\.id))
+  for ready in ReadyPatterns.all {
+    #expect(Pattern(ready, keeping: ids).fits, "\(ready.id)")
+  }
+}
+
 @Test(arguments: try vectors("patterns", as: PatternsVectors.self).deleted)
 func deleted(_ vector: PatternsVectors.Deleted) {
   let left = patterns(vector.patterns.map(\.pattern), without: vector.id)

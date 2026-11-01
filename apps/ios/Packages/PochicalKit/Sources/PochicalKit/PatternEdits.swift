@@ -49,7 +49,7 @@ func isID(_ text: String) -> Bool {
 
 /// Whether the text is a time of day as "HH:MM", 00:00 to 23:59.
 private func isClockTime(_ text: String) -> Bool {
-  text.wholeMatch(of: /(?:[01]\d|2[0-3]):[0-5]\d/) != nil
+  text.wholeMatch(of: /(?:[01][0-9]|2[0-3]):[0-5][0-9]/) != nil
 }
 
 extension Pattern {
