@@ -30,41 +30,45 @@ struct ChatRequest: FetchKeyRequest, Hashable {
   }
 }
 
-/// The chat a screen shows, read for it alone for as long as the screen
-/// is there. SwiftUI makes a screen's state anew each time its parent
-/// draws and keeps only the first, so this reads nothing as it is made:
-/// the chat is read as the screen first draws, in that frame, and again
-/// as the database or the request changes. A read made with the screen
-/// (`@Fetch` given its request) was made again at each of those, and the
-/// request it began with kept being read beside the one laid out.
+/// A chat as a view shows it (the chat screen's lines, a list's row),
+/// read for it alone for as long as the view is there. SwiftUI makes a
+/// view's state anew each time its parent draws and keeps only the first,
+/// so this reads nothing as it is made: the chat is read as the view first
+/// draws, in that frame, and again as the database or the request
+/// changes. A read made with the view (`@Fetch` given its request) was
+/// made again at each of those, on the main thread, and the request it
+/// began with kept being read beside the one shown.
 @MainActor
-final class ChatFeed {
-  private var request: ChatRequest
-  private var fetch: Fetch<ChatRequest.Value>?
+final class ChatFeed<Request: FetchKeyRequest> where Request.Value: Sendable {
+  private var request: Request
+  /// What shows before the first read.
+  private let empty: Request.Value
+  private var fetch: Fetch<Request.Value>?
   /// The `follow()` going on, the last begun; none once it has ended. The
-  /// chat is read as the screen first draws, before one begins.
+  /// chat is read as the view first draws, before one begins.
   private var follower: UUID? = UUID()
 
-  init(_ request: ChatRequest) {
+  init(_ request: Request, empty: Request.Value) {
     self.request = request
+    self.empty = empty
   }
 
-  var value: ChatRequest.Value {
+  var value: Request.Value {
     if let fetch { return fetch.wrappedValue }
-    let made = Fetch(wrappedValue: ChatRequest.Value(), request)
+    let made = Fetch(wrappedValue: empty, request)
     fetch = made
     return made.wrappedValue
   }
 
   /// Reads the chat again as `request` asks, and from then on; once the
-  /// screen is gone, only keeps it for `follow()`.
-  func load(_ request: ChatRequest) async {
+  /// view is gone, only keeps it for `follow()`.
+  func load(_ request: Request) async {
     self.request = request
     guard follower != nil else { return }
     _ = try? await fetch?.load(request)
   }
 
-  /// Reads the chat for as long as the calling task runs, the screen's
+  /// Reads the chat for as long as the calling task runs, the view's
   /// while it is shown, and stops with it: SwiftUI keeps a closed screen's
   /// state a while longer (its toolbar until the next push, its last
   /// text field's environment until another is typed in), and the read
