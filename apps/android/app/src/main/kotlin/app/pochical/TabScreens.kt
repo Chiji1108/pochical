@@ -67,19 +67,19 @@ fun SettingsScreen(open: (RootPage) -> Unit) {
       }
       // The chat with the people who make Pochical, apart from the rows of settings.
       item { SupportRow(open) }
-      item { About(snackbar) }
+      item { About(open, snackbar) }
     }
   }
 }
 
 /**
  * Pochical itself, at the foot (/design's AboutSection), its version under it: rows that leave the
- * app end in ↗, opening the site's pages in Custom Tabs. The store's own review prompt comes by
+ * app end in ↗, opening the site's pages in Custom Tabs, and ライセンス, the app's own page, last. The store's own review prompt comes by
  * itself only now and then (spec/review.md); the review row is there whenever someone wants to
  * write one.
  */
 @Composable
-private fun About(snackbar: SnackbarHostState) {
+private fun About(open: (RootPage) -> Unit, snackbar: SnackbarHostState) {
   val context = LocalContext.current
   val scope = rememberCoroutineScope()
   val afterRelease = stringResource(R.string.settings_review_after_release)
@@ -111,6 +111,7 @@ private fun About(snackbar: SnackbarHostState) {
     row {
       SettingsRow(stringResource(R.string.settings_privacy), R.drawable.ic_privacy_tip, onClick = { openLink(context, Site.page("privacy")) }, end = RowEnd.Outside, onClickLabel = opensBrowser)
     }
+    row { SettingsRow(stringResource(R.string.settings_licenses), R.drawable.ic_license, onClick = { open(RootPage.Licenses) }) }
   }
   Text(
     stringResource(R.string.settings_version, appVersion(context)),

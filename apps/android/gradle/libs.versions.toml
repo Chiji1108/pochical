@@ -67,6 +67,8 @@ google-services = "4.5.0"
 benchmark = "1.5.0"
 uiautomator = "2.4.0"
 profileinstaller = "1.4.1"
+# AboutLibraries, the libraries the build resolves and their licenses for ライセンス (Apache 2.0).
+aboutlibraries = "15.3.0"
 
 [libraries]
 protobuf-javalite = { module = "com.google.protobuf:protobuf-javalite", version.ref = "protobuf" }
@@ -127,6 +129,7 @@ firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
 benchmark-macro-junit4 = { module = "androidx.benchmark:benchmark-macro-junit4", version.ref = "benchmark" }
 uiautomator = { module = "androidx.test.uiautomator:uiautomator", version.ref = "uiautomator" }
 profileinstaller = { module = "androidx.profileinstaller:profileinstaller", version.ref = "profileinstaller" }
+aboutlibraries-core = { module = "com.mikepenz:aboutlibraries-core", version.ref = "aboutlibraries" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -140,3 +143,4 @@ metro = { id = "dev.zacsweers.metro", version.ref = "metro" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 room = { id = "androidx.room3", version.ref = "room" }
 google-services = { id = "com.google.gms.google-services", version.ref = "google-services" }
+aboutlibraries = { id = "com.mikepenz.aboutlibraries.plugin.android", version.ref = "aboutlibraries" }

@@ -13,6 +13,7 @@ export const ignorePatterns = [
   "apps/server/src/db/auth-schema.ts",
   "apps/web/src/gen",
   "packages/prototype/src/lib/holiday-names.ts",
+  "packages/prototype/src/lib/notices.ts",
   "spec/design-tokens.json",
   "**/routeTree.gen.ts",
   "**/worker-configuration.d.ts",
