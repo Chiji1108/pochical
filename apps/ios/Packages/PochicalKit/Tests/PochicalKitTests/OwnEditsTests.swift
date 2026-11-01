@@ -13,6 +13,10 @@ func calendarWithAnOrder() throws -> any DatabaseWriter {
     for (id, nextDay, off) in [("day", nil, false), ("night", "after", false), ("after", nil, false), ("off", nil, true)] {
       var pattern = Pochical_V1_Pattern()
       pattern.name = id
+      // A mark in each look, so an edit of it is one the server takes.
+      pattern.emoji = "⭐️"
+      pattern.symbol = String(id.prefix(1))
+      pattern.icon = "star"
       pattern.countsAsOff = off
       if let nextDay {
         pattern.nextDay = nextDay
@@ -216,6 +220,16 @@ private func savingAPattern(_ vector: SavedVectors.Saved) throws {
 
     try OwnValues.deletePattern("off", now: 2, in: db)
     #expect(try !OwnValues.patterns(in: db).map(\.id).contains("off"))
+  }
+}
+
+@Test func aPatternTheServerWouldRefuseIsNotWritten() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    let nameless = Pattern(id: "day", name: " ", emoji: "☀️", symbol: "日", icon: "sun", color: 1)
+    #expect(throws: PatternRefusal.unfit) { try OwnValues.save(nameless, now: 1, in: db) }
+    let kept = try OwnValues.patterns(in: db)
+    #expect(kept.isEmpty)
   }
 }
 

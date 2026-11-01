@@ -901,6 +901,22 @@ func oneEmoji(_ vector: EmojiVectors.Case) {
   #expect(isEmoji(vector.text) == vector.expected)
 }
 
+struct FitsTextVectors: Decodable, Sendable {
+  struct Case: VectorCase {
+    let name: String
+    let text: String
+    let limit: Int
+    let expected: Bool
+  }
+
+  let fitsText: [Case]
+}
+
+@Test(arguments: try vectors("text", as: FitsTextVectors.self).fitsText)
+func fitsTheServersLimit(_ vector: FitsTextVectors.Case) {
+  #expect(fitsText(vector.text, limit: vector.limit) == vector.expected)
+}
+
 struct MarkLetterVectors: Decodable, Sendable {
   struct Case: VectorCase {
     let name: String
