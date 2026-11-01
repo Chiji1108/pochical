@@ -184,7 +184,7 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
         val groupId = calls.join(code, myName)
         // Once in the group: someone with no usual name yet keeps these as theirs everywhere, which
         // the group then shows as it shows anyone's usual ones; anyone else's face is the group's.
-        val faced = if (usualName.isEmpty()) keepAsUsual(calls, myName, face) else setFace(calls, face, groupId)
+        val faced = if (usualName.isEmpty()) keepAsUsual(calls, face) else setFace(calls, face, groupId)
         (face as? JoinFace.Held)?.let { calls.releasePhoto(it.photoId) }
         if (!faced) {
           ReviewPrompt.troubled = true
@@ -468,19 +468,20 @@ private fun JoinProfileDialog(
 }
 
 /**
- * The name and face as the usual ones (設定 › プロフィール), for someone who has none yet: whether
- * they were kept.
+ * The face as the usual one (設定 › プロフィール), for someone who had no usual name, whose name the
+ * join itself made their usual one; the usual photo, if there is one, stays as it is. Whether it was
+ * kept.
  */
-private suspend fun keepAsUsual(calls: app.pochical.kit.GroupCalls, name: String, face: JoinFace): Boolean =
+private suspend fun keepAsUsual(calls: app.pochical.kit.GroupCalls, face: JoinFace): Boolean =
   try {
-    // The usual photo, if there is one, stays as the account has it.
-    val photoId =
-      when (face) {
-        JoinFace.Usual -> null
-        is JoinFace.Held -> face.photoId.also { calls.sendHeldPhoto(it, PhotoShelf.Mine) }
-        JoinFace.None -> ""
+    when (face) {
+      JoinFace.Usual -> Unit
+      is JoinFace.Held -> {
+        calls.sendHeldPhoto(face.photoId, PhotoShelf.Mine)
+        calls.setProfile(name = null, photoId = face.photoId)
       }
-    calls.setProfile(name, photoId)
+      JoinFace.None -> calls.setProfile(name = null, photoId = "")
+    }
     true
   } catch (e: CancellationException) {
     throw e
