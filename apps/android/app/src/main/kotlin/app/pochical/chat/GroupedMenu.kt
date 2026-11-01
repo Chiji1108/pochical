@@ -13,13 +13,19 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import app.pochical.LocalThemeColors
+import app.pochical.R
 
-// The chat's menus in Material 3 Expressive's grouped menus: the small ones from where they were
-// opened (⋯ beside the title, the composer's ＋, a pin's long press, a line not sent's !, a profile's
-// ⋯) and a line's own over the dimmed chat (LineMenu), one piece, so they read alike.
+// The app's menus in Material 3 Expressive's grouped menus: the chat's small ones from where they
+// were opened (⋯ beside the title, the composer's ＋, a pin's long press, a line not sent's !, a
+// profile's ⋯) and a line's own over the dimmed chat (LineMenu), and the others the app opens from a
+// button (the calendar's save corner, a group's table, a photo's 写真を編集, the QR code's long press,
+// a reminder's minutes), one piece, so they read alike.
 
 /**
  * A menu from where it was opened: [items] in their groups (MenuGroups), [title] heading the first.
@@ -38,7 +44,8 @@ fun GroupedMenu(expanded: Boolean, onDismiss: () -> Unit, items: List<LineMenuIt
 /**
  * [items] as Material 3 Expressive groups them, a group starting at each item that [LineMenuItem.startsGroup]:
  * each group a rounded card a small gap from the next, its first and last item rounder, each item's
- * symbol before its words, a destructive one in the danger color. [item] adds to each item's
+ * symbol before its words, a destructive one in the danger color, and of a choice the one in use
+ * checked. [item] adds to each item's
  * modifier, by its place in [items] and its shape.
  */
 @Composable
@@ -56,13 +63,22 @@ fun ColumnScope.MenuGroups(
       if (at == 0 && title != null) MenuDefaults.DropdownMenuGroupLabel { Text(title) }
       group.forEachIndexed { place, (index, entry) ->
         val tint = if (entry.destructive) colors.dangerDefault else MaterialTheme.colorScheme.onSurface
-        val shape = MenuDefaults.itemShape(place, group.size).shape
+        val shapes = MenuDefaults.itemShape(place, group.size)
+        // Of a choice, the one in use checked where an item's symbol goes, the others' words in line with it.
+        val choice = entry.selected
+        val icon = if (choice == true) R.drawable.ic_check else entry.icon
         DropdownMenuItem(
           onClick = { onPick(entry) },
           text = { Text(entry.label, color = tint) },
-          shape = shape,
-          leadingIcon = { Icon(painterResource(entry.icon), contentDescription = null, tint = tint) },
-          modifier = item(index, shape),
+          shape = shapes.shape,
+          leadingIcon =
+            when {
+              icon != null -> ({ Icon(painterResource(icon), contentDescription = null, tint = tint) })
+              // The check unseen, so the words stay where the checked one's are.
+              choice != null -> ({ Icon(painterResource(R.drawable.ic_check), contentDescription = null, tint = Color.Transparent) })
+              else -> null
+            },
+          modifier = item(index, shapes.shape).then(if (choice != null) Modifier.semantics { selected = choice } else Modifier),
         )
       }
     }

@@ -391,7 +391,8 @@ private fun ProfileForm(groupName: String, me: GroupMemberRow, modifier: Modifie
       },
       modifier = Modifier.padding(top = 16.dp),
       onUsual = if (me.ownPhoto) ({ change { calls.setGroupPhoto(groupId, usual = true) } }) else null,
-      onRemove = { change { calls.setGroupPhoto(groupId, usual = false) } },
+      // 写真を削除 only while a photo shows, as on iOS.
+      onRemove = if (me.photoId.isNotEmpty()) ({ change { calls.setGroupPhoto(groupId, usual = false) } }) else null,
     ) {
       MemberAvatar(me.displayName, me.photoId, PhotoShelf.Group(groupId), 88.dp, me = true)
     }

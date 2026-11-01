@@ -81,12 +81,17 @@ import kotlin.math.roundToInt
 // menu under it, or over it when there is no room under it, and only when neither fits all moved
 // together to stay on the screen. Material's menu surface and items draw the menu.
 
-/** One of a line's menu items: [destructive] in the danger color, [startsGroup] apart from those before it. */
+/**
+ * One item of a menu, a line's or any of the app's (GroupedMenu): [icon] before its words when it
+ * has one, [destructive] in the danger color, [startsGroup] apart from those before it. [selected],
+ * when not null, makes it one of a choice, the one in use [selected] and checked.
+ */
 class LineMenuItem(
   val label: String,
-  @param:DrawableRes val icon: Int,
+  @param:DrawableRes val icon: Int?,
   val destructive: Boolean = false,
   val startsGroup: Boolean = false,
+  val selected: Boolean? = null,
   val run: () -> Unit,
 )
 
