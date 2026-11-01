@@ -200,10 +200,11 @@ export function HeaderAction({
 }
 
 // A page's top, as the platforms' navigation bars have it: the way back
-// (or キャンセル) on the left, an action on the right, and the large title
-// under them. `back` and `onBack` are the usual way back; `leading` takes
-// anything else there. `children` go between the bar and the title, like
-// a step count.
+// (or キャンセル) on the left, an action on the right, and the title: large
+// under them on a tab's own page, in the bar's middle on iOS once there
+// is a way back (Android's flexible app bar below). `back` and `onBack`
+// are the usual way back; `leading` takes anything else there. `children`
+// go between the bar and the title, like a step count.
 const pageHeader = {
   bar: css({
     alignItems: "center",
@@ -362,13 +363,17 @@ export function PageHeader({
       </>
     );
   }
+  // iOS titles large only a tab's own page, like 設定; a page with a way
+  // back names itself in the bar, as the pages under iOS's Settings do.
+  const inBar = inlineTitle ?? (start ? title : undefined);
+  const large = start ? undefined : title;
   return (
     <header className={pageHeader.root}>
-      {trailing || inlineTitle ? (
+      {trailing || inBar ? (
         <div className={pageHeader.bar}>
           <div>{start}</div>
-          {inlineTitle ? (
-            <h3 className={pageHeader.inlineTitle}>{inlineTitle}</h3>
+          {inBar ? (
+            <h3 className={pageHeader.inlineTitle}>{inBar}</h3>
           ) : (
             <span />
           )}
@@ -378,7 +383,7 @@ export function PageHeader({
         start
       )}
       {children}
-      {title && <h3 className={pageHeader.title({ size: "ios" })}>{title}</h3>}
+      {large && <h3 className={pageHeader.title({ size: "ios" })}>{large}</h3>}
     </header>
   );
 }

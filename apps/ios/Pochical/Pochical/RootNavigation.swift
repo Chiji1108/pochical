@@ -206,6 +206,11 @@ final class RootController: UIViewController, UINavigationControllerDelegate {
     self.nothingOpen = nothingOpen
     main = UINavigationController(rootViewController: self.tabs)
     super.init(nibName: nil, bundle: nil)
+    // A tab's root may be titled large, as iOS's Settings is, the title
+    // going into the bar as its list scrolls up under it (arrange); the
+    // pages over it are titled in the bar (PageHost), and those beside it
+    // too, as Settings' are on an iPad.
+    main.navigationBar.prefersLargeTitles = true
     navigator.controller = self
     arrange(animated: false)
   }
@@ -311,6 +316,18 @@ final class RootController: UIViewController, UINavigationControllerDelegate {
       navigation.setViewControllers(controllers, animated: push)
     }
     main.setNavigationBarHidden(navigator.tab == .calendar && over.count == 1, animated: false)
+    // 設定 titled large, as iOS's Settings is; グループ heads itself in the
+    // bar's band, and the calendar has none. The bar takes a tab's at once,
+    // as it would a page's pushed: else it keeps the last tab's height until
+    // it lays itself out again, and the list handed to it as the tab
+    // appears (TabScrollViewForBar), at its top under the small bar, would
+    // hold its title small until pulled down.
+    let titleMode: UINavigationItem.LargeTitleDisplayMode =
+      navigator.tab == .settings ? .always : .never
+    if tabs.navigationItem.largeTitleDisplayMode != titleMode {
+      tabs.navigationItem.largeTitleDisplayMode = titleMode
+      main.navigationBar.sizeToFit()
+    }
     viewIfLoaded?.setNeedsLayout()
   }
 
@@ -331,6 +348,9 @@ private final class PageHost: UIHostingController<AnyView> {
   init(page: RootPage, view: AnyView) {
     self.page = page
     super.init(rootView: view)
+    // Titled in the bar, as the pages under iOS's Settings are, whatever
+    // the tab's root under it is titled.
+    navigationItem.largeTitleDisplayMode = .never
   }
 
   @available(*, unavailable) required init?(coder: NSCoder) { fatalError() }
