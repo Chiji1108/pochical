@@ -27,21 +27,7 @@ final class PhotoLineTouchTests: XCTestCase {
   func test1HoldingOthersPhotoOpensItsMenu() throws {
     let code = try String(contentsOf: shared.appending(path: "invite"), encoding: .utf8)
       .trimmingCharacters(in: .whitespacesAndNewlines)
-    app.open(URL(string: "pochical://invite/\(code)")!)
-    let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
-    let open = springboard.buttons.matching(NSPredicate(format: "label IN {'開く', 'Open'}"))
-      .firstMatch
-    if open.waitForExistence(timeout: 5) { open.tap() }
-    let profile = app.buttons.matching(NSPredicate(format: "label BEGINSWITH '名前を入れてください'"))
-      .firstMatch
-    XCTAssertTrue(profile.waitForExistence(timeout: 15), "the join screen opens")
-    profile.tap()
-    let name = app.textFields.firstMatch
-    XCTAssertTrue(name.waitForExistence(timeout: 5), "the name can be typed")
-    name.tap()
-    name.typeText("テスト")
-    app.navigationBars.buttons.firstMatch.tap()
-    app.buttons["参加する"].tap()
+    app.joins(code: code, named: "テスト")
     openChat()
 
     newestPhoto().press(forDuration: 1)

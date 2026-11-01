@@ -351,7 +351,16 @@ socket.addEventListener("message", (event) => {
     fail(`server: ${JSON.stringify(frame.kind.value)}`);
   }
 });
-socket.addEventListener("error", () => fail("socket: could not connect"));
+const lost = (): void => {
+  fail("socket: could not connect, or the connection was lost");
+};
+socket.addEventListener("error", lost);
+// Closed once the group has answered: what the socket says as it closes
+// is no longer a failure.
+const close = (): void => {
+  socket.removeEventListener("error", lost);
+  socket.close();
+};
 await welcomed.promise;
 
 if (reaction !== undefined) {
@@ -396,7 +405,7 @@ if (reaction !== undefined) {
     )
   );
   await inTime(acked.promise);
-  socket.close();
+  close();
   // The group answers every edit, taken or not: the line it sent again
   // says whether the reaction is on it.
   if (!(reactionsOf.get(seq)?.get(reaction)?.includes(userId) ?? false)) {
@@ -447,7 +456,7 @@ await inTime(
     })
   )
 );
-socket.close();
+close();
 const refused = [...sent]
   .filter(([opId]) => !taken.has(opId))
   .map(([, { what }]) => `  ${what}`);

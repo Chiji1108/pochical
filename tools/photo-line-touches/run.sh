@@ -40,11 +40,6 @@ run_test() {
     -only-testing:"PochicalUITests/PhotoLineTouchTests/$1"
 }
 
-photo() {
-  magick -size 900x1200 xc:"$1" -font /System/Library/Fonts/Supplemental/Arial.ttf -gravity center -pointsize 400 -fill white \
-    -annotate 0 "$2" "$3"
-}
-
 prepare
 photo "#3a7bd5" 1 "$shared/1.jpg"
 xcrun simctl addmedia "$device" "$shared/1.jpg"
