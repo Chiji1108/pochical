@@ -300,12 +300,13 @@ struct JoinScreen: View {
     joining = true
     Task {
       defer { joining = false }
-      // Someone with no usual name yet keeps these as theirs everywhere,
-      // which the group then shows as it shows anyone's usual ones; kept
-      // or not, they still join with them.
-      let keptAsUsual = usualName.isEmpty ? await keepAsUsual() : false
       do throws(InviteError) {
         let groupID = try await groupCalls.join(code: invite.code, displayName: myName)
+        // Once in the group, so a join that fails changes nothing: someone
+        // with no usual name yet keeps these as theirs everywhere, which
+        // the group then shows as it shows anyone's usual ones; anyone
+        // else's face, or one not kept as usual, is the group's own.
+        let keptAsUsual = usualName.isEmpty ? await keepAsUsual() : false
         if !keptAsUsual {
           await setFace(in: groupID)
         }
