@@ -36,6 +36,7 @@ import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -646,6 +647,13 @@ class SyncAccount internal constructor(
       is Command.EraseFailed -> {
         (state.value as? AccountState.Erasing)?.let { mutableState.value = it.copy(failed = true) }
       }
+      is Command.SignInEnded -> {
+        // One cancelled and replaced since is stale. The one under way is over once its outcome is
+        // here, so a sign-in after it (once erased, or after もう一度つなぐ) never waits on it.
+        if (command.from !== signingIn) return
+        signingIn = null
+        handle(command.outcome)
+      }
       is Command.Erasing -> if (state.value == AccountState.SigningIn) beginErasing(command.userId, command.why)
       Command.KeptEnded -> if (state.value == AccountState.SigningIn) mutableState.value = AccountState.SessionEnded
       is Command.Erased -> {
@@ -893,14 +901,10 @@ class SyncAccount internal constructor(
     val before = signingIn
     if (before?.isActive != true && state.value == AccountState.SigningIn) {
       // One cancelled may still be keeping the user it made: this one starts from what it kept.
-      val signing = scope.async {
+      signingIn = scope.launch {
         before?.join()
-        signIn()
+        signIn()?.let { commands.send(Command.SignInEnded(coroutineContext.job, it)) }
       }
-      signingIn = signing
-      // Handed to the queue once the sign-in is over, so what the queue does with it (signing in
-      // again after erasing, or after もう一度つなぐ) never finds this one still under way.
-      scope.launch { signing.await()?.let { commands.send(it) } }
     }
   }
 
@@ -1059,6 +1063,12 @@ class SyncAccount internal constructor(
 
     /** The session kept was ended, the server not knowing it: it stays so until the person chooses. */
     data object KeptEnded : Command
+
+    /**
+     * What came of the sign-in [from]: [SignedIn], [Erasing] or [KeptEnded]. Taken only from the
+     * sign-in under way, which is over from then on, whether or not its job has completed yet.
+     */
+    class SignInEnded(val from: Job, val outcome: Command) : Command
 
     /** A try at erasing failed; another follows. */
     data object EraseFailed : Command
