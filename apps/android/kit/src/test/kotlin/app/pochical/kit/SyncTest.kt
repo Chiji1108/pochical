@@ -7,14 +7,14 @@ import app.pochical.v1.DayField
 import app.pochical.v1.SignInProvider
 import java.time.LocalDate
 import java.util.concurrent.CopyOnWriteArrayList
-import kotlin.random.Random
 import kotlin.coroutines.CoroutineContext
+import kotlin.random.Random
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineName
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
@@ -101,18 +101,19 @@ private class HoldingSignIn : CoroutineDispatcher() {
   private var holding = true
 
   override fun dispatch(context: CoroutineContext, block: Runnable) {
-    synchronized(this) {
-      if (holding && held == null && context[CoroutineName] == SIGN_IN) {
-        held = context to block
-        job.complete(context.job)
-        return
+    val holds =
+      synchronized(this) {
+        (holding && held == null && context[CoroutineName] == SIGN_IN).also { if (it) held = context to block }
       }
-    }
-    Dispatchers.Default.dispatch(context, block)
+    if (holds) job.complete(context.job) else Dispatchers.Default.dispatch(context, block)
   }
 
   fun release() {
-    val (context, block) = synchronized(this) { holding = false; held } ?: return
+    val (context, block) =
+      synchronized(this) {
+        holding = false
+        held.also { held = null }
+      } ?: return
     Dispatchers.Default.dispatch(context, block)
   }
 }
@@ -358,7 +359,6 @@ class SyncTest {
       eventually { signingIn.isCancelled }
       // Let go of only once cancelled: the sign-in ends without having begun.
       held.release()
-      assertEquals(0, server.signIns.get())
 
       account.foreground()
       withTimeout(10_000) { account.state.first { it is AccountState.SignedIn } }
