@@ -11,6 +11,9 @@ plugins {
   // The Baseline Profile and startup profile :baselineprofile generates, checked in under
   // src/release/generated (AGENTS.md, Android).
   alias(libs.plugins.baselineprofile)
+  // ライセンス's list: each variant's resolved libraries and their licenses, which the build writes
+  // into its res/raw/aboutlibraries.json, so it never drifts from what the app ships.
+  alias(libs.plugins.aboutlibraries)
 }
 
 // The version people see is the iOS app's: one MARKETING_VERSION for the
@@ -122,6 +125,7 @@ dependencies {
   implementation(platform(libs.firebase.bom))
   implementation(libs.firebase.messaging)
   implementation(libs.profileinstaller)
+  implementation(libs.aboutlibraries.core)
   baselineProfile(project(":baselineprofile"))
 
   testImplementation(libs.junit)
@@ -134,6 +138,13 @@ dependencies {
 
   androidTestImplementation(libs.androidx.test.runner)
   androidTestImplementation(libs.androidx.test.junit)
+}
+
+aboutLibraries {
+  collect {
+    // What the app carries that no dependency brings: Material Symbols' drawables.
+    configPath = file("aboutlibraries")
+  }
 }
 
 baselineProfile {

@@ -109,10 +109,15 @@ struct PhotoEditor<Picture: View>: View {
               .frame(width: 26, height: 26)
               .background(colors.backgroundCard, in: .circle)
               .shadow(Shadow.sm)
-              .alignmentGuide(.trailing) { $0[.trailing] - 2 }
-              .alignmentGuide(.bottom) { $0[.bottom] - 2 }
+              .alignmentGuide(.trailing) { $0[.trailing] - cameraOverhang }
+              .alignmentGuide(.bottom) { $0[.bottom] - cameraOverhang }
               .accessibilityHidden(true)
           }
+          // Room in the label's own frame for the camera, its shadow and
+          // the picture's round: the menu morphs out of that frame and
+          // back into it in a rounded shape, clipping whatever reaches its
+          // edge. The words under the picture make the room below it.
+          .padding([.horizontal, .top], cameraReach)
       }
     }
     .disabled(busy)
@@ -173,6 +178,12 @@ struct PhotoEditor<Picture: View>: View {
     }
   }
 }
+
+/// How far past the picture's corner `PhotoEditor`'s camera sits.
+nonisolated private let cameraOverhang: CGFloat = 2
+/// How far past the picture `PhotoEditor`'s camera reaches, its shadow
+/// with it.
+private let cameraReach = cameraOverhang + Shadow.sm.blur / 2 + Shadow.sm.y
 
 /// A photo taken or picked, cut (`PhotoCrop`) once a picked one is read,
 /// a spinner on the cut's own dark meanwhile, with キャンセル where the cut

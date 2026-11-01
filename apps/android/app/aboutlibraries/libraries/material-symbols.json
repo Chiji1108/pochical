@@ -1,0 +1,8 @@
+{
+  "uniqueId": "com.google:material-symbols",
+  "name": "Material Symbols",
+  "description": "The symbols of the app's rows and buttons (res/drawable), from Material Symbols Rounded.",
+  "website": "https://github.com/google/material-design-icons",
+  "developers": [],
+  "licenses": ["Apache-2.0"]
+}

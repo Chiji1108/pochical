@@ -167,11 +167,7 @@ struct GroupPersonView: View {
   /// The month's みんな休み, which lists its days.
   private func together(in month: Day) -> some View {
     let days = month.daysOfMonth
-    let offs = members.map { $0.offDays(from: days[0], through: days[days.count - 1]) }
-    let together =
-      members.count > 1
-      ? Together.days(offs, from: days[0], through: days[days.count - 1])
-      : (days: [], unsure: false)
+    let together = Together.days(of: members, from: days[0], through: days[days.count - 1])
     let title = "\(month == Day.today.firstOfMonth ? "今月" : month.monthText)のみんな休み"
     return TogetherSummary(label: title, together: together) {
       onTogether(TogetherList(title: title, days: together.days))

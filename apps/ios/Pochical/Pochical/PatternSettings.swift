@@ -385,7 +385,8 @@ struct PatternEditor: View {
     .toolbar {
       ToolbarItem(placement: .confirmationAction) {
         Button(isNew ? "追加" : "保存", role: .confirm) { save() }
-          .disabled(draft.name.trimmingCharacters(in: .whitespaces).isEmpty)
+          // Only what the server takes, so a pattern saved stays once sent.
+          .disabled(!shaped.fits)
       }
     }
     .alert(
@@ -400,10 +401,13 @@ struct PatternEditor: View {
         "\(days)日の予定に入っている「\(initial.name)」も一緒に消えます。元に戻せません。日の印を残すなら「入力に出す」をオフにしてください。"
       )
     }
-    .alert("繰り返しの並びに入っています", isPresented: Binding($refusal)) {
+    .alert(
+      refusal == .unfit ? "保存できませんでした" : "繰り返しの並びに入っています",
+      isPresented: Binding($refusal)
+    ) {
       Button("OK", role: .cancel) {}
     } message: {
-      Text("先に「繰り返し」で並びを変えてください。")
+      Text(refusal == .unfit ? "名前と印を確かめてください。" : "先に「繰り返し」で並びを変えてください。")
     }
   }
 

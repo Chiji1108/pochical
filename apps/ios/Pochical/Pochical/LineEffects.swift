@@ -84,11 +84,14 @@ struct BurstView: View {
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     // Fading in as they leave the part, as in a particle layer of their
     // own (Pow's). The particles are drawn only while some fly, and go as
-    // the last lands.
+    // the last lands. Each spray draws them anew, so the particle that
+    // goes says which spray has played out: a spray begun as the last
+    // one lands is not taken for played out with it.
     .changeEffect(
       .spray(layer: .named(Self.sprays)) {
-        Text(burst.emoji).onDisappear {
-          sprayedOut = sprayed
+        let spray = sprayed
+        Text(burst.emoji).id(spray).onDisappear {
+          sprayedOut = spray
           endIfPlayedOut()
         }
       }, value: sprayed)

@@ -268,10 +268,7 @@ struct GroupShiftsPage: View {
     let thisYear = month.year == today.year
     let name = thisYear ? month.monthTitle(english: english) : month.monthWithYear(english: english)
     let days = month.daysOfMonth
-    let offs = members.map { $0.offDays(from: days[0], through: days[days.count - 1]) }
-    let together =
-      members.count > 1
-      ? Together.days(offs, from: days[0], through: days[days.count - 1]) : (days: [], unsure: false)
+    let together = Together.days(of: members, from: days[0], through: days[days.count - 1])
     if together.days.isEmpty {
       HStack(alignment: .firstTextBaseline, spacing: 12) {
         Text(name).font(.title3.bold()).accessibilityAddTraits(.isHeader)

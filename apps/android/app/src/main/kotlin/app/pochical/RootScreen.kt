@@ -185,6 +185,8 @@ private fun Page(route: RootRoute, navigator: RootNavigator) {
     RootPage.Coworkers -> CoworkersPage(rememberPageNavigation(navigator))
     RootPage.Profile -> ProfilePage(rememberPageNavigation(navigator))
     is RootPage.CoworkerEditor -> CoworkerEditorPage(route.id, rememberPageNavigation(navigator))
+    RootPage.Licenses -> LicensesPage(rememberPageNavigation(navigator))
+    is RootPage.License -> LicensePage(route.id, onBack = rememberPageNavigation(navigator)::back)
   }
 }
 
