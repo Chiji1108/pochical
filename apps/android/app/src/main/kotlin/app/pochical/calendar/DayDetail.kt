@@ -7,9 +7,9 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -26,10 +26,9 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -60,6 +59,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import app.pochical.LocalThemeColors
 import app.pochical.R
+import app.pochical.RowEnd
+import app.pochical.SettingsRow
+import app.pochical.SettingsSection
 import app.pochical.ShiftMark
 import app.pochical.design.COWORKERS_MAX
 import app.pochical.design.TextLimits
@@ -131,32 +133,49 @@ private fun DayHolds(
 ) {
   val entry = calendar.shown(day, day)[day]
   val pattern = entry?.let { shown -> calendar.patterns.find { it.id == shown.shift } }
+  val time = pattern?.time
+  // Someone works alongside on any shift but a day off.
+  val people = entry != null && pattern != null && !pattern.countsAsOff
   Column {
-    ListItem(
-      headlineContent = { Text(stringResource(R.string.day_shift)) },
-      trailingContent = {
-        if (pattern == null) {
-          Text(stringResource(R.string.none))
-        } else {
-          Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-            ShiftMark(pattern.icon, pattern.emoji, pattern.symbol, pattern.color, size = 18.dp)
-            Text(pattern.name, maxLines = 1)
+    // シフト, its hours and the people on it in one rounded group of segments, as 設定's rows are
+    // (spec/calendar.md, A day's detail).
+    SettingsSection {
+      row {
+        SettingsRow(
+          stringResource(R.string.day_shift),
+          icon = null,
+          onClick = onPickShift,
+          value = if (pattern == null) stringResource(R.string.none) else null,
+          valueContent =
+            pattern?.let {
+              {
+                ShiftMark(it.icon, it.emoji, it.symbol, it.color, size = 18.dp)
+                Text(it.name, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+              }
+            },
+        )
+      }
+      if (entry != null && time != null) {
+        row { HoursRow(entry, time) { days.set(day, it) } }
+        if (entry.start != null || entry.end != null) {
+          row {
+            SettingsRow(
+              stringResource(R.string.day_hours_reset, hoursText(time.start, time.end)),
+              icon = null,
+              onClick = { days.set(day, entry.copy(start = null, end = null)) },
+              headlineContent = {
+                Text(stringResource(R.string.day_hours_reset, hoursText(time.start, time.end)), color = MaterialTheme.colorScheme.primary)
+              },
+              end = RowEnd.None,
+            )
           }
         }
-      },
-      modifier = Modifier.clickable(onClick = onPickShift),
-    )
-    val time = pattern?.time
-    if (entry != null && time != null) {
-      HoursRow(entry, time) { days.set(day, it) }
+      }
+      if (people) row { PeopleRow(entry.people, calendar.coworkers, peopleOpen, onPeopleOpenChange) }
     }
-    // Someone works alongside on any shift but a day off.
-    if (entry != null && pattern != null && !pattern.countsAsOff) {
-      PeopleRows(entry, calendar.coworkers, peopleOpen, onPeopleOpenChange, days) { days.set(day, it) }
-    }
-    HorizontalDivider(Modifier.padding(vertical = 8.dp))
+    if (people) PeopleChips(entry, calendar.coworkers, peopleOpen, days) { days.set(day, it) }
     // A field of its own for each day, so the one left keeps its own memo as it goes.
-    key(day) { MemoField(day, calendar.note(day), days, Modifier.padding(horizontal = 16.dp)) }
+    key(day) { MemoField(day, calendar.note(day), days, Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp)) }
     if (entry != null) {
       ClearButton(entry, calendar.coworkers) { days.set(day, null) }
     }
@@ -172,8 +191,10 @@ private fun DayHolds(
 private fun HoursRow(entry: DayEntry, time: ShiftTime, onChange: (DayEntry) -> Unit) {
   val change = timeChange(entry.start, entry.end, time)
   var picking by remember { mutableStateOf<Boolean?>(null) }
-  ListItem(
-    headlineContent = { Text(stringResource(R.string.day_hours)) },
+  SettingsRow(
+    stringResource(R.string.day_hours),
+    icon = null,
+    onClick = null,
     supportingContent =
       change?.let {
         {
@@ -185,19 +206,16 @@ private fun HoursRow(entry: DayEntry, time: ShiftTime, onChange: (DayEntry) -> U
           Text(if (moves.isEmpty()) stringResource(R.string.day_hours_changed) else moves.joinToString("・"))
         }
       },
-    trailingContent = {
-      Row(verticalAlignment = Alignment.CenterVertically) {
-        TextButton(onClick = { picking = true }) { Text((entry.start ?: time.start).removePrefix("0")) }
+    // Each hour a tonal button picked on Material's clock, as /design's time fields.
+    valueContent = {
+      Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        HourButton((entry.start ?: time.start).removePrefix("0")) { picking = true }
         Text("–", color = LocalThemeColors.current.textTertiary)
-        TextButton(onClick = { picking = false }) { Text((entry.end ?: time.end).removePrefix("0")) }
+        HourButton((entry.end ?: time.end).removePrefix("0")) { picking = false }
       }
     },
+    end = RowEnd.None,
   )
-  if (entry.start != null || entry.end != null) {
-    TextButton(onClick = { onChange(entry.copy(start = null, end = null)) }, Modifier.padding(horizontal = 8.dp)) {
-      Text(stringResource(R.string.day_hours_reset, hoursText(time.start, time.end)))
-    }
-  }
   picking?.let { start ->
     TimeDialog(
       time = if (start) entry.start ?: time.start else entry.end ?: time.end,
@@ -210,6 +228,12 @@ private fun HoursRow(entry: DayEntry, time: ShiftTime, onChange: (DayEntry) -> U
       onDismiss = { picking = null },
     )
   }
+}
+
+/** One of a day's hours, opening Material's clock. */
+@Composable
+private fun HourButton(hour: String, onClick: () -> Unit) {
+  FilledTonalButton(onClick = onClick, shapes = ButtonDefaults.shapes(), contentPadding = PaddingValues(horizontal = 12.dp)) { Text(hour) }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -234,18 +258,30 @@ internal fun TimeDialog(time: String, onPick: (String) -> Unit, onDismiss: () ->
   )
 }
 
+/** 一緒に働く人's row: those on the day by name, unfolding the chips under the rows. */
+@Composable
+private fun PeopleRow(onDay: List<String>, coworkers: List<Coworker>, open: Boolean, onOpenChange: (Boolean) -> Unit) {
+  SettingsRow(
+    stringResource(R.string.day_people),
+    icon = null,
+    onClick = { onOpenChange(!open) },
+    supporting = coworkers.filter { it.id in onDay }.joinToString("、") { it.name }.ifEmpty { stringResource(R.string.none) },
+    valueContent = { Icon(painterResource(R.drawable.ic_expand_more), null, Modifier.rotate(if (open) 180f else 0f)) },
+    end = RowEnd.None,
+    oneLine = true,
+  )
+}
+
 /**
- * 一緒に働く人, those on the day by name, unfolding into the person's
- * coworkers as filter chips and 追加, as /design's; kept unfolded as
- * another day opens, for noting people day after day.
+ * The person's coworkers as filter chips and 追加, unfolded from 一緒に働く人, as /design's; kept
+ * unfolded as another day opens, for noting people day after day.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun PeopleRows(
+private fun PeopleChips(
   entry: DayEntry,
   coworkers: List<Coworker>,
   open: Boolean,
-  onOpenChange: (Boolean) -> Unit,
   days: OwnDays,
   onChange: (DayEntry) -> Unit,
 ) {
@@ -253,22 +289,9 @@ private fun PeopleRows(
   val people = entry.people.filter { id -> coworkers.any { it.id == id } }
   var adding by remember { mutableStateOf(false) }
   var full by remember { mutableStateOf(false) }
-  ListItem(
-    headlineContent = { Text(stringResource(R.string.day_people)) },
-    supportingContent = {
-      Text(
-        coworkers.filter { it.id in people }.joinToString("、") { it.name }.ifEmpty { stringResource(R.string.none) },
-        maxLines = 1,
-      )
-    },
-    trailingContent = {
-      Icon(painterResource(R.drawable.ic_expand_more), null, Modifier.rotate(if (open) 180f else 0f))
-    },
-    modifier = Modifier.clickable(onClickLabel = stringResource(R.string.day_people)) { onOpenChange(!open) },
-  )
   AnimatedVisibility(open) {
     FlowRow(
-      Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+      Modifier.fillMaxWidth().padding(start = 16.dp, top = 8.dp, end = 16.dp),
       horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
       for (coworker in coworkers) {
