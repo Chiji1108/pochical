@@ -385,7 +385,8 @@ struct PatternEditor: View {
     .toolbar {
       ToolbarItem(placement: .confirmationAction) {
         Button(isNew ? "追加" : "保存", role: .confirm) { save() }
-          .disabled(draft.name.trimmingCharacters(in: .whitespaces).isEmpty)
+          // Only what the server takes, so a pattern saved stays once sent.
+          .disabled(!shaped.fits)
       }
     }
     .alert(

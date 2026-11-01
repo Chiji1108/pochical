@@ -1,5 +1,6 @@
 import PochicalDesign
 import PochicalKit
+import PochicalProto
 import Testing
 
 // spec/vectors/repeat.json, own-days.json, entering.json, periods.json,
@@ -439,7 +440,40 @@ struct PatternsVectors: Decodable, Sendable {
     let expected: Expected
   }
 
+  struct Fits: VectorCase {
+    /// A pattern as the wire carries it, each time on its own.
+    struct WirePattern: Decodable, Sendable {
+      let id: String
+      let name: String
+      let emoji: String
+      let symbol: String
+      let icon: String
+      let color: UInt32
+      let start: String?
+      let end: String?
+      let nextDay: String?
+
+      var wire: Pochical_V1_Pattern {
+        var pattern = Pochical_V1_Pattern()
+        pattern.name = name
+        pattern.emoji = emoji
+        pattern.symbol = symbol
+        pattern.icon = icon
+        pattern.color = color
+        if let start { pattern.start = start }
+        if let end { pattern.end = end }
+        if let nextDay { pattern.nextDay = nextDay }
+        return pattern
+      }
+    }
+
+    let name: String
+    let pattern: WirePattern
+    let expected: Bool
+  }
+
   let refused: [Refused]
+  let fits: [Fits]
   let deleted: [Deleted]
   let newJob: [NewJob]
   let readyCopies: [ReadyCopy]
@@ -457,6 +491,11 @@ func refused(_ vector: PatternsVectors.Refused) {
       vector.id, archived: vector.archived, orders: orders, today: vector.today),
     deleting: repeats(vector.id, in: orders, today: vector.today))
   #expect(refused == vector.expected)
+}
+
+@Test(arguments: try vectors("patterns", as: PatternsVectors.self).fits)
+func fits(_ vector: PatternsVectors.Fits) {
+  #expect(fitsPattern(vector.pattern.wire, id: vector.pattern.id) == vector.expected)
 }
 
 @Test(arguments: try vectors("patterns", as: PatternsVectors.self).deleted)
