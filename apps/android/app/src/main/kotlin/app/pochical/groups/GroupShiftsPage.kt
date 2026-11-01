@@ -27,10 +27,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SheetValue
@@ -71,6 +68,8 @@ import app.pochical.calendar.holidayCountry
 import app.pochical.calendar.rememberToday
 import app.pochical.calendar.shortText
 import app.pochical.calendar.yearMonthText
+import app.pochical.chat.GroupedMenu
+import app.pochical.chat.LineMenuItem
 import app.pochical.design.PochicalTextStyles
 import app.pochical.design.Radius
 import app.pochical.kit.GroupRow
@@ -440,26 +439,12 @@ private fun LayoutMenu(layout: ShiftsLayout, onLayout: (ShiftsLayout) -> Unit, o
       Text(stringResource(layout.title))
       Icon(painterResource(R.drawable.ic_expand_more), contentDescription = null)
     }
-    DropdownMenu(open, onDismissRequest = { open = false }) {
-      for (option in ShiftsLayout.entries) {
-        DropdownMenuItem(
-          text = { Text(stringResource(option.title)) },
-          onClick = {
-            open = false
-            onLayout(option)
-          },
-          trailingIcon = if (option == layout) ({ Icon(painterResource(R.drawable.ic_check), contentDescription = null) }) else null,
-        )
-      }
-      HorizontalDivider()
-      DropdownMenuItem(
-        text = { Text(stringResource(R.string.patterns)) },
-        onClick = {
-          open = false
-          onLegend()
-        },
-        leadingIcon = { Icon(painterResource(R.drawable.ic_info), contentDescription = null) },
-      )
-    }
+    GroupedMenu(
+      open,
+      onDismiss = { open = false },
+      items =
+        ShiftsLayout.entries.map { option -> LineMenuItem(stringResource(option.title), icon = null, selected = option == layout) { onLayout(option) } } +
+          LineMenuItem(stringResource(R.string.patterns), R.drawable.ic_info, startsGroup = true, run = onLegend),
+    )
   }
 }

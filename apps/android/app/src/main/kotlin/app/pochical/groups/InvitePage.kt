@@ -24,8 +24,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -63,6 +61,8 @@ import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.pochical.R
+import app.pochical.chat.GroupedMenu
+import app.pochical.chat.LineMenuItem
 import app.pochical.design.Metrics
 import app.pochical.design.Radius
 import app.pochical.kit.inviteLink
@@ -164,27 +164,22 @@ fun InvitePage(groupId: String, onBack: () -> Unit) {
                   .semantics { onLongClick(qrMenuLabel) { qrMenu = true; true } },
                 filterQuality = FilterQuality.None,
               )
-              DropdownMenu(expanded = qrMenu, onDismissRequest = { qrMenu = false }) {
-                DropdownMenuItem(
-                  text = { Text(stringResource(R.string.share)) },
-                  leadingIcon = { Icon(painterResource(R.drawable.ic_share), contentDescription = null) },
-                  onClick = {
-                    qrMenu = false
-                    scope.launch { if (!shareQr(context, shownQr, name)) say(R.string.not_shared, done = false) }
-                  },
-                )
-                DropdownMenuItem(
-                  text = { Text(stringResource(R.string.save_to_photos)) },
-                  leadingIcon = { Icon(painterResource(R.drawable.ic_download), contentDescription = null) },
-                  onClick = {
-                    qrMenu = false
-                    scope.launch {
-                      val saved = saveQr(context, shownQr)
-                      say(if (saved) R.string.saved_to_photos else R.string.not_saved, done = saved)
-                    }
-                  },
-                )
-              }
+              GroupedMenu(
+                qrMenu,
+                onDismiss = { qrMenu = false },
+                items =
+                  listOf(
+                    LineMenuItem(stringResource(R.string.share), R.drawable.ic_share) {
+                      scope.launch { if (!shareQr(context, shownQr, name)) say(R.string.not_shared, done = false) }
+                    },
+                    LineMenuItem(stringResource(R.string.save_to_photos), R.drawable.ic_download) {
+                      scope.launch {
+                        val saved = saveQr(context, shownQr)
+                        say(if (saved) R.string.saved_to_photos else R.string.not_saved, done = saved)
+                      }
+                    },
+                  ),
+              )
             }
             failed ->
               TextButton(onClick = { scope.launch { load(remake = false) } }) {
