@@ -91,7 +91,7 @@ struct BurstView: View {
       .spray(layer: .named(Self.sprays)) {
         let spray = sprayed
         Text(burst.emoji).id(spray).onDisappear {
-          sprayedOut = max(sprayedOut, spray)
+          sprayedOut = spray
           endIfPlayedOut()
         }
       }, value: sprayed)
