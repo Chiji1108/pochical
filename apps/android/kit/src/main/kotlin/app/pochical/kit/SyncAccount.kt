@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicLong
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.random.Random
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -617,17 +618,6 @@ class SyncAccount internal constructor(
         if (sendsNow) sendBeforeClosing()
         current?.openGroups(sendingSoon = sendsNow)
       }
-      is Command.SignedIn -> {
-        if (state.value != AccountState.SigningIn) return
-        val stretch = Stretch(Credentials(generation.incrementAndGet(), command.session.token, command.session.userId, generation::get))
-        this.stretch.value = stretch
-        mutableState.value = AccountState.SignedIn(command.session.userId, command.session.linked)
-        if (foreground || sending > 0) stretch.user.start()
-        stretch.openGroups()
-        if (command.kept) keepAgain()
-        stretch.scope.launch { learnLinked(stretch.credentials) }
-        deleteLeftBehind(stretch)
-      }
       is Command.SessionUnknown -> {
         if (current?.credentials?.generation != command.generation) return
         when (val now = state.value) {
@@ -646,7 +636,18 @@ class SyncAccount internal constructor(
       is Command.EraseFailed -> {
         (state.value as? AccountState.Erasing)?.let { mutableState.value = it.copy(failed = true) }
       }
-      is Command.Erasing -> if (state.value == AccountState.SigningIn) beginErasing(command.userId, command.why)
+      is Command.SignInEnded -> {
+        // Over from here, whatever came of it: a sign-in after it (once erased, after もう一度つなぐ,
+        // or wanted again while it ended) begins at once.
+        signingIn = null
+        val outcome = command.outcome
+        when {
+          // Cancelled: begun again should the app have come back meanwhile.
+          outcome == null -> if (foreground || sending > 0) startSigningIn()
+          state.value != AccountState.SigningIn -> return
+          else -> signedIn(outcome)
+        }
+      }
       is Command.Erased -> {
         if (command.why == AccountState.Erasing.Why.Deleted) mutableDeleted.value += 1
         mutableState.value = AccountState.SigningIn
@@ -888,14 +889,40 @@ class SyncAccount internal constructor(
     }
   }
 
+  /**
+   * Signs in, one sign-in at a time: under way until the queue takes its end ([Command.SignInEnded]),
+   * handed over once its job is over however it ended, cancelled too, even before it began. One
+   * cancelled is over only once the user it made is kept ([newSession]), so the next starts from it.
+   */
   private fun startSigningIn() {
-    val before = signingIn
-    if (before?.isActive != true && state.value == AccountState.SigningIn) {
-      // One cancelled may still be keeping the user it made: this one starts from what it kept.
-      signingIn = scope.launch {
-        before?.join()
-        signIn()
+    if (signingIn != null || state.value != AccountState.SigningIn) return
+    var outcome: SignInOutcome? = null
+    val job = scope.launch(SIGN_IN) { outcome = signIn() }
+    signingIn = job
+    job.invokeOnCompletion { cause ->
+      // One that failed goes on to the scope's handler, never begun again at once.
+      if (cause == null || cause is CancellationException) commands.trySend(Command.SignInEnded(outcome))
+    }
+  }
+
+  /** What a sign-in came to ([signIn]), for the queue to take on while the device is still signing in. */
+  private suspend fun signedIn(outcome: SignInOutcome) {
+    when (outcome) {
+      is SignInOutcome.SignedIn -> {
+        val session = outcome.session
+        val stretch = Stretch(Credentials(generation.incrementAndGet(), session.token, session.userId, generation::get))
+        this.stretch.value = stretch
+        mutableState.value = AccountState.SignedIn(session.userId, session.linked)
+        if (foreground || sending > 0) stretch.user.start()
+        stretch.openGroups()
+        if (outcome.kept) keepAgain()
+        stretch.scope.launch { learnLinked(stretch.credentials) }
+        deleteLeftBehind(stretch)
       }
+      is SignInOutcome.Erasing -> beginErasing(outcome.userId, outcome.why)
+      SignInOutcome.KeptEnded -> mutableState.value = AccountState.SessionEnded
+      // Tried again in the foreground.
+      SignInOutcome.Unreachable -> Unit
     }
   }
 
@@ -912,26 +939,22 @@ class SyncAccount internal constructor(
    * The kept session, or a new anonymous one, tried again after a wait that doubles while the account
    * still needs it; then the database is claimed for its user. A database another user
    * left, whose session the device no longer has, is erased first, as nothing can send what it holds
-   * any more (spec/sync-protocol.md, Sockets).
+   * any more (spec/sync-protocol.md, Sockets). What came of it is the queue's to take on.
    */
-  private suspend fun signIn() {
+  private suspend fun signIn(): SignInOutcome {
     val kept =
       try {
         sessions.read()
       } catch (e: StoreUnreachable) {
         Log.i(TAG, "The kept session cannot be reached, tried again in the foreground: $e")
-        return
+        return SignInOutcome.Unreachable
       }
     // Erasing cut off part way goes on, as the database noted it.
     val noted = database.write { state() }
     if (kept != null && noted.erased == kept.userId) {
-      commands.send(Command.Erasing(kept.userId, AccountState.Erasing.Why.valueOf(noted.erasedWhy)))
-      return
+      return SignInOutcome.Erasing(kept.userId, AccountState.Erasing.Why.valueOf(noted.erasedWhy))
     }
-    if (kept?.ended == true) {
-      mutableState.value = AccountState.SessionEnded
-      return
-    }
+    if (kept?.ended == true) return SignInOutcome.KeptEnded
     if (kept != null) Log.i(TAG, "Signed in as kept, ${kept.userId}")
     var tries = 0
     var session = kept
@@ -941,7 +964,7 @@ class SyncAccount internal constructor(
         Log.i(TAG, "Signed in anonymously as ${session.userId}")
       } catch (e: StoreUnreachable) {
         Log.i(TAG, "The new session could not be kept, tried again in the foreground: $e")
-        return
+        return SignInOutcome.Unreachable
       } catch (e: IOException) {
         tries += 1
         Log.i(TAG, "Signing in failed: $e")
@@ -957,7 +980,7 @@ class SyncAccount internal constructor(
         true
       }
     if (erased) linePhotos.eraseAll()
-    commands.send(Command.SignedIn(session, kept = kept != null))
+    return SignInOutcome.SignedIn(session, kept = kept != null)
   }
 
   /**
@@ -1026,6 +1049,21 @@ class SyncAccount internal constructor(
     class Failed(val cause: Throwable, val unknown: Boolean, val ended: Throwable) : Outcome
   }
 
+  /** What a sign-in came to ([signIn]). */
+  private sealed interface SignInOutcome {
+    /** Signed in as [session], [kept] from before rather than made now. */
+    data class SignedIn(val session: StoredSession, val kept: Boolean) : SignInOutcome
+
+    /** The session kept is of [userId], whose erasing ([why]) was cut off: erasing goes on. */
+    data class Erasing(val userId: String, val why: AccountState.Erasing.Why) : SignInOutcome
+
+    /** The session kept was ended, the server not knowing it: it stays so until the person chooses. */
+    data object KeptEnded : SignInOutcome
+
+    /** The kept session's store could not be reached: tried again in the foreground. */
+    data object Unreachable : SignInOutcome
+  }
+
   private sealed interface Command {
     data object Foreground : Command
 
@@ -1041,9 +1079,6 @@ class SyncAccount internal constructor(
     /** The groups whose chat outbox has edits still to send changed to [groups]. */
     data class ChatWaiting(val groups: Set<String>) : Command
 
-    /** Signed in as [session], [kept] from before rather than made now. */
-    data class SignedIn(val session: StoredSession, val kept: Boolean) : Command
-
     data class SessionUnknown(val generation: Long) : Command
 
     /** A change asked in the stretch [generation]: [began] says whether it may go. */
@@ -1052,8 +1087,11 @@ class SyncAccount internal constructor(
     /** The server's answer to the change begun in the stretch [generation], [settled] once the device is done with it. */
     class Settle(val generation: Long, val outcome: Outcome, val settled: CompletableDeferred<Unit>) : Command
 
-    /** The session kept is of [userId], whose erasing ([why]) was cut off: erasing goes on. */
-    data class Erasing(val userId: String, val why: AccountState.Erasing.Why) : Command
+    /**
+     * The sign-in under way is over: what it came to, or null when it was cancelled before it came
+     * to anything; one cancelled only after that hands over what it came to.
+     */
+    data class SignInEnded(val outcome: SignInOutcome?) : Command
 
     /** A try at erasing failed; another follows. */
     data object EraseFailed : Command
@@ -1093,6 +1131,9 @@ class SyncAccount internal constructor(
     const val SIGN_IN_WAIT_MS = 15_000L
   }
 }
+
+/** The name the account's sign-in runs under, as a debugger or a test tells it. */
+internal val SIGN_IN = CoroutineName("PochicalSignIn")
 
 /** A hold on a group's socket, let go of once. */
 fun interface GroupHold {

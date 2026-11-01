@@ -191,6 +191,10 @@ run = "tools/photo-line-touches/run.sh"
 description = "Run the chat notification tap UI tests in a simulator, erasing it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default): <simulator name> [derived data]"
 run = "tools/notification-taps/run.sh"
 
+[tasks."ios:chat-open"]
+description = "Run the chat's opening on ここから新着 UI tests in a simulator, erasing it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default): <simulator name> [derived data]"
+run = "tools/chat-open/run.sh"
+
 [tasks."ios:shifts-rotation"]
 description = "Run a big group's 一覧 rotation UI tests in a simulator, erasing it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default): <simulator name> [derived data]"
 run = "tools/shifts-rotation/run.sh"

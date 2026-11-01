@@ -28,29 +28,10 @@ final class NotificationTapTests: XCTestCase {
   @MainActor
   func test1JoinsAndAllowsNotifications() throws {
     app.launch()
-    for step in ["はじめる", "繰り返しはない", "パート・アルバイト", "はじめる"] {
-      let button = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", step)).firstMatch
-      XCTAssertTrue(button.waitForExistence(timeout: 10), "はじめの設定 offers \(step)")
-      button.tap()
-    }
-    XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 10), "the tabs show")
+    app.startsAsNewUser()
     let code = try String(contentsOf: shared.appending(path: "invite"), encoding: .utf8)
       .trimmingCharacters(in: .whitespacesAndNewlines)
-    app.open(URL(string: "pochical://invite/\(code)")!)
-    let open = springboard.buttons.matching(NSPredicate(format: "label IN {'開く', 'Open'}"))
-      .firstMatch
-    if open.waitForExistence(timeout: 5) { open.tap() }
-    let profile = app.buttons.matching(NSPredicate(format: "label BEGINSWITH '名前を入れてください'"))
-      .firstMatch
-    XCTAssertTrue(profile.waitForExistence(timeout: 15), "the join screen opens")
-    profile.tap()
-    let name = app.textFields.firstMatch
-    XCTAssertTrue(name.waitForExistence(timeout: 5), "the name can be typed")
-    name.tap()
-    name.typeText("テスト")
-    app.navigationBars.buttons.firstMatch.tap()
-    app.buttons["参加する"].tap()
-    XCTAssertTrue(app.buttons["月で見る"].waitForExistence(timeout: 15), "the group's hub shows")
+    app.joins(code: code, named: "テスト")
     // Its lines read, for the chat a notification opens to come on the
     // latest, those before it under the bar.
     app.buttons.matching(NSPredicate(format: "label BEGINSWITH '全体チャット'")).firstMatch.tap()
