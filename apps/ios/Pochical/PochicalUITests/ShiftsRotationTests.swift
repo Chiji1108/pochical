@@ -40,26 +40,7 @@ final class ShiftsRotationTests: XCTestCase {
       let code = try? String(contentsOf: shared.appending(path: invite), encoding: .utf8)
         .trimmingCharacters(in: .whitespacesAndNewlines)
     else { return XCTFail("the invitation \(invite) is there") }
-    app.open(URL(string: "pochical://invite/\(code)")!)
-    let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
-    let open = springboard.buttons.matching(NSPredicate(format: "label IN {'開く', 'Open'}"))
-      .firstMatch
-    if open.waitForExistence(timeout: 5) { open.tap() }
-    if let name {
-      let profile = app.buttons.matching(NSPredicate(format: "label BEGINSWITH '名前を入れてください'"))
-        .firstMatch
-      XCTAssertTrue(profile.waitForExistence(timeout: 15), "the join screen opens")
-      profile.tap()
-      let field = app.textFields.firstMatch
-      XCTAssertTrue(field.waitForExistence(timeout: 5), "the name can be typed")
-      field.tap()
-      field.typeText(name)
-      app.navigationBars.buttons.firstMatch.tap()
-    }
-    let join = app.buttons["参加する"]
-    XCTAssertTrue(join.waitForExistence(timeout: 15), "the join screen opens")
-    join.tap()
-    XCTAssertTrue(app.buttons["月で見る"].waitForExistence(timeout: 15), "the group's hub shows")
+    app.joins(code: code, named: name)
   }
 
   @MainActor

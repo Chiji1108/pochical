@@ -352,7 +352,7 @@ socket.addEventListener("message", (event) => {
   }
 });
 const lost = (): void => {
-  fail("socket: could not connect");
+  fail("socket: could not connect, or the connection was lost");
 };
 socket.addEventListener("error", lost);
 // Closed once the group has answered: what the socket says as it closes
