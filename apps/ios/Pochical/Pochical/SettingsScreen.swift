@@ -138,7 +138,7 @@ struct SettingsScreen: View {
 
   /// Pochical itself, at the foot (/design's AboutSection): rows that leave
   /// the app end in ↗ instead of the arrow of rows that go on inside it,
-  /// as ライセンス, last, does.
+  /// as ライセンス, last, does: it ends in the arrow.
   /// The store's own review prompt comes by itself only now and then
   /// (spec/review.md); the review row is there whenever someone wants to
   /// write one.

@@ -12,7 +12,7 @@ const notices = [
   {
     license: "@phosphor-icons/react/LICENSE",
     name: "Phosphor Icons",
-    url: "https://github.com/phosphor-icons/core",
+    url: "https://github.com/phosphor-icons/react",
   },
   {
     license: "@holiday-jp/holiday_jp/LICENSE",
@@ -30,6 +30,38 @@ const notices = [
 const DOC =
   "What design/ writes into the app from other projects, each with its license's text (design/scripts/notices.ts).";
 
+// A string literal of `value`: quotes, backslashes and line breaks escaped
+// as both languages write them, any other control character by its code
+// point in the language's own form (`unicode`), and `$` as `dollar`, which
+// Kotlin reads as a template.
+const literal = (
+  value: string,
+  unicode: (hex: string) => string,
+  dollar: string
+) => {
+  const known: Record<string, string> = {
+    "\t": "\\t",
+    "\n": "\\n",
+    "\r": "\\r",
+    '"': '\\"',
+    $: dollar,
+    "\\": "\\\\",
+  };
+  const escaped = value.replaceAll(
+    /[\p{Cc}"\\$]/gu,
+    (char) =>
+      known[char] ??
+      unicode((char.codePointAt(0) ?? 0).toString(16).padStart(4, "0"))
+  );
+  return `"${escaped}"`;
+};
+
+const swiftString = (value: string) =>
+  literal(value, (hex) => `\\u{${hex}}`, "$");
+
+const kotlinString = (value: string) =>
+  literal(value, (hex) => `\\u${hex}`, "\\$");
+
 export const swiftNotices = () => [
   `/// ${DOC}`,
   "public enum Notices {",
@@ -42,7 +74,7 @@ export const swiftNotices = () => [
   "  public static let all: [Notice] = [",
   ...notices.map(
     ({ name, url, text }) =>
-      `    Notice(name: ${JSON.stringify(name)}, url: ${JSON.stringify(url)}, text: ${JSON.stringify(text)}),`
+      `    Notice(name: ${swiftString(name)}, url: ${swiftString(url)}, text: ${swiftString(text)}),`
   ),
   "  ]",
   "}",
@@ -56,10 +88,6 @@ export const webNotices = (header: string) =>
     `export const notices = ${JSON.stringify(notices, null, 2)} as const;`,
     "",
   ].join("\n");
-
-// Kotlin reads `$` in a string as a template.
-const kotlinString = (value: string) =>
-  JSON.stringify(value).replaceAll("$", "\\$");
 
 export const kotlinNotices = () => [
   `/** ${DOC} */`,

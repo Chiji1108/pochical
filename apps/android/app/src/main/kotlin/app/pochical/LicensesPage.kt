@@ -51,11 +51,14 @@ fun licensed(context: Context): List<Licensed> {
   return (libraries + notices).sortedBy { it.name.lowercase(Locale.ROOT) }
 }
 
-/** [licensed], read off the main thread: null until it is. */
+/** [licensed] once read: the build's, which no process outlives, so ライセンス and each license page share it. */
+private var read: List<Licensed>? = null
+
+/** [licensed], read off the main thread the first time: null until it is. */
 @Composable
 private fun rememberLicensed(): List<Licensed>? {
-  val context = LocalContext.current
-  val list by produceState<List<Licensed>?>(null, context) { value = withContext(Dispatchers.Default) { licensed(context) } }
+  val context = LocalContext.current.applicationContext
+  val list by produceState(read) { if (value == null) value = withContext(Dispatchers.Default) { licensed(context) }.also { read = it } }
   return list
 }
 
@@ -99,7 +102,7 @@ fun LicensePage(id: String, onBack: () -> Unit) {
                 R.drawable.ic_description,
                 onClick = license.url?.let { url -> { openLink(context, url) } },
                 end = if (license.url != null) RowEnd.Outside else RowEnd.None,
-                onClickLabel = stringResource(R.string.settings_opens_browser),
+                onClickLabel = license.url?.let { stringResource(R.string.settings_opens_browser) },
               )
             }
           }
