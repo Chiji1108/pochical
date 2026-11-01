@@ -646,13 +646,8 @@ class SyncAccount internal constructor(
       is Command.EraseFailed -> {
         (state.value as? AccountState.Erasing)?.let { mutableState.value = it.copy(failed = true) }
       }
-      is Command.Erasing -> {
-        if (state.value != AccountState.SigningIn) return
-        // The sign-in that found the note sent it as its last act: over before erasing begins, so
-        // the sign-in after the erasing (Erased) is not taken for one still under way and skipped.
-        signingIn?.join()
-        beginErasing(command.userId, command.why)
-      }
+      is Command.Erasing -> if (state.value == AccountState.SigningIn) beginErasing(command.userId, command.why)
+      Command.KeptEnded -> if (state.value == AccountState.SigningIn) mutableState.value = AccountState.SessionEnded
       is Command.Erased -> {
         if (command.why == AccountState.Erasing.Why.Deleted) mutableDeleted.value += 1
         mutableState.value = AccountState.SigningIn
@@ -898,10 +893,14 @@ class SyncAccount internal constructor(
     val before = signingIn
     if (before?.isActive != true && state.value == AccountState.SigningIn) {
       // One cancelled may still be keeping the user it made: this one starts from what it kept.
-      signingIn = scope.launch {
+      val signing = scope.async {
         before?.join()
         signIn()
       }
+      signingIn = signing
+      // Handed to the queue once the sign-in is over, so what the queue does with it (signing in
+      // again after erasing, or after もう一度つなぐ) never finds this one still under way.
+      scope.launch { signing.await()?.let { commands.send(it) } }
     }
   }
 
@@ -918,26 +917,23 @@ class SyncAccount internal constructor(
    * The kept session, or a new anonymous one, tried again after a wait that doubles while the account
    * still needs it; then the database is claimed for its user. A database another user
    * left, whose session the device no longer has, is erased first, as nothing can send what it holds
-   * any more (spec/sync-protocol.md, Sockets).
+   * any more (spec/sync-protocol.md, Sockets). What came of it is for the queue: signed in, erasing to
+   * go on, or the kept session ended; null when it is tried again in the foreground.
    */
-  private suspend fun signIn() {
+  private suspend fun signIn(): Command? {
     val kept =
       try {
         sessions.read()
       } catch (e: StoreUnreachable) {
         Log.i(TAG, "The kept session cannot be reached, tried again in the foreground: $e")
-        return
+        return null
       }
     // Erasing cut off part way goes on, as the database noted it.
     val noted = database.write { state() }
     if (kept != null && noted.erased == kept.userId) {
-      commands.send(Command.Erasing(kept.userId, AccountState.Erasing.Why.valueOf(noted.erasedWhy)))
-      return
+      return Command.Erasing(kept.userId, AccountState.Erasing.Why.valueOf(noted.erasedWhy))
     }
-    if (kept?.ended == true) {
-      mutableState.value = AccountState.SessionEnded
-      return
-    }
+    if (kept?.ended == true) return Command.KeptEnded
     if (kept != null) Log.i(TAG, "Signed in as kept, ${kept.userId}")
     var tries = 0
     var session = kept
@@ -947,7 +943,7 @@ class SyncAccount internal constructor(
         Log.i(TAG, "Signed in anonymously as ${session.userId}")
       } catch (e: StoreUnreachable) {
         Log.i(TAG, "The new session could not be kept, tried again in the foreground: $e")
-        return
+        return null
       } catch (e: IOException) {
         tries += 1
         Log.i(TAG, "Signing in failed: $e")
@@ -963,7 +959,7 @@ class SyncAccount internal constructor(
         true
       }
     if (erased) linePhotos.eraseAll()
-    commands.send(Command.SignedIn(session, kept = kept != null))
+    return Command.SignedIn(session, kept = kept != null)
   }
 
   /**
@@ -1060,6 +1056,9 @@ class SyncAccount internal constructor(
 
     /** The session kept is of [userId], whose erasing ([why]) was cut off: erasing goes on. */
     data class Erasing(val userId: String, val why: AccountState.Erasing.Why) : Command
+
+    /** The session kept was ended, the server not knowing it: it stays so until the person chooses. */
+    data object KeptEnded : Command
 
     /** A try at erasing failed; another follows. */
     data object EraseFailed : Command
