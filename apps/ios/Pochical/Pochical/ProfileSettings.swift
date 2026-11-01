@@ -51,11 +51,11 @@ private struct ProfilePage: View {
         ) { jpeg in
           await save {
             let photoID = try await groupCalls.sendPhoto(jpeg, to: .mine)
-            try await groupCalls.setProfile(UsualProfile(name: shownName, photoID: photoID))
+            try await groupCalls.setProfile(photoID: photoID)
           }
         } onRemove: {
           await save {
-            try await groupCalls.setProfile(UsualProfile(name: shownName))
+            try await groupCalls.setProfile(photoID: "")
           }
         }
         .settingsOnPage()
@@ -90,13 +90,7 @@ private struct ProfilePage: View {
   /// Saves what is typed, when it differs from the saved name.
   private func saveName() {
     guard let kept = unsaved else { return }
-    let profile = UsualProfile(name: kept, photoID: saved.photoID)
-    Task { await save { try await groupCalls.setProfile(profile) } }
-  }
-
-  /// The name as it will be kept: what is typed, else the saved one.
-  private var shownName: String {
-    unsaved ?? saved.name
+    Task { await save { try await groupCalls.setProfile(name: kept) } }
   }
 
   /// What is typed, trimmed, when it differs from the saved name and fits.

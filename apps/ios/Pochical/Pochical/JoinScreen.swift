@@ -327,7 +327,7 @@ extension JoinScreen {
       if case .picked(let jpeg) = face {
         photoID = try await groupCalls.sendPhoto(jpeg, to: .mine)
       }
-      try await groupCalls.setProfile(UsualProfile(name: myName, photoID: photoID))
+      try await groupCalls.setProfile(name: myName, photoID: photoID)
       return true
     } catch {
       return false
