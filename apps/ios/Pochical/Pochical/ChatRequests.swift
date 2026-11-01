@@ -31,13 +31,15 @@ struct ChatRequest: FetchKeyRequest, Hashable {
 }
 
 /// A chat as a view shows it (the chat screen's lines, a list's row),
-/// read for it alone for as long as the view is there. SwiftUI makes a
-/// view's state anew each time its parent draws and keeps only the first,
-/// so this reads nothing as it is made: the chat is read as the view first
-/// draws, in that frame, and again as the database or the request
-/// changes. A read made with the view (`@Fetch` given its request) was
-/// made again at each of those, on the main thread, and the request it
-/// began with kept being read beside the one shown.
+/// read for it alone. SwiftUI makes a view's state anew each time its
+/// parent draws and keeps only the first, so this reads nothing as it is
+/// made: the chat is read as the view first draws, in that frame, and
+/// again as the database or the request changes. A read made with the
+/// view (`@Fetch` given its request) was made again at each of those, on
+/// the main thread, and the request it began with kept being read beside
+/// the one shown. A row reads for as long as its list keeps it, so it is
+/// current as a screen over the list goes; a screen reads only while it
+/// is shown (`follow()`).
 @MainActor
 final class ChatFeed<Request: FetchKeyRequest> where Request.Value: Sendable {
   private var request: Request

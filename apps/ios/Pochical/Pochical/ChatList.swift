@@ -153,7 +153,7 @@ struct ChatRow<Icon: View>: View {
   /// Whether the chat's notifications are off, marked after its name.
   @Fetch(ChatNotificationsRequest()) private var notifications = ChatNotificationState()
   /// The device's time the chat's lines not sent are read by.
-  @State private var now = ChatTime.nowMs
+  @State private var now: Int64
   /// The chat's place, by the id the device keeps its chats by.
   let placeID: String
   let threadID: String
@@ -178,9 +178,11 @@ struct ChatRow<Icon: View>: View {
     self.blocked = blocked
     self.icon = icon
     self.onOpen = onOpen
+    let now = ChatTime.nowMs
+    _now = State(initialValue: now)
     _feed = State(
       initialValue: ChatFeed(
-        ChatSummaryRequest(groupID: placeID, threadID: threadID, me: me, now: ChatTime.nowMs),
+        ChatSummaryRequest(groupID: placeID, threadID: threadID, me: me, now: now),
         empty: ChatSummaryRequest.Value()))
   }
 
@@ -240,8 +242,7 @@ struct ChatRow<Icon: View>: View {
       .contentShape(.rect)
     }
     .buttonStyle(.plain)
-    // Read while the row is shown, and again as what it asks changes.
-    .task { await feed.follow() }
+    // Read again as what it asks changes.
     .task(id: request) { await feed.load(request) }
     // A line still being sent says 送れませんでした the moment its wait is
     // over, the chat open or not (spec/chat.md, Lines on their way).
