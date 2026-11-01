@@ -1,5 +1,5 @@
 {
-  "originHash" : "7d57f60055eb46eef6b0132928ffbc74c088aefb9beb842f9d54c3b5529b455b",
+  "originHash" : "17e8928b5cee52a21eb18e70e4c2d6a7217f5840e2850a8f57debc6d8dc3616d",
   "pins" : [
     {
       "identity" : "app-check",
@@ -177,8 +177,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-collections",
       "state" : {
-        "revision" : "f96b909e1a9e469620bc5037c1e24e00153f376f",
-        "version" : "1.7.5"
+        "revision" : "35a1edcb8ebd2bfe251d587f0b69e62af28f508c",
+        "version" : "1.7.3"
       }
     },
     {
@@ -204,8 +204,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/pointfreeco/swift-dependencies",
       "state" : {
-        "revision" : "2f83b70a6fbf45795dd40ccaa907bad3c8d93fe1",
-        "version" : "1.17.2"
+        "revision" : "b476cc5761057d8d857de063fe7ac8daecf5c06b",
+        "version" : "1.17.1"
       }
     },
     {
@@ -294,8 +294,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/pointfreeco/swift-snapshot-testing",
       "state" : {
-        "revision" : "1488390b0735e726564b948bf08b384398bdab5c",
-        "version" : "1.19.7"
+        "revision" : "28e5de025e3fd98991791bfbf83023ab3708da03",
+        "version" : "1.19.6"
       }
     },
     {
