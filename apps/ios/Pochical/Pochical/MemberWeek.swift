@@ -229,16 +229,18 @@ struct MemberWeek: View {
   }
 
   /// 次のみんな休み: the first day from today, within `nextTogetherDays`,
-  /// everyone is off, which opens on the month; else なし.
+  /// everyone is off, which opens on the month; else なし, or 未入力の日あり
+  /// when days someone has not entered may yet be one.
   @ViewBuilder private func next(today: Day) -> some View {
     let through = today.adding(days: nextTogetherDays - 1)
     let offs = members.map { $0.offDays(from: today, through: through) }
-    let next = members.count > 1 ? Together.days(offs, from: today, through: through).days.first : nil
+    let ahead = members.count > 1 ? Together.days(offs, from: today, through: through) : (days: [], unsure: false)
+    let next = ahead.days.first
     let row = HStack(spacing: 8) {
       Text("次のみんな休み")
         .foregroundStyle(colors.textSecondary)
       Spacer()
-      Text(next.map { "\($0.fullText)・\(fromToday($0, today: today))" } ?? "なし")
+      Text(next.map { "\($0.fullText)・\(fromToday($0, today: today))" } ?? (ahead.unsure ? "未入力の日あり" : "なし"))
         .fontWeight(.semibold)
         .foregroundStyle(next == nil ? colors.textTertiary : colors.accentDefault)
       if next != nil {
