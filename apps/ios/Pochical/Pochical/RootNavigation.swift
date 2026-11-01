@@ -206,6 +206,11 @@ final class RootController: UIViewController, UINavigationControllerDelegate {
     self.nothingOpen = nothingOpen
     main = UINavigationController(rootViewController: self.tabs)
     super.init(nibName: nil, bundle: nil)
+    // A tab's root may be titled large, as iOS's Settings is, the title
+    // going into the bar as its list scrolls up under it (arrange); the
+    // pages over it are titled in the bar (PageHost), and those beside it
+    // too, as Settings' are on an iPad.
+    main.navigationBar.prefersLargeTitles = true
     navigator.controller = self
     arrange(animated: false)
   }
@@ -311,6 +316,10 @@ final class RootController: UIViewController, UINavigationControllerDelegate {
       navigation.setViewControllers(controllers, animated: push)
     }
     main.setNavigationBarHidden(navigator.tab == .calendar && over.count == 1, animated: false)
+    // 設定 titled large, as iOS's Settings is, while its list is at its top
+    // (TabScrollViewForBar); グループ heads itself in the bar's band, and
+    // the calendar has none.
+    tabs.navigationItem.largeTitleDisplayMode = navigator.tab == .settings ? .always : .never
     viewIfLoaded?.setNeedsLayout()
   }
 
@@ -331,6 +340,9 @@ private final class PageHost: UIHostingController<AnyView> {
   init(page: RootPage, view: AnyView) {
     self.page = page
     super.init(rootView: view)
+    // Titled in the bar, as the pages under iOS's Settings are, whatever
+    // the tab's root under it is titled.
+    navigationItem.largeTitleDisplayMode = .never
   }
 
   @available(*, unavailable) required init?(coder: NSCoder) { fatalError() }
@@ -353,12 +365,35 @@ private struct TabScrollViewForBar: UIViewControllerRepresentable {
   func updateUIViewController(_ controller: Controller, context: Context) {}
 
   final class Controller: UIViewController {
-    override func viewDidAppear(_ animated: Bool) {
-      super.viewDidAppear(animated)
+    /// The tab's own controller, right under the tab bar controller.
+    private var shownTab: UIViewController? {
       var tab = parent
       while let next = tab?.parent, !(next is UITabBarController) { tab = next }
-      tab?.parent?.pageInNavigation?.setContentScrollView(
-        tab?.contentScrollView(for: .top), for: .top)
+      return tab
+    }
+
+    /// The tabs' titles are one navigation item, so the bar keeps the
+    /// height it had for the tab before, and would take a list at its top
+    /// as scrolled by the difference. A list at its top, or not there yet,
+    /// has the bar take the tab's title first, as for a page pushed with
+    /// its list at its top, and is laid out under it; one scrolled is
+    /// followed at once, its title staying in the bar.
+    override func viewWillAppear(_ animated: Bool) {
+      super.viewWillAppear(animated)
+      guard let page = shownTab?.parent?.pageInNavigation else { return }
+      let list = shownTab?.contentScrollView(for: .top)
+      if let list, list.contentOffset.y > -list.adjustedContentInset.top {
+        page.setContentScrollView(list, for: .top)
+      } else {
+        page.setContentScrollView(nil, for: .top)
+        page.navigationController?.navigationBar.sizeToFit()
+      }
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+      super.viewDidAppear(animated)
+      shownTab?.parent?.pageInNavigation?.setContentScrollView(
+        shownTab?.contentScrollView(for: .top), for: .top)
     }
   }
 }
