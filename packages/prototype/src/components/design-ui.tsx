@@ -205,7 +205,7 @@ export function BarGroup({ children }: { children: ReactNode }) {
 // with its word, the small size and round, its corners squaring a little
 // while pressed; Material's disabled fill while it cannot yet.
 export const materialConfirmStyle = css({
-  _active: { borderRadius: "8px" },
+  _active: { borderRadius: "sm" },
   _disabled: {
     bg: "fill.quaternary",
     color: "text.disabled",
@@ -219,7 +219,7 @@ export const materialConfirmStyle = css({
   display: "inline-flex",
   flexShrink: 0,
   fontWeight: 500,
-  height: "40px",
+  height: "action",
   justifyContent: "center",
   paddingInline: "16px",
   textStyle: "subheadline",

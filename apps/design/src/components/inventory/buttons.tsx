@@ -102,7 +102,7 @@ export function HeaderButtons() {
       <Item
         name="PageHeader trailing=HeaderAction"
         ios="ToolbarItem(placement: .confirmationAction)"
-        android="FlexibleTopAppBar の actions"
+        android="FlexibleTopAppBar の actions の ConfirmAction（塗りの Button、文字。並び替えなどほかの文字は TextButton）"
         where="編集して保存するページ"
         wide
       >
@@ -149,7 +149,7 @@ export function HeaderButtons() {
       <Item
         name="DoneButton"
         ios="ToolbarItem(placement: .confirmationAction) の Button(role: .confirm)、checkmark だけ（完了は読み上げ）"
-        android="TopAppBar の actions の Button（✓と完了）"
+        android="TopAppBar の actions の ConfirmAction（塗りの Button と完了）"
         where="ポチポチ入力と、繰り返しの並びを入れる画面の完了だけ"
       >
         <DoneButton />

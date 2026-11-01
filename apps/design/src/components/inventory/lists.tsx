@@ -11,6 +11,7 @@ import {
 } from "@pochical/prototype/components/design-list";
 import { SortableList } from "@pochical/prototype/components/design-sortable-list";
 import {
+  Headline,
   OptionCard,
   Note,
   Section,
@@ -74,6 +75,14 @@ export function Rows() {
           </List>
         </Section>
         <Note>ポチポチ入力のボタンを長押ししても、その場で直せます。</Note>
+      </Item>
+      <Item
+        name="Headline"
+        ios="Text ＋ .bold()（はじめの設定の質問は .semibold）"
+        android="Headline（headlineMediumEmphasized・headlineSmallEmphasized の Text）"
+        where="はじめの設定のポチカルと質問、グループがないときの見出し、招待のグループ名、メンバーの名前"
+      >
+        <Headline>グループでシフトを共有できます</Headline>
       </Item>
       <Item
         name="SettingsLists + List（Android）"
