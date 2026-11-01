@@ -56,8 +56,6 @@ private final class FakeAccountServer: AccountServer {
   let linkedTo = Mutex<LinkedAccount.Provider?>(.apple)
   /// How deleting the account fails, when it does.
   let deletion = Mutex<DeletionFailure?>(nil)
-  /// Called as a deletion succeeds, before its answer is back.
-  let whenDeleted = Mutex<(@Sendable () -> Void)?>(nil)
   /// Called as Apple's sign-in succeeds, before its answer is back.
   let whenSignedIn = Mutex<(@Sendable () -> Void)?>(nil)
   /// Each call named here waits at its gate.
@@ -112,7 +110,6 @@ private final class FakeAccountServer: AccountServer {
       $0.deleted.append(token)
       $0.codes.append(appleAuthorizationCode)
     }
-    whenDeleted.withLock { $0 }?()
   }
 }
 
@@ -694,12 +691,6 @@ private final class FakeAccountServer: AccountServer {
   #expect(made.server.asked.withLock(\.deleted).isEmpty)
 }
 
-/// The session an app started again would be, made while the one before
-/// is cut off.
-@MainActor private final class Relaunched {
-  var session: AccountSession?
-}
-
 @MainActor @Test func anAppEndedJustAfterTheServerDeletedFinishesErasingAsItStartsAgain() async throws {
   let made = try await Made.signedIn(as: "a", "A")
   #expect(await eventually { made.owner == "A" })
@@ -710,24 +701,15 @@ private final class FakeAccountServer: AccountServer {
       sql: #"CREATE TRIGGER "keep" BEFORE DELETE ON "coworkers" BEGIN SELECT RAISE(ABORT, 'kept'); END"#)
   }
   _ = await made.session.hold("g1")
-  let relaunched = Relaunched()
-  // Main-actor jobs run in order: the inner one runs once the deletion's
-  // answer is back and the session first waits after it, where an app
-  // ended then would stop.
-  made.server.whenDeleted.withLock {
-    $0 = {
-      Task { @MainActor in
-        Task { @MainActor in
-          relaunched.session = AccountSession(
-            database: made.database, server: made.server, keychain: made.keychain,
-            shared: made.shared, eraseFiles: {}, socketServer: made.socketURL)
-        }
-      }
-    }
-  }
-  #expect(try await made.session.deleteAccount(appleCode: { "code" }))
-  #expect(await eventually { relaunched.session != nil })
-  let again = try #require(relaunched.session)
+  let deleted = try await made.session.deleteAccount(appleCode: { "code" })
+  // Started again as the deletion returns, before the session waits on
+  // anything after the answer, where an app ended then would stop: the
+  // session the server deleted is still kept.
+  #expect(try made.keychain.kept()?.userID == "A")
+  let again = AccountSession(
+    database: made.database, server: made.server, keychain: made.keychain,
+    shared: made.shared, eraseFiles: {}, socketServer: made.socketURL)
+  #expect(deleted)
   // Started again erasing, not as the session the server deleted.
   #expect(again.erasing?.why == .deleted)
   #expect(again.userID == nil)
