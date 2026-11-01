@@ -240,9 +240,10 @@ class GroupCalls internal constructor(
 
   /**
    * Joins the group [code] opens as [displayName], the group's id; joining a group the user is in
-   * changes nothing. [InviteFailure] when it cannot.
+   * changes nothing. [InviteFailure] when it cannot. A name the server would refuse is not asked for.
    */
   suspend fun join(code: String, displayName: String): String = inviting { headers ->
+    if (!fitsPersonName(displayName)) throw InviteFailure(InviteFailure.Reason.Failed)
     groups
       .joinGroup(
         joinGroupRequest {

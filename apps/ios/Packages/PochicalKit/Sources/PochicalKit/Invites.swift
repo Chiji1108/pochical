@@ -96,8 +96,10 @@ extension GroupCalls {
   }
 
   /// Joins the group the code opens as `displayName`; joining a group the
-  /// user is in changes nothing. The group's id.
+  /// user is in changes nothing. The group's id. A name the server would
+  /// refuse is not asked for.
   public func join(code: String, displayName: String) async throws(InviteError) -> String {
+    guard fitsPersonName(displayName) else { throw .failed }
     var request = Pochical_V1_JoinGroupRequest()
     request.inviteCode = code
     request.displayName = displayName

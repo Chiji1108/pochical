@@ -264,12 +264,15 @@ struct CalendarScreen: View {
             keep { db, now in try OwnValues.setNote(day, to: note, now: now, in: db) }
           },
           // Someone added from a day is on that day too, while it takes
-          // one more.
+          // one more, counting those still listed as the day's list does.
           onAddCoworker: { name in
             keep { db, now in
               let id = try OwnValues.addCoworker(named: name, now: now, in: db)
-              if var entry, fitsDayPeople((entry.people ?? []) + [id]) {
-                entry.people = (entry.people ?? []) + [id]
+              let listed = (entry?.people ?? []).filter { id in
+                calendar.coworkers.contains { $0.id == id }
+              }
+              if var entry, fitsDayPeople(listed + [id]) {
+                entry.people = listed + [id]
                 try OwnValues.set(day, to: entry, now: now, in: db)
               }
             }
