@@ -27,9 +27,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -37,13 +37,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import app.pochical.ConfirmAction
 import app.pochical.ListSheet
 import app.pochical.LocalDeviceSettings
 import app.pochical.LocalThemeColors
@@ -228,9 +228,7 @@ fun DecideSheet(poll: ChatPoll, onDismiss: () -> Unit, onDecide: (LocalDate) -> 
           Modifier.weight(1f).semantics { heading() },
           style = MaterialTheme.typography.titleLarge,
         )
-        TextButton(onClick = { picked?.let { onDecide(LocalDate.parse(it)) } }, enabled = picked != null && picked != decided) {
-          Text(stringResource(R.string.chat_poll_settle))
-        }
+        ConfirmAction(stringResource(R.string.chat_poll_settle), onClick = { picked?.let { onDecide(LocalDate.parse(it)) } }, enabled = picked != null && picked != decided)
       }
     }
     items(poll.daysList, key = { it }) { day ->

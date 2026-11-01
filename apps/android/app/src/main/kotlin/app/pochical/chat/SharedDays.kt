@@ -24,10 +24,9 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -55,6 +54,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.pochical.ConfirmAction
 import app.pochical.ListSheet
 import app.pochical.LocalDeviceSettings
 import app.pochical.LocalThemeColors
@@ -65,6 +65,7 @@ import app.pochical.calendar.holidayCountry
 import app.pochical.calendar.holidayName
 import app.pochical.calendar.monthWeeks
 import app.pochical.calendar.monthWithYear
+import app.pochical.calendar.rememberToday
 import app.pochical.calendar.shortMonth
 import app.pochical.calendar.slashText
 import app.pochical.calendar.weekdayColor
@@ -81,7 +82,6 @@ import app.pochical.groups.rememberGroupDays
 import app.pochical.groups.rememberGroupMembers
 import app.pochical.kit.GroupMember
 import app.pochical.kit.PhotoShelf
-import app.pochical.calendar.rememberToday
 import app.pochical.kit.weekday
 import java.time.LocalDate
 import java.time.YearMonth
@@ -379,7 +379,7 @@ fun ShareDaysSheet(
           Modifier.weight(1f).semantics { heading() },
           style = MaterialTheme.typography.titleLarge,
         )
-        TextButton(onClick = { onSend(picked.map(LocalDate::parse)) }, enabled = picked.size >= least && !sending) { Text(stringResource(R.string.days_send)) }
+        ConfirmAction(stringResource(R.string.days_send), onClick = { onSend(picked.map(LocalDate::parse)) }, enabled = picked.size >= least && !sending)
       }
     }
     val suggestions = together.filter { it >= today && it < today.plusDays(SUGGESTION_DAYS) }.sorted()

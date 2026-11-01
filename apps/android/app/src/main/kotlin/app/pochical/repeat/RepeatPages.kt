@@ -40,6 +40,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.pochical.ConfirmAction
 import app.pochical.Footnote
 import app.pochical.LocalThemeColors
 import app.pochical.PageNavigation
@@ -338,7 +339,7 @@ fun RepeatEditor(mode: RepeatMode, navigation: PageNavigation) {
     subtitle = subtitle,
     collapsing = false,
     actions = {
-      TextButton(onClick = { confirming = true }, enabled = typing.sequence.isNotEmpty()) { Text(stringResource(R.string.entering_done)) }
+      ConfirmAction(stringResource(R.string.entering_done), onClick = { confirming = true }, enabled = typing.sequence.isNotEmpty())
     },
   ) { padding ->
     RepeatCalendar(

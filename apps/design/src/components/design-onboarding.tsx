@@ -12,7 +12,11 @@ import {
   ColorSchemeContext,
   useThemeStyle,
 } from "@pochical/prototype/components/design-theme";
-import { Button, pushToBottom } from "@pochical/prototype/components/design-ui";
+import {
+  Button,
+  Headline,
+  pushToBottom,
+} from "@pochical/prototype/components/design-ui";
 import {
   onboarding,
   StepHeader,
@@ -229,7 +233,7 @@ function WelcomeStep({
             width={200}
           />
         )}
-        <h3 className={onboarding.name}>ポチカル</h3>
+        <Headline className={onboarding.name}>ポチカル</Headline>
         {/* Each phrase stays whole, so the line breaks after the comma. */}
         <p className={onboarding.lead}>
           <span className={onboarding.phrase}>シフトをポチッと入れて、</span>

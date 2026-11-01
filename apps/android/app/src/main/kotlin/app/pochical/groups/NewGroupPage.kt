@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.Scaffold
@@ -25,10 +24,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.pochical.ConfirmAction
 import app.pochical.Footnote
 import app.pochical.LimitedTextField
 import app.pochical.LocalThemeColors
-import app.pochical.pageInsets
 import app.pochical.R
 import app.pochical.ReviewPrompt
 import app.pochical.SectionRow
@@ -41,6 +40,7 @@ import app.pochical.kit.PhotoShelf
 import app.pochical.kit.characterCount
 import app.pochical.kit.guessGroupMark
 import app.pochical.kit.nextGroupColor
+import app.pochical.pageInsets
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.launch
 
@@ -115,11 +115,7 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
   Scaffold(
     topBar = {
       PageBar(stringResource(R.string.new_group), onBack) {
-        if (making) {
-          CircularProgressIndicator(Modifier.padding(end = 16.dp).size(24.dp))
-        } else {
-          TextButton(onClick = ::make, enabled = canMake) { Text(stringResource(R.string.new_group_make)) }
-        }
+        ConfirmAction(stringResource(R.string.new_group_make), onClick = ::make, enabled = canMake, busy = making)
       }
     },
     contentWindowInsets = pageInsets,

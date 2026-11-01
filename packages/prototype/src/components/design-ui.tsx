@@ -199,6 +199,85 @@ export function BarGroup({ children }: { children: ReactNode }) {
   return <div className={barGroupStyle}>{children}</div>;
 }
 
+// On Android, what a page, a mode or a sheet is for, confirmed at the end
+// of its bar (保存, 追加, 完了, 送る), as the app's ConfirmAction: Material 3
+// Expressive's one high-visibility action in an app bar, a filled button
+// with its word, the small size and round, its corners squaring a little
+// while pressed; Material's disabled fill while it cannot yet.
+export const materialConfirmStyle = css({
+  _active: { borderRadius: "8px" },
+  _disabled: {
+    bg: "fill.quaternary",
+    color: "text.disabled",
+    cursor: "default",
+  },
+  alignItems: "center",
+  bg: "accent.fill",
+  border: 0,
+  borderRadius: "full",
+  color: "accent.onFill",
+  display: "inline-flex",
+  flexShrink: 0,
+  fontWeight: 500,
+  height: "40px",
+  justifyContent: "center",
+  paddingInline: "16px",
+  textStyle: "subheadline",
+  transition: "border-radius 0.2s",
+});
+
+// The bar's other worded actions on Android, like 並び替え: Material's
+// text button, the word alone in the accent.
+export const materialTextActionStyle = css({
+  _disabled: { color: "text.disabled", cursor: "default" },
+  bg: "transparent",
+  border: 0,
+  borderRadius: "full",
+  color: "accent.default",
+  flexShrink: 0,
+  fontWeight: 500,
+  height: "40px",
+  paddingInline: "12px",
+  textStyle: "subheadline",
+});
+
+// The headline a screen stands on, outside its bar: the first run's
+// ポチカル and its questions, the empty グループ's, an invitation's group, a
+// member's name. iOS's in bold (`ios` says how bold); Android's in
+// Material 3 Expressive's emphasized type, as the app's Headline, which
+// is Medium. Its place, margins included, is the screen's to say.
+const headlineStyle = cva({
+  variants: {
+    weight: {
+      android: { fontWeight: 500 },
+      bold: { fontWeight: 700 },
+      semibold: { fontWeight: 600 },
+    },
+  },
+});
+
+export function Headline({
+  ios = "bold",
+  className,
+  children,
+}: {
+  ios?: "bold" | "semibold";
+  className?: string;
+  children: ReactNode;
+}) {
+  const platform = useDevice((state) => state.platform);
+  return (
+    <h3
+      className={cx(
+        headlineStyle({ weight: platform === "android" ? "android" : ios }),
+        className
+      )}
+    >
+      {children}
+    </h3>
+  );
+}
+
 // A screen under the phone's status bar: a column that fills the phone,
 // so the part that scrolls and what is pinned to its foot share the
 // height. Hidden, it keeps its state and takes no room.

@@ -37,6 +37,7 @@ import { ConfirmDialog, Sheet, SheetHeading, sheetBody } from "./design-sheet";
 import { ToastContext } from "./design-toast";
 import {
   Button,
+  Headline,
   IconButton,
   Note,
   Screen,
@@ -324,7 +325,7 @@ const joinScreen = {
   arrow: css({ flexShrink: 0 }),
   // The whole name, as the one place it is read before joining; a name
   // longer than three lines is cut short.
-  title: css({ fontWeight: 700, lineClamp: 3, margin: 0, textStyle: "title1" }),
+  title: css({ lineClamp: 3, margin: 0, textStyle: "title1" }),
 };
 
 // Who is in a group, by name while that stays short, and by as many
@@ -455,7 +456,7 @@ export function JoinScreen({
             <span className={markFrame({ size: "large" })}>
               <GroupIcon mark={invite.mark} size={40} />
             </span>
-            <h3 className={joinScreen.title}>{invite.group}</h3>
+            <Headline className={joinScreen.title}>{invite.group}</Headline>
           </div>
           <button
             className={cx(joinScreen.members, joinScreen.membersButton)}

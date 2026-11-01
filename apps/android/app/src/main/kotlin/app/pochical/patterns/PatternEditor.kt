@@ -40,6 +40,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.pochical.ConfirmAction
 import app.pochical.Footnote
 import app.pochical.LimitedTextField
 import app.pochical.LocalDeviceSettings
@@ -65,10 +66,10 @@ import app.pochical.kit.PatternRefusal
 import app.pochical.kit.ShiftTime
 import app.pochical.kit.fitsPattern
 import app.pochical.kit.guessLook
+import app.pochical.kit.limitText
 import app.pochical.kit.nextColor
 import app.pochical.kit.refusesArchiving
 import app.pochical.kit.repeats
-import app.pochical.kit.limitText
 import app.pochical.mark
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
@@ -160,15 +161,14 @@ fun PatternEditor(id: String, isNew: Boolean, navigation: PageNavigation) {
     stringResource(if (isNew) R.string.patterns_add else R.string.pattern_edit),
     onBack = navigation::back,
     actions = {
-      TextButton(
-        // Only what the server takes, so a pattern saved stays once sent.
-        enabled = fitsPattern(shaped.row),
+      ConfirmAction(
+        stringResource(if (isNew) R.string.add else R.string.save),
         onClick = {
           scope.launch { kept(days.savePattern(shaped)) { if (isNew) navigation.back(2) else navigation.back() } }
         },
-      ) {
-        Text(stringResource(if (isNew) R.string.add else R.string.save))
-      }
+        // Only what the server takes, so a pattern saved stays once sent.
+        enabled = fitsPattern(shaped.row),
+      )
     },
   ) { padding ->
     LazyColumn(contentPadding = padding) {

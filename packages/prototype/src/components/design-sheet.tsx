@@ -4,7 +4,8 @@ import { Check, ChevronLeft, X } from "lucide-react";
 import { createContext, useContext, useEffect, useRef } from "react";
 import type { ReactNode, RefObject } from "react";
 
-import { SegmentedContext } from "./design-ui";
+import { useDevice } from "../lib/design-device";
+import { materialConfirmStyle, SegmentedContext } from "./design-ui";
 
 // Sheet headings, in the two kinds the platforms' own sheets have. A sheet
 // to look at has its title and a × to close it. A sheet to decide
@@ -407,6 +408,7 @@ const decide = {
       },
     },
   }),
+  end: css({ justifySelf: "end" }),
   root: css({
     alignItems: "center",
     display: "grid",
@@ -497,6 +499,9 @@ export function DecideHeading({
   onAction: () => void;
   disabled?: boolean;
 }) {
+  // iOS's ✓ alone, named to a screen reader; Android's the bar's filled
+  // button with its word, as every confirm there is.
+  const android = useDevice((state) => state.platform === "android");
   return (
     <header className={decide.root}>
       <button
@@ -508,15 +513,26 @@ export function DecideHeading({
         <X aria-hidden="true" size={22} />
       </button>
       <h4 className={decide.title}>{title}</h4>
-      <button
-        aria-label={action}
-        className={decide.button({ confirm: true })}
-        disabled={disabled}
-        onClick={onAction}
-        type="button"
-      >
-        <Check aria-hidden="true" size={22} />
-      </button>
+      {android ? (
+        <button
+          className={cx(materialConfirmStyle, decide.end)}
+          disabled={disabled}
+          onClick={onAction}
+          type="button"
+        >
+          {action}
+        </button>
+      ) : (
+        <button
+          aria-label={action}
+          className={decide.button({ confirm: true })}
+          disabled={disabled}
+          onClick={onAction}
+          type="button"
+        >
+          <Check aria-hidden="true" size={22} />
+        </button>
+      )}
     </header>
   );
 }

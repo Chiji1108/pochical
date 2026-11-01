@@ -1,7 +1,5 @@
 package app.pochical.chat
 
-import androidx.compose.foundation.selection.selectableGroup
-import app.pochical.SettingsRadioRow
 import android.content.res.Resources
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -12,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
@@ -27,7 +26,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,13 +51,15 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.pochical.Headline
 import app.pochical.ListSheet
 import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.ReviewPrompt
 import app.pochical.RowEnd
+import app.pochical.SettingsRadioRow
 import app.pochical.SettingsRow
 import app.pochical.SettingsSection
 import app.pochical.design.Chat
@@ -324,7 +324,7 @@ fun MemberProfileSheet(
           if (opens) Modifier.clip(CircleShape).clickable(onClickLabel = opensLarge) { faceOpen = true }.semantics { contentDescription = photo } else Modifier,
         )
         if (faceOpen) FaceViewer(person.photoId, shelf, person.name) { faceOpen = false }
-        Text(person.name, style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Headline(person.name, textAlign = TextAlign.Center, maxLines = 2)
         if (blocked) {
           Text(
             stringResource(R.string.blocked_badge),

@@ -57,6 +57,7 @@ import app.pochical.SectionRow
 import app.pochical.SettingsPage
 import app.pochical.SettingsRow
 import app.pochical.SettingsSection
+import app.pochical.SortToggle
 import app.pochical.calendar.Coworker
 import app.pochical.calendar.LocalOwnDays
 import app.pochical.design.COWORKERS_MAX
@@ -123,9 +124,7 @@ fun CoworkersPage(navigation: PageNavigation) {
     snackbar = snackbar,
     actions = {
       if (people.size > 1 && !adding) {
-        TextButton(onClick = { sorting = !sorting }) {
-          Text(stringResource(if (sorting) R.string.patterns_sort_done else R.string.patterns_sort))
-        }
+        SortToggle(sorting) { sorting = !sorting }
       }
     },
   ) { padding ->
