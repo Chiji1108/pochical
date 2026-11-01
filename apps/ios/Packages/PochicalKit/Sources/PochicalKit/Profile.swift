@@ -125,7 +125,7 @@ extension GroupCalls {
   /// another device's change to the other (spec/sync-protocol.md,
   /// Profile). The device hears of them from the user's socket. A photo
   /// goes up first (`ChatPhotos.send` to `PhotoShelf.mine`).
-  public func setProfile(name: String? = nil, photoID: String? = nil) async throws {
+  public func setProfile(name: String?, photoID: String?) async throws {
     var request = Pochical_V1_SetProfileRequest()
     if let name { request.name = name }
     if let photoID { request.photoID = photoID }

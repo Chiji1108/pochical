@@ -473,7 +473,13 @@ private fun JoinProfileDialog(
  */
 private suspend fun keepAsUsual(calls: app.pochical.kit.GroupCalls, name: String, face: JoinFace): Boolean =
   try {
-    val photoId = (face as? JoinFace.Held)?.photoId?.also { calls.sendHeldPhoto(it, PhotoShelf.Mine) }.orEmpty()
+    // The usual photo, if there is one, stays as the account has it.
+    val photoId =
+      when (face) {
+        JoinFace.Usual -> null
+        is JoinFace.Held -> face.photoId.also { calls.sendHeldPhoto(it, PhotoShelf.Mine) }
+        JoinFace.None -> ""
+      }
     calls.setProfile(name, photoId)
     true
   } catch (e: CancellationException) {
