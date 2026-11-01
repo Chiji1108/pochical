@@ -159,6 +159,14 @@ private final class FakeAccountServer: AccountServer {
       eraseFiles: {}, socketServer: url)
   }
 
+  /// The session the app would be as it starts again, on the same
+  /// database, Keychain and app group.
+  func relaunched() -> AccountSession {
+    AccountSession(
+      database: database, server: server, keychain: keychain, shared: shared,
+      eraseFiles: {}, socketServer: socketURL)
+  }
+
   static func signedIn(
     as token: String, _ userID: String, socketStatus: String = "403 Forbidden",
     socketServer: URL? = nil
@@ -461,9 +469,7 @@ private final class FakeAccountServer: AccountServer {
   #expect(try made.keychain.kept() == StoredSession(token: "a", userID: "A"))
 
   // The app ends and starts again meanwhile: still erasing, as no one.
-  let again = AccountSession(
-    database: made.database, server: made.server, keychain: made.keychain, shared: made.shared,
-    eraseFiles: {}, socketServer: made.socketURL)
+  let again = made.relaunched()
   #expect(again.phase == .erasing)
   #expect(again.erasing?.why == .deleted)
   #expect(again.userID == nil)
@@ -507,9 +513,7 @@ private final class FakeAccountServer: AccountServer {
   made.session.cameToFront()
 
   // The app ends and starts again: still ended.
-  let again = AccountSession(
-    database: made.database, server: made.server, keychain: made.keychain, shared: made.shared,
-    eraseFiles: {}, socketServer: made.socketURL)
+  let again = made.relaunched()
   #expect(again.phase == .ended)
   #expect(again.userID == "A")
   again.cameToFront()
@@ -702,14 +706,12 @@ private final class FakeAccountServer: AccountServer {
   }
   _ = await made.session.hold("g1")
   let deleted = try await made.session.deleteAccount(appleCode: { "code" })
+  try #require(deleted)
   // Started again as the deletion returns, before the session waits on
   // anything after the answer, where an app ended then would stop: the
   // session the server deleted is still kept.
   #expect(try made.keychain.kept()?.userID == "A")
-  let again = AccountSession(
-    database: made.database, server: made.server, keychain: made.keychain,
-    shared: made.shared, eraseFiles: {}, socketServer: made.socketURL)
-  #expect(deleted)
+  let again = made.relaunched()
   // Started again erasing, not as the session the server deleted.
   #expect(again.erasing?.why == .deleted)
   #expect(again.userID == nil)
@@ -894,9 +896,7 @@ func aChangesAnswerSettlesA401ThatCameWhileItWaited(_ pending: Pending, _ answer
   await #expect(throws: (any Error).self) { try await switching.value }
   #expect(made.session.phase == .ended)
   #expect(try made.keychain.kept() == StoredSession(token: "a", userID: "A", ended: true))
-  let again = AccountSession(
-    database: made.database, server: made.server, keychain: made.keychain, shared: made.shared,
-    eraseFiles: {}, socketServer: made.socketURL)
+  let again = made.relaunched()
   #expect(again.phase == made.session.phase)
   #expect(again.userID == made.session.userID)
 }
@@ -930,9 +930,7 @@ func aChangesAnswerSettlesA401ThatCameWhileItWaited(_ pending: Pending, _ answer
   await #expect(throws: (any Error).self) { try await switching.value }
   #expect(try made.keychain.kept() == StoredSession(token: "a", userID: "A"))
   #expect(made.session.phase == .signedIn)
-  let again = AccountSession(
-    database: made.database, server: made.server, keychain: made.keychain, shared: made.shared,
-    eraseFiles: {}, socketServer: made.socketURL)
+  let again = made.relaunched()
   #expect(again.phase == made.session.phase)
   #expect(again.userID == made.session.userID)
 }
