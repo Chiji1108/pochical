@@ -513,26 +513,19 @@ export function DecideHeading({
         <X aria-hidden="true" size={22} />
       </button>
       <h4 className={decide.title}>{title}</h4>
-      {android ? (
-        <button
-          className={cx(materialConfirmStyle, decide.end)}
-          disabled={disabled}
-          onClick={onAction}
-          type="button"
-        >
-          {action}
-        </button>
-      ) : (
-        <button
-          aria-label={action}
-          className={decide.button({ confirm: true })}
-          disabled={disabled}
-          onClick={onAction}
-          type="button"
-        >
-          <Check aria-hidden="true" size={22} />
-        </button>
-      )}
+      <button
+        aria-label={android ? undefined : action}
+        className={
+          android
+            ? cx(materialConfirmStyle, decide.end)
+            : decide.button({ confirm: true })
+        }
+        disabled={disabled}
+        onClick={onAction}
+        type="button"
+      >
+        {android ? action : <Check aria-hidden="true" size={22} />}
+      </button>
     </header>
   );
 }

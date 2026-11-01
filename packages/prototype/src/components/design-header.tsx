@@ -7,8 +7,8 @@ import { useDevice } from "../lib/design-device";
 import { MaterialSymbol } from "./design-symbol";
 import {
   iconButtonStyle,
+  Button,
   materialConfirmStyle,
-  materialTextActionStyle,
   SCREEN_SCROLL_GAP,
 } from "./design-ui";
 import type { ButtonProps } from "./design-ui";
@@ -175,11 +175,15 @@ export function HeaderAction({
   className,
   ...props
 }: ButtonProps & { prominent?: boolean }) {
-  const platform = useDevice((state) => state.platform);
-  let look = headerActionStyle({ prominent });
-  if (platform === "android") {
-    look = prominent ? materialConfirmStyle : materialTextActionStyle;
+  const android = useDevice((state) => state.platform === "android");
+  if (android && !prominent) {
+    return (
+      <Button className={className} size="small" variant="text" {...props} />
+    );
   }
+  const look = android
+    ? materialConfirmStyle
+    : headerActionStyle({ prominent });
   return <button className={cx(look, className)} type="button" {...props} />;
 }
 

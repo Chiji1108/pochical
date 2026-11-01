@@ -10,6 +10,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
@@ -17,15 +18,19 @@ import androidx.compose.ui.unit.dp
  * 送る. Material 3 Expressive's one high-visibility action in an app bar, drawn as Google's own
  * apps draw Save (Contacts' new contact): a filled button with its word, Material's small size
  * and round, squaring a little while pressed. One to a bar; the bar's other actions stay icon or
- * text buttons. It stands 16dp in from the bar's end, as the way back's arrow does from its start.
- * [busy] puts Material's spinner in its place while what it started is under way.
+ * text buttons. [busy] puts Material's spinner in its place while what it started is under way.
+ *
+ * [endInset] is the room it keeps from the end of the row it ends: an app bar's actions run to 4dp
+ * from the screen's edge, as an icon button keeps its own room inside it, so 12dp puts it 16dp
+ * in, as the way back's arrow stands from the start; a row that keeps its own edge, as the
+ * calendar's heading does, passes 0.
  */
 @Composable
-fun ConfirmAction(label: String, onClick: () -> Unit, enabled: Boolean = true, busy: Boolean = false) {
+fun ConfirmAction(label: String, onClick: () -> Unit, enabled: Boolean = true, busy: Boolean = false, endInset: Dp = 12.dp) {
   if (busy) {
-    CircularProgressIndicator(Modifier.padding(end = 16.dp).size(24.dp))
+    CircularProgressIndicator(Modifier.padding(end = endInset).size(24.dp))
   } else {
-    Button(onClick = onClick, shapes = ButtonDefaults.shapes(), modifier = Modifier.padding(end = 12.dp), enabled = enabled) { Text(label) }
+    Button(onClick = onClick, shapes = ButtonDefaults.shapes(), modifier = Modifier.padding(end = endInset), enabled = enabled) { Text(label) }
   }
 }
 

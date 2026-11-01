@@ -379,7 +379,7 @@ fun ShareDaysSheet(
           Modifier.weight(1f).semantics { heading() },
           style = MaterialTheme.typography.titleLarge,
         )
-        ConfirmAction(stringResource(R.string.days_send), onClick = { onSend(picked.map(LocalDate::parse)) }, enabled = picked.size >= least && !sending)
+        ConfirmAction(stringResource(R.string.days_send), onClick = { onSend(picked.map(LocalDate::parse)) }, enabled = picked.size >= least, busy = sending)
       }
     }
     val suggestions = together.filter { it >= today && it < today.plusDays(SUGGESTION_DAYS) }.sorted()

@@ -649,7 +649,7 @@ private fun Heading(
     Spacer(Modifier.weight(1f))
     val away = if (dayOpen) (if (thisWeekAway) 1f else 0f) else abs(pages - todayPage).coerceAtMost(1f)
     if (entering) {
-      ConfirmAction(stringResource(R.string.entering_done), onClick = onDone)
+      ConfirmAction(stringResource(R.string.entering_done), onClick = onDone, endInset = 0.dp)
     } else if (away > 0f) {
       OutlinedButton(
         onClick = if (dayOpen) onThisWeek else onThisMonth,

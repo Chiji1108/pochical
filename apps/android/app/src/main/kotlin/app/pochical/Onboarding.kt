@@ -349,7 +349,7 @@ private fun OrderStep(template: JobTemplate, ids: List<String>, onBack: () -> Un
     onBack = onBack,
     collapsing = false,
     actions = {
-      ConfirmAction(stringResource(R.string.job_done), onClick = { onDone(ids, typing.sequence, typing.anchor) }, enabled = typing.sequence.isNotEmpty() && !waiting)
+      ConfirmAction(stringResource(R.string.job_done), onClick = { onDone(ids, typing.sequence, typing.anchor) }, enabled = typing.sequence.isNotEmpty(), busy = waiting)
     },
   ) { padding ->
     JobOrderCalendar(

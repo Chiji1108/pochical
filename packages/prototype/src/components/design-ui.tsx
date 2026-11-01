@@ -226,21 +226,6 @@ export const materialConfirmStyle = css({
   transition: "border-radius 0.2s",
 });
 
-// The bar's other worded actions on Android, like 並び替え: Material's
-// text button, the word alone in the accent.
-export const materialTextActionStyle = css({
-  _disabled: { color: "text.disabled", cursor: "default" },
-  bg: "transparent",
-  border: 0,
-  borderRadius: "full",
-  color: "accent.default",
-  flexShrink: 0,
-  fontWeight: 500,
-  height: "40px",
-  paddingInline: "12px",
-  textStyle: "subheadline",
-});
-
 // The headline a screen stands on, outside its bar: the first run's
 // ポチカル and its questions, the empty グループ's, an invitation's group, a
 // member's name. iOS's in bold (`ios` says how bold); Android's in
