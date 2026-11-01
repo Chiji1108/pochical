@@ -9,9 +9,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
@@ -25,9 +25,9 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -50,6 +50,8 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.collapse
+import androidx.compose.ui.semantics.expand
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -146,26 +148,19 @@ private fun DayHolds(
           icon = null,
           onClick = onPickShift,
           value = if (pattern == null) stringResource(R.string.none) else null,
-          valueContent =
-            pattern?.let {
-              {
-                ShiftMark(it.icon, it.emoji, it.symbol, it.color, size = 18.dp)
-                Text(it.name, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
-              }
-            },
+          valueContent = pattern?.let { { PatternValue(it) } },
         )
       }
       if (entry != null && time != null) {
         row { HoursRow(entry, time) { days.set(day, it) } }
         if (entry.start != null || entry.end != null) {
           row {
+            val reset = stringResource(R.string.day_hours_reset, hoursText(time.start, time.end))
             SettingsRow(
-              stringResource(R.string.day_hours_reset, hoursText(time.start, time.end)),
+              reset,
               icon = null,
               onClick = { days.set(day, entry.copy(start = null, end = null)) },
-              headlineContent = {
-                Text(stringResource(R.string.day_hours_reset, hoursText(time.start, time.end)), color = MaterialTheme.colorScheme.primary)
-              },
+              headlineContent = { Text(reset, color = MaterialTheme.colorScheme.primary) },
               end = RowEnd.None,
             )
           }
@@ -206,7 +201,6 @@ private fun HoursRow(entry: DayEntry, time: ShiftTime, onChange: (DayEntry) -> U
           Text(if (moves.isEmpty()) stringResource(R.string.day_hours_changed) else moves.joinToString("・"))
         }
       },
-    // Each hour a tonal button picked on Material's clock, as /design's time fields.
     valueContent = {
       Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         HourButton((entry.start ?: time.start).removePrefix("0")) { picking = true }
@@ -230,9 +224,18 @@ private fun HoursRow(entry: DayEntry, time: ShiftTime, onChange: (DayEntry) -> U
   }
 }
 
-/** One of a day's hours, opening Material's clock. */
+/** A pattern as a row's value shows it: its mark and name. */
 @Composable
-private fun HourButton(hour: String, onClick: () -> Unit) {
+internal fun PatternValue(pattern: Pattern) {
+  Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+    ShiftMark(pattern.icon, pattern.emoji, pattern.symbol, pattern.color, size = 18.dp)
+    Text(pattern.name, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+  }
+}
+
+/** An hour of a day or a pattern, a tonal button opening Material's clock (TimeDialog), as /design's time fields. */
+@Composable
+internal fun HourButton(hour: String, onClick: () -> Unit) {
   FilledTonalButton(onClick = onClick, shapes = ButtonDefaults.shapes(), contentPadding = PaddingValues(horizontal = 12.dp)) { Text(hour) }
 }
 
@@ -265,6 +268,8 @@ private fun PeopleRow(onDay: List<String>, coworkers: List<Coworker>, open: Bool
     stringResource(R.string.day_people),
     icon = null,
     onClick = { onOpenChange(!open) },
+    // Read as what unfolds or folds the chips, as the arrow shows.
+    modifier = Modifier.semantics { if (open) collapse { onOpenChange(false); true } else expand { onOpenChange(true); true } },
     supporting = coworkers.filter { it.id in onDay }.joinToString("、") { it.name }.ifEmpty { stringResource(R.string.none) },
     valueContent = { Icon(painterResource(R.drawable.ic_expand_more), null, Modifier.rotate(if (open) 180f else 0f)) },
     end = RowEnd.None,
