@@ -263,11 +263,12 @@ struct CalendarScreen: View {
           onNoteChange: { note in
             keep { db, now in try OwnValues.setNote(day, to: note, now: now, in: db) }
           },
-          // Someone added from a day is on that day too.
+          // Someone added from a day is on that day too, while it takes
+          // one more.
           onAddCoworker: { name in
             keep { db, now in
               let id = try OwnValues.addCoworker(named: name, now: now, in: db)
-              if var entry {
+              if var entry, fitsDayPeople((entry.people ?? []) + [id]) {
                 entry.people = (entry.people ?? []) + [id]
                 try OwnValues.set(day, to: entry, now: now, in: db)
               }

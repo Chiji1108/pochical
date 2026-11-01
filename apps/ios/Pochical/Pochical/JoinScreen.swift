@@ -77,7 +77,7 @@ struct JoinScreen: View {
 
   private func invitation(_ details: InviteDetails) -> some View {
     let canJoin =
-      !details.full && !myName.isEmpty && myName.count <= TextLimits.personName
+      !details.full && !myName.isEmpty && fitsPersonName(myName)
     return VStack(spacing: 0) {
       List {
         Section {

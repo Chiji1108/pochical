@@ -221,8 +221,10 @@ private struct GroupEditPage: View {
 
   var body: some View {
     let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+    // Only what the server takes (spec/vectors/fits.json), so the call
+    // is never refused for it.
     let canSave =
-      !trimmedName.isEmpty && name.count <= TextLimits.groupName
+      fitsGroupName(trimmedName) && fitsGroupMark(mark)
       && (trimmedName != group.name || mark != group.mark)
     List {
       Section {
@@ -401,7 +403,7 @@ private struct DisplayNamePage: View {
   /// kept: within the limit, and empty only with a usual name to follow.
   private var unsaved: String? {
     let kept = name.trimmingCharacters(in: .whitespacesAndNewlines)
-    let fits = kept.count <= TextLimits.personName && !(kept.isEmpty && usualName.isEmpty)
+    let fits = fitsPersonName(kept) && !(kept.isEmpty && usualName.isEmpty)
     return kept != saved && fits ? kept : nil
   }
 

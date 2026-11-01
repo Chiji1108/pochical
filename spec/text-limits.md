@@ -1,6 +1,6 @@
 # Text limits
 
-How the free text people type is held to its limit and how a long value is shown. Both native apps and the server follow it. The TypeScript code counts with `characterCount` and `withinLimit` in `design/src/text.ts` (`@pochical/design/text`), shared by the server, the admin site and the web prototype, whose `LimitedInput` in `packages/prototype/src/components/design-fields.tsx` and `packages/prototype/src/lib/text-limits.ts` follow this spec.
+How the free text people type is held to its limit and how a long value is shown. Both native apps and the server follow it. The TypeScript code counts with `characterCount` and `withinLimit`, and checks with `fitsText` and `isEmoji`, in `design/src/text.ts` (`@pochical/design/text`), shared by the server, the admin site and the web prototype, whose `LimitedInput` in `packages/prototype/src/components/design-fields.tsx` and `packages/prototype/src/lib/text-limits.ts` follow this spec.
 
 ## Limits
 
@@ -35,3 +35,5 @@ A value within its limit can still be wider than where it is shown.
 ## Server
 
 The server rejects a change whose text is over its limit, counted the same way, so a client that does not hold a field to its limit cannot store a longer value. It never cuts the text itself. It also rejects text larger than its limit's characters can be, more than 32 UTF-16 code units a character in all: more than any emoji sequence or accented letter takes (Unicode's stream-safe text keeps a run of combining marks to 30), so one character stacked with thousands of marks, which no keyboard writes, cannot carry a value past what everything downstream takes (`spec/vectors/text.json`, fitsText).
+
+What the server takes of each value the apps edit is one rule per value, written once for TypeScript in `design/src/values.ts` (the server and the prototype import it) and once in each app's kit (PochicalKit's `Fits.swift`, `:kit`'s `Fits.kt`), all pinned by `spec/vectors/fits.json`; a pattern's is `spec/vectors/patterns.json`'s fits. Each app checks it where the value is kept, a day's fields, a coworker's name, a group's name and mark and a person's name, and its pages hold their buttons off, or keep the value last kept, until the value fits, so nothing the person keeps looks saved and then goes back on the next sync with the edits around it.
