@@ -17,8 +17,11 @@ internal class MemoryBytes : KeptBytes {
   @Volatile var reachable = true
   @Volatile var writable = true
   @Volatile var failure: Exception? = null
+  /** How many reads were asked for. */
+  val reads = java.util.concurrent.atomic.AtomicInteger()
 
   override suspend fun read(): ByteArray? {
+    reads.incrementAndGet()
     failure?.let { throw it }
     if (!reachable) throw StoreUnreachable(IllegalStateException("Play services unavailable"))
     return bytes

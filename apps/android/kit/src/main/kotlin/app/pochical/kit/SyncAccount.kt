@@ -894,7 +894,7 @@ class SyncAccount internal constructor(
    * Signs in, one sign-in at a time: under way until the queue takes its end ([Command.SignInEnded]),
    * handed over once its job is over however it ended, cancelled too, even before it began. One
    * cancelled is over only once the user it made is kept ([newSession]), so the next starts from it.
-   * One that failed, whatever the cause, is [SignInOutcome.Failed], never the app's crash: as iOS's
+   * One that failed with any exception is [SignInOutcome.Failed], never the app's crash: as iOS's
    * AccountSession, the device logs it and stays signing in until the app comes to the foreground.
    */
   private fun startSigningIn() {
@@ -904,17 +904,18 @@ class SyncAccount internal constructor(
       outcome =
         try {
           signIn()
-        } catch (e: CancellationException) {
-          throw e
         } catch (e: Exception) {
-          // One that failed as it was cancelled was cancelled.
+          // Failed as it was cancelled, it was cancelled; a CancellationException not its own failed it.
           ensureActive()
           Log.e(TAG, "Signing in failed, tried again in the foreground", e)
           SignInOutcome.Failed
         }
     }
     signingIn = job
-    job.invokeOnCompletion { commands.trySend(Command.SignInEnded(outcome)) }
+    job.invokeOnCompletion { cause ->
+      // An Error goes on to the scope's handler, the app's crash, never begun again at once.
+      if (cause == null || cause is CancellationException) commands.trySend(Command.SignInEnded(outcome))
+    }
   }
 
   /** What a sign-in came to ([signIn]), for the queue to take on while the device is still signing in. */
@@ -984,9 +985,10 @@ class SyncAccount internal constructor(
       }
     }
     // Another user's photos go before their database, so an erase cut off (the sign-in cancelled or
-    // failed) is still to do at the next try, which finds the database still theirs.
+    // failed) is still to do at the next try, which finds the database still theirs. Only signing in
+    // changes whose it is, so it is as noted.
     val userId = session.userId
-    if (database.owner().let { it != null && it != userId }) linePhotos.eraseAll()
+    if (noted.owner.isNotEmpty() && noted.owner != userId) linePhotos.eraseAll()
     database.write {
       if (!claim(userId)) {
         eraseUserData()

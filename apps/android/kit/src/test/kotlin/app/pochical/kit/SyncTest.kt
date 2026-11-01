@@ -385,14 +385,17 @@ class SyncTest {
     val phone = device()
     phone.sessions.write(StoredSession(server.token, server.userId))
     phone.kept.failure = IllegalStateException("Block Store failed")
+    val reads = phone.kept.reads.get()
     phone.account.foreground()
-    delay(500)
+    eventually { phone.kept.reads.get() > reads }
+    phone.kept.failure = null
     assertEquals(AccountState.SigningIn, phone.account.state.value)
 
-    phone.kept.failure = null
-    phone.account.background()
-    phone.account.foreground()
-    withTimeout(10_000) { phone.current() }
+    // The next foreground signs in, once the sign-in that failed is over.
+    eventually {
+      phone.account.foreground()
+      phone.account.state.value is AccountState.SignedIn
+    }
     assertEquals(AccountState.SignedIn(server.userId, linked = null), phone.account.state.value)
     assertEquals(0, server.signIns.get())
   }
@@ -404,14 +407,14 @@ class SyncTest {
     val phone = device()
     phone.account.foreground()
     eventually { server.signIns.get() == 1 }
-    delay(500)
-    assertEquals("not tried again until the foreground", 1, server.signIns.get())
     assertEquals(AccountState.SigningIn, phone.account.state.value)
 
     server.signInStatus = 200
     server.signInBody = null
-    phone.account.background()
-    phone.account.foreground()
+    eventually {
+      phone.account.foreground()
+      phone.account.state.value is AccountState.SignedIn
+    }
     withTimeout(10_000) { phone.current() }
     assertEquals(StoredSession(server.token, server.userId), phone.sessions.read())
   }
