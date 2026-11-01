@@ -113,6 +113,11 @@ struct PhotoEditor<Picture: View>: View {
               .alignmentGuide(.bottom) { $0[.bottom] - 2 }
               .accessibilityHidden(true)
           }
+          // Room in the label's own frame for the camera, its shadow and
+          // the picture's round: the menu morphs out of that frame and
+          // back into it in a rounded shape, clipping whatever reaches its
+          // edge. The words under the picture make the room below it.
+          .padding([.horizontal, .top], 4)
       }
     }
     .disabled(busy)
