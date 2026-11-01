@@ -3,7 +3,6 @@ package app.pochical.chat
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.DropdownMenuGroup
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.DropdownMenuPopup
@@ -14,11 +13,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import app.pochical.LocalThemeColors
 import app.pochical.R
 
@@ -75,7 +74,8 @@ fun ColumnScope.MenuGroups(
           leadingIcon =
             when {
               icon != null -> ({ Icon(painterResource(icon), contentDescription = null, tint = tint) })
-              choice != null -> ({ Spacer(Modifier.size(24.dp)) })
+              // The check unseen, so the words stay where the checked one's are.
+              choice != null -> ({ Icon(painterResource(R.drawable.ic_check), contentDescription = null, tint = Color.Transparent) })
               else -> null
             },
           modifier = item(index, shapes.shape).then(if (choice != null) Modifier.semantics { selected = choice } else Modifier),
