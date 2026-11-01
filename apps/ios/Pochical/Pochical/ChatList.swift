@@ -148,11 +148,12 @@ struct ChatList: View {
 /// and how many lines count as unread.
 struct ChatRow<Icon: View>: View {
   @Environment(\.themeColors) private var colors
-  @Fetch private var chat = ChatSummaryRequest.Value()
+  @State private var feed: ChatFeed<ChatSummaryRequest>
+  private var chat: ChatSummaryRequest.Value { feed.value }
   /// Whether the chat's notifications are off, marked after its name.
   @Fetch(ChatNotificationsRequest()) private var notifications = ChatNotificationState()
   /// The device's time the chat's lines not sent are read by.
-  @State private var now = ChatTime.nowMs
+  @State private var now: Int64
   /// The chat's place, by the id the device keeps its chats by.
   let placeID: String
   let threadID: String
@@ -163,8 +164,9 @@ struct ChatRow<Icon: View>: View {
   @ViewBuilder let icon: () -> Icon
   let onOpen: () -> Void
 
-  /// The chat read as the row is made, so its latest line is there on the
-  /// first frame rather than `empty` for a moment.
+  /// The chat read as the row first draws (ChatFeed), so its latest line
+  /// is there on the first frame rather than `empty` for a moment, and
+  /// not again each time the list draws.
   init(
     placeID: String, threadID: String, me: String, label: String, blocked: Set<String> = [],
     @ViewBuilder icon: @escaping () -> Icon, onOpen: @escaping () -> Void
@@ -176,9 +178,12 @@ struct ChatRow<Icon: View>: View {
     self.blocked = blocked
     self.icon = icon
     self.onOpen = onOpen
-    _chat = Fetch(
-      wrappedValue: ChatSummaryRequest.Value(),
-      ChatSummaryRequest(groupID: placeID, threadID: threadID, me: me, now: ChatTime.nowMs))
+    let now = ChatTime.nowMs
+    _now = State(initialValue: now)
+    _feed = State(
+      initialValue: ChatFeed(
+        ChatSummaryRequest(groupID: placeID, threadID: threadID, me: me, now: now),
+        empty: ChatSummaryRequest.Value()))
   }
 
   var body: some View {
@@ -237,9 +242,8 @@ struct ChatRow<Icon: View>: View {
       .contentShape(.rect)
     }
     .buttonStyle(.plain)
-    .task(id: request) {
-      _ = try? await $chat.load(request)
-    }
+    // Read again as what it asks changes.
+    .task(id: request) { await feed.load(request) }
     // A line still being sent says 送れませんでした the moment its wait is
     // over, the chat open or not (spec/chat.md, Lines on their way).
     .task(id: chat.summary.failsAt) {
