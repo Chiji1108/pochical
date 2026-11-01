@@ -298,6 +298,10 @@ struct JoinScreen: View {
 
   private func join() {
     joining = true
+    // Decided by the screen the person saw: the join itself makes their
+    // name the usual one, which comes back on the user's socket while it
+    // is still going.
+    let asUsual = usualName.isEmpty
     Task {
       defer { joining = false }
       do throws(InviteError) {
@@ -307,7 +311,7 @@ struct JoinScreen: View {
         // and keeps the face as theirs everywhere too, which the group
         // then shows as it shows anyone's usual ones; anyone else's face,
         // or one not kept as usual, is the group's own.
-        let keptAsUsual = usualName.isEmpty ? await keepAsUsual() : false
+        let keptAsUsual = asUsual ? await keepAsUsual() : false
         if !keptAsUsual {
           await setFace(in: groupID)
         }
