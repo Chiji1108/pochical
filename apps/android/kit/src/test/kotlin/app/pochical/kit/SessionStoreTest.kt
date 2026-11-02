@@ -8,15 +8,21 @@ import org.junit.Assert.assertThrows
 import org.junit.Test
 
 /**
- * Bytes kept in memory, as Block Store keeps them; [reachable] false as without Play services, and
- * [writable] false for a store that went out of reach between a read and a write.
+ * Bytes kept in memory, as Block Store keeps them; [reachable] false as without Play services,
+ * [writable] false for a store that went out of reach between a read and a write, and [failure]
+ * what a read throws that the store did not foresee.
  */
 internal class MemoryBytes : KeptBytes {
   @Volatile var bytes: ByteArray? = null
   @Volatile var reachable = true
   @Volatile var writable = true
+  @Volatile var failure: Exception? = null
+  /** How many reads were asked for. */
+  val reads = java.util.concurrent.atomic.AtomicInteger()
 
   override suspend fun read(): ByteArray? {
+    reads.incrementAndGet()
+    failure?.let { throw it }
     if (!reachable) throw StoreUnreachable(IllegalStateException("Play services unavailable"))
     return bytes
   }
