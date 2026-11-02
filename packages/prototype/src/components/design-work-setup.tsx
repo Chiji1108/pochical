@@ -24,7 +24,7 @@ import {
 } from "./design-repeat-editor";
 import { ConfirmDialog } from "./design-sheet";
 import { KeysPreview } from "./design-shift-input";
-import { Button, OptionCard, optionList } from "./design-ui";
+import { Button, Headline, OptionCard, optionList } from "./design-ui";
 
 type Template = JobTemplate;
 
@@ -132,7 +132,7 @@ export const onboarding = {
     margin: 0,
     textStyle: "body",
   }),
-  name: css({ fontWeight: 700, margin: "8px 0 0", textStyle: "title1" }),
+  name: css({ margin: "8px 0 0", textStyle: "title1" }),
   // Each phrase stays whole, so the line breaks after the comma.
   phrase: css({ display: "inline-block" }),
   // In light, the scan's black lines on white paper are multiplied into
@@ -168,7 +168,6 @@ export const onboarding = {
     textStyle: "footnote",
   }),
   title: css({
-    fontWeight: 600,
     lineHeight: 1.45,
     margin: 0,
     textStyle: "title2",
@@ -360,7 +359,9 @@ export function StepHeader({
           onClick={onBack}
         />
       )}
-      <h3 className={onboarding.title}>{title}</h3>
+      <Headline className={onboarding.title} ios="semibold">
+        {title}
+      </Headline>
       {description && <p className={onboarding.description}>{description}</p>}
     </header>
   );

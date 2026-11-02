@@ -38,6 +38,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.pochical.ConfirmAction
 import app.pochical.Footnote
 import app.pochical.LimitedTextField
 import app.pochical.LocalThemeColors
@@ -296,8 +297,7 @@ private fun EditForm(group: GroupRow, onBack: () -> Unit) {
   Scaffold(
     topBar = {
       PageBar(stringResource(R.string.group_edit), onBack) {
-        if (saving) CircularProgressIndicator(Modifier.padding(end = 16.dp).size(24.dp))
-        else TextButton(onClick = ::save, enabled = canSave) { Text(stringResource(R.string.save)) }
+        ConfirmAction(stringResource(R.string.save), onClick = ::save, enabled = canSave, busy = saving)
       }
     }
   ) { padding ->

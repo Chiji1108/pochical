@@ -45,6 +45,7 @@ import {
   BarGroup,
   Button,
   DestructiveButton,
+  Headline,
   IconButton,
   Note,
   Section,
@@ -120,7 +121,9 @@ export function NoGroups({
         />
       </div>
       <div className={noGroups.foot}>
-        <h3 className={noGroups.title}>グループでシフトを共有できます</h3>
+        <Headline className={noGroups.title}>
+          グループでシフトを共有できます
+        </Headline>
         <p className={noGroups.note}>
           家族や友達とシフトを見せ合って、
           <br />
@@ -169,12 +172,7 @@ const noGroups = {
     minHeight: "180px",
     overflow: "hidden",
   }),
-  title: css({
-    fontWeight: 700,
-    margin: 0,
-    textAlign: "center",
-    textStyle: "title2",
-  }),
+  title: css({ margin: 0, textAlign: "center", textStyle: "title2" }),
 };
 
 // The groups down the left edge, as the messaging apps' server rails: a
@@ -619,7 +617,7 @@ export function MemberSheet({
             ) : (
               <Avatar member={member} size={72} />
             )}
-            <h3 className={profileStyle.name}>{member.name}</h3>
+            <Headline className={profileStyle.name}>{member.name}</Headline>
             {/* With the actions in ⋯, the face says it is blocked. */}
             {isBlocked && <Tag size="sm">ブロック中</Tag>}
             <span className={profileStyle.where}>
@@ -693,7 +691,7 @@ export function MemberSheet({
 
 const profileStyle = {
   message: css({ alignSelf: "stretch", marginTop: "8px" }),
-  name: css({ fontWeight: 700, margin: 0, textStyle: "title2" }),
+  name: css({ margin: 0, textStyle: "title2" }),
   root: css({
     alignItems: "center",
     display: "flex",
