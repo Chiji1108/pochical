@@ -39,19 +39,6 @@ public func fitsPattern(_ pattern: Pochical_V1_Pattern, id: PatternID) -> Bool {
     && (!pattern.hasNextDay || (isID(pattern.nextDay) && pattern.nextDay != id))
 }
 
-/// Whether the text can be an id or an icon's name: 1 to
-/// `SyncLimits.idLength` UTF-16 units, as the server counts them, with no
-/// spaces.
-func isID(_ text: String) -> Bool {
-  !text.isEmpty && text.utf16.count <= SyncLimits.idLength
-    && !text.contains(where: \.isWhitespace)
-}
-
-/// Whether the text is a time of day as "HH:MM", 00:00 to 23:59.
-private func isClockTime(_ text: String) -> Bool {
-  text.wholeMatch(of: /(?:[01][0-9]|2[0-3]):[0-5][0-9]/) != nil
-}
-
 extension Pattern {
   /// Whether the server takes it as it is (`fitsPattern`).
   public var fits: Bool { fitsPattern(wire, id: id) }

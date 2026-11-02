@@ -1,4 +1,5 @@
 import { COWORKERS_MAX, textLimits } from "@pochical/design/limits";
+import { fitsCoworkerName } from "@pochical/design/values";
 import { useContext, useState } from "react";
 
 import type { Schedule } from "../lib/design-days";
@@ -103,7 +104,7 @@ export function CoworkersPage({
   const add = (value: string) => {
     const name = limitText(value.trim(), textLimits.personName);
     setAdding(false);
-    if (!name || names.includes(name)) {
+    if (!fitsCoworkerName(name) || names.includes(name)) {
       return;
     }
     // Counted again: the list may have grown while the name was typed.
@@ -231,9 +232,10 @@ function CoworkerEditor({
   const [confirming, setConfirming] = useState(false);
   const trimmed = draft.trim();
   const duplicate = taken.includes(trimmed);
-  // An empty name or another's is not kept: the person keeps theirs.
+  // A name the server would refuse or another's is not kept: the person
+  // keeps theirs.
   const keep = () => {
-    if (trimmed !== "" && !duplicate && trimmed !== name) {
+    if (fitsCoworkerName(trimmed) && !duplicate && trimmed !== name) {
       onSave(trimmed);
     }
   };

@@ -1,9 +1,8 @@
-import { COWORKERS_MAX, syncLimits, textLimits } from "@pochical/design/limits";
+import { COWORKERS_MAX, syncLimits } from "@pochical/design/limits";
+import { isId, isIdList } from "@pochical/design/values";
 
 import { isDate } from "./day-values";
 import type { RepeatOrder } from "./gen/pochical/v1/sync_pb";
-import { isId, isIdList } from "./ids";
-import { fitsText } from "./text-limits";
 
 // What a user's repeating orders and coworkers may hold
 // (spec/shift-patterns.md, Repeating orders; spec/sync-protocol.md,
@@ -34,10 +33,6 @@ export const fitsOrders = (orders: readonly RepeatOrder[]): boolean =>
       fitsOrder(order) &&
       (index === 0 || (orders[index - 1]?.start ?? "") < order.start)
   );
-
-/** Whether a coworker's name is one a person could type. */
-export const fitsCoworkerName = (name: string): boolean =>
-  fitsText(name, textLimits.personName);
 
 /** Whether an order of coworkers is ids, each once, and not too many. */
 export const fitsCoworkerOrder = (ids: readonly string[]): boolean =>

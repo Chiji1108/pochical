@@ -1,30 +1,15 @@
 import { Code, ConnectError } from "@connectrpc/connect";
-import { markColors } from "@pochical/design/colors";
-import { textLimits } from "@pochical/design/limits";
-import { markIconGlyphs } from "@pochical/design/mark-icons";
-import { withinLimit } from "@pochical/design/text";
+import { fitsGroupMark } from "@pochical/design/values";
+import type { GroupMarkParts } from "@pochical/design/values";
 
 import type { GroupMark } from "./gen/pochical/v1/marks_pb";
-import { isId } from "./ids";
 import { hasPersonPhoto, sharePersonPhoto } from "./photos";
-import { isEmoji } from "./text-limits";
 
 /**
  * A group's mark as the server keeps and sends it (proto GroupMark): one
  * of emoji, icon, letter and photo set, the color for icon and letter.
  */
-export type MarkValue = {
-  emoji: string;
-  icon: string;
-  letter: string;
-  color: number;
-  photoId: string;
-};
-
-// "letter" draws a pattern's letter in a circle; a group's letters are a
-// mark of their own.
-const isMarkIcon = (name: string): boolean =>
-  name !== "letter" && Object.hasOwn(markIconGlyphs, name);
+export type MarkValue = GroupMarkParts;
 
 const invalidMark = (): ConnectError =>
   new ConnectError(
@@ -33,9 +18,10 @@ const invalidMark = (): ConnectError =>
   );
 
 /**
- * A mark as a call gave it, checked: exactly one of one emoji, a mark
- * icon's name, up to groupMark letters, the last two in a color of the
- * palette, and a photo's id. INVALID_ARGUMENT otherwise.
+ * A mark as a call gave it, checked (spec/vectors/fits.json, groupMark):
+ * exactly one of one emoji, a mark icon's name, up to groupMark letters,
+ * the last two in a color of the palette, and a photo's id.
+ * INVALID_ARGUMENT otherwise.
  */
 export const requireMark = (mark: GroupMark | undefined): MarkValue => {
   const {
@@ -45,22 +31,12 @@ export const requireMark = (mark: GroupMark | undefined): MarkValue => {
     color = 0,
     photoId = "",
   } = mark ?? {};
-  const given = [emoji, icon, letter, photoId].filter(
-    (part) => part !== ""
-  ).length;
-  const fits =
-    given === 1 &&
-    (emoji === "" || isEmoji(emoji)) &&
-    (icon === "" || isMarkIcon(icon)) &&
-    (letter === "" ||
-      (letter.trim() !== "" && withinLimit(letter, textLimits.groupMark))) &&
-    (photoId === "" || isId(photoId)) &&
-    color < markColors.length;
-  if (!fits) {
+  const given = { color, emoji, icon, letter, photoId };
+  if (!fitsGroupMark(given)) {
     throw invalidMark();
   }
   const colored = icon !== "" || letter !== "";
-  return { color: colored ? color : 0, emoji, icon, letter, photoId };
+  return { ...given, color: colored ? color : 0 };
 };
 
 /**

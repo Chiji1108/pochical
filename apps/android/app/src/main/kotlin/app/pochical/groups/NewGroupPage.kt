@@ -38,7 +38,9 @@ import app.pochical.kit.GroupMarkValue
 import app.pochical.kit.MarkPhotoGone
 import app.pochical.kit.NewGroupRequest
 import app.pochical.kit.PhotoShelf
-import app.pochical.kit.characterCount
+import app.pochical.kit.fitsGroupMark
+import app.pochical.kit.fitsGroupName
+import app.pochical.kit.fitsPersonName
 import app.pochical.kit.guessGroupMark
 import app.pochical.kit.nextGroupColor
 import kotlin.coroutines.cancellation.CancellationException
@@ -83,9 +85,8 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
     picked
       ?: sent?.takeIf { it.name == groupName }?.mark
       ?: guessGroupMark(name.text, freeColor)
-  val canMake =
-    groupName.isNotEmpty() && myName.text.isNotBlank() && characterCount(name.text) <= TextLimits.groupName &&
-      characterCount(myName.text) <= TextLimits.personName
+  // Only what the server takes (spec/vectors/fits.json), so the call is never refused for it.
+  val canMake = fitsGroupName(groupName) && fitsGroupMark(mark) && myName.text.isNotBlank() && fitsPersonName(myName.text)
 
   fun make() {
     val request = NewGroupRequest.asking(groupName, mark, myName.text.trim(), sent)

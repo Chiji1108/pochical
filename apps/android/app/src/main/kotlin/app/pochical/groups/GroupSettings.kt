@@ -58,7 +58,9 @@ import app.pochical.kit.GroupMemberRow
 import app.pochical.kit.GroupRow
 import app.pochical.kit.MarkPhotoGone
 import app.pochical.kit.PhotoShelf
-import app.pochical.kit.characterCount
+import app.pochical.kit.fitsGroupMark
+import app.pochical.kit.fitsGroupName
+import app.pochical.kit.fitsPersonName
 import app.pochical.kit.directThread
 import app.pochical.kit.nextGroupColor
 import app.pochical.notifications.GroupChatNotifications
@@ -267,7 +269,8 @@ private fun EditForm(group: GroupRow, onBack: () -> Unit) {
   var photoGone by remember { mutableStateOf(false) }
   val shown = mark ?: group.mark
   val trimmed = name.text.trim()
-  val canSave = trimmed.isNotEmpty() && characterCount(name.text) <= TextLimits.groupName && (trimmed != group.name || shown != group.mark)
+  // Only what the server takes (spec/vectors/fits.json), so the call is never refused for it.
+  val canSave = fitsGroupName(trimmed) && fitsGroupMark(shown) && (trimmed != group.name || shown != group.mark)
 
   fun save() {
     saving = true
@@ -368,7 +371,7 @@ private fun ProfileForm(groupName: String, me: GroupMemberRow, modifier: Modifie
   val usualName = remember(values) { values.profile() }.collectAsStateWithLifecycle(null).value?.name.orEmpty()
   val kept = if (me.ownName) me.displayName else ""
   val name =
-    rememberKeptField(kept, fits = { characterCount(it) <= TextLimits.personName && !(it.isEmpty() && usualName.isEmpty()) }) {
+    rememberKeptField(kept, fits = { fitsPersonName(it) && !(it.isEmpty() && usualName.isEmpty()) }) {
       calls.keepDisplayName(groupId, it)
     }
 

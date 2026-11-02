@@ -125,8 +125,9 @@ class GroupCalls internal constructor(
     val answer = CompletableDeferred<Unit>()
   }
 
-  /** Makes the group [request] asks for, with the user in it: the new group's id. */
+  /** Makes the group [request] asks for, with the user in it: the new group's id. One the server would refuse is not asked for. */
   suspend fun create(request: NewGroupRequest): String {
+    require(request.fits) { "A group the server would refuse" }
     val groupId = call { headers ->
       groups
         .createGroup(
@@ -239,9 +240,10 @@ class GroupCalls internal constructor(
 
   /**
    * Joins the group [code] opens as [displayName], the group's id; joining a group the user is in
-   * changes nothing. [InviteFailure] when it cannot.
+   * changes nothing. [InviteFailure] when it cannot. A name the server would refuse is not asked for.
    */
   suspend fun join(code: String, displayName: String): String = inviting { headers ->
+    if (!fitsPersonName(displayName)) throw InviteFailure(InviteFailure.Reason.Failed)
     groups
       .joinGroup(
         joinGroupRequest {
@@ -254,8 +256,9 @@ class GroupCalls internal constructor(
       .groupId
   }
 
-  /** Gives the group a new name and mark, which every member sees. */
+  /** Gives the group a new name and mark, which every member sees; one the server would refuse is not asked for. */
   suspend fun rename(groupId: String, name: String, mark: GroupMarkValue) = call { headers ->
+    require(fitsGroupName(name) && fitsGroupMark(mark)) { "A group the server would refuse" }
     groups
       .renameGroup(
         renameGroupRequest {
@@ -269,8 +272,12 @@ class GroupCalls internal constructor(
     releaseMark(mark)
   }
 
-  /** How the user appears in the group from now on: empty, or their usual name, follows the usual one. */
+  /**
+   * How the user appears in the group from now on: empty, or their usual name, follows the usual one.
+   * A name the server would refuse is not asked for.
+   */
   suspend fun setDisplayName(groupId: String, displayName: String) = call { headers ->
+    require(fitsPersonName(displayName)) { "A name the server would refuse" }
     groups
       .setDisplayName(
         setDisplayNameRequest {
@@ -323,6 +330,7 @@ class GroupCalls internal constructor(
    * either left as the account has it when not given.
    */
   suspend fun setProfile(name: String?, photoId: String?) = call { headers ->
+    require(name == null || fitsPersonName(name)) { "A name the server would refuse" }
     users
       .setProfile(
         setProfileRequest {

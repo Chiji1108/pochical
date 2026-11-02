@@ -2,7 +2,6 @@ package app.pochical.kit
 
 import app.pochical.design.ReadyPattern
 import app.pochical.design.ReadyPatterns
-import app.pochical.design.SyncLimits
 import app.pochical.design.TextLimits
 import app.pochical.design.Theme
 import java.time.LocalDate
@@ -41,10 +40,6 @@ fun guessLook(name: String): MarkLook {
 /** The mark palette's slots, the same in every テーマ. */
 val MARK_SLOTS: Int = Theme.Pochical.colors(dark = false).marks.size
 
-private val TIME = Regex("^(?:[01]\\d|2[0-3]):[0-5]\\d$")
-
-/** Whether the text can be an id or an icon's name: 1 to `SyncLimits.idLength`, no spaces. */
-fun isId(text: String): Boolean = text.isNotEmpty() && text.length <= SyncLimits.idLength && text.none(Char::isWhitespace)
 
 /**
  * Whether [pattern] holds only what the server takes for one under its id, so it stays once sent
@@ -59,8 +54,8 @@ fun fitsPattern(pattern: PatternRow): Boolean {
     isId(pattern.icon) &&
     pattern.color in 0 until MARK_SLOTS &&
     (!timed || (pattern.start != null && pattern.end != null)) &&
-    (pattern.start == null || TIME.matches(pattern.start)) &&
-    (pattern.end == null || TIME.matches(pattern.end)) &&
+    (pattern.start == null || isClockTime(pattern.start)) &&
+    (pattern.end == null || isClockTime(pattern.end)) &&
     (pattern.nextDay == null || (isId(pattern.nextDay) && pattern.nextDay != pattern.id))
 }
 
