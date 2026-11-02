@@ -69,6 +69,8 @@ import app.pochical.design.COWORKERS_MAX
 import app.pochical.design.TextLimits
 import app.pochical.kit.ShiftTime
 import app.pochical.kit.hoursText
+import app.pochical.kit.fitsCoworkerName
+import app.pochical.kit.fitsDayPeople
 import app.pochical.kit.limitText
 import app.pochical.kit.minutes
 import app.pochical.kit.timeChange
@@ -304,6 +306,8 @@ private fun PeopleChips(
         FilterChip(
           selected = picked,
           onClick = { onChange(entry.copy(people = if (picked) people - coworker.id else people + coworker.id)) },
+          // A day with all the people it takes takes no one more (spec/vectors/fits.json, dayField).
+          enabled = picked || fitsDayPeople(people + coworker.id),
           label = { Text(coworker.name) },
           leadingIcon =
             if (picked) {
@@ -323,9 +327,9 @@ private fun PeopleChips(
   if (adding) {
     NameDialog(
       onAdd = { name ->
-        // Someone added from a day is on that day too.
+        // Someone added from a day is on that day too, while it takes one more.
         val added = days.addCoworker(name)
-        onChange(entry.copy(people = people + added.id))
+        if (fitsDayPeople(people + added.id)) onChange(entry.copy(people = people + added.id))
       },
       onDismiss = { adding = false },
     )
@@ -357,7 +361,7 @@ private fun NameDialog(onAdd: (String) -> Unit, onDismiss: () -> Unit) {
     confirmButton = {
       TextButton(
         onClick = {
-          limitText(name.text, TextLimits.personName).trim().takeIf { it.isNotEmpty() }?.let(onAdd)
+          limitText(name.text, TextLimits.personName).trim().takeIf(::fitsCoworkerName)?.let(onAdd)
           onDismiss()
         }
       ) {

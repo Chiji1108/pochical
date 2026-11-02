@@ -43,11 +43,13 @@ extension OwnValues {
   }
 
   /// Sets a day's memo, whether it has a shift or not; "" clears it
-  /// (spec/shift-patterns.md, A day's memo).
+  /// (spec/shift-patterns.md, A day's memo). One the server would refuse
+  /// is not kept (`Unfit`).
   public static func setNote(_ day: Day, to note: String, now: Int64, in db: Database) throws {
     let stored = try DayRow.find(day.key).fetchOne(db)?.note
     let kept = note.isEmpty ? nil : note
     guard kept != stored else { return }
+    guard fitsDayField(.note, kept) else { throw Unfit() }
     var dayValue = Pochical_V1_DayValue()
     dayValue.date = day.key
     dayValue.field = .note
@@ -61,10 +63,11 @@ extension OwnValues {
   }
 
   /// Adds a person to 一緒に働く人, at the end of the list, and gives back
-  /// their id.
+  /// their id. A name the server would refuse adds no one (`Unfit`).
   public static func addCoworker(named name: String, now: Int64, in db: Database) throws
     -> String
   {
+    guard fitsCoworkerName(name) else { throw Unfit() }
     let id = UUID().uuidString.lowercased()
     var coworker = Pochical_V1_CoworkerValue()
     coworker.id = id
@@ -84,7 +87,8 @@ extension OwnValues {
   }
 
   /// Makes the days in `edits` show what they say, as edits of the fields
-  /// whose own values change.
+  /// whose own values change. A field the server would refuse keeps
+  /// every day as it was (`Unfit`).
   private static func setShown(
     _ edits: [Day: DayEntry?], calendar: OwnCalendar, now: Int64, in db: Database
   ) throws {
@@ -94,19 +98,21 @@ extension OwnValues {
     let own = calendar.own
     let planned = calendar.planned(from: first, through: last)
     let edited = editedOwnDays(own: own, planned: planned, edits: edits)
-    for day in edits.keys.sorted() {
-      for (field, value) in changedFields(from: own[day], to: edited[day]) {
-        var dayValue = Pochical_V1_DayValue()
-        dayValue.date = day.key
-        dayValue.field = field
-        if let value {
-          dayValue.value = value
-        }
-        dayValue.hlc = try nextClock(now: now, in: db)
-        var change = Pochical_V1_Change()
-        change.day = dayValue
-        try edit(change, opID: UUID().uuidString.lowercased(), in: db)
+    let changes = edits.keys.sorted().flatMap { day in
+      changedFields(from: own[day], to: edited[day]).map { (day, $0.0, $0.1) }
+    }
+    guard changes.allSatisfy({ fitsDayField($0.1, $0.2) }) else { throw Unfit() }
+    for (day, field, value) in changes {
+      var dayValue = Pochical_V1_DayValue()
+      dayValue.date = day.key
+      dayValue.field = field
+      if let value {
+        dayValue.value = value
       }
+      dayValue.hlc = try nextClock(now: now, in: db)
+      var change = Pochical_V1_Change()
+      change.day = dayValue
+      try edit(change, opID: UUID().uuidString.lowercased(), in: db)
     }
   }
 

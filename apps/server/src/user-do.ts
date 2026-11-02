@@ -1,6 +1,7 @@
 import { create, toBinary } from "@bufbuild/protobuf";
 import { chatRules } from "@pochical/design/chat";
 import { syncLimits } from "@pochical/design/limits";
+import { isId } from "@pochical/design/values";
 import { DurableObject } from "cloudflare:workers";
 import {
   and,
@@ -41,7 +42,6 @@ import type {
 import type { GroupProfile } from "./group-do";
 import { markColumns } from "./group-marks";
 import { isAhead } from "./hlc";
-import { isId } from "./ids";
 import { errorFields } from "./log";
 import {
   deleteBatchesOf,

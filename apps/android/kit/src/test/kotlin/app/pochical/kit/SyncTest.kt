@@ -381,6 +381,45 @@ class SyncTest {
   }
 
   @Test
+  fun aStoreFailingUnforeseenIsTriedAgainInTheForeground() = runBlocking {
+    val phone = device()
+    phone.sessions.write(StoredSession(server.token, server.userId))
+    phone.kept.failure = IllegalStateException("Block Store failed")
+    val reads = phone.kept.reads.get()
+    phone.account.foreground()
+    eventually { phone.kept.reads.get() > reads }
+    phone.kept.failure = null
+    assertEquals(AccountState.SigningIn, phone.account.state.value)
+
+    // The next foreground signs in, once the sign-in that failed is over.
+    eventually {
+      phone.account.foreground()
+      phone.account.state.value is AccountState.SignedIn
+    }
+    assertEquals(AccountState.SignedIn(server.userId, linked = null), phone.account.state.value)
+    assertEquals(0, server.signIns.get())
+  }
+
+  @Test
+  fun aSignInTheServerRefusesIsTriedAgainInTheForeground() = runBlocking {
+    server.signInStatus = 403
+    server.signInBody = """{"code":"USER_SUSPENDED"}"""
+    val phone = device()
+    phone.account.foreground()
+    eventually { server.signIns.get() == 1 }
+    assertEquals(AccountState.SigningIn, phone.account.state.value)
+
+    server.signInStatus = 200
+    server.signInBody = null
+    eventually {
+      phone.account.foreground()
+      phone.account.state.value is AccountState.SignedIn
+    }
+    withTimeout(10_000) { phone.current() }
+    assertEquals(StoredSession(server.token, server.userId), phone.sessions.read())
+  }
+
+  @Test
   fun aSessionTheServerDoesNotKnowWhenLinkingEndsIt() = runBlocking {
     val phone = device()
     phone.account.foreground()
@@ -463,9 +502,11 @@ class SyncTest {
       claim("someone-before")
       takeOwn(app.pochical.v1.change { day = app.pochical.v1.dayValue { date = "2026-10-06"; field = DayField.DAY_FIELD_NOTE; value = "前の人" } })
     }
+    val photo = phone.linePhotos.files.pending("g1", "photo-before").apply { parentFile!!.mkdirs(); writeBytes(byteArrayOf(1)) }
     phone.account.foreground()
     withTimeout(10_000) { phone.current() }
     assertNull(phone.note("2026-10-06"))
+    assertFalse(photo.exists())
     assertEquals(server.userId, phone.database.write { state().owner })
   }
 

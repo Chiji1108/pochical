@@ -79,7 +79,7 @@ import app.pochical.design.TextLimits
 import app.pochical.kit.InviteDetails
 import app.pochical.kit.InviteFailure
 import app.pochical.kit.PhotoShelf
-import app.pochical.kit.characterCount
+import app.pochical.kit.fitsPersonName
 import app.pochical.rowColors
 import app.pochical.segmentShapes
 import java.io.IOException
@@ -239,7 +239,7 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
               color = MaterialTheme.colorScheme.onSurfaceVariant,
               textAlign = TextAlign.Center,
             )
-            val canJoin = !shown.full && myName.isNotEmpty() && characterCount(myName) <= TextLimits.personName
+            val canJoin = !shown.full && myName.isNotEmpty() && fitsPersonName(myName)
             Button(onClick = ::join, shapes = ButtonDefaults.shapes(), enabled = canJoin && !joining, modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
               if (joining) CircularProgressIndicator(Modifier.size(20.dp)) else Text(stringResource(R.string.join))
             }

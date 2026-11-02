@@ -1,7 +1,6 @@
 import { chatRules } from "@pochical/design/chat";
 import { inviteRules } from "@pochical/design/invite";
-
-import { isEmoji } from "./text-limits";
+import { isEmoji } from "@pochical/design/text";
 
 // A chat message's words as spec/chat.md has them: its links, and
 // the members it mentions.

@@ -2,7 +2,7 @@
 // spec/text-limits.md sets it for every platform. Counted as a reader sees
 // characters, so an emoji or a letter with its accent counts as one.
 import { textFields } from "@pochical/design/limits";
-import { characterCount, withinLimit } from "@pochical/design/text";
+import { characterCount } from "@pochical/design/text";
 
 const graphemes = new Intl.Segmenter("ja", { granularity: "grapheme" });
 
@@ -33,16 +33,6 @@ export function markLetter(before: string, after: string, limit: number) {
   }
   const typed = now.slice(start, now.length - end);
   return (typed.length > 0 ? typed : now).slice(0, limit).join("");
-}
-
-// One emoji, as the pickers and the system keyboards give one: a single
-// character that starts as a pictograph or a flag, or a keycap (1️⃣, #️⃣),
-// which starts with the plain digit or sign under its combining keycap.
-const EMOJI =
-  /^\p{Extended_Pictographic}|^\p{Regional_Indicator}|^[#*0-9]\uFE0F?\u20E3/u;
-
-export function isEmoji(text: string) {
-  return withinLimit(text, 1) && characterCount(text) === 1 && EMOJI.test(text);
 }
 
 // A name's first character, as a mark's letter or a face without a photo

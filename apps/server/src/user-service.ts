@@ -1,7 +1,7 @@
 import { create } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
 import type { ConnectRouter } from "@connectrpc/connect";
-import { textLimits } from "@pochical/design/limits";
+import { fitsPersonName, isId } from "@pochical/design/values";
 import { env } from "cloudflare:workers";
 
 import { deleteAccount } from "./account-deletion";
@@ -22,12 +22,11 @@ import {
   UserService,
 } from "./gen/pochical/v1/user_pb";
 import { GROUP_THREAD, otherIn } from "./group-chat";
-import { isId } from "./ids";
 import { registerPushToken } from "./push-tokens";
 import type { Device } from "./push-tokens";
 import { requireUser } from "./session";
 import { linkedProvider } from "./sign-in-providers";
-import { requireText } from "./text-limits";
+import { requireFit } from "./text-limits";
 
 /** The shapes marks are drawn in (MarkLook.style). */
 const MARK_STYLES = new Set(["icon", "emoji", "badge"]);
@@ -138,11 +137,10 @@ export const registerUserService = (router: ConnectRouter): void => {
     },
     setProfile: async ({ name, photoId }, context) => {
       const user = await requireUser(context);
-      const kept = name?.trim();
       const shown =
-        kept === undefined || kept === ""
-          ? kept
-          : requireText(kept, textLimits.personName, "name");
+        name === undefined
+          ? undefined
+          : requireFit(name, fitsPersonName, "name").trim();
       // The photo it replaces goes: each group drops its copy as it hears.
       if (!(await env.USERS.getByName(user.id).setProfile(shown, photoId))) {
         throw new ConnectError("No such photo of yours", Code.InvalidArgument);

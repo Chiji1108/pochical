@@ -30,9 +30,11 @@ struct NewGroupPage: View {
   @State private var photoGone = false
 
   var body: some View {
+    // Only what the server takes (spec/vectors/fits.json), so the call
+    // is never refused for it.
     let canMake =
-      !trimmed(name).isEmpty && !trimmed(myName).isEmpty && name.count <= TextLimits.groupName
-      && myName.count <= TextLimits.personName
+      fitsGroupName(trimmed(name)) && fitsGroupMark(mark) && !trimmed(myName).isEmpty
+      && fitsPersonName(myName)
     List {
       Section {
         LabeledContent("グループ名") {
