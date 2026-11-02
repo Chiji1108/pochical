@@ -25,6 +25,25 @@ const retriesOf = async (session: string) =>
         .toArray()
   );
 
+/**
+ * Waits until `taken` holds `count` items, what a mocked service took or
+ * what was logged, then expects no more. A push leaves through the group's
+ * and the user's DOs, whose calls go through the pool's main process,
+ * which a busy runner can stall past expect.poll's second (#1031): this
+ * waits for the push itself, as long as the test may run.
+ */
+const arrived = async (
+  taken: readonly unknown[],
+  count: number
+): Promise<void> => {
+  if (taken.length < count) {
+    await scheduler.wait(10);
+    await arrived(taken, count);
+    return;
+  }
+  expect(taken).toHaveLength(count);
+};
+
 /** How many pushes the user's DO keeps to try again. */
 const retriesLeft = async (session: string): Promise<number> => {
   const rows = await retriesOf(session);
@@ -179,7 +198,7 @@ describe("a chat's notifications", () => {
     const calls = apnsCalls();
     const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
     say(mine.socket, "a", "<@nobody>今週どう？");
-    await expect.poll(() => calls.length).toBe(1);
+    await arrived(calls, 1);
     expect(calls[0]).toMatchObject({
       body: {
         aps: {
@@ -210,7 +229,7 @@ describe("a chat's notifications", () => {
     // APNs says the token is gone (410): it is dropped, and the next line
     // reaches nothing.
     say(mine.socket, "b", "まだ？");
-    await expect.poll(() => calls.length).toBe(2);
+    await arrived(calls, 2);
     say(mine.socket, "c", "おーい");
     await mine.frames.next();
     // Time for a notification that should not come.
@@ -258,7 +277,7 @@ describe("a chat's notifications", () => {
     say(mine.socket, "a", "誰か見てる？");
     await mine.frames.next();
     say(mine.socket, "b", `<@${guestId}> 見て`);
-    await expect.poll(() => calls.length).toBe(1);
+    await arrived(calls, 1);
     // The badge counts the mention alone.
     expect(calls[0]?.body).toMatchObject({
       aps: { alert: { "loc-args": ["さくら", "@ゆうき 見て"] }, badge: 1 },
@@ -324,7 +343,7 @@ describe("a chat's notifications", () => {
     const theirs = await syncSocket(`/v1/groups/${groupId}/socket`, guest);
     say(mine.socket, "a", "今週どう？");
     say(mine.socket, "b", "土曜とか");
-    await expect.poll(() => calls.length).toBe(2);
+    await arrived(calls, 2);
 
     // After the line saying the guest joined.
     const [first, second] = [2, 3];
@@ -334,7 +353,7 @@ describe("a chat's notifications", () => {
     ]);
     // Read up to the first: it is taken back, the second waits.
     read(theirs.socket, "r1", first);
-    await expect.poll(() => calls.length).toBe(3);
+    await arrived(calls, 3);
     expect(calls[2]).toStrictEqual({
       body: {
         aps: { "content-available": 1 },
@@ -344,12 +363,12 @@ describe("a chat's notifications", () => {
       type: "background",
     });
     read(theirs.socket, "r2", second);
-    await expect.poll(() => calls.length).toBe(4);
+    await arrived(calls, 4);
     expect(calls[3]?.body).toMatchObject({ withdraw: { readTo: second } });
 
     // Nothing notified is left to take back: a read sends nothing.
     say(mine.socket, "c", "あ、日曜でも");
-    await expect.poll(() => calls.length).toBe(5);
+    await arrived(calls, 5);
     await call(
       "UserService/SetChatMuted",
       { groupId, muted: true, threadId: "group" },
@@ -357,7 +376,7 @@ describe("a chat's notifications", () => {
     );
     say(mine.socket, "d", "どっちがいい？");
     read(theirs.socket, "r3", second + 1);
-    await expect.poll(() => calls.length).toBe(6);
+    await arrived(calls, 6);
     expect(calls[5]?.body).toMatchObject({ withdraw: { readTo: second + 1 } });
     read(theirs.socket, "r4", second + 2);
     await theirs.frames.next();
@@ -430,7 +449,7 @@ describe("a device's push token", () => {
     const calls = apnsCalls();
     const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
     say(mine.socket, "a", "今週どう？");
-    await expect.poll(() => calls.length).toBe(1);
+    await arrived(calls, 1);
     // Time for a notification to the signed-out device that should not come.
     await scheduler.wait(100);
     expect(reached(calls)).toStrictEqual([OTHER_TOKEN]);
@@ -459,7 +478,7 @@ describe("a device's push token", () => {
 
     const guests = await syncSocket(`/v1/groups/${groupId}/socket`, guest);
     say(guests.socket, "b", "さくらさんへ");
-    await expect.poll(() => calls.length).toBe(1);
+    await arrived(calls, 1);
     expect(reached(calls)).toStrictEqual([TOKEN]);
     expect(calls[0]?.body).toMatchObject({
       recipientId: await userIdOf(maker),
@@ -485,7 +504,7 @@ describe("a device's push token", () => {
 
     const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
     say(mine.socket, "a", "今週どう？");
-    await expect.poll(() => warned.mock.calls.length).toBe(2);
+    await arrived(warned.mock.calls, 2);
     expect(warned).toHaveBeenCalledWith({
       message: "Push not sent",
       push: {
@@ -539,7 +558,7 @@ describe("a device's push token", () => {
 
     const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
     say(mine.socket, "a", "今週どう？");
-    await expect.poll(() => warned.mock.calls.length).toBe(1);
+    await arrived(warned.mock.calls, 1);
     expect(warned).toHaveBeenCalledWith({
       message: "Push not sent",
       push: {
@@ -665,7 +684,7 @@ describe("an Android phone's notifications", () => {
     const { sends } = googleCalls(() => Response.json({ name: "sent" }));
     const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
     say(mine.socket, "a", "今週どう？");
-    await expect.poll(() => sends.length).toBe(1);
+    await arrived(sends, 1);
     expect(sends[0]).toMatchObject({
       body: {
         message: { android: { priority: "HIGH" }, token: FCM_TOKEN },
@@ -702,11 +721,11 @@ describe("an Android phone's notifications", () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
     say(mine.socket, "a", "今週どう？");
-    await expect.poll(() => sends.length).toBe(1);
+    await arrived(sends, 1);
     const granted = grants.length;
     say(mine.socket, "b", "土曜とか");
     say(mine.socket, "c", "日曜でも");
-    await expect.poll(() => sends.length).toBe(3);
+    await arrived(sends, 3);
     expect(grants).toHaveLength(granted + 1);
     await expect(
       signedClaims(assertionOf(grants.at(-1)))
@@ -728,9 +747,9 @@ describe("an Android phone's notifications", () => {
     const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
     const theirs = await syncSocket(`/v1/groups/${groupId}/socket`, guest);
     say(mine.socket, "a", "今週どう？");
-    await expect.poll(() => sends.length).toBe(1);
+    await arrived(sends, 1);
     read(theirs.socket, "r1", 2);
-    await expect.poll(() => sends.length).toBe(2);
+    await arrived(sends, 2);
     expect(sends[1]?.body).toStrictEqual({
       message: {
         android: { priority: "NORMAL" },
@@ -789,8 +808,8 @@ describe("an Android phone's notifications", () => {
       const warned = vi.spyOn(console, "warn").mockImplementation(() => {});
       const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
       say(mine.socket, "a", "今週どう？");
-      await expect.poll(() => sends.length).toBe(1);
-      await expect.poll(() => warned.mock.calls.length).toBe(1);
+      await arrived(sends, 1);
+      await arrived(warned.mock.calls, 1);
       expect(warned).toHaveBeenCalledWith({
         message: "Push not sent",
         push: {
