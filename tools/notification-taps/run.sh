@@ -23,7 +23,7 @@ derived=${2:-$root/.build/DerivedData}
 shared=$(mktemp -d)
 server_log=$shared/server.log
 . "$root/tools/ios-ui/lib.sh"
-trap stop_server EXIT
+trap 'stop_tests; stop_server' EXIT
 
 prepare
 new_group "$shared/invite"
@@ -37,39 +37,18 @@ TEST_RUNNER_NOTIFICATION_TAP_DIR=$shared xcodebuild_for test-without-building \
   -only-testing:PochicalUITests/NotificationTapTests &
 tests=$!
 
-# Waits for the tests to name `step`, false once they have ended without.
-step() {
-  until [ -e "$shared/$1" ]; do
-    kill -0 "$tests" 2>/dev/null || return 1
-    sleep 1
-  done
-}
-
 if step joined; then
-  # The simulator's user: the session made last, once it has joined.
-  me=$(cd "$root/apps/server" &&
-    pnpm exec wrangler d1 execute pochical --local --json \
-      --command "select user_id from session order by created_at desc limit 1" |
-    jq -r '.[0].results[0].user_id')
+  me=$(signed_in_user)
   for each in background cold; do
     step "$each" || break
     pnpm --dir "$root" exec tsx "$root/tools/chat-try/index.ts" "$code" 1
-    jq -n --arg group "$group" --arg me "$me" '{
-      aps: {
-        alert: {
-          "title-loc-key": "CHAT_TITLE", "title-loc-args": ["ポチカルのテスト"],
-          "loc-key": "CHAT_GROUP_TEXT", "loc-args": ["テスト送信", "テスト 31"]
-        },
-        badge: 1, "mutable-content": 1, sound: "default", "thread-id": "\($group)/group"
-      },
-      groupId: $group, recipientId: $me, threadId: "group"
-    }' >"$shared/$each.apns"
-    xcrun simctl push "$device" app.pochical "$shared/$each.apns"
+    push_line "$group" "$me" テスト送信 "テスト 31" "$shared/$each.apns"
   done
 fi
 
 failed=0
 wait "$tests" || failed=1
+tests=""
 xcrun simctl shutdown "$device" || true
 echo "results and screenshots: $shared"
 exit "$failed"

@@ -66,3 +66,55 @@ new_group() {
   pnpm --dir "$root" exec tsx "$root/tools/api-try/index.ts" create ${2:+"$2"} --local
   jq -r .inviteCode "$root/tools/api-try/out/state.json" >"$1"
 }
+
+# A 900×1200 JPEG of the color "$1" with "$2" written on it, at "$3".
+photo() {
+  magick -size 900x1200 xc:"$1" -font /System/Library/Fonts/Supplemental/Arial.ttf -gravity center \
+    -pointsize 400 -fill white -annotate 0 "$2" "$3"
+}
+
+# The tests, run in the background by a script that talks to them: their
+# pid, once started. They tell the script a step is done by a file in
+# `shared` named for it.
+tests=""
+
+# Waits for the tests to name the step "$1", false once they have ended
+# without.
+step() {
+  until [ -e "$shared/$1" ]; do
+    kill -0 "$tests" 2>/dev/null || return 1
+    sleep 1
+  done
+}
+
+# Stops the tests, should the script end before them.
+stop_tests() {
+  [ -n "$tests" ] || return 0
+  kill "$tests" 2>/dev/null || true
+  wait "$tests" 2>/dev/null || true
+}
+
+# The simulator's user: the session made last, once it has joined.
+signed_in_user() {
+  (cd "$root/apps/server" &&
+    pnpm exec wrangler d1 execute pochical --local --json \
+      --command "select user_id from session order by created_at desc limit 1" |
+    jq -r '.[0].results[0].user_id')
+}
+
+# Pushes to the simulator a notification of a line of the chat of the group
+# "$1" for the user "$2", worded as the server's (apns.ts payloadOf): the
+# line "$4" from "$3". Its payload is kept at "$5".
+push_line() {
+  jq -n --arg group "$1" --arg me "$2" --arg from "$3" --arg words "$4" '{
+    aps: {
+      alert: {
+        "title-loc-key": "CHAT_TITLE", "title-loc-args": ["ポチカルのテスト"],
+        "loc-key": "CHAT_GROUP_TEXT", "loc-args": [$from, $words]
+      },
+      badge: 1, "mutable-content": 1, sound: "default", "thread-id": "\($group)/group"
+    },
+    groupId: $group, recipientId: $me, threadId: "group"
+  }' >"$5"
+  xcrun simctl push "$device" app.pochical "$5"
+}
