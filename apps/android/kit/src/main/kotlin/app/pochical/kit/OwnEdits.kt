@@ -22,8 +22,12 @@ import java.util.UUID
  * is open or not: the user's socket sends it once it is.
  */
 class OwnEdits(private val database: AppDatabase, private val now: () -> Long = System::currentTimeMillis) {
-  /** Sets one field of a day, or clears it with null; nothing when it already shows that. */
+  /**
+   * Sets one field of a day, or clears it with null; nothing when it already shows that, or when
+   * the server would refuse it (spec/vectors/fits.json, dayField).
+   */
   suspend fun setDay(date: String, field: DayField, value: String?) = database.write {
+    if (!fitsDayField(field, value)) return@write
     val shown = day(date)
     val current =
       when (field) {
@@ -49,7 +53,8 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
   /**
    * Sets the days in [edits] to show what they say, or nothing (null), as a day's detail does
    * (iOS OwnValues.set): each field whose own value changes is an edit of its own, and only what
-   * differs from the repeating orders is kept as the person's (spec/vectors/own-days.json).
+   * differs from the repeating orders is kept as the person's (spec/vectors/own-days.json). A field
+   * the server would refuse keeps every day as it was.
    */
   suspend fun setDays(edits: Map<LocalDate, ShownDay?>) = database.write {
     val first = edits.keys.minOrNull() ?: return@write
@@ -77,18 +82,18 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
   private suspend fun SyncDao.setShown(edits: Map<LocalDate, ShownDay?>, calendar: OwnCalendar) {
     if (edits.isEmpty()) return
     val edited = editedOwnDays(calendar.own, calendar.planned(edits.keys.min(), edits.keys.max()), edits)
-    for (day in edits.keys.sorted()) {
-      for ((field, value) in changedFields(calendar.own[day], edited[day])) {
-        val clock = nextClock(now())
-        edit(change {
-          this.day = dayValue {
-            date = day.toString()
-            this.field = field
-            if (value != null) this.value = value
-            hlc = clock
-          }
-        })
-      }
+    val changes = edits.keys.sorted().flatMap { day -> changedFields(calendar.own[day], edited[day]).map { (field, value) -> Triple(day, field, value) } }
+    if (!changes.all { (_, field, value) -> fitsDayField(field, value) }) return
+    for ((day, field, value) in changes) {
+      val clock = nextClock(now())
+      edit(change {
+        this.day = dayValue {
+          date = day.toString()
+          this.field = field
+          if (value != null) this.value = value
+          hlc = clock
+        }
+      })
     }
   }
 
@@ -252,9 +257,11 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
 
   /**
    * Adds someone to 一緒に働く人, at the end of the list, and gives back their id: [id] when the caller
-   * names them before this is written, as a day's detail does to put them on the day too.
+   * names them before this is written, as a day's detail does to put them on the day too. A name the
+   * server would refuse adds no one, null.
    */
-  suspend fun addCoworker(name: String, id: String = newId()): String = database.write {
+  suspend fun addCoworker(name: String, id: String = newId()): String? = database.write {
+    if (!fitsCoworkerName(name)) return@write null
     putCoworker(id, name)
     orderCoworkers(coworkerOrder() + id)
     id
@@ -262,9 +269,12 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
 
   /**
    * Gives someone a new name, on every day they are on too; nothing for someone gone, whose newer
-   * clock would bring them back (spec/sync-protocol.md, Deleted values).
+   * clock would bring them back (spec/sync-protocol.md, Deleted values), or for a name the server
+   * would refuse.
    */
-  suspend fun renameCoworker(id: String, name: String) = database.write { if (id in coworkerIds()) putCoworker(id, name) }
+  suspend fun renameCoworker(id: String, name: String) = database.write {
+    if (fitsCoworkerName(name) && id in coworkerIds()) putCoworker(id, name)
+  }
 
   /** Deletes someone: gone from the list, and skipped on the days that name them. */
   suspend fun deleteCoworker(id: String) = database.write {

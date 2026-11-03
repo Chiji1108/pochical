@@ -54,8 +54,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -65,6 +63,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.Footnote
+import app.pochical.Headline
 import app.pochical.LimitedTextField
 import app.pochical.ListSheet
 import app.pochical.MarkFrame
@@ -80,7 +79,7 @@ import app.pochical.design.TextLimits
 import app.pochical.kit.InviteDetails
 import app.pochical.kit.InviteFailure
 import app.pochical.kit.PhotoShelf
-import app.pochical.kit.characterCount
+import app.pochical.kit.fitsPersonName
 import app.pochical.rowColors
 import app.pochical.segmentShapes
 import java.io.IOException
@@ -240,7 +239,7 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
               color = MaterialTheme.colorScheme.onSurfaceVariant,
               textAlign = TextAlign.Center,
             )
-            val canJoin = !shown.full && myName.isNotEmpty() && characterCount(myName) <= TextLimits.personName
+            val canJoin = !shown.full && myName.isNotEmpty() && fitsPersonName(myName)
             Button(onClick = ::join, shapes = ButtonDefaults.shapes(), enabled = canJoin && !joining, modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
               if (joining) CircularProgressIndicator(Modifier.size(20.dp)) else Text(stringResource(R.string.join))
             }
@@ -290,13 +289,7 @@ private fun Invitation(details: InviteDetails, code: String, onMembers: () -> Un
     verticalArrangement = Arrangement.spacedBy(12.dp),
   ) {
     MarkFrame { GroupMarkView(details.mark, MarkFrameSize, shelf = PhotoShelf.Invitation(code)) }
-    Text(
-      details.name,
-      Modifier.padding(bottom = 12.dp).semantics { heading() },
-      style = MaterialTheme.typography.headlineMedium,
-      textAlign = TextAlign.Center,
-      maxLines = 3,
-    )
+    Headline(details.name, Modifier.padding(bottom = 12.dp), large = true, textAlign = TextAlign.Center, maxLines = 3)
     Column(Modifier.clickable(onClick = onMembers).padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
       Row(horizontalArrangement = Arrangement.spacedBy((-8).dp)) {
         details.members.take(5).forEach { member ->

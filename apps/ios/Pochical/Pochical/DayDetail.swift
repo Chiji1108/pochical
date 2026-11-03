@@ -193,7 +193,9 @@ struct DayDetail: View {
   private func peopleRows(_ entry: DayEntry) -> some View {
     NavigationLink {
       PeopleChecklist(
-        coworkers: coworkers, picked: entry.people ?? [],
+        // Only those still listed, as `toggle` writes them.
+        coworkers: coworkers,
+        picked: (entry.people ?? []).filter { id in coworkers.contains { $0.id == id } },
         onToggle: { coworker in toggle(coworker, in: entry) },
         onAdd: {
           if coworkers.count >= coworkersMax {
@@ -208,7 +210,7 @@ struct DayDetail: View {
           let name = String(newCoworker.trimmingCharacters(in: .whitespacesAndNewlines)
             .prefix(TextLimits.personName))
           // A name not kept stays for 追加 to be tried again.
-          if name.isEmpty || onAddCoworker(name) {
+          if !fitsCoworkerName(name) || onAddCoworker(name) {
             newCoworker = ""
           }
         }
@@ -324,11 +326,14 @@ private struct PeopleChecklist: View {
         Section {
           ForEach(coworkers) { coworker in
             let isPicked = picked.contains(coworker.id)
+            // A day with all the people it takes takes no one more
+            // (spec/vectors/fits.json, dayField).
+            let takes = isPicked || fitsDayPeople(picked + [coworker.id])
             Button {
               onToggle(coworker)
             } label: {
               HStack {
-                Text(coworker.name).foregroundStyle(colors.textPrimary)
+                Text(coworker.name).foregroundStyle(takes ? colors.textPrimary : colors.textTertiary)
                 Spacer()
                 Image(systemName: "checkmark")
                   .foregroundStyle(colors.accentDefault)
@@ -337,6 +342,7 @@ private struct PeopleChecklist: View {
               .contentShape(.rect)
             }
             .buttonStyle(.plain)
+            .disabled(!takes)
             .accessibilityAddTraits(isPicked ? .isSelected : [])
           }
         }

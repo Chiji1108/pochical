@@ -44,6 +44,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.ChoiceButtons
+import app.pochical.ConfirmAction
 import app.pochical.LocalDeviceSettings
 import app.pochical.LocalThemeColors
 import app.pochical.PageNavigation
@@ -239,7 +240,8 @@ fun ReminderEditorPage(id: String?, navigation: PageNavigation) {
     title = stringResource(if (reminder == null) R.string.reminders_add else R.string.reminder_edit),
     onBack = navigation::back,
     actions = {
-      TextButton(
+      ConfirmAction(
+        stringResource(R.string.save),
         enabled = picked.isNotEmpty(),
         onClick = {
           settings.change { device ->
@@ -250,9 +252,7 @@ fun ReminderEditorPage(id: String?, navigation: PageNavigation) {
           asking.askOnce()
           navigation.back()
         },
-      ) {
-        Text(stringResource(R.string.save))
-      }
+      )
     },
   ) { padding ->
     LazyColumn(contentPadding = padding) {

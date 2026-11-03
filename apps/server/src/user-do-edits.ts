@@ -1,4 +1,5 @@
 import { COWORKERS_MAX } from "@pochical/design/limits";
+import { fitsCoworkerName, isId, isIdList } from "@pochical/design/values";
 import { and, asc, count, eq, gte, inArray, isNotNull } from "drizzle-orm";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 
@@ -15,15 +16,10 @@ import type {
 } from "./gen/pochical/v1/sync_pb";
 import { clockAfter } from "./hlc";
 import type { Clock } from "./hlc";
-import { hasDeviceClock, isId, isIdList } from "./ids";
+import { hasDeviceClock } from "./ids";
 import { givesWay, heldBackBy, ORDER_FIELDS } from "./order-clears";
 import type { Floor } from "./order-clears";
-import {
-  fitsClearFrom,
-  fitsCoworkerName,
-  fitsCoworkerOrder,
-  fitsOrders,
-} from "./order-values";
+import { fitsClearFrom, fitsCoworkerOrder, fitsOrders } from "./order-values";
 import { fitsOrder, fitsPattern } from "./pattern-values";
 import { fitsPreference } from "./preference-values";
 import {

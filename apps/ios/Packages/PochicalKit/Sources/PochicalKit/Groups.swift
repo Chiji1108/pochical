@@ -47,6 +47,12 @@ public struct NewGroupRequest: Hashable, Sendable {
   public let displayName: String
   public let id: String
 
+  /// Whether the server takes its name, mark and the person's name in it
+  /// (spec/vectors/fits.json).
+  public var fits: Bool {
+    fitsGroupName(name) && fitsGroupMark(mark) && fitsPersonName(displayName)
+  }
+
   /// The request for these, after `last`: the same one again while nothing
   /// it asks for has changed, else a new one with `newID`, as one request
   /// id stands for one request.
@@ -281,8 +287,9 @@ public struct GroupCalls: Sendable {
   }
 
   /// Makes the group `request` asks for, with the user in it. The new
-  /// group's id.
+  /// group's id. One the server would refuse is not asked for (`Unfit`).
   public func create(_ request: NewGroupRequest) async throws -> String {
+    guard request.fits else { throw Unfit() }
     var wire = Pochical_V1_CreateGroupRequest()
     wire.name = request.name
     wire.mark = request.mark.wire
@@ -300,8 +307,10 @@ public struct GroupCalls: Sendable {
       .get().inviteCode
   }
 
-  /// Gives the group a new name and mark, which every member sees.
+  /// Gives the group a new name and mark, which every member sees; one
+  /// the server would refuse is not asked for (`Unfit`).
   public func rename(_ groupID: String, name: String, mark: GroupMarkValue) async throws {
+    guard fitsGroupName(name), fitsGroupMark(mark) else { throw Unfit() }
     var request = Pochical_V1_RenameGroupRequest()
     request.groupID = groupID
     request.name = name
@@ -309,8 +318,10 @@ public struct GroupCalls: Sendable {
     _ = try await client.renameGroup(request: request, headers: headers()).result.get()
   }
 
-  /// How the user appears in the group from now on.
+  /// How the user appears in the group from now on; a name the server
+  /// would refuse is not asked for (`Unfit`).
   public func setDisplayName(_ displayName: String, in groupID: String) async throws {
+    guard fitsPersonName(displayName) else { throw Unfit() }
     var request = Pochical_V1_SetDisplayNameRequest()
     request.groupID = groupID
     request.displayName = displayName

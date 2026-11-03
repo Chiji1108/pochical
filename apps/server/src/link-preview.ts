@@ -1,9 +1,9 @@
 import { create } from "@bufbuild/protobuf";
+import { isId } from "@pochical/design/values";
 
 import { previewLinkOf } from "./chat-links";
 import { LinkPreviewSchema } from "./gen/pochical/v1/chat_pb";
 import type { LinkPreview } from "./gen/pochical/v1/chat_pb";
-import { isId } from "./ids";
 
 // A link's page read for its preview (spec/chat.md, Reading a page): the
 // server reads it, so people's addresses are not sent to the sites, and

@@ -607,6 +607,8 @@ export const chipStyle = cva({
       color: "accent.default",
       fontWeight: 600,
     },
+    // Not to be picked now, like a day that has all the people it takes.
+    _disabled: { color: "text.disabled", cursor: "default" },
     alignItems: "center",
     bg: "background.card",
     border: "1px solid token(colors.border.default)",

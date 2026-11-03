@@ -1,7 +1,12 @@
 import { create } from "@bufbuild/protobuf";
 import { chatPlaces } from "@pochical/design/chat";
 import { syncLimits } from "@pochical/design/limits";
-import { characterCount } from "@pochical/design/text";
+import { characterCount, fitsText, isEmoji } from "@pochical/design/text";
+import {
+  fitsCoworkerName,
+  fitsGroupName,
+  fitsPersonName,
+} from "@pochical/design/values";
 import { runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { drizzle } from "drizzle-orm/durable-sqlite";
@@ -11,6 +16,7 @@ import { describe, expect, it } from "vitest";
 import chatPhotos from "../../../spec/vectors/chat-photos.json";
 import chatText from "../../../spec/vectors/chat-text.json";
 import chat from "../../../spec/vectors/chat.json";
+import fits from "../../../spec/vectors/fits.json";
 import hlc from "../../../spec/vectors/hlc.json";
 import orderClears from "../../../spec/vectors/order-clears.json";
 import patterns from "../../../spec/vectors/patterns.json";
@@ -18,6 +24,9 @@ import text from "../../../spec/vectors/text.json";
 import unread from "../../../spec/vectors/unread.json";
 import { inviteCodeOf, textParts } from "../src/chat-links";
 import { pinStep } from "../src/chat-pins";
+import { fitsField } from "../src/day-values";
+import { GroupMarkSchema } from "../src/gen/pochical/v1/marks_pb";
+import type { GroupMark } from "../src/gen/pochical/v1/marks_pb";
 import {
   ChatEditSchema,
   DayField,
@@ -33,10 +42,10 @@ import {
   unreadCount,
 } from "../src/group-chat";
 import { chatLines, readMarks } from "../src/group-do-schema";
+import { requireMark } from "../src/group-marks";
 import { compareClocks, isAhead } from "../src/hlc";
 import { givesWay, heldBackBy } from "../src/order-clears";
 import { fitsPattern } from "../src/pattern-values";
-import { fitsText, isEmoji } from "../src/text-limits";
 import { notifyingCount } from "../src/user-do-values";
 import { photosAmong } from "./helpers";
 
@@ -180,6 +189,48 @@ const FIELDS: Record<string, DayField | undefined> = {
 };
 const fieldOf = (name: string): DayField =>
   FIELDS[name] ?? DayField.UNSPECIFIED;
+
+// Whether a call's mark is one the server keeps.
+const takesMark = (mark: GroupMark): boolean => {
+  try {
+    requireMark(mark);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+// What the server takes of each value the apps edit, which the apps check
+// before they save one.
+describe("spec/vectors/fits.json", () => {
+  it.each(fits.dayField)("dayField: $name", ({ field, value, expected }) => {
+    expect(fitsField(fieldOf(field.toUpperCase()), value ?? undefined)).toBe(
+      expected
+    );
+  });
+
+  it.each(fits.coworkerName)(
+    "coworkerName: $name",
+    ({ text: written, expected }) => {
+      expect(fitsCoworkerName(written)).toBe(expected);
+    }
+  );
+
+  it.each(fits.personName)(
+    "personName: $name",
+    ({ text: written, expected }) => {
+      expect(fitsPersonName(written)).toBe(expected);
+    }
+  );
+
+  it.each(fits.groupName)("groupName: $name", ({ text: written, expected }) => {
+    expect(fitsGroupName(written)).toBe(expected);
+  });
+
+  it.each(fits.groupMark)("groupMark: $name", ({ mark, expected }) => {
+    expect(takesMark(create(GroupMarkSchema, mark))).toBe(expected);
+  });
+});
 
 describe("spec/vectors/order-clears.json", () => {
   it.each(orderClears.givesWay)(

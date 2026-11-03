@@ -97,7 +97,7 @@ private struct ProfilePage: View {
   private var unsaved: String? {
     guard let name else { return nil }
     let kept = name.trimmingCharacters(in: .whitespacesAndNewlines)
-    return kept != saved.name && kept.count <= TextLimits.personName ? kept : nil
+    return kept != saved.name && fitsPersonName(kept) ? kept : nil
   }
 
   /// Saves, saying so under the name if it could not.

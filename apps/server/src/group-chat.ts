@@ -7,6 +7,8 @@ import {
   SHARED_DAYS_MAX,
   textLimits,
 } from "@pochical/design/limits";
+import { fitsText, isEmoji } from "@pochical/design/text";
+import { isId } from "@pochical/design/values";
 import {
   and,
   asc,
@@ -74,10 +76,8 @@ import {
   readMarks,
 } from "./group-do-schema";
 import { letGoUnsent, takeBack } from "./group-photos";
-import { isId } from "./ids";
 import { keptPreview, mayFetch, sentPreview } from "./link-preview";
 import type { Alert } from "./push";
-import { fitsText, isEmoji } from "./text-limits";
 import { fitsThumbHash, keptThumbHash, sentThumbHash } from "./thumb-hash";
 
 // A group's chats as its Group DO keeps them (spec/sync-protocol.md,

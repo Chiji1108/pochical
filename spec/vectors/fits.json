@@ -1,0 +1,305 @@
+{
+  "about": "What the server takes of each value the apps edit (design/src/values.ts; apps/server/src/day-values.ts, fitsField), so an app checks the same before it saves and a value it keeps stays once sent rather than going back on the next sync with the edits around it. Text is counted as spec/text-limits.md has it (text.json, fitsText and isEmoji); a pattern's own rule is patterns.json's fits. dayField: whether the server keeps `value` for a day's `field` (null clears it, which always fits): a pattern's id or \"\" (dayRules.noShift, a day cleared on purpose); a time as HH:MM, 00:00 to 23:59; a memo of up to textLimits.dayNote characters, spaces and all; people as 1 to syncLimits.peopleADay coworker ids separated by single spaces, each once, so a day takes no more people once it has peopleADay. coworkerName: a coworker's name, 1 to textLimits.personName characters, not only spaces. personName: a person's name as their profile or a group shows it, trimmed: up to textLimits.personName characters, empty being no name of their own. groupName: 1 to textLimits.groupName characters, not only spaces. groupMark: a group's mark, exactly one of one emoji, a mark icon's name (design/src/mark-icons.ts, never \"letter\", which only patterns draw), 1 to textLimits.groupMark letters, not only spaces, and a photo's id (1 to syncLimits.idLength characters, no spaces), with a `color` of the palette's 12 slots; a part left out is \"\" and the color 0.",
+  "dayField": [
+    {
+      "name": "a pattern's id",
+      "field": "pattern",
+      "value": "night",
+      "expected": true
+    },
+    {
+      "name": "a day cleared on purpose",
+      "field": "pattern",
+      "value": "",
+      "expected": true
+    },
+    {
+      "name": "a pattern's id with a space",
+      "field": "pattern",
+      "value": "night shift",
+      "expected": false
+    },
+    {
+      "name": "a time",
+      "field": "start",
+      "value": "09:30",
+      "expected": true
+    },
+    {
+      "name": "a time past the day",
+      "field": "end",
+      "value": "24:00",
+      "expected": false
+    },
+    {
+      "name": "a time without its leading zero",
+      "field": "start",
+      "value": "9:30",
+      "expected": false
+    },
+    {
+      "name": "clearing always fits",
+      "field": "note",
+      "value": null,
+      "expected": true
+    },
+    {
+      "name": "a memo",
+      "field": "note",
+      "value": "歯医者 15時",
+      "expected": true
+    },
+    {
+      "name": "a memo of only spaces",
+      "field": "note",
+      "value": "   ",
+      "expected": true
+    },
+    {
+      "name": "a memo at the limit",
+      "field": "note",
+      "value": "ああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああ",
+      "expected": true
+    },
+    {
+      "name": "a memo past the limit",
+      "field": "note",
+      "value": "あああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああ",
+      "expected": false
+    },
+    {
+      "name": "one person",
+      "field": "people",
+      "value": "p1",
+      "expected": true
+    },
+    {
+      "name": "as many people as a day takes",
+      "field": "people",
+      "value": "p1 p2 p3 p4 p5 p6 p7 p8 p9 p10 p11 p12 p13 p14 p15 p16 p17 p18 p19 p20 p21 p22 p23 p24 p25 p26 p27 p28 p29 p30 p31 p32 p33 p34 p35 p36 p37 p38 p39 p40 p41 p42 p43 p44 p45 p46 p47 p48 p49 p50",
+      "expected": true
+    },
+    {
+      "name": "one more than a day takes",
+      "field": "people",
+      "value": "p1 p2 p3 p4 p5 p6 p7 p8 p9 p10 p11 p12 p13 p14 p15 p16 p17 p18 p19 p20 p21 p22 p23 p24 p25 p26 p27 p28 p29 p30 p31 p32 p33 p34 p35 p36 p37 p38 p39 p40 p41 p42 p43 p44 p45 p46 p47 p48 p49 p50 p51",
+      "expected": false
+    },
+    {
+      "name": "someone twice",
+      "field": "people",
+      "value": "p1 p2 p1",
+      "expected": false
+    },
+    {
+      "name": "two spaces between people",
+      "field": "people",
+      "value": "p1  p2",
+      "expected": false
+    },
+    {
+      "name": "nobody, written rather than cleared",
+      "field": "people",
+      "value": "",
+      "expected": false
+    }
+  ],
+  "coworkerName": [
+    {
+      "name": "a name",
+      "text": "さくら",
+      "expected": true
+    },
+    {
+      "name": "a name at the limit",
+      "text": "ああああああああああああああああああああ",
+      "expected": true
+    },
+    {
+      "name": "a name past the limit",
+      "text": "あああああああああああああああああああああ",
+      "expected": false
+    },
+    {
+      "name": "only spaces",
+      "text": " 　 ",
+      "expected": false
+    },
+    {
+      "name": "nothing",
+      "text": "",
+      "expected": false
+    }
+  ],
+  "personName": [
+    {
+      "name": "a name",
+      "text": "さくら",
+      "expected": true
+    },
+    {
+      "name": "a name at the limit, with spaces around it",
+      "text": "  ああああああああああああああああああああ ",
+      "expected": true
+    },
+    {
+      "name": "a name past the limit",
+      "text": "あああああああああああああああああああああ",
+      "expected": false
+    },
+    {
+      "name": "nothing, no name of their own",
+      "text": "",
+      "expected": true
+    },
+    {
+      "name": "only spaces, no name of their own",
+      "text": "   ",
+      "expected": true
+    }
+  ],
+  "groupName": [
+    {
+      "name": "a name",
+      "text": "家族",
+      "expected": true
+    },
+    {
+      "name": "a name at the limit",
+      "text": "ああああああああああああああああああああああああああああああ",
+      "expected": true
+    },
+    {
+      "name": "a name past the limit",
+      "text": "あああああああああああああああああああああああああああああああ",
+      "expected": false
+    },
+    {
+      "name": "only spaces",
+      "text": "  ",
+      "expected": false
+    },
+    {
+      "name": "nothing",
+      "text": "",
+      "expected": false
+    }
+  ],
+  "groupMark": [
+    {
+      "name": "an emoji",
+      "mark": {
+        "emoji": "🏠"
+      },
+      "expected": true
+    },
+    {
+      "name": "two emoji",
+      "mark": {
+        "emoji": "🏠🐶"
+      },
+      "expected": false
+    },
+    {
+      "name": "a letter as the emoji",
+      "mark": {
+        "emoji": "家"
+      },
+      "expected": false
+    },
+    {
+      "name": "a mark icon in a color",
+      "mark": {
+        "icon": "house",
+        "color": 3
+      },
+      "expected": true
+    },
+    {
+      "name": "the letter icon, which only patterns draw",
+      "mark": {
+        "icon": "letter",
+        "color": 3
+      },
+      "expected": false
+    },
+    {
+      "name": "an icon that is not a mark icon",
+      "mark": {
+        "icon": "no-such-icon"
+      },
+      "expected": false
+    },
+    {
+      "name": "letters",
+      "mark": {
+        "letter": "家族",
+        "color": 5
+      },
+      "expected": true
+    },
+    {
+      "name": "one letter",
+      "mark": {
+        "letter": "家"
+      },
+      "expected": true
+    },
+    {
+      "name": "more letters than a mark takes",
+      "mark": {
+        "letter": "山田家"
+      },
+      "expected": false
+    },
+    {
+      "name": "a space as the letters",
+      "mark": {
+        "letter": " "
+      },
+      "expected": false
+    },
+    {
+      "name": "a letter stacked with more marks than two characters take",
+      "mark": {
+        "letter": "á́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́"
+      },
+      "expected": false
+    },
+    {
+      "name": "a color past the palette",
+      "mark": {
+        "letter": "家",
+        "color": 12
+      },
+      "expected": false
+    },
+    {
+      "name": "a photo",
+      "mark": {
+        "photoId": "0b6f2c9e-5d1a-4e0c-9a4b-2f7d8e1c3a5b"
+      },
+      "expected": true
+    },
+    {
+      "name": "a photo's id with a space",
+      "mark": {
+        "photoId": "a b"
+      },
+      "expected": false
+    },
+    {
+      "name": "nothing",
+      "mark": {},
+      "expected": false
+    },
+    {
+      "name": "an emoji and letters",
+      "mark": {
+        "emoji": "🏠",
+        "letter": "家"
+      },
+      "expected": false
+    }
+  ]
+}

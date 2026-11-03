@@ -85,6 +85,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.pochical.ConfirmAction
 import app.pochical.LocalDeviceSettings
 import app.pochical.LocalThemeColors
 import app.pochical.R
@@ -648,11 +649,7 @@ private fun Heading(
     Spacer(Modifier.weight(1f))
     val away = if (dayOpen) (if (thisWeekAway) 1f else 0f) else abs(pages - todayPage).coerceAtMost(1f)
     if (entering) {
-      Button(onClick = onDone, shapes = ButtonDefaults.shapes()) {
-        Icon(painterResource(R.drawable.ic_check), null, Modifier.size(18.dp))
-        Spacer(Modifier.width(6.dp))
-        Text(stringResource(R.string.entering_done))
-      }
+      ConfirmAction(stringResource(R.string.entering_done), onClick = onDone, endInset = 0.dp)
     } else if (away > 0f) {
       OutlinedButton(
         onClick = if (dayOpen) onThisWeek else onThisMonth,

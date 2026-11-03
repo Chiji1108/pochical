@@ -15,7 +15,6 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -42,6 +41,7 @@ import app.pochical.SettingsPage
 import app.pochical.SettingsRow
 import app.pochical.SettingsSection
 import app.pochical.ShiftMark
+import app.pochical.SortToggle
 import app.pochical.calendar.LocalOwnDays
 import app.pochical.calendar.Pattern
 import app.pochical.design.PATTERNS_PER_PAGE
@@ -74,9 +74,7 @@ fun PatternsPage(navigation: PageNavigation) {
     onBack = navigation::back,
     actions = {
       if (inUse.size > 1) {
-        TextButton(onClick = { sorting = !sorting }) {
-          Text(stringResource(if (sorting) R.string.patterns_sort_done else R.string.patterns_sort))
-        }
+        SortToggle(sorting) { sorting = !sorting }
       }
     },
   ) { padding ->

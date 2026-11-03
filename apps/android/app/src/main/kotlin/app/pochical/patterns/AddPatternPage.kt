@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -18,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.pochical.ConfirmAction
 import app.pochical.Footnote
 import app.pochical.PageNavigation
 import app.pochical.R
@@ -53,7 +52,8 @@ fun AddPatternPage(navigation: PageNavigation) {
     onBack = navigation::back,
     actions = {
       if (anyOffered) {
-        TextButton(
+        ConfirmAction(
+          stringResource(R.string.add),
           // Only ones not there yet: a 明け or 非番 picked with its 夜勤 or 当番 may be.
           enabled = picked.any(offered),
           onClick = {
@@ -65,9 +65,7 @@ fun AddPatternPage(navigation: PageNavigation) {
               navigation.back()
             }
           },
-        ) {
-          Text(stringResource(R.string.add))
-        }
+        )
       }
     },
   ) { padding ->

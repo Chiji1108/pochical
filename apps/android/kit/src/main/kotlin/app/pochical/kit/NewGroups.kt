@@ -36,6 +36,10 @@ fun initialLetter(name: String): String = firstCharacter(name.trim()).ifEmpty { 
  * (spec/sync-protocol.md, Groups).
  */
 data class NewGroupRequest(val name: String, val mark: GroupMarkValue, val displayName: String, val id: String) {
+  /** Whether the server takes its name, mark and the person's name in it (spec/vectors/fits.json). */
+  val fits: Boolean
+    get() = fitsGroupName(name) && fitsGroupMark(mark) && fitsPersonName(displayName)
+
   companion object {
     /**
      * The request for these after [last]: the same one again while nothing it asks for has changed,

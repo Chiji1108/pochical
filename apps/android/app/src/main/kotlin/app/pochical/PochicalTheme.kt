@@ -19,6 +19,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import app.pochical.design.MarkColor
 import app.pochical.design.PochicalTextStyles
 import app.pochical.design.Theme
@@ -56,13 +57,18 @@ fun PochicalTheme(settings: DeviceSettings, content: @Composable () -> Unit) {
 /**
  * Material's type scale, its Japanese breaking between phrases rather than in the middle of a word,
  * as the app's own text styles and the site's do (PochicalTextStyles.phrases), so a title, a button
- * or a note wraps where a reader would. bodyLarge, what Material's text fields type in, keeps
- * Material's break, as words being typed should not jump between lines a phrase at a time.
+ * or a note wraps where a reader would; Material 3 Expressive's emphasized styles too, as a
+ * Headline's. bodyLarge, what Material's text fields type in, keeps Material's break, as words being
+ * typed should not jump between lines a phrase at a time.
+ *
+ * From the constructor that takes the typeface (Material's own, sans-serif), the one that gives
+ * every style its token: Typography() resolves to the overload of the 15 baseline styles, whose
+ * emphasized ones are only copies of them, no heavier.
  */
 private val Phrases: Typography =
-  Typography().run {
+  Typography(fontFamily = FontFamily.SansSerif).run {
     fun TextStyle.inPhrases() = copy(lineBreak = PochicalTextStyles.phrases)
-    Typography(
+    copy(
       displayLarge = displayLarge.inPhrases(),
       displayMedium = displayMedium.inPhrases(),
       displaySmall = displaySmall.inPhrases(),
@@ -72,12 +78,25 @@ private val Phrases: Typography =
       titleLarge = titleLarge.inPhrases(),
       titleMedium = titleMedium.inPhrases(),
       titleSmall = titleSmall.inPhrases(),
-      bodyLarge = bodyLarge,
       bodyMedium = bodyMedium.inPhrases(),
       bodySmall = bodySmall.inPhrases(),
       labelLarge = labelLarge.inPhrases(),
       labelMedium = labelMedium.inPhrases(),
       labelSmall = labelSmall.inPhrases(),
+      displayLargeEmphasized = displayLargeEmphasized.inPhrases(),
+      displayMediumEmphasized = displayMediumEmphasized.inPhrases(),
+      displaySmallEmphasized = displaySmallEmphasized.inPhrases(),
+      headlineLargeEmphasized = headlineLargeEmphasized.inPhrases(),
+      headlineMediumEmphasized = headlineMediumEmphasized.inPhrases(),
+      headlineSmallEmphasized = headlineSmallEmphasized.inPhrases(),
+      titleLargeEmphasized = titleLargeEmphasized.inPhrases(),
+      titleMediumEmphasized = titleMediumEmphasized.inPhrases(),
+      titleSmallEmphasized = titleSmallEmphasized.inPhrases(),
+      bodyMediumEmphasized = bodyMediumEmphasized.inPhrases(),
+      bodySmallEmphasized = bodySmallEmphasized.inPhrases(),
+      labelLargeEmphasized = labelLargeEmphasized.inPhrases(),
+      labelMediumEmphasized = labelMediumEmphasized.inPhrases(),
+      labelSmallEmphasized = labelSmallEmphasized.inPhrases(),
     )
   }
 

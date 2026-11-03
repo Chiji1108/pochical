@@ -42,7 +42,7 @@ import app.pochical.groups.PhotoEditor
 import app.pochical.kit.PhotoShelf
 import app.pochical.kit.ProfileRow
 import app.pochical.kit.UsualPhoto
-import app.pochical.kit.characterCount
+import app.pochical.kit.fitsPersonName
 import app.pochical.rememberKeptField
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.flow.map
@@ -75,7 +75,7 @@ fun ProfilePage(navigation: PageNavigation) {
 @Composable
 private fun ProfileForm(saved: ProfileRow, modifier: Modifier) {
   val calls = LocalGroupCalls.current
-  val name = rememberKeptField(saved.name, fits = { characterCount(it) <= TextLimits.personName }) { calls.keepProfile(name = it) }
+  val name = rememberKeptField(saved.name, fits = ::fitsPersonName) { calls.keepProfile(name = it) }
   var photoFailed by remember { mutableStateOf(false) }
   val typed = name.field.value.text.trim()
 

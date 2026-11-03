@@ -1,7 +1,8 @@
 import { create } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
 import type { ConnectRouter, HandlerContext } from "@connectrpc/connect";
-import { GROUP_MAX_MEMBERS, textLimits } from "@pochical/design/limits";
+import { GROUP_MAX_MEMBERS } from "@pochical/design/limits";
+import { fitsGroupName, fitsPersonName, isId } from "@pochical/design/values";
 import { env } from "cloudflare:workers";
 
 import {
@@ -18,7 +19,6 @@ import {
   SetGroupPhotoResponseSchema,
 } from "./gen/pochical/v1/group_pb";
 import { requireMark, shareMarkPhoto } from "./group-marks";
-import { isId } from "./ids";
 import {
   issueInviteCode,
   liveInviteCode,
@@ -29,7 +29,7 @@ import { isMemberOf } from "./membership";
 import { sharePersonPhoto } from "./photos";
 import { overLimit } from "./rate-limits";
 import { requireUser } from "./session";
-import { requireText } from "./text-limits";
+import { requireFit } from "./text-limits";
 
 /** The usual photo into a group's photos, before the group shows it. */
 const shareUsualPhoto = async (
@@ -67,7 +67,7 @@ const namesFor = async (
     }
     return { adopted: false, ownName: null, usualName, usualPhoto };
   }
-  requireText(name, textLimits.personName, "display_name");
+  requireFit(name, fitsPersonName, "display_name");
   if (usualName === "" && adopt) {
     return { adopted: true, ownName: null, usualName: name, usualPhoto };
   }
@@ -125,7 +125,7 @@ export const registerGroupService = (router: ConnectRouter): void => {
   router.service(GroupService, {
     createGroup: async (request, context) => {
       const user = await requireUser(context);
-      const name = requireText(request.name, textLimits.groupName, "name");
+      const name = requireFit(request.name, fitsGroupName, "name");
       const mark = requireMark(request.mark);
       if (!isId(request.requestId)) {
         throw new ConnectError("Malformed request_id", Code.InvalidArgument);
@@ -268,7 +268,7 @@ export const registerGroupService = (router: ConnectRouter): void => {
 
     renameGroup: async (request, context) => {
       const userId = await requireMember(context, request.groupId);
-      const name = requireText(request.name, textLimits.groupName, "name");
+      const name = requireFit(request.name, fitsGroupName, "name");
       const mark = requireMark(request.mark);
       const group = env.GROUPS.getByName(request.groupId);
       const current = await group.getProfile();
