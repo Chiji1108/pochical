@@ -58,10 +58,15 @@ extension OwnValues {
   /// The orders as one value; from `clearFrom`, the days give their own
   /// pattern and times set before back to the orders, hidden at once while
   /// the edit waits as the server clears them (OwnValues.edit;
-  /// spec/vectors/order-clears.json).
+  /// spec/vectors/order-clears.json). A timeline the server would refuse
+  /// (`fitsRepeatOrders`) throws `Unfit`, so the write it is part of, a new
+  /// job's patterns included, keeps nothing.
   private static func setOrders(
     _ orders: [RepeatOrder], clearFrom: Day?, now: Int64, in db: Database
   ) throws {
+    guard fitsRepeatOrders(orders) else {
+      throw Unfit()
+    }
     var value = Pochical_V1_RepeatOrders()
     value.orders = orders.map(\.wire)
     value.hlc = try nextClock(now: now, in: db)

@@ -1,3 +1,4 @@
+import { syncLimits } from "@pochical/design/limits";
 import { css, cva } from "@pochical/styled-system/css";
 import { ArrowRight, Trash } from "lucide-react";
 import { useMotionValue } from "motion/react";
@@ -38,6 +39,13 @@ import { ShiftMark } from "./shift-mark";
 // which typing keeps in sight, and the month's name picks any other.
 const repeatCalendar = {
   foot: css({ marginTop: "auto", paddingTop: "2px" }),
+  // Why the keys are off, over them, as a note under a list says it.
+  full: css({
+    color: "text.secondary",
+    margin: "0 0 8px",
+    textAlign: "center",
+    textStyle: "footnote",
+  }),
   // Room around the grid for the framed day's outline, as the
   // calendar's month keeps, so both line up.
   month: css({ paddingInline: "4px" }),
@@ -104,6 +112,12 @@ const sequenceTiles = {
     },
   }),
 };
+
+// Said where adding stays off: a timeline with as many periods as the
+// server takes (design/src/values.ts, fitsRepeatOrders), and a rotation
+// as long as it takes (fitsRotation), whose keys then type over days only.
+export const ordersFull = `繰り返しの期間は${syncLimits.orders}個までです`;
+export const rotationFull = `並びは${syncLimits.sequence}日までです`;
 
 // Whole days from one date to another.
 function daysFrom(from: Date, to: Date) {
@@ -253,6 +267,9 @@ export function RepeatCalendar({
   const pages = patternPagesOf(patternKeys).length;
   const orderStart = from === undefined ? anchor : from;
   const cursor = framed ?? sequence.length;
+  // At its full length the order takes no day more: the keys type only
+  // over a day typed.
+  const full = framed === undefined && sequence.length >= syncLimits.sequence;
   const goTo = (target: Date) => {
     setSwipedTo(undefined);
     setMonth(monthOf(target));
@@ -353,7 +370,9 @@ export function RepeatCalendar({
       {/* ポチポチ入力's tray. No date over the keys: the framed day shows
       where typing goes, and the room is the month's. */}
       <div className={repeatCalendar.foot}>
+        {full && <p className={repeatCalendar.full}>{rotationFull}</p>}
         <PatternKeys
+          disabled={full}
           onPage={setPage}
           onPick={pick}
           page={page}

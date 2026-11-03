@@ -75,3 +75,21 @@ public func fitsGroupMark(_ mark: GroupMarkValue) -> Bool {
     && (mark.photoID.isEmpty || isID(mark.photoID))
     && (0..<markSlots).contains(mark.color)
 }
+
+/// The patterns' order: pattern ids, each once, and `SyncLimits.patterns`
+/// at most, so a person who keeps that many adds no more.
+public func fitsPatternOrder(_ ids: [PatternID]) -> Bool {
+  ids.count <= SyncLimits.patterns && Set(ids).count == ids.count && ids.allSatisfy(isID)
+}
+
+/// A repeating order's rotation: pattern ids, each as often as it comes
+/// round, and `SyncLimits.sequence` at most; empty ends repeating.
+public func fitsRotation(_ sequence: [PatternID]) -> Bool {
+  sequence.count <= SyncLimits.sequence && sequence.allSatisfy(isID)
+}
+
+/// The repeating orders of one timeline: `SyncLimits.orders` at most, each
+/// rotation fitting.
+public func fitsRepeatOrders(_ orders: [RepeatOrder]) -> Bool {
+  orders.count <= SyncLimits.orders && orders.allSatisfy { fitsRotation($0.sequence) }
+}

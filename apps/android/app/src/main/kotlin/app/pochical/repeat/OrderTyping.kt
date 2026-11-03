@@ -1,6 +1,7 @@
 package app.pochical.repeat
 
 import androidx.compose.runtime.saveable.Saver
+import app.pochical.design.SyncLimits
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
@@ -18,6 +19,13 @@ data class OrderTyping(val sequence: List<String>, val anchor: LocalDate, val fr
   /** The day typing goes to. */
   val cursorDay: LocalDate
     get() = anchor.plusDays(cursor.toLong())
+
+  /**
+   * At its full length (spec/vectors/fits.json, rotation) the order takes no day more: the keys type
+   * only over a day typed.
+   */
+  val full: Boolean
+    get() = framed == null && sequence.size >= SyncLimits.sequence
 
   /** On the day after those typed, there is nothing to take out or move past. */
   val onTyped: Boolean

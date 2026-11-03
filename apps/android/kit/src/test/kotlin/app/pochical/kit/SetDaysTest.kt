@@ -25,15 +25,7 @@ class SetDaysTest {
   private suspend fun everyDayADayShift() {
     edits.savePattern("day", markedPattern("日勤"))
     edits.savePattern("night", markedPattern("夜勤"))
-    edits.setRepeatOrders(
-      listOf(
-        app.pochical.v1.repeatOrder {
-          start = "2026-10-01"
-          sequence += "day"
-          holidayCountry = "JP"
-        }
-      )
-    )
+    edits.setRepeatOrders(listOf(RepeatOrder(listOf("day"), LocalDate.parse("2026-10-01"), holidayCountry = "JP")))
   }
 
   /** The day edits waiting to be sent, each its field and value. */

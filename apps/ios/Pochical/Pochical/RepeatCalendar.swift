@@ -2,6 +2,10 @@ import PochicalDesign
 import PochicalKit
 import SwiftUI
 
+/// Said over the keys of an order as long as the server takes
+/// (`fitsRotation`): they then type over a day typed, adding none.
+let rotationFull = "並びは\(SyncLimits.sequence)日までです"
+
 /// The days an order being typed covers.
 enum OrderCover: Hashable {
   /// From its 1st day, as a new order starts.
@@ -96,6 +100,8 @@ struct RepeatCalendar: View {
 
   var body: some View {
     let shown = month ?? origin
+    // At its full length the order takes no day more.
+    let full = framed == nil && sequence.count >= SyncLimits.sequence
     VStack(spacing: Self.gap) {
       HStack {
         MonthTitleButton(
@@ -129,10 +135,16 @@ struct RepeatCalendar: View {
       // ポチポチ入力's tray. No date over the keys: the framed day shows
       // where typing goes, and the room is the month's.
       VStack(spacing: 8) {
+        if full {
+          Text(rotationFull)
+            .font(.footnote)
+            .foregroundStyle(colors.textSecondary)
+        }
         PatternKeys(patterns: patterns, page: $keyPage) { pattern in
           keys += 1
           pick(pattern)
         }
+        .disabled(full)
         TrayActionsRow(
           pages: (patterns.count + patternsPerPage - 1) / patternsPerPage, page: $keyPage
         ) {

@@ -151,6 +151,9 @@ private struct TrayPress: ButtonStyle {
 /// swiped. The tray and 繰り返し's order are entered with them alike.
 struct PatternKeys: View {
   @Environment(\.themeColors) private var colors
+  /// Off, as an order's keys at its full length, they dim as the system
+  /// dims a disabled button.
+  @Environment(\.isEnabled) private var isEnabled
   let patterns: [Pattern]
   @Binding var page: Int
   let onPick: (Pattern) -> Void
@@ -160,13 +163,16 @@ struct PatternKeys: View {
     let pages = stride(from: 0, to: patterns.count, by: patternsPerPage).map {
       Array(patterns[$0..<min($0 + patternsPerPage, patterns.count)])
     }
-    if pages.count > 1 {
-      SwipePages(count: pages.count, current: $page) { index in
-        grid(pages[index], columns: 5, paged: true)
+    Group {
+      if pages.count > 1 {
+        SwipePages(count: pages.count, current: $page) { index in
+          grid(pages[index], columns: 5, paged: true)
+        }
+      } else {
+        grid(patterns, columns: columns, paged: false)
       }
-    } else {
-      grid(patterns, columns: columns, paged: false)
     }
+    .opacity(isEnabled ? 1 : 0.5)
   }
 
   /// Fewer patterns sit in fewer columns, as /design lays them out.

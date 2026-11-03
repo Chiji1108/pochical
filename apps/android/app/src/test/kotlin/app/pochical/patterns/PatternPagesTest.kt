@@ -28,9 +28,9 @@ import app.pochical.awaitRoutes
 import app.pochical.calendar.LocalOwnDays
 import app.pochical.calendar.TestDays
 import app.pochical.kit.DeviceSettings
+import app.pochical.kit.RepeatOrder
 import app.pochical.kit.ShownDay
 import app.pochical.v1.pattern
-import app.pochical.v1.repeatOrder
 import java.time.LocalDate
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -69,11 +69,7 @@ class PatternPagesTest {
       symbol = "遅"
       icon = "cloudMoon"
     })
-    test.edits.setRepeatOrders(listOf(repeatOrder {
-      start = "2026-01-01"
-      sequence += "day"
-      holidayCountry = "JP"
-    }))
+    test.edits.setRepeatOrders(listOf(RepeatOrder(listOf("day"), LocalDate.parse("2026-01-01"), holidayCountry = "JP")))
     test.edits.setDays(mapOf(LocalDate.parse("2026-10-02") to ShownDay("late"), LocalDate.parse("2026-10-03") to ShownDay("late")))
     test.awaitCalendar(compose) { it.patterns.size == 2 && it.orders.isNotEmpty() }
   }

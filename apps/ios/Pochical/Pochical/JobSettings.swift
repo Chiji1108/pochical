@@ -41,15 +41,25 @@ struct JobChangePage: View {
   @State private var sequence: [PatternID] = []
   @State private var anchor = Day.today
   @State private var confirming = false
+  /// The new job not kept: its patterns, with those still on the days
+  /// before it, are more than the server takes.
+  @State private var tooMany = false
   /// The patterns picked on 勤務や休みを選んでください.
   @State private var picked: Set<PatternID> = []
 
   var body: some View {
     let step = steps.last ?? .day
-    if case .order(let template, let patterns) = step {
-      orderStep(template, patternIDs: patterns)
-    } else {
-      questions(step)
+    Group {
+      if case .order(let template, let patterns) = step {
+        orderStep(template, patternIDs: patterns)
+      } else {
+        questions(step)
+      }
+    }
+    .alert(patternsFull, isPresented: $tooMany) {
+      Button("OK", role: .cancel) {}
+    } message: {
+      Text(jobKeepsPatterns)
     }
   }
 
@@ -316,11 +326,13 @@ struct JobChangePage: View {
   ) {
     let incoming = readyPatterns(patternIDs)
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
-    let kept = write {
-      try OwnValues.changeJob(
-        to: incoming, sequence: sequence, start: start, anchor: anchor,
-        holidayCountry: HolidayCountry.current, now: now, in: $0)
-    }
+    let kept = write(
+      {
+        try OwnValues.changeJob(
+          to: incoming, sequence: sequence, start: start, anchor: anchor,
+          holidayCountry: HolidayCountry.current, now: now, in: $0)
+      },
+      refused: { (_: Unfit) in tooMany = true })
     guard kept else { return }
     if let period { settings.device.period = period }
     ReminderOffer.setUpOrder(sequence)

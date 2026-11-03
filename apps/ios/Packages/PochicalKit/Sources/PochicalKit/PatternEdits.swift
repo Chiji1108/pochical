@@ -90,7 +90,13 @@ extension OwnValues {
   }
 
   /// Puts the patterns in this order, ポチポチ入力's buttons with them.
+  /// One the server would refuse (`fitsPatternOrder`), as a pattern past
+  /// `SyncLimits.patterns` makes it, throws `Unfit`, so the write it is part
+  /// of keeps nothing.
   public static func order(_ ids: [PatternID], now: Int64, in db: Database) throws {
+    guard fitsPatternOrder(ids) else {
+      throw Unfit()
+    }
     var order = Pochical_V1_PatternOrder()
     order.ids = ids
     order.hlc = try nextClock(now: now, in: db)
