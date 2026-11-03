@@ -1,4 +1,4 @@
-import { COWORKERS_MAX } from "@pochical/design/limits";
+import { COWORKERS_MAX, syncLimits } from "@pochical/design/limits";
 import {
   fitsCoworkerName,
   fitsPatternOrder,
@@ -127,6 +127,21 @@ export const applyDay = (
   return writeDay(db, row);
 };
 
+/**
+ * Whether the user keeps syncLimits.patterns patterns already, so that two
+ * devices adding patterns apart never keep more than an order of them can
+ * hold.
+ */
+const patternsFull = (db: DrizzleSqliteDODatabase): boolean => {
+  const kept =
+    db
+      .select({ kept: count() })
+      .from(patterns)
+      .where(isNotNull(patterns.data))
+      .get()?.kept ?? 0;
+  return kept >= syncLimits.patterns;
+};
+
 export const applyPattern = (
   db: DrizzleSqliteDODatabase,
   edit: PatternValue,
@@ -144,7 +159,12 @@ export const applyPattern = (
   if (!isNewer(clock, stored)) {
     return undefined;
   }
-  const fits = edit.pattern === undefined || fitsPattern(edit.id, edit.pattern);
+  // A pattern newly kept past syncLimits.patterns is refused, answered as
+  // deleted, as a coworker past COWORKERS_MAX is.
+  const adding = edit.pattern !== undefined && (stored?.data ?? null) === null;
+  const fits =
+    edit.pattern === undefined ||
+    (fitsPattern(edit.id, edit.pattern) && !(adding && patternsFull(db)));
   let data = stored?.data ?? null;
   if (fits) {
     data = edit.pattern === undefined ? null : encodePattern(edit.pattern);
