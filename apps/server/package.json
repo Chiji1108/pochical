@@ -27,7 +27,7 @@
   },
   "devDependencies": {
     "@bufbuild/protoc-gen-es": "2.16.0",
-    "@cloudflare/vitest-plugin": "1.4.6",
+    "@cloudflare/vitest-plugin": "1.4.11",
     "@types/node": "catalog:",
     "drizzle-kit": "^0.31.11",
     "typescript": "~7.0.2",
