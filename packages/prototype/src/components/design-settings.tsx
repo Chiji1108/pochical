@@ -24,7 +24,11 @@ import {
   NotificationSection,
   RemindersPage,
 } from "./design-notifications";
-import { PatternsPage } from "./design-pattern-editor";
+import {
+  jobKeepsPatterns,
+  PatternsPage,
+  patternsFull,
+} from "./design-pattern-editor";
 import {
   AccountPage,
   AccountRow,
@@ -109,12 +113,15 @@ export function DesignSettings({
   // start when moved), or taken out.
   onPutRule: (rule: RepeatRule, replacing?: Date) => void;
   onRemoveRule: (start: Date) => void;
-  onChangeJob: (job: { patterns: Pattern[]; rule: RepeatRule }) => void;
+  // False when the new job's patterns, with those kept for the days
+  // before it, are more than the server takes: nothing changed.
+  onChangeJob: (job: { patterns: Pattern[]; rule: RepeatRule }) => boolean;
   onTab: (tab: Tab) => void;
   // For the flow diagrams: a page to open on.
   initialPage?: Page;
 }) {
   const coworkers = useCoworkerList();
+  const toast = useContext(ToastContext);
   const platform = useDevice((state) => state.platform);
   const [page, setPage] = useState<Page>(initialPage);
   // A new job's order on the calendar takes the screen, its keys at the
@@ -219,8 +226,13 @@ export function DesignSettings({
           {page === "job" && (
             <JobChangePage
               onApply={(job) => {
-                onChangeJob(job);
-                setPage("patterns");
+                const kept = onChangeJob(job);
+                if (kept) {
+                  setPage("patterns");
+                } else {
+                  toast(`${patternsFull}。${jobKeepsPatterns}`, "problem");
+                }
+                return kept;
               }}
               onBack={() => {
                 setPage("patterns");

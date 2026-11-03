@@ -1,11 +1,13 @@
 package app.pochical.kit
 
+import app.pochical.design.SyncLimits
 import app.pochical.v1.DayField
 import java.time.LocalDate
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.Serializable
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -20,6 +22,9 @@ private data class FitsVectors(
   val personName: List<Text>,
   val groupName: List<Text>,
   val groupMark: List<Mark>,
+  val patternOrder: List<Ids>,
+  val rotation: List<Rotation>,
+  val repeatOrders: List<Orders>,
 ) {
   @Serializable
   data class DayFieldCase(override val name: String, val field: String, val value: String?, val expected: Boolean) : VectorCase {
@@ -36,7 +41,18 @@ private data class FitsVectors(
   }
 
   @Serializable data class Mark(override val name: String, val mark: Parts, val expected: Boolean) : VectorCase
+
+  /** Ids separated by single spaces, "" for none. */
+  @Serializable data class Ids(override val name: String, val ids: String, val expected: Boolean) : VectorCase
+
+  @Serializable data class Rotation(override val name: String, val sequence: String, val expected: Boolean) : VectorCase
+
+  /** Each order by its rotation, as [Rotation] writes one. */
+  @Serializable data class Orders(override val name: String, val orders: List<String>, val expected: Boolean) : VectorCase
 }
+
+/** Ids separated by single spaces, "" for none, as fits.json writes lists. */
+private fun ids(text: String): List<String> = if (text.isEmpty()) emptyList() else text.split(" ")
 
 // Robolectric, for the Unicode properties Android's ICU has and the database.
 @RunWith(RobolectricTestRunner::class)
@@ -56,6 +72,46 @@ class FitsTest {
   @Test fun groupName() = vectors.groupName.checkEach({ it.expected }) { fitsGroupName(it.text) }
 
   @Test fun groupMark() = vectors.groupMark.checkEach({ it.expected }) { fitsGroupMark(it.mark.mark) }
+
+  @Test fun patternOrder() = vectors.patternOrder.checkEach({ it.expected }) { fitsPatternOrder(ids(it.ids)) }
+
+  @Test fun rotation() = vectors.rotation.checkEach({ it.expected }) { fitsRotation(ids(it.sequence)) }
+
+  @Test
+  fun repeatOrders() =
+    vectors.repeatOrders.checkEach({ it.expected }) { case ->
+      val start = LocalDate.of(2026, 1, 1)
+      fitsRepeatOrders(case.orders.mapIndexed { index, sequence -> RepeatOrder(ids(sequence), start.plusDays(index.toLong()), holidayCountry = "JP") })
+    }
+
+  @Test
+  fun aCountPastTheServersIsNotWritten() = runTest {
+    val start = LocalDate.of(2026, 1, 1)
+    fun order(index: Int) = RepeatOrder(listOf("p1"), start.plusDays(index.toLong()), holidayCountry = "JP")
+    for (index in 1..SyncLimits.patterns) edits.savePattern("p$index", markedPattern("p$index"))
+    for (index in 0 until SyncLimits.orders) edits.putOrder(order(index))
+    val kept = database.write { outbox() }.size
+
+    assertEquals(PatternRefusal.Unfit, edits.savePattern("one-more", markedPattern("one-more")))
+    edits.putOrder(order(SyncLimits.orders))
+    edits.putOrder(RepeatOrder(List(SyncLimits.sequence + 1) { "p1" }, start, holidayCountry = "JP"))
+    assertFalse(edits.changeJob(listOf(), listOf("p1"), start.plusDays(SyncLimits.orders.toLong()), start, "JP"))
+
+    assertEquals(kept, database.write { outbox() }.size)
+  }
+
+  @Test
+  fun aNewJobPastThePatternsWithThoseKeptForTheDaysBeforeIsNotWritten() = runTest {
+    val start = LocalDate.of(2026, 1, 1)
+    // As many patterns as a person keeps, each on a day before the switch, so each stays.
+    for (index in 1..SyncLimits.patterns) edits.savePattern("p$index", markedPattern("p$index"))
+    edits.setDays((1..SyncLimits.patterns).associate { start.plusDays(it.toLong()) to ShownDay("p$it") })
+    val switch = start.plusDays(SyncLimits.patterns + 1L)
+    val kept = database.write { outbox() }.size
+
+    assertFalse(edits.changeJob(readyCopies(listOf("day")), listOf("day"), switch, switch, "JP"))
+    assertEquals(kept, database.write { outbox() }.size)
+  }
 
   @Test
   fun aValueTheServerWouldRefuseIsNotWritten() = runTest {

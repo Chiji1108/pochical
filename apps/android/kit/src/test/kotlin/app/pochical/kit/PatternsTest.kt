@@ -6,7 +6,6 @@ import app.pochical.v1.change
 import app.pochical.v1.pattern
 import app.pochical.v1.patternOrder
 import app.pochical.v1.patternValue
-import app.pochical.v1.repeatOrder
 import java.time.LocalDate
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -225,11 +224,7 @@ class PatternsTest {
     val database = testDatabase()
     val edits = OwnEdits(database)
     edits.savePattern("day", markedPattern("日勤"))
-    edits.setRepeatOrders(listOf(repeatOrder {
-      start = "2026-01-01"
-      sequence += "day"
-      holidayCountry = "JP"
-    }))
+    edits.setRepeatOrders(listOf(RepeatOrder(listOf("day"), LocalDate.parse("2026-01-01"), holidayCountry = "JP")))
     val sent = database.write { outbox() }.size
     assertEquals(PatternRefusal.Repeating, edits.savePattern("day", markedPattern("日勤") {
       archived = true
@@ -249,11 +244,7 @@ class PatternsTest {
     val edits = OwnEdits(database)
     edits.savePattern("day", markedPattern("日勤"))
     edits.savePattern("off", markedPattern("休み"))
-    edits.setRepeatOrders(listOf(repeatOrder {
-      start = "2026-10-01"
-      sequence += listOf("day", "off")
-      holidayCountry = "JP"
-    }))
+    edits.setRepeatOrders(listOf(RepeatOrder(listOf("day", "off"), LocalDate.parse("2026-10-01"), holidayCountry = "JP")))
     edits.setDays(mapOf(LocalDate.parse("2026-10-02") to ShownDay("day"), LocalDate.parse("2026-10-04") to ShownDay("day")))
     // From the order's start through the last own day: the 1st and 3rd from the order, the 2nd and 4th their own.
     assertEquals(4, database.daysShowing("day"))

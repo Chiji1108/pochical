@@ -1,9 +1,9 @@
 package app.pochical.calendar
 
+import app.pochical.kit.RepeatOrder
 import app.pochical.kit.ShiftTime
 import app.pochical.kit.ownCalendar
 import app.pochical.v1.pattern
-import app.pochical.v1.repeatOrder
 import java.time.LocalDate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -29,15 +29,7 @@ class SyncedDaysTest {
   fun putPatterns() = runBlocking {
     test.edits.savePattern("day", markedPattern("日勤") { start = "09:00"; end = "18:00" })
     test.edits.savePattern("night", markedPattern("夜勤") { nextDay = "after" })
-    test.edits.setRepeatOrders(
-      listOf(
-        repeatOrder {
-          start = "2026-10-01"
-          sequence += "day"
-          holidayCountry = "JP"
-        }
-      )
-    )
+    test.edits.setRepeatOrders(listOf(RepeatOrder(listOf("day"), LocalDate.parse("2026-10-01"), holidayCountry = "JP")))
     test.awaitCalendar { it.patterns.size == 2 && it.shown(day, day).isNotEmpty() }
     Unit
   }

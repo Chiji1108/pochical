@@ -24,12 +24,21 @@ private func ownPatterns(_ rows: [PatternRow], _ order: [PatternOrderRow]) -> [P
   OwnCalendar(days: [], patterns: rows, patternOrder: order, orders: []).patterns
 }
 
+/// Said where パターンを追加 stays off: the person keeps as many patterns
+/// as the server takes (`fitsPatternOrder`).
+let patternsFull = "シフトパターンは\(SyncLimits.patterns)個までです"
+
+/// Why a new job past it is not kept: its patterns join those still on
+/// the days before it (spec/shift-patterns.md, Changing jobs).
+let jobKeepsPatterns = "前の日までに入っているパターンも残るので、数に入ります"
+
 /// 設定 › シフトパターン, and below the list 新しい仕事にする.
 struct PatternsPage: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.write) private var write
   @FetchAll private var rows: [PatternRow]
   @FetchAll private var order: [PatternOrderRow]
+  @FetchAll private var repeatOrders: [RepeatOrderRow]
   @State private var editMode = EditMode.inactive
 
   var body: some View {
@@ -39,6 +48,10 @@ struct PatternsPage: View {
     let patterns = all.inUse
     let archived = all.filter(\.archived)
     let sorting = editMode.isEditing
+    // Archived ones count too: they stay in the order.
+    let full = all.count >= SyncLimits.patterns
+    // 新しい仕事にする puts in one more order.
+    let ordersAreFull = repeatOrders.count >= SyncLimits.orders
     List {
       ForEach(Array(patterns.enumerated()), id: \.element.id) { index, pattern in
         // ポチポチ入力 shows them a page at a time: where each page starts,
@@ -72,12 +85,17 @@ struct PatternsPage: View {
             .settingsOnPage()
         } else {
           PageLink {
-            AddPatternPage(patterns: patterns)
+            AddPatternPage(patterns: all)
           } label: {
             Label("パターンを追加", systemImage: "plus")
-              .foregroundStyle(colors.accentDefault)
+              .foregroundStyle(full ? colors.textDisabled : colors.accentDefault)
           }
+          .disabled(full)
           .settingsRows()
+        }
+      } footer: {
+        if !sorting, full {
+          Text(patternsFull)
         }
       }
 
@@ -100,7 +118,7 @@ struct PatternsPage: View {
 
       // Choosing the patterns again with the repeat, for a new job.
       if !sorting {
-        Section("仕事") {
+        Section {
           PageLink {
             JobChangePage()
           } label: {
@@ -110,6 +128,13 @@ struct PatternsPage: View {
                 .font(.caption)
                 .foregroundStyle(colors.textTertiary)
             }
+          }
+          .disabled(ordersAreFull)
+        } header: {
+          Text("仕事")
+        } footer: {
+          if ordersAreFull {
+            Text(ordersFull)
           }
         }
         .settingsRows()
@@ -152,6 +177,8 @@ private struct AddPatternPage: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
   @Environment(\.write) private var write
+  /// Every pattern in the order, archived ones too: one is there, so not
+  /// offered again, and the added ones join them.
   let patterns: [Pattern]
   @State private var picked: Set<PatternID> = []
   /// One made with 自分で作る: back to the list, past this page, once the
@@ -166,6 +193,8 @@ private struct AddPatternPage: View {
       !ids.contains(id) && !names.contains(readyByID[id]?.name ?? "")
     }
     let any = ReadyPatterns.offered.contains(where: offered)
+    // As many as the order still takes.
+    let fits = fitsPatternOrder(patterns.map(\.id) + chosenPatterns(picked).filter(offered))
     List {
       if any {
         Section {
@@ -173,7 +202,7 @@ private struct AddPatternPage: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .settingsTextOnPage()
         } footer: {
-          Text("名前や時間は、追加したあとで直せます。")
+          Text(fits ? "名前や時間は、追加したあとで直せます。" : patternsFull)
         }
       }
       Section {
@@ -194,7 +223,7 @@ private struct AddPatternPage: View {
           Button("追加", role: .confirm) { add(keeping: ids, offered: offered) }
             // Only ones not there yet: a 明け or 非番 picked with its 夜勤
             // or 当番 may be.
-            .disabled(!picked.contains(where: offered))
+            .disabled(!picked.contains(where: offered) || !fits)
         }
       }
     }

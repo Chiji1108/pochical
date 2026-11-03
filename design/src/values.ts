@@ -33,6 +33,30 @@ export const fitsDayNote = (note: string): boolean =>
 export const fitsDayPeople = (ids: readonly string[]): boolean =>
   ids.length > 0 && isIdList(ids, syncLimits.peopleADay);
 
+/**
+ * The patterns' order: pattern ids, each once, and syncLimits.patterns at
+ * most, so a person who keeps that many adds no more.
+ */
+export const fitsPatternOrder = (ids: readonly string[]): boolean =>
+  isIdList(ids, syncLimits.patterns);
+
+/**
+ * A repeating order's rotation: pattern ids, each as often as it comes
+ * round, and syncLimits.sequence at most; empty ends repeating.
+ */
+export const fitsRotation = (sequence: readonly string[]): boolean =>
+  sequence.length <= syncLimits.sequence && sequence.every((id) => isId(id));
+
+/**
+ * The repeating orders of one timeline: syncLimits.orders at most, each
+ * rotation fitting.
+ */
+export const fitsRepeatOrders = (
+  orders: readonly { sequence: readonly string[] }[]
+): boolean =>
+  orders.length <= syncLimits.orders &&
+  orders.every(({ sequence }) => fitsRotation(sequence));
+
 /** A coworker's name: 1 to textLimits.personName characters, not only spaces. */
 export const fitsCoworkerName = (name: string): boolean =>
   fitsText(name, textLimits.personName);

@@ -71,6 +71,8 @@ export const shiftInput = {
   pattern: cva({
     base: {
       _active: { bg: "accent.pressed", transform: "scale(0.97)" },
+      // Dimmed as the system dims a disabled button, taking no presses.
+      _disabled: { opacity: 0.5, pointerEvents: "none" },
       _hover: { bg: "accent.container", borderColor: "accent.border" },
       alignItems: "center",
       bg: "background.card",
@@ -252,12 +254,15 @@ export function PatternKeys({
   onPage,
   progress,
   onPick,
+  disabled = false,
 }: {
   patternKeys: Shift[];
   page: number;
   onPage: (page: number) => void;
   progress: MotionValue<number>;
   onPick: (shift: Shift) => void;
+  // Keys that type nothing now, as an order's at its full length.
+  disabled?: boolean;
 }) {
   const book = usePatterns();
   const pages = patternPagesOf(patternKeys);
@@ -280,7 +285,11 @@ export function PatternKeys({
       </button>
     ));
   return paged ? (
-    <fieldset aria-label="入力するシフト" className={shiftInput.patternPages}>
+    <fieldset
+      aria-label="入力するシフト"
+      className={shiftInput.patternPages}
+      disabled={disabled}
+    >
       <Pager
         ends={{ back: shown > 0, forward: shown < pages.length - 1 }}
         gap={PATTERN_PAGE_GAP}
@@ -305,6 +314,7 @@ export function PatternKeys({
     <fieldset
       aria-label="入力するシフト"
       className={shiftInput.patterns({ columns: columnsFor(patternKeys) })}
+      disabled={disabled}
     >
       {buttons(patternKeys)}
     </fieldset>

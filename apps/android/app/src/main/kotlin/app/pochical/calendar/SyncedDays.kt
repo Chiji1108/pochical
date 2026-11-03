@@ -120,7 +120,7 @@ class SyncedDays(
     edits.begin(readyCopies(ids), sequence, anchor, LocalDate.now(), holidayCountry())
   }
 
-  override suspend fun changeJob(ids: List<String>, sequence: List<String>, start: LocalDate, anchor: LocalDate) = inTurn {
+  override suspend fun changeJob(ids: List<String>, sequence: List<String>, start: LocalDate, anchor: LocalDate): Boolean = inTurn {
     edits.changeJob(readyCopies(ids), sequence, start, anchor, holidayCountry())
   }
 

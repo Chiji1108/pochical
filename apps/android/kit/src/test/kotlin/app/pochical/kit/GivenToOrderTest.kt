@@ -1,7 +1,6 @@
 package app.pochical.kit
 
 import app.pochical.v1.DayField
-import app.pochical.v1.repeatOrder
 import java.time.LocalDate
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.Serializable
@@ -45,14 +44,7 @@ class GivenToOrderTest {
         edits.setDay(date, DayField.DAY_FIELD_NOTE, own.note)
         edits.setDay(date, DayField.DAY_FIELD_PEOPLE, own.people?.joinToString(" "))
       }
-      edits.setRepeatOrders(
-        listOf(repeatOrder {
-          start = case.start
-          sequence += "day"
-          holidayCountry = "JP"
-        }),
-        clearFrom = case.start,
-      )
+      edits.setRepeatOrders(listOf(RepeatOrder(listOf("day"), LocalDate.parse(case.start), holidayCountry = "JP")), clearFrom = case.start)
       val days = database.read { days() }.associate { LocalDate.parse(it.date) to it.ownDay }
       database.close()
       case.name to days

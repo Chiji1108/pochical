@@ -3,10 +3,10 @@ package app.pochical.calendar
 import app.pochical.design.ReadyPatterns
 import app.pochical.kit.AppDatabase
 import app.pochical.kit.OwnEdits
+import app.pochical.kit.RepeatOrder
 import app.pochical.kit.ShownDay
 import app.pochical.v1.DayField
 import app.pochical.v1.pattern
-import app.pochical.v1.repeatOrder
 import java.time.LocalDate
 import kotlinx.coroutines.flow.first
 
@@ -40,13 +40,13 @@ suspend fun putSampleDays(database: AppDatabase, edits: OwnEdits, today: LocalDa
   val first = today.withDayOfMonth(1)
   edits.setRepeatOrders(
     listOf(
-      repeatOrder {
-        start = first.minusMonths(1).toString()
-        sequence += listOf("day", "day", "night", "after", "off", "off")
-        holidaysOff = true
-        holidayShift = "off"
-        holidayCountry = holidayCountry()
-      }
+      RepeatOrder(
+        sequence = listOf("day", "day", "night", "after", "off", "off"),
+        start = first.minusMonths(1),
+        holidaysOff = true,
+        holidayShift = "off",
+        holidayCountry = holidayCountry(),
+      )
     )
   )
   edits.setDays(
