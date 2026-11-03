@@ -515,16 +515,13 @@ describe("a device's push token", () => {
       expect.arrayContaining([["gone"], ["later"]])
     );
 
-    await expect
-      .poll(async () => {
-        const kept = await env.DB.prepare(
-          "select token from push_tokens where token in (?, ?)"
-        )
-          .bind(TOKEN, OTHER_TOKEN)
-          .all<{ token: string }>();
-        return kept.results;
-      })
-      .toStrictEqual([{ token: OTHER_TOKEN }]);
+    await membersTold(groupId);
+    const kept = await env.DB.prepare(
+      "select token from push_tokens where token in (?, ?)"
+    )
+      .bind(TOKEN, OTHER_TOKEN)
+      .all<{ token: string }>();
+    expect(kept.results).toStrictEqual([{ token: OTHER_TOKEN }]);
     // The push APNs failed is kept to try again, the other not.
     await expect(retriesLeft(guest)).resolves.toBe(1);
     await retryNow(guest, true);
@@ -807,16 +804,13 @@ describe("an Android phone's notifications", () => {
           status,
         },
       });
-      await expect
-        .poll(async () => {
-          const rows = await env.DB.prepare(
-            "select token from push_tokens where token = ?"
-          )
-            .bind(FCM_TOKEN)
-            .all<{ token: string }>();
-          return rows.results.length;
-        })
-        .toBe(sent === "gone" ? 0 : 1);
+      await membersTold(groupId);
+      const rows = await env.DB.prepare(
+        "select token from push_tokens where token = ?"
+      )
+        .bind(FCM_TOKEN)
+        .all<{ token: string }>();
+      expect(rows.results).toHaveLength(sent === "gone" ? 0 : 1);
       await expectKept(warned, guest, sent === "later" ? 1 : 0);
       await retryNow(guest, true);
     }
@@ -897,9 +891,8 @@ describe("a notification's size", () => {
     // 200 characters, as many as a notification carries: 5000 bytes.
     const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
     say(mine.socket, "a", FAMILY.repeat(200));
-    await expect
-      .poll(() => sent.apns !== undefined && sent.fcm !== undefined)
-      .toBeTruthy();
+    await untilAcked(mine.frames, "a");
+    await membersTold(groupId);
 
     const fcm = Object.entries(sent.fcm ?? {})
       .flat()
@@ -1008,12 +1001,12 @@ describe("a push refused for a while", () => {
     );
     const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
     say(mine.socket, "a", "今週どう？");
-    await expect
-      .poll(() => warned.mock.calls.map(([logged]: unknown[]) => logged))
-      .toContainEqual({
-        message: "Push given up",
-        push: { kind: "alert", platform: "apns", tries: 1 },
-      });
+    await untilAcked(mine.frames, "a");
+    await membersTold(groupId);
+    expect(warned).toHaveBeenCalledWith({
+      message: "Push given up",
+      push: { kind: "alert", platform: "apns", tries: 1 },
+    });
     await expect(retriesOf(guest)).resolves.toStrictEqual([]);
   });
 
@@ -1031,9 +1024,12 @@ describe("a push refused for a while", () => {
     say(mine.socket, "a", "今週どう？");
     await expectKept(warned, guest, 1);
     read(theirs.socket, "r1", 2);
-    await expect
-      .poll(() => calls.map(({ type }) => type))
-      .toStrictEqual(["alert", "background"]);
+    await untilAcked(theirs.frames, "r1");
+    await membersTold(groupId);
+    expect(calls.map(({ type }) => type)).toStrictEqual([
+      "alert",
+      "background",
+    ]);
 
     await retryNow(guest);
     expect(calls.map(({ type }) => type)).toStrictEqual([
