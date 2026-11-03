@@ -46,9 +46,10 @@ describe("a Durable Object's alarm in a test", () => {
           async (_, state) => await state.storage.getAlarm()
         )
       ).resolves.toBeNull();
-      const ran = runAlarm(user).then(() => {
+      const ran = (async () => {
+        await runAlarm(user);
         seen.push("returned");
-      });
+      })();
       // Taken after runAlarm's own call on the same stub, so once it waits.
       await runInDurableObject(user, () => {
         begin.resolve(undefined);
