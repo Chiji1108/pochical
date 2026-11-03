@@ -1,7 +1,7 @@
 import { createExecutionContext, runInDurableObject } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { drizzle } from "drizzle-orm/d1";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AdminEntrypoint } from "../src/admin-entrypoint";
 import { user } from "../src/db/auth-schema";
@@ -76,6 +76,12 @@ const seed = async () => {
 };
 
 describe("erasing everything (全消去)", () => {
+  // The database and the bucket are the file's, and each test counts them
+  // whole: it starts with nothing.
+  beforeEach(async () => {
+    await resetEverything(env);
+  });
+
   it("previews what it erases, erases every user, group and object, and erases nothing more run again", async () => {
     const { groupId, guest, guestId, maker } = await seed();
     const admin = exports.AdminEntrypoint;

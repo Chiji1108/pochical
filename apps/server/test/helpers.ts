@@ -14,6 +14,50 @@ import {
 
 export const ORIGIN = "https://server.test";
 
+/** How many tests have ended, so a wait does not outlive its own. */
+let testsEnded = 0;
+
+/** Ends the waits of the test that ran (setup.ts, after each test). */
+export const endWaits = (): void => {
+  testsEnded += 1;
+};
+
+/**
+ * Waits until `done`, for as long as the test runs: what a mocked
+ * service took, what was logged, or what was stored. What a step sets off
+ * goes through Durable Objects, whose calls go through the pool's main
+ * process, which a busy runner can stall past expect.poll's and
+ * vi.waitFor's second (#1031), so no wait has a deadline of its own.
+ */
+export const until = async (
+  done: () => boolean | Promise<boolean>
+): Promise<void> => {
+  const test = testsEnded;
+  const look = async (): Promise<void> => {
+    if (testsEnded !== test) {
+      throw new Error("Its test ended before it was done");
+    }
+    if (await done()) {
+      return;
+    }
+    await scheduler.wait(10);
+    await look();
+  };
+  await look();
+};
+
+/**
+ * Waits until `taken` holds `count` items, what a mocked service took or
+ * what was logged, then expects no more.
+ */
+export const arrived = async (
+  taken: readonly unknown[],
+  count: number
+): Promise<void> => {
+  await until(() => taken.length >= count);
+  expect(taken).toHaveLength(count);
+};
+
 /** Signs in anonymously and returns the session token the bearer plugin hands back. */
 export const signInAnonymously = async (): Promise<string> => {
   const response = await exports.default.fetch(

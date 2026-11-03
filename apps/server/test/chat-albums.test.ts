@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ChatEditSchema } from "../src/gen/pochical/v1/sync_pb";
 import { photoKey } from "../src/photos";
+import { alarmsSettled } from "./alarms";
 import { call, ORIGIN } from "./helpers";
 import {
   changesIn,
@@ -14,6 +15,7 @@ import {
   syncSocket,
   untilAcked,
 } from "./sync-helpers";
+import { membersTold } from "./telling";
 
 // A JPEG's first bytes, as the app sends one.
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4]);
@@ -175,18 +177,24 @@ describe("a line of photos", () => {
     await expect(linesOf(groupId, guest)).resolves.toStrictEqual([
       { photos: [], pinned: false, reactions: [], seq: 2, unsent: true },
     ]);
-    await expect
-      .poll(async () => await storedIn(groupId, ["p1", "p2", "kept"]))
-      .toStrictEqual([false, false, true]);
+    // The sweep the unsend set deletes its photos.
+    await alarmsSettled(env.GROUPS.getByName(groupId));
+    await expect(
+      storedIn(groupId, ["p1", "p2", "kept"])
+    ).resolves.toStrictEqual([false, false, true]);
 
     // Its photos' ids are spent: neither uploaded nor sent again.
     await expect(putStatus(groupId, "p1", maker)).resolves.toBe(409);
     await edit(mine, [photoLine(["p2"]), photoLine(["kept"])]);
-    await expect(linesOf(groupId, guest)).resolves.toMatchObject([
-      { seq: 2, unsent: true },
-      { photos: ["kept"], seq: 3 },
+    await expect(
+      Promise.all([linesOf(groupId, guest), storedIn(groupId, ["p1"])])
+    ).resolves.toMatchObject([
+      [
+        { seq: 2, unsent: true },
+        { photos: ["kept"], seq: 3 },
+      ],
+      [false],
     ]);
-    await expect(storedIn(groupId, ["p1"])).resolves.toStrictEqual([false]);
   });
 
   it("taken back before it came deletes every photo it names, the send never coming", async () => {
@@ -204,9 +212,10 @@ describe("a line of photos", () => {
         },
       },
     ]);
-    await expect
-      .poll(async () => await storedIn(groupId, ["r1", "r2", "theirs"]))
-      .toStrictEqual([false, false, true]);
+    await alarmsSettled(env.GROUPS.getByName(groupId));
+    await expect(
+      storedIn(groupId, ["r1", "r2", "theirs"])
+    ).resolves.toStrictEqual([false, false, true]);
     await edit(mine, [photoLine(["r1", "r2"])], ["late"]);
     await expect(linesOf(groupId, guest)).resolves.toStrictEqual([]);
   });
@@ -230,9 +239,10 @@ describe("a line of photos", () => {
         value: { photoIds: ["m0"], sendOpId: "later", threadId: "group" },
       },
     ]);
-    await expect
-      .poll(async () => await storedIn(groupId, many))
-      .toStrictEqual(many.map((id) => id !== "m0"));
+    await alarmsSettled(env.GROUPS.getByName(groupId));
+    await expect(storedIn(groupId, many)).resolves.toStrictEqual(
+      many.map((id) => id !== "m0")
+    );
   });
 
   it("is dropped empty, or unless its photos are the sender's own, unsent, each once, as many as one send holds", async () => {
@@ -279,7 +289,7 @@ describe("a line of photos", () => {
     });
     const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
     await edit(mine, [photoLine(["n1", "n2", "n3"])]);
-    await expect.poll(() => pushes.length).toBe(1);
+    await membersTold(groupId);
     // Only its own tries share it (spec/sync-protocol.md, Push).
     expect(pushes).toStrictEqual([expect.stringMatching(/^[\da-f-]{36}$/u)]);
   });

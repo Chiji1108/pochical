@@ -162,12 +162,10 @@ describe("a chat's photos alone", () => {
       { blocked: true, userId: guestId },
       maker
     );
-    await expect
-      .poll(async () => {
-        const page = await photosOf(mine, 0, false);
-        return page.ids;
-      })
-      .toStrictEqual(["m1", "m2", "m3"]);
+    // The block holds once the call returns.
+    await expect(photosOf(mine, 0, false)).resolves.toMatchObject({
+      ids: ["m1", "m2", "m3"],
+    });
     const unblocked = await photosOf(theirs, 0, false);
     expect(unblocked.total).toBe(4);
 
