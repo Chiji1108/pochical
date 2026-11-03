@@ -30,8 +30,8 @@
     "sharp": "0.35.5",
     "tsx": "catalog:",
     "typescript": "~7.0.2",
-    "ultracite": "8.0.1",
+    "ultracite": "8.1.0",
     "vitest": "catalog:"
   },
-  "packageManager": "pnpm@12.15.0"
+  "packageManager": "pnpm@12.16.1"
 }

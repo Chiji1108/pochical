@@ -220,13 +220,14 @@ describe("deleting an account", () => {
   it("revokes Apple's tokens first, and goes no further without a code Apple takes", async () => {
     const asked: { path: string; form: URLSearchParams }[] = [];
     let takes: "none" | "other" | "theirs" = "none";
-    providerKeys((request) => {
+    providerKeys(async (request) => {
       const url = new URL(request.url);
       if (url.host !== "appleid.apple.com") {
         return undefined;
       }
-      void request.text().then((text) => {
-        asked.push({ form: new URLSearchParams(text), path: url.pathname });
+      asked.push({
+        form: new URLSearchParams(await request.text()),
+        path: url.pathname,
       });
       if (url.pathname === "/auth/token") {
         if (takes === "none") {
@@ -271,13 +272,14 @@ describe("deleting an account", () => {
 
   it("revokes with the Services ID, and its redirect URI, a code Apple's web page gave", async () => {
     const asked: { path: string; form: URLSearchParams }[] = [];
-    providerKeys((request) => {
+    providerKeys(async (request) => {
       const url = new URL(request.url);
       if (url.host !== "appleid.apple.com") {
         return undefined;
       }
-      void request.text().then((text) => {
-        asked.push({ form: new URLSearchParams(text), path: url.pathname });
+      asked.push({
+        form: new URLSearchParams(await request.text()),
+        path: url.pathname,
       });
       const body = btoa(JSON.stringify({ sub: "apple-web" }));
       return url.pathname === "/auth/token"

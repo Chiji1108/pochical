@@ -17,7 +17,7 @@
     "fix": "pnpm --dir ../.. fix"
   },
   "dependencies": {
-    "@better-auth/core": "1.7.12",
+    "@better-auth/core": "1.7.14",
     "@bufbuild/protobuf": "2.16.0",
     "@connectrpc/connect": "2.2.0",
     "@pochical/design": "workspace:*",
@@ -27,7 +27,7 @@
   },
   "devDependencies": {
     "@bufbuild/protoc-gen-es": "2.16.0",
-    "@cloudflare/vitest-plugin": "1.4.6",
+    "@cloudflare/vitest-plugin": "1.4.11",
     "@types/node": "catalog:",
     "drizzle-kit": "^0.31.11",
     "typescript": "~7.0.2",
