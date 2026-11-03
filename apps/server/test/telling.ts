@@ -10,7 +10,12 @@ import { GroupDO } from "../src/group-do";
 // it looks at what reached a push service, or that nothing did.
 
 /** GroupDO's tellUnread, as the code has it: private, so looked up. */
-const taken: unknown = Reflect.get(GroupDO.prototype, "tellUnread");
+const lookedUp: unknown = Reflect.get(GroupDO.prototype, "tellUnread");
+if (typeof lookedUp !== "function") {
+  // Else membersTold would wait on nothing, and pass whatever came.
+  throw new TypeError("GroupDO has no tellUnread to watch");
+}
+const taken = lookedUp;
 
 /** Each group's tellings going, by its state, so they go with it. */
 const goingByState = new WeakMap<DurableObjectState, Set<Promise<unknown>>>();
@@ -28,9 +33,6 @@ async function watchedTellUnread(
   this: GroupDO,
   ...told: unknown[]
 ): Promise<void> {
-  if (typeof taken !== "function") {
-    throw new TypeError("GroupDO has no tellUnread to watch");
-  }
   const telling = Promise.resolve<unknown>(Reflect.apply(taken, this, told));
   const going = goingOf(this.ctx);
   going.add(telling);

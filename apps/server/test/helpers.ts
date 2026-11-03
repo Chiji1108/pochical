@@ -14,8 +14,16 @@ import {
 
 export const ORIGIN = "https://server.test";
 
+/** How many tests have ended, so a wait does not outlive its own. */
+let testsEnded = 0;
+
+/** Ends the waits of the test that ran (setup.ts, after each test). */
+export const endWaits = (): void => {
+  testsEnded += 1;
+};
+
 /**
- * Waits until `done`, for as long as the test may run: what a mocked
+ * Waits until `done`, for as long as the test runs: what a mocked
  * service took, what was logged, or what was stored. What a step sets off
  * goes through Durable Objects, whose calls go through the pool's main
  * process, which a busy runner can stall past expect.poll's and
@@ -24,11 +32,18 @@ export const ORIGIN = "https://server.test";
 export const until = async (
   done: () => boolean | Promise<boolean>
 ): Promise<void> => {
-  if (await done()) {
-    return;
-  }
-  await scheduler.wait(10);
-  await until(done);
+  const test = testsEnded;
+  const look = async (): Promise<void> => {
+    if (testsEnded !== test) {
+      throw new Error("Its test ended before it was done");
+    }
+    if (await done()) {
+      return;
+    }
+    await scheduler.wait(10);
+    await look();
+  };
+  await look();
 };
 
 /**

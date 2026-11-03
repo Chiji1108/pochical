@@ -540,7 +540,8 @@ export class UserDO extends DurableObject<Env> {
    * read, as the group counted them at its cursor `groupCursor`, for their
    * devices' badges, sent to them when it changed. One counted no later
    * than the count kept, or for a group they are not in, changes nothing.
-   * Done once the pushes it sets off are, which the group waits on.
+   * Done once the pushes it sets off are, which the group waits on; one
+   * that fails is logged.
    */
   async setUnread(
     groupId: string,
@@ -554,12 +555,22 @@ export class UserDO extends DurableObject<Env> {
     read?: number
   ): Promise<void> {
     this.storeUnread(groupId, threadId, unread, groupCursor);
-    await Promise.all([
+    const pushes = await Promise.allSettled([
       line !== undefined && this.notifies(groupId, threadId, line.mentioned)
         ? this.notify(line.alert)
         : undefined,
       read === undefined ? undefined : this.withdraw(groupId, threadId, read),
     ]);
+    for (const pushed of pushes) {
+      if (pushed.status === "rejected") {
+        console.error({
+          error: errorFields(pushed.reason),
+          groupId,
+          message: "Telling the user's devices of a chat failed",
+          threadId,
+        });
+      }
+    }
   }
 
   /**

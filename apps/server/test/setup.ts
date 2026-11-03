@@ -1,8 +1,10 @@
 import { applyD1Migrations } from "cloudflare:test";
 import type { D1Migration } from "cloudflare:test";
 import { env } from "cloudflare:workers";
+import { afterEach } from "vitest";
 
 import { watchAlarms } from "./alarms";
+import { endWaits } from "./helpers";
 import { watchTelling } from "./telling";
 
 // vitest.config.ts passes the migrations in as a binding. Env is declared
@@ -23,3 +25,4 @@ await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
 
 watchAlarms();
 watchTelling();
+afterEach(endWaits);
