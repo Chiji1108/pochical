@@ -21,9 +21,6 @@ const SECRET = "slack-signing-secret";
 // Each message Slack posts gets its own time, across the tests too.
 let posts = 0;
 
-/** Where Slack says a file uploaded by the app was shared. */
-const SHARED_TS = "1700000300.000001";
-
 /** How the messages a photo is shared in begin, as conversations.* say. */
 const SHARED_PREFIX = "1700000400.";
 
@@ -49,8 +46,20 @@ const slackAnswer = (
       };
     }
     case "files.info": {
+      // Where the app shared the file, once it has: in a message of its
+      // own time, as each of Slack's is, which keeps the line apart.
+      const shared = messages.find(
+        (message) =>
+          Array.isArray(message.files) &&
+          message.files.some((file) => isRecord(file) && file.id === args.file)
+      );
       return {
-        file: { shares: { private: { "C-SUPPORT": [{ ts: SHARED_TS }] } } },
+        file: {
+          shares:
+            shared === undefined
+              ? {}
+              : { private: { "C-SUPPORT": [{ ts: shared.ts }] } },
+        },
         ok: true,
       };
     }
@@ -842,11 +851,13 @@ describe("a user's photo, in Slack", () => {
   });
 
   it("is uploaded into their thread, its shared message kept with the line", async () => {
-    const calls = slackCalls();
+    const messages: SlackMessage[] = [];
+    const calls = slackCalls(() => false, messages);
     const token = await signInAnonymously();
     const { edit, userId } = await supportChat(token);
     await sendPhoto(token, edit);
-    await expect(slackTsOf(userId, 1)).resolves.toBe(SHARED_TS);
+    const shared = messages.find(({ files }) => files !== undefined);
+    await expect(slackTsOf(userId, 1)).resolves.toBe(shared?.ts);
     const thread = await threadOf(userId);
     expect(calls.map(({ method }) => method)).toStrictEqual([
       "chat.postMessage",

@@ -8,12 +8,12 @@ import { AUDIT_GRACE_MS } from "../src/bucket-audit";
 import type { BucketAudit } from "../src/bucket-audit";
 import { chatLines, groupPhotos } from "../src/group-do-schema";
 import {
-  deletePhotosUnder,
   personPhotoKey,
   photoKey,
   sharePersonPhoto,
   uploadedPhotoKey,
 } from "../src/photos";
+import { resetEverything } from "../src/reset";
 import { runAlarm } from "./alarms";
 import { call, ORIGIN } from "./helpers";
 import {
@@ -223,9 +223,10 @@ const outcomes = (deleted: number, skipped = 0, failed = 0) => ({
 });
 
 describe("the photos bucket's audit", () => {
-  // The bucket is the file's: each test audits it whole.
+  // The bucket and the database are the file's, and each test audits
+  // them whole: it starts with nothing.
   beforeEach(async () => {
-    await deletePhotosUnder(env, "");
+    await resetEverything(env);
   });
 
   afterEach(() => {
