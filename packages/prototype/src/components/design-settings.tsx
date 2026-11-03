@@ -226,11 +226,13 @@ export function DesignSettings({
           {page === "job" && (
             <JobChangePage
               onApply={(job) => {
-                if (onChangeJob(job)) {
+                const kept = onChangeJob(job);
+                if (kept) {
                   setPage("patterns");
                 } else {
                   toast(`${patternsFull}。${jobKeepsPatterns}`, "problem");
                 }
+                return kept;
               }}
               onBack={() => {
                 setPage("patterns");

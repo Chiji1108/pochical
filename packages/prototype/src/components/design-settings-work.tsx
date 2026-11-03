@@ -542,7 +542,9 @@ export function JobChangePage({
   onOrdering,
 }: {
   onBack: () => void;
-  onApply: (job: { patterns: Pattern[]; rule: RepeatRule }) => void;
+  // Whether the new job was kept; one that was not leaves everything as
+  // it was, the questions still open.
+  onApply: (job: { patterns: Pattern[]; rule: RepeatRule }) => boolean;
   // Told when the order's calendar comes and goes, as it takes the
   // screen from the tab bar.
   onOrdering: (ordering: boolean) => void;
@@ -567,6 +569,17 @@ export function JobChangePage({
             setAsking(false);
           }}
           onFinish={({ patternKeys, sequence, anchor, periodStart }) => {
+            const kept = onApply({
+              patterns: presetList(patternKeys),
+              rule: {
+                anchor,
+                sequence: sequence ?? [],
+                start,
+              },
+            });
+            if (!kept) {
+              return;
+            }
             onOrdering(false);
             if (periodStart !== undefined) {
               setPeriodStart(periodStart);
@@ -575,14 +588,6 @@ export function JobChangePage({
             if (sequence !== undefined && sequence.length > 0) {
               useDevice.setState({ reminderOfferPending: true });
             }
-            onApply({
-              patterns: presetList(patternKeys),
-              rule: {
-                anchor,
-                sequence: sequence ?? [],
-                start,
-              },
-            });
           }}
         />
       </div>
