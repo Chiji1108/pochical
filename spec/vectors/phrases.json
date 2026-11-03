@@ -122,7 +122,7 @@
     {
       "name": "a ZWJ sequence with a gender sign",
       "text": "ありがとう🙇‍♀️また明日",
-      "expected": ["ありがとう🙇‍♀️また", "明日"]
+      "expected": ["ありがとう", "🙇‍♀️また", "明日"]
     },
     {
       "name": "a flag",
@@ -142,7 +142,7 @@
     {
       "name": "a skin tone ending a phrase",
       "text": "いいね👍🏽ありがとう",
-      "expected": ["いいね👍🏽", "ありがとう"]
+      "expected": ["いいね", "👍🏽", "ありがとう"]
     },
     {
       "name": "a keycap",

@@ -122,11 +122,13 @@ export function useAppIcons() {
   const [icons, setIcons] = useState<Record<string, string>>({});
   useEffect(() => {
     let current = true;
-    void loadIcons().then((loaded) => {
+    const load = async () => {
+      const loaded = await loadIcons();
       if (current) {
         setIcons(loaded);
       }
-    });
+    };
+    void load();
     return () => {
       current = false;
     };
