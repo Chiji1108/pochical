@@ -81,7 +81,7 @@ struct PatternsPage: View {
             .settingsOnPage()
         } else {
           PageLink {
-            AddPatternPage(patterns: patterns, kept: all.map(\.id))
+            AddPatternPage(patterns: all)
           } label: {
             Label("パターンを追加", systemImage: "plus")
               .foregroundStyle(full ? colors.textDisabled : colors.accentDefault)
@@ -173,10 +173,9 @@ private struct AddPatternPage: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
   @Environment(\.write) private var write
+  /// Every pattern in the order, archived ones too: one is there, so not
+  /// offered again, and the added ones join them.
   let patterns: [Pattern]
-  /// Every pattern's id in the order, archived ones too, which the added
-  /// ones join.
-  let kept: [PatternID]
   @State private var picked: Set<PatternID> = []
   /// One made with 自分で作る: back to the list, past this page, once the
   /// editor has gone.
@@ -191,7 +190,7 @@ private struct AddPatternPage: View {
     }
     let any = ReadyPatterns.offered.contains(where: offered)
     // As many as the order still takes.
-    let fits = fitsPatternOrder(kept + chosenPatterns(picked).filter(offered))
+    let fits = fitsPatternOrder(patterns.map(\.id) + chosenPatterns(picked).filter(offered))
     List {
       if any {
         Section {
