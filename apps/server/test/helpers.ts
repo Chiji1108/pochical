@@ -14,6 +14,35 @@ import {
 
 export const ORIGIN = "https://server.test";
 
+/**
+ * Waits until `done`, for as long as the test may run: what a mocked
+ * service took, what was logged, or what was stored. What a step sets off
+ * goes through Durable Objects, whose calls go through the pool's main
+ * process, which a busy runner can stall past expect.poll's and
+ * vi.waitFor's second (#1031), so no wait has a deadline of its own.
+ */
+export const until = async (
+  done: () => boolean | Promise<boolean>
+): Promise<void> => {
+  if (await done()) {
+    return;
+  }
+  await scheduler.wait(10);
+  await until(done);
+};
+
+/**
+ * Waits until `taken` holds `count` items, what a mocked service took or
+ * what was logged, then expects no more.
+ */
+export const arrived = async (
+  taken: readonly unknown[],
+  count: number
+): Promise<void> => {
+  await until(() => taken.length >= count);
+  expect(taken).toHaveLength(count);
+};
+
 /** Signs in anonymously and returns the session token the bearer plugin hands back. */
 export const signInAnonymously = async (): Promise<string> => {
   const response = await exports.default.fetch(

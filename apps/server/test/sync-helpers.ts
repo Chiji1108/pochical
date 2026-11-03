@@ -99,12 +99,17 @@ export const edit = (
 });
 
 // Reads up to the next Acked, once the edits sent have been taken, past
-// what came before it, like a catch-up.
+// what came before it, like a catch-up; with `opId`, up to the one of
+// that edit.
 export const untilAcked = async (
-  frames: ReturnType<typeof framesOf>
+  frames: ReturnType<typeof framesOf>,
+  opId?: string
 ): Promise<ServerFrame> => {
   const frame = await frames.next();
-  return frame.kind.case === "acked" ? frame : await untilAcked(frames);
+  return frame.kind.case === "acked" &&
+    (opId === undefined || frame.kind.value.opIds.includes(opId))
+    ? frame
+    : await untilAcked(frames, opId);
 };
 
 // After the frames a step causes, a Ping's Pong proves none are left.

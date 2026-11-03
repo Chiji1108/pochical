@@ -1429,7 +1429,7 @@ export class GroupDO extends DurableObject<Env> {
     );
     const told = [...answeredChanges(this.db, farBack), ...changed];
     broadcastChanges(this.ctx, told, seenBy, readerView(this.db, told));
-    this.tellUnread(counted, alerts, reads);
+    this.ctx.waitUntil(this.tellUnread(counted, alerts, reads));
     for (const page of pages) {
       this.ctx.waitUntil(this.addPage(page));
     }
@@ -1572,16 +1572,17 @@ export class GroupDO extends DurableObject<Env> {
   /**
    * Gives each member's User DO their new count of a chat's unread lines,
    * with the cursor it was counted at, for their badges
-   * (spec/sync-protocol.md, Unread summary). One that fails is put right
-   * by the member's next count.
+   * (spec/sync-protocol.md, Unread summary), done once each has taken it
+   * and sent the pushes it set off. One that fails is put right by the
+   * member's next count.
    */
-  private tellUnread(
+  private async tellUnread(
     counted: Map<string, Set<string>>,
     alerts = new Map<string, { alert: Alert; mentioned: boolean }>(),
     // Who read in which chat, by readerKey: their read mark goes
     // too, for their devices to take back what was notified.
     reads = new Set<string>()
-  ): void {
+  ): Promise<void> {
     const groupId = this.placeId();
     if (groupId === undefined || counted.size === 0) {
       return;
@@ -1605,7 +1606,7 @@ export class GroupDO extends DurableObject<Env> {
           );
         })
     );
-    this.ctx.waitUntil(Promise.allSettled(calls));
+    await Promise.allSettled(calls);
   }
 
   /**

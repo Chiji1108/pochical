@@ -14,6 +14,7 @@ import {
   syncSocket,
   untilAcked,
 } from "./sync-helpers";
+import { membersTold } from "./telling";
 
 // A JPEG's first bytes, as the app sends one.
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4]);
@@ -279,7 +280,7 @@ describe("a line of photos", () => {
     });
     const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
     await edit(mine, [photoLine(["n1", "n2", "n3"])]);
-    await expect.poll(() => pushes.length).toBe(1);
+    await membersTold(groupId);
     // Only its own tries share it (spec/sync-protocol.md, Push).
     expect(pushes).toStrictEqual([expect.stringMatching(/^[\da-f-]{36}$/u)]);
   });

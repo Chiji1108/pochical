@@ -540,8 +540,9 @@ export class UserDO extends DurableObject<Env> {
    * read, as the group counted them at its cursor `groupCursor`, for their
    * devices' badges, sent to them when it changed. One counted no later
    * than the count kept, or for a group they are not in, changes nothing.
+   * Done once the pushes it sets off are, which the group waits on.
    */
-  setUnread(
+  async setUnread(
     groupId: string,
     threadId: string,
     unread: Unread,
@@ -551,17 +552,14 @@ export class UserDO extends DurableObject<Env> {
     line?: { alert: Alert; mentioned: boolean },
     // Where the user's read mark in the chat is, when they read.
     read?: number
-  ): void {
+  ): Promise<void> {
     this.storeUnread(groupId, threadId, unread, groupCursor);
-    if (
-      line !== undefined &&
-      this.notifies(groupId, threadId, line.mentioned)
-    ) {
-      this.ctx.waitUntil(this.notify(line.alert));
-    }
-    if (read !== undefined) {
-      this.ctx.waitUntil(this.withdraw(groupId, threadId, read));
-    }
+    await Promise.all([
+      line !== undefined && this.notifies(groupId, threadId, line.mentioned)
+        ? this.notify(line.alert)
+        : undefined,
+      read === undefined ? undefined : this.withdraw(groupId, threadId, read),
+    ]);
   }
 
   /**

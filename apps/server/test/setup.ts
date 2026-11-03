@@ -3,6 +3,7 @@ import type { D1Migration } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 
 import { watchAlarms } from "./alarms";
+import { watchTelling } from "./telling";
 
 // vitest.config.ts passes the migrations in as a binding. Env is declared
 // by `wrangler types` as a global interface, so only merging can extend it.
@@ -21,3 +22,4 @@ declare global {
 await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
 
 watchAlarms();
+watchTelling();

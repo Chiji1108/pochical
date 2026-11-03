@@ -13,7 +13,7 @@ import {
 } from "../src/slack";
 import { supportPlace } from "../src/support-lines";
 import { alarmOf, alarmsSettled, runAlarm } from "./alarms";
-import { call, ORIGIN, signInAnonymously } from "./helpers";
+import { arrived, call, ORIGIN, signInAnonymously, until } from "./helpers";
 import { relayed, sendFrame, supportChat, untilAcked } from "./sync-helpers";
 
 const SECRET = "slack-signing-secret";
@@ -312,6 +312,14 @@ const answersTo = async (userId: string): Promise<string[]> => {
     .map((line) => line.text);
 };
 
+/** Waits until Pochical's people's lines' words are `done`. */
+const answered = async (
+  userId: string,
+  done: (answers: string[]) => boolean
+): Promise<void> => {
+  await until(async () => done(await answersTo(userId)));
+};
+
 /** Who reacted with what on the line at `seq`. */
 const reactionsOn = async (userId: string, seq: number) =>
   await runInDurableObject(
@@ -476,16 +484,12 @@ describe("a support chat in Slack", () => {
     });
     const taken = await postEvent(reply);
     expect(taken.status).toBe(200);
-    await vi.waitFor(() => {
-      expect(calls.at(-1)?.method).toBe("reactions.add");
-    });
+    await until(() => calls.at(-1)?.method === "reactions.add");
     // Slack sending it again keeps it once.
     await postEvent(reply);
-    await vi.waitFor(() => {
-      expect(
-        calls.filter(({ method }) => method === "reactions.add")
-      ).toHaveLength(2);
-    });
+    await until(
+      () => calls.filter(({ method }) => method === "reactions.add").length > 1
+    );
     await expect(answersTo(userId)).resolves.toStrictEqual([
       "設定から変えられます & 試してね",
     ]);
@@ -578,11 +582,8 @@ describe("a support chat in Slack", () => {
     await postEvent(
       replyIn(thread, { subtype: "thread_broadcast", text: "チャンネルにも" })
     );
-    await vi.waitFor(async () => {
-      await expect(answersTo(userId)).resolves.toStrictEqual([
-        "チャンネルにも",
-      ]);
-    });
+    await answered(userId, (answers) => answers.length > 0);
+    await expect(answersTo(userId)).resolves.toStrictEqual(["チャンネルにも"]);
   });
 
   it("sends a reply's images as one photo line before its words, and says why not to other files", async () => {
@@ -599,13 +600,9 @@ describe("a support chat in Slack", () => {
         text: "設定画面です",
       })
     );
-    await vi.waitFor(() => {
-      expect(
-        calls.some(({ args }) =>
-          String(args.text).startsWith("届けられなかった")
-        )
-      ).toBeTruthy();
-    });
+    await until(() =>
+      calls.some(({ args }) => String(args.text).startsWith("届けられなかった"))
+    );
     const lines = await linesOf(userId);
     const answers = lines.filter(
       (line) => line.author_id === chatRules.pochicalMember
@@ -658,18 +655,14 @@ describe("an answer from Pochical's people", () => {
     await postEvent(
       replyIn(thread, { text: "設定から変えられます", ts: "1700000400.000001" })
     );
-    await vi.waitFor(() => {
-      expect(alerts()).toHaveLength(1);
-    });
+    await until(() => alerts().length > 0);
     await exports.AdminEntrypoint.answerSupport(
       userId,
       "ほかにもありますか",
       crypto.randomUUID(),
       "staff@pochical.app"
     );
-    await vi.waitFor(() => {
-      expect(alerts()).toHaveLength(2);
-    });
+    await until(() => alerts().length > 1);
     expect(alerts().map(({ args }) => args)).toMatchObject([
       {
         // Titled with the chat, as 設定's row names it: no writer.
@@ -753,13 +746,17 @@ describe("reactions and lines taken back, in Slack", () => {
     await postEvent(
       reactionEvent("reaction_added", "U-STAFF", "+1::skin-tone-3")
     );
-    await vi.waitFor(async () => {
-      await expect(theirs()).resolves.toStrictEqual(["👀", "👍🏼"]);
-    });
+    const reacted = async (count: number) => {
+      await until(async () => {
+        const emoji = await theirs();
+        return emoji.length === count;
+      });
+    };
+    await reacted(2);
+    await expect(theirs()).resolves.toStrictEqual(["👀", "👍🏼"]);
     await postEvent(reactionEvent("reaction_removed", "U-STAFF", "eyes"));
-    await vi.waitFor(async () => {
-      await expect(theirs()).resolves.toStrictEqual(["👍🏼"]);
-    });
+    await reacted(1);
+    await expect(theirs()).resolves.toStrictEqual(["👍🏼"]);
   });
 
   it("take back an answer deleted there", async () => {
@@ -767,9 +764,8 @@ describe("reactions and lines taken back, in Slack", () => {
     const { thread, userId } = await startedChat();
     const ts = "1700000200.000001";
     await postEvent(replyIn(thread, { text: "消す答え", ts }));
-    await vi.waitFor(async () => {
-      await expect(answersTo(userId)).resolves.toStrictEqual(["消す答え"]);
-    });
+    await answered(userId, (answers) => answers.length > 0);
+    await expect(answersTo(userId)).resolves.toStrictEqual(["消す答え"]);
     await relayed(userId);
     // An emoji on an answer stays in Slack.
     await postEvent({
@@ -790,9 +786,8 @@ describe("reactions and lines taken back, in Slack", () => {
       },
       type: "event_callback",
     });
-    await vi.waitFor(async () => {
-      await expect(answersTo(userId)).resolves.toStrictEqual([""]);
-    });
+    await answered(userId, ([answer]) => answer === "");
+    await expect(answersTo(userId)).resolves.toStrictEqual([""]);
     await expect(reactionsOn(userId, 2)).resolves.toStrictEqual([]);
   });
 });
@@ -1323,9 +1318,7 @@ describe("a deleted account's support chat, in Slack", () => {
       { appleAuthorizationCode: "" },
       token
     );
-    await vi.waitFor(() => {
-      expect(calls.at(-1)?.method).toBe("auth.test");
-    });
+    await until(() => calls.at(-1)?.method === "auth.test");
     const waiting = messages.length;
 
     slackDown = false;
@@ -1378,7 +1371,7 @@ describe("a deleted account's support chat, in Slack", () => {
     vi.mocked(fetch).mockImplementation(async (input, init) => {
       if (new Request(input, init).url.endsWith("/chat.postMessage")) {
         reached = true;
-        await vi.waitUntil(() => !held, { interval: 5, timeout: 5000 });
+        await until(() => !held);
       }
       if (answer === undefined) {
         throw new Error("Slack is not answered");
@@ -1408,7 +1401,7 @@ describe("a deleted account's support chat, in Slack", () => {
       },
     });
     await untilAcked(frames);
-    await vi.waitUntil(() => reached);
+    await until(() => reached);
     socket.close();
     const deleting = call(
       "UserService/DeleteAccount",
@@ -1416,7 +1409,7 @@ describe("a deleted account's support chat, in Slack", () => {
       token
     );
     // The post lands once the chat is gone from D1's index.
-    await vi.waitUntil(async () => {
+    await until(async () => {
       const left = await env.DB.prepare(
         "select count(*) as n from support_chats where user_id = ?"
       )
@@ -1427,9 +1420,7 @@ describe("a deleted account's support chat, in Slack", () => {
     held = false;
     const deleted = await deleting;
     expect(deleted.status).toBe(200);
-    await vi.waitFor(() => {
-      expect(messages).toHaveLength(1);
-    });
+    await arrived(messages, 1);
     await sweep(Date.now() + 2 * 24 * 60 * 60 * 1000);
     expect(messages.map(({ metadata }) => metadata)).toStrictEqual([
       { event_payload: {}, event_type: "pochical_account_deleted" },

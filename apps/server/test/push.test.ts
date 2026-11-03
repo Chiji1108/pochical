@@ -4,9 +4,17 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { MockInstance } from "vitest";
 
 import { runAlarm } from "./alarms";
-import { call, ORIGIN, userIdOf } from "./helpers";
+import { arrived, call, ORIGIN, until, userIdOf } from "./helpers";
 import { providerKeys, idToken, link } from "./provider-helpers";
-import { changesIn, device, pair, sendFrame, syncSocket } from "./sync-helpers";
+import {
+  changesIn,
+  device,
+  pair,
+  sendFrame,
+  syncSocket,
+  untilAcked,
+} from "./sync-helpers";
+import { membersTold } from "./telling";
 
 // An APNs token as a device gives it.
 const TOKEN = "a1".repeat(32);
@@ -25,25 +33,6 @@ const retriesOf = async (session: string) =>
         .toArray()
   );
 
-/**
- * Waits until `taken` holds `count` items, what a mocked service took or
- * what was logged, then expects no more. A push leaves through the group's
- * and the user's DOs, whose calls go through the pool's main process,
- * which a busy runner can stall past expect.poll's second (#1031): this
- * waits for the push itself, as long as the test may run.
- */
-const arrived = async (
-  taken: readonly unknown[],
-  count: number
-): Promise<void> => {
-  if (taken.length < count) {
-    await scheduler.wait(10);
-    await arrived(taken, count);
-    return;
-  }
-  expect(taken).toHaveLength(count);
-};
-
 /** How many pushes the user's DO keeps to try again. */
 const retriesLeft = async (session: string): Promise<number> => {
   const rows = await retriesOf(session);
@@ -54,28 +43,24 @@ const retriesLeft = async (session: string): Promise<number> => {
  * Waits until a push was logged as not sent, then expects the user's DO to
  * keep `kept` to try again. sendPush (push.ts) logs it and returns, and
  * UserDO.deliver, resumed a microtask later, keeps the try or lets it go
- * before it awaits anything; this poll looks again only in a later task,
- * so the DO's rows are settled by then. They are read once, not polled
- * against a deadline, as a read inside the DO goes through the pool's
- * main process, which a busy runner can stall past expect.poll's second
- * (#1031).
+ * before it awaits anything, so the DO's rows are settled by the time a
+ * read reaches the DO. They are read once, as a read inside the DO goes
+ * through the pool's main process (#1031).
  */
 const expectKept = async (
   warned: MockInstance<typeof console.warn>,
   session: string,
   kept: number
 ): Promise<void> => {
-  await expect
-    .poll(() =>
-      warned.mock.calls.some(
-        ([logged]: unknown[]) =>
-          typeof logged === "object" &&
-          logged !== null &&
-          "message" in logged &&
-          logged.message === "Push not sent"
-      )
+  await until(() =>
+    warned.mock.calls.some(
+      ([logged]: unknown[]) =>
+        typeof logged === "object" &&
+        logged !== null &&
+        "message" in logged &&
+        logged.message === "Push not sent"
     )
-    .toBeTruthy();
+  );
   await expect(retriesLeft(session)).resolves.toBe(kept);
 };
 
@@ -229,11 +214,12 @@ describe("a chat's notifications", () => {
     // APNs says the token is gone (410): it is dropped, and the next line
     // reaches nothing.
     say(mine.socket, "b", "まだ？");
-    await arrived(calls, 2);
+    await untilAcked(mine.frames, "b");
+    await membersTold(groupId);
+    expect(calls).toHaveLength(2);
     say(mine.socket, "c", "おーい");
-    await mine.frames.next();
-    // Time for a notification that should not come.
-    await scheduler.wait(100);
+    await untilAcked(mine.frames, "c");
+    await membersTold(groupId);
     expect(calls).toHaveLength(2);
   });
 
@@ -252,9 +238,8 @@ describe("a chat's notifications", () => {
     const calls = apnsCalls();
     const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
     say(mine.socket, "a", "見て");
-    await mine.frames.next();
-    // Time for a notification that should not come.
-    await scheduler.wait(100);
+    await untilAcked(mine.frames, "a");
+    await membersTold(groupId);
     expect(calls).toHaveLength(0);
   });
 
@@ -290,9 +275,8 @@ describe("a chat's notifications", () => {
       guest
     );
     say(mine.socket, "c", `<@${guestId}> まだ？`);
-    await mine.frames.next();
-    // Time for a notification that should not come.
-    await scheduler.wait(100);
+    await untilAcked(mine.frames, "c");
+    await membersTold(groupId);
     expect(calls).toHaveLength(1);
   });
 
@@ -378,10 +362,10 @@ describe("a chat's notifications", () => {
     read(theirs.socket, "r3", second + 1);
     await arrived(calls, 6);
     expect(calls[5]?.body).toMatchObject({ withdraw: { readTo: second + 1 } });
+    // No withdrawal for a read reaching only a line not notified.
     read(theirs.socket, "r4", second + 2);
-    await theirs.frames.next();
-    // Time for a withdrawal that should not come: its line was not notified.
-    await scheduler.wait(100);
+    await untilAcked(theirs.frames, "r4");
+    await membersTold(groupId);
     expect(calls).toHaveLength(6);
   });
 });
@@ -449,9 +433,9 @@ describe("a device's push token", () => {
     const calls = apnsCalls();
     const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
     say(mine.socket, "a", "今週どう？");
-    await arrived(calls, 1);
-    // Time for a notification to the signed-out device that should not come.
-    await scheduler.wait(100);
+    await untilAcked(mine.frames, "a");
+    await membersTold(groupId);
+    // Not to the signed-out device.
     expect(reached(calls)).toStrictEqual([OTHER_TOKEN]);
     // Nor is the signed-out device's token kept.
     const kept = await env.DB.prepare(
@@ -471,9 +455,9 @@ describe("a device's push token", () => {
     const calls = apnsCalls();
     const makers = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
     say(makers.socket, "a", "ゆうきさんへ");
-    await makers.frames.next();
-    // Time for a notification to the guest that should not come.
-    await scheduler.wait(100);
+    await untilAcked(makers.frames, "a");
+    await membersTold(groupId);
+    // Not to the guest.
     expect(calls).toHaveLength(0);
 
     const guests = await syncSocket(`/v1/groups/${groupId}/socket`, guest);

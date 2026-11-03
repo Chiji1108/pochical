@@ -9,7 +9,7 @@ import {
   smallKey,
 } from "../src/photos";
 import { alarmsSettled, ownRun, runAlarm } from "./alarms";
-import { call, ORIGIN, signInAnonymously, userIdOf } from "./helpers";
+import { call, ORIGIN, signInAnonymously, until, userIdOf } from "./helpers";
 import {
   changesBesidesNotices,
   changesIn,
@@ -396,11 +396,7 @@ const heldDelete = () => {
       go.resolve(undefined);
     },
     reached: async () => {
-      await vi.waitFor(() => {
-        if (!held) {
-          throw new Error("the delete is not held yet");
-        }
-      });
+      await until(() => held);
     },
   };
 };
