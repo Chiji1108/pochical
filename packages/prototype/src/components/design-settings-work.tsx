@@ -1,5 +1,6 @@
 import editSymbol from "@iconify-icons/material-symbols/edit-outline-rounded";
 import repeatSymbol from "@iconify-icons/material-symbols/repeat-outline-rounded";
+import { syncLimits } from "@pochical/design/limits";
 import { css, cx } from "@pochical/styled-system/css";
 import { ArrowRight, ChevronRight, CircleSlash } from "lucide-react";
 import { useContext, useState } from "react";
@@ -30,6 +31,7 @@ import { DoneButton, PageHeader } from "./design-header";
 import { AddRow, List, ListRow, SwitchRow } from "./design-list";
 import {
   OrderTitle,
+  ordersFull,
   RepeatCalendar,
   SequenceTiles,
 } from "./design-repeat-editor";
@@ -164,19 +166,29 @@ function RepeatList({
   const indices = rules.map((_, index) => index).toReversed();
   const upcoming = indices.filter((index) => index > inUse);
   const past = indices.filter((index) => index < inUse);
+  // Both put in one more period, which a full timeline has no room for.
+  const full = rules.length >= syncLimits.orders;
   return (
     <>
       {/* Over the newest first, where a new period mostly lands. */}
       <List>
-        <AddRow label="新しい繰り返しを追加" onClick={onNew} opensPage />
+        <AddRow
+          disabled={full}
+          label="新しい繰り返しを追加"
+          onClick={onNew}
+          opensPage
+        />
         <ListRow
+          disabled={full}
           label="繰り返しをやめる"
           leading={<CircleSlash aria-hidden="true" size={20} />}
           onClick={onStop}
         />
       </List>
       <Note>
-        どちらも、選んだ日から切り替わります。前後の期間と、自分で入れた日は、そのまま残ります。
+        {full
+          ? ordersFull
+          : "どちらも、選んだ日から切り替わります。前後の期間と、自分で入れた日は、そのまま残ります。"}
       </Note>
       {upcoming.length > 0 && (
         <Section title="これから">{cards(upcoming)}</Section>

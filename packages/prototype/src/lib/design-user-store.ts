@@ -1,3 +1,4 @@
+import { fitsPatternOrder, fitsRepeatOrders } from "@pochical/design/values";
 import { createContext, useCallback, useContext, useMemo } from "react";
 import type { SetStateAction } from "react";
 import { createStore, useStore } from "zustand";
@@ -92,11 +93,19 @@ export const sampleProfile: Profile = {
 
 export function createUserStore(initial: Partial<OwnData & GroupData> = {}) {
   return createStore<UserState>()((set) => {
-    // Accepts a value or an updater, like React's own setters.
+    // Accepts a value or an updater, like React's own setters. One the
+    // server would refuse (`fits`) keeps what was there, as the apps write
+    // nothing that would go back on sync.
     const setter =
-      <K extends keyof (OwnData & GroupData)>(key: K) =>
+      <K extends keyof (OwnData & GroupData)>(
+        key: K,
+        fits: (value: UserState[K]) => boolean = () => true
+      ) =>
       (next: SetStateAction<UserState[K]>) => {
-        set((state) => ({ [key]: apply(next, state[key]) }));
+        set((state) => {
+          const value = apply(next, state[key]);
+          return fits(value) ? { [key]: value } : {};
+        });
       };
     return {
       blocked: [],
@@ -115,9 +124,11 @@ export function createUserStore(initial: Partial<OwnData & GroupData> = {}) {
       setCoworkers: setter("coworkers"),
       setGroups: setter("groups"),
       setMentionsWhenMuted: setter("mentionsWhenMuted"),
-      setPatterns: setter("patterns"),
+      setPatterns: setter("patterns", (patterns) =>
+        fitsPatternOrder(patterns.map(({ id }) => id))
+      ),
       setProfile: setter("profile"),
-      setRules: setter("rules"),
+      setRules: setter("rules", fitsRepeatOrders),
       setSchedule: setter("schedule"),
       setSupport: setter("support"),
     };

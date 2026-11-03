@@ -32,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onPlaced
@@ -144,16 +145,16 @@ private fun TrayDateLabel(day: LocalDate, week: Week, country: String, said: Str
  * keyboard's do.
  */
 @Composable
-fun PatternKeys(patterns: List<Pattern>, pages: PagerState, onPick: (Pattern) -> Unit) {
+fun PatternKeys(patterns: List<Pattern>, pages: PagerState, enabled: Boolean = true, onPick: (Pattern) -> Unit) {
   val paged = patterns.chunked(PATTERNS_PER_PAGE)
   if (paged.size > 1) {
     HorizontalPager(pages, Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) { page ->
-      KeyGrid(paged[page], columns = PAGE_COLUMNS, rows = KEY_ROWS, tall = false, onPick)
+      KeyGrid(paged[page], columns = PAGE_COLUMNS, rows = KEY_ROWS, tall = false, enabled, onPick)
     }
   } else {
     // Fewer patterns sit in fewer columns, as /design lays them out: two rows from five on.
     val columns = if (patterns.size <= 4) maxOf(patterns.size, 1) else minOf((patterns.size + 1) / KEY_ROWS, PAGE_COLUMNS)
-    KeyGrid(patterns, columns, rows = (patterns.size + columns - 1) / columns, tall = patterns.size <= 4, onPick)
+    KeyGrid(patterns, columns, rows = (patterns.size + columns - 1) / columns, tall = patterns.size <= 4, enabled, onPick)
   }
 }
 
@@ -162,10 +163,11 @@ private const val KEY_ROWS = 2
 private const val PAGE_COLUMNS = (PATTERNS_PER_PAGE + KEY_ROWS - 1) / KEY_ROWS
 
 private val KEY_GAP = 8.dp
+private const val DISABLED_ALPHA = 0.38f
 private val KEY_WIDTH = 72.dp
 
 @Composable
-private fun KeyGrid(patterns: List<Pattern>, columns: Int, rows: Int, tall: Boolean, onPick: (Pattern) -> Unit) {
+private fun KeyGrid(patterns: List<Pattern>, columns: Int, rows: Int, tall: Boolean, enabled: Boolean, onPick: (Pattern) -> Unit) {
   val colors = LocalThemeColors.current
   val shape = RoundedCornerShape(Radius.lg)
   val height = if (tall) 77.dp else 64.dp
@@ -184,7 +186,9 @@ private fun KeyGrid(patterns: List<Pattern>, columns: Int, rows: Int, tall: Bool
                   shape = shape,
                   color = colors.backgroundCard,
                   border = BorderStroke(1.dp, colors.borderDefault),
-                  modifier = Modifier.size(width, height),
+                  // Off, as an order's keys at its full length, at Material's disabled content alpha.
+                  enabled = enabled,
+                  modifier = Modifier.size(width, height).alpha(if (enabled) 1f else DISABLED_ALPHA),
                 ) {
                   Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                     ShiftMark(pattern.icon, pattern.emoji, pattern.symbol, pattern.color, size = 26.dp)

@@ -1,5 +1,10 @@
 import { COWORKERS_MAX } from "@pochical/design/limits";
-import { fitsCoworkerName, isId, isIdList } from "@pochical/design/values";
+import {
+  fitsCoworkerName,
+  fitsPatternOrder,
+  isId,
+  isIdList,
+} from "@pochical/design/values";
 import { and, asc, count, eq, gte, inArray, isNotNull } from "drizzle-orm";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 
@@ -20,7 +25,7 @@ import { hasDeviceClock } from "./ids";
 import { givesWay, heldBackBy, ORDER_FIELDS } from "./order-clears";
 import type { Floor } from "./order-clears";
 import { fitsClearFrom, fitsCoworkerOrder, fitsOrders } from "./order-values";
-import { fitsOrder, fitsPattern } from "./pattern-values";
+import { fitsPattern } from "./pattern-values";
 import { fitsPreference } from "./preference-values";
 import {
   coworkerOrder,
@@ -170,7 +175,7 @@ export const applyPatternOrder = (
   if (!isNewer(clock, stored)) {
     return undefined;
   }
-  const fits = fitsOrder(edit.ids);
+  const fits = fitsPatternOrder(edit.ids);
   const ids = fits ? edit.ids : parseIds(stored?.ids ?? "[]");
   const row: OrderRow = {
     ...clockColumns(writtenClock(clock, fits)),

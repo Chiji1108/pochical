@@ -58,6 +58,7 @@ import app.pochical.calendar.monthDayText
 import app.pochical.calendar.slashText
 import app.pochical.design.Metrics
 import app.pochical.design.Radius
+import app.pochical.design.SyncLimits
 import app.pochical.kit.RepeatOrder
 import app.pochical.kit.holidaySetting
 import app.pochical.kit.holidaysOffByDefault
@@ -106,10 +107,21 @@ fun RepeatPage(navigation: PageNavigation) {
         }
         return@LazyColumn
       }
+      // Both put in one more period, which a full timeline has no room for (spec/vectors/fits.json, repeatOrders).
+      val full = orders.size >= SyncLimits.orders
       item {
-        SettingsSection(footnote = stringResource(R.string.repeat_rows_note)) {
-          row { SettingsRow(stringResource(R.string.repeat_add), R.drawable.ic_add, onClick = { navigation.open(RootPage.RepeatEditor(RepeatMode.Switch)) }) }
-          row { SettingsRow(stringResource(R.string.repeat_stop), R.drawable.ic_close, onClick = { navigation.open(RootPage.StopRepeat) }) }
+        SettingsSection(
+          footnote = if (full) stringResource(R.string.repeat_orders_full, SyncLimits.orders) else stringResource(R.string.repeat_rows_note)
+        ) {
+          row {
+            SettingsRow(
+              stringResource(R.string.repeat_add),
+              R.drawable.ic_add,
+              onClick = { navigation.open(RootPage.RepeatEditor(RepeatMode.Switch)) },
+              enabled = !full,
+            )
+          }
+          row { SettingsRow(stringResource(R.string.repeat_stop), R.drawable.ic_close, onClick = { navigation.open(RootPage.StopRepeat) }, enabled = !full) }
         }
       }
       val groups =

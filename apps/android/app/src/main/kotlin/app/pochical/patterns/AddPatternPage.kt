@@ -27,6 +27,8 @@ import app.pochical.SettingsRow
 import app.pochical.calendar.LocalOwnDays
 import app.pochical.calendar.pattern
 import app.pochical.design.ReadyPatterns
+import app.pochical.design.SyncLimits
+import app.pochical.kit.fitsPatternOrder
 import app.pochical.kit.newId
 import app.pochical.kit.readyCopies
 import kotlinx.coroutines.launch
@@ -46,6 +48,8 @@ fun AddPatternPage(navigation: PageNavigation) {
   val offered = { id: String -> id !in ids && ReadyPatterns.all.find { it.id == id }?.name !in names }
   val anyOffered = ReadyPatterns.offered.any(offered)
   var picked by rememberSaveable { mutableStateOf(emptySet<String>()) }
+  // As many as the order still takes, archived ones counted.
+  val fits = fitsPatternOrder(calendar.patterns.map { it.id } + chosenPatterns(picked).filter(offered))
   val scope = rememberCoroutineScope()
   SettingsPage(
     stringResource(R.string.patterns_add),
@@ -55,7 +59,7 @@ fun AddPatternPage(navigation: PageNavigation) {
         ConfirmAction(
           stringResource(R.string.add),
           // Only ones not there yet: a 明け or 非番 picked with its 夜勤 or 当番 may be.
-          enabled = picked.any(offered),
+          enabled = picked.any(offered) && fits,
           onClick = {
             val chosen = chosenPatterns(picked).filter(offered)
             // A next day comes along only when that pattern is there or added with it.
@@ -74,7 +78,7 @@ fun AddPatternPage(navigation: PageNavigation) {
         item {
           ReadyPatternChips(picked, { picked = it }, Modifier.fillMaxWidth().padding(16.dp), offered = offered)
         }
-        item { Footnote(stringResource(R.string.patterns_ready_note)) }
+        item { Footnote(if (fits) stringResource(R.string.patterns_ready_note) else stringResource(R.string.patterns_full, SyncLimits.patterns)) }
         item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
       }
       item {

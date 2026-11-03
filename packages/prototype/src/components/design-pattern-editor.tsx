@@ -1,6 +1,7 @@
 import badgeSymbol from "@iconify-icons/material-symbols/badge-outline-rounded";
-import { PATTERNS_PER_PAGE } from "@pochical/design/limits";
+import { PATTERNS_PER_PAGE, syncLimits } from "@pochical/design/limits";
 import { readyPatternOrder } from "@pochical/design/patterns";
+import { fitsPatternOrder } from "@pochical/design/values";
 import { css } from "@pochical/styled-system/css";
 import { Fragment, useContext, useState } from "react";
 
@@ -29,6 +30,7 @@ import {
 import { LookEditorPage } from "./design-look-editor";
 import type { LookField } from "./design-look-editor";
 import { inChipOrder, ReadyPatternChips, toggled } from "./design-ready-chips";
+import { ordersFull } from "./design-repeat-editor";
 import { ConfirmDialog } from "./design-sheet";
 import { SortableList } from "./design-sortable-list";
 import { DestructiveButton, Note, Section } from "./design-ui";
@@ -126,6 +128,10 @@ export function timeText({ time }: Pattern) {
   return `${start} – ${time[1] <= time[0] ? "翌" : ""}${end}`;
 }
 
+// Said where パターンを追加 stays off: the person keeps as many patterns as
+// the server takes (design/src/values.ts, fitsPatternOrder).
+export const patternsFull = `シフトパターンは${syncLimits.patterns}個までです`;
+
 // The person's patterns: what ポチポチ入力, the calendar and their groups
 // show. A change here is theirs at once. Below them, 新しい仕事にする
 // chooses them again with the repeat.
@@ -154,6 +160,10 @@ export function PatternsPage({
   };
   const used = items.filter((item) => item.archived !== true);
   const archived = items.filter((item) => item.archived === true);
+  // Archived ones count too: they stay in the order.
+  const full = items.length >= syncLimits.patterns;
+  // 新しい仕事にする puts in one more order.
+  const ordersAreFull = rules.length >= syncLimits.orders;
 
   if (editing) {
     return (
@@ -282,6 +292,7 @@ export function PatternsPage({
       {!sorting && (
         <List>
           <AddRow
+            disabled={full}
             label="パターンを追加"
             opensPage
             onClick={() => {
@@ -290,6 +301,7 @@ export function PatternsPage({
           />
         </List>
       )}
+      {!sorting && full && <Note>{patternsFull}</Note>}
       {!sorting && archived.length > 0 && (
         <Section title="使わなくなったパターン">
           <List>
@@ -322,11 +334,13 @@ export function PatternsPage({
           <List>
             <ListRow
               detail="シフトパターンと繰り返しを選び直す"
+              disabled={ordersAreFull}
               label="新しい仕事にする"
               onClick={onJob}
               symbol={badgeSymbol}
             />
           </List>
+          {ordersAreFull && <Note>{ordersFull}</Note>}
         </Section>
       )}
       {sorting && (
@@ -362,6 +376,8 @@ function AddPatternPage({
   // Only ones not there yet: a 明け picked with its 夜勤, or a 非番 with
   // its 当番, may be.
   const chosen = inChipOrder(picked).filter(offered);
+  // As many as the order still takes.
+  const fits = fitsPatternOrder([...items.map(({ id }) => id), ...chosen]);
   const add = () => {
     // A next day (夜勤's 明け, 当番's 非番) comes only when that is there
     // too.
@@ -378,7 +394,7 @@ function AddPatternPage({
         trailing={
           any && (
             <HeaderAction
-              disabled={chosen.length === 0}
+              disabled={chosen.length === 0 || !fits}
               onClick={add}
               prominent
             >
@@ -396,7 +412,9 @@ function AddPatternPage({
             }}
             picked={picked}
           />
-          <Note>名前や時間は、追加したあとで直せます。</Note>
+          <Note>
+            {fits ? "名前や時間は、追加したあとで直せます。" : patternsFull}
+          </Note>
         </div>
       )}
       <List>

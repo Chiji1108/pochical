@@ -1,3 +1,5 @@
+import { fitsPatternOrder, fitsRepeatOrders } from "@pochical/design/values";
+
 import {
   dateKey,
   defaultHolidaysOff,
@@ -19,6 +21,7 @@ import { useUser } from "./design-user-store";
 // before a change.
 export function useWorkChanges(schedule: Schedule) {
   const ownPatterns = useUser((state) => state.patterns);
+  const rules = useUser((state) => state.rules);
   const setPatterns = useUser((state) => state.setPatterns);
   const setRules = useUser((state) => state.setRules);
   const setOwnDays = useUser((state) => state.setSchedule);
@@ -55,7 +58,12 @@ export function useWorkChanges(schedule: Schedule) {
     setOwnDays((previous) => giveDaysToOrder(previous, rule.start));
     return withHolidays(rule, patterns);
   }
+  // An order the timeline has no room for changes nothing, the days
+  // included (spec/shift-patterns.md, Repeating orders).
   function applyRule(rule: RepeatRule, patterns?: Pattern[]) {
+    if (!fitsRepeatOrders(withOrder(rules, rule))) {
+      return;
+    }
     const filled = fillRule(rule, patterns);
     setRules((previous) => withOrder(previous, filled));
   }
@@ -85,8 +93,17 @@ export function useWorkChanges(schedule: Schedule) {
           ([key, entry]) => key < from && entry?.shift === id
         ),
     });
+    const rule = { ...job.rule, sequence };
+    if (
+      !(
+        fitsPatternOrder(patterns.map(({ id }) => id)) &&
+        fitsRepeatOrders(withOrder(rules, rule))
+      )
+    ) {
+      return;
+    }
     setPatterns(patterns);
-    applyRule({ ...job.rule, sequence }, patterns);
+    applyRule(rule, patterns);
   }
   return { changeJob, putOrder, removeOrder };
 }

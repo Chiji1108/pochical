@@ -56,3 +56,12 @@ fun fitsGroupMark(mark: GroupMarkValue): Boolean =
     (mark.letter.isEmpty() || fitsText(mark.letter, TextLimits.groupMark)) &&
     (mark.photoId.isEmpty() || isId(mark.photoId)) &&
     mark.color in 0 until MARK_SLOTS
+
+/** The patterns' order: pattern ids, each once, and `SyncLimits.patterns` at most, so a person who keeps that many adds no more. */
+fun fitsPatternOrder(ids: List<String>): Boolean = ids.size <= SyncLimits.patterns && ids.toSet().size == ids.size && ids.all(::isId)
+
+/** A repeating order's rotation: pattern ids, each as often as it comes round, and `SyncLimits.sequence` at most; empty ends repeating. */
+fun fitsRotation(sequence: List<String>): Boolean = sequence.size <= SyncLimits.sequence && sequence.all(::isId)
+
+/** The repeating orders of one timeline: `SyncLimits.orders` at most, each rotation fitting. */
+fun fitsRepeatOrders(orders: List<RepeatOrder>): Boolean = orders.size <= SyncLimits.orders && orders.all { fitsRotation(it.sequence) }

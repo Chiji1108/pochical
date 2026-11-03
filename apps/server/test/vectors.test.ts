@@ -5,7 +5,10 @@ import { characterCount, fitsText, isEmoji } from "@pochical/design/text";
 import {
   fitsCoworkerName,
   fitsGroupName,
+  fitsPatternOrder,
   fitsPersonName,
+  fitsRepeatOrders,
+  fitsRotation,
 } from "@pochical/design/values";
 import { runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
@@ -200,6 +203,9 @@ const takesMark = (mark: GroupMark): boolean => {
   }
 };
 
+// Ids separated by single spaces, "" for none, as fits.json writes lists.
+const idsOf = (spaced: string) => (spaced === "" ? [] : spaced.split(" "));
+
 // What the server takes of each value the apps edit, which the apps check
 // before they save one.
 describe("spec/vectors/fits.json", () => {
@@ -229,6 +235,22 @@ describe("spec/vectors/fits.json", () => {
 
   it.each(fits.groupMark)("groupMark: $name", ({ mark, expected }) => {
     expect(takesMark(create(GroupMarkSchema, mark))).toBe(expected);
+  });
+
+  it.each(fits.patternOrder)("patternOrder: $name", ({ ids, expected }) => {
+    expect(fitsPatternOrder(idsOf(ids))).toBe(expected);
+  });
+
+  it.each(fits.rotation)("rotation: $name", ({ sequence, expected }) => {
+    expect(fitsRotation(idsOf(sequence))).toBe(expected);
+  });
+
+  it.each(fits.repeatOrders)("repeatOrders: $name", ({ orders, expected }) => {
+    expect(
+      fitsRepeatOrders(
+        orders.map((sequence) => ({ sequence: idsOf(sequence) }))
+      )
+    ).toBe(expected);
   });
 });
 

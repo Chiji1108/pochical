@@ -1,3 +1,4 @@
+import PochicalDesign
 @testable import PochicalKit
 import PochicalProto
 import SQLiteData
@@ -60,11 +61,39 @@ struct FitsVectors: Decodable, Sendable {
     let expected: Bool
   }
 
+  /// Ids separated by single spaces, "" for none.
+  struct IDs: VectorCase {
+    let name: String
+    let ids: String
+    let expected: Bool
+  }
+
+  struct Rotation: VectorCase {
+    let name: String
+    let sequence: String
+    let expected: Bool
+  }
+
+  /// Each order by its rotation, as `Rotation` writes one.
+  struct Orders: VectorCase {
+    let name: String
+    let orders: [String]
+    let expected: Bool
+  }
+
   let dayField: [DayField]
   let coworkerName: [Text]
   let personName: [Text]
   let groupName: [Text]
   let groupMark: [Mark]
+  let patternOrder: [IDs]
+  let rotation: [Rotation]
+  let repeatOrders: [Orders]
+}
+
+/// Ids separated by single spaces, "" for none, as fits.json writes lists.
+private func ids(_ text: String) -> [PatternID] {
+  text.isEmpty ? [] : text.split(separator: " ", omittingEmptySubsequences: false).map(String.init)
 }
 
 @Test(arguments: try vectors("fits", as: FitsVectors.self).dayField)
@@ -90,6 +119,61 @@ func groupName(_ vector: FitsVectors.Text) {
 @Test(arguments: try vectors("fits", as: FitsVectors.self).groupMark)
 func groupMark(_ vector: FitsVectors.Mark) {
   #expect(fitsGroupMark(vector.mark.mark) == vector.expected)
+}
+
+@Test(arguments: try vectors("fits", as: FitsVectors.self).patternOrder)
+func patternOrder(_ vector: FitsVectors.IDs) {
+  #expect(fitsPatternOrder(ids(vector.ids)) == vector.expected)
+}
+
+@Test(arguments: try vectors("fits", as: FitsVectors.self).rotation)
+func rotation(_ vector: FitsVectors.Rotation) {
+  #expect(fitsRotation(ids(vector.sequence)) == vector.expected)
+}
+
+@Test(arguments: try vectors("fits", as: FitsVectors.self).repeatOrders)
+func repeatOrders(_ vector: FitsVectors.Orders) {
+  let start = Day(year: 2026, month: 1, day: 1)
+  let orders = vector.orders.enumerated().map { index, sequence in
+    RepeatOrder(sequence: ids(sequence), start: start.adding(days: index), holidayCountry: "JP")
+  }
+  #expect(fitsRepeatOrders(orders) == vector.expected)
+}
+
+@Test func aCountPastTheServersIsNotWritten() throws {
+  let database = try appDatabase()
+  let pattern = { (id: PatternID) in
+    Pattern(id: id, name: id, emoji: "⭐️", symbol: "!", icon: "star", color: 0)
+  }
+  let start = Day(year: 2026, month: 1, day: 1)
+  let order = { (index: Int) in
+    RepeatOrder(sequence: ["p1"], start: start.adding(days: index), holidayCountry: "JP")
+  }
+  try database.write { db in
+    for index in 1...SyncLimits.patterns {
+      try OwnValues.save(pattern("p\(index)"), now: 1, in: db)
+    }
+    for index in 0..<SyncLimits.orders {
+      try OwnValues.put(order(index), now: 1, in: db)
+    }
+  }
+  let kept = try database.read { try OutboxEdit.all.fetchCount($0) }
+  // Each refused whole, its write keeping nothing.
+  #expect(throws: Unfit.self) {
+    try database.write { try OwnValues.save(pattern("one-more"), now: 2, in: $0) }
+  }
+  #expect(throws: Unfit.self) {
+    try database.write { try OwnValues.put(order(SyncLimits.orders), now: 2, in: $0) }
+  }
+  let yearAndADay = Array(repeating: "p1", count: SyncLimits.sequence + 1)
+  #expect(throws: Unfit.self) {
+    try database.write {
+      try OwnValues.put(
+        RepeatOrder(sequence: yearAndADay, start: start, holidayCountry: "JP"), now: 2, in: $0)
+    }
+  }
+  #expect(try database.read { try OutboxEdit.all.fetchCount($0) } == kept)
+  #expect(try database.read { try PatternRow.find("one-more").fetchOne($0) } == nil)
 }
 
 @Test func aValueTheServerWouldRefuseIsNotWritten() throws {

@@ -462,7 +462,9 @@ export function ListRow({
   );
   const rowClass = cx(
     frame,
-    (pressable || isLabel) && listRow.pressable,
+    disabled === true
+      ? listRow.disabled
+      : (pressable || isLabel) && listRow.pressable,
     danger && listRow.danger,
     className
   );
@@ -685,21 +687,26 @@ export function SwitchRow({
 // Adding one more to a list, as the last row of its card or a card of its
 // own: a plus where an icon goes and the words after it, both in the
 // accent, as iOS's add rows (リマインドを追加, パターンを追加). One that
-// goes on to a page of its own ends in the chevron, as any such row.
+// goes on to a page of its own ends in the chevron, as any such row. A
+// list that takes no more turns it off, with a note under the list saying
+// why.
 export function AddRow({
   label,
   onClick,
   opensPage = false,
+  disabled = false,
 }: {
   label: string;
   onClick: () => void;
   opensPage?: boolean;
+  disabled?: boolean;
 }) {
   const segmented = useContext(SegmentedContext);
   return (
     <ListRow
       arrow={opensPage}
       className={listRow.adds}
+      disabled={disabled}
       label={label}
       leading={segmented ? undefined : <Plus aria-hidden="true" size={20} />}
       onClick={onClick}

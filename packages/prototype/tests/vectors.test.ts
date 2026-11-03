@@ -5,6 +5,9 @@ import {
   fitsCoworkerName,
   fitsDayPeople,
   fitsGroupName,
+  fitsPatternOrder,
+  fitsRepeatOrders,
+  fitsRotation,
 } from "@pochical/design/values";
 import { widgetRules } from "@pochical/design/widgets";
 import { rgbaToThumbHash, thumbHashToRGBA } from "thumbhash";
@@ -526,6 +529,27 @@ describe("spec/vectors/fits.json", () => {
   for (const { name, text: written, expected } of fits.groupName) {
     test(`groupName: ${name}`, () => {
       expect(fitsGroupName(written)).toBe(expected);
+    });
+  }
+  // Ids separated by single spaces, "" for none.
+  const idsOf = (spaced: string) => (spaced === "" ? [] : spaced.split(" "));
+  for (const { name, ids, expected } of fits.patternOrder) {
+    test(`patternOrder: ${name}`, () => {
+      expect(fitsPatternOrder(idsOf(ids))).toBe(expected);
+    });
+  }
+  for (const { name, sequence, expected } of fits.rotation) {
+    test(`rotation: ${name}`, () => {
+      expect(fitsRotation(idsOf(sequence))).toBe(expected);
+    });
+  }
+  for (const { name, orders, expected } of fits.repeatOrders) {
+    test(`repeatOrders: ${name}`, () => {
+      expect(
+        fitsRepeatOrders(
+          orders.map((sequence) => ({ sequence: idsOf(sequence) }))
+        )
+      ).toBe(expected);
     });
   }
 });

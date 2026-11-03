@@ -3,7 +3,6 @@ package app.pochical.kit
 import app.pochical.v1.Change
 import app.pochical.v1.DayField
 import app.pochical.v1.Pattern
-import app.pochical.v1.RepeatOrder as WireOrder
 import app.pochical.v1.change
 import app.pochical.v1.coworkerOrder
 import app.pochical.v1.coworkerValue
@@ -105,7 +104,8 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
   suspend fun savePattern(id: String, pattern: Pattern): PatternRefusal? = database.write {
     // Asked before the edit shows it.
     val saved = pattern(id)
-    if (!fitsPattern(pattern.row(id))) return@write PatternRefusal.Unfit
+    // A new one joins the order, which takes SyncLimits.patterns at most.
+    if (!fitsPattern(pattern.row(id)) || (saved == null && !fitsPatternOrder(patternIds() + id))) return@write PatternRefusal.Unfit
     if (pattern.archived && refusesArchiving(id, saved?.archived == true, repeatOrders().map { it.order })) {
       return@write PatternRefusal.Repeating
     }
@@ -126,22 +126,22 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
     null
   }
 
-  /** Puts the patterns in this order. */
-  suspend fun orderPatterns(ids: List<String>) = database.write { orderPatterns(ids) }
+  /** Puts the patterns in this order; nothing for one the server would refuse (spec/vectors/fits.json, patternOrder). */
+  suspend fun orderPatterns(ids: List<String>) = database.write { if (fitsPatternOrder(ids)) orderPatterns(ids) }
 
   /**
    * The repeating orders from now on, whole. A new job's order gives its start as [clearFrom], and
    * takes back the days' own shifts and times from there set before it (spec/sync-protocol.md,
    * Repeating orders).
    */
-  suspend fun setRepeatOrders(orders: List<WireOrder>, clearFrom: String? = null) = database.write { writeOrders(orders, clearFrom) }
+  suspend fun setRepeatOrders(orders: List<RepeatOrder>, clearFrom: String? = null) = database.write { writeOrders(orders, clearFrom) }
 
   /**
    * 繰り返し's periods: [order] put in on its start among the others, in place of one that started
    * that day, the rest kept. The days the person entered stay over it.
    */
   suspend fun putOrder(order: RepeatOrder) = database.write {
-    writeOrders(ordersPutting(repeatOrders().map { it.order }, order).map { it.wire })
+    writeOrders(ordersPutting(repeatOrders().map { it.order }, order))
   }
 
   /**
@@ -154,13 +154,13 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
     val index = orders.indexOfFirst { it.start == from }
     if (index < 0 || !startFits(orders, index, to)) return@write false
     val order = orders[index]
-    if (to != from) writeOrders(ordersPutting(orders, order.copy(start = to, anchor = order.anchor ?: order.start), replacing = from).map { it.wire })
+    if (to != from) writeOrders(ordersPutting(orders, order.copy(start = to, anchor = order.anchor ?: order.start), replacing = from))
     true
   }
 
   /** Takes out the period starting on [start], the one before running on. */
   suspend fun removeOrder(start: LocalDate) = database.write {
-    writeOrders(ordersRemoving(repeatOrders().map { it.order }, start).map { it.wire })
+    writeOrders(ordersRemoving(repeatOrders().map { it.order }, start))
   }
 
   /**
@@ -176,7 +176,7 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
     if (on && !order.holidaysOff && !setting.canTurnOn) return@write
     // Turned off, it keeps the pattern holidays took, so turned on again it takes it again.
     val changed = order.copy(holidaysOff = on, holidayShift = setting.shift ?: order.holidayShift)
-    writeOrders(ordersPutting(orders, changed).map { it.wire })
+    writeOrders(ordersPutting(orders, changed))
   }
 
   /**
@@ -191,10 +191,7 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
     start: LocalDate,
     anchor: LocalDate,
     holidayCountry: String,
-  ) = database.write {
-    val job = takePatterns(incoming, sequence, start)
-    repeatFrom(job, start, anchor, holidayCountry)
-  }
+  ) = database.write { takeJob(incoming, sequence, start, anchor, holidayCountry, repeating = true) }
 
   /**
    * はじめの設定 (spec/shift-patterns.md, The first run), as iOS's `OwnValues.begin`: [incoming]
@@ -205,39 +202,53 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
   suspend fun begin(incoming: List<PatternRow>, sequence: List<String>, anchor: LocalDate, today: LocalDate, holidayCountry: String) =
     database.write {
       val start = minOf(anchor, today.withDayOfMonth(1).minusMonths(1))
-      val job = takePatterns(incoming, sequence, start)
-      if (sequence.isNotEmpty()) repeatFrom(job, start, anchor, holidayCountry)
+      takeJob(incoming, sequence, start, anchor, holidayCountry, repeating = sequence.isNotEmpty())
     }
 
   /**
    * [incoming] take over the patterns from [start], a pattern of the person's still on a day before
-   * it staying after them; the job's patterns and its [sequence] under their ids.
+   * it staying after them; with [repeating], the job's sequence repeats from [start] counted from
+   * [anchor], and an empty one ends repeating there. Patterns or orders the server would refuse
+   * (spec/vectors/fits.json, patternOrder and repeatOrders) write nothing.
    */
-  private suspend fun SyncDao.takePatterns(incoming: List<PatternRow>, sequence: List<String>, start: LocalDate): NewJob {
-    val shownBefore = shownSoFar(through = start.minusDays(1)).mapTo(HashSet()) { it.shift }
-    val job = patternsForJob(patterns(), incoming, sequence, usedBefore = shownBefore::contains, newId = ::newId)
+  private suspend fun SyncDao.takeJob(
+    incoming: List<PatternRow>,
+    sequence: List<String>,
+    start: LocalDate,
+    anchor: LocalDate,
+    holidayCountry: String,
+    repeating: Boolean,
+  ) {
     val own = patterns()
+    val shownBefore = shownSoFar(through = start.minusDays(1)).mapTo(HashSet()) { it.shift }
+    val job = patternsForJob(own, incoming, sequence, usedBefore = shownBefore::contains, newId = ::newId)
+    val orders = ordersAdding(repeatOrders().map { it.order }, jobOrder(job, start, anchor, holidayCountry))
+    if (!fitsPatternOrder(job.patterns.map { it.id }) || (repeating && !fitsRepeatOrders(orders))) return
     val kept = job.patterns.mapTo(HashSet()) { it.id }
     for (pattern in own) if (pattern.id !in kept) putPattern(pattern.id, null)
     for (pattern in job.patterns) if (pattern !in own) putPattern(pattern.id, pattern.wire)
     orderPatterns(job.patterns.map { it.id })
-    return job
+    if (repeating) writeOrders(orders, clearFrom = start.toString())
   }
 
-  /** The job's sequence repeats from [start] counted from [anchor]; an empty one ends repeating there. */
-  private suspend fun SyncDao.repeatFrom(job: NewJob, start: LocalDate, anchor: LocalDate, holidayCountry: String) {
+  /** The job's sequence from [start] counted from [anchor], holidays off as its days suggest. */
+  private fun jobOrder(job: NewJob, start: LocalDate, anchor: LocalDate, holidayCountry: String): RepeatOrder {
     val byId = job.patterns.associateBy { it.id }
     val offShift = holidayShift(job.patterns.filter { it.countsAsOff && !it.archived }.map { it.id })
     val holidaysOff = offShift != null && holidaysOffByDefault(job.sequence, anchor) { byId[it]?.countsAsOff == true }
-    val order = RepeatOrder(job.sequence, start, anchor, holidaysOff, offShift.takeIf { holidaysOff }, holidayCountry)
-    writeOrders(ordersAdding(repeatOrders().map { it.order }, order).map { it.wire }, clearFrom = start.toString())
+    return RepeatOrder(job.sequence, start, anchor, holidaysOff, offShift.takeIf { holidaysOff }, holidayCountry)
   }
 
-  private suspend fun SyncDao.writeOrders(orders: List<WireOrder>, clearFrom: String? = null) {
+  /**
+   * The orders as one value; from [clearFrom], the days give their own shifts and times back to them.
+   * A timeline the server would refuse (spec/vectors/fits.json, repeatOrders) writes nothing.
+   */
+  private suspend fun SyncDao.writeOrders(orders: List<RepeatOrder>, clearFrom: String? = null) {
+    if (!fitsRepeatOrders(orders)) return
     val clock = nextClock(now())
     edit(change {
       repeatOrders = repeatOrders {
-        this.orders += orders
+        this.orders += orders.map { it.wire }
         hlc = clock
       }
     }, clearFrom)
