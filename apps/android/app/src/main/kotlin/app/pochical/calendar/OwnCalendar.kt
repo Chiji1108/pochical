@@ -148,9 +148,10 @@ interface OwnDays {
 
   /**
    * 新しい仕事にする: the ready-made patterns `ids` take over from `start`, and `sequence` repeats
-   * from there counted from `anchor`; an empty one ends repeating.
+   * from there counted from `anchor`; an empty one ends repeating. False when nothing is kept: the
+   * new job's patterns, with those still on the days before it, are more than the server takes.
    */
-  suspend fun changeJob(ids: List<String>, sequence: List<String>, start: LocalDate, anchor: LocalDate)
+  suspend fun changeJob(ids: List<String>, sequence: List<String>, start: LocalDate, anchor: LocalDate): Boolean
 
   /**
    * はじめの設定: the ready-made patterns `ids` become the person's, and `sequence`, when there is

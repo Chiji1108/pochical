@@ -54,17 +54,9 @@ export function useWorkChanges(schedule: Schedule) {
         }
       : rule;
   }
-  function fillRule(rule: RepeatRule, patterns = ownPatterns) {
+  function applyRule(rule: RepeatRule, patterns: Pattern[]) {
     setOwnDays((previous) => giveDaysToOrder(previous, rule.start));
-    return withHolidays(rule, patterns);
-  }
-  // An order the timeline has no room for changes nothing, the days
-  // included (spec/shift-patterns.md, Repeating orders).
-  function applyRule(rule: RepeatRule, patterns?: Pattern[]) {
-    if (!fitsRepeatOrders(withOrder(rules, rule))) {
-      return;
-    }
-    const filled = fillRule(rule, patterns);
+    const filled = withHolidays(rule, patterns);
     setRules((previous) => withOrder(previous, filled));
   }
   // 繰り返し's periods: one put in, set again, or moved (`replacing` its
@@ -80,7 +72,9 @@ export function useWorkChanges(schedule: Schedule) {
   // The new job's patterns take over, keeping any old one still on a day
   // before the switch so those days keep their marks. A ready-made one the
   // person has changed, still on those days, stays theirs; the new job's
-  // comes in under an id of its own, and its order uses that.
+  // comes in under an id of its own, and its order uses that. Patterns or
+  // orders past what the server takes change nothing, the days included,
+  // and it says false (spec/shift-patterns.md, Changing jobs).
   function changeJob(job: { patterns: Pattern[]; rule: RepeatRule }) {
     const from = dateKey(job.rule.start);
     const { patterns, sequence } = patternsForJob({
@@ -100,10 +94,11 @@ export function useWorkChanges(schedule: Schedule) {
         fitsRepeatOrders(withOrder(rules, rule))
       )
     ) {
-      return;
+      return false;
     }
     setPatterns(patterns);
     applyRule(rule, patterns);
+    return true;
   }
   return { changeJob, putOrder, removeOrder };
 }

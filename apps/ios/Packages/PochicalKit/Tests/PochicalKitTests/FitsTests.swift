@@ -176,6 +176,32 @@ func repeatOrders(_ vector: FitsVectors.Orders) {
   #expect(try database.read { try PatternRow.find("one-more").fetchOne($0) } == nil)
 }
 
+@Test func aNewJobPastThePatternsWithThoseKeptForTheDaysBeforeIsNotWritten() throws {
+  let database = try appDatabase()
+  let pattern = { (id: PatternID) in
+    Pattern(id: id, name: id, emoji: "⭐️", symbol: "!", icon: "star", color: 0)
+  }
+  let start = Day(year: 2026, month: 1, day: 1)
+  // As many patterns as a person keeps, each on a day before the switch,
+  // so each stays.
+  try database.write { db in
+    for index in 1...SyncLimits.patterns {
+      try OwnValues.save(pattern("p\(index)"), now: 1, in: db)
+      try OwnValues.enter("p\(index)", on: start.adding(days: index), now: 1, in: db)
+    }
+  }
+  let kept = try database.read { try OutboxEdit.all.fetchCount($0) }
+  let switchDay = start.adding(days: SyncLimits.patterns + 1)
+  #expect(throws: Unfit.self) {
+    try database.write {
+      try OwnValues.changeJob(
+        to: [pattern("day")], sequence: ["day"], start: switchDay, anchor: switchDay,
+        holidayCountry: "JP", now: 2, in: $0)
+    }
+  }
+  #expect(try database.read { try OutboxEdit.all.fetchCount($0) } == kept)
+}
+
 @Test func aValueTheServerWouldRefuseIsNotWritten() throws {
   let database = try appDatabase()
   try database.write { db in

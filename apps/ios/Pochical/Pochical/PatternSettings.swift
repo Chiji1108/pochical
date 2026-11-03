@@ -28,6 +28,10 @@ private func ownPatterns(_ rows: [PatternRow], _ order: [PatternOrderRow]) -> [P
 /// as the server takes (`fitsPatternOrder`).
 let patternsFull = "シフトパターンは\(SyncLimits.patterns)個までです"
 
+/// Why a new job past it is not kept: its patterns join those still on
+/// the days before it (spec/shift-patterns.md, Changing jobs).
+let jobKeepsPatterns = "前の日までに入っているパターンも残るので、数に入ります"
+
 /// 設定 › シフトパターン, and below the list 新しい仕事にする.
 struct PatternsPage: View {
   @Environment(\.themeColors) private var colors

@@ -7,6 +7,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.Serializable
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -94,8 +95,21 @@ class FitsTest {
     assertEquals(PatternRefusal.Unfit, edits.savePattern("one-more", markedPattern("one-more")))
     edits.putOrder(order(SyncLimits.orders))
     edits.putOrder(RepeatOrder(List(SyncLimits.sequence + 1) { "p1" }, start, holidayCountry = "JP"))
-    edits.changeJob(listOf(), listOf("p1"), start.plusDays(SyncLimits.orders.toLong()), start, "JP")
+    assertFalse(edits.changeJob(listOf(), listOf("p1"), start.plusDays(SyncLimits.orders.toLong()), start, "JP"))
 
+    assertEquals(kept, database.write { outbox() }.size)
+  }
+
+  @Test
+  fun aNewJobPastThePatternsWithThoseKeptForTheDaysBeforeIsNotWritten() = runTest {
+    val start = LocalDate.of(2026, 1, 1)
+    // As many patterns as a person keeps, each on a day before the switch, so each stays.
+    for (index in 1..SyncLimits.patterns) edits.savePattern("p$index", markedPattern("p$index"))
+    edits.setDays((1..SyncLimits.patterns).associate { start.plusDays(it.toLong()) to ShownDay("p$it") })
+    val switch = start.plusDays(SyncLimits.patterns + 1L)
+    val kept = database.write { outbox() }.size
+
+    assertFalse(edits.changeJob(readyCopies(listOf("day")), listOf("day"), switch, switch, "JP"))
     assertEquals(kept, database.write { outbox() }.size)
   }
 

@@ -131,6 +131,10 @@ export function timeText({ time }: Pattern) {
 // Said where パターンを追加 stays off: the person keeps as many patterns as
 // the server takes (design/src/values.ts, fitsPatternOrder).
 export const patternsFull = `シフトパターンは${syncLimits.patterns}個までです`;
+// Why a new job past it is not kept: its patterns join those still on the
+// days before it (spec/shift-patterns.md, Changing jobs).
+export const jobKeepsPatterns =
+  "前の日までに入っているパターンも残るので、数に入ります";
 
 // The person's patterns: what ポチポチ入力, the calendar and their groups
 // show. A change here is theirs at once. Below them, 新しい仕事にする

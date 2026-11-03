@@ -352,6 +352,7 @@
   <string name="patterns_key_page">ポチポチ入力の%1$dページ目</string>
   <string name="patterns_add">パターンを追加</string>
   <string name="patterns_full">シフトパターンは%1$d個までです</string>
+  <string name="job_keeps_patterns">前の日までに入っているパターンも残るので、数に入ります</string>
   <string name="patterns_archived">使わなくなったパターン</string>
   <string name="patterns_archived_note">ポチポチ入力のボタンには出ません。入っている日には、そのまま出ます。</string>
   <string name="patterns_ready_note">名前や時間は、追加したあとで直せます。</string>

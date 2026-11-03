@@ -183,7 +183,8 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
    * 新しい仕事にする (spec/shift-patterns.md, Changing jobs): [incoming] take over the patterns from
    * [start], a pattern of the person's still on a day before it staying after them, archived; and
    * [sequence] repeats from [start] counted from [anchor], taking the days from there back from the
-   * person's own. An empty sequence ends repeating there.
+   * person's own. An empty sequence ends repeating there. Patterns or orders past what the server
+   * takes, the new job's with those kept for the days before it, write nothing: false.
    */
   suspend fun changeJob(
     incoming: List<PatternRow>,
@@ -191,7 +192,7 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
     start: LocalDate,
     anchor: LocalDate,
     holidayCountry: String,
-  ) = database.write { takeJob(incoming, sequence, start, anchor, holidayCountry, repeating = true) }
+  ): Boolean = database.write { takeJob(incoming, sequence, start, anchor, holidayCountry, repeating = true) }
 
   /**
    * はじめの設定 (spec/shift-patterns.md, The first run), as iOS's `OwnValues.begin`: [incoming]
@@ -199,7 +200,7 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
    * from the month before [today]'s or from [anchor] when that is earlier, so the days just past
    * show it too. A roster's work, with no sequence, sets no order.
    */
-  suspend fun begin(incoming: List<PatternRow>, sequence: List<String>, anchor: LocalDate, today: LocalDate, holidayCountry: String) =
+  suspend fun begin(incoming: List<PatternRow>, sequence: List<String>, anchor: LocalDate, today: LocalDate, holidayCountry: String): Unit =
     database.write {
       val start = minOf(anchor, today.withDayOfMonth(1).minusMonths(1))
       takeJob(incoming, sequence, start, anchor, holidayCountry, repeating = sequence.isNotEmpty())
@@ -209,7 +210,7 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
    * [incoming] take over the patterns from [start], a pattern of the person's still on a day before
    * it staying after them; with [repeating], the job's sequence repeats from [start] counted from
    * [anchor], and an empty one ends repeating there. Patterns or orders the server would refuse
-   * (spec/vectors/fits.json, patternOrder and repeatOrders) write nothing.
+   * (spec/vectors/fits.json, patternOrder and repeatOrders) write nothing: false.
    */
   private suspend fun SyncDao.takeJob(
     incoming: List<PatternRow>,
@@ -218,17 +219,18 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
     anchor: LocalDate,
     holidayCountry: String,
     repeating: Boolean,
-  ) {
+  ): Boolean {
     val own = patterns()
     val shownBefore = shownSoFar(through = start.minusDays(1)).mapTo(HashSet()) { it.shift }
     val job = patternsForJob(own, incoming, sequence, usedBefore = shownBefore::contains, newId = ::newId)
     val orders = ordersAdding(repeatOrders().map { it.order }, jobOrder(job, start, anchor, holidayCountry))
-    if (!fitsPatternOrder(job.patterns.map { it.id }) || (repeating && !fitsRepeatOrders(orders))) return
+    if (!fitsPatternOrder(job.patterns.map { it.id }) || (repeating && !fitsRepeatOrders(orders))) return false
     val kept = job.patterns.mapTo(HashSet()) { it.id }
     for (pattern in own) if (pattern.id !in kept) putPattern(pattern.id, null)
     for (pattern in job.patterns) if (pattern !in own) putPattern(pattern.id, pattern.wire)
     orderPatterns(job.patterns.map { it.id })
     if (repeating) writeOrders(orders, clearFrom = start.toString())
+    return true
   }
 
   /** The job's sequence from [start] counted from [anchor], holidays off as its days suggest. */
