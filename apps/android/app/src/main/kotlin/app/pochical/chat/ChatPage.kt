@@ -31,6 +31,7 @@ import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.imeNestedScroll
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -84,6 +85,9 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.painterResource
@@ -937,22 +941,30 @@ private fun ChatLines(
   val pinned = remember(chat.pins) { chat.pins.mapTo(HashSet()) { it.seq } }
   val focus = LocalFocusManager.current
   val keyboardUp = WindowInsets.isImeVisible
-  // The keyboard gone takes the field's cursor with it, the app leaving the screen keeping both to come back to.
-  val lifecycle = LocalLifecycleOwner.current.lifecycle
-  var keyboardWasUp by remember { mutableStateOf(false) }
-  LaunchedEffect(keyboardUp) {
-    if (keyboardWasUp && !keyboardUp && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) focus.clearFocus()
-    keyboardWasUp = keyboardUp
-  }
+  val dragged by list.interactionSource.collectIsDraggedAsState()
+  val upAsDragged = remember(dragged) { keyboardUp }
+  val keyboardStillUp by rememberUpdatedState(keyboardUp)
+  // The keyboard taken down by the lines takes the field's cursor with it, not one going any other way.
+  val cursorGoes =
+    remember(focus) {
+      object : NestedScrollConnection {
+        override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+          if (!keyboardStillUp) focus.clearFocus()
+          return Velocity.Zero
+        }
+      }
+    }
   LazyColumn(
     modifier
       .fillMaxSize()
       // While the keyboard is up, a tap off the lines (beside or between them) puts it away, as LINE
       // does, a tap on a line staying its own; and dragging the lines down at their foot takes the
       // keyboard down with the finger, as Material's messaging apps do (spec/chat.md, Opening a
-      // message's menu). Only while it is up: down, the same scrolling at the foot would bring it up.
+      // message's menu). Only while it is up or that drag holds it: down, the same scrolling at the
+      // foot would bring it up.
       .pointerInput(focus) { detectTapGestures(onTap = { focus.clearFocus() }) }
-      .then(if (keyboardUp) Modifier.imeNestedScroll() else Modifier),
+      .nestedScroll(cursorGoes)
+      .then(if (keyboardUp || (dragged && upAsDragged)) Modifier.imeNestedScroll() else Modifier),
     state = list,
     reverseLayout = true,
     contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 8.dp + topRoom, bottom = 8.dp),
@@ -1100,13 +1112,14 @@ private suspend fun LazyListState.toFoot(reducedMotion: Boolean) = if (reducedMo
 
 /**
  * Puts the item at [index] in the middle of the screen, in one glide unless [animated] is off: its
- * height, until it is laid out, taken from the lines on the screen, and what that was off by made
+ * height, until it is laid out, taken for the least on the screen's, and what that was off by made
  * up on arriving, nothing for a line of the usual height.
  */
 private suspend fun LazyListState.showInMiddle(index: Int, animated: Boolean) {
-  val shown = layoutInfo.visibleItemsInfo
-  val size = shown.firstOrNull { it.index == index }?.size ?: shown.sumOf { it.size } / shown.size.coerceAtLeast(1)
   val middle = (layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset) / 2
+  val shown = layoutInfo.visibleItemsInfo
+  // A tall line on the screen says nothing of the item's height, and never takes it past the screen.
+  val size = shown.firstOrNull { it.index == index }?.size ?: (shown.minOfOrNull { it.size } ?: 0).coerceAtMost(middle)
   // Reversed, a negative offset stands the item's foot that far over the foot of the lines.
   val offset = size / 2 - middle
   if (animated) animateScrollToItem(index, offset) else scrollToItem(index, offset)
