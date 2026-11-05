@@ -32,6 +32,7 @@ import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.imeNestedScroll
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -935,15 +936,23 @@ private fun ChatLines(
 ) {
   val pinned = remember(chat.pins) { chat.pins.mapTo(HashSet()) { it.seq } }
   val focus = LocalFocusManager.current
+  val keyboardUp = WindowInsets.isImeVisible
+  // The keyboard gone takes the field's cursor with it, the app leaving the screen keeping both to come back to.
+  val lifecycle = LocalLifecycleOwner.current.lifecycle
+  var keyboardWasUp by remember { mutableStateOf(false) }
+  LaunchedEffect(keyboardUp) {
+    if (keyboardWasUp && !keyboardUp && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) focus.clearFocus()
+    keyboardWasUp = keyboardUp
+  }
   LazyColumn(
     modifier
       .fillMaxSize()
       // While the keyboard is up, a tap off the lines (beside or between them) puts it away, as LINE
       // does, a tap on a line staying its own; and dragging the lines down at their foot takes the
       // keyboard down with the finger, as Material's messaging apps do (spec/chat.md, Opening a
-      // message's menu).
+      // message's menu). Only while it is up: down, the same scrolling at the foot would bring it up.
       .pointerInput(focus) { detectTapGestures(onTap = { focus.clearFocus() }) }
-      .imeNestedScroll(),
+      .then(if (keyboardUp) Modifier.imeNestedScroll() else Modifier),
     state = list,
     reverseLayout = true,
     contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 8.dp + topRoom, bottom = 8.dp),
@@ -1089,13 +1098,20 @@ private suspend fun LazyListState.showAtTop(index: Int): Boolean {
 /** Takes the lines to their foot, the latest: gliding there, or at once with motion reduced (spec/chat.md, Reduced motion). */
 private suspend fun LazyListState.toFoot(reducedMotion: Boolean) = if (reducedMotion) scrollToItem(0) else animateScrollToItem(0)
 
-/** Puts the item at [index] in the middle of the screen, gliding there unless [animated] is off. */
+/**
+ * Puts the item at [index] in the middle of the screen, in one glide unless [animated] is off: its
+ * height, until it is laid out, taken from the lines on the screen, and what that was off by made
+ * up on arriving, nothing for a line of the usual height.
+ */
 private suspend fun LazyListState.showInMiddle(index: Int, animated: Boolean) {
-  if (animated) animateScrollToItem(index) else scrollToItem(index)
-  val info = layoutInfo
-  val item = info.visibleItemsInfo.firstOrNull { it.index == index } ?: return
-  // Reversed, an item's offset is from the foot; it goes up by how far its middle is under the screen's.
-  val middle = (info.viewportEndOffset - info.viewportStartOffset) / 2
+  val shown = layoutInfo.visibleItemsInfo
+  val size = shown.firstOrNull { it.index == index }?.size ?: shown.sumOf { it.size } / shown.size.coerceAtLeast(1)
+  val middle = (layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset) / 2
+  // Reversed, a negative offset stands the item's foot that far over the foot of the lines.
+  val offset = size / 2 - middle
+  if (animated) animateScrollToItem(index, offset) else scrollToItem(index, offset)
+  val item = layoutInfo.visibleItemsInfo.firstOrNull { it.index == index } ?: return
+  // An item's offset is from the foot; it goes up by how far its middle is under the screen's.
   val by = -(middle - (item.offset + item.size / 2)).toFloat()
   if (animated) animateScrollBy(by) else scrollBy(by)
 }
