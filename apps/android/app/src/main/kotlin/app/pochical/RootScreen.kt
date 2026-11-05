@@ -201,7 +201,11 @@ private fun TabsScreen(navigator: RootNavigator, navigation: PageNavigation) {
     rememberNavigationSuiteScaffoldState(
       if (barHidden) NavigationSuiteScaffoldValue.Hidden else NavigationSuiteScaffoldValue.Visible
     )
-  LaunchedEffect(barHidden) { if (barHidden) suite.hide() else suite.show() }
+  // snapTo, as the scaffold's own spring still moves the bar, at once: show() holds it back until a
+  // spring of the state's has ended, as hide() does not (#1134).
+  LaunchedEffect(barHidden) {
+    suite.snapTo(if (barHidden) NavigationSuiteScaffoldValue.Hidden else NavigationSuiteScaffoldValue.Visible)
+  }
   // Read once over the tabs, for their badges and the group rail's.
   val unread = rememberNotifyingUnread()
   val badges = tabBadges(unread)
