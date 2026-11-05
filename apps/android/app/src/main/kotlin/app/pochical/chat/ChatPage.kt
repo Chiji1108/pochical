@@ -566,10 +566,15 @@ fun ChatPage(
   LaunchedEffect(keepTop) {
     val (key, top) = keepTop ?: return@LaunchedEffect
     // Reversed, the line grows up from its foot: the lines go down by as much as its top rose, as it
-    // is laid out opened (it runs past its lines, so opening it always changes its height).
+    // is laid out opened (it runs past its lines, so opening it always changes its height), going
+    // there as a scroll to a place, so those over it, which never moved, keep no motion of a new height.
     val now = snapshotFlow { list.layoutInfo.visibleItemsInfo.firstOrNull { it.key == key }?.let { it.offset + it.size } }.first { it != top }
-    if (now != null) moves.run { list.scrollBy((now - top).toFloat()) }
-    keepTop = null
+    try {
+      if (now != null) moves.run { list.scrollToItem(list.firstVisibleItemIndex, list.firstVisibleItemScrollOffset + now - top) }
+    } finally {
+      // A finger on the lines may take the scroll from it; the next line opened has its own.
+      if (keepTop?.first == key) keepTop = null
+    }
   }
   val linkItems = rememberLinkActions(openLink, snackbar)
   val floatingDay = rememberFloatingDay(list, items)
@@ -634,6 +639,7 @@ fun ChatPage(
       folded = folded,
       showFolded = { seq -> shownBlocked = shownBlocked + seq },
       unfolded = unfolded,
+      opening = keepTop?.first,
       unfold = { key ->
         // Opened where it is, its words going on down, and the chat no longer follows its latest.
         following = false
@@ -952,7 +958,15 @@ private fun ChatLines(
       val look = messageLook(item, me, writers, direct, pinned, quoteOf, handlers.nameOf, handlers.invite)
       // Lines come in fading as the lines slide up to them, and move to a new height together, over
       // chatRules.lineMoveMs; with motion reduced they fade where they go, put there at once.
-      ChatItemRow(item, look, writers, me, handlers, Modifier.animateItem(fadeInSpec = tween(Chat.lineMoveMs), placementSpec = if (handlers.reducedMotion) null else tween(Chat.lineMoveMs), fadeOutSpec = tween(Chat.lineMoveMs)))
+      ChatItemRow(
+        item,
+        look,
+        writers,
+        me,
+        handlers,
+        Modifier.animateItem(fadeInSpec = tween(Chat.lineMoveMs), placementSpec = if (handlers.reducedMotion) null else tween(Chat.lineMoveMs), fadeOutSpec = tween(Chat.lineMoveMs))
+          .movesToNewHeight(handlers.reducedMotion || handlers.opening == item.key),
+      )
     }
     if (head != null && chat.atStart) item(key = "head") { head() }
     // A chat with nothing in it yet says so in the middle of the lines' room.
