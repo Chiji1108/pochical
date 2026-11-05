@@ -1,20 +1,27 @@
 package app.pochical.chat
 
-import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.tween
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.drawscope.ContentDrawScope
-import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
-import androidx.compose.ui.node.DrawModifierNode
 import androidx.compose.ui.node.LayoutModifierNode
 import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import app.pochical.design.Chat
-import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 /**
@@ -37,13 +44,16 @@ private data class NewHeightElement(val atOnce: Boolean) : ModifierNodeElement<N
   }
 }
 
-private class NewHeightNode(var atOnce: Boolean) : Modifier.Node(), LayoutModifierNode, DrawModifierNode {
+private class NewHeightNode(var atOnce: Boolean) : Modifier.Node(), LayoutModifierNode {
   /** How far under its place the line's top is drawn, over it while the line shrinks. */
-  private val drawnUnder = Animatable(0f)
+  private var drawnUnder by mutableFloatStateOf(0f)
   private var height = UNMEASURED
+  private var moving: Job? = null
 
   // A list's item taken up by another line starts anew.
   override fun onReset() {
+    moving?.cancel()
+    drawnUnder = 0f
     height = UNMEASURED
   }
 
@@ -51,25 +61,26 @@ private class NewHeightNode(var atOnce: Boolean) : Modifier.Node(), LayoutModifi
     val placeable = measurable.measure(constraints)
     val grown = placeable.height - height
     if (height != UNMEASURED && grown != 0 && !atOnce) {
-      // Undispatched, so this very frame already draws it where it stood.
-      coroutineScope.launch(start = CoroutineStart.UNDISPATCHED) {
-        drawnUnder.snapTo(drawnUnder.value + grown)
-        drawnUnder.animateTo(0f, tween(Chat.lineMoveMs))
-      }
+      // Set here, so this very frame already draws it where it stood; only its layer reads it.
+      val from = Snapshot.withoutReadObservation { drawnUnder + grown }
+      drawnUnder = from
+      moving?.cancel()
+      moving = coroutineScope.launch { animate(from, 0f, animationSpec = tween(Chat.lineMoveMs)) { value, _ -> drawnUnder = value } }
     }
     height = placeable.height
-    return layout(placeable.width, placeable.height) { placeable.placeWithLayer(0, 0) { translationY = drawnUnder.value } }
-  }
-
-  override fun ContentDrawScope.draw() {
-    if (drawnUnder.value == 0f) {
-      drawContent()
-    } else {
-      // Drawn inside its own layer, so its foot, which stays, is measured from where the line is drawn.
-      // Past its sides and top what plays on it still shows.
-      clipRect(-OPEN, -OPEN, size.width + OPEN, size.height - drawnUnder.value) { this@draw.drawContent() }
+    return layout(placeable.width, placeable.height) {
+      placeable.placeWithLayer(0, 0) {
+        translationY = drawnUnder
+        clip = drawnUnder != 0f
+        shape = FootClip(drawnUnder)
+      }
     }
   }
+}
+
+/** Cuts a line drawn [under] its place at its foot, which stays; past its sides and top what plays on it still shows. */
+private data class FootClip(val under: Float) : Shape {
+  override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density) = Outline.Rectangle(Rect(-OPEN, -OPEN, size.width + OPEN, size.height - under))
 }
 
 private const val UNMEASURED = -1

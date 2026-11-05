@@ -103,7 +103,7 @@ fun ReactionRow(
       val own = me != null && me in reaction.userIds
       val here = reaction.emoji in present
       key(reaction.emoji) {
-        // Shown until it has shrunk away, so the row closes up after it.
+        // Shown until it has shrunk away, others' pills closing up after it.
         val shownNow = remember { Animatable(1f) }
         LaunchedEffect(here) {
           shownNow.animateTo(if (here) 1f else 0f, fade)

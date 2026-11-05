@@ -569,8 +569,12 @@ fun ChatPage(
     // is laid out opened (it runs past its lines, so opening it always changes its height), going
     // there as a scroll to a place, so those over it, which never moved, keep no motion of a new height.
     val now = snapshotFlow { list.layoutInfo.visibleItemsInfo.firstOrNull { it.key == key }?.let { it.offset + it.size } }.first { it != top }
-    if (now != null) moves.run { list.scrollToItem(list.firstVisibleItemIndex, list.firstVisibleItemScrollOffset + now - top) }
-    keepTop = null
+    try {
+      if (now != null) moves.run { list.scrollToItem(list.firstVisibleItemIndex, list.firstVisibleItemScrollOffset + now - top) }
+    } finally {
+      // A finger on the lines may take the scroll from it; the next line opened has its own.
+      if (keepTop?.first == key) keepTop = null
+    }
   }
   val linkItems = rememberLinkActions(openLink, snackbar)
   val floatingDay = rememberFloatingDay(list, items)
