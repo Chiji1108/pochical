@@ -1,15 +1,10 @@
 package app.pochical.chat
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -36,10 +31,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.lerp
 import androidx.compose.ui.unit.sp
 import app.pochical.LocalThemeColors
 import app.pochical.R
@@ -88,9 +85,17 @@ fun ReactionRow(
   SideEffect { drawn = shown }
   if (shown.isEmpty()) return
   val present = reactions.mapTo(HashSet()) { it.emoji }
-  val motion = MaterialTheme.motionScheme
+  val fade = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
+  // The last one going gives its room up as it starts to, the line closing up as it fades; with
+  // motion reduced it fades where it is first.
+  val closing = reactions.isEmpty() && !reducedMotion
   FlowRow(
-    modifier.padding(top = 4.dp),
+    modifier
+      .layout { measurable, constraints ->
+        val row = measurable.measure(constraints)
+        layout(row.width, if (closing) 0 else row.height) { row.place(0, 0) }
+      }
+      .padding(top = 4.dp),
     horizontalArrangement = Arrangement.spacedBy(4.dp, if (mine) Alignment.End else Alignment.Start),
     verticalArrangement = Arrangement.spacedBy(4.dp),
   ) {
@@ -98,35 +103,36 @@ fun ReactionRow(
       val own = me != null && me in reaction.userIds
       val here = reaction.emoji in present
       key(reaction.emoji) {
-        val visible = remember { MutableTransitionState(true) }
-        visible.targetState = here
-        // Gone once it has shrunk away, so the row closes up after it.
-        if (visible.isIdle && !visible.currentState) {
-          LaunchedEffect(Unit) {
+        // Shown until it has shrunk away, so the row closes up after it.
+        val shownNow = remember { Animatable(1f) }
+        LaunchedEffect(here) {
+          shownNow.animateTo(if (here) 1f else 0f, fade)
+          if (!here) {
             there -= reaction.emoji
             drawn = drawn.filterNot { it.emoji == reaction.emoji }
           }
         }
-        AnimatedVisibility(
-          visible,
-          enter = EnterTransition.None,
-          exit =
-            if (reducedMotion) fadeOut(motion.fastEffectsSpec())
-            else scaleOut(motion.fastSpatialSpec(), targetScale = LEAVING_SCALE) + fadeOut(motion.fastEffectsSpec()),
-        ) {
-          ReactionPill(
-            reaction,
-            own,
-            writers,
-            counted,
-            comes = reaction.emoji !in there,
-            reducedMotion = reducedMotion,
-            spray = spray?.takeIf { it.emoji == reaction.emoji && !reducedMotion },
-            // One leaving takes no taps: what it held is gone.
-            onTap = { onToggle(reaction.emoji, !own) }.takeIf { here },
-            onLongPress = { onChoosers(reaction) },
-          )
-        }
+        ReactionPill(
+          reaction,
+          own,
+          writers,
+          counted,
+          comes = reaction.emoji !in there,
+          reducedMotion = reducedMotion,
+          spray = spray?.takeIf { it.emoji == reaction.emoji && !reducedMotion },
+          // One leaving takes no taps: what it held is gone.
+          onTap = { onToggle(reaction.emoji, !own) }.takeIf { here },
+          onLongPress = { onChoosers(reaction) },
+          modifier =
+            Modifier.graphicsLayer {
+              alpha = shownNow.value
+              if (!reducedMotion) {
+                val scale = lerp(LEAVING_SCALE, 1f, shownNow.value)
+                scaleX = scale
+                scaleY = scale
+              }
+            },
+        )
       }
     }
   }
@@ -159,6 +165,7 @@ private fun ReactionPill(
   /** A tap puts the reader's on or takes it back; null on one leaving. */
   onTap: (() -> Unit)?,
   onLongPress: () -> Unit,
+  modifier: Modifier = Modifier,
 ) {
   val colors = LocalThemeColors.current
   val shape = RoundedCornerShape(50)
@@ -167,7 +174,7 @@ private fun ReactionPill(
   LaunchedEffect(Unit) {
     if (comes) coming.animateTo(1f, if (reducedMotion) fade else spring(dampingRatio = Spring.DampingRatioMediumBouncy))
   }
-  Box(contentAlignment = Alignment.Center) {
+  Box(modifier, contentAlignment = Alignment.Center) {
     Row(
       Modifier.graphicsLayer {
         if (reducedMotion) {
