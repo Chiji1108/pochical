@@ -173,8 +173,8 @@ fun ScanScreen(onClose: () -> Unit, onInvite: (String) -> Unit) {
       }
     }
     // Over the picture under the bar, as a toast is, so the frame stays where the code is held.
-    // Keeps its words as it fades out.
-    AnimatedContent(problem, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "problem") { said ->
+    // Fades in and out where it stands, keeping its words as it goes.
+    AnimatedContent(problem, transitionSpec = { (fadeIn() togetherWith fadeOut()) using null }, label = "problem") { said ->
       if (said != null) {
         Text(
           said,

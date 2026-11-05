@@ -384,9 +384,9 @@ fun MonthRow(
   Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(start = 8.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
     MonthChooser(onChoose, Modifier.weight(1f, fill = false), title)
     Box(Modifier.weight(1f))
-    // Fades in and out as what it goes back to leaves sight and comes back, keeping its words as it
-    // goes and pressed no more once going.
-    AnimatedContent(back, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "back") { shown ->
+    // Fades in and out where it stands as what it goes back to leaves sight and comes back, keeping
+    // its words as it goes and pressed no more once going.
+    AnimatedContent(back, transitionSpec = { (fadeIn() togetherWith fadeOut()) using null }, label = "back") { shown ->
       if (shown != null) {
         val said = stringResource(R.string.go_back_to, shown)
         OutlinedButton(
