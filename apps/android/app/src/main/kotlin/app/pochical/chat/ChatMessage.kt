@@ -225,6 +225,8 @@ class MessageHandlers(
   val showFolded: (seq: Long) -> Unit = {},
   /** The lines opened past `chatRules.foldLines` (続きを読む), by key, opened while the chat is open. */
   val unfolded: Set<String> = emptySet(),
+  /** The line 続きを読む is opening now, which keeps its top rather than moving to its new height. */
+  val opening: String? = null,
   /** 続きを読む on the line [key]. */
   val unfold: (key: String) -> Unit = {},
   /** A link's own menu, as a long press on it opens it: リンクを開く and リンクをコピー. */
