@@ -461,8 +461,8 @@ fun CalendarScreen(
         val pull = rememberDraggableState { down -> pulled = (pulled + down / unfoldPx).coerceIn(0f, fold.value) }
         Box(
           Modifier.fillMaxWidth()
-            // As tall as the days, past the room the foot leaves them on its way.
-            .wrapContentHeight(Alignment.Top, unbounded = true)
+            // As tall as the days past the room the foot leaves them on its way, and within it at rest.
+            .wrapContentHeight(Alignment.Top, unbounded = footMoving)
             .height(cell + (monthHeight - cell) * (1 - folding))
             .clipToBounds()
             .draggable(
@@ -526,7 +526,8 @@ fun CalendarScreen(
     if (opened == null) {
       // ポチポチ入力 and its tray trade places in a fade through, the one gone before the other shows. Both
       // stand on the foot's lower edge, which goes with the tab bar, so that alone moves them; the
-      // height follows on the bar's own spring. The tray fading out keeps its last day.
+      // height follows on Material's standard spatial spring, the one the scaffold gives the bar. The
+      // tray fading out keeps its last day.
       val trayDay = remember { mutableStateOf<LocalDate?>(null) }.apply { if (entering != null) value = entering }.value
       foot.AnimatedContent(
         Modifier.padding(horizontal = SCREEN_EDGE).padding(top = 12.dp, bottom = 12.dp),

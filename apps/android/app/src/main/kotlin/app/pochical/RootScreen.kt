@@ -197,15 +197,11 @@ private fun TabsScreen(navigator: RootNavigator, navigation: PageNavigation) {
   BackHandler(enabled = navigator.backGoesToFirstTab, onBack = navigator::back)
   // The tab bar gives way to a day's week and to ポチポチ入力's tray, as iOS's and /design's do.
   var barHidden by rememberSaveable { mutableStateOf(false) }
-  val suite =
-    rememberNavigationSuiteScaffoldState(
-      if (barHidden) NavigationSuiteScaffoldValue.Hidden else NavigationSuiteScaffoldValue.Visible
-    )
+  val barValue = if (barHidden) NavigationSuiteScaffoldValue.Hidden else NavigationSuiteScaffoldValue.Visible
+  val suite = rememberNavigationSuiteScaffoldState(barValue)
   // snapTo, as the scaffold's own spring still moves the bar, at once: show() holds it back until a
   // spring of the state's has ended, as hide() does not (#1134).
-  LaunchedEffect(barHidden) {
-    suite.snapTo(if (barHidden) NavigationSuiteScaffoldValue.Hidden else NavigationSuiteScaffoldValue.Visible)
-  }
+  LaunchedEffect(barValue) { suite.snapTo(barValue) }
   // Read once over the tabs, for their badges and the group rail's.
   val unread = rememberNotifyingUnread()
   val badges = tabBadges(unread)
