@@ -2,7 +2,7 @@
 
 家族や友だちと共有できるシフトカレンダーです。ポチポチ押していくだけでひと月ぶんのシフトが埋まり、決まった順番のシフトは一度決めれば毎月そのまま入ります。家族や友だちのシフトをひとつの表で見て、休みの合う日をチャットで決められます。
 
-[![ポチカル　シフトを、ポチッと。家族や友だちと共有できる、シフトカレンダー。](packages/prototype/src/assets/share.png)](https://pochical.app)
+[![ポチカル　シフトを、ポチッと。夜勤や交代勤務のある人の、シフトカレンダー。](packages/prototype/src/assets/share.png)](https://pochical.app)
 
 - [pochical.app](https://pochical.app)：公式サイト
 - [try.pochical.app](https://try.pochical.app)：ブラウザで触れるプロトタイプ

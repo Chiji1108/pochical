@@ -1,7 +1,5 @@
-import { rotationTemplates } from "@pochical/design/patterns";
 import { themeSkyId } from "@pochical/design/skies";
 import { DesignApp } from "@pochical/prototype/components/design-app";
-import { HomeScreen } from "@pochical/prototype/components/design-home-screen";
 import {
   DesignProviders,
   PresetContexts,
@@ -32,14 +30,12 @@ import {
   initialDesignSchedule,
 } from "@pochical/prototype/lib/design-days";
 import { calendarAlone } from "@pochical/prototype/lib/design-features";
-import { presetList } from "@pochical/prototype/lib/design-patterns";
 import { useSamplePerson } from "@pochical/prototype/lib/design-sample-person";
 import { designMonth } from "@pochical/prototype/lib/design-today";
 import {
   UserStoreContext,
   useShownDays,
 } from "@pochical/prototype/lib/design-user-store";
-import type { OwnData } from "@pochical/prototype/lib/design-user-store";
 import { parseDesignVariants } from "@pochical/prototype/lib/design-variants";
 import { useReducedMotion } from "@pochical/prototype/lib/device-media";
 import { css, cva } from "@pochical/styled-system/css";
@@ -289,94 +285,75 @@ function HeroFoot({ action }: { action: PrimaryAction }) {
   );
 }
 
-// How much of a feature's phone shows, from its top.
+// How much of a feature's phone shows.
 const SCREEN_SHOWN = 600;
 
-// The phone at the hero's size, only its top shown, fading out: a
-// scaled one would throw off the lists that measure themselves.
-const screenStyle = css({
-  flexShrink: 0,
-  height: `${SCREEN_SHOWN}px`,
-  maskImage: "linear-gradient(to bottom, black 70%, transparent)",
-  overflow: "hidden",
-  pointerEvents: "none",
-  width: "min(390px, 100%)",
+// The phone at the hero's size, only part of it shown, fading out: a
+// scaled one would throw off the lists that measure themselves. Its top,
+// or its foot where the screen's point is the sheet at the bottom.
+const screenStyle = cva({
+  base: {
+    display: "flex",
+    flexShrink: 0,
+    height: `${SCREEN_SHOWN}px`,
+    overflow: "hidden",
+    pointerEvents: "none",
+    width: "min(390px, 100%)",
+  },
+  variants: {
+    shown: {
+      foot: {
+        alignItems: "flex-end",
+        maskImage: "linear-gradient(to top, black 70%, transparent)",
+      },
+      top: {
+        alignItems: "flex-start",
+        maskImage: "linear-gradient(to bottom, black 70%, transparent)",
+      },
+    },
+  },
 });
 
-// Where each feature's screen opens, a tab and its page, and what the
-// sample person holds for it beyond the demo's.
-type AppProps = ComponentProps<typeof DesignApp>;
-type FeatureOpening =
-  | (Required<Pick<AppProps, "initialTab" | "initialGroupPage">> & {
-      initialTab: "group";
-    })
-  | (Required<Pick<AppProps, "initialTab" | "initialSettingsPage">> & {
-      initialTab: "settings";
-    });
-
-type Feature = "repeat" | "share" | "chat";
-
-// 繰り返し is for work that comes round in a fixed order, so the top page
-// shows the order はじめの設定 offers for it: 当番・非番・休み.
-const duty = rotationTemplates.find((template) => template.id === "duty");
-if (duty?.sequence === undefined) {
-  throw new Error("はじめの設定 has no 当番・非番・休み order");
-}
+// How each feature's screen opens, and the part of it shown: entering with
+// the hero's month and its sheet of shifts, the calendar as it is, and the
+// group's shift table and chat.
+type Feature = "entry" | "calendar" | "share" | "chat";
 
 const featureScreens: Record<
   Feature,
-  { opening: FeatureOpening; own?: Partial<OwnData> }
+  {
+    opening?: Partial<ComponentProps<typeof DesignApp>>;
+    own?: Parameters<typeof useSamplePerson>[0];
+    shown?: "foot";
+  }
 > = {
+  calendar: {},
   chat: { opening: { initialGroupPage: "chat", initialTab: "group" } },
-  repeat: {
-    opening: { initialSettingsPage: "repeat-new", initialTab: "settings" },
-    own: {
-      patterns: presetList(duty.patternKeys),
-      // From 4/1, as /demo's order, so it is the one in use on the
-      // prototype's today (9/24).
-      rules: [{ sequence: duty.sequence, start: new Date(2026, 3, 1) }],
-      schedule: {},
-    },
+  entry: {
+    opening: { initialDay: HERO_FIRST_BLANK, initialEditing: true },
+    own: { schedule: heroSchedule },
+    shown: "foot",
   },
   share: { opening: { initialGroupPage: "shifts", initialTab: "group" } },
 };
 
-function ShownScreen({
-  own,
-  children,
-}: {
-  own?: Partial<OwnData>;
-  children: ReactNode;
-}) {
+export function FeatureScreen({ feature }: { feature: Feature }) {
+  const { opening, own, shown = "top" } = featureScreens[feature];
   const person = useSamplePerson(own);
   return (
     <Motion>
-      <div aria-hidden="true" className={screenStyle} inert>
+      <div aria-hidden="true" className={screenStyle({ shown })} inert>
         <DesignProviders fresh>
-          <UserStoreContext value={person}>{children}</UserStoreContext>
+          <UserStoreContext value={person}>
+            <DesignApp
+              initialEditing={false}
+              {...opening}
+              variants={variants}
+            />
+          </UserStoreContext>
         </DesignProviders>
       </div>
     </Motion>
-  );
-}
-
-export function FeatureScreen({ feature }: { feature: Feature }) {
-  const { opening, own } = featureScreens[feature];
-  return (
-    <ShownScreen own={own}>
-      <DesignApp initialEditing={false} {...opening} variants={variants} />
-    </ShownScreen>
-  );
-}
-
-// The phone's home screen with the app's widgets on it, as /demo shows
-// it, 次の休み set to the sample person's family: the days everyone in
-// it is off (みんな休み).
-export function WidgetScreen() {
-  return (
-    <ShownScreen>
-      <HomeScreen nextOffGroup="family" />
-    </ShownScreen>
   );
 }
 
