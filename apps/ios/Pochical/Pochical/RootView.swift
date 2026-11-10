@@ -73,6 +73,8 @@ struct RootView: View {
     .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.top } action: { barTop = $0 }
     // The reminders' notifications, put in anew as what they read changes.
     .modifier(ReminderUpdates())
+    // The days kept in the device's calendar while 自動で反映 is on.
+    .modifier(CalendarReflection())
     // The widgets' entries, made again as what they show changes.
     .modifier(WidgetReloads())
     // The shape the user's groups draw their marks in.
