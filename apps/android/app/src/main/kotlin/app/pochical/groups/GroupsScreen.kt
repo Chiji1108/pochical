@@ -91,6 +91,7 @@ import app.pochical.calendar.holidayName
 import app.pochical.calendar.rememberToday
 import app.pochical.chat.ChatList
 import app.pochical.chat.rememberChatList
+import app.pochical.notifications.rememberChatNotifications
 import app.pochical.rememberRead
 import app.pochical.design.Metrics
 import app.pochical.design.Radius
@@ -138,7 +139,8 @@ fun GroupsScreen(openId: String?, onOpen: (String) -> Unit, actions: GroupsActio
   HoldSocket(open.id)
   Row(Modifier.fillMaxSize()) {
     GroupRail(list, open.id, onOpen, actions)
-    GroupHub(open, actions)
+    // Each group's page its own, so one never shows another's days or chats while its own are read.
+    key(open.id) { GroupHub(open, actions) }
   }
 }
 
@@ -377,6 +379,7 @@ private fun GroupHub(group: GroupRow, actions: GroupsActions) {
   val members = rememberGroupMembers(group.id, today, today.plusDays(NEXT_TOGETHER_DAYS - 1))
   val me = rememberMeId()
   val chats = me?.let { rememberChatList(group.id, it) }
+  val notifications = rememberChatNotifications()
   val bar = TopAppBarDefaults.pinnedScrollBehavior()
   Scaffold(
     Modifier.nestedScroll(bar.nestedScrollConnection),
@@ -399,8 +402,9 @@ private fun GroupHub(group: GroupRow, actions: GroupsActions) {
       )
     }
   ) { padding ->
+    // Nothing under the bar until read, the list then laid out whole, so a scroll it kept starts where it was.
+    if (members == null || (me != null && chats == null)) return@Scaffold
     LazyColumn(contentPadding = padding) {
-      if (members == null || (me != null && chats == null)) return@LazyColumn
       item {
         Row(verticalAlignment = Alignment.CenterVertically) {
           Box(Modifier.weight(1f)) { SectionHeader(stringResource(R.string.group_shifts_heading)) }
@@ -411,9 +415,7 @@ private fun GroupHub(group: GroupRow, actions: GroupsActions) {
         }
       }
       item { MemberWeek(members, group.id, today, onOpen = { actions.onShifts(group.id, it) }, Modifier.padding(horizontal = 16.dp)) }
-      if (me != null && chats != null) {
-        item { ChatList(group.id, group.name, me, chats, onOpen = { actions.onChat(group.id, it) }) }
-      }
+      if (chats != null) item { ChatList(group.id, group.name, chats, notifications, onOpen = { actions.onChat(group.id, it) }) }
       item { Spacer(Modifier.height(24.dp)) }
     }
   }

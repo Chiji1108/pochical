@@ -20,20 +20,23 @@ import kotlinx.coroutines.flow.Flow
 // database answers again (#1150).
 
 /**
- * What [read] gives, by [keys]: null until it has first given anything, then the latest, read again
- * as it changes while the screen is started. Held while its screen is away, so a screen coming back
- * draws at once what it showed, and only one shown for the first time waits for the database.
+ * What [read] gives: null until it has first given anything, then the latest, read again as it
+ * changes while the screen is started, and made anew as [keys] change, what it last gave shown
+ * until the new one gives, as collectAsStateWithLifecycle keeps it. Held while its screen is away,
+ * so a screen coming back draws at once what it showed, and only one shown for the first time
+ * waits for the database.
  */
 @Composable
 fun <T : Any> rememberRead(vararg keys: Any?, read: () -> Flow<T>): T? {
-  val held = retain(*keys) { HeldRead(read()) }
+  val held = retain { HeldRead<T>() }
+  val flow = remember(*keys) { read() }
   val lifecycle = LocalLifecycleOwner.current.lifecycle
-  LaunchedEffect(held, lifecycle) { lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { held.flow.collect { held.value = it } } }
+  LaunchedEffect(flow, lifecycle) { lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { flow.collect { held.value = it } } }
   return held.value
 }
 
-/** A read and what it last gave. */
-private class HeldRead<T : Any>(val flow: Flow<T>) {
+/** What a read last gave. */
+private class HeldRead<T : Any> {
   var value by mutableStateOf<T?>(null)
 }
 

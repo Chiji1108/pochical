@@ -15,6 +15,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.pochical.chat.SupportRow
+import app.pochical.chat.rememberChatList
+import app.pochical.design.Chat
+import app.pochical.groups.rememberMeId
+import app.pochical.notifications.rememberChatNotifications
 import app.pochical.kit.DeviceSettings
 import app.pochical.kit.appVersion
 import app.pochical.notifications.ChatNotificationsRow
@@ -34,6 +38,10 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(open: (RootPage) -> Unit) {
   val device = LocalDeviceSettings.current.device
   val snackbar = remember { SnackbarHostState() }
+  // The chat with Pochical's people, read over the list so its row comes back drawn as it was.
+  val me = rememberMeId()
+  val support = me?.let { rememberChatList(Chat.supportPlace, it) }
+  val notifications = rememberChatNotifications()
   SettingsPage(stringResource(R.string.tab_settings), onBack = null, large = true, snackbar = snackbar) { padding ->
     LazyColumn(contentPadding = padding) {
       // The patterns first: every way of working has them, and the repeating order is made of them.
@@ -66,7 +74,7 @@ fun SettingsScreen(open: (RootPage) -> Unit) {
         }
       }
       // The chat with the people who make Pochical, apart from the rows of settings.
-      item { SupportRow(open) }
+      if (me != null && support != null) item { SupportRow(me, support, notifications, open) }
       item { About(open, snackbar) }
     }
   }

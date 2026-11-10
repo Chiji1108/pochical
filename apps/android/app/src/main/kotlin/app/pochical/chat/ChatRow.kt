@@ -32,12 +32,12 @@ import app.pochical.R
 import app.pochical.RowEnd
 import app.pochical.SettingsRow
 import app.pochical.SettingsSection
-import app.pochical.notifications.rememberChatNotifications
 import app.pochical.calendar.rememberToday
 import app.pochical.calendar.slashText
 import app.pochical.design.Radius
 import app.pochical.groups.LocalValues
 import app.pochical.groups.MemberAvatar
+import app.pochical.kit.ChatNotificationState
 import app.pochical.kit.ChatSummary
 import app.pochical.kit.Chats
 import app.pochical.kit.Values
@@ -52,6 +52,7 @@ import java.time.LocalDate
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import java.time.ZoneId
 
@@ -61,9 +62,9 @@ import java.time.ZoneId
  * then a one-to-one chat with each member it has been started with (one who left too, so it can still
  * be read). Whom the user blocked has no one-to-one chat here, nor can one be started.
  */
-class ChatListRead(me: String, val writers: List<GroupMemberRow>, val blocked: Set<String>, val summaries: Map<String, ChatSummary>) {
+class ChatListRead(val me: String, val writers: List<GroupMemberRow>, val blocked: Set<String>, val summaries: Map<String, ChatSummary>) {
   /** The members a one-to-one chat is listed with, in the order they joined. */
-  val talking = writers.filter { it.userId != me && directThread(me, it.userId) in summaries }
+  val talking = writers.filter { it.userId != me && it.userId !in blocked && directThread(me, it.userId) in summaries }
 
   /** Those still in the group. */
   val present = writers.filter { !it.left }
@@ -72,16 +73,25 @@ class ChatListRead(me: String, val writers: List<GroupMemberRow>, val blocked: S
   val untouched = present.filter { it.userId != me && talking.none { t -> t.userId == it.userId } && it.userId !in blocked }
 }
 
-/** [ChatListRead] as the device holds it, again whenever what it reads changes. */
+/**
+ * [ChatListRead] as the device holds it, again whenever what it reads changes; each chat's summary
+ * read anew only as the chats listed change.
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
-fun chatList(values: Values, chats: Chats, groupId: String, me: String): Flow<ChatListRead> =
-  combine(values.members(groupId), chats.threads(groupId), values.blocks(), ::Triple).flatMapLatest { (writers, threads, blocks) ->
-    val blocked = blocks.map { it.userId }.toSet()
-    val listed =
-      listOf(GROUP_THREAD) +
-        writers.filter { it.userId != me && it.userId !in blocked }.map { directThread(me, it.userId) }.filter { it in threads }
-    combine(listed.map { chats.summary(groupId, it, me) }) { summaries -> ChatListRead(me, writers, blocked, listed.zip(summaries).toMap()) }
-  }
+fun chatList(values: Values, chats: Chats, groupId: String, me: String): Flow<ChatListRead> {
+  val people = combine(values.members(groupId), values.blocks()) { writers, blocks -> writers to blocks.map { it.userId }.toSet() }
+  val listed =
+    combine(people, chats.threads(groupId)) { (writers, blocked), threads ->
+        listOf(GROUP_THREAD) +
+          writers.filter { it.userId != me && it.userId !in blocked }.map { directThread(me, it.userId) }.filter { it in threads }
+      }
+      .distinctUntilChanged()
+  val summaries = listed.flatMapLatest { ids -> combine(ids.map { chats.summary(groupId, it, me) }) { ids.zip(it).toMap() } }
+  return combine(people, summaries) { (writers, blocked), summaries -> ChatListRead(me, writers, blocked, summaries) }
+}
+
+/** Whether [notifications], once read, have the chat's off. */
+fun ChatNotificationState?.mutes(groupId: String, threadId: String): Boolean = this?.isMuted(groupId, threadId) == true
 
 /** The hub's [ChatListRead], null until the device has read all of it, so no part shows before the rest. */
 @Composable
@@ -96,9 +106,17 @@ fun rememberChatList(groupId: String, me: String): ChatListRead? {
  * of rows, and 個人チャットを始める while someone is left to start one with.
  */
 @Composable
-fun ChatList(groupId: String, groupName: String, me: String, read: ChatListRead, onOpen: (threadId: String) -> Unit, modifier: Modifier = Modifier) {
+fun ChatList(
+  groupId: String,
+  groupName: String,
+  read: ChatListRead,
+  notifications: ChatNotificationState?,
+  onOpen: (threadId: String) -> Unit,
+  modifier: Modifier = Modifier,
+) {
   val colors = LocalThemeColors.current
   val today = rememberToday()
+  val me = read.me
   val names = read.writers.associate { it.userId to it.shownName() }
   var starting by rememberSaveable { mutableStateOf(false) }
   val groupChat = stringResource(R.string.group_chat)
@@ -107,7 +125,7 @@ fun ChatList(groupId: String, groupName: String, me: String, read: ChatListRead,
   // in the group, why there is no one to talk to one to one under them.
   SettingsSection(stringResource(R.string.chat_heading), modifier, footnote = stringResource(R.string.chat_invite_to_talk).takeIf { read.present.size <= 1 }) {
     row {
-      ChatRow(groupId, GROUP_THREAD, me, groupChat, read.summaries.getValue(GROUP_THREAD), names, read.blocked, onOpen = { onOpen(GROUP_THREAD) }, today = today) {
+      ChatRow(me, groupChat, read.summaries.getValue(GROUP_THREAD), notifications.mutes(groupId, GROUP_THREAD), names, read.blocked, onOpen = { onOpen(GROUP_THREAD) }, today = today) {
         Box(Modifier.size(28.dp).background(colors.accentContainer, RoundedCornerShape(Radius.sm)), contentAlignment = Alignment.Center) {
           Icon(painterResource(R.drawable.ic_forum), contentDescription = null, Modifier.size(16.dp), tint = colors.accentDefault)
         }
@@ -116,7 +134,7 @@ fun ChatList(groupId: String, groupName: String, me: String, read: ChatListRead,
     for (member in read.talking) {
       row {
         val thread = directThread(me, member.userId)
-        ChatRow(groupId, thread, me, member.shownName(), read.summaries.getValue(thread), names, read.blocked, onOpen = { onOpen(thread) }, today = today) {
+        ChatRow(me, member.shownName(), read.summaries.getValue(thread), notifications.mutes(groupId, thread), names, read.blocked, onOpen = { onOpen(thread) }, today = today) {
           MemberAvatar(member.shownName(), if (member.deleted) "" else member.photoId, PhotoShelf.Group(groupId), 28.dp)
         }
       }
@@ -133,18 +151,17 @@ fun ChatList(groupId: String, groupName: String, me: String, read: ChatListRead,
 
 /**
  * A chat in a list of chats (/design's ChatRow), a row of its section's segments: the hub's, and
- * 設定's chat with Pochical's people, drawn from its [summary] as read. Its mark, its name with a crossed-out bell while its notifications are off,
+ * 設定's chat with Pochical's people, drawn from its [summary] as read. Its mark, its name with a crossed-out bell while its notifications are [muted],
  * its latest line ([empty] while it has none), or 下書き： and the draft left in it, or the red ! of a
  * line of the member's not sent; its time, and how many of its lines are unread, @ before them when
  * one mentions the reader.
  */
 @Composable
 internal fun ChatRow(
-  groupId: String,
-  threadId: String,
   me: String,
   label: String,
   summary: ChatSummary,
+  muted: Boolean,
   names: Map<String, String>,
   blocked: Set<String>,
   onOpen: () -> Unit,
@@ -164,7 +181,7 @@ internal fun ChatRow(
     headlineContent = {
       Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(label, Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis)
-        if (rememberChatNotifications()?.isMuted(groupId, threadId) == true) {
+        if (muted) {
           Icon(
             painterResource(R.drawable.ic_notifications_off),
             stringResource(R.string.chat_muted),

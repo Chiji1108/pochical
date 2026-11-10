@@ -28,14 +28,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.pochical.LocalThemeColors
 import app.pochical.R
-import app.pochical.rememberRead
 import app.pochical.RootPage
 import app.pochical.SettingsSection
 import app.pochical.design.Chat
 import app.pochical.groups.HoldSocket
-import app.pochical.groups.LocalValues
 import app.pochical.groups.MemberAvatar
-import app.pochical.groups.rememberMeId
+import app.pochical.kit.ChatNotificationState
 import app.pochical.kit.GROUP_THREAD
 import app.pochical.kit.PhotoShelf
 
@@ -50,31 +48,24 @@ import app.pochical.kit.PhotoShelf
  * latest line is current.
  */
 @Composable
-fun SupportRow(open: (RootPage) -> Unit) {
-  val me = rememberMeId() ?: return
+fun SupportRow(me: String, read: ChatListRead, notifications: ChatNotificationState?, open: (RootPage) -> Unit) {
   HoldSocket(Chat.supportPlace)
-  // The place's members as it names them: the user, and ポチカル for Pochical's people.
-  val values = LocalValues.current
-  val chats = LocalChats.current
-  val members = rememberRead(values) { values.members(Chat.supportPlace) } ?: return
-  // Its latest line once read, never 「まだ…」 before.
-  val summary = rememberRead(chats, me) { chats.summary(Chat.supportPlace, GROUP_THREAD, me) } ?: return
   // A section of its own, apart from the rows of settings above it.
   SettingsSection(modifier = Modifier.padding(top = 20.dp)) {
     row {
-    ChatRow(
-      Chat.supportPlace,
-      GROUP_THREAD,
-      me,
-      stringResource(R.string.support_title),
-      summary,
-      names = members.associate { it.userId to it.shownName() },
-      blocked = emptySet(),
-      empty = stringResource(R.string.support_empty),
-      onOpen = { open(RootPage.Chat(Chat.supportPlace, GROUP_THREAD)) },
-    ) {
-      AppIcon(28.dp)
-    }
+      ChatRow(
+        me,
+        stringResource(R.string.support_title),
+        read.summaries.getValue(GROUP_THREAD),
+        notifications.mutes(Chat.supportPlace, GROUP_THREAD),
+        // The place's members as it names them: the user, and ポチカル for Pochical's people.
+        names = read.writers.associate { it.userId to it.shownName() },
+        blocked = emptySet(),
+        empty = stringResource(R.string.support_empty),
+        onOpen = { open(RootPage.Chat(Chat.supportPlace, GROUP_THREAD)) },
+      ) {
+        AppIcon(28.dp)
+      }
     }
   }
 }
