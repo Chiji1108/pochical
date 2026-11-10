@@ -14,9 +14,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,9 +32,8 @@ import app.pochical.RootPage
 import app.pochical.SettingsSection
 import app.pochical.design.Chat
 import app.pochical.groups.HoldSocket
-import app.pochical.groups.LocalValues
 import app.pochical.groups.MemberAvatar
-import app.pochical.groups.rememberMeId
+import app.pochical.kit.ChatNotificationState
 import app.pochical.kit.GROUP_THREAD
 import app.pochical.kit.PhotoShelf
 
@@ -52,27 +48,24 @@ import app.pochical.kit.PhotoShelf
  * latest line is current.
  */
 @Composable
-fun SupportRow(open: (RootPage) -> Unit) {
-  val me = rememberMeId() ?: return
+fun SupportRow(me: String, read: ChatListRead, notifications: ChatNotificationState?, open: (RootPage) -> Unit) {
   HoldSocket(Chat.supportPlace)
-  // The place's members as it names them: the user, and ポチカル for Pochical's people.
-  val values = LocalValues.current
-  val members by remember(values) { values.members(Chat.supportPlace) }.collectAsStateWithLifecycle(emptyList())
   // A section of its own, apart from the rows of settings above it.
   SettingsSection(modifier = Modifier.padding(top = 20.dp)) {
     row {
-    ChatRow(
-      Chat.supportPlace,
-      GROUP_THREAD,
-      me,
-      stringResource(R.string.support_title),
-      names = members.associate { it.userId to it.shownName() },
-      blocked = emptySet(),
-      empty = stringResource(R.string.support_empty),
-      onOpen = { open(RootPage.Chat(Chat.supportPlace, GROUP_THREAD)) },
-    ) {
-      AppIcon(28.dp)
-    }
+      ChatRow(
+        me,
+        stringResource(R.string.support_title),
+        read.summaries.getValue(GROUP_THREAD),
+        notifications.mutes(Chat.supportPlace, GROUP_THREAD),
+        // The place's members as it names them: the user, and ポチカル for Pochical's people.
+        names = read.writers.associate { it.userId to it.shownName() },
+        blocked = emptySet(),
+        empty = stringResource(R.string.support_empty),
+        onOpen = { open(RootPage.Chat(Chat.supportPlace, GROUP_THREAD)) },
+      ) {
+        AppIcon(28.dp)
+      }
     }
   }
 }

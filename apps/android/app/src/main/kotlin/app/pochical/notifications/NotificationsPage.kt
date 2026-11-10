@@ -58,6 +58,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.Footnote
 import app.pochical.LocalDeviceSettings
 import app.pochical.R
+import app.pochical.rememberRead
 import app.pochical.RootPage
 import app.pochical.RowEnd
 import app.pochical.SectionHeader
@@ -87,9 +88,9 @@ import kotlinx.coroutines.launch
 fun ChatNotificationsRow(open: (RootPage) -> Unit) {
   val allowed by LocalNotificationPermission.current.allowed.collectAsStateWithLifecycle()
   val values = LocalValues.current
-  val groups by remember(values) { values.groups() }.collectAsStateWithLifecycle(emptyList())
-  // Its value once the device has read the switches, never a guess before.
-  val summary = rememberChatNotifications()?.let { chatNotificationsSummary(groups.map { it.id }, it, allowed) }
+  val groups = rememberRead(values) { values.groups() }
+  // Its value once the device has read the switches and the groups, never a guess before.
+  val summary = rememberChatNotifications()?.let { switches -> groups?.let { chatNotificationsSummary(it.map { it.id }, switches, allowed) } }
   SettingsRow(
     stringResource(R.string.notifications_chat),
     R.drawable.ic_notifications,

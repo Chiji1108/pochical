@@ -25,11 +25,11 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.Footnote
 import app.pochical.LimitedTextField
 import app.pochical.PageNavigation
 import app.pochical.R
+import app.pochical.rememberRead
 import app.pochical.RootPage
 import app.pochical.SettingsPage
 import app.pochical.SettingsRow
@@ -51,7 +51,7 @@ import kotlinx.coroutines.flow.map
 @Composable
 private fun usualProfile(): ProfileRow? {
   val values = LocalValues.current
-  return remember(values) { values.profile().map { it ?: ProfileRow(name = "", photoId = "") } }.collectAsStateWithLifecycle(null).value
+  return rememberRead(values) { values.profile().map { it ?: ProfileRow(name = "", photoId = "") } }
 }
 
 /**
