@@ -139,6 +139,9 @@ class DeviceCalendars(private val context: Context) {
           val allDay = rows.getInt(6) == 1
           val zone = if (allDay) ZoneOffset.UTC else ZoneId.systemDefault()
           val start = minutes(mark.day, rows.getLong(4), zone)
+          // The provider keeps an end (DTEND) for every event but a repeating one, which has a
+          // DURATION instead: one made to repeat in a calendar app reads as ending at 0 here, says
+          // something else than any shift, and is replaced once by one that does not repeat.
           val end = minutes(mark.day, rows.getLong(5), zone)
           val wholeDay = allDay && start == 0 && end == MINUTES_A_DAY
           val said = ShiftEvent(mark.day, rows.getString(3).orEmpty(), start.takeUnless { wholeDay }, end.takeUnless { wholeDay }, notes)

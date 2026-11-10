@@ -221,29 +221,45 @@ actor CalendarWriter {
 /// access nothing is written, and the sheet says so.
 struct CalendarReflection: ViewModifier {
   @Environment(Settings.self) private var settings
-  @Environment(AccountSession.self) private var session
   @Environment(\.scenePhase) private var scenePhase
-  @Fetch(OwnCalendarRequest()) private var calendar = OwnCalendar.empty
+  /// The days with the user they are of, read together, so one user's
+  /// days never go in under another's mark while the account changes.
+  @Fetch(OwnedCalendarRequest()) private var own = OwnedCalendarRequest.Value.empty
 
   private struct Key: Hashable {
     let on: Bool
     let events: [ShiftEvent]
     let span: Period
-    let user: String?
+    let user: String
     let target: String?
   }
 
   func body(content: Content) -> some View {
     let device = settings.device
-    let on = device.calendarReflects && scenePhase == .active && !$calendar.isLoading
+    // A database with no patterns holds nothing of the person's to go by,
+    // as one erased and not yet synced again: with none, or while it is
+    // no one's, nothing is written, so what was put in stays.
+    let on =
+      device.calendarReflects && scenePhase == .active && !own.owner.isEmpty
+      && !own.calendar.patterns.isEmpty
     let span = device.period.reflected(from: .today)
-    let events = on ? calendar.shiftEvents(in: span, putting: device.calendarAdd) : []
-    let user = session.userID
+    // Keyed by what would be put in, so a change that leaves it the same,
+    // a pattern's color or the days of another month, reads no calendar.
+    let events = on ? own.calendar.shiftEvents(in: span, putting: device.calendarAdd) : []
+    let user = own.owner
     let target = device.deviceCalendar
     content.task(id: Key(on: on, events: events, span: span, user: user, target: target)) {
-      guard on, let user, let target else { return }
+      guard on, let target else { return }
       do {
         try await CalendarWriter.shared.put(events, in: span, by: user, to: target)
+        // The device was another user's when it last reflected: theirs
+        // go from the days kept, which would else show each day twice.
+        if let before = device.calendarReflectedBy, before != user {
+          _ = try await CalendarWriter.shared.remove(span, by: before)
+        }
+        if settings.device.calendarReflectedBy != user {
+          settings.device.calendarReflectedBy = user
+        }
       } catch {
         // Tried again with the next change, or as the app next comes back.
         Logger(subsystem: "app.pochical", category: "calendar")

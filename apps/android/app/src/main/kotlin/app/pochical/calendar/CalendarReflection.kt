@@ -3,6 +3,7 @@ package app.pochical.calendar
 import android.util.Log
 import app.pochical.kit.CalendarAdd
 import app.pochical.kit.DeviceSettings
+import app.pochical.kit.OwnCalendar as KitCalendar
 import app.pochical.kit.Period
 import app.pochical.kit.ShiftEvent
 import app.pochical.kit.ShownDay
@@ -66,25 +67,32 @@ internal class Adding(calendar: OwnCalendar, page: Period, putting: CalendarAdd)
  */
 class CalendarReflection(
   private val calendars: DeviceCalendars,
-  private val days: OwnDays,
+  /**
+   * The person's days with the user they are of, read together ([ownedCalendar]), so one user's
+   * days never go in under another's mark while the account changes.
+   */
+  private val own: Flow<Pair<String, KitCalendar>>,
   private val settings: Flow<DeviceSettings>,
-  /** The signed-in user's id, none while there is none. */
-  private val user: Flow<String?>,
+  private val change: ((DeviceSettings) -> DeviceSettings) -> Unit,
   private val scope: CoroutineScope,
   private val today: () -> LocalDate = LocalDate::now,
 ) {
   /** How many times the app came to the front: each reads the day and the calendar again. */
   private val fronts = MutableStateFlow(0)
 
-  /** Follows what is put in, as the app starts; nothing before the person's days are read. */
+  /**
+   * Follows what is put in, as the app starts. A database with no patterns holds nothing of the
+   * person's to go by, as one erased and not yet synced again: with none, or while it is no one's,
+   * nothing is written, so what was put in stays.
+   */
   fun start() {
     scope.launch {
-      days.awaitRead()
-      combine(days.calendar, settings, user, fronts) { calendar, device, user, front ->
+      combine(own, settings, fronts) { (user, calendar), device, front ->
           val target = device.deviceCalendar
-          if (!device.calendarReflects || user == null || target == null) return@combine null
+          if (!device.calendarReflects || target == null || user.isEmpty() || calendar.patterns.isEmpty()) return@combine null
           val span = device.period.reflected(today())
-          Wanted(Adding(calendar, span, device.calendarAdd).events, span, user, target, front)
+          val events = Adding(SyncedDays.Synced(calendar), span, device.calendarAdd).events
+          Wanted(events, span, user, target, device.calendarReflectedBy, front)
         }
         .distinctUntilChanged()
         .collectLatest { wanted -> if (wanted != null) reflect(wanted) }
@@ -99,6 +107,10 @@ class CalendarReflection(
   private suspend fun reflect(wanted: Wanted) {
     try {
       calendars.put(wanted.events, wanted.span, wanted.user, wanted.target)
+      // The device was another user's when it last reflected: theirs go from the days kept, which
+      // would else show each day twice.
+      if (wanted.before != null && wanted.before != wanted.user) calendars.remove(wanted.span, wanted.before)
+      if (wanted.before != wanted.user) change { it.copy(calendarReflectedBy = wanted.user) }
     } catch (e: CancellationException) {
       throw e
     } catch (e: Exception) {
@@ -107,5 +119,13 @@ class CalendarReflection(
     }
   }
 
-  private data class Wanted(val events: List<ShiftEvent>, val span: Period, val user: String, val target: Long, val front: Int)
+  private data class Wanted(
+    val events: List<ShiftEvent>,
+    val span: Period,
+    val user: String,
+    val target: Long,
+    /** The user whose days were last kept. */
+    val before: String?,
+    val front: Int,
+  )
 }

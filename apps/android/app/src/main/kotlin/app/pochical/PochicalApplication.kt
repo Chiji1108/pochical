@@ -14,6 +14,7 @@ import app.pochical.calendar.SyncedDays
 import app.pochical.chat.chatImageLoader
 import app.pochical.chat.followForgotten
 import app.pochical.kit.PochicalKit
+import app.pochical.kit.ownedCalendar
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
@@ -116,12 +117,12 @@ interface AppGraph : MetroAppComponentProviders {
   /** 自動で反映: the days kept in the device's calendar, read from the days, the device settings and the account. */
   @Provides
   @SingleIn(AppScope::class)
-  fun calendarReflection(application: Application, kit: PochicalKit, days: OwnDays, settings: SyncedSettings): CalendarReflection =
+  fun calendarReflection(application: Application, kit: PochicalKit, settings: SyncedSettings): CalendarReflection =
     CalendarReflection(
       DeviceCalendars(application),
-      days,
+      kit.database.ownedCalendar(),
       settings.settings,
-      kit.account.state.map { it.userId }.distinctUntilChanged(),
+      settings::change,
       CoroutineScope(SupervisorJob() + Dispatchers.Default),
     )
 
