@@ -785,8 +785,10 @@ export const sampleChats: Record<string, Chat> = {
     ],
     unread: 2,
   },
-  // Something small asked of people at work, and a meal fixed on a day
-  // they are all off, minutes before the phone's clock.
+  // The stores' scene (tools/store-screenshots/seed.ts), without its two
+  // lines of thanks and agreement, so the phone holds it from the question
+  // to the vote: something small asked of people at work, and a meal fixed
+  // on a day they are all off, minutes before the phone's clock.
   "workplace:group": {
     messages: [
       {
@@ -813,28 +815,11 @@ export const sampleChats: Record<string, Chat> = {
       {
         content: {
           kind: "words",
-          text: "助かります、ありがとうございます！",
-        },
-        from: "kobayashi",
-        id: "c3",
-        time: "9:37",
-        when: "今日",
-      },
-      {
-        content: {
-          kind: "words",
           text: "今度のごはん会、みんなの休みが合う日で決めませんか？",
         },
         from: "tanaka",
-        id: "c4",
+        id: "c3",
         time: "9:38",
-        when: "今日",
-      },
-      {
-        content: { kind: "words", text: "いいですね、行きたいです！" },
-        from: "mori",
-        id: "c5",
-        time: "9:39",
         when: "今日",
       },
       // 森 can come on every day, 小林 on the last.
@@ -852,7 +837,7 @@ export const sampleChats: Record<string, Chat> = {
           ),
         },
         from: "tanaka",
-        id: "c6",
+        id: "c4",
         time: "9:39",
         when: "今日",
       },
