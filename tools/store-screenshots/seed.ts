@@ -1,6 +1,6 @@
 // Puts on `mise run server` the group the stores' screenshots are
-// photographed in (#806): 同期, three coworkers of the same year on a
-// two-shift roster, with this month's and next month's shifts and a little
+// photographed in (#806): 職場のみんな, three coworkers on a two-shift
+// roster who speak politely, as people who have not exchanged contacts do, with this month's and next month's shifts and a little
 // of 全体チャット, a 日にちの投票 over the days they are all off among it.
 //
 //   pnpm exec tsx tools/store-screenshots/seed.ts <file to write the invite code to>
@@ -67,22 +67,22 @@ const SHIFTS = [
 ] as const satisfies readonly ReadyPatternId[];
 type Shift = (typeof SHIFTS)[number];
 
-const GROUP = { mark: { emoji: "🎓" }, name: "同期" };
+const GROUP = { mark: { emoji: "🏥" }, name: "職場のみんな" };
 
 // The members, the first making the group, each with the shifts they are
 // given in turn from the first of the month: 夜勤 brings its 明け, so a
 // round names none.
 const MEMBERS: readonly { name: string; round: readonly Shift[] }[] = [
   {
-    name: "みさき",
+    name: "田中",
     round: ["day", "day", "night", "off", "day", "night", "off", "off"],
   },
   {
-    name: "はると",
+    name: "小林",
     round: ["day", "night", "off", "off", "day", "day", "day", "off"],
   },
   {
-    name: "ゆい",
+    name: "森",
     round: ["night", "off", "day", "day", "off", "day", "night", "off", "off"],
   },
 ];
@@ -358,36 +358,30 @@ await Promise.all(
 );
 await inTime(projected.promise);
 
-const [misaki, haruto, yui] = people;
-if (misaki === undefined || haruto === undefined || yui === undefined) {
+const [tanaka, kobayashi, mori] = people;
+if (tanaka === undefined || kobayashi === undefined || mori === undefined) {
   fail("no members");
 }
 await words(
-  haruto,
-  "更衣室にスマホの充電器わすれたかも。白いやつ、だれか見てない？"
+  kobayashi,
+  "すみません、モバイルバッテリー、休憩室にあったりしますか…？"
 );
-const found = await words(
-  yui,
-  "ロッカーの上にあったよ！はるとのロッカーに入れといたね"
-);
-await words(haruto, "助かった〜ありがとう！");
-await edit(misaki, {
+const found = await words(mori, "ありましたよ！ロッカーの上に置いておきますね");
+await words(kobayashi, "助かります、ありがとうございます！");
+await edit(tanaka, {
   case: "react",
   value: { emoji: "👍", on: true, seq: found, threadId: GROUP_THREAD },
 });
-await words(
-  misaki,
-  "そういえば、みんなの休みがかぶってる日あるね。ごはん行かない？"
-);
-await words(yui, "行きたい！焼肉がいいな");
-const poll = await say(misaki, {
+await words(tanaka, "今度のごはん会、みんなの休みが合う日で決めませんか？");
+await words(mori, "いいですね、行きたいです！");
+const poll = await say(tanaka, {
   case: "poll",
   value: { days: allOff.map(keyOf) },
 });
-// ゆい can come on every day, はると on the last.
+// 森 can come on every day, 小林 on the last.
 const votes = [
-  ...allOff.map((day) => ({ day, voter: yui })),
-  ...allOff.slice(-1).map((day) => ({ day, voter: haruto })),
+  ...allOff.map((day) => ({ day, voter: mori })),
+  ...allOff.slice(-1).map((day) => ({ day, voter: kobayashi })),
 ];
 for (const { day, voter } of votes) {
   // oxlint-disable-next-line no-await-in-loop -- in the order they vote
@@ -404,7 +398,7 @@ for (const { socket } of people) {
 // other: the lines it sent again say whether they are on them.
 const reacted = lines
   .get(found)
-  ?.reactions.some(({ userIds }) => userIds.includes(misaki.userId));
+  ?.reactions.some(({ userIds }) => userIds.includes(tanaka.userId));
 const pollLine = lines.get(poll)?.content?.kind;
 const voted =
   pollLine?.case === "poll" &&
