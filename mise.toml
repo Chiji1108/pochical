@@ -183,6 +183,10 @@ done
 exit $status
 """
 
+[tasks."store:shots:android"]
+description = "Photograph the Android app for the stores' screenshots on the emulator ANDROID_SERIAL names, taking the app off it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default) and seeds: the screens and the widgets, raw, into .build/store-screenshots/android"
+run = "tools/store-screenshots/android.sh"
+
 [tasks."ios:photo-touches"]
 description = "Run the chat photo line's touch UI tests in a simulator, erasing it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default): <simulator name> [derived data]"
 run = "tools/photo-line-touches/run.sh"

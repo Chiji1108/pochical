@@ -9,6 +9,7 @@ import android.graphics.Shader
 import android.view.View
 import android.widget.FrameLayout
 import androidx.compose.ui.unit.DpSize
+import app.pochical.design.Theme
 import app.pochical.kit.DeviceSettings
 import app.pochical.kit.Week
 import java.io.File
@@ -24,11 +25,13 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Draws the pictures the widget picker shows of each kind before Android 15 (spec/widgets.md, In
- * the widget gallery), as `android:previewImage`: the sample week the generated previews show, drawn
- * by the widgets themselves through Glance, in light and in dark (`drawable-night`). Run by
- * `mise run android:widget-previews`, which names where they go (WIDGET_PREVIEWS_OUT, the app's
- * res); skipped in the ordinary test run.
+ * Draws the widgets by themselves through Glance, with the sample week the generated previews show,
+ * where a run names a folder for them; skipped in the ordinary test run.
+ * - The pictures the widget picker shows of each kind before Android 15 (spec/widgets.md, In the
+ *   widget gallery), as `android:previewImage`, in light and in dark (`drawable-night`):
+ *   `mise run android:widget-previews`, into the app's res (WIDGET_PREVIEWS_OUT).
+ * - The stores' wall of widgets (#806), each kind at each size it offers, in 墨 and light:
+ *   `mise run store:shots:android`, into STORE_WIDGETS_OUT.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -37,35 +40,49 @@ class WidgetPreviewImages {
   /** A Sunday, the sample's settings' first day of the week, so the week reads from today. */
   private val today = LocalDate.of(2026, 10, 25)
 
+  private val kinds =
+    listOf(
+      "simple" to SimpleWidget(),
+      "next_off" to NextOffWidget(),
+      "upcoming" to UpcomingWidget(),
+      "calendar" to CalendarWidget(),
+      "now" to NowWidget(),
+    )
+
   @Test
   fun drawsThePickersPictures() = runTest {
     val out = System.getenv("WIDGET_PREVIEWS_OUT")
     assumeTrue("Only when asked for, by mise run android:widget-previews", out != null)
-    val kinds =
-      listOf(
-        "simple" to SimpleWidget(),
-        "next_off" to NextOffWidget(),
-        "upcoming" to UpcomingWidget(),
-        "calendar" to CalendarWidget(),
-        "now" to NowWidget(),
-      )
-    // Midday, the sample's 日勤 on, as いまのシフト's ring shows it.
-    val drawn = Drawn(sampleWidgetEntry(today.atTime(13, 0).atZone(ZoneId.systemDefault()), Week()), DeviceSettings())
     for (dark in listOf(false, true)) {
-      val context = RuntimeEnvironment.getApplication().let { app ->
-        val configuration = Configuration(app.resources.configuration)
-        configuration.uiMode = (configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or
-          (if (dark) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO)
-        app.createConfigurationContext(configuration)
-      }
-      val folder = File(checkNotNull(out), if (dark) "drawable-night-nodpi" else "drawable-nodpi").apply { mkdirs() }
-      for ((name, widget) in kinds) {
-        val size = widget.pickerSize
-        val views = widget.preview(context, drawn, size)
-        val view = views.apply(context, FrameLayout(context))
-        File(folder, "widget_preview_$name.png").outputStream().use { picture(view, size, context.resources.displayMetrics.density).compress(Bitmap.CompressFormat.PNG, 100, it) }
-      }
+      val folder = File(checkNotNull(out), if (dark) "drawable-night-nodpi" else "drawable-nodpi")
+      for ((name, widget) in kinds) draw(widget, widget.pickerSize, DeviceSettings(), dark, File(folder, "widget_preview_$name.png"))
     }
+  }
+
+  @Test
+  fun drawsTheStoresPictures() = runTest {
+    val out = System.getenv("STORE_WIDGETS_OUT")
+    assumeTrue("Only when asked for, by mise run store:shots:android", out != null)
+    val sizes = mapOf(SMALL to "small", MEDIUM to "medium", LARGE to "large")
+    val sumi = DeviceSettings(themeId = Theme.Sumi.id)
+    for ((name, widget) in kinds) {
+      for (size in widget.previews) draw(widget, size, sumi, dark = false, File(checkNotNull(out), "$name-${sizes.getValue(size)}.png"))
+    }
+  }
+
+  /** [widget] at [size] in [settings], light or [dark], as the PNG [file]. */
+  private suspend fun draw(widget: PochicalWidget, size: DpSize, settings: DeviceSettings, dark: Boolean, file: File) {
+    val context = RuntimeEnvironment.getApplication().let { app ->
+      val configuration = Configuration(app.resources.configuration)
+      configuration.uiMode = (configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or
+        (if (dark) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO)
+      app.createConfigurationContext(configuration)
+    }
+    // Midday, the sample's 日勤 on, as いまのシフト's ring shows it.
+    val drawn = Drawn(sampleWidgetEntry(today.atTime(13, 0).atZone(ZoneId.systemDefault()), Week()), settings)
+    val view = widget.preview(context, drawn, size).apply(context, FrameLayout(context))
+    file.parentFile?.mkdirs()
+    file.outputStream().use { picture(view, size, context.resources.displayMetrics.density).compress(Bitmap.CompressFormat.PNG, 100, it) }
   }
 
   private companion object {

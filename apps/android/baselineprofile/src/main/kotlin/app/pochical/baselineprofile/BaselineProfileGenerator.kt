@@ -3,6 +3,7 @@ package app.pochical.baselineprofile
 import androidx.benchmark.macro.MacrobenchmarkScope
 import androidx.benchmark.macro.junit4.BaselineProfileRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.pochical.walk.PACKAGE
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
