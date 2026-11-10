@@ -26,3 +26,24 @@ public struct OwnCalendarRequest: FetchKeyRequest, Hashable {
     try OwnCalendar(db)
   }
 }
+
+/// The person's own calendar with the user it is of, read in one
+/// transaction: what goes out of the device under a user's name, as the
+/// events 自動で反映 marks (spec/calendar.md, Reflecting automatically),
+/// is never one user's days under another's id while the account changes.
+public struct OwnedCalendarRequest: FetchKeyRequest, Hashable {
+  public struct Value: Hashable, Sendable {
+    /// The user whose data the database holds, empty while it is no
+    /// one's: a new install's, or once erased.
+    public let owner: String
+    public let calendar: OwnCalendar
+
+    public static let empty = Value(owner: "", calendar: .empty)
+  }
+
+  public init() {}
+
+  public func fetch(_ db: Database) throws -> Value {
+    Value(owner: try SyncState.find(1).fetchOne(db)?.owner ?? "", calendar: try OwnCalendar(db))
+  }
+}

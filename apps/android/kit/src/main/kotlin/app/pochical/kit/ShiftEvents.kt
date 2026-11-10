@@ -63,13 +63,21 @@ fun <Id> reflection(wanted: List<ShiftEvent>, user: String, there: List<PutEvent
   val left = there.toMutableList()
   val add =
     wanted.filter { event ->
-      val said = event.copy(notes = EventMark(event.day, user).appendedTo(event.notes))
-      val kept = left.indexOfFirst { it.inTarget && it.event == said }
+      val notes = noteLines(EventMark(event.day, user).appendedTo(event.notes))
+      val kept = left.indexOfFirst { it.inTarget && it.event.copy(notes = null) == event.copy(notes = null) && noteLines(it.event.notes) == notes }
       if (kept >= 0) left.removeAt(kept)
       kept < 0
     }
   return Reflection(left.map { it.id }, add)
 }
+
+/**
+ * An event's notes as they are compared: line by line as the mark is read, lines ending at a line
+ * feed, each without the spaces, tabs and carriage return around it, and empty lines at the ends
+ * aside, so a calendar whose sync ends lines its own way does not make them differ.
+ */
+private fun noteLines(notes: String?): List<String> =
+  notes.orEmpty().split('\n').map { it.trim(' ', '\t', '\r') }.dropWhile { it.isEmpty() }.dropLastWhile { it.isEmpty() }
 
 /**
  * The days 自動で反映 keeps in the device's calendar: from the first of the page holding [today]

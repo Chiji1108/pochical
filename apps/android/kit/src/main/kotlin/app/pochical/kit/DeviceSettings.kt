@@ -55,6 +55,11 @@ data class DeviceSettings(
   /** これからも自動で反映しますか？ was asked, or its switch used: never asked again. */
   val calendarReflectAsked: Boolean = false,
   /**
+   * The user whose days 自動で反映 last kept in the calendar: once the device is another's, theirs
+   * are taken out of the days kept.
+   */
+  val calendarReflectedBy: String? = null,
+  /**
    * Reminders of the person's shifts, sent by this device on its own, so kept with it rather than
    * the account: on every device they would go off on each (spec/sync-protocol.md).
    */

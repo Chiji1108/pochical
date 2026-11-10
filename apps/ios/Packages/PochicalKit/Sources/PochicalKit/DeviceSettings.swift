@@ -102,6 +102,9 @@ public struct DeviceSettings: Codable, Equatable, Sendable {
   /// これからも自動で反映しますか？ was asked, or its switch used: never
   /// asked again.
   public var calendarReflectAsked = false
+  /// The user whose days 自動で反映 last kept in the calendar: once the
+  /// device is another's, theirs are taken out of the days kept.
+  public var calendarReflectedBy: String?
 
   public var theme: Theme {
     get { Theme(rawValue: themeID) ?? .pochical }
@@ -125,6 +128,7 @@ public struct DeviceSettings: Codable, Equatable, Sendable {
     calendarReflects = try container.decodeIfPresent(Bool.self, forKey: .calendarReflects) ?? false
     calendarReflectAsked =
       try container.decodeIfPresent(Bool.self, forKey: .calendarReflectAsked) ?? false
+    calendarReflectedBy = try container.decodeIfPresent(String.self, forKey: .calendarReflectedBy)
   }
 }
 

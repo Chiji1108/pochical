@@ -129,15 +129,32 @@ public enum ShiftEvents {
     var left = there
     var add: [ShiftEvent] = []
     for event in wanted {
-      var said = event
-      said.notes = EventMark(day: event.day, user: user).appended(to: event.notes)
-      if let kept = left.firstIndex(where: { $0.inTarget && $0.event == said }) {
+      let notes = noteLines(EventMark(day: event.day, user: user).appended(to: event.notes))
+      let kept = left.firstIndex { found in
+        found.inTarget && found.event.day == event.day && found.event.title == event.title
+          && found.event.start == event.start && found.event.end == event.end
+          && noteLines(found.event.notes) == notes
+      }
+      if let kept {
         left.remove(at: kept)
       } else {
         add.append(event)
       }
     }
     return (left.map(\.id), add)
+  }
+
+  /// An event's notes as they are compared: line by line as the mark is
+  /// read, lines ending at a line feed, each without the spaces, tabs and
+  /// carriage return around it, and empty lines at the ends aside, so a
+  /// calendar whose sync ends lines its own way does not make them differ.
+  private static func noteLines(_ notes: String?) -> [String] {
+    let lines = (notes ?? "").components(separatedBy: "\n")
+      .map { $0.trimmingCharacters(in: CharacterSet(charactersIn: " \t\r")) }
+    guard let first = lines.firstIndex(where: { !$0.isEmpty }),
+      let last = lines.lastIndex(where: { !$0.isEmpty })
+    else { return [] }
+    return Array(lines[first...last])
   }
 
   private static func shiftEvent(
