@@ -5,8 +5,10 @@
 #
 #   . "$root/tools/ios-ui/lib.sh"
 #
-# Before sourcing, set `device` (a simulator's name), `root` (the repo),
-# `derived` (the derived data) and `server_log` (where the server writes).
+# Before sourcing, set `root` (the repo) and `server_log` (where the server
+# writes), all the server's functions need (tools/store-screenshots/android.sh),
+# and for the simulator's, `device` (its name) and `derived` (the derived
+# data).
 
 export POCHICAL_DEV_SERVER=${POCHICAL_DEV_SERVER:-http://localhost:8787}
 [[ $POCHICAL_DEV_SERVER =~ ^http://localhost:([0-9]+)$ ]] ||
@@ -16,8 +18,10 @@ server=""
 
 # The server runs in a process group of its own, led by mise (`server`),
 # which runs the task's shell, pnpm, wrangler and workerd in a group of
-# their own; stopping signals both groups.
+# their own; stopping signals both groups. It starts on an up-to-date local
+# database.
 start_server() {
+  (cd "$root/apps/server" && pnpm exec wrangler d1 migrations apply pochical --local >/dev/null)
   (cd "$root" && exec perl -e 'setpgrp; exec @ARGV' mise run server -- --port "$port" >>"$server_log" 2>&1) &
   server=$!
   until curl -s -o /dev/null "$POCHICAL_DEV_SERVER"; do
@@ -50,14 +54,12 @@ xcodebuild_for() {
     -skipMacroValidation -skipPackagePluginValidation POCHICAL_DEV_SERVER="$POCHICAL_DEV_SERVER" "${@:2}"
 }
 
-# Builds the tests, erases and boots the simulator, and starts the server
-# on an up-to-date local database.
+# Builds the tests, erases and boots the simulator, and starts the server.
 prepare() {
   xcodebuild_for build-for-testing -quiet
   xcrun simctl shutdown "$device" 2>/dev/null || true
   xcrun simctl erase "$device"
   xcrun simctl boot "$device"
-  (cd "$root/apps/server" && pnpm exec wrangler d1 migrations apply pochical --local >/dev/null)
   start_server
 }
 
