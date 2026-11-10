@@ -31,6 +31,10 @@ import androidx.compose.ui.unit.dp
  * [footer], the sheet's one action, stays at its foot under the rows as they scroll, as iOS keeps a
  * sheet's button at its bottom: with a [sheetState] that opens whole (skipPartiallyExpanded), as a
  * half-open sheet would leave its foot below the screen.
+ *
+ * A [header], such as chips that pick what the rows show, stays at its head over the rows, the
+ * title with it. Such a sheet [fills] the screen whatever its rows, opening half-way and pulled up
+ * to the whole screen (iOS's medium and large detents), so the header stays put as the rows change.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,17 +44,23 @@ fun ListSheet(
   titleStyle: TextStyle = MaterialTheme.typography.titleLarge,
   sheetState: SheetState = rememberModalBottomSheetState(),
   footer: (@Composable () -> Unit)? = null,
+  header: (@Composable () -> Unit)? = null,
+  fills: Boolean = header != null,
   content: LazyListScope.() -> Unit,
 ) {
   ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
     val foot = WindowInsets.navigationBars.add(WindowInsets(bottom = 16.dp))
+    val heading: (@Composable () -> Unit)? =
+      title?.let { { Text(it, Modifier.padding(horizontal = 24.dp, vertical = 8.dp).semantics { heading() }, style = titleStyle) } }
+    if (header != null) {
+      heading?.invoke()
+      header()
+    }
     LazyColumn(
-      Modifier.weight(1f, fill = false),
+      Modifier.weight(1f, fill = fills),
       contentPadding = if (footer == null) foot.asPaddingValues() else PaddingValues(bottom = 16.dp),
     ) {
-      if (title != null) {
-        item(key = TITLE) { Text(title, Modifier.padding(horizontal = 24.dp, vertical = 8.dp).semantics { heading() }, style = titleStyle) }
-      }
+      if (header == null && heading != null) item(key = TITLE) { heading() }
       content()
     }
     if (footer != null) Box(Modifier.windowInsetsPadding(foot).padding(horizontal = 24.dp)) { footer() }

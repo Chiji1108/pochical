@@ -6,15 +6,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.add
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -27,7 +22,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -163,9 +157,9 @@ fun TogetherSheet(title: String, days: List<LocalDate>, country: String, onPick:
  * 1人ずつ picks whom to show (/design's LegendSheet). It opens on [first]: the face pressed, or from
  * the menu the first of the others.
  *
- * The sheet fills the screen whoever is picked, so it opens half-way and is pulled up to the whole
- * screen, as iOS's medium and large detents: its height never follows one person's patterns, and the
- * chips stay under the finger from one person to the next. Only the list under them scrolls.
+ * It is a [ListSheet] with the chips as its header, so it fills the screen whoever is picked: its
+ * height never follows one person's patterns, and the chips stay under the finger from one person
+ * to the next. Only the list under them scrolls.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -174,38 +168,41 @@ fun LegendSheet(members: List<GroupMember>, groupId: String, first: String, onDi
   val member = members.firstOrNull { it.userId == picked } ?: members.firstOrNull() ?: return
   val chips = rememberLazyListState()
   LaunchedEffect(Unit) { chips.scrollToItem(members.indexOf(member).coerceAtLeast(0)) }
-  ModalBottomSheet(onDismissRequest = onDismiss) {
-    Text(stringResource(R.string.patterns), Modifier.padding(horizontal = 24.dp, vertical = 8.dp).semantics { heading() }, style = PochicalTextStyles.headline)
-    LazyRow(state = chips, contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-      items(members, key = { it.userId }) { candidate ->
-        FilterChip(
-          selected = candidate.userId == member.userId,
-          onClick = { picked = candidate.userId },
-          label = { Text(candidate.name, maxLines = 1) },
-          leadingIcon = { MemberAvatar(candidate.name, candidate.photoId, PhotoShelf.Group(groupId), 24.dp) },
-        )
-      }
-    }
-    val patterns = legendPatterns(member)
-    LazyColumn(Modifier.weight(1f), contentPadding = WindowInsets.navigationBars.add(WindowInsets(bottom = 16.dp)).asPaddingValues()) {
-      if (patterns.isEmpty()) {
-        item(key = NO_PATTERNS) {
-          Text(
-            stringResource(R.string.legend_none),
-            Modifier.fillMaxWidth().padding(24.dp),
-            style = PochicalTextStyles.subheadline,
-            color = LocalThemeColors.current.textTertiary,
+  val patterns = legendPatterns(member)
+  ListSheet(
+    onDismiss,
+    stringResource(R.string.patterns),
+    titleStyle = PochicalTextStyles.headline,
+    header = {
+      LazyRow(state = chips, contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        items(members, key = { it.userId }) { candidate ->
+          FilterChip(
+            selected = candidate.userId == member.userId,
+            onClick = { picked = candidate.userId },
+            label = { Text(candidate.name, maxLines = 1) },
+            leadingIcon = { MemberAvatar(candidate.name, candidate.photoId, PhotoShelf.Group(groupId), 24.dp) },
           )
         }
       }
-      items(patterns, key = { it.id }) { pattern ->
-        ListItem(
-          headlineContent = { Text(pattern.name) },
-          leadingContent = { MemberMark(member, MemberShift(pattern, change = null), 20.dp) },
-          trailingContent = pattern.time?.let { time -> { Text(hoursText(time.start, time.end)) } },
-          colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+    },
+  ) {
+    if (patterns.isEmpty()) {
+      item(key = NO_PATTERNS) {
+        Text(
+          stringResource(R.string.legend_none),
+          Modifier.fillMaxWidth().padding(24.dp),
+          style = PochicalTextStyles.subheadline,
+          color = LocalThemeColors.current.textTertiary,
         )
       }
+    }
+    items(patterns, key = { it.id }) { pattern ->
+      ListItem(
+        headlineContent = { Text(pattern.name) },
+        leadingContent = { MemberMark(member, MemberShift(pattern, change = null), 20.dp) },
+        trailingContent = pattern.time?.let { time -> { Text(hoursText(time.start, time.end)) } },
+        colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+      )
     }
   }
 }
