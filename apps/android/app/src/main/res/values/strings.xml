@@ -34,6 +34,15 @@
   <string name="calendar_add_people">一緒に働く人も入れる</string>
   <string name="calendar_add_people_note">シフトの予定のメモ欄に入ります</string>
   <string name="calendar_add_again">前に入れた%1$sの予定は、入れ直します。</string>
+  <string name="calendar_reflect">自動で反映</string>
+  <string name="calendar_reflect_note">シフトを変えると、%1$dか月先の分まで入れ直します</string>
+  <string name="calendar_reflect_about">アプリを開いたときに反映します。カレンダーアプリで変えた予定は、ポチカルのシフトに戻ります。</string>
+  <string name="calendar_reflect_ask">これからも自動で反映しますか？</string>
+  <string name="calendar_reflect_ask_about">シフトを変えると、「%1$s」の予定も変わります。%2$dか月先の分まで入ります。</string>
+  <string name="calendar_reflect_ask_yes">自動で反映する</string>
+  <string name="calendar_reflect_ask_no">今はしない</string>
+  <string name="calendar_reflect_no_calendar">追加先のカレンダーが見つからないので、自動での反映を止めています。追加先を選ぶと、また反映します。</string>
+  <string name="calendar_reflect_no_access">自動での反映も止まっています。</string>
   <string name="calendar_add_button">%1$d件を追加</string>
   <string name="calendar_add_remove">ポチカルで入れた%1$sの予定を消す</string>
   <string name="calendar_add_remove_title">ポチカルで入れた予定を%1$d件消します</string>

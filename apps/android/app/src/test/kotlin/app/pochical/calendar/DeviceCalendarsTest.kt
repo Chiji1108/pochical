@@ -7,6 +7,7 @@ import android.database.Cursor
 import android.database.MatrixCursor
 import android.net.Uri
 import android.provider.CalendarContract
+import android.provider.CalendarContract.Calendars
 import android.provider.CalendarContract.Events
 import app.pochical.kit.EventMark
 import app.pochical.kit.Period
@@ -23,31 +24,43 @@ import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 
 /** 端末カレンダーに追加's writes (spec/calendar.md, Adding a month to the device calendar), over a calendar provider in memory. */
 @RunWith(RobolectricTestRunner::class)
 class DeviceCalendarsTest {
-  /** The events table alone, as the writes use it: every row whatever is asked, by its columns. */
+  /**
+   * The events table, as the writes use it: every row whatever is asked, by its columns; and the
+   * calendars 1 and 2, which take events.
+   */
   class EventsInMemory : ContentProvider() {
     val rows = mutableListOf<Map<String, Any?>>()
     private var next = 1L
+
+    /** How many times the events were written to, a batch's each. */
+    var writes = 0
 
     override fun onCreate() = true
 
     override fun query(uri: Uri, projection: Array<String>?, selection: String?, args: Array<String>?, sort: String?): Cursor {
       val columns = checkNotNull(projection)
-      return MatrixCursor(columns).apply { synchronized(rows) { rows.forEach { row -> addRow(columns.map { row[it] }) } } }
+      val asked = if (uri == Calendars.CONTENT_URI) listOf(1L, 2L).map { mapOf(Calendars._ID to it) } else synchronized(rows) { rows.toList() }
+      return MatrixCursor(columns).apply { asked.forEach { row -> addRow(columns.map { row[it] }) } }
     }
 
     override fun insert(uri: Uri, values: ContentValues?): Uri =
       synchronized(rows) {
+        writes++
         val id = next++
         rows += values!!.keySet().associateWith { values.get(it) } + (Events._ID to id)
         ContentUris.withAppendedId(uri, id)
       }
 
     override fun delete(uri: Uri, selection: String?, args: Array<String>?): Int =
-      synchronized(rows) { if (rows.removeIf { it[Events._ID] == ContentUris.parseId(uri) }) 1 else 0 }
+      synchronized(rows) {
+        writes++
+        if (rows.removeIf { it[Events._ID] == ContentUris.parseId(uri) }) 1 else 0
+      }
 
     override fun update(uri: Uri, values: ContentValues?, selection: String?, args: Array<String>?) = 0
 
@@ -55,7 +68,8 @@ class DeviceCalendarsTest {
   }
 
   private val provider = Robolectric.setupContentProvider(EventsInMemory::class.java, CalendarContract.AUTHORITY)
-  private val calendars = DeviceCalendars(RuntimeEnvironment.getApplication())
+  private val calendars =
+    DeviceCalendars(RuntimeEnvironment.getApplication().also { shadowOf(it).grantPermissions(*DeviceCalendars.PERMISSIONS) })
   private val page = Period.of(YearMonth.of(2026, 11), 1)
   private val events =
     listOf(
@@ -75,7 +89,7 @@ class DeviceCalendarsTest {
 
   @Test
   fun eachEventCarriesTheMarkInItsDescription() = runBlocking {
-    calendars.add(events.take(1).map { it.copy(notes = "申し送りあり") }, page, "me", 1)
+    calendars.put(events.take(1).map { it.copy(notes = "申し送りあり") }, page, "me", 1)
 
     assertEquals(listOf("申し送りあり\n${link(LocalDate.of(2026, 11, 2), "me")}"), descriptions())
   }
@@ -83,9 +97,43 @@ class DeviceCalendarsTest {
   @Test
   fun twoAddsAtOnceLeaveThePageInOnce() = runBlocking {
     // As two quick taps, or two pages: each takes out what the other put in, never both in at once.
-    coroutineScope { repeat(2) { launch(Dispatchers.Default) { calendars.add(events, page, "me", 1) } } }
+    coroutineScope { repeat(2) { launch(Dispatchers.Default) { calendars.put(events, page, "me", 1) } } }
 
     assertEquals(events.map { link(it.day, "me") }.sorted(), descriptions().map { it.orEmpty() }.sorted())
+  }
+
+  @Test
+  fun puttingTheSameInAgainWritesNothing() = runBlocking {
+    calendars.put(events, page, "me", 1)
+    val ids = provider.rows.map { it[Events._ID] }
+    val written = provider.writes
+
+    calendars.put(events, page, "me", 1)
+
+    assertEquals(written, provider.writes)
+    assertEquals(ids, provider.rows.map { it[Events._ID] })
+  }
+
+  @Test
+  fun aDayChangedIsReplacedAndTheOthersLeft() = runBlocking {
+    calendars.put(events, page, "me", 1)
+    val before = provider.rows.associate { it[Events.DESCRIPTION] to it[Events._ID] }
+
+    // The 5th's night became a day off, and the 7th's day off is no more.
+    calendars.put(listOf(events[0], ShiftEvent(LocalDate.of(2026, 11, 5), "休み", null, null)), page, "me", 1)
+
+    val after = provider.rows.associate { it[Events.DESCRIPTION] to it[Events._ID] }
+    assertEquals(setOf(link(LocalDate.of(2026, 11, 2), "me"), link(LocalDate.of(2026, 11, 5), "me")), after.keys)
+    assertEquals(before[link(LocalDate.of(2026, 11, 2), "me")], after[link(LocalDate.of(2026, 11, 2), "me")])
+    assertEquals(listOf("日勤", "休み"), provider.rows.map { it[Events.TITLE] })
+  }
+
+  @Test
+  fun aCalendarThatIsGoneTakesNothing() = runBlocking {
+    val refused = runCatching { calendars.put(events, page, "me", 3) }.exceptionOrNull()
+
+    assertEquals(DeviceCalendars.NoCalendar::class, refused?.let { it::class })
+    assertEquals(0, provider.rows.size)
   }
 
   @Test
@@ -98,8 +146,8 @@ class DeviceCalendarsTest {
     putDescribed(link(LocalDate.of(2026, 12, 1), "me"))
     putDescribed("${link(LocalDate.of(2026, 11, 2), "me")} を見る")
 
-    calendars.add(events, page, "me", 1)
-    calendars.add(events.take(1), page, "me", 2)
+    calendars.put(events, page, "me", 1)
+    calendars.put(events.take(1), page, "me", 2)
     assertEquals(4, provider.rows.size)
 
     assertEquals(1, calendars.remove(page, "me"))

@@ -14,11 +14,15 @@ import android.provider.CalendarContract
 import androidx.core.content.ContextCompat
 import app.pochical.kit.EventMark
 import app.pochical.kit.Period
+import app.pochical.kit.PutEvent
 import app.pochical.kit.SITE_DAY_LINKS
 import app.pochical.kit.ShiftEvent
+import app.pochical.kit.reflection
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZoneOffset
+import java.time.temporal.ChronoUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -94,25 +98,33 @@ class DeviceCalendars(private val context: Context) {
     return found.sortedWith(compareBy<DeviceCalendar> { accounts.indexOf(it.account) }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.name })
   }
 
-  /** The calendar picked first: [last], the one added to last, while it still takes events, else an account's own, else the first. */
-  fun pickedFirst(calendars: List<DeviceCalendar>, last: Long?): DeviceCalendar? =
-    calendars.find { it.id == last } ?: calendars.find { it.primary } ?: calendars.firstOrNull()
+  /**
+   * The calendar picked first: [last], the one added to last, while it still takes events, else an
+   * account's own, else the first; but none while 自動で反映 is on ([reflecting]), which writes
+   * nowhere the person did not pick.
+   */
+  fun pickedFirst(calendars: List<DeviceCalendar>, last: Long?, reflecting: Boolean): DeviceCalendar? =
+    calendars.find { it.id == last } ?: if (reflecting) null else calendars.find { it.primary } ?: calendars.firstOrNull()
 
   /**
-   * The events Pochical put in for the page's days as [user]'s, in any calendar that takes changes,
-   * by their ids: those adding again replaces, and ポチカルで入れた〇月の予定を消す takes out. Found by
-   * the mark on a line of each one's description, so they are found whichever device put them in.
+   * The events Pochical put in for the days of [span] as [user]'s, in any calendar that takes
+   * changes, each as it is there now: those adding again replaces, and ポチカルで入れた〇月の予定を消す
+   * takes out. Found by the mark on a line of each one's description, so they are found whichever
+   * device put them in. An event's hours are counted from its mark's day's midnight by the clock,
+   * none for one all day on that day.
    */
-  fun marked(page: Period, user: String): List<Long> {
-    // From the day before the page's first to two past its last, at midnight in UTC, which all-day
-    // events keep: a night's event ends the day after it, and a timed one's start is the device's clock.
-    val from = page.first.minusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
-    val to = page.last.plusDays(2).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
-    val ids = mutableListOf<Long>()
+  fun marked(span: Period, user: String): List<PutEvent<Long>> = marked(span, user, target = null)
+
+  private fun marked(span: Period, user: String, target: Long?): List<PutEvent<Long>> {
+    // From the day before the first to two past the last, at midnight in UTC, which all-day events
+    // keep: a night's event ends the day after it, and a timed one's start is the device's clock.
+    val from = span.first.minusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+    val to = span.last.plusDays(2).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+    val found = mutableListOf<PutEvent<Long>>()
     resolver
       .query(
         Events.CONTENT_URI,
-        arrayOf(Events._ID, Events.DESCRIPTION),
+        arrayOf(Events._ID, Events.DESCRIPTION, Events.CALENDAR_ID, Events.TITLE, Events.DTSTART, Events.DTEND, Events.ALL_DAY),
         "${Events.DELETED} = 0 AND ${Events.CALENDAR_ACCESS_LEVEL} >= ? AND ${Events.DTSTART} >= ? AND ${Events.DTSTART} < ? AND " +
           "${Events.DESCRIPTION} LIKE ?",
         arrayOf(Calendars.CAL_ACCESS_CONTRIBUTOR.toString(), from.toString(), to.toString(), "%$SITE_DAY_LINKS%"),
@@ -120,25 +132,37 @@ class DeviceCalendars(private val context: Context) {
       )
       ?.use { rows ->
         while (rows.moveToNext()) {
-          val mark = EventMark.inNotes(rows.getString(1)) ?: continue
-          if (mark.user == user && mark.day in page) ids += rows.getLong(0)
+          val notes = rows.getString(1)
+          val mark = EventMark.inNotes(notes) ?: continue
+          if (mark.user != user || mark.day !in span) continue
+          // All-day events are kept at midnight in UTC, the others by the device's clock.
+          val allDay = rows.getInt(6) == 1
+          val zone = if (allDay) ZoneOffset.UTC else ZoneId.systemDefault()
+          val start = minutes(mark.day, rows.getLong(4), zone)
+          val end = minutes(mark.day, rows.getLong(5), zone)
+          val wholeDay = allDay && start == 0 && end == MINUTES_A_DAY
+          val said = ShiftEvent(mark.day, rows.getString(3).orEmpty(), start.takeUnless { wholeDay }, end.takeUnless { wholeDay }, notes)
+          found += PutEvent(rows.getLong(0), inTarget = rows.getLong(2) == target, said)
         }
       }
-    return ids
+    return found
   }
 
   /**
-   * Puts [events], the page's, in [calendar], taking out first the events Pochical put in for its
-   * days as [user]'s, from any calendar, so a page added again is put in anew rather than twice.
-   * All in one batch, which the provider writes whole or not at all; the marks are read and the
-   * batch written under [writing], so two writes never both take out the same events and both put
-   * theirs in.
+   * Puts [events], those of the days of [span], in [calendar], writing only what differs
+   * ([reflection]): of the events Pochical put in for those days as [user]'s, from any calendar,
+   * one in [calendar] that says the same stays and the others go, so days added again are never
+   * there twice. All in one batch, which the provider writes whole or not at all; the marks are
+   * read and the batch written under [writing], so two writes never both take out the same events
+   * and both put theirs in. Without the calendar or its access ([NoCalendar]) nothing is written.
    */
-  suspend fun add(events: List<ShiftEvent>, page: Period, user: String, calendar: Long) = write {
+  suspend fun put(events: List<ShiftEvent>, span: Period, user: String, calendar: Long) = write {
+    if (!allowed || calendars().none { it.id == calendar }) throw NoCalendar()
     val zone = ZoneId.systemDefault()
+    val changes = reflection(events, user, marked(span, user, calendar))
     val operations = ArrayList<ContentProviderOperation>()
-    marked(page, user).mapTo(operations) { ContentProviderOperation.newDelete(eventUri(it)).build() }
-    for (event in events) {
+    changes.remove.mapTo(operations) { ContentProviderOperation.newDelete(eventUri(it)).build() }
+    for (event in changes.add) {
       val start = event.start
       val end = event.end
       val mark = EventMark(event.day, user)
@@ -163,16 +187,20 @@ class DeviceCalendars(private val context: Context) {
       }
       operations += insert.build()
     }
-    resolver.applyBatch(CalendarContract.AUTHORITY, operations)
+    if (operations.isNotEmpty()) resolver.applyBatch(CalendarContract.AUTHORITY, operations)
     Unit
   }
 
   /** Takes out the events Pochical put in for the page as [user]'s, all at once or none, and says how many went. */
   suspend fun remove(page: Period, user: String): Int = write {
     val old = marked(page, user)
-    resolver.applyBatch(CalendarContract.AUTHORITY, old.mapTo(ArrayList()) { ContentProviderOperation.newDelete(eventUri(it)).build() })
+    resolver.applyBatch(CalendarContract.AUTHORITY, old.mapTo(ArrayList()) { ContentProviderOperation.newDelete(eventUri(it.id)).build() })
     old.size
   }
+
+  /** [millis] as minutes after the start of [day] by the clock of [zone], as [at] counts them. */
+  private fun minutes(day: LocalDate, millis: Long, zone: ZoneId): Int =
+    ChronoUnit.MINUTES.between(day.atStartOfDay(), Instant.ofEpochMilli(millis).atZone(zone).toLocalDateTime()).toInt()
 
   /** [work] off the main thread, one write to the device's calendars at a time, whoever asks. */
   private suspend fun <T> write(work: () -> T): T = writing.withLock { withContext(Dispatchers.IO) { work() } }
@@ -183,7 +211,12 @@ class DeviceCalendars(private val context: Context) {
   private fun at(day: LocalDate, minutes: Int, zone: ZoneId): Long =
     day.atStartOfDay().plusMinutes(minutes.toLong()).atZone(zone).toInstant().toEpochMilli()
 
+  /** The calendar to write to is gone or takes events no more, or the calendars' access was taken away. */
+  class NoCalendar : Exception()
+
   companion object {
+    private const val MINUTES_A_DAY = 24 * 60
+
     /** The device's calendars are one for the whole app: its writes to them go one at a time. */
     private val writing = Mutex()
 

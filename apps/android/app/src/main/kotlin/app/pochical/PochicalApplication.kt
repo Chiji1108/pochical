@@ -7,6 +7,8 @@ import androidx.datastore.dataStoreFile
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
+import app.pochical.calendar.CalendarReflection
+import app.pochical.calendar.DeviceCalendars
 import app.pochical.calendar.OwnDays
 import app.pochical.calendar.SyncedDays
 import app.pochical.chat.chatImageLoader
@@ -111,6 +113,18 @@ interface AppGraph : MetroAppComponentProviders {
       CoroutineScope(SupervisorJob() + Dispatchers.Default),
     )
 
+  /** 自動で反映: the days kept in the device's calendar, read from the days, the device settings and the account. */
+  @Provides
+  @SingleIn(AppScope::class)
+  fun calendarReflection(application: Application, kit: PochicalKit, days: OwnDays, settings: SyncedSettings): CalendarReflection =
+    CalendarReflection(
+      DeviceCalendars(application),
+      days,
+      settings.settings,
+      kit.account.state.map { it.userId }.distinctUntilChanged(),
+      CoroutineScope(SupervisorJob() + Dispatchers.Default),
+    )
+
   val kit: PochicalKit
 
   /** The settings, as the widgets read them too. */
@@ -119,6 +133,8 @@ interface AppGraph : MetroAppComponentProviders {
   val push: Push
 
   val reminderAlarms: ReminderAlarms
+
+  val calendarReflection: CalendarReflection
 
   @DependencyGraph.Factory
   fun interface Factory {
@@ -166,6 +182,7 @@ class PochicalApplication : Application(), MetroApplication, PochicalKit.Holder,
     graph.kit.followProcess()
     followForWidgets(this, graph.kit.database, graph.settings)
     graph.reminderAlarms.start()
+    graph.calendarReflection.start()
     ProcessLifecycleOwner.get()
       .lifecycle
       .addObserver(
@@ -173,6 +190,7 @@ class PochicalApplication : Application(), MetroApplication, PochicalKit.Holder,
           override fun onStart(owner: LifecycleOwner) {
             graph.push.foreground()
             graph.reminderAlarms.readExact()
+            graph.calendarReflection.foreground()
             ReviewPrompt.opened(this@PochicalApplication)
           }
         }
