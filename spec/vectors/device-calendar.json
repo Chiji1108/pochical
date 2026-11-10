@@ -1,5 +1,5 @@
 {
-  "about": "A month's shifts as events in the device's calendar (spec/calendar.md, Adding a month to the device calendar). The page is `month`'s, or with `start` (a シフトの期間's first day, spec/vectors/periods.json) the period starting in that month. `days` are the month's days as they show, a pattern id and any hours of the day's own; `patterns` give each pattern's name and its time (none is all day); `shown` are the patterns picked under 入れるシフト, the only ones put in. Each event is the pattern's name, `start` and `end` in minutes from the day's midnight, past 1440 when the shift ends the next day (at or before its start), or null for all day. Optional `notes` (each day's memo) and `people` (each day's names, in order) are given only when the person asks for them; an event's `notes` is the memo, then 一緒に働く人：A、B on its own line, left out without either. A day with a memo and no shift's event (no shift, or a pattern not picked) gets an all-day event of its own, named by the memo's first line, the whole memo in its notes only when it runs longer. `shownAtFirst` gives the patterns picked until the person picks otherwise: those with a time, and of those without, all but the days off (`off`) and a pattern another names as its next day (`nextDay`), like 明け after 夜勤, whose night shows on that day already. `picks` pin what is kept of the person's picks (`chosen`, a pattern id to put in or left out, only where it differs from the first pick): `pick`, when given, picks one pattern (`id`) in or out (`on`) first, which drops any choice of a pattern no longer there and keeps none for one picked back to its first pick; `expectedChosen` is what is kept then, and `expectedShown` the patterns put in. `marks` pin Pochical's mark on each event it puts in, a line of its own at the end of the event's notes, the site's link to the day (`https://pochical.app/day/YYYY-MM-DD`, which opens the app there) and whose shift it is, in the fragment (`#by=<user id>`): `notes` is what the event says without it, `day` and `user` the mark's; `expected` is the notes it goes in with. `marksRead` pin finding it again in an event's notes, whatever else they say and however their lines end (a line feed alone ends one, a carriage return before it, spaces and tabs around the link aside): `expected` is the day and the user the mark names, or null for an event that is not Pochical's: no line that is the link alone, another link, or a day that is none. Of two such lines, the last is the event's own. `daysOpened` pin the day a link opening the app names: a widget's `pochical://day/{yyyy-mm-dd}` or the site's `https://pochical.app/day/{yyyy-mm-dd}` (a mark's), the host in any case, a trailing `/`, a query and a fragment allowed; `expected` is the day, or null for a link that opens none.",
+  "about": "A month's shifts as events in the device's calendar (spec/calendar.md, Adding a month to the device calendar). The page is `month`'s, or with `start` (a シフトの期間's first day, spec/vectors/periods.json) the period starting in that month. `days` are the month's days as they show, a pattern id and any hours of the day's own; `patterns` give each pattern's name and its time (none is all day); `shown` are the patterns picked under 入れるシフト, the only ones put in. Each event is the pattern's name, `start` and `end` in minutes from the day's midnight, past 1440 when the shift ends the next day (at or before its start), or null for all day. Optional `notes` (each day's memo) and `people` (each day's names, in order) are given only when the person asks for them; an event's `notes` is the memo, then 一緒に働く人：A、B on its own line, left out without either. A day with a memo and no shift's event (no shift, or a pattern not picked) gets an all-day event of its own, named by the memo's first line, the whole memo in its notes only when it runs longer. `shownAtFirst` gives the patterns picked until the person picks otherwise: those with a time, and of those without, all but the days off (`off`) and a pattern another names as its next day (`nextDay`), like 明け after 夜勤, whose night shows on that day already. `picks` pin what is kept of the person's picks (`chosen`, a pattern id to put in or left out, only where it differs from the first pick): `pick`, when given, picks one pattern (`id`) in or out (`on`) first, which drops any choice of a pattern no longer there and keeps none for one picked back to its first pick; `expectedChosen` is what is kept then, and `expectedShown` the patterns put in. `marks` pin Pochical's mark on each event it puts in, a line of its own at the end of the event's notes, the site's link to the day (`https://pochical.app/day/YYYY-MM-DD`, which opens the app there) and whose shift it is, in the fragment (`#by=<user id>`): `notes` is what the event says without it, `day` and `user` the mark's; `expected` is the notes it goes in with. `marksRead` pin finding it again in an event's notes, whatever else they say and however their lines end (a line feed alone ends one, a carriage return before it, spaces and tabs around the link aside): `expected` is the day and the user the mark names, or null for an event that is not Pochical's: no line that is the link alone, another link, or a day that is none. Of two such lines, the last is the event's own. `daysOpened` pin the day a link opening the app names: a widget's `pochical://day/{yyyy-mm-dd}` or the site's `https://pochical.app/day/{yyyy-mm-dd}` (a mark's), the host in any case, a trailing `/`, a query and a fragment allowed; `expected` is the day, or null for a link that opens none. `reflected` pin the days 自動で反映 keeps in the device's calendar (spec/calendar.md, Reflecting automatically): from the first day of the page holding `today`, a month's or with `start` a シフトの期間's, through the last of the page `ahead` pages on (the apps' is `reflectedMonthsAhead` of design/src/days.ts); `expected` is its `first` and `last` day. `reflections` pin what putting events in changes, so an event that already says the same is not written again: `wanted` are the events to be there (as `events` gives them, without the mark), by `user`, in the calendar `calendar`; `there` are the events of those days carrying the user's mark now, each with an `id`, the `calendar` it is in, the `day` its mark names, its `title`, its `start` and `end` in minutes from that day's midnight by the clock (null for one all day on that day, and the minutes of its own start and end for one all day on another), and all its `notes`, the mark too. An event there is kept when it is in `calendar` and says what a wanted event of its day would with its mark on: the same title, hours and notes, the notes compared line by line as the mark is read (a line feed ends a line, each taken without the spaces, tabs and carriage return around it, empty lines at the ends aside), so a calendar whose sync ends lines its own way does not make them differ; of several that do, the first. `expected` is `remove`, the ids of the others in the order they are there, and `add`, the days of the wanted events none was kept for, in order.",
   "events": [
     {
       "name": "work at its pattern's time, a pattern not picked left out",
@@ -425,6 +425,435 @@
       "name": "an invitation",
       "url": "https://pochical.app/invite/Toko2345",
       "expected": null
+    }
+  ],
+  "reflected": [
+    {
+      "name": "the month holding today and the months ahead",
+      "today": "2026-11-10",
+      "ahead": 3,
+      "expected": { "first": "2026-11-01", "last": "2027-02-28" }
+    },
+    {
+      "name": "a period, today before its start: the period begun last month",
+      "today": "2026-11-10",
+      "start": 15,
+      "ahead": 3,
+      "expected": { "first": "2026-10-15", "last": "2027-02-14" }
+    },
+    {
+      "name": "a period, today on its start",
+      "today": "2026-11-15",
+      "start": 15,
+      "ahead": 3,
+      "expected": { "first": "2026-11-15", "last": "2027-03-14" }
+    },
+    {
+      "name": "none ahead is today's page alone",
+      "today": "2026-12-31",
+      "ahead": 0,
+      "expected": { "first": "2026-12-01", "last": "2026-12-31" }
+    }
+  ],
+  "reflections": [
+    {
+      "name": "nothing there yet: all put in",
+      "user": "u7Hk2Qx",
+      "calendar": "work",
+      "wanted": [
+        { "day": "2026-11-02", "title": "日勤", "start": 510, "end": 1050 },
+        { "day": "2026-11-03", "title": "休み", "start": null, "end": null }
+      ],
+      "there": [],
+      "expected": { "remove": [], "add": ["2026-11-02", "2026-11-03"] }
+    },
+    {
+      "name": "the same there already: nothing written",
+      "user": "u7Hk2Qx",
+      "calendar": "work",
+      "wanted": [
+        { "day": "2026-11-02", "title": "日勤", "start": 510, "end": 1050 },
+        { "day": "2026-11-03", "title": "夜勤", "start": 990, "end": 2010 },
+        { "day": "2026-11-05", "title": "休み", "start": null, "end": null }
+      ],
+      "there": [
+        {
+          "id": "a",
+          "calendar": "work",
+          "day": "2026-11-02",
+          "title": "日勤",
+          "start": 510,
+          "end": 1050,
+          "notes": "https://pochical.app/day/2026-11-02#by=u7Hk2Qx"
+        },
+        {
+          "id": "b",
+          "calendar": "work",
+          "day": "2026-11-03",
+          "title": "夜勤",
+          "start": 990,
+          "end": 2010,
+          "notes": "https://pochical.app/day/2026-11-03#by=u7Hk2Qx"
+        },
+        {
+          "id": "c",
+          "calendar": "work",
+          "day": "2026-11-05",
+          "title": "休み",
+          "start": null,
+          "end": null,
+          "notes": "https://pochical.app/day/2026-11-05#by=u7Hk2Qx"
+        }
+      ],
+      "expected": { "remove": [], "add": [] }
+    },
+    {
+      "name": "a day's shift changed: that day's alone replaced",
+      "user": "u7Hk2Qx",
+      "calendar": "work",
+      "wanted": [
+        { "day": "2026-11-02", "title": "日勤", "start": 510, "end": 1050 },
+        { "day": "2026-11-03", "title": "夜勤", "start": 990, "end": 2010 }
+      ],
+      "there": [
+        {
+          "id": "a",
+          "calendar": "work",
+          "day": "2026-11-02",
+          "title": "日勤",
+          "start": 510,
+          "end": 1050,
+          "notes": "https://pochical.app/day/2026-11-02#by=u7Hk2Qx"
+        },
+        {
+          "id": "b",
+          "calendar": "work",
+          "day": "2026-11-03",
+          "title": "日勤",
+          "start": 510,
+          "end": 1050,
+          "notes": "https://pochical.app/day/2026-11-03#by=u7Hk2Qx"
+        }
+      ],
+      "expected": { "remove": ["b"], "add": ["2026-11-03"] }
+    },
+    {
+      "name": "a day's own hours changed",
+      "user": "u7Hk2Qx",
+      "calendar": "work",
+      "wanted": [
+        { "day": "2026-11-02", "title": "日勤", "start": 510, "end": 1140 }
+      ],
+      "there": [
+        {
+          "id": "a",
+          "calendar": "work",
+          "day": "2026-11-02",
+          "title": "日勤",
+          "start": 510,
+          "end": 1050,
+          "notes": "https://pochical.app/day/2026-11-02#by=u7Hk2Qx"
+        }
+      ],
+      "expected": { "remove": ["a"], "add": ["2026-11-02"] }
+    },
+    {
+      "name": "a day with no shift any more: its event taken out",
+      "user": "u7Hk2Qx",
+      "calendar": "work",
+      "wanted": [
+        { "day": "2026-11-02", "title": "日勤", "start": 510, "end": 1050 }
+      ],
+      "there": [
+        {
+          "id": "a",
+          "calendar": "work",
+          "day": "2026-11-02",
+          "title": "日勤",
+          "start": 510,
+          "end": 1050,
+          "notes": "https://pochical.app/day/2026-11-02#by=u7Hk2Qx"
+        },
+        {
+          "id": "b",
+          "calendar": "work",
+          "day": "2026-11-03",
+          "title": "日勤",
+          "start": 510,
+          "end": 1050,
+          "notes": "https://pochical.app/day/2026-11-03#by=u7Hk2Qx"
+        }
+      ],
+      "expected": { "remove": ["b"], "add": [] }
+    },
+    {
+      "name": "put in twice, as by two devices at once: one kept",
+      "user": "u7Hk2Qx",
+      "calendar": "work",
+      "wanted": [
+        { "day": "2026-11-02", "title": "日勤", "start": 510, "end": 1050 }
+      ],
+      "there": [
+        {
+          "id": "a",
+          "calendar": "work",
+          "day": "2026-11-02",
+          "title": "日勤",
+          "start": 510,
+          "end": 1050,
+          "notes": "https://pochical.app/day/2026-11-02#by=u7Hk2Qx"
+        },
+        {
+          "id": "b",
+          "calendar": "work",
+          "day": "2026-11-02",
+          "title": "日勤",
+          "start": 510,
+          "end": 1050,
+          "notes": "https://pochical.app/day/2026-11-02#by=u7Hk2Qx"
+        }
+      ],
+      "expected": { "remove": ["b"], "add": [] }
+    },
+    {
+      "name": "the same in another calendar: moved to the one picked",
+      "user": "u7Hk2Qx",
+      "calendar": "work",
+      "wanted": [
+        { "day": "2026-11-02", "title": "日勤", "start": 510, "end": 1050 }
+      ],
+      "there": [
+        {
+          "id": "a",
+          "calendar": "home",
+          "day": "2026-11-02",
+          "title": "日勤",
+          "start": 510,
+          "end": 1050,
+          "notes": "https://pochical.app/day/2026-11-02#by=u7Hk2Qx"
+        }
+      ],
+      "expected": { "remove": ["a"], "add": ["2026-11-02"] }
+    },
+    {
+      "name": "changed in the calendar app, the mark still on it: put back",
+      "user": "u7Hk2Qx",
+      "calendar": "work",
+      "wanted": [
+        { "day": "2026-11-02", "title": "日勤", "start": 510, "end": 1050 },
+        { "day": "2026-11-04", "title": "日勤", "start": 510, "end": 1050 }
+      ],
+      "there": [
+        {
+          "id": "a",
+          "calendar": "work",
+          "day": "2026-11-02",
+          "title": "日勤（会議）",
+          "start": 510,
+          "end": 1050,
+          "notes": "https://pochical.app/day/2026-11-02#by=u7Hk2Qx"
+        },
+        {
+          "id": "b",
+          "calendar": "work",
+          "day": "2026-11-04",
+          "title": "日勤",
+          "start": 600,
+          "end": 1050,
+          "notes": "https://pochical.app/day/2026-11-04#by=u7Hk2Qx"
+        }
+      ],
+      "expected": { "remove": ["a", "b"], "add": ["2026-11-02", "2026-11-04"] }
+    },
+    {
+      "name": "a memo asked for, or no longer: the notes differ",
+      "user": "u7Hk2Qx",
+      "calendar": "work",
+      "wanted": [
+        {
+          "day": "2026-11-02",
+          "title": "日勤",
+          "start": 510,
+          "end": 1050,
+          "notes": "歯医者 19時"
+        },
+        { "day": "2026-11-04", "title": "日勤", "start": 510, "end": 1050 }
+      ],
+      "there": [
+        {
+          "id": "a",
+          "calendar": "work",
+          "day": "2026-11-02",
+          "title": "日勤",
+          "start": 510,
+          "end": 1050,
+          "notes": "https://pochical.app/day/2026-11-02#by=u7Hk2Qx"
+        },
+        {
+          "id": "b",
+          "calendar": "work",
+          "day": "2026-11-04",
+          "title": "日勤",
+          "start": 510,
+          "end": 1050,
+          "notes": "研修\nhttps://pochical.app/day/2026-11-04#by=u7Hk2Qx"
+        }
+      ],
+      "expected": { "remove": ["a", "b"], "add": ["2026-11-02", "2026-11-04"] }
+    },
+    {
+      "name": "a memo there as asked for: left",
+      "user": "u7Hk2Qx",
+      "calendar": "work",
+      "wanted": [
+        {
+          "day": "2026-11-02",
+          "title": "日勤",
+          "start": 510,
+          "end": 1050,
+          "notes": "歯医者 19時"
+        }
+      ],
+      "there": [
+        {
+          "id": "a",
+          "calendar": "work",
+          "day": "2026-11-02",
+          "title": "日勤",
+          "start": 510,
+          "end": 1050,
+          "notes": "歯医者 19時\nhttps://pochical.app/day/2026-11-02#by=u7Hk2Qx"
+        }
+      ],
+      "expected": { "remove": [], "add": [] }
+    },
+    {
+      "name": "all day moved to another day in the calendar app: put back",
+      "user": "u7Hk2Qx",
+      "calendar": "work",
+      "wanted": [
+        { "day": "2026-11-03", "title": "休み", "start": null, "end": null }
+      ],
+      "there": [
+        {
+          "id": "a",
+          "calendar": "work",
+          "day": "2026-11-03",
+          "title": "休み",
+          "start": 1440,
+          "end": 2880,
+          "notes": "https://pochical.app/day/2026-11-03#by=u7Hk2Qx"
+        }
+      ],
+      "expected": { "remove": ["a"], "add": ["2026-11-03"] }
+    },
+    {
+      "name": "all day made timed, or timed made all day",
+      "user": "u7Hk2Qx",
+      "calendar": "work",
+      "wanted": [
+        { "day": "2026-11-03", "title": "休み", "start": null, "end": null },
+        { "day": "2026-11-04", "title": "日勤", "start": 510, "end": 1050 }
+      ],
+      "there": [
+        {
+          "id": "a",
+          "calendar": "work",
+          "day": "2026-11-03",
+          "title": "休み",
+          "start": 0,
+          "end": 1440,
+          "notes": "https://pochical.app/day/2026-11-03#by=u7Hk2Qx"
+        },
+        {
+          "id": "b",
+          "calendar": "work",
+          "day": "2026-11-04",
+          "title": "日勤",
+          "start": null,
+          "end": null,
+          "notes": "https://pochical.app/day/2026-11-04#by=u7Hk2Qx"
+        }
+      ],
+      "expected": { "remove": ["a", "b"], "add": ["2026-11-03", "2026-11-04"] }
+    },
+    {
+      "name": "notes a calendar's sync gave its own line ends, spaces after them and an empty line at the end: left",
+      "user": "u7Hk2Qx",
+      "calendar": "work",
+      "wanted": [
+        {
+          "day": "2026-11-02",
+          "title": "日勤",
+          "start": 510,
+          "end": 1050,
+          "notes": "歯医者 19時\n研修の資料"
+        }
+      ],
+      "there": [
+        {
+          "id": "a",
+          "calendar": "work",
+          "day": "2026-11-02",
+          "title": "日勤",
+          "start": 510,
+          "end": 1050,
+          "notes": "歯医者 19時\r\n研修の資料 \r\nhttps://pochical.app/day/2026-11-02#by=u7Hk2Qx\t\r\n\r\n"
+        }
+      ],
+      "expected": { "remove": [], "add": [] }
+    },
+    {
+      "name": "a space inside a line of the notes: they differ",
+      "user": "u7Hk2Qx",
+      "calendar": "work",
+      "wanted": [
+        {
+          "day": "2026-11-02",
+          "title": "日勤",
+          "start": 510,
+          "end": 1050,
+          "notes": "歯医者 19時\n研修の資料"
+        }
+      ],
+      "there": [
+        {
+          "id": "a",
+          "calendar": "work",
+          "day": "2026-11-02",
+          "title": "日勤",
+          "start": 510,
+          "end": 1050,
+          "notes": "歯医者  19時\n研修の資料\nhttps://pochical.app/day/2026-11-02#by=u7Hk2Qx"
+        }
+      ],
+      "expected": { "remove": ["a"], "add": ["2026-11-02"] }
+    },
+    {
+      "name": "an empty line between the notes' lines: they differ",
+      "user": "u7Hk2Qx",
+      "calendar": "work",
+      "wanted": [
+        {
+          "day": "2026-11-02",
+          "title": "日勤",
+          "start": 510,
+          "end": 1050,
+          "notes": "歯医者 19時\n研修の資料"
+        }
+      ],
+      "there": [
+        {
+          "id": "a",
+          "calendar": "work",
+          "day": "2026-11-02",
+          "title": "日勤",
+          "start": 510,
+          "end": 1050,
+          "notes": "歯医者 19時\n\n研修の資料\nhttps://pochical.app/day/2026-11-02#by=u7Hk2Qx"
+        }
+      ],
+      "expected": { "remove": ["a"], "add": ["2026-11-02"] }
     }
   ]
 }

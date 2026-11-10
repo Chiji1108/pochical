@@ -93,6 +93,17 @@ fun AppDatabase.ownCalendar(): Flow<OwnCalendar> =
     .createFlow("days", "patterns", "patternOrder", "repeatOrders", "coworkers", "coworkerOrder")
     .map { read { ownCalendar() } }
 
+/**
+ * The person's own calendar with the user it is of, empty while the database is no one's (a new
+ * install's, or once erased), read in one transaction: what goes out of the device under a user's
+ * name, as the events 自動で反映 marks (spec/calendar.md, Reflecting automatically), is never one
+ * user's days under another's id while the account changes.
+ */
+fun AppDatabase.ownedCalendar(): Flow<Pair<String, OwnCalendar>> =
+  invalidationTracker
+    .createFlow("days", "patterns", "patternOrder", "repeatOrders", "coworkers", "coworkerOrder", "syncState")
+    .map { read { state().owner to ownCalendar() } }
+
 /** The person's own calendar, read in the transaction it runs in. */
 internal suspend fun SyncDao.ownCalendar(): OwnCalendar = OwnCalendar.of(days(), patterns(), repeatOrders(), coworkers())
 

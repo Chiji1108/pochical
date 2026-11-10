@@ -425,7 +425,7 @@ private fun GroupHub(group: GroupRow, actions: GroupsActions) {
 @Composable
 fun rememberMeId(): String? {
   val state by LocalAccount.current.state.collectAsStateWithLifecycle()
-  return (state as? AccountState.SignedIn)?.userId ?: (state as? AccountState.Changing)?.before?.userId
+  return state.userId
 }
 
 /** The open group's buttons in the bar over its page: メンバーを招待 and グループの設定. */

@@ -1,3 +1,4 @@
+import { dayRules } from "@pochical/design/days";
 import { css, cva, cx } from "@pochical/styled-system/css";
 import {
   CalendarPlus,
@@ -412,6 +413,10 @@ export function SaveSheet({
   // ポチカルで入れた〇月の予定を消す: none for any other month.
   const [putIn, setPutIn] = useState({ count: 0, month: "" });
   const put = putFor(putIn, month);
+  // 自動で反映 (spec/calendar.md, Reflecting automatically): the days
+  // ahead kept in the calendar as the shifts change; the demo only shows
+  // the switch, having no calendar to write to.
+  const [reflects, setReflects] = useState(false);
   const refused = access === "denied" && !allowedThere;
   const putting = useSettings((state) => state.device.calendarAdd);
   const setPutting = useSettings((state) => state.setCalendarAdd);
@@ -540,6 +545,21 @@ export function SaveSheet({
             <ExtraSwitches days={days} shown={shown} />
           </div>
           <Note>前に入れた{monthLabel}の予定は、入れ直します。</Note>
+          <div className={save.groups}>
+            <List>
+              <SwitchRow
+                checked={reflects}
+                detail={`シフトを変えると、${dayRules.reflectedMonthsAhead}か月先の分まで入れ直します`}
+                label="自動で反映"
+                onChange={setReflects}
+              />
+            </List>
+          </div>
+          {reflects && (
+            <Note>
+              アプリを開いたときに反映します。カレンダーアプリで変えた予定は、ポチカルのシフトに戻ります。
+            </Note>
+          )}
           <Button
             variant="primary"
             className={save.add}

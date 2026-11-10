@@ -1,4 +1,6 @@
 ---
+import { dayRules } from "@pochical/design/days";
+
 import accountCalendar from "../../assets/support/account-calendar.png";
 import addAccount from "../../assets/support/add-account.png";
 import calendarPicker from "../../assets/support/calendar-picker.png";
@@ -63,6 +65,9 @@ import Site from "../../layouts/site.astro";
             「追加先」で、Googleアカウントの下（最初は「Gmail」という名前）にあるカレンダーを選びます。メールアドレスの名前のものが、Googleカレンダーのいつものカレンダーです。
           </li>
           <li>「追加」を押すと、表示している月のシフトが入ります。</li>
+          <li>
+            はじめて追加すると「これからも自動で反映しますか？」と聞かれます。「自動で反映する」を選ぶと、あとからシフトを変えたときに、Googleカレンダーの予定も変わります。
+          </li>
         </ol>
         <div class="guide-shots">
           <GuideShot
@@ -112,7 +117,16 @@ import Site from "../../layouts/site.astro";
         </p>
         <h3>あとからシフトを変えた</h3>
         <p>
-          追加したあとの変更は、Googleカレンダーに自動では反映されません。同じ月をもう一度追加すると、前に入れたその月の予定を入れ直します。
+          「端末カレンダーに追加」の画面で「自動で反映」をオンにしておくと、シフトを変えるたびに、今月から
+          {dayRules.reflectedMonthsAhead}
+          か月先までの予定を入れ直します。反映するのはポチカルを開いているときです。ほかの端末で変えたシフトは、このiPhoneでポチカルを開いたときに入ります。
+        </p>
+        <p>
+          オフのときは、自動では変わりません。同じ月をもう一度追加すると、前に入れたその月の予定を入れ直します。
+        </p>
+        <h3>Googleカレンダーで予定を直した</h3>
+        <p>
+          Googleカレンダーで変えた内容は、ポチカルには戻りません。「自動で反映」がオンのときは、次に反映するときにポチカルのシフトのとおりに戻ります。シフトを変えたいときは、ポチカルで変えてください。
         </p>
       </section>
     </div>

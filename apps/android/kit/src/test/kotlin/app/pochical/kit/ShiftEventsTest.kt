@@ -13,7 +13,37 @@ private data class DeviceCalendarVectors(
   val marks: List<Marking>,
   val marksRead: List<Reading>,
   val daysOpened: List<Opening>,
+  val reflected: List<Reflected>,
+  val reflections: List<Reflecting>,
 ) {
+  @Serializable data class Span(val first: String, val last: String)
+
+  @Serializable
+  data class Reflected(override val name: String, val today: String, val start: Int = 1, val ahead: Int, val expected: Span) : VectorCase
+
+  @Serializable
+  data class There(
+    val id: String,
+    val calendar: String,
+    val day: String,
+    val title: String,
+    val start: Int?,
+    val end: Int?,
+    val notes: String,
+  )
+
+  @Serializable data class Changes(val remove: List<String>, val add: List<String>)
+
+  @Serializable
+  data class Reflecting(
+    override val name: String,
+    val user: String,
+    val calendar: String,
+    val wanted: List<Event>,
+    val there: List<There>,
+    val expected: Changes,
+  ) : VectorCase
+
   @Serializable
   data class Pattern(
     val name: String = "",
@@ -112,6 +142,27 @@ class ShiftEventsTest {
   fun marksRead() =
     cases.marksRead.checkEach({ it.expected }) { case ->
       EventMark.inNotes(case.notes)?.let { DeviceCalendarVectors.Mark(it.day.toString(), it.user) }
+    }
+
+  @Test
+  fun reflected() =
+    cases.reflected.checkEach({ it.expected }) { case ->
+      ShiftPeriod(case.start).reflected(LocalDate.parse(case.today), case.ahead).let {
+        DeviceCalendarVectors.Span(it.first.toString(), it.last.toString())
+      }
+    }
+
+  @Test
+  fun reflections() =
+    cases.reflections.checkEach({ it.expected }) { case ->
+      val wanted = case.wanted.map { ShiftEvent(LocalDate.parse(it.day), it.title, it.start, it.end, it.notes) }
+      val there =
+        case.there.map {
+          PutEvent(it.id, it.calendar == case.calendar, ShiftEvent(LocalDate.parse(it.day), it.title, it.start, it.end, it.notes))
+        }
+      reflection(wanted, case.user, there).let { changes ->
+        DeviceCalendarVectors.Changes(changes.remove, changes.add.map { it.day.toString() })
+      }
     }
 
   @Test

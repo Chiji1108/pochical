@@ -305,8 +305,7 @@ struct CalendarScreen: View {
     }
     .sheet(item: $addingToCalendar, id: \.self) { month in
       DeviceCalendarSheet(
-        page: period.page(month), byPeriod: period.byPeriod, calendar: calendar,
-        coworkers: Dictionary(uniqueKeysWithValues: calendar.coworkers.map { ($0.id, $0.name) }))
+        page: period.page(month), byPeriod: period.byPeriod, calendar: calendar)
     }
     .onChange(of: gaps) { _, gaps in
       if gaps.isEmpty {
