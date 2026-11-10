@@ -203,6 +203,19 @@ run = "tools/shifts-rotation/run.sh"
 description = "Run 自動で反映's UI test in a simulator, erasing it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default), reading the simulator's calendars after each step: <simulator name> [derived data]"
 run = "tools/calendar-reflect/run.sh"
 
+[tasks."store:shots:ios"]
+description = "Photograph the screens of the App Store's screenshots in a simulator, erasing it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default) and seeds: [simulator name, pochical-store by default, made if there is none] [derived data]"
+run = "tools/store-screenshots/ios.sh"
+
+[tasks."store:images"]
+description = "Draw the stores' pictures in store/ from the screens photographed, and Google Play's feature graphic"
+run = "pnpm --dir apps/design image:store"
+
+[tasks."store:screenshots"]
+description = "Make the stores' screenshots from the real apps: each platform's screens photographed, then the pictures drawn from them"
+# Android's screens go here, before the pictures are drawn.
+run = [{ task = "store:shots:ios" }, { task = "store:images" }]
+
 [tasks."server:typecheck"]
 description = "Typecheck the server"
 run = "pnpm --dir apps/server typecheck"
