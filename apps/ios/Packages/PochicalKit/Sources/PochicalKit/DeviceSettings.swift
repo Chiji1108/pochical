@@ -92,6 +92,16 @@ public struct DeviceSettings: Codable, Equatable, Sendable {
   public var reminders = Reminder.defaults
   /// What 端末カレンダーに追加 puts in besides the shifts, as last left.
   public var calendarAdd = CalendarAdd()
+  /// The device's calendar 端末カレンダーに追加 put events in last, picked
+  /// first next time, and the one 自動で反映 writes to; the device's own,
+  /// as its calendars are.
+  public var deviceCalendar: String?
+  /// 自動で反映 (spec/calendar.md, Reflecting automatically): the days
+  /// ahead are kept in `deviceCalendar` as they change. The device's own.
+  public var calendarReflects = false
+  /// これからも自動で反映しますか？ was asked, or its switch used: never
+  /// asked again.
+  public var calendarReflectAsked = false
 
   public var theme: Theme {
     get { Theme(rawValue: themeID) ?? .pochical }
@@ -111,6 +121,10 @@ public struct DeviceSettings: Codable, Equatable, Sendable {
     picture = try container.decodeIfPresent(PictureLook.self, forKey: .picture) ?? PictureLook()
     reminders = try container.decodeIfPresent([Reminder].self, forKey: .reminders) ?? Reminder.defaults
     calendarAdd = try container.decodeIfPresent(CalendarAdd.self, forKey: .calendarAdd) ?? CalendarAdd()
+    deviceCalendar = try container.decodeIfPresent(String.self, forKey: .deviceCalendar)
+    calendarReflects = try container.decodeIfPresent(Bool.self, forKey: .calendarReflects) ?? false
+    calendarReflectAsked =
+      try container.decodeIfPresent(Bool.self, forKey: .calendarReflectAsked) ?? false
   }
 }
 

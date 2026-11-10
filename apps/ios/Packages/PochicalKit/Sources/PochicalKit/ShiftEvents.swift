@@ -1,4 +1,5 @@
 import Foundation
+import PochicalDesign
 
 /// A day's shift as an event in the device's calendar (spec/calendar.md,
 /// Adding a month to the device calendar): its name, at its time on that
@@ -15,6 +16,32 @@ public struct ShiftEvent: Hashable, Sendable {
   /// The event's notes: the day's memo and who works it, when asked for;
   /// none without either.
   public var notes: String? = nil
+
+  public init(day: Day, title: String, start: Int?, end: Int?, notes: String? = nil) {
+    self.day = day
+    self.title = title
+    self.start = start
+    self.end = end
+    self.notes = notes
+  }
+}
+
+/// An event Pochical put in for the user, as it is in a calendar now: its
+/// id there, whether it is in the calendar events are being put in, and
+/// what it says. Its day is its mark's, its hours are counted from that
+/// day's midnight by the clock, none for one all day on that day (one all
+/// day on another has its own start and end), and its notes are all of
+/// them, the mark too.
+public struct PutEvent<ID: Sendable>: Sendable {
+  public let id: ID
+  public let inTarget: Bool
+  public let event: ShiftEvent
+
+  public init(id: ID, inTarget: Bool, event: ShiftEvent) {
+    self.id = id
+    self.inTarget = inTarget
+    self.event = event
+  }
 }
 
 /// Pochical's mark on an event it puts in: the site's link to the event's
@@ -90,6 +117,29 @@ public enum ShiftEvents {
       .map(\.id))
   }
 
+  /// What putting `wanted` in as `user`'s changes, `there` being the
+  /// events of those days carrying the user's mark now (spec/calendar.md,
+  /// Reflecting automatically): an event in the calendar picked that says
+  /// what a wanted one of its day would with its mark on stays, the first
+  /// of several, so nothing that did not change is written again; the
+  /// others there are taken out, and the wanted ones none stays for go in.
+  public static func reflection<ID>(
+    of wanted: [ShiftEvent], by user: String, over there: [PutEvent<ID>]
+  ) -> (remove: [ID], add: [ShiftEvent]) {
+    var left = there
+    var add: [ShiftEvent] = []
+    for event in wanted {
+      var said = event
+      said.notes = EventMark(day: event.day, user: user).appended(to: event.notes)
+      if let kept = left.firstIndex(where: { $0.inTarget && $0.event == said }) {
+        left.remove(at: kept)
+      } else {
+        add.append(event)
+      }
+    }
+    return (left.map(\.id), add)
+  }
+
   private static func shiftEvent(
     on day: Day, days: [Day: DayEntry], patterns: [PatternID: Pattern], shown: Set<PatternID>,
     notes: [Day: String], people: [Day: [String]]
@@ -135,5 +185,42 @@ public enum ShiftEvents {
     let parts = time.split(separator: ":").compactMap { Int($0) }
     guard parts.count == 2 else { return nil }
     return parts[0] * 60 + parts[1]
+  }
+}
+
+extension ShiftPeriod {
+  /// The days 自動で反映 keeps in the device's calendar: from the first of
+  /// the page holding `today` through the last of the page `ahead` pages
+  /// on (spec/calendar.md, Reflecting automatically).
+  public func reflected(from today: Day, ahead: Int = Days.reflectedMonthsAhead) -> Period {
+    let month = month(holding: today)
+    return Period(first: page(month).first, last: page(month.addingMonths(ahead)).last)
+  }
+}
+
+extension OwnCalendar {
+  /// Each day's memo in `span`.
+  public func memos(in span: Period) -> [Day: String] {
+    Dictionary(uniqueKeysWithValues: span.days.compactMap { day in note(on: day).map { (day, $0) } })
+  }
+
+  /// Each day's people by name, of the days `shown`, those still among
+  /// the coworkers.
+  public func peopleNames(on shown: [Day: DayEntry]) -> [Day: [String]] {
+    let names = Dictionary(coworkers.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
+    return shown.compactMapValues { entry in
+      let on = (entry.people ?? []).compactMap { names[$0] }
+      return on.isEmpty ? nil : on
+    }
+  }
+
+  /// What 端末カレンダーに追加 puts in for the days of `span` as `putting`
+  /// has it: the patterns picked, and the memos and people when asked for.
+  public func shiftEvents(in span: Period, putting: CalendarAdd) -> [ShiftEvent] {
+    let shown = shown(from: span.first, through: span.last)
+    return ShiftEvents.page(
+      span, days: shown, patterns: patternsByID, shown: putting.shown(of: patterns),
+      notes: putting.notes ? memos(in: span) : [:],
+      people: putting.people ? peopleNames(on: shown) : [:])
   }
 }

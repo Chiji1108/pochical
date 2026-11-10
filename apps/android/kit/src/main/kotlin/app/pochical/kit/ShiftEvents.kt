@@ -1,5 +1,6 @@
 package app.pochical.kit
 
+import app.pochical.design.Days
 import java.time.LocalDate
 import java.time.format.DateTimeParseException
 
@@ -39,6 +40,45 @@ fun shiftEvents(
   page.days.mapNotNull { day ->
     shiftEvent(day, days[day], patterns, shown, notes[day], people[day].orEmpty()) ?: notes[day]?.let { memoEvent(it, day) }
   }
+
+/**
+ * An event Pochical put in for the user, as it is in a calendar now: its [id] there, whether it is
+ * in the calendar events are being put in, and what it says. Its day is its mark's, its hours are
+ * counted from that day's midnight by the clock, none for one all day on that day (one all day on
+ * another has its own start and end), and its notes are all of them, the mark too.
+ */
+data class PutEvent<Id>(val id: Id, val inTarget: Boolean, val event: ShiftEvent)
+
+/** What putting events in changes: the events there to take out, and those to put in. */
+data class Reflection<Id>(val remove: List<Id>, val add: List<ShiftEvent>)
+
+/**
+ * What putting [wanted] in as [user]'s changes, [there] being the events of those days carrying the
+ * user's mark now (spec/calendar.md, Reflecting automatically): an event in the calendar picked
+ * that says what a wanted one of its day would with its mark on stays, the first of several, so
+ * nothing that did not change is written again; the others there are taken out, and the wanted
+ * ones none stays for go in.
+ */
+fun <Id> reflection(wanted: List<ShiftEvent>, user: String, there: List<PutEvent<Id>>): Reflection<Id> {
+  val left = there.toMutableList()
+  val add =
+    wanted.filter { event ->
+      val said = event.copy(notes = EventMark(event.day, user).appendedTo(event.notes))
+      val kept = left.indexOfFirst { it.inTarget && it.event == said }
+      if (kept >= 0) left.removeAt(kept)
+      kept < 0
+    }
+  return Reflection(left.map { it.id }, add)
+}
+
+/**
+ * The days 自動で反映 keeps in the device's calendar: from the first of the page holding [today]
+ * through the last of the page [ahead] pages on (spec/calendar.md, Reflecting automatically).
+ */
+fun ShiftPeriod.reflected(today: LocalDate, ahead: Int = Days.reflectedMonthsAhead): Period {
+  val page = pageHolding(today)
+  return Period(page.first, page.stepped(ahead, start).last)
+}
 
 /**
  * The patterns put in until the person picks otherwise: those with a time, and of those without,

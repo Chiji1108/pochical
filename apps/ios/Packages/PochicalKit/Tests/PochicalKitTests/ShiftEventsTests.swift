@@ -92,6 +92,46 @@ struct DeviceCalendarVectors: Decodable {
   let marks: [MarkCase]
   let marksRead: [ReadCase]
   let daysOpened: [OpenCase]
+
+  struct Span: Decodable, Sendable, Equatable {
+    let first: String
+    let last: String
+  }
+
+  struct SpanCase: VectorCase {
+    let name: String
+    let today: String
+    let start: Int?
+    let ahead: Int
+    let expected: Span
+  }
+
+  struct There: Decodable, Sendable {
+    let id: String
+    let calendar: String
+    let day: String
+    let title: String
+    let start: Int?
+    let end: Int?
+    let notes: String
+  }
+
+  struct Changes: Decodable, Sendable, Equatable {
+    let remove: [String]
+    let add: [String]
+  }
+
+  struct ReflectionCase: VectorCase {
+    let name: String
+    let user: String
+    let calendar: String
+    let wanted: [Event]
+    let there: [There]
+    let expected: Changes
+  }
+
+  let reflected: [SpanCase]
+  let reflections: [ReflectionCase]
 }
 
 private func patterns(_ cases: [String: DeviceCalendarVectors.FirstPattern]) -> [Pattern] {
@@ -163,6 +203,28 @@ func marksRead(_ vector: DeviceCalendarVectors.ReadCase) {
 @Test(arguments: try vectors("device-calendar", as: DeviceCalendarVectors.self).daysOpened)
 func daysOpened(_ vector: DeviceCalendarVectors.OpenCase) throws {
   #expect(openedDay(of: try #require(URL(string: vector.url)))?.key == vector.expected)
+}
+
+@Test(arguments: try vectors("device-calendar", as: DeviceCalendarVectors.self).reflected)
+func daysReflected(_ vector: DeviceCalendarVectors.SpanCase) throws {
+  let span = ShiftPeriod(start: vector.start ?? 1)
+    .reflected(from: try #require(Day(vector.today)), ahead: vector.ahead)
+  #expect(.init(first: span.first.key, last: span.last.key) == vector.expected)
+}
+
+@Test(arguments: try vectors("device-calendar", as: DeviceCalendarVectors.self).reflections)
+func eventsReflected(_ vector: DeviceCalendarVectors.ReflectionCase) throws {
+  let wanted = try vector.wanted.map {
+    ShiftEvent(day: try #require(Day($0.day)), title: $0.title, start: $0.start, end: $0.end, notes: $0.notes)
+  }
+  let there = try vector.there.map {
+    PutEvent(
+      id: $0.id, inTarget: $0.calendar == vector.calendar,
+      event: ShiftEvent(
+        day: try #require(Day($0.day)), title: $0.title, start: $0.start, end: $0.end, notes: $0.notes))
+  }
+  let changes = ShiftEvents.reflection(of: wanted, by: vector.user, over: there)
+  #expect(.init(remove: changes.remove, add: changes.add.map(\.day.key)) == vector.expected)
 }
 
 @Test func anEventsMarkOpensItsDay() throws {
