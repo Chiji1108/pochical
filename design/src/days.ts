@@ -14,4 +14,8 @@ export const dayRules = {
   // start on, so every month has it (1 is the month itself).
   periodFirstPick: 15,
   periodLastStart: 28,
+  // 自動で反映 (spec/calendar.md, Reflecting automatically): how many pages
+  // of the calendar after today's, months or シフトの期間, are kept in the
+  // device's calendar with it.
+  reflectedMonthsAhead: 3,
 } as const;

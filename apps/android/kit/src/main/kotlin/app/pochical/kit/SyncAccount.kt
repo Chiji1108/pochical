@@ -49,11 +49,15 @@ import okhttp3.OkHttpClient
  * account; Reconnecting).
  */
 sealed interface AccountState {
+  /** The signed-in user, the one before while switching or deleting; none otherwise. */
+  val userId: String?
+    get() = (this as? Changing)?.before?.userId
+
   /** Signing in: a first launch, offline before its first sign-in reached the server, or after a deletion. */
   data object SigningIn : AccountState
 
   /** Signed in as [userId], linked to [linked], null while anonymous. */
-  data class SignedIn(val userId: String, val linked: LinkedAccount?) : AccountState
+  data class SignedIn(override val userId: String, val linked: LinkedAccount?) : AccountState
 
   /**
    * Switching to an account in use or deleting the account, until the server answers: signed in as

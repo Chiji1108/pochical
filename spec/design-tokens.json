@@ -2748,7 +2748,8 @@
   "days": {
     "noShift": "",
     "periodFirstPick": 15,
-    "periodLastStart": 28
+    "periodLastStart": 28,
+    "reflectedMonthsAhead": 3
   },
   "derivation": {
     "inkShares": {

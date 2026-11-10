@@ -55,6 +55,7 @@ import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.pochical.calendar.Adding
 import app.pochical.calendar.DeviceCalendar
 import app.pochical.calendar.DeviceCalendars
 import app.pochical.calendar.LocalOwnDays
@@ -63,16 +64,16 @@ import app.pochical.calendar.Pattern
 import app.pochical.calendar.monthText
 import app.pochical.calendar.row
 import app.pochical.calendar.text
+import app.pochical.design.Days
 import app.pochical.design.Metrics
 import app.pochical.groups.rememberMeId
 import app.pochical.kit.CalendarAdd
 import app.pochical.kit.Period
-import app.pochical.kit.ShownDay
 import app.pochical.kit.byPeriod
 import app.pochical.kit.hoursText
 import app.pochical.kit.page
 import app.pochical.kit.picking
-import app.pochical.kit.shiftEvents
+import app.pochical.kit.reflected
 import app.pochical.kit.shown
 import app.pochical.patterns.SwitchRow
 import java.time.LocalDate
@@ -130,7 +131,9 @@ fun DeviceCalendarPage(month: YearMonth, navigation: PageNavigation) {
   var put by remember { mutableIntStateOf(0) }
   var pickedId by rememberSaveable { mutableStateOf<Long?>(null) }
   val lastCalendar by rememberUpdatedState(device.deviceCalendar)
-  LaunchedEffect(allowed, page, me) {
+  val reflects = device.calendarReflects
+  // Again as 自動で反映 is turned off with none picked, for the first pick to show.
+  LaunchedEffect(allowed, page, me, reflects) {
     if (!allowed) return@LaunchedEffect
     calendars
       .changes()
@@ -149,7 +152,7 @@ fun DeviceCalendarPage(month: YearMonth, navigation: PageNavigation) {
         list = found
         put = marked
         // The one picked stays while it still takes events, else the first pick.
-        if (found.none { it.id == pickedId }) pickedId = calendars.pickedFirst(found, lastCalendar)?.id
+        if (found.none { it.id == pickedId }) pickedId = calendars.pickedFirst(found, lastCalendar, reflects)?.id
       }
   }
 
@@ -160,6 +163,8 @@ fun DeviceCalendarPage(month: YearMonth, navigation: PageNavigation) {
   // While a write runs: its buttons wait, as a second tap would only queue the same again.
   var writing by remember { mutableStateOf(false) }
   var pickingCalendar by rememberSaveable { mutableStateOf(false) }
+  // The calendar just added to, while これからも自動で反映しますか？ asks.
+  var asksToReflect by rememberSaveable { mutableStateOf<String?>(null) }
 
   // The patterns picked, the days' memos and who works them, kept with the account as last left:
   // the memos and people off at first, as a calendar may be shared with family.
@@ -180,10 +185,13 @@ fun DeviceCalendarPage(month: YearMonth, navigation: PageNavigation) {
     writing = true
     scope.launch {
       try {
-        calendars.add(events, page, user, into.id)
-        settings.change { it.copy(deviceCalendar = into.id) }
+        calendars.put(events, page, user, into.id)
+        // Asked once, the first time a month goes in, unless it is on.
+        val asks = !device.calendarReflects && !device.calendarReflectAsked
+        settings.change { it.copy(deviceCalendar = into.id, calendarReflectAsked = true) }
         doneTitle = resources.getString(R.string.calendar_add_saved)
         doneText = resources.getString(R.string.calendar_add_added, into.name, name, events.size)
+        if (asks) asksToReflect = into.name
       } catch (e: CancellationException) {
         throw e
       } catch (e: Exception) {
@@ -219,6 +227,7 @@ fun DeviceCalendarPage(month: YearMonth, navigation: PageNavigation) {
         when {
           !allowed && refused -> {
             item { Footnote(stringResource(R.string.calendar_add_denied)) }
+            if (reflects) item { Footnote(stringResource(R.string.calendar_reflect_no_access)) }
             item {
               Wide(stringResource(if (asksAgain) R.string.calendar_add_allow else R.string.calendar_add_open_settings)) {
                 if (asksAgain) {
@@ -247,6 +256,8 @@ fun DeviceCalendarPage(month: YearMonth, navigation: PageNavigation) {
           }
           else -> {
             item { Footnote(stringResource(R.string.calendar_add_about, name)) }
+            // 自動で反映 is on and its calendar is gone: it writes nowhere else, and says so until one is picked.
+            if (reflects && target == null) item { Footnote(stringResource(R.string.calendar_reflect_no_calendar)) }
             item {
               SettingsSection(footnote = stringResource(R.string.calendar_add_again, name)) {
                 row {
@@ -293,6 +304,26 @@ fun DeviceCalendarPage(month: YearMonth, navigation: PageNavigation) {
                 }
               }
             }
+            // The days ahead kept in the calendar as the shifts change: turned on here it writes to the
+            // 追加先 showing, and is never asked about after.
+            item {
+              SettingsSection(footnote = if (reflects) stringResource(R.string.calendar_reflect_about) else null) {
+                row {
+                  SettingsSwitchRow(
+                    stringResource(R.string.calendar_reflect),
+                    R.drawable.ic_repeat,
+                    reflects,
+                    { on ->
+                      settings.change {
+                        it.copy(calendarReflects = on, calendarReflectAsked = true, deviceCalendar = if (on) target?.id else it.deviceCalendar)
+                      }
+                    },
+                    supporting = stringResource(R.string.calendar_reflect_note, Days.reflectedMonthsAhead),
+                    enabled = reflects || target != null,
+                  )
+                }
+              }
+            }
             item {
               Wide(
                 stringResource(R.string.calendar_add_button, events.size),
@@ -301,7 +332,9 @@ fun DeviceCalendarPage(month: YearMonth, navigation: PageNavigation) {
               )
             }
             // Only while some are in, as from a calendar picked by mistake, so none is taken out one by one.
-            if (put > 0) {
+            // Not of the days 自動で反映 keeps, which would come back at once.
+            val kept = device.period.reflected(LocalDate.now())
+            if (put > 0 && !(reflects && page.first in kept && page.last in kept)) {
               item {
                 TextButton(
                   onClick = { asksToRemove = true },
@@ -338,43 +371,37 @@ fun DeviceCalendarPage(month: YearMonth, navigation: PageNavigation) {
     )
   }
   if (pickingCalendar) {
-    CalendarPicker(list.orEmpty(), pickedId, onPick = { pickedId = it }, onDismiss = { pickingCalendar = false })
-  }
-}
-
-/**
- * What 端末カレンダーに追加 puts in from [page] as [putting] has it: the patterns to pick from and
- * those picked, the events, and which switches would put something in, worked out once for each.
- */
-private class Adding(calendar: OwnCalendar, page: Period, putting: CalendarAdd) {
-  private val rows = calendar.patterns.map { it.row }
-  private val shownDays = calendar.shown(page.first, page.last)
-
-  /** The patterns to pick from: those in use, and one left that still shows on the page. */
-  val listed: List<Pattern> = calendar.patterns.filter { pattern -> !pattern.archived || shownDays.values.any { it.shift == pattern.id } }
-
-  val picked: Set<String> = putting.shown(rows)
-
-  private val memos = page.days.mapNotNull { day -> calendar.note(day)?.takeIf { it.isNotEmpty() }?.let { day to it } }.toMap()
-
-  private val people: Map<LocalDate, List<String>> =
-    calendar.coworkers.associate { it.id to it.name }.let { names ->
-      shownDays.mapNotNull { (day, entry) -> entry.people.mapNotNull(names::get).takeIf { it.isNotEmpty() }?.let { day to it } }.toMap()
-    }
-
-  val events =
-    shiftEvents(
-      page,
-      shownDays.mapValues { (_, entry) -> ShownDay(entry.shift, entry.start, entry.end) },
-      rows.associateBy { it.id },
-      picked,
-      if (putting.notes) memos else emptyMap(),
-      if (putting.people) people else emptyMap(),
+    CalendarPicker(
+      list.orEmpty(),
+      pickedId,
+      onPick = { id ->
+        pickedId = id
+        // While 自動で反映 is on, the one picked is where it writes.
+        if (reflects) settings.change { it.copy(deviceCalendar = id) }
+      },
+      onDismiss = { pickingCalendar = false },
     )
-
-  // A switch only when it would put something in: a memo goes in any day, those on a day only in its shift's event.
-  val offersNotes = memos.isNotEmpty()
-  val offersPeople = people.keys.any { shownDays[it]?.shift in picked }
+  }
+  // A month first put in: whether the days ahead follow by themselves from now on, asked once
+  // (spec/calendar.md, Reflecting automatically).
+  asksToReflect?.let { calendarName ->
+    AlertDialog(
+      onDismissRequest = { asksToReflect = null },
+      title = { Text(stringResource(R.string.calendar_reflect_ask)) },
+      text = { Text(stringResource(R.string.calendar_reflect_ask_about, calendarName, Days.reflectedMonthsAhead)) },
+      confirmButton = {
+        TextButton(
+          onClick = {
+            asksToReflect = null
+            settings.change { it.copy(calendarReflects = true) }
+          }
+        ) {
+          Text(stringResource(R.string.calendar_reflect_ask_yes))
+        }
+      },
+      dismissButton = { TextButton(onClick = { asksToReflect = null }) { Text(stringResource(R.string.calendar_reflect_ask_no)) } },
+    )
+  }
 }
 
 /** What the row under 入れるシフト says is left out, every name of it. */

@@ -42,10 +42,12 @@ stop_server() {
   exit 1
 }
 
+# -skipPackagePluginValidation: no one is here to trust the packages' build
+# plugins (LicenseList's), as in CI.
 xcodebuild_for() {
   xcodebuild "$1" -project "$root/apps/ios/Pochical/Pochical.xcodeproj" -scheme Pochical \
     -destination "platform=iOS Simulator,name=$device" -derivedDataPath "$derived" \
-    -skipMacroValidation POCHICAL_DEV_SERVER="$POCHICAL_DEV_SERVER" "${@:2}"
+    -skipMacroValidation -skipPackagePluginValidation POCHICAL_DEV_SERVER="$POCHICAL_DEV_SERVER" "${@:2}"
 }
 
 # Builds the tests, erases and boots the simulator, and starts the server

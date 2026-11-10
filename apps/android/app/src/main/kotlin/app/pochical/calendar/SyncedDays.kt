@@ -162,7 +162,7 @@ class SyncedDays(
     writes.trySend { edits.orderCoworkers(ids) }
   }
 
-  private class Synced(private val own: KitCalendar) : OwnCalendar {
+  internal class Synced(private val own: KitCalendar) : OwnCalendar {
     override val patterns = own.patterns.map { it.pattern }
     override val coworkers = own.coworkers.map { Coworker(it.id, it.name) }
 

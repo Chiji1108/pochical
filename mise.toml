@@ -199,6 +199,10 @@ run = "tools/chat-open/run.sh"
 description = "Run a big group's 一覧 rotation UI tests in a simulator, erasing it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default): <simulator name> [derived data]"
 run = "tools/shifts-rotation/run.sh"
 
+[tasks."ios:calendar-reflect"]
+description = "Run 自動で反映's UI test in a simulator, erasing it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default), reading the simulator's calendars after each step: <simulator name> [derived data]"
+run = "tools/calendar-reflect/run.sh"
+
 [tasks."server:typecheck"]
 description = "Typecheck the server"
 run = "pnpm --dir apps/server typecheck"

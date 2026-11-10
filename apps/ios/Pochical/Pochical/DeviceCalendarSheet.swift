@@ -1,21 +1,21 @@
 import EventKit
+import OSLog
 import PochicalDesign
 import PochicalKit
+import SQLiteData
+import SafariServices
 import SwiftUI
 import SwiftUINavigation
 import UIKit
 
 /// The device's calendars, through EventKit: asked for once, then listed
-/// for 追加先 and written to (spec/calendar.md, Adding a month to the
-/// device calendar).
+/// for 追加先 (spec/calendar.md, Adding a month to the device calendar);
+/// `CalendarWriter` writes to them.
 @MainActor @Observable final class DeviceCalendars {
   enum Access { case notAsked, granted, denied }
 
   private let store = EKEventStore()
   private(set) var access: Access
-
-  /// The calendar added to last, picked first next time.
-  private static let lastKey = "deviceCalendar.last"
 
   init() {
     access =
@@ -39,12 +39,12 @@ import UIKit
   /// whenever the device's calendars change outside the app, as when a
   /// Google account's calendar is turned on in 設定 with the sheet open.
   /// `changed` runs after each, for what the caller works out from them.
-  func follow(_ changed: () -> Void) async {
+  func follow(_ changed: () async -> Void) async {
     readSources()
-    changed()
+    await changed()
     for await _ in NotificationCenter.default.notifications(named: .EKEventStoreChanged) {
       readSources()
-      changed()
+      await changed()
     }
   }
 
@@ -58,33 +58,66 @@ import UIKit
     }
   }
 
-  /// The last one added to, else the system's for new events.
-  var pickedFirst: String? {
-    let last = UserDefaults.standard.string(forKey: Self.lastKey)
+  /// The one picked first: `last`, the one added to last, while it still
+  /// takes events, else the system's for new events; but none while
+  /// 自動で反映 is on, which writes nowhere the person did not pick.
+  func pickedFirst(last: String?, reflecting: Bool) -> String? {
     if let last, store.calendar(withIdentifier: last)?.allowsContentModifications == true {
       return last
     }
-    return store.defaultCalendarForNewEvents?.calendarIdentifier
+    return reflecting ? nil : store.defaultCalendarForNewEvents?.calendarIdentifier
   }
 
   func calendar(_ id: String) -> EKCalendar? {
     store.calendar(withIdentifier: id)
   }
+}
 
-  /// Puts the page's events in the calendar. Those Pochical put in for its
-  /// days before go first, from any device and any calendar, found by the
-  /// mark on a line of each one's notes (`EventMark`), so a page added
-  /// again is put in anew rather than twice, whatever was reinstalled or
-  /// synced since, and whichever app, iOS's or Android's, put them in.
-  /// The mark's link goes in the event's URL too, which Calendar opens
-  /// the day by, but which a calendar's sync need not keep.
-  func add(_ events: [ShiftEvent], of page: Period, by user: String, to calendarID: String) throws {
-    guard let target = store.calendar(withIdentifier: calendarID) else { return }
+/// The writes to the device's calendars, through EventKit: one at a time
+/// and off the main thread, whoever asks, 端末カレンダーに追加 or 自動で反映,
+/// so two never both take out the same events and both put theirs in
+/// (spec/calendar.md, Adding a month to the device calendar and
+/// Reflecting automatically).
+actor CalendarWriter {
+  static let shared = CalendarWriter()
+
+  /// The calendar to write to is gone, takes events no more, or the
+  /// calendars' access was taken away: nothing is written anywhere else.
+  struct NoCalendar: Error {}
+
+  /// Made as first used, once the access is given: a store made before
+  /// sees no calendar.
+  private lazy var store = EKEventStore()
+
+  /// Puts the events of the days of `span` in the calendar, writing only
+  /// what differs (`ShiftEvents.reflection`). Those Pochical put in for
+  /// its days before are found by the mark on a line of each one's notes
+  /// (`EventMark`), from any device and any calendar, whichever app,
+  /// iOS's or Android's, put them in: one in the calendar that says the
+  /// same stays, the others go, so days added again are never there
+  /// twice, whatever was reinstalled or synced since. The mark's link
+  /// goes in the event's URL too, which Calendar opens the day by, but
+  /// which a calendar's sync need not keep. A call put aside by a newer
+  /// one writes nothing.
+  func put(_ events: [ShiftEvent], in span: Period, by user: String, to calendarID: String) throws {
+    try Task.checkCancellation()
+    guard EKEventStore.authorizationStatus(for: .event) == .fullAccess,
+      let target = store.calendar(withIdentifier: calendarID), target.allowsContentModifications
+    else { throw NoCalendar() }
+    let old = marked(span, by: user)
+    let changes = ShiftEvents.reflection(
+      of: events, by: user,
+      over: old.enumerated().map { index, found in
+        PutEvent(
+          id: index, inTarget: found.event.calendar.calendarIdentifier == calendarID,
+          event: said(found.event, on: found.day))
+      })
+    guard !changes.remove.isEmpty || !changes.add.isEmpty else { return }
     do {
-      for old in marked(page, by: user) {
-        try store.remove(old, span: .thisEvent, commit: false)
+      for index in changes.remove {
+        try store.remove(old[index].event, span: .thisEvent, commit: false)
       }
-      for shift in events {
+      for shift in changes.add {
         let event = EKEvent(eventStore: store)
         event.calendar = target
         event.title = shift.title
@@ -103,37 +136,26 @@ import UIKit
       }
       try store.commit()
     } catch {
-      // Nothing half done stays waiting to go with a later add.
+      // Nothing half done stays waiting to go with a later write.
       store.reset()
       throw error
     }
-    UserDefaults.standard.set(calendarID, forKey: Self.lastKey)
   }
 
-  /// The events Pochical put in for the page's days as the user's, in
-  /// any calendar that takes changes: those adding again replaces, and
-  /// ポチカルで入れた〇月の予定を消す takes out.
-  func marked(_ page: Period, by user: String) -> [EKEvent] {
-    let days = Set(page.days)
-    // From the page's first day to two past its last: a night's event
-    // ends the day after it.
-    let range = store.predicateForEvents(
-      withStart: date(of: page.first, at: 0),
-      end: date(of: page.last, at: 2 * 24 * 60), calendars: nil)
-    return store.events(matching: range).filter { event in
-      guard let mark = EventMark(notes: event.notes) else { return false }
-      return mark.user == user && days.contains(mark.day)
-        && event.calendar.allowsContentModifications
-    }
+  /// How many events Pochical put in for the days of `span` as the
+  /// user's are in a calendar, for ポチカルで入れた〇月の予定を消す.
+  func count(in span: Period, by user: String) -> Int {
+    guard EKEventStore.authorizationStatus(for: .event) == .fullAccess else { return 0 }
+    return marked(span, by: user).count
   }
 
-  /// Takes out the events Pochical put in for the page as the user's,
-  /// all at once or none, and says how many went.
-  func remove(_ page: Period, by user: String) throws -> Int {
-    let old = marked(page, by: user)
+  /// Takes out the events Pochical put in for the days of `span` as the
+  /// user's, all at once or none, and says how many went.
+  func remove(_ span: Period, by user: String) throws -> Int {
+    let old = marked(span, by: user)
     do {
-      for event in old {
-        try store.remove(event, span: .thisEvent, commit: false)
+      for found in old {
+        try store.remove(found.event, span: .thisEvent, commit: false)
       }
       try store.commit()
     } catch {
@@ -141,6 +163,35 @@ import UIKit
       throw error
     }
     return old.count
+  }
+
+  /// The events Pochical put in for the days of `span` as the user's, in
+  /// any calendar that takes changes, each with its mark's day: those
+  /// adding again replaces, and ポチカルで入れた〇月の予定を消す takes out.
+  private func marked(_ span: Period, by user: String) -> [(event: EKEvent, day: Day)] {
+    // From the first day to two past the last: a night's event ends the
+    // day after it.
+    let range = store.predicateForEvents(
+      withStart: date(of: span.first, at: 0),
+      end: date(of: span.last, at: 2 * 24 * 60), calendars: nil)
+    return store.events(matching: range).compactMap { event in
+      guard let mark = EventMark(notes: event.notes), mark.user == user, span.contains(mark.day),
+        event.calendar.allowsContentModifications
+      else { return nil }
+      return (event, mark.day)
+    }
+  }
+
+  /// What an event in a calendar says, as one to put in would: its hours
+  /// from `day`'s midnight by the clock, none for one all day on that day.
+  private func said(_ event: EKEvent, on day: Day) -> ShiftEvent {
+    let wholeDay =
+      event.isAllDay && Day(event.startDate, in: .current) == day
+      && Day(event.endDate, in: .current) == day
+    return ShiftEvent(
+      day: day, title: event.title ?? "",
+      start: wholeDay ? nil : minutes(from: day, to: event.startDate),
+      end: wholeDay ? nil : minutes(from: day, to: event.endDate), notes: event.notes)
   }
 
   /// The clock time `minutes` after the start of `day`, a day on past
@@ -154,12 +205,75 @@ import UIKit
       ?? .now
   }
 
+  /// `date` as minutes after the start of `day` by the clock, as `date(of:at:)` counts them.
+  private func minutes(from day: Day, to date: Date) -> Int {
+    let time = Calendar.current.dateComponents([.hour, .minute], from: date)
+    return Day(date, in: .current).days(since: day) * 24 * 60 + (time.hour ?? 0) * 60
+      + (time.minute ?? 0)
+  }
+}
+
+/// 自動で反映 (spec/calendar.md, Reflecting automatically): while it is on,
+/// the days from today's page through the pages ahead are kept in the
+/// device's calendar, written anew whenever what would be put in changes,
+/// the days, patterns and orders, sync's changes among them, and what
+/// 端末カレンダーに追加 is set to put in, and each time the app comes back,
+/// as the reminders are (`ReminderUpdates`). Without the calendar or its
+/// access nothing is written, and the sheet says so.
+struct CalendarReflection: ViewModifier {
+  @Environment(Settings.self) private var settings
+  @Environment(\.scenePhase) private var scenePhase
+  /// The days with the user they are of, read together, so one user's
+  /// days never go in under another's mark while the account changes.
+  @Fetch(OwnedCalendarRequest()) private var own = OwnedCalendarRequest.Value.empty
+
+  private struct Key: Hashable {
+    let on: Bool
+    let events: [ShiftEvent]
+    let span: Period
+    let user: String
+    let target: String?
+  }
+
+  func body(content: Content) -> some View {
+    let device = settings.device
+    // A database with no patterns holds nothing of the person's to go by,
+    // as one erased and not yet synced again: with none, or while it is
+    // no one's, nothing is written, so what was put in stays.
+    let on =
+      device.calendarReflects && scenePhase == .active && !own.owner.isEmpty
+      && !own.calendar.patterns.isEmpty
+    let span = device.period.reflected(from: .today)
+    // Keyed by what would be put in, so a change that leaves it the same,
+    // a pattern's color or the days of another month, reads no calendar.
+    let events = on ? own.calendar.shiftEvents(in: span, putting: device.calendarAdd) : []
+    let user = own.owner
+    let target = device.deviceCalendar
+    content.task(id: Key(on: on, events: events, span: span, user: user, target: target)) {
+      guard on, let target else { return }
+      do {
+        try await CalendarWriter.shared.put(events, in: span, by: user, to: target)
+        // The device was another user's when it last reflected: theirs
+        // go from the days kept, which would else show each day twice.
+        if let before = device.calendarReflectedBy, before != user {
+          _ = try await CalendarWriter.shared.remove(span, by: before)
+        }
+        if settings.device.calendarReflectedBy != user {
+          settings.device.calendarReflectedBy = user
+        }
+      } catch {
+        // Tried again with the next change, or as the app next comes back.
+        Logger(subsystem: "app.pochical", category: "calendar")
+          .info("The days were not reflected: \(error)")
+      }
+    }
+  }
 }
 
 /// 端末カレンダーに追加 (/design's SaveSheet, its calendar step): the
 /// page's shifts, a month's or a シフトの期間's, put in the device's
 /// calendar a day each, into the one picked, days off only of the patterns
-/// asked for.
+/// asked for; and 自動で反映, which keeps the days ahead there from then on.
 struct DeviceCalendarSheet: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
@@ -170,10 +284,10 @@ struct DeviceCalendarSheet: View {
   /// A シフトの期間's page, named by its days wherever the month would be.
   let byPeriod: Bool
   let calendar: OwnCalendar
-  /// The person's coworkers' names by id, for 一緒に働く人も入れる.
-  let coworkers: [String: String]
   @State private var calendars = DeviceCalendars()
   @State private var calendarID: String?
+  /// The device's calendars were read, so none picked is none to pick.
+  @State private var read = false
   /// What was done, once added or taken out: the page's title and its
   /// line.
   @State private var done: (title: String, text: String)?
@@ -181,8 +295,15 @@ struct DeviceCalendarSheet: View {
   /// for ポチカルで入れた〇月の予定を消す.
   @State private var put = 0
   @State private var asksToRemove = false
+  /// While a write runs: its buttons wait, as a second tap would only
+  /// queue the same again.
+  @State private var writing = false
+  /// The calendar just added to, while これからも自動で反映しますか？ asks.
+  @State private var asksToReflect: String?
   /// The alert's title when adding or taking out failed.
   @State private var failure: String?
+  /// While the guide to Google Calendar shows over the sheet.
+  @State private var showsGuide = false
 
   var body: some View {
     // The patterns picked, the days' memos, and who works them, kept with
@@ -192,17 +313,16 @@ struct DeviceCalendarSheet: View {
     let shown = calendar.shown(from: page.first, through: page.last)
     let listed = listed(shown)
     let picked = putting.shown(of: calendar.patterns)
-    let memos = notes
-    let names = people(shown)
-    let events = ShiftEvents.page(
-      page, days: shown, patterns: calendar.patternsByID, shown: picked,
-      notes: putting.notes ? memos : [:], people: putting.people ? names : [:])
+    let events = calendar.shiftEvents(in: page, putting: putting)
     // A switch only when it would put something in: a memo goes in any
     // day, those on a day only in its shift's event.
     let offers = (
-      notes: !memos.isEmpty,
-      people: names.keys.contains { shown[$0].map { picked.contains($0.shift) } ?? false }
+      notes: !calendar.memos(in: page).isEmpty,
+      people: calendar.peopleNames(on: shown).keys.contains {
+        shown[$0].map { picked.contains($0.shift) } ?? false
+      }
     )
+    let reflects = settings.device.calendarReflects
     NavigationStack {
       Form {
         switch calendars.access {
@@ -213,6 +333,9 @@ struct DeviceCalendarSheet: View {
         case .denied:
           Section {
             Text("カレンダーへのアクセスが許可されていません。設定アプリで、ポチカルにカレンダーへのフルアクセスを許可してください。")
+            if reflects {
+              Text("自動での反映も止まっています。")
+            }
             Button("設定を開く") {
               if let url = URL(string: UIApplication.openSettingsURLString) {
                 openURL(url)
@@ -237,16 +360,18 @@ struct DeviceCalendarSheet: View {
             form(listed: listed, picked: picked, offers: offers)
             Section {
               wide("\(events.count)件を追加") { add(events) }
-                .disabled(events.isEmpty || calendarID == nil)
+                .disabled(events.isEmpty || calendarID == nil || writing)
             }
             // Only while some are in, as from a calendar picked by
-            // mistake, so none is taken out one by one.
-            if put > 0 {
+            // mistake, so none is taken out one by one; and not of the
+            // days 自動で反映 keeps, which would come back at once.
+            if put > 0, !(reflects && kept.contains(page.first) && kept.contains(page.last)) {
               Section {
                 Button("ポチカルで入れた\(name)の予定を消す", role: .destructive) {
                   asksToRemove = true
                 }
                 .frame(maxWidth: .infinity)
+                .disabled(writing)
               }
               .settingsRows()
             }
@@ -272,6 +397,18 @@ struct DeviceCalendarSheet: View {
       .alert(failure ?? "", isPresented: Binding($failure), presenting: failure) { _ in
         Button("OK", role: .cancel) {}
       }
+      // A month first put in: whether the days ahead follow by themselves
+      // from now on, asked once (spec/calendar.md, Reflecting
+      // automatically).
+      .alert(
+        "これからも自動で反映しますか？", isPresented: Binding($asksToReflect),
+        presenting: asksToReflect
+      ) { _ in
+        Button("今はしない", role: .cancel) {}
+        Button("自動で反映する") { settings.device.calendarReflects = true }
+      } message: { calendarName in
+        Text("シフトを変えると、「\(calendarName)」の予定も変わります。\(Days.reflectedMonthsAhead)か月先の分まで入ります。")
+      }
     }
     .task {
       if calendars.access == .notAsked {
@@ -279,14 +416,30 @@ struct DeviceCalendarSheet: View {
       }
       guard calendars.access == .granted else { return }
       await calendars.follow {
-        // The one picked stays while it still takes events.
-        if calendarID.flatMap({ calendars.calendar($0) })?.allowsContentModifications != true {
-          calendarID = calendars.pickedFirst
-        }
+        pick()
+        read = true
         if let meID {
-          put = calendars.marked(page, by: meID).count
+          put = await CalendarWriter.shared.count(in: page, by: meID)
         }
       }
+    }
+    // Turned off with no calendar picked, the first pick shows again.
+    .onChange(of: reflects) { pick() }
+    .fullScreenCover(isPresented: $showsGuide) {
+      SitePage(url: Site.page("support/google-calendar")).ignoresSafeArea()
+    }
+  }
+
+  /// The days 自動で反映 keeps in the calendar.
+  private var kept: Period {
+    settings.device.period.reflected(from: .today)
+  }
+
+  /// The one picked stays while it still takes events, else the first pick.
+  private func pick() {
+    if calendarID.flatMap({ calendars.calendar($0) })?.allowsContentModifications != true {
+      calendarID = calendars.pickedFirst(
+        last: settings.device.deviceCalendar, reflecting: settings.device.calendarReflects)
     }
   }
 
@@ -306,8 +459,28 @@ struct DeviceCalendarSheet: View {
     listed: [Pattern], picked: Set<PatternID>, offers: (notes: Bool, people: Bool)
   ) -> some View {
     @Bindable var settings = settings
+    let reflects = settings.device.calendarReflects
     Section {
-      Picker("追加先", selection: $calendarID) {
+      // 自動で反映 is on and its calendar is gone: it writes nowhere
+      // else, and says so until one is picked.
+      if reflects, read, calendarID == nil {
+        Label {
+          Text("追加先のカレンダーが見つからないので、自動での反映を止めています。追加先を選ぶと、また反映します。")
+            .foregroundStyle(colors.textPrimary)
+        } icon: {
+          Image(systemName: "exclamationmark.triangle").foregroundStyle(.orange)
+        }
+      }
+      // While 自動で反映 is on, the one picked is where it writes.
+      Picker(
+        "追加先",
+        selection: Binding(
+          get: { calendarID },
+          set: { id in
+            calendarID = id
+            if reflects { settings.device.deviceCalendar = id }
+          })
+      ) {
         ForEach(calendars.sources, id: \.title) { source in
           Section(source.title) {
             ForEach(source.calendars, id: \.calendarIdentifier) { item in
@@ -368,6 +541,30 @@ struct DeviceCalendarSheet: View {
       }
       .settingsRows()
     }
+    // The days ahead kept in the calendar as the shifts change: turned on
+    // here it writes to the 追加先 showing, and is never asked about after.
+    Section {
+      Toggle(
+        isOn: Binding(
+          get: { reflects },
+          set: { on in
+            var device = settings.device
+            device.calendarReflectAsked = true
+            if on { device.deviceCalendar = calendarID }
+            device.calendarReflects = on
+            settings.device = device
+          })
+      ) {
+        Text("自動で反映")
+        Text("シフトを変えると、\(Days.reflectedMonthsAhead)か月先の分まで入れ直します")
+      }
+      .disabled(!reflects && calendarID == nil)
+    } footer: {
+      if reflects {
+        Text("アプリを開いたときに反映します。カレンダーアプリで変えた予定は、ポチカルのシフトに戻ります。")
+      }
+    }
+    .settingsRows()
   }
 
   /// Under the sheet's last rows: that adding again replaces the month,
@@ -378,7 +575,7 @@ struct DeviceCalendarSheet: View {
       // A calendar of a Google account added to the iPhone goes on to
       // Google Calendar, which few find by themselves (spec/calendar.md).
       Button("Googleカレンダーに入れるには") {
-        openURL(Site.page("support/google-calendar"), prefersInApp: true)
+        showsGuide = true
       }
       .font(.footnote)
       .accessibilityHint("ブラウザで開きます")
@@ -409,36 +606,31 @@ struct DeviceCalendarSheet: View {
     return "\(out.map(\.name).joined(separator: "・"))は入れません"
   }
 
-  /// Each day's memo in the month.
-  private var notes: [Day: String] {
-    Dictionary(
-      uniqueKeysWithValues: page.days.compactMap { day in
-        calendar.note(on: day).map { (day, $0) }
-      })
-  }
-
-  /// Each day's people by name, those still among the coworkers.
-  private func people(_ shown: [Day: DayEntry]) -> [Day: [String]] {
-    shown.compactMapValues { entry in
-      let names = (entry.people ?? []).compactMap { coworkers[$0] }
-      return names.isEmpty ? nil : names
-    }
-  }
-
   private func add(_ events: [ShiftEvent]) {
     guard let calendarID, let meID else {
       failure = "追加できませんでした"
       return
     }
-    do {
-      try calendars.add(events, of: page, by: meID, to: calendarID)
-      let calendarName = calendars.calendar(calendarID)?.title ?? ""
-      withAnimation {
-        done = ("保存しました", "「\(calendarName)」に\(name)の予定を\(events.count)件追加しました。")
+    writing = true
+    Task {
+      defer { writing = false }
+      do {
+        try await CalendarWriter.shared.put(events, in: page, by: meID, to: calendarID)
+        let calendarName = calendars.calendar(calendarID)?.title ?? ""
+        var device = settings.device
+        device.deviceCalendar = calendarID
+        // Asked once, the first time a month goes in, unless it is on.
+        let asks = !device.calendarReflects && !device.calendarReflectAsked
+        device.calendarReflectAsked = true
+        settings.device = device
+        withAnimation {
+          done = ("保存しました", "「\(calendarName)」に\(name)の予定を\(events.count)件追加しました。")
+        }
+        if asks { asksToReflect = calendarName }
+      } catch {
+        ReviewPrompt.troubled = true
+        failure = "追加できませんでした"
       }
-    } catch {
-      ReviewPrompt.troubled = true
-      failure = "追加できませんでした"
     }
   }
 
@@ -447,16 +639,37 @@ struct DeviceCalendarSheet: View {
       failure = "消せませんでした"
       return
     }
-    do {
-      let removed = try calendars.remove(page, by: meID)
-      withAnimation {
-        done = ("消しました", "ポチカルで入れた\(name)の予定を\(removed)件消しました。")
+    writing = true
+    Task {
+      defer { writing = false }
+      do {
+        let removed = try await CalendarWriter.shared.remove(page, by: meID)
+        withAnimation {
+          done = ("消しました", "ポチカルで入れた\(name)の予定を\(removed)件消しました。")
+        }
+      } catch {
+        ReviewPrompt.troubled = true
+        failure = "消せませんでした"
       }
-    } catch {
-      ReviewPrompt.troubled = true
-      failure = "消せませんでした"
     }
   }
+}
+
+/// A page of the site in the system's browser, shown over a sheet by the
+/// sheet itself: `openURL(_:prefersInApp:)` presents the browser on the
+/// scene's root, which UIKit refuses while that is presenting the sheet
+/// ("Attempt to present <SFSafariViewController> ... which is already
+/// presenting", logged on the simulator's iOS 27; an iPhone's iOS 26
+/// opens nothing the same way), so from a sheet it opens nothing. Apple's
+/// to fix: #1158 takes this out once it has.
+private struct SitePage: UIViewControllerRepresentable {
+  let url: URL
+
+  func makeUIViewController(context: Context) -> SFSafariViewController {
+    SFSafariViewController(url: url)
+  }
+
+  func updateUIViewController(_ browser: SFSafariViewController, context: Context) {}
 }
 
 /// 入れるシフト: each pattern by its mark and name, checked when its days
