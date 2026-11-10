@@ -15,6 +15,7 @@ import { Route as DesignRouteImport } from './routes/design'
 import { Route as ToolDemoRouteImport } from './routes/_tool/demo'
 import { Route as ApiSearchRouteImport } from './routes/api.search'
 import { Route as ToolRenderShareImageRouteImport } from './routes/_tool/[_]render/share-image'
+import { Route as ToolRenderStoreShotRouteImport } from './routes/_tool/[_]render/store-shot'
 
 const SplatRoute = SplatRouteImport.update({
   id: '/$',
@@ -45,6 +46,11 @@ const ToolRenderShareImageRoute = ToolRenderShareImageRouteImport.update({
   path: '/_render/share-image',
   getParentRoute: () => ToolRoute,
 } as any)
+const ToolRenderStoreShotRoute = ToolRenderStoreShotRouteImport.update({
+  id: '/_render/store-shot',
+  path: '/_render/store-shot',
+  getParentRoute: () => ToolRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/$': typeof SplatRoute
@@ -53,6 +59,7 @@ export interface FileRoutesByFullPath {
   '/demo': typeof ToolDemoRoute
   '/api/search': typeof ApiSearchRoute
   '/_render/share-image': typeof ToolRenderShareImageRoute
+  '/_render/store-shot': typeof ToolRenderStoreShotRoute
 }
 export interface FileRoutesByTo {
   '/$': typeof SplatRoute
@@ -61,6 +68,7 @@ export interface FileRoutesByTo {
   '/demo': typeof ToolDemoRoute
   '/api/search': typeof ApiSearchRoute
   '/_render/share-image': typeof ToolRenderShareImageRoute
+  '/_render/store-shot': typeof ToolRenderStoreShotRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -70,13 +78,27 @@ export interface FileRoutesById {
   '/_tool/demo': typeof ToolDemoRoute
   '/api/search': typeof ApiSearchRoute
   '/_tool/_render/share-image': typeof ToolRenderShareImageRoute
+  '/_tool/_render/store-shot': typeof ToolRenderStoreShotRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/$' | '/' | '/design' | '/demo' | '/api/search' | '/_render/share-image'
+    | '/$'
+    | '/'
+    | '/design'
+    | '/demo'
+    | '/api/search'
+    | '/_render/share-image'
+    | '/_render/store-shot'
   fileRoutesByTo: FileRoutesByTo
-  to: '/$' | '/' | '/design' | '/demo' | '/api/search' | '/_render/share-image'
+  to:
+    | '/$'
+    | '/'
+    | '/design'
+    | '/demo'
+    | '/api/search'
+    | '/_render/share-image'
+    | '/_render/store-shot'
   id:
     | '__root__'
     | '/$'
@@ -85,6 +107,7 @@ export interface FileRouteTypes {
     | '/_tool/demo'
     | '/api/search'
     | '/_tool/_render/share-image'
+    | '/_tool/_render/store-shot'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -138,17 +161,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ToolRenderShareImageRouteImport
       parentRoute: typeof ToolRoute
     }
+    '/_tool/_render/store-shot': {
+      id: '/_tool/_render/store-shot'
+      path: '/_render/store-shot'
+      fullPath: '/_render/store-shot'
+      preLoaderRoute: typeof ToolRenderStoreShotRouteImport
+      parentRoute: typeof ToolRoute
+    }
   }
 }
 
 interface ToolRouteChildren {
   ToolDemoRoute: typeof ToolDemoRoute
   ToolRenderShareImageRoute: typeof ToolRenderShareImageRoute
+  ToolRenderStoreShotRoute: typeof ToolRenderStoreShotRoute
 }
 
 const ToolRouteChildren: ToolRouteChildren = {
   ToolDemoRoute: ToolDemoRoute,
   ToolRenderShareImageRoute: ToolRenderShareImageRoute,
+  ToolRenderStoreShotRoute: ToolRenderStoreShotRoute,
 }
 
 const ToolRouteWithChildren = ToolRoute._addFileChildren(ToolRouteChildren)

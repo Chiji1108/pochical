@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite dev --port 3200 --strictPort",
     "image:share": "node scripts/share-image.ts",
+    "image:store": "node scripts/store-images.ts",
     "build": "vite build",
     "preview": "vite preview --port 3200 --strictPort",
     "deploy": "pnpm run build && wrangler deploy",

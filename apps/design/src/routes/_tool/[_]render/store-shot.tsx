@@ -1,0 +1,284 @@
+import {
+  FEATURE_GRAPHIC,
+  HEADLINE_SHARE,
+  STORE_SHOTS,
+  STORES,
+  WIDGET_CELLS,
+} from "@pochical/prototype/lib/store-shots";
+import type { StoreId, WidgetSize } from "@pochical/prototype/lib/store-shots";
+import { css, cx } from "@pochical/styled-system/css";
+import { createFileRoute } from "@tanstack/react-router";
+
+import { pageMeta } from "../../../lib/page-meta";
+import {
+  PictureBrand,
+  PictureSky,
+  pictureTitle,
+} from "../../../lib/site-picture";
+
+// One of the stores' pictures (#806), which pnpm run image:store takes
+// from /_render/store-shot into store/: a screen of the real app, with
+// rounded corners and no phone around it, on the site's sky under its
+// headline, at the size its store asks for
+// (@pochical/prototype's lib/store-shots.ts). `?store=ios&shot=calendar`
+// names the picture, `shot=feature-graphic` Google Play's feature graphic.
+// The screens are not in the app: the script answers /_render/store-raw/
+// with the files the platform's UI test photographed, and names the
+// widgets it found for the wall in `widgets`.
+
+const RAW = "/_render/store-raw/";
+
+// Where the wall's grid is as wide as it must be to run off the picture's
+// edges once tilted, and how many of its rows cover the picture's height.
+const WALL = { columns: 6, rows: 9 };
+
+const isStore = (value: unknown): value is StoreId =>
+  typeof value === "string" && Object.hasOwn(STORES, value);
+
+const isWidgetSize = (value: string | undefined): value is WidgetSize =>
+  value !== undefined && Object.hasOwn(WIDGET_CELLS, value);
+
+export const Route = createFileRoute("/_tool/_render/store-shot")({
+  component: StoreShotPage,
+  head: () => pageMeta("ストアの画像", "ストアに載せる、ポチカルの画像"),
+  validateSearch: (search: Record<string, unknown>) => ({
+    shot: typeof search.shot === "string" ? search.shot : "",
+    store: isStore(search.store) ? search.store : "ios",
+    // The wall's widgets' files, with commas between them.
+    widgets: typeof search.widgets === "string" ? search.widgets : "",
+  }),
+});
+
+// Every length but the headline's room is in --u, a hundredth of the
+// picture's width, so each store's picture is laid out alike at its size.
+// A widget's cell on the wall, in them.
+const WIDGET_CELL = "calc(var(--u) * 25)";
+
+const styles = {
+  feature: css({
+    alignItems: "center",
+    display: "flex",
+    flexDirection: "column",
+    gap: "28px",
+    justifyContent: "center",
+    position: "relative",
+  }),
+  featureTitle: css({ fontSize: "84px", position: "relative" }),
+  headline: css({
+    alignItems: "center",
+    boxSizing: "border-box",
+    display: "flex",
+    fontSize: "calc(var(--u) * 8.6)",
+    height: "var(--headline)",
+    justifyContent: "center",
+    paddingTop: "calc(var(--u) * 4)",
+    position: "relative",
+    textAlign: "center",
+    whiteSpace: "nowrap",
+    zIndex: 1,
+  }),
+  line: css({ display: "block" }),
+  // Two screens, the second over the first's corner and lower.
+  pairFirst: css({
+    left: "calc(var(--u) * 4)",
+    position: "absolute",
+    top: 0,
+    width: "calc(var(--u) * 57)",
+  }),
+  pairSecond: css({
+    bottom: "calc(var(--u) * 5)",
+    position: "absolute",
+    right: "calc(var(--u) * 4)",
+    width: "calc(var(--u) * 57)",
+  }),
+  root: css({
+    bg: "var(--paper)",
+    color: "var(--ink)",
+    overflow: "hidden",
+    position: "relative",
+  }),
+  // A screen as the phone shows it: its corners rounded, nothing around it.
+  screen: css({
+    borderRadius: "calc(var(--u) * 9)",
+    boxShadow:
+      "0 calc(var(--u) * 2) calc(var(--u) * 7) rgba(60, 70, 60, 0.2), 0 0 0 1px rgba(60, 70, 60, 0.08)",
+    display: "block",
+  }),
+  single: css({ height: "100%", width: "auto" }),
+  // Under the headline, to the picture's foot.
+  stage: css({
+    boxSizing: "border-box",
+    display: "flex",
+    inset: "var(--headline) 0 0",
+    justifyContent: "center",
+    paddingBottom: "calc(var(--u) * 5)",
+    position: "absolute",
+  }),
+  // The widgets on a Home Screen's grid, tilted, running off every edge
+  // and fading into the sky under the headline.
+  wall: css({
+    inset: 0,
+    maskImage:
+      "linear-gradient(to bottom, transparent calc(var(--headline) * 0.8), black calc(var(--headline) * 1.25))",
+    position: "absolute",
+  }),
+  wallGrid: css({
+    display: "grid",
+    gap: "calc(var(--u) * 3.5)",
+    gridAutoFlow: "dense",
+    left: "50%",
+    position: "absolute",
+    top: "54%",
+    transform: "translate(-50%, -50%) rotate(-12deg)",
+  }),
+  // A widget's photograph holds the wallpaper beyond its corners, which
+  // are rounder toward their ends than a circle's: its frame's corners
+  // are a little wider than the widget's, and the photograph a little
+  // larger than its frame.
+  widget: css({
+    "& img": {
+      display: "block",
+      height: "100%",
+      objectFit: "cover",
+      transform: "scale(1.02)",
+      width: "100%",
+    },
+    borderRadius: "calc(var(--u) * 4.25)",
+    boxShadow:
+      "0 calc(var(--u) * 1) calc(var(--u) * 3.5) rgba(60, 70, 60, 0.2)",
+    overflow: "hidden",
+  }),
+};
+
+function StoreShotPage() {
+  const { shot: name, store, widgets } = Route.useSearch();
+  if (name === FEATURE_GRAPHIC.name) {
+    return <FeatureGraphic />;
+  }
+  const shot = STORE_SHOTS.find((one) => one.name === name);
+  if (shot === undefined) {
+    return <p>No shot is named {name}.</p>;
+  }
+  const { height, width } = STORES[store];
+  return (
+    <div
+      className={styles.root}
+      data-store-shot
+      style={{
+        "--headline": `${height * HEADLINE_SHARE}px`,
+        "--u": `${width / 100}px`,
+        height,
+        width,
+      }}
+    >
+      <PictureSky height="100%" />
+      {shot.kind === "wall" && (
+        <Wall folder={shot.raw} widgets={widgets.split(",").filter(Boolean)} />
+      )}
+      <h1 className={cx(pictureTitle, styles.headline)}>
+        <span>
+          {shot.headline.map((line) => (
+            <span className={styles.line} key={line}>
+              {line}
+            </span>
+          ))}
+        </span>
+      </h1>
+      {shot.kind === "screen" && (
+        <div className={styles.stage}>
+          <img
+            alt=""
+            className={cx(styles.screen, styles.single)}
+            src={RAW + shot.raw}
+          />
+        </div>
+      )}
+      {shot.kind === "pair" && (
+        <div className={styles.stage}>
+          <img
+            alt=""
+            className={cx(styles.screen, styles.pairFirst)}
+            src={RAW + shot.raw[0]}
+          />
+          <img
+            alt=""
+            className={cx(styles.screen, styles.pairSecond)}
+            src={RAW + shot.raw[1]}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// The cells a widget covers, by its size, the last word of its file's name.
+const cellsOf = (file: string) => {
+  const size = file
+    .replace(/\.png$/u, "")
+    .split("-")
+    .at(-1);
+  return WIDGET_CELLS[isWidgetSize(size) ? size : "small"];
+};
+
+// The widgets over and over, each round starting further along so the
+// same two are not neighbors again, until the wall's cells are covered.
+function Wall({ folder, widgets }: { folder: string; widgets: string[] }) {
+  let cells = 0;
+  for (const file of widgets) {
+    const { columns, rows } = cellsOf(file);
+    cells += columns * rows;
+  }
+  const rounds =
+    cells === 0 ? 0 : Math.ceil((WALL.columns * WALL.rows) / cells);
+  const tiles = Array.from({ length: rounds }, (_, round) =>
+    widgets.map((_file, index) => {
+      const file = widgets[(index + round * 5) % widgets.length] ?? "";
+      return { file, key: `${round} ${file}` };
+    })
+  ).flat();
+  return (
+    <div className={styles.wall}>
+      <div
+        className={styles.wallGrid}
+        style={{
+          gridAutoRows: WIDGET_CELL,
+          gridTemplateColumns: `repeat(${WALL.columns}, ${WIDGET_CELL})`,
+        }}
+      >
+        {tiles.map(({ file, key }) => {
+          const { columns, rows } = cellsOf(file);
+          return (
+            <div
+              className={styles.widget}
+              key={key}
+              style={{
+                gridColumn: `span ${columns}`,
+                gridRow: `span ${rows}`,
+              }}
+            >
+              <img alt="" src={`${RAW}${folder}/${file}`} />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function FeatureGraphic() {
+  return (
+    <div
+      className={cx(styles.root, styles.feature)}
+      data-store-shot
+      style={{ height: FEATURE_GRAPHIC.height, width: FEATURE_GRAPHIC.width }}
+    >
+      <PictureSky height="100%" />
+      <div className={styles.featureTitle}>
+        <PictureBrand size={88} />
+      </div>
+      <h1 className={cx(pictureTitle, styles.featureTitle)}>
+        シフトを、ポチッと。
+      </h1>
+    </div>
+  );
+}
