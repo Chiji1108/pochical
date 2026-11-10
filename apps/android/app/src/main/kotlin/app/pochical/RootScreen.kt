@@ -15,6 +15,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.retain.retainRetainedValuesStoreRegistry
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
@@ -24,6 +25,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavEntry
+import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import app.pochical.calendar.CalendarScreen
 import app.pochical.calendar.LocalOwnDays
@@ -113,6 +115,7 @@ fun RootScreen(navigator: RootNavigator) {
       backStack = navigator.routes,
       onBack = navigator::back,
       sceneStrategies = listOf(rememberTabPanes(navigator.tab)),
+      entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator(), rememberHeldReadsDecorator()),
       sharedTransitionScope = this,
       transitionSpec = push,
       popTransitionSpec = pop,
@@ -190,10 +193,14 @@ private fun Page(route: RootRoute, navigator: RootNavigator) {
   }
 }
 
-/** The tab shown, over the tab bar, each tab keeping what it showed as another is gone to. */
+/**
+ * The tab shown, over the tab bar, each tab keeping what it showed as another is gone to: its saved
+ * state, and what it read (rememberRead), so it comes back drawn as it was.
+ */
 @Composable
 private fun TabsScreen(navigator: RootNavigator, navigation: PageNavigation) {
   val tabStates = rememberSaveableStateHolder()
+  val tabReads = retainRetainedValuesStoreRegistry()
   BackHandler(enabled = navigator.backGoesToFirstTab, onBack = navigator::back)
   // The tab bar gives way to a day's week and to ポチポチ入力's tray, as iOS's and /design's do.
   var barHidden by rememberSaveable { mutableStateOf(false) }
@@ -226,19 +233,25 @@ private fun TabsScreen(navigator: RootNavigator, navigation: PageNavigation) {
   ) {
     CompositionLocalProvider(LocalNotifyingUnread provides unread) {
       tabStates.SaveableStateProvider(navigation.tab) {
-        when (navigation.tab) {
-          RootTab.Calendar ->
-            CalendarScreen(
-              open = navigation::show,
-              hidesTabBar = { barHidden = it },
-              opening = navigator.openingDay,
-              onOpening = { navigator.openingDay = null },
-            )
-          RootTab.Groups ->
-            GroupsScreen(navigator.openGroup, navigation::pickGroup, GroupsActions(onNew = { navigation.show(RootPage.NewGroup) }, onScan = { navigation.show(RootPage.Scan) }, onShifts = { id, day -> navigation.show(RootPage.GroupShifts(id, day?.toString())) }, onChat = { id, thread -> navigation.show(RootPage.Chat(id, thread)) }) { group -> GroupButtons(group.id, navigation::show) })
-          RootTab.Settings -> SettingsScreen(open = navigation::show)
-        }
+        tabReads.LocalRetainedValuesStoreProvider(navigation.tab) { TabScreen(navigator, navigation, hidesTabBar = { barHidden = it }) }
       }
     }
+  }
+}
+
+/** [navigation]'s tab. */
+@Composable
+private fun TabScreen(navigator: RootNavigator, navigation: PageNavigation, hidesTabBar: (Boolean) -> Unit) {
+  when (navigation.tab) {
+    RootTab.Calendar ->
+      CalendarScreen(
+        open = navigation::show,
+        hidesTabBar = hidesTabBar,
+        opening = navigator.openingDay,
+        onOpening = { navigator.openingDay = null },
+      )
+    RootTab.Groups ->
+      GroupsScreen(navigator.openGroup, navigation::pickGroup, GroupsActions(onNew = { navigation.show(RootPage.NewGroup) }, onScan = { navigation.show(RootPage.Scan) }, onShifts = { id, day -> navigation.show(RootPage.GroupShifts(id, day?.toString())) }, onChat = { id, thread -> navigation.show(RootPage.Chat(id, thread)) }) { group -> GroupButtons(group.id, navigation::show) })
+    RootTab.Settings -> SettingsScreen(open = navigation::show)
   }
 }

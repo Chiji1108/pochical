@@ -14,9 +14,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,6 +28,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.pochical.LocalThemeColors
 import app.pochical.R
+import app.pochical.rememberRead
 import app.pochical.RootPage
 import app.pochical.SettingsSection
 import app.pochical.design.Chat
@@ -57,7 +55,10 @@ fun SupportRow(open: (RootPage) -> Unit) {
   HoldSocket(Chat.supportPlace)
   // The place's members as it names them: the user, and ポチカル for Pochical's people.
   val values = LocalValues.current
-  val members by remember(values) { values.members(Chat.supportPlace) }.collectAsStateWithLifecycle(emptyList())
+  val chats = LocalChats.current
+  val members = rememberRead(values) { values.members(Chat.supportPlace) } ?: return
+  // Its latest line once read, never 「まだ…」 before.
+  val summary = rememberRead(chats, me) { chats.summary(Chat.supportPlace, GROUP_THREAD, me) } ?: return
   // A section of its own, apart from the rows of settings above it.
   SettingsSection(modifier = Modifier.padding(top = 20.dp)) {
     row {
@@ -66,6 +67,7 @@ fun SupportRow(open: (RootPage) -> Unit) {
       GROUP_THREAD,
       me,
       stringResource(R.string.support_title),
+      summary,
       names = members.associate { it.userId to it.shownName() },
       blocked = emptySet(),
       empty = stringResource(R.string.support_empty),

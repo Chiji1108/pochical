@@ -4,9 +4,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.LocalDeviceSettings
 import app.pochical.ShiftMark
+import app.pochical.rememberRead
 import app.pochical.calendar.Pattern
 import app.pochical.calendar.pattern
 import app.pochical.kit.GroupMember
@@ -88,7 +88,5 @@ fun MemberMark(member: GroupMember, shift: MemberShift, size: Dp, modifier: Modi
 @Composable
 fun rememberGroupMembers(groupId: String, from: LocalDate, through: LocalDate): List<GroupMember>? {
   val values = LocalValues.current
-  return remember(values, groupId, from, through) { values.groupMembers(groupId, from, through) }
-    .collectAsStateWithLifecycle(null)
-    .value
+  return rememberRead(values, groupId, from, through) { values.groupMembers(groupId, from, through) }
 }
