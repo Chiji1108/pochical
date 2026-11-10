@@ -103,6 +103,23 @@ export const storeShotFile = (name: StoreShotName): string => {
   return `${String(order).padStart(2, "0")}-${name}.png`;
 };
 
+// The wall of widgets once more, for the site's top page (apps/web): the
+// `shot` of `store` with no headline and no sky, on the paper alone, at
+// twice the size the page shows it, in assets/widget-wall.png.
+export const SITE_WALL = {
+  height: 1200,
+  name: "widget-wall",
+  shot: "widgets",
+  store: "ios",
+  width: 780,
+} as const satisfies {
+  height: number;
+  name: string;
+  shot: StoreShotName;
+  store: StoreId;
+  width: number;
+};
+
 // The sizes a widget on the wall comes in, by the cells of a Home Screen
 // it covers across and down.
 export const WIDGET_CELLS = {

@@ -4,6 +4,7 @@ import path from "node:path";
 import {
   FEATURE_GRAPHIC,
   HEADLINE_SHARE,
+  SITE_WALL,
   STORE_SHOTS,
   STORES,
   storeShotFile,
@@ -47,6 +48,21 @@ test.each([
     alpha: false,
     height: size.height,
     width: size.width,
+  });
+});
+
+// The wall of widgets the site's top page shows is drawn with them, into
+// @pochical/prototype's assets, where the site takes its pictures from.
+test("the site's wall of widgets is drawn at its size", () => {
+  const file = path.join(
+    import.meta.dirname,
+    "../../../packages/prototype/src/assets",
+    `${SITE_WALL.name}.png`
+  );
+  expect(existsSync(file), "run mise run store:images").toBe(true);
+  expect(header(file)).toMatchObject({
+    height: SITE_WALL.height,
+    width: SITE_WALL.width,
   });
 });
 

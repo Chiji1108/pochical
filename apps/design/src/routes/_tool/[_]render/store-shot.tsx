@@ -1,6 +1,7 @@
 import {
   FEATURE_GRAPHIC,
   HEADLINE_SHARE,
+  SITE_WALL,
   STORE_SHOTS,
   STORES,
   WIDGET_CELLS,
@@ -21,7 +22,9 @@ import {
 // rounded corners and no phone around it, on the site's sky under its
 // headline, at the size its store asks for
 // (@pochical/prototype's lib/store-shots.ts). `?store=ios&shot=calendar`
-// names the picture, `shot=feature-graphic` Google Play's feature graphic.
+// names the picture, `shot=feature-graphic` Google Play's feature graphic
+// and `shot=widget-wall` the wall of widgets as the site's top page shows
+// it, with no headline and no sky.
 // The screens are not in the app: the script answers /_render/store-raw/
 // with the files the platform's UI test photographed, and names the
 // widgets it found for the wall in `widgets`.
@@ -155,23 +158,27 @@ function StoreShotPage() {
   if (name === FEATURE_GRAPHIC.name) {
     return <FeatureGraphic />;
   }
-  const shot = STORE_SHOTS.find((one) => one.name === name);
+  const site = name === SITE_WALL.name;
+  const shot = STORE_SHOTS.find(
+    (one) => one.name === (site ? SITE_WALL.shot : name)
+  );
   if (shot === undefined) {
     return <p>No shot is named {name}.</p>;
   }
-  const { height, widgetRow, width } = STORES[store];
+  const { widgetRow } = STORES[store];
+  const { height, width } = site ? SITE_WALL : STORES[store];
   return (
     <div
       className={styles.root}
       data-store-shot
       style={{
-        "--headline": `${height * HEADLINE_SHARE}px`,
+        "--headline": `${site ? 0 : height * HEADLINE_SHARE}px`,
         "--u": `${width / 100}px`,
         height,
         width,
       }}
     >
-      <PictureSky height="100%" />
+      {!site && <PictureSky height="100%" />}
       {shot.kind === "wall" && (
         <Wall
           folder={shot.raw}
@@ -179,15 +186,17 @@ function StoreShotPage() {
           widgets={widgets.split(",").filter(Boolean)}
         />
       )}
-      <h1 className={cx(pictureTitle, styles.headline)}>
-        <span>
-          {shot.headline.map((line) => (
-            <span className={styles.line} key={line}>
-              {line}
-            </span>
-          ))}
-        </span>
-      </h1>
+      {!site && (
+        <h1 className={cx(pictureTitle, styles.headline)}>
+          <span>
+            {shot.headline.map((line) => (
+              <span className={styles.line} key={line}>
+                {line}
+              </span>
+            ))}
+          </span>
+        </h1>
+      )}
       {shot.kind === "screen" && (
         <div className={styles.stage}>
           <img

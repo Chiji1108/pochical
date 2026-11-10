@@ -7,11 +7,14 @@ import { fileURLToPath } from "node:url";
 // (`mise run store:shots:ios`, `mise run store:shots:android`): each shot of @pochical/prototype's
 // lib/store-shots.ts from /_render/store-shot into
 // store/screenshots/<store>, and Google Play's feature graphic into
-// store/feature-graphic.png, on a dev server of its own. A store whose
+// store/feature-graphic.png, and the wall of widgets the site's top page
+// shows (SITE_WALL) into @pochical/prototype's assets, on a dev server of
+// its own. A store whose
 // screens are not there is left as it is. Run again after changing the
 // page or the shots: pnpm run image:store
 import {
   FEATURE_GRAPHIC,
+  SITE_WALL,
   STORE_SHOTS,
   STORES,
   storeShotFile,
@@ -25,6 +28,11 @@ import {
 const ROOT = fileURLToPath(new URL("../../..", import.meta.url));
 const RAW = path.join(ROOT, ".build/store-screenshots");
 const OUTPUT = path.join(ROOT, "store");
+const SITE_WALL_FILE = path.join(
+  ROOT,
+  "packages/prototype/src/assets",
+  `${SITE_WALL.name}.png`
+);
 // Where the page asks for a screen, answered with its file.
 const RAW_PATH = "/_render/store-raw/";
 
@@ -94,17 +102,27 @@ await photographDevServer(
 
     for (const store of photographed) {
       for (const shot of STORE_SHOTS) {
+        const search = {
+          shot: shot.name,
+          store,
+          widgets: screensOf(store, shot).join(","),
+        };
         // oxlint-disable-next-line no-await-in-loop -- one page at a time
         await photograph(
-          {
-            shot: shot.name,
-            store,
-            widgets: screensOf(store, shot).join(","),
-          },
+          search,
           STORES[store],
           path.join(OUTPUT, "screenshots", store, storeShotFile(shot.name)),
           path.join(RAW, store)
         );
+        if (store === SITE_WALL.store && shot.name === SITE_WALL.shot) {
+          // oxlint-disable-next-line no-await-in-loop -- one page at a time
+          await photograph(
+            { ...search, shot: SITE_WALL.name },
+            SITE_WALL,
+            SITE_WALL_FILE,
+            path.join(RAW, store)
+          );
+        }
       }
     }
     await photograph(
