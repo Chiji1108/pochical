@@ -23,8 +23,7 @@ final class CalendarReflectTests: XCTestCase {
 
   @MainActor
   func testAMonthAddedIsReflectedFromThenOn() throws {
-    app.launchArguments += ["-sample", "-firstRunDone", "YES"]
-    app.launch()
+    app.launchPastFirstRun(["-sample"])
     XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 15), "the tabs show")
 
     // The month put in by hand: the question comes once, over what was done.
@@ -37,7 +36,7 @@ final class CalendarReflectTests: XCTestCase {
     add.tap()
     let question = app.alerts["これからも自動で反映しますか？"]
     XCTAssertTrue(question.waitForExistence(timeout: 10), "adding a month asks")
-    snap("1-question")
+    snap("1-question", of: app)
     question.buttons["自動で反映する"].tap()
     XCTAssertTrue(app.navigationBars["保存しました"].waitForExistence(timeout: 5), "the month was put in")
     app.buttons.matching(NSPredicate(format: "label == '閉じる'")).firstMatch.tap()
@@ -61,7 +60,7 @@ final class CalendarReflectTests: XCTestCase {
     openSheet()
     XCTAssertTrue(reveal(toggle), "the switch is on the sheet")
     XCTAssertEqual(toggle.value as? String, "1", "it is on")
-    snap("2-on")
+    snap("2-on", of: app)
     toggle.switches.firstMatch.tap()
     XCTAssertEqual(toggle.value as? String, "0", "it is turned off")
     app.navigationBars.buttons["閉じる"].tap()
@@ -73,8 +72,7 @@ final class CalendarReflectTests: XCTestCase {
   /// browser over the sheet, each time it is tapped (spec/calendar.md).
   @MainActor
   func testTheGuideToGoogleCalendarOpens() throws {
-    app.launchArguments += ["-sample", "-firstRunDone", "YES"]
-    app.launch()
+    app.launchPastFirstRun(["-sample"])
     XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 15), "the tabs show")
     openSheet()
     let guide = app.buttons["Googleカレンダーに入れるには"]
@@ -85,7 +83,7 @@ final class CalendarReflectTests: XCTestCase {
       guide.tap()
       XCTAssertTrue(
         browser.webViews.firstMatch.waitForExistence(timeout: 10), "the browser opens, \(time)")
-      snap("guide-\(time)")
+      snap("guide-\(time)", of: app)
       browser.buttons["閉じる"].firstMatch.tap()
       XCTAssertTrue(browser.waitForNonExistence(timeout: 5), "the browser closes, \(time)")
     }
@@ -146,13 +144,6 @@ final class CalendarReflectTests: XCTestCase {
           NSPredicate(format: "label BEGINSWITH %@", "\(day.month!)月\(day.day!)日、\(title)")
         ).firstMatch.waitForExistence(timeout: 5), "the day shows \(title)")
     return title
-  }
-
-  @MainActor private func snap(_ name: String) {
-    let shot = XCTAttachment(screenshot: app.screenshot())
-    shot.name = name
-    shot.lifetime = .keepAlways
-    add(shot)
   }
 
   /// Tells the script `name` is done, with what it is to look for, and

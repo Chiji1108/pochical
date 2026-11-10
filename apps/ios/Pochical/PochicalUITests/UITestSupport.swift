@@ -1,8 +1,16 @@
 import XCTest
 
-/// What the UI tests run against a local server do to be in its group: go
-/// through はじめの設定 as a new user would, and join by the invitation.
+/// What the UI tests share: launching past はじめの設定 or going through
+/// it as a new user would, joining a local server's group by its
+/// invitation, and keeping a screenshot.
 extension XCUIApplication {
+  /// Launches as someone past はじめの設定, with `arguments` besides
+  /// (`-sample` for the sample month).
+  @MainActor func launchPastFirstRun(_ arguments: [String] = []) {
+    launchArguments += ["-firstRunDone", "YES"] + arguments
+    launch()
+  }
+
   /// はじめの設定 through to the tabs, kept by the app, so a launch the
   /// test does not make (a notification's tap) is past it too.
   @MainActor func startsAsNewUser() {
@@ -14,9 +22,12 @@ extension XCUIApplication {
     XCTAssertTrue(tabBars.firstMatch.waitForExistence(timeout: 10), "the tabs show")
   }
 
-  /// Joins the group of the invitation `code`, as `name` if given (else
-  /// as the user already is), its hub shown.
-  @MainActor func joins(code: String, named name: String?) {
+  /// Joins the group whose invitation code the test's script kept in
+  /// `invitation`, as `name` if given (else as the user already is), its
+  /// hub shown.
+  @MainActor func joins(invitation: URL, named name: String?) throws {
+    let code = try String(contentsOf: invitation, encoding: .utf8)
+      .trimmingCharacters(in: .whitespacesAndNewlines)
     open(URL(string: "pochical://invite/\(code)")!)
     let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
     let confirm = springboard.buttons.matching(NSPredicate(format: "label IN {'開く', 'Open'}"))
@@ -37,5 +48,25 @@ extension XCUIApplication {
     XCTAssertTrue(join.waitForExistence(timeout: 15), "the join screen opens")
     join.tap()
     XCTAssertTrue(buttons["月で見る"].waitForExistence(timeout: 15), "the group's hub shows")
+  }
+}
+
+extension XCTestCase {
+  /// Keeps a screenshot of `shown` with the test's results as `name`, and
+  /// as `name`.png in `directory` when a script reads it from there.
+  @MainActor func snap(
+    _ name: String, of shown: any XCUIScreenshotProviding, into directory: URL? = nil
+  ) {
+    let screenshot = shown.screenshot()
+    let shot = XCTAttachment(screenshot: screenshot)
+    shot.name = name
+    shot.lifetime = .keepAlways
+    add(shot)
+    guard let directory else { return }
+    do {
+      try screenshot.pngRepresentation.write(to: directory.appending(path: "\(name).png"))
+    } catch {
+      XCTFail("\(name).png is not written: \(error)")
+    }
   }
 }

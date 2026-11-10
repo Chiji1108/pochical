@@ -29,9 +29,7 @@ final class NotificationTapTests: XCTestCase {
   func test1JoinsAndAllowsNotifications() throws {
     app.launch()
     app.startsAsNewUser()
-    let code = try String(contentsOf: shared.appending(path: "invite"), encoding: .utf8)
-      .trimmingCharacters(in: .whitespacesAndNewlines)
-    app.joins(code: code, named: "テスト")
+    try app.joins(invitation: shared.appending(path: "invite"), named: "テスト")
     // Its lines read, for the chat a notification opens to come on the
     // latest, those before it under the bar.
     app.buttons.matching(NSPredicate(format: "label BEGINSWITH '全体チャット'")).firstMatch.tap()
@@ -86,24 +84,17 @@ final class NotificationTapTests: XCTestCase {
     XCTAssertTrue(app.cells.firstMatch.waitForExistence(timeout: 10), "with its lines")
     XCTAssertEqual(app.navigationBars.count, 1, "the chat has one bar")
     XCTAssertFalse(app.tabBars.firstMatch.isHittable, "the chat is over the tabs")
-    snap(name)
+    snap(name, of: app)
     bar.buttons.firstMatch.tap()
     XCTAssertTrue(app.buttons["月で見る"].waitForExistence(timeout: 5), "back is the group's hub")
     XCTAssertTrue(app.tabBars.buttons["グループ"].isSelected, "over グループ")
-    snap("\(name)-back")
+    snap("\(name)-back", of: app)
   }
 
   /// Taps 設定's row named `row`.
   @MainActor private func openRow(_ row: String) {
     app.collectionViews.firstMatch.buttons
       .matching(NSPredicate(format: "label BEGINSWITH %@", row)).firstMatch.tap()
-  }
-
-  @MainActor private func snap(_ name: String) {
-    let shot = XCTAttachment(screenshot: app.screenshot())
-    shot.name = name
-    shot.lifetime = .keepAlways
-    add(shot)
   }
 
   private func signal(_ step: String) throws {

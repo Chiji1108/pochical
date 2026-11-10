@@ -9,8 +9,7 @@ final class PictureHeaderTests: XCTestCase {
 
   func testPatternPagesHeadWithTheirMarkAsFacesAndGroupsDo() throws {
     continueAfterFailure = false
-    app.launchArguments += ["-firstRunDone", "YES"]
-    app.launch()
+    app.launchPastFirstRun()
     let settings = app.tabBars.buttons["設定"]
     XCTAssertTrue(settings.waitForExistence(timeout: 20))
     settings.tap()
@@ -22,7 +21,7 @@ final class PictureHeaderTests: XCTestCase {
     tapRow("自分で作る")
     let mark = app.buttons.matching(identifier: "印と色を変える").firstMatch
     XCTAssertTrue(mark.waitForExistence(timeout: 5), "パターンを追加 heads with its mark")
-    snap("1-pattern-new-blank")
+    snap("1-pattern-new-blank", of: app)
     let name = app.textFields.firstMatch
     name.tap()
     name.typeText("夜勤")
@@ -31,10 +30,10 @@ final class PictureHeaderTests: XCTestCase {
     let said = try XCTUnwrap(mark.value as? String)
     XCTAssertTrue(said.hasPrefix("月"), "the mark follows the name typed: \(said)")
     XCTAssertFalse(app.staticTexts["新しいパターン"].exists, "the top does not name the pattern")
-    snap("2-pattern-new-typed")
+    snap("2-pattern-new-typed", of: app)
     mark.tap()
     XCTAssertTrue(app.navigationBars["印と色"].waitForExistence(timeout: 5))
-    snap("3-pattern-new-look")
+    snap("3-pattern-new-look", of: app)
     app.navigationBars.buttons.firstMatch.tap()
     XCTAssertTrue(mark.waitForExistence(timeout: 5))
     app.navigationBars.buttons["追加"].tap()
@@ -43,7 +42,7 @@ final class PictureHeaderTests: XCTestCase {
     tapRow("夜勤")
     XCTAssertTrue(app.navigationBars["パターンを編集"].waitForExistence(timeout: 5))
     XCTAssertTrue(mark.waitForExistence(timeout: 5), "パターンを編集 heads with its mark")
-    snap("4-pattern-edit")
+    snap("4-pattern-edit", of: app)
     app.navigationBars.buttons.firstMatch.tap()
     XCTAssertTrue(app.navigationBars["シフトパターン"].waitForExistence(timeout: 5))
     app.navigationBars.buttons.firstMatch.tap()
@@ -51,7 +50,7 @@ final class PictureHeaderTests: XCTestCase {
     tapRow("プロフィール")
     XCTAssertTrue(app.navigationBars["プロフィール"].waitForExistence(timeout: 5))
     XCTAssertTrue(header("写真を編集").exists, "プロフィール heads with the face")
-    snap("5-profile")
+    snap("5-profile", of: app)
     app.navigationBars.buttons.firstMatch.tap()
 
     app.tabBars.buttons["グループ"].tap()
@@ -65,7 +64,7 @@ final class PictureHeaderTests: XCTestCase {
     tapRow("アイコン")
     XCTAssertTrue(app.navigationBars["アイコン"].waitForExistence(timeout: 5))
     XCTAssertTrue(header("写真を使う").exists, "アイコン heads with the group's mark")
-    snap("6-group-icon")
+    snap("6-group-icon", of: app)
   }
 
   /// The button heading a page, its picture read with its words.
@@ -81,12 +80,5 @@ final class PictureHeaderTests: XCTestCase {
       swipes += 1
     }
     cell.tap()
-  }
-
-  private func snap(_ name: String) {
-    let shot = XCTAttachment(screenshot: app.screenshot())
-    shot.name = name
-    shot.lifetime = .keepAlways
-    add(shot)
   }
 }

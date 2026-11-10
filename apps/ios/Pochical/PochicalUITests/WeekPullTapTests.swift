@@ -32,7 +32,7 @@ final class WeekPullTapTests: XCTestCase {
     start.press(
       forDuration: 0, thenDragTo: start.withOffset(CGVector(dx: 0, dy: 30)),
       withVelocity: 100, thenHoldForDuration: 0)
-    snap("slow-pull")
+    snap("slow-pull", of: app)
     XCTAssertFalse(becomesSelected(other), "a slow pull let go picks no day")
     XCTAssertTrue(opened.isSelected, "the week folds back on the day open")
   }
@@ -43,7 +43,7 @@ final class WeekPullTapTests: XCTestCase {
     start.press(
       forDuration: 0, thenDragTo: start.withOffset(CGVector(dx: 0, dy: 60)),
       withVelocity: 600, thenHoldForDuration: 0)
-    snap("fast-pull")
+    snap("fast-pull", of: app)
     XCTAssertFalse(becomesSelected(other), "a flick down picks no day")
     XCTAssertFalse(anySelected, "the flick unfolds the month with no day open")
   }
@@ -57,7 +57,7 @@ final class WeekPullTapTests: XCTestCase {
     let next = days.matching(NSPredicate(format: "label BEGINSWITH %@", "\(thisMonth)月22日、"))
       .firstMatch
     let swiped = becomesSelected(next)
-    snap("swipe")
+    snap("swipe", of: app)
     XCTAssertTrue(swiped, "a swipe opens the same weekday a week on")
     XCTAssertFalse(opened.isSelected, "the day open before closes")
   }
@@ -65,8 +65,7 @@ final class WeekPullTapTests: XCTestCase {
   /// Opens a day mid-month and returns it with another day of its week.
   private func openADay() throws -> (opened: XCUIElement, other: XCUIElement) {
     continueAfterFailure = false
-    app.launchArguments += ["-firstRunDone", "YES"]
-    app.launch()
+    app.launchPastFirstRun()
     let day = days.matching(NSPredicate(format: "label BEGINSWITH %@", "\(thisMonth)月15日、"))
       .firstMatch
     XCTAssertTrue(day.waitForExistence(timeout: 15), "the month shows")
@@ -95,12 +94,5 @@ final class WeekPullTapTests: XCTestCase {
   private func becomesSelected(_ day: XCUIElement) -> Bool {
     let selected = expectation(for: NSPredicate(format: "isSelected == true"), evaluatedWith: day)
     return XCTWaiter().wait(for: [selected], timeout: 3) == .completed
-  }
-
-  private func snap(_ name: String) {
-    let shot = XCTAttachment(screenshot: app.screenshot())
-    shot.name = name
-    shot.lifetime = .keepAlways
-    add(shot)
   }
 }

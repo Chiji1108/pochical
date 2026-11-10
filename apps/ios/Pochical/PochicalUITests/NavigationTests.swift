@@ -14,13 +14,12 @@ final class NavigationTests: XCTestCase {
 
   func testSettingsPagesOpenOverTheTabs() throws {
     continueAfterFailure = false
-    app.launchArguments += ["-firstRunDone", "YES"]
-    app.launch()
+    app.launchPastFirstRun()
     let tab = app.tabBars.buttons["設定"]
     XCTAssertTrue(tab.waitForExistence(timeout: 15), "the tabs show")
     tab.tap()
     XCTAssertTrue(app.navigationBars["設定"].waitForExistence(timeout: 5), "設定 is titled in the bar")
-    snap("settings")
+    snap("settings", of: app)
     for row in [
       "シフトパターン", "繰り返し", "一緒に働く人", "リマインド", "チャット", "スタイル", "外観",
       "カレンダー", "アプリアイコン", "プロフィール", "アカウント", "ライセンス",
@@ -30,7 +29,7 @@ final class NavigationTests: XCTestCase {
       XCTAssertTrue(title.waitForExistence(timeout: 5), "\(row) is titled in the bar")
       XCTAssertEqual(app.navigationBars.count, 1, "\(row) has one bar")
       XCTAssertFalse(app.tabBars.firstMatch.isHittable, "\(row) is over the tabs")
-      snap(row)
+      snap(row, of: app)
       title.buttons.firstMatch.tap()
       XCTAssertTrue(app.navigationBars["設定"].waitForExistence(timeout: 5), "back is 設定")
       XCTAssertTrue(tab.isHittable, "the tab bar comes back with 設定")
@@ -44,8 +43,7 @@ final class NavigationTests: XCTestCase {
   /// from one its title is large again.
   func testSettingsTitleIsLargeAtItsRoot() throws {
     continueAfterFailure = false
-    app.launchArguments += ["-firstRunDone", "YES"]
-    app.launch()
+    app.launchPastFirstRun()
     let tab = app.tabBars.buttons["設定"]
     XCTAssertTrue(tab.waitForExistence(timeout: 15), "the tabs show")
     tab.tap()
@@ -55,11 +53,11 @@ final class NavigationTests: XCTestCase {
     open("外観")
     XCTAssertTrue(page.waitForExistence(timeout: 5), "外観 is titled in the bar")
     let inline = page.frame.height
-    snap("page")
+    snap("page", of: app)
     page.buttons.firstMatch.tap()
     XCTAssertTrue(settles(bar) { $0 > inline + 30 }, "back at 設定, its title is large")
     let large = bar.frame.height
-    snap("large")
+    snap("large", of: app)
     // From the calendar, which has no bar, and from グループ, whose title
     // is in the bar.
     for other in ["カレンダー", "グループ"] {
@@ -71,7 +69,7 @@ final class NavigationTests: XCTestCase {
     list.swipeUp()
     XCTAssertTrue(settles(bar) { $0 < large - 30 }, "the title goes into the bar as the list scrolls")
     let scrolled = bar.frame.height
-    snap("scrolled")
+    snap("scrolled", of: app)
     app.tabBars.buttons["グループ"].tap()
     tab.tap()
     XCTAssertTrue(settles(bar) { $0 == scrolled }, "the title stays in the bar while the list is scrolled")
@@ -85,8 +83,7 @@ final class NavigationTests: XCTestCase {
   /// beside its column, each in a bar of its own (#1023).
   func testSettingsPagesOpenBesideOnAWideScreen() throws {
     continueAfterFailure = false
-    app.launchArguments += ["-firstRunDone", "YES"]
-    app.launch()
+    app.launchPastFirstRun()
     XCUIDevice.shared.orientation = .landscapeLeft
     let tab = app.tabBars.buttons["設定"]
     XCTAssertTrue(tab.waitForExistence(timeout: 15), "the tabs show")
@@ -102,7 +99,7 @@ final class NavigationTests: XCTestCase {
       XCTWaiter().wait(for: [over], timeout: 2) == .completed,
       "a compact width, its pages over the tabs")
     XCTAssertTrue(tab.isHittable, "シフトパターン is beside the tabs")
-    snap("beside")
+    snap("beside", of: app)
   }
 
   /// Whether `bar`'s height comes to what `holds` asks within a few
@@ -117,20 +114,19 @@ final class NavigationTests: XCTestCase {
   /// notices, each opening its license's text.
   func testLicensesOpenTheirText() throws {
     continueAfterFailure = false
-    app.launchArguments += ["-firstRunDone", "YES"]
-    app.launch()
+    app.launchPastFirstRun()
     let tab = app.tabBars.buttons["設定"]
     XCTAssertTrue(tab.waitForExistence(timeout: 15), "the tabs show")
     tab.tap()
     let row = reveal("ライセンス")
-    snap("about")
+    snap("about", of: app)
     row.tap()
     XCTAssertTrue(app.navigationBars["ライセンス"].waitForExistence(timeout: 5), "ライセンス is titled in the bar")
-    snap("licenses")
+    snap("licenses", of: app)
     open("GRDB")
     XCTAssertTrue(app.navigationBars["GRDB"].waitForExistence(timeout: 5), "a license is titled by its package")
     XCTAssertTrue(text("Permission is hereby granted").waitForExistence(timeout: 5), "its text shows")
-    snap("license")
+    snap("license", of: app)
     app.navigationBars["GRDB"].buttons.firstMatch.tap()
     open("Phosphor Icons")
     XCTAssertTrue(text("Copyright (c) 2020 Phosphor Icons").waitForExistence(timeout: 5), "design/'s notices are listed")
@@ -155,12 +151,5 @@ final class NavigationTests: XCTestCase {
       swipes += 1
     }
     return cell
-  }
-
-  private func snap(_ name: String) {
-    let shot = XCTAttachment(screenshot: app.screenshot())
-    shot.name = name
-    shot.lifetime = .keepAlways
-    add(shot)
   }
 }
