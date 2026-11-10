@@ -205,7 +205,7 @@ fun GlanceModifier.spoken(day: WidgetDay, words: WidgetWords): GlanceModifier = 
  */
 abstract class PochicalWidget(
   private val chooses: Choosing = Choosing.Nobody,
-  previews: Set<DpSize>,
+  val previews: Set<DpSize>,
 ) : GlanceAppWidget() {
   override val sizeMode: SizeMode = SizeMode.Exact
 
