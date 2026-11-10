@@ -26,6 +26,7 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { devServer } from "../dev-server";
+import { fail, rpc, signIn, textOf } from "../group-client";
 
 type User = { name: string; token: string; userId: string };
 
@@ -62,11 +63,6 @@ const isState = (value: unknown): value is State =>
   "users" in value &&
   Array.isArray(value.users);
 
-const fail = (message: string): never => {
-  console.error(message);
-  process.exit(1);
-};
-
 const loadState = async (): Promise<State> => {
   if (!existsSync(statePath)) {
     return { local, users: [] };
@@ -88,45 +84,11 @@ const saveState = async (state: State): Promise<void> => {
   await writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`);
 };
 
-// A Connect JSON call, as the apps make one.
-const rpc = async <T>(
-  method: string,
-  body: Record<string, unknown>,
-  token?: string
-): Promise<T> => {
-  const response = await fetch(`${api}/pochical.v1.${method}`, {
-    body: JSON.stringify(body),
-    headers: {
-      "Content-Type": "application/json",
-      ...(token === undefined ? {} : { Authorization: `Bearer ${token}` }),
-    },
-    method: "POST",
-  });
-  const data: unknown = await response.json();
-  if (!response.ok) {
-    return fail(`${method}: ${response.status} ${JSON.stringify(data)}`);
-  }
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the server's Connect JSON for this method
-  return data as T;
-};
-
-const signIn = async (name: string): Promise<User> => {
-  const response = await fetch(`${api}/api/auth/sign-in/anonymous`, {
-    body: "{}",
-    headers: { "Content-Type": "application/json" },
-    method: "POST",
-  });
-  const token = response.headers.get("set-auth-token");
-  if (!response.ok || token === null) {
-    return fail(`sign-in: ${response.status} ${await response.text()}`);
-  }
-  const { userId } = await rpc<{ userId: string }>(
-    "UserService/GetMe",
-    {},
-    token
-  );
-  return { name, token, userId };
-};
+// A new user, by the name they take in the group.
+const newUser = async (name: string): Promise<User> => ({
+  name,
+  ...(await signIn(api)),
+});
 
 const linkOf = (code: string): string => `${site}/invite/${code}`;
 
@@ -139,11 +101,9 @@ const requireGroup = (state: State): { groupId: string; code: string } => {
 
 const create = async (state: State): Promise<void> => {
   const [name = "ポチカルのテスト", emoji = "🧪"] = rest;
-  const maker = await signIn(`テスト${state.users.length + 1}`);
-  const { groupId, inviteCode } = await rpc<{
-    groupId: string;
-    inviteCode: string;
-  }>(
+  const maker = await newUser(`テスト${state.users.length + 1}`);
+  const made = await rpc(
+    api,
     "GroupService/CreateGroup",
     {
       displayName: maker.name,
@@ -153,6 +113,8 @@ const create = async (state: State): Promise<void> => {
     },
     maker.token
   );
+  const groupId = textOf(made, "groupId");
+  const inviteCode = textOf(made, "inviteCode");
   await saveState({
     ...state,
     groupId,
@@ -165,15 +127,16 @@ const create = async (state: State): Promise<void> => {
 
 const join = async (state: State): Promise<void> => {
   const { code } = requireGroup(state);
-  const guest = await signIn(`テスト${state.users.length + 1}`);
-  const { alreadyMember = false } = await rpc<{ alreadyMember?: boolean }>(
+  const guest = await newUser(`テスト${state.users.length + 1}`);
+  const { alreadyMember } = await rpc(
+    api,
     "GroupService/JoinGroup",
     { displayName: guest.name, inviteCode: code },
     guest.token
   );
   await saveState({ ...state, users: [...state.users, guest] });
   console.log(
-    alreadyMember
+    alreadyMember === true
       ? `${guest.name}はもう参加しています`
       : `${guest.name}が参加しました`
   );
@@ -181,14 +144,20 @@ const join = async (state: State): Promise<void> => {
 
 const preview = async (state: State): Promise<void> => {
   const { code } = requireGroup(state);
-  const shown = await rpc<{
-    groupName: string;
-    groupEmoji?: string;
-    memberCount?: number;
-  }>("InviteService/GetInvitePreview", { inviteCode: code });
-  console.log(
-    `${shown.groupEmoji ?? ""} ${shown.groupName}（${shown.memberCount ?? 0}人）`
-  );
+  const shown = await rpc(api, "InviteService/GetInvitePreview", {
+    inviteCode: code,
+  });
+  // Connect's JSON leaves out a mark that is no emoji and a count of 0.
+  const mark = shown.groupMark;
+  const emoji =
+    typeof mark === "object" &&
+    mark !== null &&
+    "emoji" in mark &&
+    typeof mark.emoji === "string"
+      ? mark.emoji
+      : "";
+  const members = typeof shown.memberCount === "number" ? shown.memberCount : 0;
+  console.log(`${emoji} ${textOf(shown, "groupName")}（${members}人）`);
   const page = await fetch(linkOf(code));
   const title = TITLE.exec(await page.text())?.groups?.title;
   console.log(`ページのタイトル: ${title ?? `（${page.status}）`}`);
@@ -200,10 +169,9 @@ const remake = async (state: State): Promise<void> => {
   if (!maker) {
     return fail("No maker in out/state.json");
   }
-  const { inviteCode } = await rpc<{ inviteCode: string }>(
-    "GroupService/RemakeInviteLink",
-    { groupId },
-    maker.token
+  const inviteCode = textOf(
+    await rpc(api, "GroupService/RemakeInviteLink", { groupId }, maker.token),
+    "inviteCode"
   );
   await saveState({ ...state, inviteCode });
   console.log(`作り直しました: ${linkOf(inviteCode)}`);

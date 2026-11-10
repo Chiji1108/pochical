@@ -32,38 +32,23 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
-import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
 import { chatRules } from "@pochical/design/chat";
 
-import {
-  ClientFrameSchema,
-  ServerFrameSchema,
-} from "../../apps/server/src/gen/pochical/v1/sync_pb";
-import { CURRENT_PROTOCOL_VERSION } from "../../apps/server/src/protocol";
 import { devServer } from "../dev-server";
+import {
+  fail,
+  GROUP_THREAD,
+  groupSocket,
+  inTime,
+  openSocket,
+  rpc,
+  signIn,
+  textOf,
+  upload,
+} from "../group-client";
+import type { SyncSocket } from "../group-client";
 
-const api = devServer;
-const GROUP_THREAD = "group";
 const DEFAULT_COUNT = 10;
-const ACK_TIMEOUT_MS = 10_000;
-
-const fail = (message: string): never => {
-  console.error(message);
-  process.exit(1);
-};
-
-// Waits for the group's answer, failing once it has not come in
-// ACK_TIMEOUT_MS (the socket closed, the server gone).
-const inTime = async <T>(answer: Promise<T>): Promise<T> => {
-  const late = setTimeout(() => {
-    fail("no answer from the group");
-  }, ACK_TIMEOUT_MS);
-  try {
-    return await answer;
-  } finally {
-    clearTimeout(late);
-  }
-};
 
 const flags = new Set(["--rich", "--album"]);
 const args = process.argv.slice(2).filter((arg) => !flags.has(arg));
@@ -92,49 +77,6 @@ if (code === undefined || !Number.isInteger(count) || count < 1) {
   );
 }
 
-// A Connect JSON call, as the apps make one.
-const rpc = async (
-  method: string,
-  body: Record<string, unknown>,
-  token?: string
-): Promise<Record<string, unknown>> => {
-  const response = await fetch(`${api}/pochical.v1.${method}`, {
-    body: JSON.stringify(body),
-    headers: {
-      "Content-Type": "application/json",
-      ...(token === undefined ? {} : { Authorization: `Bearer ${token}` }),
-    },
-    method: "POST",
-  });
-  const data: unknown = await response.json();
-  if (!response.ok || typeof data !== "object" || data === null) {
-    return fail(`${method}: ${response.status} ${JSON.stringify(data)}`);
-  }
-  return Object.fromEntries(Object.entries(data));
-};
-
-const signIn = async (): Promise<{ token: string; userId: string }> => {
-  const response = await fetch(`${api}/api/auth/sign-in/anonymous`, {
-    body: "{}",
-    headers: { "Content-Type": "application/json" },
-    method: "POST",
-  });
-  const token = response.headers.get("set-auth-token");
-  const body: unknown = await response.json();
-  const user =
-    typeof body === "object" && body !== null && "user" in body
-      ? body.user
-      : undefined;
-  const userId =
-    typeof user === "object" && user !== null && "id" in user
-      ? user.id
-      : undefined;
-  if (!response.ok || token === null || typeof userId !== "string") {
-    return fail(`sign-in: ${response.status} ${JSON.stringify(body)}`);
-  }
-  return { token, userId };
-};
-
 // A long chat's lines, in turn: long words, links, a mention, emoji.
 const richLines = (userId: string): string[] => [
   "明日のシフト、朝からだっけ？",
@@ -153,48 +95,38 @@ type Photo = {
 
 type Sending = { photos: Photo[]; files: string[] } | { text: string };
 
-// Each send by its op_id: what it was, to name it if refused, and the
-// group's answer to it.
-const sent = new Map<
-  string,
-  { what: string; answered: PromiseWithResolvers<undefined> }
->();
+// Each send by its op_id: what it was, to name it if refused.
+const sent = new Map<string, string>();
 
-const send = (socket: WebSocket, lines: Sending[]): void => {
+const send = (socket: SyncSocket, lines: Sending[]): void => {
   const edits = lines.map((line) => {
     const opId = crypto.randomUUID();
-    sent.set(opId, {
-      answered: Promise.withResolvers<undefined>(),
-      what: "text" in line ? line.text : line.files.join(", "),
-    });
+    sent.set(opId, "text" in line ? line.text : line.files.join(", "));
     return { line, opId };
   });
-  const frame = create(ClientFrameSchema, {
-    kind: {
-      case: "chatEdits",
-      value: {
-        edits: edits.map(({ line, opId }) => ({
-          kind: {
-            case: "send" as const,
-            value: {
-              content: {
-                kind:
-                  "text" in line
-                    ? { case: "words" as const, value: { text: line.text } }
-                    : {
-                        case: "photos" as const,
-                        value: { photos: line.photos },
-                      },
-              },
-              threadId: GROUP_THREAD,
+  socket.send({
+    case: "chatEdits",
+    value: {
+      edits: edits.map(({ line, opId }) => ({
+        kind: {
+          case: "send" as const,
+          value: {
+            content: {
+              kind:
+                "text" in line
+                  ? { case: "words" as const, value: { text: line.text } }
+                  : {
+                      case: "photos" as const,
+                      value: { photos: line.photos },
+                    },
             },
+            threadId: GROUP_THREAD,
           },
-          opId,
-        })),
-      },
+        },
+        opId,
+      })),
     },
   });
-  socket.send(toBinary(ClientFrameSchema, frame));
 };
 
 const START_OF_FRAME = new Set([0xc0, 0xc1, 0xc2]);
@@ -233,27 +165,15 @@ const readPhoto = async (file: string): Promise<Jpeg> => {
   return jpeg;
 };
 
-// One JPEG uploaded to the group's photos.
-const upload = async (
-  { bytes, file }: Jpeg,
+// One JPEG uploaded to the group's photos, as a line carries it.
+const uploadPhoto = async (
+  jpeg: Jpeg,
   groupId: string,
   token: string
-): Promise<Photo> => {
-  const id = crypto.randomUUID();
-  const response = await fetch(`${api}/v1/groups/${groupId}/photos/${id}`, {
-    body: bytes,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "image/jpeg",
-    },
-    method: "PUT",
-  });
-  if (!response.ok) {
-    const answer = await response.text();
-    fail(`upload ${file}: ${response.status} ${answer}`);
-  }
-  return { id, ...jpegSize(bytes) };
-};
+): Promise<Photo> => ({
+  id: await upload(devServer, jpeg, groupId, token),
+  ...jpegSize(jpeg.bytes),
+});
 
 // Each JPEG in `dir`, in the order of their names.
 const jpegsIn = async (dir: string): Promise<string[]> => {
@@ -272,140 +192,80 @@ if (album && files.length > chatRules.photosPerSend) {
 }
 const jpegs = await Promise.all(files.map(readPhoto));
 
-const { token, userId } = await signIn();
+const { token, userId } = await signIn(devServer);
 const name = `テスト送信${Math.floor(Math.random() * 100)}`;
-const joined = await rpc(
-  "GroupService/JoinGroup",
-  { displayName: name, inviteCode: code },
-  token
+const groupId = textOf(
+  await rpc(
+    devServer,
+    "GroupService/JoinGroup",
+    { displayName: name, inviteCode: code },
+    token
+  ),
+  "groupId"
 );
-const groupId =
-  typeof joined.groupId === "string"
-    ? joined.groupId
-    : fail(`JoinGroup: no group id in ${JSON.stringify(joined)}`);
 
 if (face !== undefined) {
-  const { id } = await upload(await readJpeg(face), groupId, token);
-  await rpc("GroupService/SetGroupPhoto", { groupId, photoId: id }, token);
+  const photoId = await upload(devServer, await readJpeg(face), groupId, token);
+  await rpc(
+    devServer,
+    "GroupService/SetGroupPhoto",
+    { groupId, photoId },
+    token
+  );
 }
 
-const socket = new WebSocket(
-  `${api.replace(/^http/u, "ws")}/v1/groups/${groupId}/socket`,
-  {
-    headers: { Authorization: `Bearer ${token}` },
-  }
-);
-socket.binaryType = "arraybuffer";
-
-const welcomed = Promise.withResolvers<undefined>();
-// The catch-up has all come: the Pong to the Ping after Welcome.
-const caughtUp = Promise.withResolvers<undefined>();
 // The latest line of each words, by its seq.
 const seqOfWords = new Map<string, bigint>();
 // Who chose each emoji on each line, by its seq, as the group last sent it.
 const reactionsOf = new Map<bigint, Map<string, string[]>>();
 // The sends the group took as lines.
 const taken = new Set<string>();
-socket.addEventListener("open", () => {
-  const hello = create(ClientFrameSchema, {
-    kind: {
-      case: "hello",
-      value: { cursor: 0n, protocolVersion: CURRENT_PROTOCOL_VERSION },
-    },
-  });
-  socket.send(toBinary(ClientFrameSchema, hello));
-});
-socket.addEventListener("message", (event) => {
-  if (!(event.data instanceof ArrayBuffer)) {
-    return;
-  }
-  const frame = fromBinary(ServerFrameSchema, new Uint8Array(event.data));
-  if (frame.kind.case === "welcome") {
-    welcomed.resolve(undefined);
-  } else if (frame.kind.case === "pong") {
-    caughtUp.resolve(undefined);
-  } else if (frame.kind.case === "changes") {
-    for (const { kind } of frame.kind.value.changes) {
-      if (kind.case === "chatLine") {
-        taken.add(kind.value.opId);
-        const { content, reactions, seq } = kind.value;
-        // The latest of lines of the same words, whatever order the
-        // catch-up brings them in (by cursor, not seq).
-        if (
-          content?.kind.case === "words" &&
-          seq > (seqOfWords.get(content.kind.value.text) ?? 0n)
-        ) {
-          seqOfWords.set(content.kind.value.text, seq);
-        }
-        reactionsOf.set(
-          seq,
-          new Map(reactions.map(({ emoji, userIds }) => [emoji, userIds]))
-        );
-      }
+const socket = await openSocket(
+  devServer,
+  groupSocket(groupId),
+  token,
+  ({ kind }) => {
+    if (kind.case !== "chatLine") {
+      return;
     }
-  } else if (frame.kind.case === "acked") {
-    for (const opId of frame.kind.value.opIds) {
-      sent.get(opId)?.answered.resolve(undefined);
+    taken.add(kind.value.opId);
+    const { content, reactions, seq } = kind.value;
+    // The latest of lines of the same words, whatever order the catch-up
+    // brings them in (by cursor, not seq).
+    if (
+      content?.kind.case === "words" &&
+      seq > (seqOfWords.get(content.kind.value.text) ?? 0n)
+    ) {
+      seqOfWords.set(content.kind.value.text, seq);
     }
-  } else if (frame.kind.case === "error") {
-    fail(`server: ${JSON.stringify(frame.kind.value)}`);
+    reactionsOf.set(
+      seq,
+      new Map(reactions.map(({ emoji, userIds }) => [emoji, userIds]))
+    );
   }
-});
-const lost = (): void => {
-  fail("socket: could not connect, or the connection was lost");
-};
-socket.addEventListener("error", lost);
-// Closed once the group has answered: what the socket says as it closes
-// is no longer a failure.
-const close = (): void => {
-  socket.removeEventListener("error", lost);
-  socket.close();
-};
-await welcomed.promise;
+);
 
 if (reaction !== undefined) {
-  socket.send(
-    toBinary(
-      ClientFrameSchema,
-      create(ClientFrameSchema, {
-        kind: { case: "ping", value: { nonce: 1 } },
-      })
-    )
-  );
-  await inTime(caughtUp.promise);
+  await socket.caughtUp();
   const seq =
     seqOfWords.get(reactTo ?? "") ?? fail(`no line of the words ${reactTo}`);
   const opId = crypto.randomUUID();
-  const acked = Promise.withResolvers<undefined>();
-  sent.set(opId, { answered: acked, what: reaction });
-  socket.send(
-    toBinary(
-      ClientFrameSchema,
-      create(ClientFrameSchema, {
-        kind: {
-          case: "chatEdits",
-          value: {
-            edits: [
-              {
-                kind: {
-                  case: "react",
-                  value: {
-                    emoji: reaction,
-                    on: true,
-                    seq,
-                    threadId: GROUP_THREAD,
-                  },
-                },
-                opId,
-              },
-            ],
+  socket.send({
+    case: "chatEdits",
+    value: {
+      edits: [
+        {
+          kind: {
+            case: "react",
+            value: { emoji: reaction, on: true, seq, threadId: GROUP_THREAD },
           },
+          opId,
         },
-      })
-    )
-  );
-  await inTime(acked.promise);
-  close();
+      ],
+    },
+  });
+  await inTime(socket.answered(opId));
+  socket.close();
   // The group answers every edit, taken or not: the line it sent again
   // says whether the reaction is on it.
   if (!(reactionsOf.get(seq)?.get(reaction)?.includes(userId) ?? false)) {
@@ -419,7 +279,7 @@ const lines = richLines(userId);
 const uploaded = await Promise.all(
   jpegs.map(async (jpeg) => ({
     file: jpeg.file,
-    photo: await upload(jpeg, groupId, token),
+    photo: await uploadPhoto(jpeg, groupId, token),
   }))
 );
 const photoLines: Sending[] = album
@@ -450,16 +310,12 @@ if (every > 0) {
 // Until the group has answered every send: the lines it took come before
 // its Acked, and a send acked with no line was refused.
 await inTime(
-  Promise.all(
-    [...sent.values()].map(async ({ answered }) => {
-      await answered.promise;
-    })
-  )
+  Promise.all([...sent.keys()].map(async (opId) => await socket.answered(opId)))
 );
-close();
+socket.close();
 const refused = [...sent]
   .filter(([opId]) => !taken.has(opId))
-  .map(([, { what }]) => `  ${what}`);
+  .map(([, what]) => `  ${what}`);
 console.log(`${name}として${sent.size - refused.length}行送りました`);
 if (refused.length > 0) {
   fail(`refused by the group:\n${refused.join("\n")}`);
