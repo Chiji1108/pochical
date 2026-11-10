@@ -4,9 +4,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.add
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -157,6 +162,10 @@ fun TogetherSheet(title: String, days: List<LocalDate>, country: String, onPick:
  * What each mark means, one person at a time in their own shape, picked by the chips over the list as
  * 1人ずつ picks whom to show (/design's LegendSheet). It opens on [first]: the face pressed, or from
  * the menu the first of the others.
+ *
+ * The sheet fills the screen whoever is picked, so it opens half-way and is pulled up to the whole
+ * screen, as iOS's medium and large detents: its height never follows one person's patterns, and the
+ * chips stay under the finger from one person to the next. Only the list under them scrolls.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -167,7 +176,7 @@ fun LegendSheet(members: List<GroupMember>, groupId: String, first: String, onDi
   LaunchedEffect(Unit) { chips.scrollToItem(members.indexOf(member).coerceAtLeast(0)) }
   ModalBottomSheet(onDismissRequest = onDismiss) {
     Text(stringResource(R.string.patterns), Modifier.padding(horizontal = 24.dp, vertical = 8.dp).semantics { heading() }, style = PochicalTextStyles.headline)
-    LazyRow(state = chips, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    LazyRow(state = chips, contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
       items(members, key = { it.userId }) { candidate ->
         FilterChip(
           selected = candidate.userId == member.userId,
@@ -178,15 +187,17 @@ fun LegendSheet(members: List<GroupMember>, groupId: String, first: String, onDi
       }
     }
     val patterns = legendPatterns(member)
-    if (patterns.isEmpty()) {
-      Text(
-        stringResource(R.string.legend_none),
-        Modifier.fillMaxWidth().padding(24.dp),
-        style = PochicalTextStyles.subheadline,
-        color = LocalThemeColors.current.textTertiary,
-      )
-    }
-    LazyColumn(Modifier.padding(bottom = 16.dp)) {
+    LazyColumn(Modifier.weight(1f), contentPadding = WindowInsets.navigationBars.add(WindowInsets(bottom = 16.dp)).asPaddingValues()) {
+      if (patterns.isEmpty()) {
+        item(key = NO_PATTERNS) {
+          Text(
+            stringResource(R.string.legend_none),
+            Modifier.fillMaxWidth().padding(24.dp),
+            style = PochicalTextStyles.subheadline,
+            color = LocalThemeColors.current.textTertiary,
+          )
+        }
+      }
       items(patterns, key = { it.id }) { pattern ->
         ListItem(
           headlineContent = { Text(pattern.name) },
@@ -198,6 +209,8 @@ fun LegendSheet(members: List<GroupMember>, groupId: String, first: String, onDi
     }
   }
 }
+
+private const val NO_PATTERNS = "none"
 
 /** A member's patterns in a steady order: shifts by when they start, then those without hours, then days off, each by name. */
 fun legendPatterns(member: GroupMember): List<Pattern> =
