@@ -659,8 +659,9 @@ struct DeviceCalendarSheet: View {
 /// sheet itself: `openURL(_:prefersInApp:)` presents the browser on the
 /// scene's root, which UIKit refuses while that is presenting the sheet
 /// ("Attempt to present <SFSafariViewController> ... which is already
-/// presenting", on an iPhone's iOS 26 and the simulator's iOS 27), so
-/// from a sheet it opens nothing.
+/// presenting", logged on the simulator's iOS 27; an iPhone's iOS 26
+/// opens nothing the same way), so from a sheet it opens nothing. Apple's
+/// to fix: #1158 takes this out once it has.
 private struct SitePage: UIViewControllerRepresentable {
   let url: URL
 
