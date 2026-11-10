@@ -25,7 +25,9 @@ import org.junit.runner.RunWith
 /**
  * The screens the stores' screenshots are made of (#806), photographed as they are on an emulator:
  * the sample month as a new user's, who joins the group tools/store-screenshots/seed.ts made as
- * 佐藤. Run by `mise run store:shots:android` (tools/store-screenshots/android.sh), which sets the
+ * 佐藤, each kept under the name packages/prototype/src/lib/store-shots.ts gives it. The last is the
+ * month in 墨 with シフトの色 at ワントーン, in black and white, so every screen before it is in the
+ * テーマ and the colors the app starts with. Run by `mise run store:shots:android` (tools/store-screenshots/android.sh), which sets the
  * emulator up, names the invitation (the argument `invite`) and takes the PNGs from where Gradle
  * pulls them (`additionalTestOutputDir`); skipped in any other run.
  */
@@ -51,7 +53,6 @@ class StoreScreenshots {
     val calendar = By.descContains("、夜勤")
     device.find(calendar)
     photograph("02-calendar")
-    photograph("07-look-default")
 
     // ポチポチ入力, on today rather than the month's first day.
     val today = LocalDate.now().let { "${it.monthValue}月${it.dayOfMonth}日" }
@@ -74,7 +75,7 @@ class StoreScreenshots {
     device.tap(By.text("参加する"), By.text("全体チャット"))
     // The table once the group shows 佐藤's shifts too, sent from this device.
     device.tap(By.text("月で見る"), By.desc(Pattern.compile(".*佐藤：(日勤|夜勤|明け|休み).*")))
-    photograph("05-group")
+    photograph("05-group-shifts")
     device.back(By.text("一覧"))
 
     // The chat from its first line, the words about the mobile battery in the middle.
@@ -89,10 +90,10 @@ class StoreScreenshots {
 
     device.tap(By.text("設定"), By.text("スタイル"))
     device.tap(By.text("スタイル"), By.text("テーマ"))
-    device.tap(By.text("墨"), By.checked(true).hasChild(By.text("墨")))
+    for (choice in listOf("墨", "ワントーン")) device.tap(By.text(choice), By.checked(true).hasChild(By.text(choice)))
     launch()
     device.find(calendar)
-    photograph("07-look-sumi")
+    photograph("07-calendar-sumi")
   }
 
   /** The app opened anew on its calendar, with a debug build's [options] (LaunchOptions). */

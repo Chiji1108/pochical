@@ -18,6 +18,16 @@ The listing speaks to people who work nights and rotating shifts, young nurses f
 
 The pages the forms ask for are the site's: サポート `https://pochical.app/support`, マーケティング `https://pochical.app`, プライバシーポリシー `https://pochical.app/privacy`, アカウントの削除 `https://pochical.app/account/delete`.
 
+## The pictures
+
+| File | App Store Connect | Play Console |
+| --- | --- | --- |
+| `screenshots/ios/01-entry.png` … `07-themes.png` | iPhone 6.9インチのスクリーンショット (1320×2868) |  |
+| `screenshots/android/01-entry.png` … `07-themes.png` |  | スマートフォンのスクリーンショット (1080×1920) |
+| `feature-graphic.png` |  | フィーチャー グラフィック (1024×500) |
+
+They are drawn from the real apps, in the listing's order, and never edited by hand: `ANDROID_SERIAL=emulator-<port> mise run store:screenshots` photographs each app's screens (Android's on that running emulator, iOS's in a simulator of its own) and draws each under its headline. The shots, their headlines and the sizes are in `packages/prototype/src/lib/store-shots.ts`; after a change to a headline alone, `mise run store:images` draws them again from the screens last photographed. `apps/design/tests/store-screenshots.test.ts` holds each picture to its store's size.
+
 `declarations.md` holds the answers to the forms beside the listing: what data is collected, the ratings' questions, the notes for review.
 
 ## What the words keep to

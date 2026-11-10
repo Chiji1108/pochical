@@ -1,17 +1,20 @@
 #!/bin/bash
 # Photographs the Android app for the stores' screenshots (#806), raw, as
-# the emulator shows it: the screens into .build/store-screenshots/android
-# (01-entry.png, 02-calendar.png, ...; StoreScreenshots in :app's
-# androidTest walks them), and each widget by itself at each size it
-# offers into its widgets/ (<kind>-<size>.png; WidgetPreviewImages draws
-# them, with no device).
+# the emulator shows it, by the names
+# packages/prototype/src/lib/store-shots.ts gives them: the screens into
+# .build/store-screenshots/android (01-entry.png, 02-calendar.png, ...;
+# StoreScreenshots in :app's androidTest walks them), and each widget by
+# itself at each size it offers into its 04-widgets/ (<kind>-<size>.png;
+# WidgetPreviewImages draws them, with no device). `mise run store:images`
+# draws Google Play's pictures from them.
 #
 #   ANDROID_SERIAL=emulator-<port> mise run store:shots:android
 #
 # The emulator, a phone's with Google Play, is running already and is the
 # run's to change: the app is taken off it, with its data, and whoever the
-# app was signed in as there is signed out. For the run it shows 9:41 with
-# full signal and battery (SystemUI's demo mode), in light, nothing
+# app was signed in as there is signed out. For the run it shows the time
+# the group's chat was written at, with full signal and battery (SystemUI's
+# demo mode), in light, nothing
 # animating, and has a calendar of its own, 仕事, to add shifts to; all put
 # back at the end. It starts the server itself, so nothing else may be on
 # POCHICAL_DEV_SERVER (:8787 by default), and seeds the group there
@@ -31,7 +34,7 @@ server_log=$work/server.log
 
 rm -rf "$out"
 mkdir -p "$out"
-STORE_WIDGETS_OUT=$out/widgets gradle :app:testDebugUnitTest --tests app.pochical.widgets.WidgetPreviewImages --rerun --no-configuration-cache
+STORE_WIDGETS_OUT=$out/04-widgets gradle :app:testDebugUnitTest --tests app.pochical.widgets.WidgetPreviewImages --rerun --no-configuration-cache
 
 # The emulator's own calendar for the run: it has none that takes events.
 calendar="content://com.android.calendar/calendars?caller_is_syncadapter=true&account_name=pochical-store-shots&account_type=LOCAL"
@@ -62,7 +65,6 @@ adb shell "content insert --uri '$calendar' --bind account_name:s:pochical-store
   --bind calendar_color:i:-12409355 --bind calendar_access_level:i:700 --bind visible:i:1 --bind sync_events:i:1"
 adb shell settings put global sysui_demo_allowed 1
 demo enter
-demo clock -e hhmm 0941
 demo battery -e level 100 -e plugged false
 demo network -e wifi show -e level 4 -e fully true
 # The emulator's mobile network reads 3G whatever the demo is told, so Wi-Fi alone is the signal.
@@ -73,6 +75,9 @@ for key in $(adb shell cmd notification list); do adb shell "cmd notification sn
 
 start_server
 pnpm --dir "$root" exec tsx "$root/tools/store-screenshots/seed.ts" "$work/invite"
+# The status bar's time for the whole run: two minutes after the chat's
+# lines, whose times are when the seed sent them, on the emulator's clock.
+demo clock -e hhmm "$(adb shell 'date -d @$(($(date +%s) + 120)) +%H%M')"
 pulled=$root/apps/android/app/build/outputs/connected_android_test_additional_output
 rm -rf "$pulled"
 gradle :app:connectedDebugAndroidTest "-PpochicalServer=http://10.0.2.2:$port" \
@@ -80,4 +85,4 @@ gradle :app:connectedDebugAndroidTest "-PpochicalServer=http://10.0.2.2:$port" \
   "-Pandroid.testInstrumentationRunnerArguments.invite=$(cat "$work/invite")"
 # Where Gradle pulls what a test leaves in additionalTestOutputDir, under the device's name.
 cp "$pulled"/debugAndroidTest/connected/*/*.png "$out"
-ls "$out" "$out/widgets"
+ls "$out" "$out/04-widgets"

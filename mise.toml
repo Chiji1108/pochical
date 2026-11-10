@@ -216,9 +216,12 @@ description = "Draw the stores' pictures in store/ from the screens photographed
 run = "pnpm --dir apps/design image:store"
 
 [tasks."store:screenshots"]
-description = "Make the stores' screenshots from the real apps: each platform's screens photographed, then the pictures drawn from them"
-# Android's screens go here, before the pictures are drawn.
-run = [{ task = "store:shots:ios" }, { task = "store:images" }]
+description = "Make the stores' screenshots from the real apps: each platform's screens photographed, Android's first, on the emulator ANDROID_SERIAL names (it fails at once when none is named), then the pictures drawn from them"
+run = [
+  { task = "store:shots:android" },
+  { task = "store:shots:ios" },
+  { task = "store:images" },
+]
 
 [tasks."server:typecheck"]
 description = "Typecheck the server"

@@ -1,6 +1,7 @@
 // The stores' screenshots (#806): each is a screen of the real app,
 // photographed by its platform's own UI test into
-// `.build/store-screenshots/<store>` under the name `raw` gives here, and
+// `.build/store-screenshots/<store>` under the name `raw` gives here, the
+// same on both platforms, and
 // drawn on the site's sky under its headline at the store's size by
 // apps/design's /_render/store-shot, which `pnpm --dir apps/design
 // image:store` photographs into `store/screenshots/<store>`.
@@ -9,9 +10,14 @@
 // it takes for an iPhone with Dynamic Island (large display), an iPhone
 // Pro Max's own screen, which it scales down for the smaller iPhones:
 // https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications
+// Google Play's is the 9:16 it asks of the pictures it features, no side
+// more than twice the other:
+// https://support.google.com/googleplay/android-developer/answer/9866151
+// `widgetRow` is how tall a Home Screen's cell is in its widths, by the
+// platform's small widget (Android's SMALL, WidgetParts.kt).
 export const STORES = {
-  android: { height: 1920, width: 1080 },
-  ios: { height: 2868, width: 1320 },
+  android: { height: 1920, widgetRow: 202 / 179, width: 1080 },
+  ios: { height: 2868, widgetRow: 1, width: 1320 },
 } as const;
 
 export type StoreId = keyof typeof STORES;
@@ -39,7 +45,10 @@ type StoreShot = { headline: readonly string[]; name: string } & (
 );
 
 // The shots in the stores' order, each headline a line an entry. They speak
-// to people on night and rotating shifts.
+// to people on night and rotating shifts. The first three are screens,
+// which Google Play asks its first pictures to show the app by. The wall
+// and the last shot's second screen are in 墨 with シフトの色 at ワントーン,
+// in black and white; every other screen is as the app starts.
 export const STORE_SHOTS = [
   {
     headline: ["勤務表を見ながら、", "ポチポチ。"],

@@ -11,6 +11,7 @@ import android.widget.FrameLayout
 import androidx.compose.ui.unit.DpSize
 import app.pochical.design.Theme
 import app.pochical.kit.DeviceSettings
+import app.pochical.kit.Look
 import app.pochical.kit.Week
 import java.io.File
 import java.time.LocalDate
@@ -30,7 +31,8 @@ import org.robolectric.annotation.GraphicsMode
  * - The pictures the widget picker shows of each kind before Android 15 (spec/widgets.md, In the
  *   widget gallery), as `android:previewImage`, in light and in dark (`drawable-night`):
  *   `mise run android:widget-previews`, into the app's res (WIDGET_PREVIEWS_OUT).
- * - The stores' wall of widgets (#806), each kind at each size it offers, in 墨 and light:
+ * - The stores' wall of widgets (#806), each kind at each size it offers, in 墨 with シフトの色 at ワントーン and light,
+ *   in black and white:
  *   `mise run store:shots:android`, into STORE_WIDGETS_OUT.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -64,9 +66,9 @@ class WidgetPreviewImages {
     val out = System.getenv("STORE_WIDGETS_OUT")
     assumeTrue("Only when asked for, by mise run store:shots:android", out != null)
     val sizes = mapOf(SMALL to "small", MEDIUM to "medium", LARGE to "large")
-    val sumi = DeviceSettings(themeId = Theme.Sumi.id)
+    val sumi = DeviceSettings(themeId = Theme.Sumi.id, look = Look(colored = false))
     for ((name, widget) in kinds) {
-      for (size in widget.previews) draw(widget, size, sumi, dark = false, File(checkNotNull(out), "$name-${sizes.getValue(size)}.png"))
+      for (size in widget.previews) draw(widget, size, sumi, dark = false, File(checkNotNull(out), "${name.replace('_', '-')}-${sizes.getValue(size)}.png"))
     }
   }
 

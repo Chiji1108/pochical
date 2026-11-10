@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 // Draws the stores' pictures (#806) from the screens each platform's UI
 // test photographed into .build/store-screenshots/<store>
-// (`mise run store:shots:ios`): each shot of @pochical/prototype's
+// (`mise run store:shots:ios`, `mise run store:shots:android`): each shot of @pochical/prototype's
 // lib/store-shots.ts from /_render/store-shot into
 // store/screenshots/<store>, and Google Play's feature graphic into
 // store/feature-graphic.png, on a dev server of its own. A store whose
@@ -63,14 +63,14 @@ await photographDevServer(
   async ({ browser, origin }) => {
     const photograph = async (
       search: Record<string, string>,
-      size: { height: number; width: number },
+      { height, width }: { height: number; width: number },
       output: string,
       raw?: string
     ) => {
       const page = await browser.newPage({
         colorScheme: "light",
         deviceScaleFactor: 1,
-        viewport: size,
+        viewport: { height, width },
       });
       if (raw !== undefined) {
         await page.route(`**${RAW_PATH}**`, async (route) => {

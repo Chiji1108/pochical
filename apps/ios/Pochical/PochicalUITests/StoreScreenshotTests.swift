@@ -3,9 +3,10 @@ import XCTest
 /// The screens the stores' screenshots are drawn from (#806), photographed
 /// in the order the app is walked rather than the stores': the sample
 /// month and 端末カレンダーに追加; 職場のみんな's 一覧 and 全体チャット,
-/// joined as 佐藤; the month again in 墨; the widgets in 墨, each put on
-/// the Home Screen in turn; and last, as it takes days out of the month,
-/// ポチポチ入力 halfway through it. Each is kept as the
+/// joined as 佐藤; the month again in 墨 with シフトの色 at ワントーン, in
+/// black and white; the widgets so too, each put on the Home Screen in
+/// turn; and last, as it takes days out of the month and puts the テーマ
+/// and the colors back, ポチポチ入力 halfway through it. Each is kept as the
 /// file `packages/prototype/src/lib/store-shots.ts` names. Run by
 /// `mise run store:shots:ios`, against the local server it seeds; skipped
 /// without it.
@@ -69,7 +70,7 @@ final class StoreScreenshotTests: XCTestCase {
   @MainActor
   func test3Sumi() throws {
     launch()
-    pick(theme: "墨")
+    pick(theme: "墨", colors: "ワントーン")
     snap("07-calendar-sumi", of: XCUIScreen.main, into: raw)
   }
 
@@ -97,13 +98,13 @@ final class StoreScreenshotTests: XCTestCase {
     }
   }
 
-  /// ポチポチ入力 halfway through the month, in the テーマ the app starts
-  /// with: the sample month's days from the 16th taken out, as they are
+  /// ポチポチ入力 halfway through the month, in the テーマ and the colors
+  /// the app starts with: the sample month's days from the 16th taken out, as they are
   /// before they are entered, and the 16th the day to enter.
   @MainActor
   func test5Entry() throws {
     launch()
-    pick(theme: "ポチカル")
+    pick(theme: "ポチカル", colors: "色分け")
     app.buttons["ポチポチ入力"].tap()
     let month = Calendar.current.component(.month, from: .now)
     let last = Calendar.current.range(of: .day, in: .month, for: .now)!.upperBound - 1
@@ -135,18 +136,20 @@ final class StoreScreenshotTests: XCTestCase {
       .matching(NSPredicate(format: "label == %@", "入力する日付：\(month)月\(day)日")).firstMatch
   }
 
-  /// Picks the テーマ named `theme` in 設定's スタイル, and comes back to
-  /// the calendar in it.
-  @MainActor private func pick(theme: String) {
+  /// Picks the テーマ named `theme` and the シフトの色 named `colors` in
+  /// 設定's スタイル, and comes back to the calendar in them.
+  @MainActor private func pick(theme: String, colors: String) {
     app.tabBars.buttons["設定"].tap()
     let style = app.collectionViews.firstMatch.buttons
       .matching(NSPredicate(format: "label BEGINSWITH 'スタイル'")).firstMatch
     XCTAssertTrue(style.waitForExistence(timeout: 5), "設定 lists スタイル")
     style.tap()
-    let tile = app.buttons[theme]
-    for _ in 0..<4 where !(tile.exists && tile.isHittable) { app.swipeUp() }
-    tile.tap()
-    XCTAssertTrue(tile.isSelected, "\(theme) is the テーマ")
+    for choice in [theme, colors] {
+      let tile = app.buttons[choice]
+      for _ in 0..<4 where !(tile.exists && tile.isHittable) { app.swipeUp() }
+      tile.tap()
+      XCTAssertTrue(tile.isSelected, "\(choice) is picked")
+    }
     app.navigationBars["スタイル"].buttons.firstMatch.tap()
     app.tabBars.buttons["カレンダー"].tap()
     XCTAssertTrue(app.buttons["ポチポチ入力"].waitForExistence(timeout: 5), "the calendar shows")

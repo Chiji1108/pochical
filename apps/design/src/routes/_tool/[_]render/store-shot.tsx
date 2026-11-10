@@ -51,7 +51,7 @@ export const Route = createFileRoute("/_tool/_render/store-shot")({
 
 // Every length but the headline's room is in --u, a hundredth of the
 // picture's width, so each store's picture is laid out alike at its size.
-// A widget's cell on the wall, in them.
+// The width of a widget's cell on the wall, in them.
 const WIDGET_CELL = "calc(var(--u) * 25)";
 
 const styles = {
@@ -159,7 +159,7 @@ function StoreShotPage() {
   if (shot === undefined) {
     return <p>No shot is named {name}.</p>;
   }
-  const { height, width } = STORES[store];
+  const { height, widgetRow, width } = STORES[store];
   return (
     <div
       className={styles.root}
@@ -173,7 +173,11 @@ function StoreShotPage() {
     >
       <PictureSky height="100%" />
       {shot.kind === "wall" && (
-        <Wall folder={shot.raw} widgets={widgets.split(",").filter(Boolean)} />
+        <Wall
+          folder={shot.raw}
+          row={widgetRow}
+          widgets={widgets.split(",").filter(Boolean)}
+        />
       )}
       <h1 className={cx(pictureTitle, styles.headline)}>
         <span>
@@ -222,7 +226,16 @@ const cellsOf = (file: string) => {
 
 // The widgets over and over, each round starting further along so the
 // same two are not neighbors again, until the wall's cells are covered.
-function Wall({ folder, widgets }: { folder: string; widgets: string[] }) {
+// A cell is `row` times as tall as it is wide.
+function Wall({
+  folder,
+  row,
+  widgets,
+}: {
+  folder: string;
+  row: number;
+  widgets: string[];
+}) {
   let cells = 0;
   for (const file of widgets) {
     const { columns, rows } = cellsOf(file);
@@ -241,7 +254,7 @@ function Wall({ folder, widgets }: { folder: string; widgets: string[] }) {
       <div
         className={styles.wallGrid}
         style={{
-          gridAutoRows: WIDGET_CELL,
+          gridAutoRows: `calc(${WIDGET_CELL} * ${row})`,
           gridTemplateColumns: `repeat(${WALL.columns}, ${WIDGET_CELL})`,
         }}
       >

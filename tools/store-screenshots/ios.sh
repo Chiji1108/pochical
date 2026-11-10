@@ -38,15 +38,17 @@ xcrun simctl spawn "$device" defaults write -g AppleLocale ja_JP
 xcrun simctl shutdown "$device"
 xcrun simctl boot "$device"
 xcrun simctl bootstatus "$device" >/dev/null
-# The status bar the stores' pictures have: 9:41, full signal and battery.
-xcrun simctl status_bar "$device" override --time 9:41 --batteryState charged --batteryLevel 100 \
+rm -rf "$raw"
+mkdir -p "$raw"
+pnpm --dir "$root" exec tsx "$root/tools/store-screenshots/seed.ts" "$raw/invite"
+# The status bar the stores' pictures have: full signal and a full battery
+# off the charger, and for the whole run the time two minutes after the
+# chat's lines, whose times are when the seed sent them.
+xcrun simctl status_bar "$device" override --time "$(date -v+2M +%-H:%M)" --batteryState discharging --batteryLevel 100 \
   --wifiBars 3 --cellularBars 4
 xcrun simctl ui "$device" appearance light
 xcrun simctl privacy "$device" grant calendar app.pochical
 
-rm -rf "$raw"
-mkdir -p "$raw"
-pnpm --dir "$root" exec tsx "$root/tools/store-screenshots/seed.ts" "$raw/invite"
 
 failed=0
 TEST_RUNNER_STORE_SHOTS_DIR=$raw xcodebuild_for test-without-building -collect-test-diagnostics never \
