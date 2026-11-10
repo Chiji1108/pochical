@@ -2,8 +2,8 @@ import { holidayName } from "../components/design-week";
 import { guessLook, sampleLooks } from "../components/shift-mark";
 import type { Look } from "../components/shift-mark";
 import { siteOf } from "./chat-text";
-import { dayMilliseconds } from "./design-days";
-import { groupChat, memberPatternOf } from "./design-group-data";
+import { addDays, dateKey, dayMilliseconds } from "./design-days";
+import { everyoneOff, groupChat, memberPatternOf } from "./design-group-data";
 import type {
   Chat,
   GroupSummary,
@@ -14,6 +14,7 @@ import type {
 import { presetList } from "./design-patterns";
 import type { Photo } from "./design-sample-photos";
 import { sampleRosterPhoto } from "./design-sample-photos";
+import { designToday } from "./design-today";
 import { firstCharacter } from "./text-limits";
 
 // The prototype's sample person's world: the people in their groups, with
@@ -276,6 +277,45 @@ export const schoolFriends = (): Member[] => [
     style: sampleLooks.roster,
   },
 ];
+
+// 職場のみんな: the group the stores' screenshots are photographed in
+// (tools/store-screenshots/seed.ts), which the site's top page shows too.
+// Three coworkers on 二交代制 who have not exchanged contacts, so they
+// speak politely and keep no picture of themselves. Each one's eight days
+// end on the same two days off, the days everyone is off.
+const workplaceRounds = [
+  ["tanaka", "田中", "day night after off day day off off"],
+  ["kobayashi", "小林", "night after off day day day off off"],
+  ["mori", "森", "day day off night after day off off"],
+] as const;
+
+export const workplace = (): Member[] =>
+  workplaceRounds.map(([id, name, shifts]) => {
+    const round = shifts.split(" ");
+    return {
+      id,
+      name,
+      patterns: presetList(["day", "night", "after", "off"]).map(
+        memberPatternOf
+      ),
+      shiftOn: (date: Date) => round[(dayNumber(date) + 5) % round.length],
+    };
+  });
+
+// How the sample person is in it: by her family name, her photo kept
+// private, as in her ward's.
+export const workplaceGroup: GroupSummary = {
+  id: "workplace",
+  mark: { emoji: "🏥", kind: "emoji" },
+  mine: { name: "佐藤", noPhoto: true },
+  name: "職場のみんな",
+};
+
+// The days of the week ahead when the three are off: the ones put to the
+// vote.
+const workplaceOff = Array.from({ length: 7 }, (_, index) =>
+  addDays(designToday, index + 1)
+).filter((date) => everyoneOff(workplace(), date));
 
 // A page's picture for a sample link: an Unsplash photo from
 // picsum.photos, at the 1.91:1 that pages give for previews.
@@ -745,6 +785,80 @@ export const sampleChats: Record<string, Chat> = {
     ],
     unread: 2,
   },
+  // Something small asked of people at work, and a meal fixed on a day
+  // they are all off, minutes before the phone's clock.
+  "workplace:group": {
+    messages: [
+      {
+        content: {
+          kind: "words",
+          text: "すみません、モバイルバッテリー、休憩室にあったりしますか…？",
+        },
+        from: "kobayashi",
+        id: "c1",
+        time: "9:36",
+        when: "今日",
+      },
+      {
+        content: {
+          kind: "words",
+          text: "ありましたよ！ロッカーの上に置いておきますね",
+        },
+        from: "mori",
+        id: "c2",
+        reactions: [{ by: ["tanaka"], emoji: "👍" }],
+        time: "9:37",
+        when: "今日",
+      },
+      {
+        content: {
+          kind: "words",
+          text: "助かります、ありがとうございます！",
+        },
+        from: "kobayashi",
+        id: "c3",
+        time: "9:37",
+        when: "今日",
+      },
+      {
+        content: {
+          kind: "words",
+          text: "今度のごはん会、みんなの休みが合う日で決めませんか？",
+        },
+        from: "tanaka",
+        id: "c4",
+        time: "9:38",
+        when: "今日",
+      },
+      {
+        content: { kind: "words", text: "いいですね、行きたいです！" },
+        from: "mori",
+        id: "c5",
+        time: "9:39",
+        when: "今日",
+      },
+      // 森 can come on every day, 小林 on the last.
+      {
+        content: {
+          days: workplaceOff,
+          kind: "poll",
+          votes: Object.fromEntries(
+            workplaceOff.map((date, index) => [
+              dateKey(date),
+              index === workplaceOff.length - 1
+                ? ["mori", "kobayashi"]
+                : ["mori"],
+            ])
+          ),
+        },
+        from: "tanaka",
+        id: "c6",
+        time: "9:39",
+        when: "今日",
+      },
+    ],
+    unread: 0,
+  },
   "friends:misaki": {
     messages: [
       {
@@ -760,7 +874,8 @@ export const sampleChats: Record<string, Chat> = {
 };
 
 // The sample groups' other members, by group id: the four the sample
-// person is in and the cousins' group of the sample invitation. A group
+// person is in, the cousins' group of the sample invitation and
+// 職場のみんな. A group
 // made on /design starts with no one else.
 export function sampleOthers(groupId: string): Member[] {
   switch (groupId) {
@@ -778,6 +893,9 @@ export function sampleOthers(groupId: string): Member[] {
     }
     case "cousins": {
       return cousins();
+    }
+    case workplaceGroup.id: {
+      return workplace();
     }
     default: {
       return [];

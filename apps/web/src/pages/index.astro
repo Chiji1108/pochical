@@ -7,7 +7,6 @@ import { SITE_WALL } from "@pochical/prototype/lib/store-shots";
 import { css } from "@pochical/styled-system/css";
 import {
   BellRing,
-  CalendarPlus,
   CalendarRange,
   ImageDown,
   MegaphoneOff,
@@ -150,8 +149,6 @@ const featureCopy = {
 } as const;
 
 const feature = {
-  // A row with no screen: its words in the middle, under an icon.
-  alone: css(featureCopy, { alignItems: "center", maxWidth: "520px" }),
   body: css({
     color: "var(--muted)",
     fontSize: "14px",
@@ -159,16 +156,6 @@ const feature = {
     lineHeight: 2.1,
   }),
   copy: css(featureCopy, { _wide: { textAlign: "left" } }),
-  icon: css({
-    alignItems: "center",
-    bg: "var(--soft-green)",
-    borderRadius: "full",
-    color: "var(--green)",
-    display: "flex",
-    height: "64px",
-    justifyContent: "center",
-    width: "64px",
-  }),
   label: css({
     color: "var(--green)",
     fontSize: "11px",
@@ -363,8 +350,7 @@ const closing = {
        (store/README.md), each headline its store screenshot's
        (@pochical/prototype's lib/store-shots.ts). Beside each, its own
        screen, not touchable, so the page never drifts from the app; the
-       widgets are the real ones, photographed for the stores; the phone's
-       calendar has no screen here, and stands as words alone. */}
+       widgets are the real ones, photographed for the stores. */}
     <ol aria-label="ポチカルでできること" class={feature.list}>
       <li class={feature.row}>
         <div class={feature.copy}>
@@ -399,10 +385,7 @@ const closing = {
         <FeatureScreen client:visible={NEAR} feature="calendar" />
       </li>
       <li class={feature.row}>
-        <div class={feature.alone}>
-          <span class={feature.icon}>
-            <CalendarPlus aria-hidden="true" size={28} />
-          </span>
+        <div class={feature.copy}>
           <p class={feature.label}>YOUR CALENDAR</p>
           <h2 class={feature.title}>いつものカレンダーにも。</h2>
           <p class={feature.body}>
@@ -413,6 +396,7 @@ const closing = {
             一度入れたあとは、シフトを変えると予定も変わるようにできます。
           </p>
         </div>
+        <FeatureScreen client:visible={NEAR} feature="deviceCalendar" />
       </li>
       <li class={feature.row}>
         <div class={feature.copy}>
@@ -443,7 +427,7 @@ const closing = {
             ひと目で。
           </h2>
           <p class={feature.body}>
-            家族や友だちのシフトを、ひとつの表に。
+            家族や友だち、職場の人のシフトを、ひとつの表に。
             <br />
             みんなが休みの日も、すぐ見つかります。
           </p>

@@ -38,6 +38,7 @@ export function DesignApp({
   initialSettingsPage,
   initialGroupPage,
   initialDetail,
+  initialCalendarAdd,
   fullScreen = false,
   features = everyFeature,
 }: {
@@ -56,6 +57,9 @@ export function DesignApp({
   // A day of initialMonth to open on picked, its week folded out of the
   // month with the day's details under it, as a reminder opens it.
   initialDetail?: Date;
+  // The calendar with 端末カレンダーに追加 open over it, as the top page
+  // shows it.
+  initialCalendarAdd?: boolean;
   // A group's invitation link was opened: ask about joining, in a screen
   // over the calendar.
   pendingInvite?: boolean;
@@ -138,6 +142,7 @@ export function DesignApp({
                 <DesignCalendar
                   calendarAccess={variants.calendarAccess}
                   covered={joining}
+                  initialCalendarAdd={initialCalendarAdd}
                   initialDay={initialDay}
                   initialDetail={initialDetail}
                   initialEditing={initialEditing}

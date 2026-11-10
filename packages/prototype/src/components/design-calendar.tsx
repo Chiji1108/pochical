@@ -69,6 +69,7 @@ export function DesignCalendar({
   initialEditing,
   initialDay,
   initialDetail,
+  initialCalendarAdd = false,
   month,
   onMonth: setMonth,
   schedule,
@@ -82,6 +83,8 @@ export function DesignCalendar({
   initialEditing: boolean;
   initialDay: number;
   initialDetail?: Date;
+  // Opens on 端末カレンダーに追加, its sheet over the month.
+  initialCalendarAdd?: boolean;
   month: Date;
   onMonth: (month: Date) => void;
   // The days as they show, worked out through the month in view.
@@ -95,7 +98,7 @@ export function DesignCalendar({
   // The sheet open over the phone, if any; one at a time.
   const [openSheet, setOpenSheet] = useState<
     "breakdown" | "save" | "gap" | null
-  >(null);
+  >(initialCalendarAdd ? "save" : null);
   // The reminders offered once shifts were first entered, after the gap
   // sheet when it asks first.
   const reminderOffer = useReminderOffer();
@@ -115,7 +118,7 @@ export function DesignCalendar({
   const setOffLook = useSettings((state) => state.setOffLook);
   // Whether the save sheet opened because the month was just filled in.
   // Whether it opened straight on adding to the device calendar.
-  const [saveToCalendar, setSaveToCalendar] = useState(false);
+  const [saveToCalendar, setSaveToCalendar] = useState(initialCalendarAdd);
   const [imagePreview, setImagePreview] = useState(false);
   const offLookOf = useOffLooks();
   const imageOptions = useSettings((state) => state.device.imageOptions);

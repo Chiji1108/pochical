@@ -4,6 +4,7 @@ import {
   DesignProviders,
   PresetContexts,
 } from "@pochical/prototype/components/design-providers";
+import { SheetPicturesContext } from "@pochical/prototype/components/design-sheet";
 import {
   nextSkyId,
   paleSkyFromTop,
@@ -30,6 +31,7 @@ import {
   initialDesignSchedule,
 } from "@pochical/prototype/lib/design-days";
 import { calendarAlone } from "@pochical/prototype/lib/design-features";
+import { workplaceGroup } from "@pochical/prototype/lib/design-group-samples";
 import { useSamplePerson } from "@pochical/prototype/lib/design-sample-person";
 import { designMonth } from "@pochical/prototype/lib/design-today";
 import {
@@ -290,13 +292,12 @@ const SCREEN_SHOWN = 600;
 
 // The phone at the hero's size, only part of it shown, fading out: a
 // scaled one would throw off the lists that measure themselves. Its top,
-// or its foot where the screen's point is the sheet at the bottom.
+// or its foot where the screen's point is the sheet at the bottom; or all
+// of it, where the point runs from its heading to its foot.
 const screenStyle = cva({
   base: {
     display: "flex",
     flexShrink: 0,
-    height: `${SCREEN_SHOWN}px`,
-    overflow: "hidden",
     pointerEvents: "none",
     width: "min(390px, 100%)",
   },
@@ -304,37 +305,53 @@ const screenStyle = cva({
     shown: {
       foot: {
         alignItems: "flex-end",
+        height: `${SCREEN_SHOWN}px`,
         maskImage: "linear-gradient(to top, black 70%, transparent)",
+        overflow: "hidden",
       },
       top: {
         alignItems: "flex-start",
+        height: `${SCREEN_SHOWN}px`,
         maskImage: "linear-gradient(to bottom, black 70%, transparent)",
+        overflow: "hidden",
       },
+      whole: {},
     },
   },
 });
 
 // How each feature's screen opens, and the part of it shown: entering with
-// the hero's month and its sheet of shifts, the calendar as it is, and the
-// group's shift table and chat.
-type Feature = "entry" | "calendar" | "share" | "chat";
+// the hero's month and its sheet of shifts, the calendar as it is, adding
+// the month to the phone's calendar, and the shift table and chat of the
+// group the stores' screenshots show, people at work.
+type Feature = "entry" | "calendar" | "deviceCalendar" | "share" | "chat";
+
+const atWork = { groups: [workplaceGroup] };
 
 const featureScreens: Record<
   Feature,
   {
     opening?: Partial<ComponentProps<typeof DesignApp>>;
     own?: Parameters<typeof useSamplePerson>[0];
-    shown?: "foot";
+    shown?: "foot" | "whole";
   }
 > = {
   calendar: {},
-  chat: { opening: { initialGroupPage: "chat", initialTab: "group" } },
+  chat: {
+    opening: { initialGroupPage: "chat", initialTab: "group" },
+    own: atWork,
+    shown: "whole",
+  },
+  deviceCalendar: { opening: { initialCalendarAdd: true }, shown: "whole" },
   entry: {
     opening: { initialDay: HERO_FIRST_BLANK, initialEditing: true },
     own: { schedule: heroSchedule },
     shown: "foot",
   },
-  share: { opening: { initialGroupPage: "shifts", initialTab: "group" } },
+  share: {
+    opening: { initialGroupPage: "shifts", initialTab: "group" },
+    own: atWork,
+  },
 };
 
 export function FeatureScreen({ feature }: { feature: Feature }) {
@@ -345,11 +362,13 @@ export function FeatureScreen({ feature }: { feature: Feature }) {
       <div aria-hidden="true" className={screenStyle({ shown })} inert>
         <DesignProviders fresh>
           <UserStoreContext value={person}>
-            <DesignApp
-              initialEditing={false}
-              {...opening}
-              variants={variants}
-            />
+            <SheetPicturesContext value>
+              <DesignApp
+                initialEditing={false}
+                {...opening}
+                variants={variants}
+              />
+            </SheetPicturesContext>
           </UserStoreContext>
         </DesignProviders>
       </div>

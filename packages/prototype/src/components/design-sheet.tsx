@@ -148,6 +148,41 @@ const picture = {
   }),
 };
 
+function Drawn({
+  className,
+  handle,
+  label,
+  children,
+}: {
+  className: string;
+  handle: boolean;
+  label?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section aria-label={label} className={className}>
+      {handle && (
+        <div aria-hidden="true" className={sheet.grabber}>
+          <div className={sheet.handle} />
+        </div>
+      )}
+      {children}
+    </section>
+  );
+}
+
+// Over what it is drawn in, on the dimmed ground.
+function Standing({ children }: { children: ReactNode }) {
+  return (
+    <>
+      <div className={backdrop({ placement: "bottom" })} />
+      <div className={positioner({ modal: true, placement: "bottom" })}>
+        {children}
+      </div>
+    </>
+  );
+}
+
 export function SheetPicture({
   over = false,
   handle = true,
@@ -157,29 +192,29 @@ export function SheetPicture({
   handle?: boolean;
   children: ReactNode;
 }) {
-  const look = over ? content({ modal: true }) : content({ alone: true });
-  const drawn = (
-    <section className={look}>
-      {handle && (
-        <div aria-hidden="true" className={sheet.grabber}>
-          <div className={sheet.handle} />
-        </div>
-      )}
-      {children}
-    </section>
-  );
   if (!over) {
-    return drawn;
+    return (
+      <Drawn className={content({ alone: true })} handle={handle}>
+        {children}
+      </Drawn>
+    );
   }
   return (
     <div className={picture.over}>
-      <div className={backdrop({ placement: "bottom" })} />
-      <div className={positioner({ modal: true, placement: "bottom" })}>
-        {drawn}
-      </div>
+      <Standing>
+        <Drawn className={content({ modal: true })} handle={handle}>
+          {children}
+        </Drawn>
+      </Standing>
     </div>
   );
 }
+
+// Whether the phones here are pictures of screens, as on the site's top
+// page: a sheet open at the bottom of one is drawn in place over its
+// phone, where a dialog would take the page's focus and leave the rest of
+// it out of reach, and the build draws it with the screen.
+export const SheetPicturesContext = createContext(false);
 
 // The text under a sheet's heading that says what the sheet is for, with
 // room under it before the buttons, list or chips it leads to, as the
@@ -262,6 +297,22 @@ export function Sheet({
       finalFocusEl?.()?.focus();
     }
   }, [open, modal, finalFocusEl]);
+  const pictured = useContext(SheetPicturesContext);
+  if (pictured && placement === "bottom") {
+    return (
+      open && (
+        <Standing>
+          <Drawn
+            className={cx(content({ modal }), className)}
+            handle
+            label={label}
+          >
+            <SegmentedContext value={false}>{children}</SegmentedContext>
+          </Drawn>
+        </Standing>
+      )
+    );
+  }
   const root = {
     closeOnInteractOutside: modal,
     finalFocusEl,
