@@ -189,9 +189,9 @@ private fun DateLabel(day: LocalDate, isToday: Boolean, country: String) {
   val colors = LocalThemeColors.current
   val week = LocalDeviceSettings.current.device.week
   val tone = if (isToday) colors.accentDefault else weekdayColor(day.weekday, day.holidayName(country) != null, week, colors.textPrimary)
-  Row(Modifier.width(DATE_WIDTH - TODAY_BAR).padding(start = 9.dp), verticalAlignment = Alignment.Bottom) {
-    Text(day.dayOfMonth.toString(), style = PochicalTextStyles.caption, fontWeight = if (isToday) FontWeight.ExtraBold else FontWeight.SemiBold, color = tone)
-    Text(weekdayLetter(day.weekday), Modifier.padding(start = 3.dp, bottom = 1.dp), fontSize = 9.sp, color = tone)
+  Row(Modifier.width(DATE_WIDTH - TODAY_BAR).padding(start = 9.dp)) {
+    Text(day.dayOfMonth.toString(), Modifier.alignByBaseline(), style = PochicalTextStyles.caption, fontWeight = if (isToday) FontWeight.ExtraBold else FontWeight.SemiBold, color = tone)
+    Text(weekdayLetter(day.weekday), Modifier.alignByBaseline().padding(start = 3.dp), fontSize = 9.sp, color = tone)
   }
 }
 

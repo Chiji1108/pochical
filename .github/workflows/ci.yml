@@ -234,7 +234,11 @@ jobs:
           install: false
       # -skipMacroValidation and -skipPackagePluginValidation: no one is
       # here to trust the packages' macros and plugins, as Xcode asks once.
-      - run: >-
+      # LicenseList's plugin reads the checkouts for ライセンス where
+      # -clonedSourcePackagesDirPath put them.
+      - env:
+          PLL_SOURCE_PACKAGES_PATH: ${{ runner.temp }}/ios/SourcePackages
+        run: >-
           xcodebuild build -project apps/ios/Pochical/Pochical.xcodeproj -scheme Pochical -destination generic/platform=iOS -derivedDataPath ${{ runner.temp }}/ios/DerivedData -clonedSourcePackagesDirPath ${{ runner.temp }}/ios/SourcePackages -skipMacroValidation -skipPackagePluginValidation CODE_SIGNING_ALLOWED=NO
       - run: mise run ios:test
       - if: github.event_name == 'push' && steps.cache.outputs.cache-hit != 'true'

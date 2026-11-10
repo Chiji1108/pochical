@@ -2,7 +2,7 @@ import { chatRules } from "@pochical/design/chat";
 import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 
-import { memberOf, signInAnonymously, userIdOf } from "./helpers";
+import { memberOf, signInAnonymously, until, userIdOf } from "./helpers";
 import { relayed, supportChat, words } from "./sync-helpers";
 
 describe("what the admin site asks of the server", () => {
@@ -180,7 +180,7 @@ describe("what the admin site asks of the server", () => {
       const listed = await admin.user(userId);
       return listed?.groups.length;
     };
-    await expect.poll(groupsListed).toBe(1);
+    await until(async () => (await groupsListed()) === 1);
     const page = await admin.user(userId);
     expect(page).toMatchObject({
       anonymous: true,

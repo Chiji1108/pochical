@@ -16,8 +16,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
@@ -46,6 +44,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.ChoiceButtons
+import app.pochical.ConfirmAction
 import app.pochical.LocalDeviceSettings
 import app.pochical.LocalThemeColors
 import app.pochical.PageNavigation
@@ -65,6 +64,8 @@ import app.pochical.calendar.TimeDialog
 import app.pochical.calendar.fullText
 import app.pochical.calendar.row
 import app.pochical.chat.AppIcon
+import app.pochical.chat.GroupedMenu
+import app.pochical.chat.LineMenuItem
 import app.pochical.kit.Reminder
 import app.pochical.kit.ReminderFiring
 import app.pochical.kit.ShownDay
@@ -239,7 +240,8 @@ fun ReminderEditorPage(id: String?, navigation: PageNavigation) {
     title = stringResource(if (reminder == null) R.string.reminders_add else R.string.reminder_edit),
     onBack = navigation::back,
     actions = {
-      TextButton(
+      ConfirmAction(
+        stringResource(R.string.save),
         enabled = picked.isNotEmpty(),
         onClick = {
           settings.change { device ->
@@ -250,9 +252,7 @@ fun ReminderEditorPage(id: String?, navigation: PageNavigation) {
           asking.askOnce()
           navigation.back()
         },
-      ) {
-        Text(stringResource(R.string.save))
-      }
+      )
     },
   ) { padding ->
     LazyColumn(contentPadding = padding) {
@@ -277,17 +277,14 @@ fun ReminderEditorPage(id: String?, navigation: PageNavigation) {
                 end = RowEnd.None,
                 valueContent = {
                   Text(stringResource(R.string.reminder_minutes_before, Reminder.beforeText(minutes)), style = MaterialTheme.typography.bodyMedium)
-                  DropdownMenu(expanded = pickingMinutes, onDismissRequest = { pickingMinutes = false }) {
-                    for (choice in Reminder.MINUTES_CHOICES) {
-                      DropdownMenuItem(
-                        text = { Text(stringResource(R.string.reminder_minutes_before, Reminder.beforeText(choice))) },
-                        onClick = {
-                          minutes = choice
-                          pickingMinutes = false
-                        },
-                      )
-                    }
-                  }
+                  GroupedMenu(
+                    pickingMinutes,
+                    onDismiss = { pickingMinutes = false },
+                    items =
+                      Reminder.MINUTES_CHOICES.map { choice ->
+                        LineMenuItem(stringResource(R.string.reminder_minutes_before, Reminder.beforeText(choice)), icon = null, selected = choice == minutes) { minutes = choice }
+                      },
+                  )
                 },
               )
             }

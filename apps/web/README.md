@@ -52,6 +52,6 @@
 - 実際に公開されたストアURL
 - Apple/Googleで、アプリと同じアカウントになることの実環境確認
 - Webでの本人確認つき削除（認証ができてから）
-- 規約・プライバシー表記の運用確認。運営名・窓口は旧サイトのCHIJI TECHと連絡先を使用。外部サービスのログ・バックアップの保持期間など、実際の契約・設定で決まる事項を公開前に確認する。
+- 規約・プライバシー表記の運用確認。運営は千々岩真吾（屋号CHIJI TECH）、窓口は旧サイトの連絡先を使用。外部サービスのログ・バックアップの保持期間など、実際の契約・設定で決まる事項を公開前に確認する。
 
 公開はmainへのマージでWorkers Buildsが行います（ビルドコマンド `pnpm run build`、デプロイコマンド `pnpm exec wrangler deploy`、ルートディレクトリ `apps/web`）。`wrangler deploy` はビルドが書き出す `dist/server/wrangler.json` を使います。事前確認には `pnpm run build` のあと `pnpm exec wrangler deploy --dry-run` を利用できます。

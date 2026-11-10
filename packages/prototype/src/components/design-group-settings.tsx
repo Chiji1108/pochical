@@ -8,6 +8,7 @@ import {
   groupMarkHints,
   groupMarkIcons,
 } from "@pochical/design/patterns";
+import { fitsGroupName } from "@pochical/design/values";
 import { css } from "@pochical/styled-system/css";
 import { UserPlus, X } from "lucide-react";
 import { useContext, useState } from "react";
@@ -269,7 +270,7 @@ function GroupEditPage({
   const changed =
     draft.name !== group.name ||
     JSON.stringify(mark) !== JSON.stringify(group.mark);
-  const canSave = changed && draft.name !== "";
+  const canSave = changed && fitsGroupName(draft.name);
   if (editingMark) {
     return (
       <GroupMarkPage
@@ -743,7 +744,7 @@ export function NewGroupPage({
   const [picked, setPicked] = useState<GroupMark>();
   const mark = picked ?? guessGroupMark(name, freeColor);
   const [editingMark, setEditingMark] = useState(false);
-  const canCreate = name.trim() !== "" && myName.trim() !== "";
+  const canCreate = fitsGroupName(name.trim()) && myName.trim() !== "";
   if (editingMark) {
     return (
       <GroupMarkPage

@@ -1,14 +1,13 @@
-import { COWORKERS_MAX, syncLimits, textLimits } from "@pochical/design/limits";
+import { COWORKERS_MAX } from "@pochical/design/limits";
+import { fitsRepeatOrders, isId, isIdList } from "@pochical/design/values";
 
 import { isDate } from "./day-values";
 import type { RepeatOrder } from "./gen/pochical/v1/sync_pb";
-import { isId, isIdList } from "./ids";
-import { fitsText } from "./text-limits";
 
 // What a user's repeating orders and coworkers may hold
 // (spec/shift-patterns.md, Repeating orders; spec/sync-protocol.md,
 // Coworkers), checked as the owner's edits arrive, to the counts in
-// design/src/limits.ts (syncLimits).
+// design/src/limits.ts (syncLimits) as design/src/values.ts counts them.
 
 // A country code as the holiday data keys it (design/scripts/holidays.ts).
 const COUNTRY = /^[A-Z]{2}$/u;
@@ -16,8 +15,6 @@ const COUNTRY = /^[A-Z]{2}$/u;
 const fitsOrder = (order: RepeatOrder): boolean =>
   isDate(order.start) &&
   (order.anchor === undefined || isDate(order.anchor)) &&
-  order.sequence.length <= syncLimits.sequence &&
-  order.sequence.every((id) => isId(id)) &&
   COUNTRY.test(order.holidayCountry) &&
   (order.holidayShift === undefined || isId(order.holidayShift)) &&
   // Holidays off always records the pattern they take.
@@ -28,16 +25,12 @@ const fitsOrder = (order: RepeatOrder): boolean =>
  * only grow, so each takes over from the one before.
  */
 export const fitsOrders = (orders: readonly RepeatOrder[]): boolean =>
-  orders.length <= syncLimits.orders &&
+  fitsRepeatOrders(orders) &&
   orders.every(
     (order, index) =>
       fitsOrder(order) &&
       (index === 0 || (orders[index - 1]?.start ?? "") < order.start)
   );
-
-/** Whether a coworker's name is one a person could type. */
-export const fitsCoworkerName = (name: string): boolean =>
-  fitsText(name, textLimits.personName);
 
 /** Whether an order of coworkers is ids, each once, and not too many. */
 export const fitsCoworkerOrder = (ids: readonly string[]): boolean =>

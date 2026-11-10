@@ -15,7 +15,6 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -42,9 +41,11 @@ import app.pochical.SettingsPage
 import app.pochical.SettingsRow
 import app.pochical.SettingsSection
 import app.pochical.ShiftMark
+import app.pochical.SortToggle
 import app.pochical.calendar.LocalOwnDays
 import app.pochical.calendar.Pattern
 import app.pochical.design.PATTERNS_PER_PAGE
+import app.pochical.design.SyncLimits
 import app.pochical.kit.ShiftTime
 import app.pochical.kit.hoursText
 import app.pochical.rememberDragOrder
@@ -64,6 +65,10 @@ fun PatternsPage(navigation: PageNavigation) {
   val calendar by days.calendar.collectAsStateWithLifecycle()
   val inUse = calendar.patterns.filterNot { it.archived }
   val archived = calendar.patterns.filter { it.archived }
+  // Archived ones count too: they stay in the order (spec/vectors/fits.json, patternOrder).
+  val full = calendar.patterns.size >= SyncLimits.patterns
+  // 新しい仕事にする puts in one more order.
+  val ordersAreFull = calendar.orders.size >= SyncLimits.orders
   var sorting by rememberSaveable { mutableStateOf(false) }
   val list = rememberLazyListState()
   val order = rememberDragOrder(inUse, { it.id }, list) { ids -> days.orderPatterns(ids + archived.map { it.id }) }
@@ -74,9 +79,7 @@ fun PatternsPage(navigation: PageNavigation) {
     onBack = navigation::back,
     actions = {
       if (inUse.size > 1) {
-        TextButton(onClick = { sorting = !sorting }) {
-          Text(stringResource(if (sorting) R.string.patterns_sort_done else R.string.patterns_sort))
-        }
+        SortToggle(sorting) { sorting = !sorting }
       }
     },
   ) { padding ->
@@ -102,7 +105,15 @@ fun PatternsPage(navigation: PageNavigation) {
       } else {
         item {
           SectionRow(count - 1, count) {
-            SettingsRow(stringResource(R.string.patterns_add), R.drawable.ic_add, onClick = { navigation.open(RootPage.AddPattern) }, end = RowEnd.None)
+            SettingsRow(
+              stringResource(R.string.patterns_add),
+              R.drawable.ic_add,
+              onClick = { navigation.open(RootPage.AddPattern) },
+              end = RowEnd.None,
+              // Off, saying why, once the list takes no more.
+              supporting = if (full) stringResource(R.string.patterns_full, SyncLimits.patterns) else null,
+              enabled = !full,
+            )
           }
         }
         if (archived.isNotEmpty()) {
@@ -122,7 +133,9 @@ fun PatternsPage(navigation: PageNavigation) {
                 stringResource(R.string.job_change),
                 R.drawable.ic_badge,
                 onClick = { navigation.open(RootPage.JobChange) },
-                supporting = stringResource(R.string.job_change_note),
+                supporting =
+                  if (ordersAreFull) stringResource(R.string.repeat_orders_full, SyncLimits.orders) else stringResource(R.string.job_change_note),
+                enabled = !ordersAreFull,
               )
             }
           }

@@ -408,7 +408,7 @@ function PickedDaySheet({
 // What each mark means, one person at a time in their own style, chosen
 // by the chips over the list as 1人ずつ chooses whom to show. It opens on
 // the face pressed in the table, or from the menu on whom 1人ずつ shows,
-// so it is as long as one person's patterns however big the group.
+// so it lists one person's patterns however big the group.
 function LegendSheet({
   open,
   onOpenChange,

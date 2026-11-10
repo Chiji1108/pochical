@@ -57,12 +57,14 @@ import app.pochical.SectionRow
 import app.pochical.SettingsPage
 import app.pochical.SettingsRow
 import app.pochical.SettingsSection
+import app.pochical.SortToggle
 import app.pochical.calendar.Coworker
 import app.pochical.calendar.LocalOwnDays
 import app.pochical.design.COWORKERS_MAX
 import app.pochical.design.TextLimits
 import app.pochical.groups.LocalValues
 import app.pochical.kit.coworkerDays
+import app.pochical.kit.fitsCoworkerName
 import app.pochical.kit.limitText
 import app.pochical.limited
 import app.pochical.rememberDragOrder
@@ -104,10 +106,10 @@ fun CoworkersPage(navigation: PageNavigation) {
 
   fun full() = scope.launch { snackbar.showSnackbar(resources.getString(R.string.day_people_full, COWORKERS_MAX)) }
 
-  // The name typed, cut to the limit; one already there, or none, adds no one.
+  // The name typed, cut to the limit; one already there, or one the server would refuse, adds no one.
   fun add() {
     val name = limitText(typed.text, TextLimits.personName).trim()
-    if (name.isNotEmpty() && people.none { it.name == name }) {
+    if (fitsCoworkerName(name) && people.none { it.name == name }) {
       if (people.size >= COWORKERS_MAX) {
         full()
         return
@@ -123,9 +125,7 @@ fun CoworkersPage(navigation: PageNavigation) {
     snackbar = snackbar,
     actions = {
       if (people.size > 1 && !adding) {
-        TextButton(onClick = { sorting = !sorting }) {
-          Text(stringResource(if (sorting) R.string.patterns_sort_done else R.string.patterns_sort))
-        }
+        SortToggle(sorting) { sorting = !sorting }
       }
     },
   ) { padding ->
@@ -227,10 +227,10 @@ fun CoworkerEditorPage(id: String, navigation: PageNavigation) {
 @Composable
 private fun CoworkerForm(person: Coworker, count: Int?, taken: List<String>, navigation: PageNavigation) {
   val days = LocalOwnDays.current
-  // An empty name or another's is not kept, and the person keeps theirs. The days' own writes take
-  // it at once, after a delete made here; the kit keeps nothing for someone gone.
+  // A name the server would refuse or another's is not kept, and the person keeps theirs. The days'
+  // own writes take it at once, after a delete made here; the kit keeps nothing for someone gone.
   val name =
-    rememberKeptField(person.name, fits = { it.isNotEmpty() && it !in taken }) {
+    rememberKeptField(person.name, fits = { fitsCoworkerName(it) && it !in taken }) {
       days.renameCoworker(person.id, it)
       CompletableDeferred(Unit)
     }

@@ -1,6 +1,6 @@
 [tools]
-buf = "1.74.0"
-java = "temurin-21.0.12+101.0.LTS"
+buf = "1.75.0"
+java = "temurin-21.0.13+9.0.LTS"
 
 [settings]
 # Node's version is in .node-version and pnpm's in package.json's
@@ -190,6 +190,10 @@ run = "tools/photo-line-touches/run.sh"
 [tasks."ios:notification-taps"]
 description = "Run the chat notification tap UI tests in a simulator, erasing it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default): <simulator name> [derived data]"
 run = "tools/notification-taps/run.sh"
+
+[tasks."ios:chat-open"]
+description = "Run the chat's opening on ここから新着 UI tests in a simulator, erasing it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default): <simulator name> [derived data]"
+run = "tools/chat-open/run.sh"
 
 [tasks."ios:shifts-rotation"]
 description = "Run a big group's 一覧 rotation UI tests in a simulator, erasing it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default): <simulator name> [derived data]"

@@ -25,11 +25,11 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.Footnote
 import app.pochical.LimitedTextField
 import app.pochical.PageNavigation
 import app.pochical.R
+import app.pochical.rememberRead
 import app.pochical.RootPage
 import app.pochical.SettingsPage
 import app.pochical.SettingsRow
@@ -42,7 +42,7 @@ import app.pochical.groups.PhotoEditor
 import app.pochical.kit.PhotoShelf
 import app.pochical.kit.ProfileRow
 import app.pochical.kit.UsualPhoto
-import app.pochical.kit.characterCount
+import app.pochical.kit.fitsPersonName
 import app.pochical.rememberKeptField
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.flow.map
@@ -51,7 +51,7 @@ import kotlinx.coroutines.flow.map
 @Composable
 private fun usualProfile(): ProfileRow? {
   val values = LocalValues.current
-  return remember(values) { values.profile().map { it ?: ProfileRow(name = "", photoId = "") } }.collectAsStateWithLifecycle(null).value
+  return rememberRead(values) { values.profile().map { it ?: ProfileRow(name = "", photoId = "") } }
 }
 
 /**
@@ -75,7 +75,7 @@ fun ProfilePage(navigation: PageNavigation) {
 @Composable
 private fun ProfileForm(saved: ProfileRow, modifier: Modifier) {
   val calls = LocalGroupCalls.current
-  val name = rememberKeptField(saved.name, fits = { characterCount(it) <= TextLimits.personName }) { calls.keepProfile(name = it) }
+  val name = rememberKeptField(saved.name, fits = ::fitsPersonName) { calls.keepProfile(name = it) }
   var photoFailed by remember { mutableStateOf(false) }
   val typed = name.field.value.text.trim()
 

@@ -1,6 +1,7 @@
 import descriptionSymbol from "@iconify-icons/material-symbols/description-outline-rounded";
 import handshakeSymbol from "@iconify-icons/material-symbols/handshake-outline-rounded";
 import helpSymbol from "@iconify-icons/material-symbols/help-outline-rounded";
+import licenseSymbol from "@iconify-icons/material-symbols/license-outline-rounded";
 import privacyTipSymbol from "@iconify-icons/material-symbols/privacy-tip-outline-rounded";
 import rateReviewSymbol from "@iconify-icons/material-symbols/rate-review-outline-rounded";
 import repeatSymbol from "@iconify-icons/material-symbols/repeat-outline-rounded";
@@ -23,7 +24,11 @@ import {
   NotificationSection,
   RemindersPage,
 } from "./design-notifications";
-import { PatternsPage } from "./design-pattern-editor";
+import {
+  jobKeepsPatterns,
+  PatternsPage,
+  patternsFull,
+} from "./design-pattern-editor";
 import {
   AccountPage,
   AccountRow,
@@ -37,6 +42,7 @@ import {
   WeekPage,
   WeekRow,
 } from "./design-settings-display";
+import { LicensePage, LicensesPage } from "./design-settings-licenses";
 import { ListSection, settingsParts } from "./design-settings-parts";
 import { stylePreviewOf } from "./design-settings-preview";
 import { MarkPage, StyleRow } from "./design-settings-style";
@@ -80,7 +86,9 @@ type Page =
   | "profile"
   | "reminders"
   | "chatNotifications"
-  | "support";
+  | "support"
+  | "licenses"
+  | "license";
 
 const holidayWeekDay = new Date(2026, 8, 21);
 
@@ -105,12 +113,15 @@ export function DesignSettings({
   // start when moved), or taken out.
   onPutRule: (rule: RepeatRule, replacing?: Date) => void;
   onRemoveRule: (start: Date) => void;
-  onChangeJob: (job: { patterns: Pattern[]; rule: RepeatRule }) => void;
+  // False when the new job's patterns, with those kept for the days
+  // before it, are more than the server takes: nothing changed.
+  onChangeJob: (job: { patterns: Pattern[]; rule: RepeatRule }) => boolean;
   onTab: (tab: Tab) => void;
   // For the flow diagrams: a page to open on.
   initialPage?: Page;
 }) {
   const coworkers = useCoworkerList();
+  const toast = useContext(ToastContext);
   const platform = useDevice((state) => state.platform);
   const [page, setPage] = useState<Page>(initialPage);
   // A new job's order on the calendar takes the screen, its keys at the
@@ -132,6 +143,8 @@ export function DesignSettings({
   const current = inUse?.sequence.length ? inUse : undefined;
   // The period opened from 繰り返し's list, by its start.
   const [periodStart, setPeriodStart] = useState<Date>();
+  // The license opened from ライセンス, by its name.
+  const [licenseName, setLicenseName] = useState("");
   const period = rules.find(
     (rule) => rule.start.getTime() === periodStart?.getTime()
   );
@@ -213,8 +226,13 @@ export function DesignSettings({
           {page === "job" && (
             <JobChangePage
               onApply={(job) => {
-                onChangeJob(job);
-                setPage("patterns");
+                const kept = onChangeJob(job);
+                if (kept) {
+                  setPage("patterns");
+                } else {
+                  toast(`${patternsFull}。${jobKeepsPatterns}`, "problem");
+                }
+                return kept;
               }}
               onBack={() => {
                 setPage("patterns");
@@ -339,6 +357,25 @@ export function DesignSettings({
                 setPage("top");
               }}
               schedule={schedule}
+            />
+          )}
+          {page === "licenses" && (
+            <LicensesPage
+              onBack={() => {
+                setPage("top");
+              }}
+              onOpen={(name) => {
+                setLicenseName(name);
+                setPage("license");
+              }}
+            />
+          )}
+          {page === "license" && (
+            <LicensePage
+              name={licenseName}
+              onBack={() => {
+                setPage("licenses");
+              }}
             />
           )}
           {page === "chatNotifications" && (
@@ -483,7 +520,11 @@ function SettingsTop({
           onOpen("support");
         }}
       />
-      <AboutSection />
+      <AboutSection
+        onLicenses={() => {
+          onOpen("licenses");
+        }}
+      />
     </>
   );
 }
@@ -501,7 +542,8 @@ function openOutside(url: string) {
 // the review row is there whenever someone wants to write one, and opens
 // the store's page for writing it (App Store's ?action=write-review,
 // Google Play's listing), which the prototype has none of before release.
-function AboutSection() {
+// ライセンス, last, goes on inside the app.
+function AboutSection({ onLicenses }: { onLicenses: () => void }) {
   const platform = useDevice((state) => state.platform);
   const toast = useContext(ToastContext);
   const store = platform === "ios" ? "App Store" : "Google Play";
@@ -539,6 +581,11 @@ function AboutSection() {
             openOutside("/privacy");
           }}
           symbol={privacyTipSymbol}
+        />
+        <ListRow
+          label="ライセンス"
+          onClick={onLicenses}
+          symbol={licenseSymbol}
         />
       </ListSection>
       <p className={settingsParts.version}>

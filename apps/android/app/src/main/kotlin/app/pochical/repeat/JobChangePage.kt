@@ -45,6 +45,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.pochical.ConfirmAction
 import app.pochical.Footnote
 import app.pochical.LocalDeviceSettings
 import app.pochical.LocalThemeColors
@@ -64,6 +65,7 @@ import app.pochical.calendar.slashText
 import app.pochical.design.JobTemplate
 import app.pochical.design.Metrics
 import app.pochical.design.ReadyPatterns
+import app.pochical.design.SyncLimits
 import app.pochical.kit.ShiftPeriod
 import app.pochical.kit.firstPick
 import app.pochical.kit.readyCopies
@@ -128,6 +130,8 @@ fun JobChangePage(navigation: PageNavigation) {
   // While the new job is kept, once: a second tap waits.
   var finishing by remember { mutableStateOf(false) }
   var confirming by rememberSaveable { mutableStateOf(false) }
+  // The new job not kept: its patterns, with those still on the days before it, are too many.
+  var tooMany by rememberSaveable { mutableStateOf(false) }
   val scope = rememberCoroutineScope()
   val step = steps.last()
   fun go(next: JobStep) {
@@ -156,7 +160,11 @@ fun JobChangePage(navigation: PageNavigation) {
     if (finishing) return
     finishing = true
     scope.launch {
-      days.changeJob(ids, sequence, first, anchor)
+      if (!days.changeJob(ids, sequence, first, anchor)) {
+        finishing = false
+        tooMany = true
+        return@launch
+      }
       // A roster's pages become the period its shifts come for, once its patterns are kept.
       period?.let { picked -> settings.change { it.copy(period = picked) } }
       // The order fills the days without ポチポチ入力: the calendar offers the reminders as it shows.
@@ -195,7 +203,7 @@ fun JobChangePage(navigation: PageNavigation) {
         jobOrderTitle(jobTemplate(step.template)),
         onBack = back,
         collapsing = false,
-        actions = { TextButton(onClick = { confirming = true }, enabled = typing.sequence.isNotEmpty()) { Text(stringResource(R.string.entering_done)) } },
+        actions = { ConfirmAction(stringResource(R.string.entering_done), onClick = { confirming = true }, enabled = typing.sequence.isNotEmpty()) },
       ) { padding ->
         JobOrderCalendar(
           typing,
@@ -297,6 +305,14 @@ fun JobChangePage(navigation: PageNavigation) {
         }
       },
       dismissButton = { TextButton(onClick = { confirming = false }) { Text(stringResource(R.string.cancel)) } },
+    )
+  }
+  if (tooMany) {
+    AlertDialog(
+      onDismissRequest = { tooMany = false },
+      title = { Text(stringResource(R.string.patterns_full, SyncLimits.patterns)) },
+      text = { Text(stringResource(R.string.job_keeps_patterns)) },
+      confirmButton = { TextButton(onClick = { tooMany = false }) { Text(stringResource(R.string.ok)) } },
     )
   }
   if (pickingDay) DayPickerDialog(first, onPick = { start = it.toString() }, onDismiss = { pickingDay = false })

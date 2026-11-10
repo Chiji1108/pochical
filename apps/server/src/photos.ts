@@ -1,6 +1,6 @@
 import { chatRules } from "@pochical/design/chat";
+import { isId } from "@pochical/design/values";
 
-import { isId } from "./ids";
 import { groupOfCode } from "./invite-codes";
 import { previewImageKey } from "./link-preview";
 

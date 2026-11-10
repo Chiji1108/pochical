@@ -7,10 +7,14 @@ import app.pochical.v1.DayField
 import app.pochical.v1.SignInProvider
 import java.time.LocalDate
 import java.util.concurrent.CopyOnWriteArrayList
+import kotlin.coroutines.CoroutineContext
 import kotlin.random.Random
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
@@ -86,6 +90,31 @@ internal class FakeNetwork : NetworkWatch {
   override fun watch(lost: () -> Unit, changed: () -> Unit) {
     this.lost = lost
     this.changed = changed
+  }
+}
+
+/** Runs on Dispatchers.Default, holding the account's first sign-in ([SIGN_IN]) back until [release]. */
+private class HoldingSignIn : CoroutineDispatcher() {
+  /** The sign-in held. */
+  val job = CompletableDeferred<Job>()
+  private var held: Pair<CoroutineContext, Runnable>? = null
+  private var holding = true
+
+  override fun dispatch(context: CoroutineContext, block: Runnable) {
+    val holds =
+      synchronized(this) {
+        (holding && held == null && context[CoroutineName] == SIGN_IN).also { if (it) held = context to block }
+      }
+    if (holds) job.complete(context.job) else Dispatchers.Default.dispatch(context, block)
+  }
+
+  fun release() {
+    val (context, block) =
+      synchronized(this) {
+        holding = false
+        held.also { held = null }
+      } ?: return
+    Dispatchers.Default.dispatch(context, block)
   }
 }
 
@@ -318,6 +347,27 @@ class SyncTest {
   }
 
   @Test
+  fun aSignInCancelledBeforeItBeganLetsTheNextOneBegin() = runBlocking<Unit> {
+    val phone = device()
+    val held = HoldingSignIn()
+    val scope = CoroutineScope(SupervisorJob() + held)
+    try {
+      val account = SyncAccount(phone.database, phone.sessions, server.url, lazyOf(OkHttpClient()), scope, linePhotos = phone.linePhotos)
+      account.foreground()
+      val signingIn = withTimeout(10_000) { held.job.await() }
+      account.background()
+      eventually { signingIn.isCancelled }
+      // Let go of only once cancelled: the sign-in ends without having begun.
+      held.release()
+
+      account.foreground()
+      withTimeout(10_000) { account.state.first { it is AccountState.SignedIn } }
+    } finally {
+      scope.coroutineContext.job.cancelAndJoin()
+    }
+  }
+
+  @Test
   fun anAnswerTheAppCannotReadIsTriedAgainAsAFailure() = runBlocking {
     server.signInBody = "<html>"
     val phone = device()
@@ -327,6 +377,45 @@ class SyncTest {
 
     server.signInBody = null
     withTimeout(30_000) { phone.current() }
+    assertEquals(StoredSession(server.token, server.userId), phone.sessions.read())
+  }
+
+  @Test
+  fun aStoreFailingUnforeseenIsTriedAgainInTheForeground() = runBlocking {
+    val phone = device()
+    phone.sessions.write(StoredSession(server.token, server.userId))
+    phone.kept.failure = IllegalStateException("Block Store failed")
+    val reads = phone.kept.reads.get()
+    phone.account.foreground()
+    eventually { phone.kept.reads.get() > reads }
+    phone.kept.failure = null
+    assertEquals(AccountState.SigningIn, phone.account.state.value)
+
+    // The next foreground signs in, once the sign-in that failed is over.
+    eventually {
+      phone.account.foreground()
+      phone.account.state.value is AccountState.SignedIn
+    }
+    assertEquals(AccountState.SignedIn(server.userId, linked = null), phone.account.state.value)
+    assertEquals(0, server.signIns.get())
+  }
+
+  @Test
+  fun aSignInTheServerRefusesIsTriedAgainInTheForeground() = runBlocking {
+    server.signInStatus = 403
+    server.signInBody = """{"code":"USER_SUSPENDED"}"""
+    val phone = device()
+    phone.account.foreground()
+    eventually { server.signIns.get() == 1 }
+    assertEquals(AccountState.SigningIn, phone.account.state.value)
+
+    server.signInStatus = 200
+    server.signInBody = null
+    eventually {
+      phone.account.foreground()
+      phone.account.state.value is AccountState.SignedIn
+    }
+    withTimeout(10_000) { phone.current() }
     assertEquals(StoredSession(server.token, server.userId), phone.sessions.read())
   }
 
@@ -413,9 +502,11 @@ class SyncTest {
       claim("someone-before")
       takeOwn(app.pochical.v1.change { day = app.pochical.v1.dayValue { date = "2026-10-06"; field = DayField.DAY_FIELD_NOTE; value = "前の人" } })
     }
+    val photo = phone.linePhotos.files.pending("g1", "photo-before").apply { parentFile!!.mkdirs(); writeBytes(byteArrayOf(1)) }
     phone.account.foreground()
     withTimeout(10_000) { phone.current() }
     assertNull(phone.note("2026-10-06"))
+    assertFalse(photo.exists())
     assertEquals(server.userId, phone.database.write { state().owner })
   }
 

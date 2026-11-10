@@ -842,7 +842,7 @@ describe("a group's chat", () => {
   });
 
   it("keeps a report of a line with the lines around it", async () => {
-    const { call } = await import("./helpers");
+    const { arrived, call } = await import("./helpers");
     const { env } = await import("cloudflare:workers");
     const { groupId, guest, maker } = await pair();
     const mine = await groupSocket(groupId, maker);
@@ -876,9 +876,7 @@ describe("a group's chat", () => {
     expect([await report(maker), await report(guest)]).toStrictEqual([
       404, 200,
     ]);
-    await vi.waitFor(() => {
-      expect(posted).toHaveLength(1);
-    });
+    await arrived(posted, 1);
     vi.restoreAllMocks();
     expect(posted[0]?.split("\n")).toStrictEqual([
       "新しい通報：嫌がらせ・いじめ（メッセージを通報）",

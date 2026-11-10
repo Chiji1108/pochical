@@ -31,8 +31,6 @@ import androidx.compose.ui.semantics.role
 import app.pochical.LocalThemeColors
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -52,6 +50,8 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import app.pochical.R
+import app.pochical.chat.GroupedMenu
+import app.pochical.chat.LineMenuItem
 import java.io.File
 import java.util.UUID
 import kotlin.coroutines.cancellation.CancellationException
@@ -164,43 +164,25 @@ fun PhotoEditor(
     }
     Box {
       TextButton(onClick = { menu = true }, enabled = !working, modifier = Modifier.padding(top = 4.dp)) { Text(label) }
-      DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-        DropdownMenuItem(
-          text = { Text(stringResource(R.string.photo_take)) },
-          leadingIcon = { Icon(painterResource(R.drawable.ic_photo_camera), contentDescription = null) },
-          onClick = {
-            menu = false
-            if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) takePhoto()
-            else cameraAllowed.launch(Manifest.permission.CAMERA)
-          },
-        )
-        DropdownMenuItem(
-          text = { Text(stringResource(R.string.photo_pick)) },
-          leadingIcon = { Icon(painterResource(R.drawable.ic_photo_library), contentDescription = null) },
-          onClick = {
-            menu = false
-            pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-          },
-        )
-        onUsual?.let { usual ->
-          DropdownMenuItem(
-            text = { Text(stringResource(R.string.photo_usual)) },
-            onClick = {
-              menu = false
-              change(usual)
+      // Getting a new photo, then going back to what it was: the usual one, or none.
+      GroupedMenu(
+        menu,
+        onDismiss = { menu = false },
+        items =
+          listOfNotNull(
+            LineMenuItem(stringResource(R.string.photo_take), R.drawable.ic_photo_camera) {
+              if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) takePhoto()
+              else cameraAllowed.launch(Manifest.permission.CAMERA)
             },
-          )
-        }
-        onRemove?.let { remove ->
-          DropdownMenuItem(
-            text = { Text(stringResource(R.string.photo_remove)) },
-            onClick = {
-              menu = false
-              change(remove)
+            LineMenuItem(stringResource(R.string.photo_pick), R.drawable.ic_photo_library) {
+              pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
             },
-          )
-        }
-      }
+            onUsual?.let { usual -> LineMenuItem(stringResource(R.string.photo_usual), R.drawable.ic_undo, startsGroup = true) { change(usual) } },
+            onRemove?.let { remove ->
+              LineMenuItem(stringResource(R.string.photo_remove), R.drawable.ic_delete, destructive = true, startsGroup = onUsual == null) { change(remove) }
+            },
+          ),
+      )
     }
   }
 

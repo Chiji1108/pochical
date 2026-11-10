@@ -40,6 +40,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.pochical.ConfirmAction
 import app.pochical.Footnote
 import app.pochical.LocalThemeColors
 import app.pochical.PageNavigation
@@ -57,6 +58,7 @@ import app.pochical.calendar.monthDayText
 import app.pochical.calendar.slashText
 import app.pochical.design.Metrics
 import app.pochical.design.Radius
+import app.pochical.design.SyncLimits
 import app.pochical.kit.RepeatOrder
 import app.pochical.kit.holidaySetting
 import app.pochical.kit.holidaysOffByDefault
@@ -105,10 +107,21 @@ fun RepeatPage(navigation: PageNavigation) {
         }
         return@LazyColumn
       }
+      // Both put in one more period, which a full timeline has no room for (spec/vectors/fits.json, repeatOrders).
+      val full = orders.size >= SyncLimits.orders
       item {
-        SettingsSection(footnote = stringResource(R.string.repeat_rows_note)) {
-          row { SettingsRow(stringResource(R.string.repeat_add), R.drawable.ic_add, onClick = { navigation.open(RootPage.RepeatEditor(RepeatMode.Switch)) }) }
-          row { SettingsRow(stringResource(R.string.repeat_stop), R.drawable.ic_close, onClick = { navigation.open(RootPage.StopRepeat) }) }
+        SettingsSection(
+          footnote = if (full) stringResource(R.string.repeat_orders_full, SyncLimits.orders) else stringResource(R.string.repeat_rows_note)
+        ) {
+          row {
+            SettingsRow(
+              stringResource(R.string.repeat_add),
+              R.drawable.ic_add,
+              onClick = { navigation.open(RootPage.RepeatEditor(RepeatMode.Switch)) },
+              enabled = !full,
+            )
+          }
+          row { SettingsRow(stringResource(R.string.repeat_stop), R.drawable.ic_close, onClick = { navigation.open(RootPage.StopRepeat) }, enabled = !full) }
         }
       }
       val groups =
@@ -338,7 +351,7 @@ fun RepeatEditor(mode: RepeatMode, navigation: PageNavigation) {
     subtitle = subtitle,
     collapsing = false,
     actions = {
-      TextButton(onClick = { confirming = true }, enabled = typing.sequence.isNotEmpty()) { Text(stringResource(R.string.entering_done)) }
+      ConfirmAction(stringResource(R.string.entering_done), onClick = { confirming = true }, enabled = typing.sequence.isNotEmpty())
     },
   ) { padding ->
     RepeatCalendar(

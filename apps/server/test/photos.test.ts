@@ -9,7 +9,7 @@ import {
   smallKey,
 } from "../src/photos";
 import { alarmsSettled, ownRun, runAlarm } from "./alarms";
-import { call, ORIGIN, signInAnonymously, userIdOf } from "./helpers";
+import { call, ORIGIN, signInAnonymously, until, userIdOf } from "./helpers";
 import {
   changesBesidesNotices,
   changesIn,
@@ -18,6 +18,7 @@ import {
   push,
   sendFrame,
   syncSocket,
+  untilAcked,
 } from "./sync-helpers";
 
 // A JPEG's first bytes and a little more, as the app sends one.
@@ -181,14 +182,14 @@ describe("a group's photos", () => {
     expect(changesIn(await mine.frames.next())).toMatchObject([
       { kind: { value: holding("unsent") } },
     ]);
-    await expect
-      .poll(async () => await env.PHOTOS.head(photoKey(groupId, "mine")))
-      .toBeNull();
-    await expect
-      .poll(
-        async () => await env.PHOTOS.head(smallKey(photoKey(groupId, "mine")))
-      )
-      .toBeNull();
+    // The sweep the unsend set deletes it.
+    await alarmsSettled(env.GROUPS.getByName(groupId));
+    await expect(
+      Promise.all([
+        env.PHOTOS.head(photoKey(groupId, "mine")),
+        env.PHOTOS.head(smallKey(photoKey(groupId, "mine"))),
+      ])
+    ).resolves.toStrictEqual([null, null]);
   });
 
   it("deletes a photo whose send was taken back before it came, the send never coming", async () => {
@@ -216,14 +217,14 @@ describe("a group's photos", () => {
     recall("a", "early", "r1");
     // Naming someone else's photo deletes nothing.
     recall("b", "theirs", "r2");
-    await expect
-      .poll(async () => await env.PHOTOS.head(photoKey(groupId, "early")))
-      .toBeNull();
-    await expect
-      .poll(
-        async () => await env.PHOTOS.head(smallKey(photoKey(groupId, "early")))
-      )
-      .toBeNull();
+    await untilAcked(later.frames, "r2");
+    await alarmsSettled(env.GROUPS.getByName(groupId));
+    await expect(
+      Promise.all([
+        env.PHOTOS.head(photoKey(groupId, "early")),
+        env.PHOTOS.head(smallKey(photoKey(groupId, "early"))),
+      ])
+    ).resolves.toStrictEqual([null, null]);
     await expect(
       env.PHOTOS.head(photoKey(groupId, "theirs"))
     ).resolves.not.toBeNull();
@@ -396,11 +397,7 @@ const heldDelete = () => {
       go.resolve(undefined);
     },
     reached: async () => {
-      await vi.waitFor(() => {
-        if (!held) {
-          throw new Error("the delete is not held yet");
-        }
-      });
+      await until(() => held);
     },
   };
 };

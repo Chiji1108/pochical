@@ -15,6 +15,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.pochical.chat.SupportRow
+import app.pochical.chat.rememberChatList
+import app.pochical.design.Chat
+import app.pochical.groups.rememberMeId
+import app.pochical.notifications.rememberChatNotifications
 import app.pochical.kit.DeviceSettings
 import app.pochical.kit.appVersion
 import app.pochical.notifications.ChatNotificationsRow
@@ -34,6 +38,10 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(open: (RootPage) -> Unit) {
   val device = LocalDeviceSettings.current.device
   val snackbar = remember { SnackbarHostState() }
+  // The chat with Pochical's people, read over the list so its row comes back drawn as it was.
+  val me = rememberMeId()
+  val support = me?.let { rememberChatList(Chat.supportPlace, it) }
+  val notifications = rememberChatNotifications()
   SettingsPage(stringResource(R.string.tab_settings), onBack = null, large = true, snackbar = snackbar) { padding ->
     LazyColumn(contentPadding = padding) {
       // The patterns first: every way of working has them, and the repeating order is made of them.
@@ -66,20 +74,20 @@ fun SettingsScreen(open: (RootPage) -> Unit) {
         }
       }
       // The chat with the people who make Pochical, apart from the rows of settings.
-      item { SupportRow(open) }
-      item { About(snackbar) }
+      if (me != null && support != null) item { SupportRow(me, support, notifications, open) }
+      item { About(open, snackbar) }
     }
   }
 }
 
 /**
  * Pochical itself, at the foot (/design's AboutSection), its version under it: rows that leave the
- * app end in ↗, opening the site's pages in Custom Tabs. The store's own review prompt comes by
+ * app end in ↗, opening the site's pages in Custom Tabs, and ライセンス, the app's own page, last. The store's own review prompt comes by
  * itself only now and then (spec/review.md); the review row is there whenever someone wants to
  * write one.
  */
 @Composable
-private fun About(snackbar: SnackbarHostState) {
+private fun About(open: (RootPage) -> Unit, snackbar: SnackbarHostState) {
   val context = LocalContext.current
   val scope = rememberCoroutineScope()
   val afterRelease = stringResource(R.string.settings_review_after_release)
@@ -111,6 +119,7 @@ private fun About(snackbar: SnackbarHostState) {
     row {
       SettingsRow(stringResource(R.string.settings_privacy), R.drawable.ic_privacy_tip, onClick = { openLink(context, Site.page("privacy")) }, end = RowEnd.Outside, onClickLabel = opensBrowser)
     }
+    row { SettingsRow(stringResource(R.string.settings_licenses), R.drawable.ic_license, onClick = { open(RootPage.Licenses) }) }
   }
   Text(
     stringResource(R.string.settings_version, appVersion(context)),

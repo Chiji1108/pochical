@@ -13,7 +13,6 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -41,6 +40,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.pochical.ConfirmAction
 import app.pochical.Footnote
 import app.pochical.LimitedTextField
 import app.pochical.LocalDeviceSettings
@@ -48,13 +48,15 @@ import app.pochical.LocalThemeColors
 import app.pochical.PageNavigation
 import app.pochical.R
 import app.pochical.RowEnd
-import app.pochical.SectionRow
 import app.pochical.SettingsPage
 import app.pochical.SettingsRow
+import app.pochical.SettingsSection
 import app.pochical.SettingsSwitchRow
 import app.pochical.ShiftMark
+import app.pochical.calendar.HourButton
 import app.pochical.calendar.LocalOwnDays
 import app.pochical.calendar.Pattern
+import app.pochical.calendar.PatternValue
 import app.pochical.calendar.TimeDialog
 import app.pochical.calendar.row
 import app.pochical.design.MarkIconNames
@@ -64,10 +66,10 @@ import app.pochical.kit.PatternRefusal
 import app.pochical.kit.ShiftTime
 import app.pochical.kit.fitsPattern
 import app.pochical.kit.guessLook
+import app.pochical.kit.limitText
 import app.pochical.kit.nextColor
 import app.pochical.kit.refusesArchiving
 import app.pochical.kit.repeats
-import app.pochical.kit.limitText
 import app.pochical.mark
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
@@ -159,15 +161,14 @@ fun PatternEditor(id: String, isNew: Boolean, navigation: PageNavigation) {
     stringResource(if (isNew) R.string.patterns_add else R.string.pattern_edit),
     onBack = navigation::back,
     actions = {
-      TextButton(
-        // Only what the server takes, so a pattern saved stays once sent.
-        enabled = fitsPattern(shaped.row),
+      ConfirmAction(
+        stringResource(if (isNew) R.string.add else R.string.save),
         onClick = {
           scope.launch { kept(days.savePattern(shaped)) { if (isNew) navigation.back(2) else navigation.back() } }
         },
-      ) {
-        Text(stringResource(if (isNew) R.string.add else R.string.save))
-      }
+        // Only what the server takes, so a pattern saved stays once sent.
+        enabled = fitsPattern(shaped.row),
+      )
     },
   ) { padding ->
     LazyColumn(contentPadding = padding) {
@@ -198,58 +199,69 @@ fun PatternEditor(id: String, isNew: Boolean, navigation: PageNavigation) {
           placeholder = stringResource(R.string.pattern_name_example),
         )
       }
-      item { SectionRow(0, 1) { SettingsSwitchRow(stringResource(R.string.pattern_no_time), R.drawable.ic_schedule, allDay, { allDay = it }) } }
-      if (!allDay) {
-        item {
-          Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = { pickingStart = true }) { Text(time.start.removePrefix("0"), style = MaterialTheme.typography.titleMedium) }
-            Text("–", color = colors.textTertiary)
-            TextButton(onClick = { pickingStart = false }) { Text(time.end.removePrefix("0"), style = MaterialTheme.typography.titleMedium) }
-          }
-        }
-      }
-      item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
+      // Its time, then what it counts as and what follows it, then whether it is entered: each a
+      // rounded group of segments, as /design's and 設定's rows are.
       item {
-        SwitchRow(stringResource(R.string.pattern_counts_off), stringResource(R.string.pattern_counts_off_note), draft.countsAsOff) {
-          draft = draft.copy(countsAsOff = it)
+        SettingsSection(modifier = Modifier.padding(top = 8.dp)) {
+          row { SettingsSwitchRow(stringResource(R.string.pattern_no_time), icon = null, checked = allDay, onCheckedChange = { allDay = it }) }
+          if (!allDay) {
+            row {
+              SettingsRow(
+                stringResource(R.string.day_hours),
+                icon = null,
+                onClick = null,
+                valueContent = {
+                  Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    HourButton(time.start.removePrefix("0")) { pickingStart = true }
+                    Text("–", color = colors.textTertiary)
+                    HourButton(time.end.removePrefix("0")) { pickingStart = false }
+                  }
+                },
+                end = RowEnd.None,
+              )
+            }
+          }
         }
       }
       item {
         val next = others.find { it.id == draft.nextDay }
-        SectionRow(0, 1, Modifier.padding(top = 8.dp)) {
-          SettingsRow(
-            stringResource(R.string.pattern_next_day),
-            R.drawable.ic_event,
-            onClick = { choosingNextDay = true },
-            end = RowEnd.None,
-            value = if (next == null) stringResource(R.string.none) else null,
-            valueContent =
-              next?.let {
-                {
-                  Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    ShiftMark(it.icon, it.emoji, it.symbol, it.color, size = 18.dp)
-                    Text(it.name, style = MaterialTheme.typography.bodyMedium)
-                  }
-                }
-              },
-          )
+        SettingsSection {
+          row {
+            SettingsSwitchRow(
+              stringResource(R.string.pattern_counts_off),
+              icon = null,
+              checked = draft.countsAsOff,
+              onCheckedChange = { draft = draft.copy(countsAsOff = it) },
+              supporting = stringResource(R.string.pattern_counts_off_note),
+            )
+          }
+          row {
+            SettingsRow(
+              stringResource(R.string.pattern_next_day),
+              icon = null,
+              onClick = { choosingNextDay = true },
+              value = if (next == null) stringResource(R.string.none) else null,
+              valueContent = next?.let { { PatternValue(it) } },
+            )
+          }
         }
       }
       // A state undone as easily, so a switch saved with the rest; a new pattern is in use.
       if (!isNew) {
-        item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
         item {
-          SwitchRow(
-            stringResource(R.string.pattern_in_use),
-            null,
-            !draft.archived,
-            enabled = !(archivingRefused && !draft.archived),
+          SettingsSection(
+            footnote = stringResource(if (archivingRefused) R.string.pattern_in_use_refused else R.string.pattern_in_use_note),
           ) {
-            draft = draft.copy(archived = !it)
+            row {
+              SettingsSwitchRow(
+                stringResource(R.string.pattern_in_use),
+                icon = null,
+                checked = !draft.archived,
+                onCheckedChange = { draft = draft.copy(archived = !it) },
+                enabled = !(archivingRefused && !draft.archived),
+              )
+            }
           }
-        }
-        item {
-          Footnote(stringResource(if (archivingRefused) R.string.pattern_in_use_refused else R.string.pattern_in_use_note))
         }
       }
       // Said once: under the switch, while that is refused too.

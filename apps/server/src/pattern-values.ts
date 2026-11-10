@@ -1,13 +1,14 @@
 import { markColors } from "@pochical/design/colors";
-import { syncLimits, textLimits } from "@pochical/design/limits";
+import { textLimits } from "@pochical/design/limits";
+import { fitsText, isEmoji } from "@pochical/design/text";
+import { isId } from "@pochical/design/values";
 
 import { isTime } from "./day-values";
 import type { Pattern } from "./gen/pochical/v1/sync_pb";
-import { isId, isIdList } from "./ids";
-import { fitsText, isEmoji } from "./text-limits";
 
-// What a pattern and the patterns' order may hold (spec/shift-patterns.md),
-// checked as the owner's edits arrive.
+// What a pattern may hold (spec/shift-patterns.md), checked as the owner's
+// edits arrive; the patterns' order is design/src/values.ts's
+// fitsPatternOrder.
 
 const fitsTime = (text: string | undefined): boolean =>
   text === undefined || isTime(text);
@@ -31,7 +32,3 @@ export const fitsPattern = (id: string, pattern: Pattern): boolean => {
       (isId(pattern.nextDay) && pattern.nextDay !== id))
   );
 };
-
-/** Whether an order of patterns is ids, each once, and not too many. */
-export const fitsOrder = (ids: readonly string[]): boolean =>
-  isIdList(ids, syncLimits.patterns);

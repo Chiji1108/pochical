@@ -1,4 +1,10 @@
-import { COWORKERS_MAX } from "@pochical/design/limits";
+import { COWORKERS_MAX, syncLimits } from "@pochical/design/limits";
+import {
+  fitsCoworkerName,
+  fitsPatternOrder,
+  isId,
+  isIdList,
+} from "@pochical/design/values";
 import { and, asc, count, eq, gte, inArray, isNotNull } from "drizzle-orm";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 
@@ -15,16 +21,11 @@ import type {
 } from "./gen/pochical/v1/sync_pb";
 import { clockAfter } from "./hlc";
 import type { Clock } from "./hlc";
-import { hasDeviceClock, isId, isIdList } from "./ids";
+import { hasDeviceClock } from "./ids";
 import { givesWay, heldBackBy, ORDER_FIELDS } from "./order-clears";
 import type { Floor } from "./order-clears";
-import {
-  fitsClearFrom,
-  fitsCoworkerName,
-  fitsCoworkerOrder,
-  fitsOrders,
-} from "./order-values";
-import { fitsOrder, fitsPattern } from "./pattern-values";
+import { fitsClearFrom, fitsCoworkerOrder, fitsOrders } from "./order-values";
+import { fitsPattern } from "./pattern-values";
 import { fitsPreference } from "./preference-values";
 import {
   coworkerOrder,
@@ -126,6 +127,21 @@ export const applyDay = (
   return writeDay(db, row);
 };
 
+/**
+ * Whether the user keeps syncLimits.patterns patterns already, so that two
+ * devices adding patterns apart never keep more than an order of them can
+ * hold.
+ */
+const patternsFull = (db: DrizzleSqliteDODatabase): boolean => {
+  const kept =
+    db
+      .select({ kept: count() })
+      .from(patterns)
+      .where(isNotNull(patterns.data))
+      .get()?.kept ?? 0;
+  return kept >= syncLimits.patterns;
+};
+
 export const applyPattern = (
   db: DrizzleSqliteDODatabase,
   edit: PatternValue,
@@ -143,7 +159,12 @@ export const applyPattern = (
   if (!isNewer(clock, stored)) {
     return undefined;
   }
-  const fits = edit.pattern === undefined || fitsPattern(edit.id, edit.pattern);
+  // A pattern newly kept past syncLimits.patterns is refused, answered as
+  // deleted, as a coworker past COWORKERS_MAX is.
+  const adding = edit.pattern !== undefined && (stored?.data ?? null) === null;
+  const fits =
+    edit.pattern === undefined ||
+    (fitsPattern(edit.id, edit.pattern) && !(adding && patternsFull(db)));
   let data = stored?.data ?? null;
   if (fits) {
     data = edit.pattern === undefined ? null : encodePattern(edit.pattern);
@@ -174,7 +195,7 @@ export const applyPatternOrder = (
   if (!isNewer(clock, stored)) {
     return undefined;
   }
-  const fits = fitsOrder(edit.ids);
+  const fits = fitsPatternOrder(edit.ids);
   const ids = fits ? edit.ids : parseIds(stored?.ids ?? "[]");
   const row: OrderRow = {
     ...clockColumns(writtenClock(clock, fits)),

@@ -351,6 +351,8 @@
   <string name="patterns_move">%1$sを移動</string>
   <string name="patterns_key_page">ポチポチ入力の%1$dページ目</string>
   <string name="patterns_add">パターンを追加</string>
+  <string name="patterns_full">シフトパターンは%1$d個までです</string>
+  <string name="job_keeps_patterns">前の日までに入っているパターンも残るので、数に入ります</string>
   <string name="patterns_archived">使わなくなったパターン</string>
   <string name="patterns_archived_note">ポチポチ入力のボタンには出ません。入っている日には、そのまま出ます。</string>
   <string name="patterns_ready_note">名前や時間は、追加したあとで直せます。</string>
@@ -387,6 +389,8 @@
   <string name="repeat_set_note">当番・非番や交代勤務のように順番で回るシフトを、カレンダーに自動で入れられます。違う日だけ、カレンダーで変えられます。</string>
   <string name="repeat_add">新しい繰り返しを追加</string>
   <string name="repeat_stop">繰り返しをやめる</string>
+  <string name="repeat_orders_full">繰り返しの期間は%1$d個までです</string>
+  <string name="repeat_rotation_full">並びは%1$d日までです</string>
   <string name="repeat_rows_note">どちらも、選んだ日から切り替わります。前後の期間と、自分で入れた日は、そのまま残ります。</string>
   <string name="repeat_coming">これから</string>
   <string name="repeat_current">今の繰り返し</string>

@@ -59,6 +59,10 @@ private func periodText(_ orders: [RepeatOrder], _ index: Int) -> String {
   return "\(start)〜\(orders[index + 1].start.adding(days: -1).slashText)"
 }
 
+/// Said where adding a period stays off: the timeline has as many as the
+/// server takes (`fitsRepeatOrders`).
+let ordersFull = "繰り返しの期間は\(SyncLimits.orders)個までです"
+
 /// 設定 › 繰り返し (/design's RepeatPage): the periods, which never
 /// overlap, as cards newest first under the rows that add one: those to
 /// come, the one in use today and those over. Each opens to be set again,
@@ -86,25 +90,33 @@ struct RepeatPage: View {
         }
         .settingsRows()
       } else {
-        // Over the newest first, where a new period mostly lands.
+        // Over the newest first, where a new period mostly lands. Both put
+        // in one more, which a full timeline has no room for.
+        let full = orders.count >= SyncLimits.orders
         Section {
           PageLink {
             RepeatEditor(mode: .switch)
           } label: {
             Label("新しい繰り返しを追加", systemImage: "plus")
-              .foregroundStyle(colors.accentDefault)
+              .foregroundStyle(full ? colors.textDisabled : colors.accentDefault)
           }
+          .disabled(full)
           PageLink {
             StopRepeatPage()
           } label: {
             Label {
               Text("繰り返しをやめる")
             } icon: {
-              Image(systemName: "circle.slash").foregroundStyle(colors.textSecondary)
+              Image(systemName: "circle.slash")
+                .foregroundStyle(full ? colors.textDisabled : colors.textSecondary)
             }
           }
+          .disabled(full)
         } footer: {
-          Text("どちらも、選んだ日から切り替わります。前後の期間と、自分で入れた日は、そのまま残ります。")
+          Text(
+            full
+              ? ordersFull
+              : "どちらも、選んだ日から切り替わります。前後の期間と、自分で入れた日は、そのまま残ります。")
         }
         .settingsRows()
         cards("これから", newestFirst.filter { $0 > (inUse ?? -1) }, byID)

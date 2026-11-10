@@ -1,7 +1,6 @@
 package app.pochical.chat
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.rememberCoroutineScope
@@ -24,6 +23,9 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flowOf
 import androidx.compose.animation.AnimatedVisibility
 import kotlinx.coroutines.flow.first
+import androidx.compose.animation.core.AnimationState
+import androidx.compose.animation.core.animateTo
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -31,7 +33,9 @@ import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.imeNestedScroll
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -48,6 +52,7 @@ import androidx.compose.foundation.layout.size
 import app.pochical.notifications.rememberChatMuting
 import app.pochical.notifications.rememberChatNotifications
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyLayoutScrollScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -83,6 +88,9 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.painterResource
@@ -126,6 +134,8 @@ import app.pochical.kit.firstUnread
 import app.pochical.kit.otherIn
 import app.pochical.kit.pageAfter
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.math.abs
+import kotlin.math.withSign
 import java.time.LocalDate
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -270,6 +280,9 @@ fun ChatPage(
   val writers = remember(members) { members.associateBy { it.userId } }
   // Where the lines are to go once laid out as they are now: ここから新着 at the top, or the foot.
   var going by remember { mutableStateOf<Going?>(null) }
+  // The line asked to be gone to while the lines around it are laid out, then gliding there.
+  var jumping by remember { mutableStateOf<Long?>(null) }
+  var gliding by remember { mutableStateOf<Long?>(null) }
   // To the foot only once the latest lines are laid out, when the window stopped short of them.
   val reducedMotion = rememberReducedMotion()
   // The lines moved by the chat itself, not the person: a screen reader hears nothing of these.
@@ -322,6 +335,7 @@ fun ChatPage(
         touched = true
         following = false
         going = null
+        jumping = null
       }
     }
   }
@@ -337,7 +351,7 @@ fun ChatPage(
     latestBefore = chat.lines.lastOrNull()?.seq
     if (!placed || !following) return@LaunchedEffect
     val coming = if (me == null || held == null) null else firstComing(chat.lines.map { it.seq to it.writer(me) }, held, chat.lastRead(me))
-    val first = coming?.let { seq -> items.indexOfFirst { it is ChatItem.Line && it.line.seq == seq } } ?: -1
+    val first = coming?.let(items::indexOfLine) ?: -1
     when {
       // They fit: they come in at the foot, the lines sliding up to them.
       first < 0 || unreadFrom != null || list.fits(first + 1) -> moves.run { list.toFoot(reducedMotion) }
@@ -421,6 +435,7 @@ fun ChatPage(
   // A line sent, from the composer or the days sheet: the chat goes to its foot, the latest laid out.
   val toFoot = {
     if (!chat.atEnd) from = null
+    jumping = null
     going = Going.ToFoot
   }
   // 日にちを共有 and 日にちの投票 from ＋: the day sheet, in the way it was opened.
@@ -431,30 +446,47 @@ fun ChatPage(
   val deleted = stringResource(R.string.deleted_account)
   val nameOf = remember(writers, deleted) { { id: String -> writers[id]?.shownName(deleted) ?: deleted } }
 
-  // A line gone to (a quote, later a pin): laid out from it when the device holds it, else earlier
-  // lines asked for a page at a time until they reach it; then put in the middle of the screen and
-  // lit once there (spec/chat.md, Replies; Pins).
-  var jumping by remember { mutableStateOf<Long?>(null) }
+  // A line gone to: first laid out with lines either side to stand in the middle of the screen
+  // between, those the device holds at once and those it does not as they are asked for (held on its
+  // own, a line stands at the foot of nothing). Then it glides there, lines changing on the way
+  // leaving the glide be, and lights once there (spec/chat.md, Replies; Pins).
   var lit by remember { mutableStateOf<Lit?>(null) }
-  LaunchedEffect(jumping, items, placed, chat.heldBefore) {
+  LaunchedEffect(jumping, items, placed, chat.heldBefore, current) {
     val seq = jumping ?: return@LaunchedEffect
     if (!placed) return@LaunchedEffect
-    val index = items.indexOfFirst { it is ChatItem.Line && it.line.seq == seq }
+    val laidOut = items.indexOfLine(seq) >= 0
+    val held = chat.line(seq) != null
     val first = chat.lines.firstOrNull()?.seq
+    val last = chat.lines.lastOrNull()?.seq
+    if (!laidOut && !held && (first == null || seq > first || chat.atStart)) {
+      jumping = null
+      return@LaunchedEffect
+    }
+    following = false
+    val over = chat.atStart || first != null && seq - first >= Chat.pageSize / 2
+    val under = chat.atEnd || last != null && last - seq >= Chat.pageSize / 2
     when {
-      index >= 0 -> {
-        following = false
-        moves.run { list.showInMiddle(index, animated = !reducedMotion) }
-        lit = Lit(seq, System.nanoTime())
-        if (reading) readFrom = lit
+      !laidOut && held -> from = seq
+      // Those the device holds laid out first; past them, the page before them is asked as fewer
+      // than a page are held.
+      !over && chat.heldBefore > 0 && first != null -> from = maxOf(first - Chat.pageSize, chat.heldFrom ?: 1)
+      // With no connection, what the device holds is all there is.
+      laidOut && (!current || over && under) -> {
+        gliding = seq
         jumping = null
       }
-      // Held but not laid out: the lines are laid out from it.
-      from != seq && chat.line(seq) != null -> from = seq
-      // Earlier than the lines and not held: those the device holds laid out first, then the page
-      // before them waited for, which is asked as fewer than a page are held.
-      first != null && seq < first && !chat.atStart -> if (chat.heldBefore > 0) from = maxOf(first - Chat.pageSize, chat.heldFrom ?: 1)
-      else -> jumping = null
+      laidOut && !under && last != null -> socket?.requestPage(threadId, pageAfter(last))
+    }
+  }
+  LaunchedEffect(gliding) {
+    val seq = gliding ?: return@LaunchedEffect
+    try {
+      moves.run { list.showInMiddle(animated = !reducedMotion) { shownItems.indexOfLine(seq) } }
+      lit = Lit(seq, System.nanoTime())
+      if (reading) readFrom = lit
+    } finally {
+      // Taken by the person's finger or a scroll of the chat's own, the glide just stops there.
+      if (gliding == seq) gliding = null
     }
   }
 
@@ -566,10 +598,15 @@ fun ChatPage(
   LaunchedEffect(keepTop) {
     val (key, top) = keepTop ?: return@LaunchedEffect
     // Reversed, the line grows up from its foot: the lines go down by as much as its top rose, as it
-    // is laid out opened (it runs past its lines, so opening it always changes its height).
+    // is laid out opened (it runs past its lines, so opening it always changes its height), going
+    // there as a scroll to a place, so those over it, which never moved, keep no motion of a new height.
     val now = snapshotFlow { list.layoutInfo.visibleItemsInfo.firstOrNull { it.key == key }?.let { it.offset + it.size } }.first { it != top }
-    if (now != null) moves.run { list.scrollBy((now - top).toFloat()) }
-    keepTop = null
+    try {
+      if (now != null) moves.run { list.scrollToItem(list.firstVisibleItemIndex, list.firstVisibleItemScrollOffset + now - top) }
+    } finally {
+      // A finger on the lines may take the scroll from it; the next line opened has its own.
+      if (keepTop?.first == key) keepTop = null
+    }
   }
   val linkItems = rememberLinkActions(openLink, snackbar)
   val floatingDay = rememberFloatingDay(list, items)
@@ -634,6 +671,7 @@ fun ChatPage(
       folded = folded,
       showFolded = { seq -> shownBlocked = shownBlocked + seq },
       unfolded = unfolded,
+      opening = keepTop?.first,
       unfold = { key ->
         // Opened where it is, its words going on down, and the chat no longer follows its latest.
         following = false
@@ -935,15 +973,31 @@ private fun ChatLines(
 ) {
   val pinned = remember(chat.pins) { chat.pins.mapTo(HashSet()) { it.seq } }
   val focus = LocalFocusManager.current
+  val keyboardUp = WindowInsets.isImeVisible
+  val dragged by list.interactionSource.collectIsDraggedAsState()
+  val upAsDragged = remember(dragged) { keyboardUp }
+  val keyboardStillUp by rememberUpdatedState(keyboardUp)
+  // The keyboard taken down by the lines takes the field's cursor with it, not one going any other way.
+  val cursorGoes =
+    remember(focus) {
+      object : NestedScrollConnection {
+        override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+          if (!keyboardStillUp) focus.clearFocus()
+          return Velocity.Zero
+        }
+      }
+    }
   LazyColumn(
     modifier
       .fillMaxSize()
       // While the keyboard is up, a tap off the lines (beside or between them) puts it away, as LINE
       // does, a tap on a line staying its own; and dragging the lines down at their foot takes the
       // keyboard down with the finger, as Material's messaging apps do (spec/chat.md, Opening a
-      // message's menu).
+      // message's menu). Only while it is up or that drag holds it: down, the same scrolling at the
+      // foot would bring it up.
       .pointerInput(focus) { detectTapGestures(onTap = { focus.clearFocus() }) }
-      .imeNestedScroll(),
+      .nestedScroll(cursorGoes)
+      .then(if (keyboardUp || (dragged && upAsDragged)) Modifier.imeNestedScroll() else Modifier),
     state = list,
     reverseLayout = true,
     contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 8.dp + topRoom, bottom = 8.dp),
@@ -952,7 +1006,15 @@ private fun ChatLines(
       val look = messageLook(item, me, writers, direct, pinned, quoteOf, handlers.nameOf, handlers.invite)
       // Lines come in fading as the lines slide up to them, and move to a new height together, over
       // chatRules.lineMoveMs; with motion reduced they fade where they go, put there at once.
-      ChatItemRow(item, look, writers, me, handlers, Modifier.animateItem(fadeInSpec = tween(Chat.lineMoveMs), placementSpec = if (handlers.reducedMotion) null else tween(Chat.lineMoveMs), fadeOutSpec = tween(Chat.lineMoveMs)))
+      ChatItemRow(
+        item,
+        look,
+        writers,
+        me,
+        handlers,
+        Modifier.animateItem(fadeInSpec = tween(Chat.lineMoveMs), placementSpec = if (handlers.reducedMotion) null else tween(Chat.lineMoveMs), fadeOutSpec = tween(Chat.lineMoveMs))
+          .movesToNewHeight(handlers.reducedMotion || handlers.opening == item.key),
+      )
     }
     if (head != null && chat.atStart) item(key = "head") { head() }
     // A chat with nothing in it yet says so in the middle of the lines' room.
@@ -1069,6 +1131,9 @@ fun NotKeptDialog(onDismiss: () -> Unit) {
 /** How long the lines on the screen stay before they are read, so a fling reads once where it stops. */
 private const val READ_SETTLE_MS = 100L
 
+/** Where the line [seq] is among the items, -1 when it is not. */
+private fun List<ChatItem>.indexOfLine(seq: Long): Int = indexOfFirst { it is ChatItem.Line && it.line.seq == seq }
+
 /** The seq of the line [key] names among the items, null for anything else or a line still on its way. */
 private fun List<ChatItem>.lineSeq(key: String): Long? = (firstOrNull { it.key == key } as? ChatItem.Line)?.line?.seq
 
@@ -1089,15 +1154,44 @@ private suspend fun LazyListState.showAtTop(index: Int): Boolean {
 /** Takes the lines to their foot, the latest: gliding there, or at once with motion reduced (spec/chat.md, Reduced motion). */
 private suspend fun LazyListState.toFoot(reducedMotion: Boolean) = if (reducedMotion) scrollToItem(0) else animateScrollToItem(0)
 
-/** Puts the item at [index] in the middle of the screen, gliding there unless [animated] is off. */
-private suspend fun LazyListState.showInMiddle(index: Int, animated: Boolean) {
-  if (animated) animateScrollToItem(index) else scrollToItem(index)
-  val info = layoutInfo
-  val item = info.visibleItemsInfo.firstOrNull { it.index == index } ?: return
-  // Reversed, an item's offset is from the foot; it goes up by how far its middle is under the screen's.
-  val middle = (info.viewportEndOffset - info.viewportStartOffset) / 2
-  val by = -(middle - (item.offset + item.size / 2)).toFloat()
-  if (animated) animateScrollBy(by) else scrollBy(by)
+/**
+ * Puts the item [index] says, asked again as lines coming in move it, in the middle of the screen
+ * (one taller than the screen with its top at the top): at once with [animated] off, else in one
+ * glide, over the last screen only from further away. How far that is comes first, found in this
+ * frame with nothing of it drawn: lines not laid out have no height until they are, and a glide
+ * setting out on a guess has to make up for it on the way.
+ */
+private suspend fun LazyListState.showInMiddle(animated: Boolean, index: () -> Int) = scroll {
+  val lines = LazyLayoutScrollScope(this@showInMiddle, this)
+  // The room the lines are seen in: reversed, offsets run up from its foot, to what floats over them.
+  val height = (layoutInfo.viewportEndOffset - layoutInfo.afterContentPadding).toFloat()
+  fun laidOut() = index().let { at -> layoutInfo.visibleItemsInfo.firstOrNull { it.index == at } }
+  // How far a laid out item is from its place, going up being forward.
+  fun left() = laidOut()?.let { it.offset + it.size - (minOf(it.size.toFloat(), height) + height) / 2 } ?: 0f
+  if (index() < 0) return@scroll
+  if (!animated) {
+    lines.snapToItem(index())
+    scrollBy(left())
+    return@scroll
+  }
+  val screen = height.withSign((index() - firstVisibleItemIndex).toFloat())
+  // Off the screen by little, a screen on shows it and how far it is; by more, it is put a screen off.
+  val walked = if (laidOut() == null && abs(lines.calculateDistanceTo(index())) < 2 * height) scrollBy(screen) else 0f
+  val way =
+    if (laidOut() != null) {
+      (walked + left()).also { scrollBy(-walked) }
+    } else {
+      lines.snapToItem(index())
+      left() - scrollBy(left() - screen)
+    }
+  var gone = 0f
+  AnimationState(0f).animateTo(way, spring(visibilityThreshold = 1f)) {
+    val step = value - gone
+    gone = value
+    // Only the end of the lines takes less, and it stops there.
+    if (scrollBy(step) != step) cancelAnimation()
+  }
+  scrollBy(left())
 }
 
 /**

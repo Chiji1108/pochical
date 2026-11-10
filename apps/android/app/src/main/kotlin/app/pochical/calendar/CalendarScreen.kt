@@ -11,8 +11,17 @@ import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.PredictiveBackHandler
-import androidx.compose.animation.Crossfade
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.updateTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
@@ -26,6 +35,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -44,11 +54,10 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
@@ -87,11 +96,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.pochical.ConfirmAction
 import app.pochical.LocalDeviceSettings
 import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.ReviewPrompt
 import app.pochical.RootPage
+import app.pochical.chat.GroupedMenu
+import app.pochical.chat.LineMenuItem
 import app.pochical.design.Metrics
 import app.pochical.design.PochicalTextStyles
 import app.pochical.design.Springs
@@ -135,6 +147,10 @@ private val UNFOLD_FLICK = 400.dp
 /** The shortest a day gets on a short screen, keeping its date and mark clear. */
 
 private val SCREEN_EDGE = 16.dp
+
+/** Material's fade through, in milliseconds: what goes is gone before what comes starts to show. */
+private const val FADE_THROUGH_OUT = 90
+private const val FADE_THROUGH_IN = 210
 
 /**
  * カレンダー: the person's month, a page a month, turned by swiping, a
@@ -385,6 +401,8 @@ fun CalendarScreen(
     }
   }
 
+  // What stands under the days: ポチポチ入力, or its tray while entering.
+  val foot = updateTransition(entering != null, "entering")
   val sky = rememberSurpriseSky(reduceMotion)
   Column(
     Modifier.fillMaxSize()
@@ -410,7 +428,11 @@ fun CalendarScreen(
     )
     WeekdayRow(week, Modifier.padding(horizontal = SCREEN_EDGE).padding(bottom = 12.dp))
     BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
-      val cell = monthCellHeight(maxHeight - DAY_GAP)
+      // The days take their size from the room left at rest, so neither the foot nor the tab bar moves
+      // them on the way, and ease to a room that differs once all is still.
+      val footMoving = foot.isRunning || foot.currentState != foot.targetState
+      val room = remember { mutableStateOf(maxHeight) }.apply { if (!footMoving) value = maxHeight }.value
+      val cell by animateDpAsState(monthCellHeight(room - DAY_GAP), Springs.standard(), label = "cell")
       val monthHeight = monthGridHeight(cell)
       Column {
         val select by rememberUpdatedState(::selectDay)
@@ -439,6 +461,8 @@ fun CalendarScreen(
         val pull = rememberDraggableState { down -> pulled = (pulled + down / unfoldPx).coerceIn(0f, fold.value) }
         Box(
           Modifier.fillMaxWidth()
+            // As tall as the days past the room the foot leaves them on its way, and within it at rest.
+            .wrapContentHeight(Alignment.Top, unbounded = footMoving)
             .height(cell + (monthHeight - cell) * (1 - folding))
             .clipToBounds()
             .draggable(
@@ -500,9 +524,20 @@ fun CalendarScreen(
       }
     }
     if (opened == null) {
-      // ポチポチ入力 and its tray trade places in a fade; the tray fading out keeps its last day.
+      // ポチポチ入力 and its tray trade places in a fade through, the one gone before the other shows. Both
+      // stand on the foot's lower edge, which goes with the tab bar, so that alone moves them; the
+      // height follows on Material's standard spatial spring, the one the scaffold gives the bar. The
+      // tray fading out keeps its last day.
       val trayDay = remember { mutableStateOf<LocalDate?>(null) }.apply { if (entering != null) value = entering }.value
-      Crossfade(entering != null, Modifier.padding(horizontal = SCREEN_EDGE).padding(top = 12.dp, bottom = 12.dp), label = "entering") { on ->
+      foot.AnimatedContent(
+        Modifier.padding(horizontal = SCREEN_EDGE).padding(top = 12.dp, bottom = 12.dp),
+        transitionSpec = {
+          fadeIn(tween(FADE_THROUGH_IN, delayMillis = FADE_THROUGH_OUT, easing = LinearOutSlowInEasing)) togetherWith
+            fadeOut(tween(FADE_THROUGH_OUT, easing = FastOutLinearInEasing)) using
+            SizeTransform(clip = false) { _, _ -> MotionScheme.standard().defaultSpatialSpec() }
+        },
+        contentAlignment = Alignment.BottomCenter,
+      ) { on ->
         val day = trayDay
         if (!on || day == null) {
           Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -567,7 +602,9 @@ fun CalendarScreen(
               enteringKey = next.toString()
               say(resources.getString(R.string.entering_skipped), day, next)
             },
-            modifier = Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)),
+            // Read from the window, as the tab bar's scaffold takes the inset away the moment the bar
+            // starts back, which would drop the tray by it.
+            modifier = Modifier.padding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom).asPaddingValues()),
           )
         }
       }
@@ -648,11 +685,7 @@ private fun Heading(
     Spacer(Modifier.weight(1f))
     val away = if (dayOpen) (if (thisWeekAway) 1f else 0f) else abs(pages - todayPage).coerceAtMost(1f)
     if (entering) {
-      Button(onClick = onDone, shapes = ButtonDefaults.shapes()) {
-        Icon(painterResource(R.drawable.ic_check), null, Modifier.size(18.dp))
-        Spacer(Modifier.width(6.dp))
-        Text(stringResource(R.string.entering_done))
-      }
+      ConfirmAction(stringResource(R.string.entering_done), onClick = onDone, endInset = 0.dp)
     } else if (away > 0f) {
       OutlinedButton(
         onClick = if (dayOpen) onThisWeek else onThisMonth,
@@ -683,24 +716,15 @@ private fun Heading(
             tint = colors.textPrimary,
           )
         }
-        DropdownMenu(expanded = saving, onDismissRequest = { saving = false }) {
-          DropdownMenuItem(
-            text = { Text(stringResource(R.string.picture)) },
-            leadingIcon = { Icon(painterResource(R.drawable.ic_image), null) },
-            onClick = {
-              saving = false
-              onPicture()
-            },
-          )
-          DropdownMenuItem(
-            text = { Text(stringResource(R.string.calendar_add)) },
-            leadingIcon = { Icon(painterResource(R.drawable.ic_calendar_add), null) },
-            onClick = {
-              saving = false
-              onDeviceCalendar()
-            },
-          )
-        }
+        GroupedMenu(
+          saving,
+          onDismiss = { saving = false },
+          items =
+            listOf(
+              LineMenuItem(stringResource(R.string.picture), R.drawable.ic_image, run = onPicture),
+              LineMenuItem(stringResource(R.string.calendar_add), R.drawable.ic_calendar_add, run = onDeviceCalendar),
+            ),
+        )
       }
     }
   }

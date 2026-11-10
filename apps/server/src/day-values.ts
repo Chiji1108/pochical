@@ -1,10 +1,9 @@
 import { dayRules } from "@pochical/design/days";
-import { syncLimits, textLimits } from "@pochical/design/limits";
-import { withinLimit } from "@pochical/design/text";
+import { fitsDayNote, fitsDayPeople, isId } from "@pochical/design/values";
 
 import { DayField } from "./gen/pochical/v1/sync_pb";
 import type { DayValue } from "./gen/pochical/v1/sync_pb";
-import { hasDeviceClock, isId, isIdList } from "./ids";
+import { hasDeviceClock } from "./ids";
 
 // What a day's field may hold (spec/sync-protocol.md, Shifts), checked as
 // the owner's edits arrive.
@@ -53,10 +52,6 @@ export const SHARED_DAY_FIELDS: readonly DayField[] = [
   DayField.END,
 ];
 
-// A day's people: coworker ids separated by single spaces, each once.
-const isPeople = (value: string): boolean =>
-  isIdList(value.split(" "), syncLimits.peopleADay);
-
 // What a set value of each field must be.
 const fits: Record<DayField, (value: string) => boolean> = {
   [DayField.UNSPECIFIED]: () => false,
@@ -64,8 +59,9 @@ const fits: Record<DayField, (value: string) => boolean> = {
   [DayField.PATTERN]: (value) => value === dayRules.noShift || isId(value),
   [DayField.START]: isTime,
   [DayField.END]: isTime,
-  [DayField.NOTE]: (value) => withinLimit(value, textLimits.dayNote),
-  [DayField.PEOPLE]: isPeople,
+  [DayField.NOTE]: fitsDayNote,
+  // Coworker ids separated by single spaces.
+  [DayField.PEOPLE]: (value) => fitsDayPeople(value.split(" ")),
 };
 
 /** Whether a set value fits its field; clearing always does. */

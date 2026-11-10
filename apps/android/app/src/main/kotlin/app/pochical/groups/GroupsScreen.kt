@@ -71,7 +71,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -79,6 +78,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.pochical.Headline
 import app.pochical.LocalAccount
 import app.pochical.LocalNotifyingUnread
 import app.pochical.LocalThemeColors
@@ -90,6 +90,9 @@ import app.pochical.calendar.holidayCountry
 import app.pochical.calendar.holidayName
 import app.pochical.calendar.rememberToday
 import app.pochical.chat.ChatList
+import app.pochical.chat.rememberChatList
+import app.pochical.notifications.rememberChatNotifications
+import app.pochical.rememberRead
 import app.pochical.design.Metrics
 import app.pochical.design.Radius
 import app.pochical.kit.AccountState
@@ -127,8 +130,7 @@ class GroupsActions(
 @Composable
 fun GroupsScreen(openId: String?, onOpen: (String) -> Unit, actions: GroupsActions) {
   val values = LocalValues.current
-  val groups by remember(values) { values.groups() }.collectAsStateWithLifecycle(null)
-  val list = groups ?: return
+  val list = rememberRead(values) { values.groups() } ?: return
   val open = openGroup(openId, list)
   if (open == null) {
     NoGroups(actions)
@@ -137,7 +139,8 @@ fun GroupsScreen(openId: String?, onOpen: (String) -> Unit, actions: GroupsActio
   HoldSocket(open.id)
   Row(Modifier.fillMaxSize()) {
     GroupRail(list, open.id, onOpen, actions)
-    GroupHub(open, actions)
+    // Each group's page its own, so one never shows another's days or chats while its own are read.
+    key(open.id) { GroupHub(open, actions) }
   }
 }
 
@@ -168,12 +171,7 @@ private fun NoGroups(actions: GroupsActions) {
       verticalArrangement = Arrangement.spacedBy(12.dp),
       horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-      Text(
-        stringResource(R.string.groups_none_title),
-        Modifier.semantics { heading() },
-        style = MaterialTheme.typography.headlineSmall,
-        textAlign = TextAlign.Center,
-      )
+      Headline(stringResource(R.string.groups_none_title), textAlign = TextAlign.Center)
       Text(
         stringResource(R.string.groups_none_body),
         Modifier.padding(bottom = 12.dp),
@@ -369,13 +367,19 @@ private fun RailAction(icon: Int, label: String, onClick: () -> Unit) {
   }
 }
 
-/** The open group: its mark and name over its page, its buttons in the bar, and everyone's next days. */
+/**
+ * The open group: its mark and name over its page, its buttons in the bar, and everyone's next days
+ * and the chats under them, shown together once the device has read them, never one before the
+ * other nor a chat as having no lines before its lines are read.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GroupHub(group: GroupRow, actions: GroupsActions) {
   val today = rememberToday()
   val members = rememberGroupMembers(group.id, today, today.plusDays(NEXT_TOGETHER_DAYS - 1))
   val me = rememberMeId()
+  val chats = me?.let { rememberChatList(group.id, it) }
+  val notifications = rememberChatNotifications()
   val bar = TopAppBarDefaults.pinnedScrollBehavior()
   Scaffold(
     Modifier.nestedScroll(bar.nestedScrollConnection),
@@ -398,6 +402,8 @@ private fun GroupHub(group: GroupRow, actions: GroupsActions) {
       )
     }
   ) { padding ->
+    // Nothing under the bar until read, the list then laid out whole, so a scroll it kept starts where it was.
+    if (members == null || (me != null && chats == null)) return@Scaffold
     LazyColumn(contentPadding = padding) {
       item {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -408,13 +414,8 @@ private fun GroupHub(group: GroupRow, actions: GroupsActions) {
           }
         }
       }
-      if (members != null) {
-        item { MemberWeek(members, group.id, today, onOpen = { actions.onShifts(group.id, it) }, Modifier.padding(horizontal = 16.dp)) }
-      }
-      val me = me
-      if (me != null) {
-        item { ChatList(group.id, group.name, me, onOpen = { actions.onChat(group.id, it) }) }
-      }
+      item { MemberWeek(members, group.id, today, onOpen = { actions.onShifts(group.id, it) }, Modifier.padding(horizontal = 16.dp)) }
+      if (chats != null) item { ChatList(group.id, group.name, chats, notifications, onOpen = { actions.onChat(group.id, it) }) }
       item { Spacer(Modifier.height(24.dp)) }
     }
   }

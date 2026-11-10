@@ -35,16 +35,6 @@ export function markLetter(before: string, after: string, limit: number) {
   return (typed.length > 0 ? typed : now).slice(0, limit).join("");
 }
 
-// One emoji, as the pickers and the system keyboards give one: a single
-// character that starts as a pictograph or a flag, or a keycap (1️⃣, #️⃣),
-// which starts with the plain digit or sign under its combining keycap.
-const EMOJI =
-  /^\p{Extended_Pictographic}|^\p{Regional_Indicator}|^[#*0-9]\uFE0F?\u20E3/u;
-
-export function isEmoji(text: string) {
-  return characterCount(text) === 1 && EMOJI.test(text);
-}
-
 // A name's first character, as a mark's letter or a face without a photo
 // shows it, whole even when it is an emoji joined of several.
 export function firstCharacter(name: string) {

@@ -39,6 +39,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.pochical.LocalDeviceSettings
@@ -65,6 +66,7 @@ import app.pochical.calendar.monthWithYear
 import app.pochical.calendar.pageCount
 import app.pochical.design.Metrics
 import app.pochical.design.Springs
+import app.pochical.design.SyncLimits
 import app.pochical.groups.MonthChooser
 import app.pochical.kit.repeatSchedule
 import java.time.LocalDate
@@ -168,7 +170,16 @@ fun RepeatCalendar(
         MonthOfOrder(monthAt(page), typing, cover, byId, before, until, holidayShift, holidayCountry, cell) { type(typing.pressed(it)) }
       }
     }
-    PatternKeys(patterns, keyPages) { type(typing.pick(it.id)) }
+    if (typing.full) {
+      Text(
+        stringResource(R.string.repeat_rotation_full, SyncLimits.sequence),
+        Modifier.fillMaxWidth(),
+        style = MaterialTheme.typography.bodySmall,
+        color = LocalThemeColors.current.textSecondary,
+        textAlign = TextAlign.Center,
+      )
+    }
+    PatternKeys(patterns, keyPages, enabled = !typing.full) { type(typing.pick(it.id)) }
     TrayActionsRow(
       keyPages,
       leading = {

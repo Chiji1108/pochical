@@ -43,8 +43,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -261,12 +259,7 @@ private fun Welcome(onStart: () -> Unit, onSignIn: () -> Unit) {
         contentDescription = null,
         Modifier.size(200.dp),
       )
-      Text(
-        stringResource(R.string.app_name),
-        style = MaterialTheme.typography.headlineMedium,
-        color = colors.textPrimary,
-        modifier = Modifier.padding(top = 8.dp).semantics { heading() },
-      )
+      Headline(stringResource(R.string.app_name), Modifier.padding(top = 8.dp), large = true)
       Text(
         stringResource(R.string.welcome_about),
         style = MaterialTheme.typography.bodyLarge,
@@ -356,9 +349,7 @@ private fun OrderStep(template: JobTemplate, ids: List<String>, onBack: () -> Un
     onBack = onBack,
     collapsing = false,
     actions = {
-      TextButton(onClick = { onDone(ids, typing.sequence, typing.anchor) }, enabled = typing.sequence.isNotEmpty() && !waiting) {
-        Text(stringResource(R.string.job_done))
-      }
+      ConfirmAction(stringResource(R.string.job_done), onClick = { onDone(ids, typing.sequence, typing.anchor) }, enabled = typing.sequence.isNotEmpty(), busy = waiting)
     },
   ) { padding ->
     JobOrderCalendar(
@@ -430,7 +421,7 @@ private fun StepPage(
       verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
       Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(title, style = MaterialTheme.typography.headlineSmall, color = colors.textPrimary, modifier = Modifier.semantics { heading() })
+        Headline(title)
         Text(description, style = MaterialTheme.typography.bodyMedium, color = colors.textTertiary)
       }
       Column(verticalArrangement = Arrangement.spacedBy(12.dp), content = content)

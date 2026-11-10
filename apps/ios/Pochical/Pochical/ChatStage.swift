@@ -618,8 +618,15 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
 
   private var userScrolling: Bool { lines.isDragging || lines.isDecelerating }
 
-  /// Lines are laid out, in a room to show them in.
-  private var ready: Bool { !ids.isEmpty && lines.bounds.height > 0 }
+  /// Lines are laid out, in a room to show them in: its foot known, the
+  /// composer having told its height (preferredContentSizeDidChange), which
+  /// it does only after the lines are first laid out. Put where the chat
+  /// opens before then, the lines would keep their foot as the composer
+  /// takes its room (fitRoom), and ここから新着, put at the top, would go
+  /// up out of sight by the composer's height.
+  private var ready: Bool {
+    !ids.isEmpty && lines.bounds.height > 0 && composerHeight.constant > 0
+  }
 
   /// Puts in `rows`, saying whether any changed.
   @discardableResult

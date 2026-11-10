@@ -61,6 +61,7 @@ import {
   swiftMarkIconNames,
   swiftMarkIcons,
 } from "./mark-icon-code";
+import { kotlinNotices, swiftNotices, webNotices } from "./notices";
 import { kotlinReadyPatterns, swiftReadyPatterns } from "./pattern-code";
 import { swiftPhrases } from "./phrases";
 import { kotlinSkies, swiftSkies } from "./sky-code";
@@ -701,7 +702,10 @@ const outputs = {
   [`${KOTLIN_DIR}/ReadyPatterns.kt`]: kotlinFile(kotlinReadyPatterns()),
   [`${SWIFT_DIR}/Skies.swift`]: swiftFile(swiftSkies()),
   [`${KOTLIN_DIR}/Skies.kt`]: kotlinFile(kotlinSkies()),
+  [`${SWIFT_DIR}/Notices.swift`]: swiftFile(swiftNotices()),
+  [`${KOTLIN_DIR}/Notices.kt`]: kotlinFile(kotlinNotices()),
   "packages/prototype/src/lib/holiday-names.ts": webHolidays(HEADER),
+  "packages/prototype/src/lib/notices.ts": webNotices(HEADER),
   ...sharedOutputs,
   [`${SWIFT_DIR}/Chat.swift`]: swiftFile(
     swiftEnum("Chat", CHAT_DOC, chatRules),

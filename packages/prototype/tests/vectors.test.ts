@@ -1,6 +1,14 @@
 import { iconSections } from "@pochical/design/mark-icon-names";
 import type { IconSection } from "@pochical/design/mark-icon-names";
-import { characterCount } from "@pochical/design/text";
+import { characterCount, isEmoji } from "@pochical/design/text";
+import {
+  fitsCoworkerName,
+  fitsDayPeople,
+  fitsGroupName,
+  fitsPatternOrder,
+  fitsRepeatOrders,
+  fitsRotation,
+} from "@pochical/design/values";
 import { widgetRules } from "@pochical/design/widgets";
 import { rgbaToThumbHash, thumbHashToRGBA } from "thumbhash";
 import { describe, expect, test } from "vitest";
@@ -11,6 +19,7 @@ import chatText from "../../../spec/vectors/chat-text.json";
 import chatMessages from "../../../spec/vectors/chat.json";
 import dayNames from "../../../spec/vectors/day-names.json";
 import entering from "../../../spec/vectors/entering.json";
+import fits from "../../../spec/vectors/fits.json";
 import groupVectors from "../../../spec/vectors/groups.json";
 import hlc from "../../../spec/vectors/hlc.json";
 import localEdits from "../../../spec/vectors/local-edits.json";
@@ -170,12 +179,7 @@ import type { LocalEvent } from "../src/lib/local-edits";
 import { reconnectWaitMost } from "../src/lib/reconnect";
 import { mayAskForReview, openedOn } from "../src/lib/review";
 import type { ReviewHistory } from "../src/lib/review";
-import {
-  dayName,
-  isEmoji,
-  limitText,
-  markLetter,
-} from "../src/lib/text-limits";
+import { dayName, limitText, markLetter } from "../src/lib/text-limits";
 
 const dayOf = (key: string) => {
   const [year = 0, month = 1, day = 1] = key.split("-").map(Number);
@@ -503,6 +507,49 @@ describe("spec/vectors/text.json", () => {
   for (const { name, text: written, expected } of text.isEmoji) {
     test(`isEmoji: ${name}`, () => {
       expect(isEmoji(written)).toBe(expected);
+    });
+  }
+});
+
+// What the server takes of the values the prototype edits, as the apps
+// check before they save.
+describe("spec/vectors/fits.json", () => {
+  for (const { name, field, value, expected } of fits.dayField) {
+    if (field === "people" && value !== null) {
+      test(`dayField: ${name}`, () => {
+        expect(fitsDayPeople(value.split(" "))).toBe(expected);
+      });
+    }
+  }
+  for (const { name, text: written, expected } of fits.coworkerName) {
+    test(`coworkerName: ${name}`, () => {
+      expect(fitsCoworkerName(written)).toBe(expected);
+    });
+  }
+  for (const { name, text: written, expected } of fits.groupName) {
+    test(`groupName: ${name}`, () => {
+      expect(fitsGroupName(written)).toBe(expected);
+    });
+  }
+  // Ids separated by single spaces, "" for none.
+  const idsOf = (spaced: string) => (spaced === "" ? [] : spaced.split(" "));
+  for (const { name, ids, expected } of fits.patternOrder) {
+    test(`patternOrder: ${name}`, () => {
+      expect(fitsPatternOrder(idsOf(ids))).toBe(expected);
+    });
+  }
+  for (const { name, sequence, expected } of fits.rotation) {
+    test(`rotation: ${name}`, () => {
+      expect(fitsRotation(idsOf(sequence))).toBe(expected);
+    });
+  }
+  for (const { name, orders, expected } of fits.repeatOrders) {
+    test(`repeatOrders: ${name}`, () => {
+      expect(
+        fitsRepeatOrders(
+          orders.map((sequence) => ({ sequence: idsOf(sequence) }))
+        )
+      ).toBe(expected);
     });
   }
 });

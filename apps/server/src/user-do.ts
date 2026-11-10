@@ -1,6 +1,7 @@
 import { create, toBinary } from "@bufbuild/protobuf";
 import { chatRules } from "@pochical/design/chat";
 import { syncLimits } from "@pochical/design/limits";
+import { isId } from "@pochical/design/values";
 import { DurableObject } from "cloudflare:workers";
 import {
   and,
@@ -41,7 +42,6 @@ import type {
 import type { GroupProfile } from "./group-do";
 import { markColumns } from "./group-marks";
 import { isAhead } from "./hlc";
-import { isId } from "./ids";
 import { errorFields } from "./log";
 import {
   deleteBatchesOf,
@@ -540,8 +540,10 @@ export class UserDO extends DurableObject<Env> {
    * read, as the group counted them at its cursor `groupCursor`, for their
    * devices' badges, sent to them when it changed. One counted no later
    * than the count kept, or for a group they are not in, changes nothing.
+   * Done once the pushes it sets off are, which the group waits on; one
+   * that fails is logged.
    */
-  setUnread(
+  async setUnread(
     groupId: string,
     threadId: string,
     unread: Unread,
@@ -551,16 +553,23 @@ export class UserDO extends DurableObject<Env> {
     line?: { alert: Alert; mentioned: boolean },
     // Where the user's read mark in the chat is, when they read.
     read?: number
-  ): void {
+  ): Promise<void> {
     this.storeUnread(groupId, threadId, unread, groupCursor);
-    if (
-      line !== undefined &&
-      this.notifies(groupId, threadId, line.mentioned)
-    ) {
-      this.ctx.waitUntil(this.notify(line.alert));
-    }
-    if (read !== undefined) {
-      this.ctx.waitUntil(this.withdraw(groupId, threadId, read));
+    const pushes = await Promise.allSettled([
+      line !== undefined && this.notifies(groupId, threadId, line.mentioned)
+        ? this.notify(line.alert)
+        : undefined,
+      read === undefined ? undefined : this.withdraw(groupId, threadId, read),
+    ]);
+    for (const pushed of pushes) {
+      if (pushed.status === "rejected") {
+        console.error({
+          error: errorFields(pushed.reason),
+          groupId,
+          message: "Telling the user's devices of a chat failed",
+          threadId,
+        });
+      }
     }
   }
 

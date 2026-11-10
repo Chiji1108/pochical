@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -18,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.pochical.ConfirmAction
 import app.pochical.Footnote
 import app.pochical.PageNavigation
 import app.pochical.R
@@ -28,6 +27,8 @@ import app.pochical.SettingsRow
 import app.pochical.calendar.LocalOwnDays
 import app.pochical.calendar.pattern
 import app.pochical.design.ReadyPatterns
+import app.pochical.design.SyncLimits
+import app.pochical.kit.fitsPatternOrder
 import app.pochical.kit.newId
 import app.pochical.kit.readyCopies
 import kotlinx.coroutines.launch
@@ -47,15 +48,18 @@ fun AddPatternPage(navigation: PageNavigation) {
   val offered = { id: String -> id !in ids && ReadyPatterns.all.find { it.id == id }?.name !in names }
   val anyOffered = ReadyPatterns.offered.any(offered)
   var picked by rememberSaveable { mutableStateOf(emptySet<String>()) }
+  // As many as the order still takes, archived ones counted.
+  val fits = fitsPatternOrder(calendar.patterns.map { it.id } + chosenPatterns(picked).filter(offered))
   val scope = rememberCoroutineScope()
   SettingsPage(
     stringResource(R.string.patterns_add),
     onBack = navigation::back,
     actions = {
       if (anyOffered) {
-        TextButton(
+        ConfirmAction(
+          stringResource(R.string.add),
           // Only ones not there yet: a 明け or 非番 picked with its 夜勤 or 当番 may be.
-          enabled = picked.any(offered),
+          enabled = picked.any(offered) && fits,
           onClick = {
             val chosen = chosenPatterns(picked).filter(offered)
             // A next day comes along only when that pattern is there or added with it.
@@ -65,9 +69,7 @@ fun AddPatternPage(navigation: PageNavigation) {
               navigation.back()
             }
           },
-        ) {
-          Text(stringResource(R.string.add))
-        }
+        )
       }
     },
   ) { padding ->
@@ -76,7 +78,7 @@ fun AddPatternPage(navigation: PageNavigation) {
         item {
           ReadyPatternChips(picked, { picked = it }, Modifier.fillMaxWidth().padding(16.dp), offered = offered)
         }
-        item { Footnote(stringResource(R.string.patterns_ready_note)) }
+        item { Footnote(if (fits) stringResource(R.string.patterns_ready_note) else stringResource(R.string.patterns_full, SyncLimits.patterns)) }
         item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
       }
       item {

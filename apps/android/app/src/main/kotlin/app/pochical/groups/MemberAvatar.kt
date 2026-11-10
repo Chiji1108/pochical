@@ -14,7 +14,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.Dp
 import app.pochical.LocalThemeColors
 import app.pochical.R
@@ -38,13 +40,21 @@ fun MemberAvatar(name: String, photoId: String, shelf: PhotoShelf?, size: Dp, mo
     modifier.size(size).background(if (me) colors.accentFill else colors.fillSecondary, CircleShape),
     contentAlignment = Alignment.Center,
   ) {
+    // The letter's line is its own size, centered, rather than body text's taller line, which
+    // would sit it low in the circle.
+    val letter = with(LocalDensity.current) { (size * 0.45f).toSp() }
     Text(
       limitText(name.trim(), 1),
       // Under a photo, not read: the photo is the face.
       Modifier.then(if (photoId.isNotEmpty()) Modifier.clearAndSetSemantics {} else Modifier),
       color = if (me) colors.accentOnFill else colors.textSecondary,
-      fontSize = with(LocalDensity.current) { (size * 0.45f).toSp() },
-      fontWeight = FontWeight.SemiBold,
+      style =
+        TextStyle(
+          fontSize = letter,
+          fontWeight = FontWeight.SemiBold,
+          lineHeight = letter,
+          lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.Both),
+        ),
     )
     if (photoId.isNotEmpty()) PhotoPicture(photoId, shelf, Modifier.matchParentSize().clip(CircleShape), ground = null)
   }

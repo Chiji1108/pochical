@@ -36,6 +36,19 @@ public enum Together {
   }
 }
 
+extension Together {
+  /// みんな休み in a group from `from` through `through`, and whether some
+  /// other day may yet be one: none with only one member, as one person's
+  /// days off are not shared ones (spec/shift-patterns.md, Days everyone
+  /// is off; Android's groupDays).
+  public static func days(of members: [GroupMember], from: Day, through: Day) -> (
+    days: [Day], unsure: Bool
+  ) {
+    guard members.count > 1 else { return ([], false) }
+    return days(members.map { $0.offDays(from: from, through: through) }, from: from, through: through)
+  }
+}
+
 extension GroupMember {
   /// Each day from `from` through `through` the member has entered or an
   /// order fills: whether it is a day off.

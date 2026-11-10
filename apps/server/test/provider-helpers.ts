@@ -114,7 +114,9 @@ export const accountToken = async (
  * other calls; everything else as it is.
  */
 export const providerKeys = (
-  more: (request: Request) => Response | undefined = () => undefined
+  more: (
+    request: Request
+  ) => Response | undefined | Promise<Response | undefined> = () => undefined
 ) => {
   const through = globalThis.fetch;
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
@@ -122,7 +124,7 @@ export const providerKeys = (
     if (KEYS.has(request.url)) {
       return Response.json({ keys: [testKey] });
     }
-    return more(request) ?? (await through(request));
+    return (await more(request)) ?? (await through(request));
   });
 };
 

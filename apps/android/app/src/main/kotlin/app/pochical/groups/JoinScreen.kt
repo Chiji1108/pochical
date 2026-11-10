@@ -54,8 +54,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -65,6 +63,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.Footnote
+import app.pochical.Headline
 import app.pochical.LimitedTextField
 import app.pochical.ListSheet
 import app.pochical.MarkFrame
@@ -80,7 +79,7 @@ import app.pochical.design.TextLimits
 import app.pochical.kit.InviteDetails
 import app.pochical.kit.InviteFailure
 import app.pochical.kit.PhotoShelf
-import app.pochical.kit.characterCount
+import app.pochical.kit.fitsPersonName
 import app.pochical.rowColors
 import app.pochical.segmentShapes
 import java.io.IOException
@@ -184,7 +183,7 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
         val groupId = calls.join(code, myName)
         // Once in the group: someone with no usual name yet keeps these as theirs everywhere, which
         // the group then shows as it shows anyone's usual ones; anyone else's face is the group's.
-        val faced = if (usualName.isEmpty()) keepAsUsual(calls, myName, face) else setFace(calls, face, groupId)
+        val faced = if (usualName.isEmpty()) keepAsUsual(calls, face) else setFace(calls, face, groupId)
         (face as? JoinFace.Held)?.let { calls.releasePhoto(it.photoId) }
         if (!faced) {
           ReviewPrompt.troubled = true
@@ -240,7 +239,7 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
               color = MaterialTheme.colorScheme.onSurfaceVariant,
               textAlign = TextAlign.Center,
             )
-            val canJoin = !shown.full && myName.isNotEmpty() && characterCount(myName) <= TextLimits.personName
+            val canJoin = !shown.full && myName.isNotEmpty() && fitsPersonName(myName)
             Button(onClick = ::join, shapes = ButtonDefaults.shapes(), enabled = canJoin && !joining, modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
               if (joining) CircularProgressIndicator(Modifier.size(20.dp)) else Text(stringResource(R.string.join))
             }
@@ -290,13 +289,7 @@ private fun Invitation(details: InviteDetails, code: String, onMembers: () -> Un
     verticalArrangement = Arrangement.spacedBy(12.dp),
   ) {
     MarkFrame { GroupMarkView(details.mark, MarkFrameSize, shelf = PhotoShelf.Invitation(code)) }
-    Text(
-      details.name,
-      Modifier.padding(bottom = 12.dp).semantics { heading() },
-      style = MaterialTheme.typography.headlineMedium,
-      textAlign = TextAlign.Center,
-      maxLines = 3,
-    )
+    Headline(details.name, Modifier.padding(bottom = 12.dp), large = true, textAlign = TextAlign.Center, maxLines = 3)
     Column(Modifier.clickable(onClick = onMembers).padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
       Row(horizontalArrangement = Arrangement.spacedBy((-8).dp)) {
         details.members.take(5).forEach { member ->
@@ -468,13 +461,20 @@ private fun JoinProfileDialog(
 }
 
 /**
- * The name and face as the usual ones (設定 › プロフィール), for someone who has none yet: whether
- * they were kept.
+ * The face as the usual one (設定 › プロフィール), for someone who had no usual name, whose name the
+ * join itself made their usual one; the usual photo, if there is one, stays as it is. Whether it was
+ * kept.
  */
-private suspend fun keepAsUsual(calls: app.pochical.kit.GroupCalls, name: String, face: JoinFace): Boolean =
+private suspend fun keepAsUsual(calls: app.pochical.kit.GroupCalls, face: JoinFace): Boolean =
   try {
-    val photoId = (face as? JoinFace.Held)?.photoId?.also { calls.sendHeldPhoto(it, PhotoShelf.Mine) }.orEmpty()
-    calls.setProfile(name, photoId)
+    when (face) {
+      JoinFace.Usual -> Unit
+      is JoinFace.Held -> {
+        calls.sendHeldPhoto(face.photoId, PhotoShelf.Mine)
+        calls.setProfile(name = null, photoId = face.photoId)
+      }
+      JoinFace.None -> calls.setProfile(name = null, photoId = "")
+    }
     true
   } catch (e: CancellationException) {
     throw e

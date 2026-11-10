@@ -103,12 +103,12 @@ struct CoworkersPage: View {
     days.count { ($0.people ?? "").split(separator: " ").contains { $0 == id } }
   }
 
-  /// Adds the name typed, cut to the limit; one already there, or none,
-  /// adds no one.
+  /// Adds the name typed, cut to the limit; one already there, or one the
+  /// server would refuse, adds no one.
   private func add(to list: [Coworker]) {
     let name = String(
       newName.trimmingCharacters(in: .whitespacesAndNewlines).prefix(TextLimits.personName))
-    guard !name.isEmpty, !list.contains(where: { $0.name == name }) else {
+    guard fitsCoworkerName(name), !list.contains(where: { $0.name == name }) else {
       newName = ""
       return
     }
@@ -197,12 +197,12 @@ private struct CoworkerEditor: View {
     }
   }
 
-  /// Keeps the name typed; an empty one or another's is not kept, and
-  /// the person keeps theirs. One that cannot be kept goes back to the
-  /// name kept, so leaving does not try it again.
+  /// Keeps the name typed; one the server would refuse or another's is
+  /// not kept, and the person keeps theirs. One that cannot be kept goes
+  /// back to the name kept, so leaving does not try it again.
   private func keep() {
     let name = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !deleted, !name.isEmpty, !taken.contains(name), name != kept else { return }
+    guard !deleted, fitsCoworkerName(name), !taken.contains(name), name != kept else { return }
     if write({ try OwnValues.renameCoworker(person.id, to: name, now: nowMs(), in: $0) }) {
       kept = name
     } else {

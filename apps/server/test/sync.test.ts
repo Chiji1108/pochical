@@ -398,6 +398,45 @@ const order = (opId: string, ids: string[], ms: number) => ({
 });
 
 describe("syncing a user's own patterns", () => {
+  it("refuses a new pattern past syncLimits.patterns, as two devices adding apart would make, but still changes one", async () => {
+    const token = await signInAnonymously();
+    const phone = await device(token);
+    sendFrame(phone.socket, {
+      case: "patternEdits",
+      value: {
+        edits: Array.from({ length: syncLimits.patterns }, (_, index) =>
+          patternEdit(`p${index}`, `n${index}`, night, 1000)
+        ),
+      },
+    });
+    await phone.frames.next();
+    await phone.frames.next();
+
+    sendFrame(phone.socket, {
+      case: "patternEdits",
+      value: {
+        edits: [
+          patternEdit("extra", "extra", night, 2000),
+          patternEdit("n0", "n0", { ...night, name: "日勤" }, 2000),
+        ],
+      },
+    });
+    const { kind } = await phone.frames.next();
+    await phone.frames.next();
+    const changes = kind.case === "changes" ? kind.value.changes : [];
+    expect(changes.map((change) => change.kind)).toMatchObject([
+      {
+        case: "pattern",
+        value: { hlc: { deviceId: "server" }, id: "extra" },
+      },
+      { case: "pattern", value: { id: "n0", pattern: { name: "日勤" } } },
+    ]);
+    const refused = changes[0]?.kind;
+    expect(
+      refused?.case === "pattern" && refused.value.pattern
+    ).toBeUndefined();
+  });
+
   it("takes a pattern whole and sends it to every device", async () => {
     const token = await signInAnonymously();
     const phone = await device(token);

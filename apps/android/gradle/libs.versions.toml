@@ -4,7 +4,7 @@
 jvm = "21"
 compileSdk = "37"
 minSdk = "29"
-agp = "9.4.1"
+agp = "9.5.0"
 kotlin = "2.4.21"
 # protobuf's Java and Kotlin runtimes for the protoc v36.2 plugins in
 # proto/buf.gen.yaml, and connect-kotlin for its v0.9.0 plugin: they move
@@ -29,8 +29,8 @@ lifecycle = "2.11.0"
 coroutines = "1.11.0"
 # Room 3 generates its code with KSP2, whose versions no longer follow Kotlin's.
 room = "3.0.3"
-ksp = "2.3.12"
-okhttp = "5.5.0"
+ksp = "2.3.13"
+okhttp = "5.5.1"
 work = "2.12.0"
 blockstore = "16.4.0"
 credentials = "1.6.0"
@@ -52,7 +52,7 @@ androidx-test-junit = "1.3.0"
 # Jetpack Glance, the home screen widgets drawn with Compose (spec/widgets.md).
 glance = "1.2.0"
 # Drag to reorder in lazy lists, which Compose does not offer (Apache 2.0).
-reorderable = "3.0.0"
+reorderable = "3.1.0"
 # Telephoto, a photo opened large zoomed and flicked away (Apache 2.0).
 telephoto = "0.19.0"
 # Coil, the chats' photos fetched, read at the size they show and kept in memory and on the disk (Apache 2.0).
@@ -67,6 +67,8 @@ google-services = "4.5.0"
 benchmark = "1.5.0"
 uiautomator = "2.4.0"
 profileinstaller = "1.4.1"
+# AboutLibraries, the libraries the build resolves and their licenses for ライセンス (Apache 2.0).
+aboutlibraries = "15.3.0"
 
 [libraries]
 protobuf-javalite = { module = "com.google.protobuf:protobuf-javalite", version.ref = "protobuf" }
@@ -127,6 +129,7 @@ firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
 benchmark-macro-junit4 = { module = "androidx.benchmark:benchmark-macro-junit4", version.ref = "benchmark" }
 uiautomator = { module = "androidx.test.uiautomator:uiautomator", version.ref = "uiautomator" }
 profileinstaller = { module = "androidx.profileinstaller:profileinstaller", version.ref = "profileinstaller" }
+aboutlibraries-core = { module = "com.mikepenz:aboutlibraries-core", version.ref = "aboutlibraries" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -140,3 +143,4 @@ metro = { id = "dev.zacsweers.metro", version.ref = "metro" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 room = { id = "androidx.room3", version.ref = "room" }
 google-services = { id = "com.google.gms.google-services", version.ref = "google-services" }
+aboutlibraries = { id = "com.mikepenz.aboutlibraries.plugin.android", version.ref = "aboutlibraries" }

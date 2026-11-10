@@ -77,7 +77,7 @@ struct JoinScreen: View {
 
   private func invitation(_ details: InviteDetails) -> some View {
     let canJoin =
-      !details.full && !myName.isEmpty && myName.count <= TextLimits.personName
+      !details.full && !myName.isEmpty && fitsPersonName(myName)
     return VStack(spacing: 0) {
       List {
         Section {
@@ -298,14 +298,20 @@ struct JoinScreen: View {
 
   private func join() {
     joining = true
+    // Decided by the screen the person saw: the join itself makes their
+    // name the usual one, which comes back on the user's socket while it
+    // is still going.
+    let asUsual = usualName.isEmpty
     Task {
       defer { joining = false }
-      // Someone with no usual name yet keeps these as theirs everywhere,
-      // which the group then shows as it shows anyone's usual ones; kept
-      // or not, they still join with them.
-      let keptAsUsual = usualName.isEmpty ? await keepAsUsual() : false
       do throws(InviteError) {
         let groupID = try await groupCalls.join(code: invite.code, displayName: myName)
+        // Once in the group, so a join that fails changes nothing: someone
+        // with no usual name yet has the join make theirs the usual one,
+        // and keeps the face as theirs everywhere too, which the group
+        // then shows as it shows anyone's usual ones; anyone else's face,
+        // or one not kept as usual, is the group's own.
+        let keptAsUsual = asUsual ? await keepAsUsual() : false
         if !keptAsUsual {
           await setFace(in: groupID)
         }
@@ -319,15 +325,20 @@ struct JoinScreen: View {
 }
 
 extension JoinScreen {
-  /// The name and face as the usual ones (設定 › プロフィール), for someone
-  /// who has none yet; false when they could not be kept.
+  /// The face as the usual one (設定 › プロフィール), for someone who had
+  /// no usual name, whose name the join itself made their usual one; the
+  /// usual photo, if there is one, stays as it is. False when it could not
+  /// be kept.
   fileprivate func keepAsUsual() async -> Bool {
     do {
-      var photoID = ""
-      if case .picked(let jpeg) = face {
-        photoID = try await groupCalls.sendPhoto(jpeg, to: .mine)
+      switch face {
+      case .usual: break
+      case .picked(let jpeg):
+        let photoID = try await groupCalls.sendPhoto(jpeg, to: .mine)
+        try await groupCalls.setProfile(name: nil, photoID: photoID)
+      case .none:
+        try await groupCalls.setProfile(name: nil, photoID: "")
       }
-      try await groupCalls.setProfile(UsualProfile(name: myName, photoID: photoID))
       return true
     } catch {
       return false

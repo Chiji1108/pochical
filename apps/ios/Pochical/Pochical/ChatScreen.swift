@@ -35,7 +35,7 @@ struct ChatScreen: View {
   @Dependency(\.defaultDatabase) private var database
   @Environment(\.write) private var write
   /// The chat, read by this screen alone while it is there.
-  @State private var feed: ChatFeed
+  @State private var feed: ChatFeed<ChatRequest>
   private var chat: ChatRequest.Value { feed.value }
   /// Everyone with their shifts over the days the chat's lines share.
   @Fetch private var dayMembers: [GroupMember] = []
@@ -130,7 +130,8 @@ struct ChatScreen: View {
     _meID = State(initialValue: me)
     _feed = State(
       initialValue: ChatFeed(
-        ChatRequest(groupID: place.id, threadID: threadID, me: me, now: ChatTime.nowMs)))
+        ChatRequest(groupID: place.id, threadID: threadID, me: me, now: ChatTime.nowMs),
+        empty: ChatRequest.Value()))
   }
   /// All the pins open under the bar.
   @State private var pinsOpen = false

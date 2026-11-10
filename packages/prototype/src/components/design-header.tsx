@@ -5,7 +5,12 @@ import type { ReactNode } from "react";
 
 import { useDevice } from "../lib/design-device";
 import { MaterialSymbol } from "./design-symbol";
-import { iconButtonStyle, SCREEN_SCROLL_GAP } from "./design-ui";
+import {
+  iconButtonStyle,
+  Button,
+  materialConfirmStyle,
+  SCREEN_SCROLL_GAP,
+} from "./design-ui";
 import type { ButtonProps } from "./design-ui";
 
 // A screen's top: the way back, its actions, 完了 and 今月.
@@ -14,28 +19,8 @@ import type { ButtonProps } from "./design-ui";
 // purpose: entering shifts, an order typed on the calendar.
 // Each platform's own: iOS 26 draws a confirming bar button as its
 // symbol alone, the heading's icon buttons' round in the accent, naming
-// itself only to a screen reader; Material's is a filled button with its
-// word.
-const materialDoneStyle = css({
-  _disabled: {
-    bg: "fill.quaternary",
-    color: "text.disabled",
-    cursor: "default",
-  },
-  alignItems: "center",
-  bg: "accent.fill",
-  border: 0,
-  borderRadius: "2xl",
-  color: "accent.onFill",
-  display: "inline-flex",
-  flexShrink: 0,
-  gap: "8px",
-  height: "touch",
-  justifyContent: "center",
-  paddingInline: "20px",
-  textStyle: "subheadline",
-});
-
+// itself only to a screen reader; Material's is the bar's filled button
+// with its word, as every confirm on Android is.
 export function DoneButton({ className, ...props }: ButtonProps) {
   const platform = useDevice((state) => state.platform);
   if (platform === "ios") {
@@ -52,11 +37,10 @@ export function DoneButton({ className, ...props }: ButtonProps) {
   }
   return (
     <button
-      className={cx(materialDoneStyle, className)}
+      className={cx(materialConfirmStyle, className)}
       type="button"
       {...props}
     >
-      <Check aria-hidden="true" size={18} />
       完了
     </button>
   );
@@ -159,7 +143,8 @@ export function BackButton({
 // The action at a page's top right: 保存, 作る, 並び替え and the like.
 // As iOS 26's bar buttons with words: in a round-ended piece of glass,
 // and filled with the accent when it confirms, like 保存 or 追加; gray
-// glass while it cannot yet.
+// glass while it cannot yet. On Android, Material's: the confirm its
+// filled button, the others text buttons.
 const headerActionStyle = cva({
   base: {
     _disabled: {
@@ -190,20 +175,24 @@ export function HeaderAction({
   className,
   ...props
 }: ButtonProps & { prominent?: boolean }) {
-  return (
-    <button
-      className={cx(headerActionStyle({ prominent }), className)}
-      type="button"
-      {...props}
-    />
-  );
+  const android = useDevice((state) => state.platform === "android");
+  if (android && !prominent) {
+    return (
+      <Button className={className} size="small" variant="text" {...props} />
+    );
+  }
+  const look = android
+    ? materialConfirmStyle
+    : headerActionStyle({ prominent });
+  return <button className={cx(look, className)} type="button" {...props} />;
 }
 
 // A page's top, as the platforms' navigation bars have it: the way back
-// (or キャンセル) on the left, an action on the right, and the large title
-// under them. `back` and `onBack` are the usual way back; `leading` takes
-// anything else there. `children` go between the bar and the title, like
-// a step count.
+// (or キャンセル) on the left, an action on the right, and the title: large
+// under them on a tab's own page, in the bar's middle on iOS once there
+// is a way back (Android's flexible app bar below). `back` and `onBack`
+// are the usual way back; `leading` takes anything else there. `children`
+// go between the bar and the title, like a step count.
 const pageHeader = {
   bar: css({
     alignItems: "center",
@@ -362,13 +351,17 @@ export function PageHeader({
       </>
     );
   }
+  // iOS titles large only a tab's own page, like 設定; a page with a way
+  // back names itself in the bar, as the pages under iOS's Settings do.
+  const inBar = inlineTitle ?? (start ? title : undefined);
+  const large = start ? undefined : title;
   return (
     <header className={pageHeader.root}>
-      {trailing || inlineTitle ? (
+      {trailing || inBar ? (
         <div className={pageHeader.bar}>
           <div>{start}</div>
-          {inlineTitle ? (
-            <h3 className={pageHeader.inlineTitle}>{inlineTitle}</h3>
+          {inBar ? (
+            <h3 className={pageHeader.inlineTitle}>{inBar}</h3>
           ) : (
             <span />
           )}
@@ -378,7 +371,7 @@ export function PageHeader({
         start
       )}
       {children}
-      {title && <h3 className={pageHeader.title({ size: "ios" })}>{title}</h3>}
+      {large && <h3 className={pageHeader.title({ size: "ios" })}>{large}</h3>}
     </header>
   );
 }

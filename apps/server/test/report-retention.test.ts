@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ChatEditSchema } from "../src/gen/pochical/v1/sync_pb";
 import worker from "../src/index";
-import { call, signInAnonymously, userIdOf } from "./helpers";
+import { call, signInAnonymously, until, userIdOf } from "./helpers";
 import { pair, sendFrame, syncSocket, untilAcked } from "./sync-helpers";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -167,9 +167,7 @@ describe("reports after an account is deleted", () => {
       await reportMember(groupId, maker, guestId),
       await reportMember(groupId, third, makerId),
     ]).toStrictEqual([200, 200, 200]);
-    await vi.waitFor(async () => {
-      await expect(told(groupId)).resolves.toBe(3);
-    });
+    await until(async () => (await told(groupId)) === 3);
     const before = Date.now();
     await expect(deleteAccount(guest)).resolves.toBe(200);
     const after = Date.now();
@@ -205,9 +203,7 @@ describe("reports after an account is deleted", () => {
         slackBusy ? { error: "ratelimited", ok: false } : { ok: true },
     });
     await expect(reportMember(groupId, guest, makerId)).resolves.toBe(200);
-    await vi.waitFor(async () => {
-      await expect(told(groupId)).resolves.toBe(1);
-    });
+    await until(async () => (await told(groupId)) === 1);
     const id = await env.DB.prepare("select id from reports where group_id = ?")
       .bind(groupId)
       .first<string>("id");
@@ -265,9 +261,7 @@ describe("reports after an account is deleted", () => {
       await reportMember(groupId, guest, makerId),
       await reportMember(groupId, maker, guestId),
     ]).toStrictEqual([200, 200]);
-    await vi.waitFor(() => {
-      expect(tries()).toBe(2);
-    });
+    await until(() => tries() === 2);
     await expect(deleteAccount(guest)).resolves.toBe(200);
     const due = Date.now() + YEAR_MS;
 

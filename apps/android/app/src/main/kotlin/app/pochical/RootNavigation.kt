@@ -153,6 +153,12 @@ sealed interface RootPage : RootRoute, NavKey {
 
   /** 新しい仕事にする, from シフトパターン. */
   @Serializable data object JobChange : RootPage
+
+  /** ライセンス, from 設定's ポチカルについて. */
+  @Serializable data object Licenses : RootPage
+
+  /** One of ライセンス's, by its `id`. */
+  @Serializable data class License(val id: String) : RootPage
 }
 
 /**
