@@ -1,7 +1,8 @@
 // Puts on `mise run server` the group the stores' screenshots are
 // photographed in (#806): 職場のみんな, three coworkers on a two-shift
-// roster who speak politely, as people who have not exchanged contacts do, with this month's and next month's shifts and a little
-// of 全体チャット, a 日にちの投票 over the days they are all off among it.
+// roster who speak politely, as people who have not exchanged contacts
+// do, with this month's and next month's shifts and a little of
+// 全体チャット, a 日にちの投票 over the days they are all off among it.
 //
 //   pnpm exec tsx tools/store-screenshots/seed.ts <file to write the invite code to>
 //
