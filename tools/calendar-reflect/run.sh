@@ -5,6 +5,7 @@
 # changed changes that day's event alone, with nothing put in twice after
 # several changes and a relaunch, the months ahead in too, until it is
 # turned off (spec/calendar.md, Reflecting automatically, #1153).
+# Its other test opens the sheet's guide to Google Calendar over the sheet.
 # The tests drive the app and this script reads the simulator's calendars
 # after each step, from their database on this Mac, as the tests cannot.
 # It starts the server itself, so nothing else may be on

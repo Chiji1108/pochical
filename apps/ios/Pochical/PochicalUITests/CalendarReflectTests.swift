@@ -3,7 +3,8 @@ import XCTest
 /// 自動で反映 (spec/calendar.md, Reflecting automatically, #1153): adding a
 /// month asks once whether the days ahead follow by themselves; turned on,
 /// a day's shift changed changes that day's event and no other, however
-/// often and across a relaunch; turned off, it stops. Run by
+/// often and across a relaunch; turned off, it stops. And the sheet's
+/// link to the Google Calendar guide opens it. Run by
 /// `mise run ios:calendar-reflect`, whose script lets the app into the
 /// simulator's calendars and reads them after each step; skipped without it.
 final class CalendarReflectTests: XCTestCase {
@@ -66,6 +67,28 @@ final class CalendarReflectTests: XCTestCase {
     app.navigationBars.buttons["閉じる"].tap()
     _ = try change(day)
     try step("off", saying: "\(Self.key(day)) \(title)")
+  }
+
+  /// Googleカレンダーに入れるには opens the site's guide in the system's
+  /// browser over the sheet, each time it is tapped (spec/calendar.md).
+  @MainActor
+  func testTheGuideToGoogleCalendarOpens() throws {
+    app.launchArguments += ["-sample", "-firstRunDone", "YES"]
+    app.launch()
+    XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 15), "the tabs show")
+    openSheet()
+    let guide = app.buttons["Googleカレンダーに入れるには"]
+    let browser = app.otherElements
+      .matching(NSPredicate(format: "identifier BEGINSWITH 'BrowserView'")).firstMatch
+    for time in ["first", "second"] {
+      XCTAssertTrue(reveal(guide), "the guide's link is on the sheet")
+      guide.tap()
+      XCTAssertTrue(
+        browser.webViews.firstMatch.waitForExistence(timeout: 10), "the browser opens, \(time)")
+      snap("guide-\(time)")
+      browser.buttons["閉じる"].firstMatch.tap()
+      XCTAssertTrue(browser.waitForNonExistence(timeout: 5), "the browser closes, \(time)")
+    }
   }
 
   /// A day of this month that is not today, so its cell is no other's.

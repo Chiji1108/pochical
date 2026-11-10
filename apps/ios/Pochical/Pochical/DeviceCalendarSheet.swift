@@ -3,6 +3,7 @@ import OSLog
 import PochicalDesign
 import PochicalKit
 import SQLiteData
+import SafariServices
 import SwiftUI
 import SwiftUINavigation
 import UIKit
@@ -301,6 +302,8 @@ struct DeviceCalendarSheet: View {
   @State private var asksToReflect: String?
   /// The alert's title when adding or taking out failed.
   @State private var failure: String?
+  /// While the guide to Google Calendar shows over the sheet.
+  @State private var showsGuide = false
 
   var body: some View {
     // The patterns picked, the days' memos, and who works them, kept with
@@ -422,6 +425,9 @@ struct DeviceCalendarSheet: View {
     }
     // Turned off with no calendar picked, the first pick shows again.
     .onChange(of: reflects) { pick() }
+    .fullScreenCover(isPresented: $showsGuide) {
+      SitePage(url: Site.page("support/google-calendar")).ignoresSafeArea()
+    }
   }
 
   /// The days 自動で反映 keeps in the calendar.
@@ -569,7 +575,7 @@ struct DeviceCalendarSheet: View {
       // A calendar of a Google account added to the iPhone goes on to
       // Google Calendar, which few find by themselves (spec/calendar.md).
       Button("Googleカレンダーに入れるには") {
-        openURL(Site.page("support/google-calendar"), prefersInApp: true)
+        showsGuide = true
       }
       .font(.footnote)
       .accessibilityHint("ブラウザで開きます")
@@ -647,6 +653,22 @@ struct DeviceCalendarSheet: View {
       }
     }
   }
+}
+
+/// A page of the site in the system's browser, shown over a sheet by the
+/// sheet itself: `openURL(_:prefersInApp:)` presents the browser on the
+/// scene's root, which UIKit refuses while that is presenting the sheet
+/// ("Attempt to present <SFSafariViewController> ... which is already
+/// presenting", on an iPhone's iOS 26 and the simulator's iOS 27), so
+/// from a sheet it opens nothing.
+private struct SitePage: UIViewControllerRepresentable {
+  let url: URL
+
+  func makeUIViewController(context: Context) -> SFSafariViewController {
+    SFSafariViewController(url: url)
+  }
+
+  func updateUIViewController(_ browser: SFSafariViewController, context: Context) {}
 }
 
 /// 入れるシフト: each pattern by its mark and name, checked when its days
