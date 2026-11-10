@@ -53,8 +53,8 @@ Collected, not shared with third parties, encrypted in transit, and deletable (i
 | Photos and videos › Photos | The profile photo; photos sent in a chat |
 | Messages › Other in-app messages | Chat messages and reactions; messages to the operator |
 | App activity › Other user-generated content | Shifts, patterns, memos, coworkers' names |
-| App info and performance › Diagnostics | The app's version and the device's model with a message to the operator |
-| Device or other IDs | The Firebase Cloud Messaging token that notifications are sent to |
+| App info and performance › Diagnostics | The app's version and the device's model with a message to the operator; what ML Kit sends Google of the QR scanner's use and the device (the policy's 利用者情報の外部送信) |
+| Device or other IDs | The Firebase Cloud Messaging token that notifications are sent to, and the Firebase installation id |
 
 Service providers that process the data for the app (Cloudflare, Firebase Cloud Messaging, Slack for messages to the operator) are not sharing as the form defines it.
 
@@ -69,6 +69,5 @@ Service providers that process the data for the app (Cloudflare, Firebase Cloud 
 ## To check in the build before answering
 
 - The merged release manifest has no `com.google.android.gms.permission.AD_ID`.
-- What the bundled ML Kit barcode scanner sends to Google (its data disclosure page), and whether Data safety's Diagnostics must name it.
 - `READ_CALENDAR` is read only to list calendars and find the app's own events; nothing of it leaves the phone.
 - The deletion page says the data that can be removed while keeping the account is removed from the iOS app, and by mail on Android. Read it against the Android build.
