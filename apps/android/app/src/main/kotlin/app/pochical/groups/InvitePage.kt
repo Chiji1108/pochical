@@ -86,7 +86,7 @@ import kotlinx.coroutines.withContext
 @Composable
 fun InvitePage(groupId: String, onBack: () -> Unit) {
   // A group just made opens here before it has reached the device: its code is read all the same.
-  val name = pageGroup(groupId, onBack)?.name.orEmpty()
+  val name = pageGroup(groupId)?.name.orEmpty()
   val calls = LocalGroupCalls.current
   val context = LocalContext.current
   val resources = LocalResources.current

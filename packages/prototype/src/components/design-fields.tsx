@@ -303,6 +303,36 @@ export function LimitedInput({
   );
 }
 
+// A day picked with the browser's own date picker, as the apps pick one
+// with the system's: YYYY-MM-DD, from `min` on. A day cleared in the
+// picker leaves the one it had.
+export function DayInput({
+  label,
+  value,
+  min,
+  onValueChange,
+}: {
+  label: string;
+  value: string;
+  min: string;
+  onValueChange: (day: string) => void;
+}) {
+  return (
+    <input
+      aria-label={label}
+      className={fieldStyle({ align: "end", look: "inline" })}
+      min={min}
+      onChange={(event) => {
+        if (event.target.value !== "") {
+          onValueChange(event.target.value);
+        }
+      }}
+      type="date"
+      value={value}
+    />
+  );
+}
+
 // A mark's letter, a shift's or a group's: its first characters, up to the
 // limit, with no count, since the mark beside it shows what fits. Typing
 // or converting into it once full replaces it, and the mark changes only

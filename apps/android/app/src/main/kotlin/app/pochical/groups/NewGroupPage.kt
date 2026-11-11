@@ -32,8 +32,8 @@ import app.pochical.LimitedTextField
 import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.ReviewPrompt
-import app.pochical.SectionRow
 import app.pochical.SettingsRow
+import app.pochical.SettingsSection
 import app.pochical.design.TextLimits
 import app.pochical.kit.GroupMarkValue
 import app.pochical.kit.MarkPhotoGone
@@ -42,15 +42,19 @@ import app.pochical.kit.PhotoShelf
 import app.pochical.kit.fitsGroupMark
 import app.pochical.kit.fitsGroupName
 import app.pochical.kit.fitsPersonName
+import app.pochical.kit.groupEndsAt
 import app.pochical.people.usualProfile
 import app.pochical.kit.guessGroupMark
 import app.pochical.kit.nextGroupColor
 import app.pochical.pageInsets
+import java.time.LocalDate
+import java.time.ZoneId
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.launch
 
 /**
- * グループを作る (/design's NewGroupPage): its name, its mark and how the person is called in it.
+ * グループを作る (/design's NewGroupPage): its name, its mark, its end if it has one, and how the
+ * person is called in it.
  * The mark follows the name until one is picked: a fitting emoji, else its first letter in a color
  * the user's other groups do not use yet (spec/sync-protocol.md, Groups). Once the group is made,
  * [onMade] gets its id; the group may reach the device a moment later, on the user's socket.
@@ -77,6 +81,9 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
   var failed by remember { mutableStateOf(false) }
   var photoGone by remember { mutableStateOf(false) }
   var editingMark by rememberSaveable { mutableStateOf(false) }
+  // The group's end date (spec/sync-protocol.md, A group's end), none unless picked.
+  var endDay by rememberSaveable { mutableStateOf<LocalDate?>(null) }
+  var editingEnd by rememberSaveable { mutableStateOf(false) }
   val scope = rememberCoroutineScope()
 
   val groupName = name.text.trim()
@@ -91,7 +98,9 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
   val canMake = fitsGroupName(groupName) && fitsGroupMark(mark) && myName.isNotEmpty() && fitsPersonName(myName)
 
   fun make() {
-    val request = NewGroupRequest.asking(groupName, mark, myName, sent)
+    // The moment the day picked ends on this device: the same day asked again is the same request.
+    val endsAtMs = endDay?.let { groupEndsAt(it, ZoneId.systemDefault()) } ?: 0
+    val request = NewGroupRequest.asking(groupName, mark, myName, sent, endsAtMs)
     sent = request
     making = true
     val asUsual = profile.goingOn(usualName)
@@ -148,8 +157,9 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
         )
       }
       item {
-        SectionRow(0, 1, Modifier.padding(vertical = 8.dp)) {
-          SettingsRow(stringResource(R.string.group_mark), R.drawable.ic_palette, onClick = { editingMark = true }, valueContent = { GroupMarkBadge(mark) })
+        SettingsSection(modifier = Modifier.padding(bottom = 8.dp)) {
+          row { SettingsRow(stringResource(R.string.group_mark), R.drawable.ic_palette, onClick = { editingMark = true }, valueContent = { GroupMarkBadge(mark) }) }
+          row { SettingsRow(stringResource(R.string.group_end), R.drawable.ic_event, onClick = { editingEnd = true }, value = groupEndValue(endDay)) }
         }
       }
       item { Footnote(stringResource(R.string.new_group_mark_note)) }
@@ -159,6 +169,7 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
   if (editingMark) {
     GroupMarkPage(groupName, mark, freeColor, onMark = { picked = it }, onClose = { editingMark = false })
   }
+  if (editingEnd) NewGroupEndPage(endDay, onDay = { endDay = it }, onClose = { editingEnd = false })
   if (failed) {
     AlertDialog(
       onDismissRequest = { failed = false },

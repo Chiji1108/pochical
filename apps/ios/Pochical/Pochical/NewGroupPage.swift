@@ -3,8 +3,10 @@ import PochicalKit
 import SQLiteData
 import SwiftUI
 
-/// グループを作る (/design's NewGroupPage): its name and its mark, then how
-/// the person will appear in it, as the join screen asks (`JoinProfileSection`). The mark follows the name until one is picked:
+/// グループを作る (/design's NewGroupPage): its name, its mark and, for one
+/// made for an occasion, its end date (spec/sync-protocol.md, A group's
+/// end), then how the person will appear in it, as the join screen asks
+/// (`JoinProfileSection`). The mark follows the name until one is picked:
 /// a fitting emoji, else its first letter in a color the user's other
 /// groups do not use yet.
 struct NewGroupPage: View {
@@ -22,6 +24,8 @@ struct NewGroupPage: View {
   /// The mark picked by hand, which then stays as the name changes; none
   /// while the mark follows the name.
   @State private var pickedMark: GroupMarkValue?
+  /// The end date picked on 終了日, none for a group with no end.
+  @State private var end: Day?
   /// What 作る sent last, kept until the group is made: sent again as it
   /// was while nothing on the page has changed, so a retry after a lost
   /// answer makes no second group.
@@ -48,8 +52,9 @@ struct NewGroupPage: View {
             GroupMarkBadge(mark: mark)
           }
         }
+        GroupEndLink(end: end) { end = $0 }
       } footer: {
-        Text("アイコンはグループ名から自動で入ります。")
+        Text("アイコンはグループ名から自動で入ります。\(end == nil ? "" : groupEndNote)")
       }
       .settingsRows()
       JoinProfileSection(
@@ -100,7 +105,8 @@ struct NewGroupPage: View {
 
   private func make() {
     let request = NewGroupRequest.asking(
-      name: trimmed(name), mark: mark, displayName: myName, after: sent)
+      name: trimmed(name), mark: mark, displayName: myName, endsAtMs: groupEndsAt(end),
+      after: sent)
     sent = request
     making = true
     let asUsual = profile.goingOn(usualName: usualName)

@@ -515,16 +515,22 @@ public actor SyncClient {
       sending?.task.cancel()
       sending = (socket, Task { await sendOutbox(socket, as: credentials) })
     case .changes(let changes):
-      try await database.write { [peer] db in
+      // Those held before a Reset whose catch-up this is, should it say
+      // the user left one.
+      let before =
+        heldBeforeReset.flatMap { $0.userID == credentials.userID ? $0.groups : nil } ?? []
+      let went = try await database.write { [peer] db -> [String] in
         try Self.owned(by: credentials, db)
-        guard let placeID = peer.placeID else { return try Sync.take(changes.changes, in: db) }
+        guard let placeID = peer.placeID else {
+          return try Sync.take(changes.changes, heldBeforeReset: before, in: db)
+        }
         try GroupSync.take(changes.changes, of: placeID, in: db)
+        return []
       }
       if peer.placeID == nil {
-        let left = Groups.left(in: changes.changes)
         // One a Reset's catch-up says was left went with that change.
-        heldBeforeReset?.groups.subtract(left)
-        Self.tellLeft(left)
+        heldBeforeReset?.groups.subtract(Groups.left(in: changes.changes))
+        Groups.tellLeft(went)
       }
       Logger.sync.info("Took \(changes.changes.count) changes")
     case .reset:
@@ -591,7 +597,7 @@ public actor SyncClient {
             return try Groups.gone(since: held.groups, in: db)
           }
           heldBeforeReset = nil
-          Self.tellLeft(gone)
+          Groups.tellLeft(gone)
         }
         tries.caughtUp()
         caughtUp = true
@@ -639,14 +645,6 @@ public actor SyncClient {
     var frame = Pochical_V1_ClientFrame()
     frame.ping.nonce = catchUpNonce
     try await socket.send(.data(frame.serializedData()))
-  }
-
-  /// Tells the app of the groups left, for what it keeps of them beside
-  /// the database (their notifications) to go too.
-  private static func tellLeft(_ groupIDs: [String]) {
-    for groupID in groupIDs {
-      NotificationCenter.default.post(name: groupLeft, object: nil, userInfo: ["groupID": groupID])
-    }
   }
 
   /// Waits until what the DO had at Welcome has been taken, or `limit`

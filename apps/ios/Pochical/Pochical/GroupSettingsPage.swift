@@ -5,7 +5,7 @@ import SwiftUI
 import SwiftUINavigation
 
 /// グループの設定 (/design's GroupSettingsPage): the group's name and mark,
-/// how the person appears in it, its chat's 通知, who is in it with a way
+/// its end date, how the person appears in it, its chat's 通知, who is in it with a way
 /// to invite more, and leaving.
 struct GroupSettingsPage: View {
   @Environment(\.themeColors) private var colors
@@ -13,6 +13,8 @@ struct GroupSettingsPage: View {
   @Environment(\.rootNavigator) private var navigator
   @Environment(\.say) private var say
   @Fetch private var members: [GroupMember] = []
+  /// When the group ends, 0 for a group with no end.
+  @Fetch private var endsAtMs: Int64 = 0
   @Fetch(BlocksRequest()) private var blocked: Set<String> = []
   @Fetch(ChatNotificationsRequest()) private var notifications = ChatNotificationState()
   let group: GroupRow
@@ -30,6 +32,7 @@ struct GroupSettingsPage: View {
 
   var body: some View {
     let me = members.first { $0.userID == meID }
+    let end = groupEndDay(endsAtMs)
     List {
       Section {
         PageLink {
@@ -45,10 +48,13 @@ struct GroupSettingsPage: View {
             }
           }
         }
+        GroupEndLink(end: end) { picked in
+          try await groupCalls.setEnd(group.id, endsAtMs: groupEndsAt(picked))
+        }
       } header: {
         Text("グループ")
       } footer: {
-        Text("グループ名とアイコンは、メンバー全員に表示されます。")
+        Text("グループ名とアイコンは、メンバー全員に表示されます。\(end == nil ? "" : groupEndNote)")
       }
       .settingsRows()
 
@@ -144,6 +150,7 @@ struct GroupSettingsPage: View {
     .task {
       let today = Day.today
       _ = try? await $members.load(GroupMembersRequest(groupID: group.id, from: today, through: today))
+      _ = try? await $endsAtMs.load(GroupEndRequest(groupID: group.id))
     }
     .environment(\.photoShelf, .group(group.id))
     .modifier(

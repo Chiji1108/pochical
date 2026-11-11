@@ -81,6 +81,34 @@ public  final class ChatNotice extends
      * <code>KIND_REMOVED_BY_POCHICAL = 6;</code>
      */
     KIND_REMOVED_BY_POCHICAL(6),
+    /**
+     * <pre>
+     * 〇〇が終了日を12月31日に設定しました: ends_at_ms is the end, set for
+     * the first time or changed.
+     * </pre>
+     *
+     * <code>KIND_END_SET = 7;</code>
+     */
+    KIND_END_SET(7),
+    /**
+     * <pre>
+     * 〇〇が終了日を解除しました
+     * </pre>
+     *
+     * <code>KIND_END_CLEARED = 8;</code>
+     */
+    KIND_END_CLEARED(8),
+    /**
+     * <pre>
+     * このグループは12月31日に終了し、チャットや写真も消えます: the group's
+     * own line, GROUP_END_NOTICE_HOURS before ends_at_ms or as an end
+     * nearer than that is set, with no author; the one notice that
+     * notifies (spec/sync-protocol.md, A group's end).
+     * </pre>
+     *
+     * <code>KIND_ENDS_SOON = 9;</code>
+     */
+    KIND_ENDS_SOON(9),
     UNRECOGNIZED(-1),
     ;
 
@@ -137,6 +165,34 @@ public  final class ChatNotice extends
      * <code>KIND_REMOVED_BY_POCHICAL = 6;</code>
      */
     public static final int KIND_REMOVED_BY_POCHICAL_VALUE = 6;
+    /**
+     * <pre>
+     * 〇〇が終了日を12月31日に設定しました: ends_at_ms is the end, set for
+     * the first time or changed.
+     * </pre>
+     *
+     * <code>KIND_END_SET = 7;</code>
+     */
+    public static final int KIND_END_SET_VALUE = 7;
+    /**
+     * <pre>
+     * 〇〇が終了日を解除しました
+     * </pre>
+     *
+     * <code>KIND_END_CLEARED = 8;</code>
+     */
+    public static final int KIND_END_CLEARED_VALUE = 8;
+    /**
+     * <pre>
+     * このグループは12月31日に終了し、チャットや写真も消えます: the group's
+     * own line, GROUP_END_NOTICE_HOURS before ends_at_ms or as an end
+     * nearer than that is set, with no author; the one notice that
+     * notifies (spec/sync-protocol.md, A group's end).
+     * </pre>
+     *
+     * <code>KIND_ENDS_SOON = 9;</code>
+     */
+    public static final int KIND_ENDS_SOON_VALUE = 9;
 
 
     @java.lang.Override
@@ -166,6 +222,9 @@ public  final class ChatNotice extends
         case 4: return KIND_INVITE_REMADE;
         case 5: return KIND_PROFILE_CHANGED;
         case 6: return KIND_REMOVED_BY_POCHICAL;
+        case 7: return KIND_END_SET;
+        case 8: return KIND_END_CLEARED;
+        case 9: return KIND_ENDS_SOON;
         default: return null;
       }
     }
@@ -425,6 +484,47 @@ public  final class ChatNotice extends
   private void clearMarkChanged() {
 
     markChanged_ = false;
+  }
+
+  public static final int ENDS_AT_MS_FIELD_NUMBER = 5;
+  private long endsAtMs_;
+  /**
+   * <pre>
+   * END_SET, ENDS_SOON: when the group ends, as GroupProfile.ends_at_ms,
+   * which each device words as a day by its own clock.
+   * </pre>
+   *
+   * <code>int64 ends_at_ms = 5 [json_name = "endsAtMs"];</code>
+   * @return The endsAtMs.
+   */
+  @java.lang.Override
+  public long getEndsAtMs() {
+    return endsAtMs_;
+  }
+  /**
+   * <pre>
+   * END_SET, ENDS_SOON: when the group ends, as GroupProfile.ends_at_ms,
+   * which each device words as a day by its own clock.
+   * </pre>
+   *
+   * <code>int64 ends_at_ms = 5 [json_name = "endsAtMs"];</code>
+   * @param value The endsAtMs to set.
+   */
+  private void setEndsAtMs(long value) {
+    
+    endsAtMs_ = value;
+  }
+  /**
+   * <pre>
+   * END_SET, ENDS_SOON: when the group ends, as GroupProfile.ends_at_ms,
+   * which each device words as a day by its own clock.
+   * </pre>
+   *
+   * <code>int64 ends_at_ms = 5 [json_name = "endsAtMs"];</code>
+   */
+  private void clearEndsAtMs() {
+
+    endsAtMs_ = 0L;
   }
 
   public static app.pochical.v1.ChatNotice parseFrom(
@@ -759,6 +859,49 @@ public  final class ChatNotice extends
       return this;
     }
 
+    /**
+     * <pre>
+     * END_SET, ENDS_SOON: when the group ends, as GroupProfile.ends_at_ms,
+     * which each device words as a day by its own clock.
+     * </pre>
+     *
+     * <code>int64 ends_at_ms = 5 [json_name = "endsAtMs"];</code>
+     * @return The endsAtMs.
+     */
+    @java.lang.Override
+    public long getEndsAtMs() {
+      return instance.getEndsAtMs();
+    }
+    /**
+     * <pre>
+     * END_SET, ENDS_SOON: when the group ends, as GroupProfile.ends_at_ms,
+     * which each device words as a day by its own clock.
+     * </pre>
+     *
+     * <code>int64 ends_at_ms = 5 [json_name = "endsAtMs"];</code>
+     * @param value The endsAtMs to set.
+     * @return This builder for chaining.
+     */
+    public Builder setEndsAtMs(long value) {
+      copyOnWrite();
+      instance.setEndsAtMs(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * END_SET, ENDS_SOON: when the group ends, as GroupProfile.ends_at_ms,
+     * which each device words as a day by its own clock.
+     * </pre>
+     *
+     * <code>int64 ends_at_ms = 5 [json_name = "endsAtMs"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearEndsAtMs() {
+      copyOnWrite();
+      instance.clearEndsAtMs();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ChatNotice)
   }
   @java.lang.Override
@@ -779,10 +922,11 @@ public  final class ChatNotice extends
             "subjectId_",
             "name_",
             "markChanged_",
+            "endsAtMs_",
           };
           java.lang.String info =
-              "\u0000\u0004\u0000\u0000\u0001\u0004\u0004\u0000\u0000\u0000\u0001\f\u0002\u0208" +
-              "\u0003\u0208\u0004\u0007";
+              "\u0000\u0005\u0000\u0000\u0001\u0005\u0005\u0000\u0000\u0000\u0001\f\u0002\u0208" +
+              "\u0003\u0208\u0004\u0007\u0005\u0002";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

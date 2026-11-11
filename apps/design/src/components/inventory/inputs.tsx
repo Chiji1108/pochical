@@ -1,4 +1,5 @@
 import {
+  DayInput,
   LimitedInput,
   LimitedTextArea,
   MarkLetterInput,
@@ -25,6 +26,7 @@ const styles = {
 
 export function Times() {
   const [times, setTimes] = useState({ end: "18:00", start: "9:00" });
+  const [day, setDay] = useState("2026-12-31");
   return (
     <Items>
       <Item
@@ -40,6 +42,28 @@ export function Times() {
           }}
           start={times.start}
         />
+      </Item>
+      <Item
+        name="DayInput"
+        ios="DatePicker(.date) ＋ in: 今日...（終了日のページでは .graphical）"
+        android="ListItem から DatePickerDialog（SelectableDates で今日以降）"
+        where="グループの終了日"
+      >
+        <List>
+          <ListRow
+            label="日付"
+            control={
+              <>
+                <DayInput
+                  label="日付"
+                  min="2026-09-24"
+                  onValueChange={setDay}
+                  value={day}
+                />
+              </>
+            }
+          />
+        </List>
       </Item>
     </Items>
   );

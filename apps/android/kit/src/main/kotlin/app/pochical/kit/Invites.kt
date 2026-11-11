@@ -53,6 +53,8 @@ data class InviteDetails(
   val alreadyMember: Boolean,
   /** The group has its most members: joining would fail. */
   val full: Boolean,
+  /** When the group ends for everyone, in ms since the epoch; 0 for one with no end. */
+  val endsAtMs: Long = 0,
 )
 
 /** Someone in a group as its join screen shows them: their photo read by the code's holder, empty for none. */

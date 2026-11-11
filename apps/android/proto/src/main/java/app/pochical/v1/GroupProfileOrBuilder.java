@@ -40,4 +40,17 @@ public interface GroupProfileOrBuilder extends
    * @return The mark.
    */
   app.pochical.v1.GroupMark getMark();
+
+  /**
+   * <pre>
+   * When the group ends for everyone, in ms since the epoch: the moment
+   * its end date ends where it was set (spec/sync-protocol.md, A group's
+   * end). Each device shows the day that moment closes by its own clock.
+   * 0 for a group with no end.
+   * </pre>
+   *
+   * <code>int64 ends_at_ms = 4 [json_name = "endsAtMs"];</code>
+   * @return The endsAtMs.
+   */
+  long getEndsAtMs();
 }

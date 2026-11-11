@@ -115,6 +115,14 @@ struct JoinScreen: View {
       }
       .settingsList()
       VStack(spacing: 12) {
+        // A group that ends says so before joining (spec/sync-protocol.md,
+        // A group's end).
+        if details.endsAtMs != 0 {
+          Text(GroupEnd.coming(details.endsAtMs, in: .current, today: .today))
+            .font(.footnote)
+            .foregroundStyle(colors.textSecondary)
+            .multilineTextAlignment(.center)
+        }
         Text(foot(details))
           .font(.footnote)
           .foregroundStyle(colors.textTertiary)

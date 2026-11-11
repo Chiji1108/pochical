@@ -2400,6 +2400,31 @@
         "CHAT_GROUP_PHOTO"
       ],
       "expected": { "key": "UPDATE_TO_SEE", "args": [] }
+    },
+    {
+      "name": "a group's coming end is a key the app words, its day from the argument",
+      "key": "GROUP_ENDS",
+      "args": ["1798729200000"],
+      "known": [
+        "CHAT_TEXT",
+        "CHAT_PHOTO",
+        "CHAT_GROUP_TEXT",
+        "CHAT_GROUP_PHOTO",
+        "GROUP_ENDS"
+      ],
+      "expected": { "key": "GROUP_ENDS", "args": ["1798729200000"] }
+    },
+    {
+      "name": "to an app from before groups had ends it asks to update",
+      "key": "GROUP_ENDS",
+      "args": ["1798729200000"],
+      "known": [
+        "CHAT_TEXT",
+        "CHAT_PHOTO",
+        "CHAT_GROUP_TEXT",
+        "CHAT_GROUP_PHOTO"
+      ],
+      "expected": { "key": "UPDATE_TO_SEE", "args": [] }
     }
   ],
   "readNotified": [

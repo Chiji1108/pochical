@@ -31,11 +31,11 @@ fun nextGroupColor(marks: List<GroupMarkValue>, slots: Int): Int = nextColor(mar
 fun initialLetter(name: String): String = firstCharacter(name.trim()).ifEmpty { ReadyPatterns.GROUP_MARK_FALLBACK_LETTER }
 
 /**
- * A group the person asks to make: its name, mark and their name in it, under one request id the
- * server makes it once for, so a retry after a lost answer gives back the same group
- * (spec/sync-protocol.md, Groups).
+ * A group the person asks to make: its name, mark, their name in it and its end ([endsAtMs], 0 for
+ * none), under one request id the server makes it once for, so a retry after a lost answer gives
+ * back the same group (spec/sync-protocol.md, Groups).
  */
-data class NewGroupRequest(val name: String, val mark: GroupMarkValue, val displayName: String, val id: String) {
+data class NewGroupRequest(val name: String, val mark: GroupMarkValue, val displayName: String, val id: String, val endsAtMs: Long = 0) {
   /** Whether the server takes its name, mark and the person's name in it (spec/vectors/fits.json). */
   val fits: Boolean
     get() = fitsGroupName(name) && fitsGroupMark(mark) && fitsPersonName(displayName)
@@ -50,9 +50,10 @@ data class NewGroupRequest(val name: String, val mark: GroupMarkValue, val displ
       mark: GroupMarkValue,
       displayName: String,
       last: NewGroupRequest?,
+      endsAtMs: Long = 0,
       newId: () -> String = { UUID.randomUUID().toString() },
     ): NewGroupRequest =
-      if (last != null && last.name == name && last.mark == mark && last.displayName == displayName) last
-      else NewGroupRequest(name, mark, displayName, newId())
+      if (last != null && last.name == name && last.mark == mark && last.displayName == displayName && last.endsAtMs == endsAtMs) last
+      else NewGroupRequest(name, mark, displayName, newId(), endsAtMs)
   }
 }

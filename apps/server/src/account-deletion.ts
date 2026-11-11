@@ -9,12 +9,8 @@ import { drizzle } from "drizzle-orm/d1";
 import { revokeApple } from "./apple";
 import { appleCallbackUrl } from "./apple-handoff";
 import { account } from "./db/auth-schema";
-import {
-  erasingSlackThreads,
-  invites,
-  supportChats,
-  supportSlack,
-} from "./db/schema";
+import { erasingSlackThreads, supportChats, supportSlack } from "./db/schema";
+import { dropInviteCode } from "./invite-codes";
 import { noteDeletedAccount } from "./report-retention";
 import { getAuth } from "./session";
 import { eraseSupportThread } from "./slack";
@@ -44,7 +40,7 @@ const appleAccountOf = async (
  */
 export const eraseGroup = async (env: Env, groupId: string): Promise<void> => {
   await env.GROUPS.getByName(groupId).erase();
-  await drizzle(env.DB).delete(invites).where(eq(invites.groupId, groupId));
+  await dropInviteCode(env.DB, groupId);
 };
 
 /**

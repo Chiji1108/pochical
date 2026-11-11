@@ -38,13 +38,16 @@ public func nextGroupColor(_ marks: [GroupMarkValue], slots: Int) -> Int {
   nextColor(marks.compactMap(\.paletteColor), slots: slots)
 }
 
-/// A group the person asks to make: its name, its mark and their name in
-/// it, under one request id the server makes it once for, so a retry after
-/// a lost answer gives back the same group (spec/sync-protocol.md, Groups).
+/// A group the person asks to make: its name, its mark, their name in it
+/// and its end, under one request id the server makes it once for, so a
+/// retry after a lost answer gives back the same group
+/// (spec/sync-protocol.md, Groups).
 public struct NewGroupRequest: Hashable, Sendable {
   public let name: String
   public let mark: GroupMarkValue
   public let displayName: String
+  /// When the group ends, in ms since the epoch; 0 for one with no end.
+  public let endsAtMs: Int64
   public let id: String
 
   /// Whether the server takes its name, mark and the person's name in it
@@ -57,13 +60,16 @@ public struct NewGroupRequest: Hashable, Sendable {
   /// it asks for has changed, else a new one with `newID`, as one request
   /// id stands for one request.
   public static func asking(
-    name: String, mark: GroupMarkValue, displayName: String, after last: NewGroupRequest?,
-    newID: () -> String = { UUID().uuidString.lowercased() }
+    name: String, mark: GroupMarkValue, displayName: String, endsAtMs: Int64,
+    after last: NewGroupRequest?, newID: () -> String = { UUID().uuidString.lowercased() }
   ) -> NewGroupRequest {
-    if let last, last.name == name, last.mark == mark, last.displayName == displayName {
+    if let last, last.name == name, last.mark == mark, last.displayName == displayName,
+      last.endsAtMs == endsAtMs
+    {
       return last
     }
-    return NewGroupRequest(name: name, mark: mark, displayName: displayName, id: newID())
+    return NewGroupRequest(
+      name: name, mark: mark, displayName: displayName, endsAtMs: endsAtMs, id: newID())
   }
 }
 
@@ -150,53 +156,78 @@ extension DatabaseMigrator {
   }
 }
 
-/// Told of each group the user leaves or is taken out of, with its
-/// `groupID` in the user info, once the device has let go of what it held
-/// of it, for what the app keeps of it outside the database (its chats'
-/// notifications) to go too.
+/// Told of each group the device held that the user leaves or is taken out
+/// of, once for each, with its `groupID` in the user info, once the device
+/// has let go of what it held
+/// of it, its photos among them, for what the app keeps of it outside the
+/// database (its chats' notifications, its pages over the tabs, the photos
+/// it drew) to go too. A group that ends is told so too: it reaches the
+/// device as one left (spec/sync-protocol.md, A group's end).
 public let groupLeft = Notification.Name("Groups.left")
 
 enum Groups {
   /// A group the user is in, or how much of its chats they have not
   /// read, from their socket; other changes are left to what takes them.
-  static func take(_ change: Pochical_V1_Change, in db: Database) throws {
+  /// The group that went with it, when it says the user left one the
+  /// device held: one it never held, as every group ever left is to a
+  /// device taking everything again, goes nowhere.
+  @discardableResult
+  static func take(_ change: Pochical_V1_Change, in db: Database) throws -> String? {
     if case .unreadCount(let unread) = change.kind {
       try Chats.take(unread, in: db)
-      return
+      return nil
     }
     if case .block(let block) = change.kind {
       try Blocks.take(block, in: db)
-      return
+      return nil
     }
     if case .chatMute(let mute) = change.kind {
       try ChatNotifications.take(mute, in: db)
-      return
+      return nil
     }
     if case .chatNotifications(let settings) = change.kind {
       try ChatNotifications.take(settings, in: db)
-      return
+      return nil
     }
     if case .profile(let profile) = change.kind {
       try Profile.take(profile, in: db)
-      return
+      return nil
     }
-    guard case .membership(let membership) = change.kind else { return }
-    if membership.left { return try leave(membership.groupID, in: db) }
+    guard case .membership(let membership) = change.kind else { return nil }
+    if membership.left {
+      return try leave(membership.groupID, in: db) ? membership.groupID : nil
+    }
     let mark = GroupMarkValue(membership.mark)
     let row = GroupRow(
       id: membership.groupID, name: membership.name, emoji: mark.emoji,
       joinedAtMs: membership.joinedAtMs, icon: mark.icon, letter: mark.letter, color: mark.color,
       photoID: mark.photoID)
     try GroupRow.upsert { row }.execute(db)
+    return nil
   }
 
-  /// A group left goes, with what the device holds of it.
-  static func leave(_ groupID: String, in db: Database) throws {
+  /// A group left goes, with what the device holds of it. Whether it was
+  /// in the device's list of groups.
+  @discardableResult
+  static func leave(_ groupID: String, in db: Database) throws -> Bool {
+    let held = try GroupRow.find(groupID).fetchOne(db) != nil
     try GroupRow.find(groupID).delete().execute(db)
     try GroupSync.reset(groupID, in: db)
     try Chats.dropWaiting(of: groupID, in: db)
     try Chats.dropDrafts(of: groupID, in: db)
     try Chats.dropUnread(of: groupID, in: db)
+    return held
+  }
+
+  /// Lets go of the photos the device keeps of the groups that went, those
+  /// it held and the user left, and tells the app of each (`groupLeft`),
+  /// for what it keeps of them beside the database (their notifications,
+  /// their pages, the photos it drew) to go too.
+  static func tellLeft(_ groupIDs: [String]) {
+    for groupID in groupIDs {
+      ChatPhotos.forgetAll(in: .group(groupID))
+      NotificationCenter.default.post(name: groupLeft, object: nil, userInfo: ["groupID": groupID])
+    }
   }
 
   /// The groups the user is in as the device holds them, read before a
@@ -295,6 +326,7 @@ public struct GroupCalls: Sendable {
     wire.mark = request.mark.wire
     wire.displayName = request.displayName
     wire.requestID = request.id
+    wire.endsAtMs = request.endsAtMs
     return try await client.createGroup(request: wire, headers: headers()).result
       .get().groupID
   }
@@ -316,6 +348,15 @@ public struct GroupCalls: Sendable {
     request.name = name
     request.mark = mark.wire
     _ = try await client.renameGroup(request: request, headers: headers()).result.get()
+  }
+
+  /// Gives the group an end, changes it or, with 0, takes it away, which
+  /// every member sees (spec/sync-protocol.md, A group's end).
+  public func setEnd(_ groupID: String, endsAtMs: Int64) async throws {
+    var request = Pochical_V1_SetGroupEndRequest()
+    request.groupID = groupID
+    request.endsAtMs = endsAtMs
+    _ = try await client.setGroupEnd(request: request, headers: headers()).result.get()
   }
 
   /// How the user appears in the group from now on; a name the server

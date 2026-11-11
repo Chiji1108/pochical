@@ -15,6 +15,7 @@ import type { Chat, Group, Member, Profile } from "../lib/design-group-data";
 import { sampleOthers } from "../lib/design-group-samples";
 import type { Pattern } from "../lib/design-patterns";
 import { useUser } from "../lib/design-user-store";
+import { endDay, endNotice, today } from "../lib/group-end";
 import type { InviteLook } from "./design-chat-cards";
 import type { PhotoFetch, PhotoSend } from "./design-chat-screen";
 import { GroupChatPage } from "./design-group-chat";
@@ -231,6 +232,10 @@ export function DesignGroup({
           }
           const mine = first ? undefined : picked;
           setGroups([...groups, { ...created, id, mine }]);
+          if (created.endsAt !== undefined) {
+            const by = profileIn({ ...created, id, mine: picked }, profile);
+            addNotice(id, endSetNotice(by.name, created.endsAt));
+          }
           setGroupId(id);
           setPage({ name: "invite" });
         }}
@@ -561,6 +566,20 @@ export function DesignGroup({
                     )
                   );
                 }}
+                onEnd={(endsAt) => {
+                  setGroups(
+                    groups.map((item) =>
+                      item.id === group.id ? { ...item, endsAt } : item
+                    )
+                  );
+                  const by = profileIn(group, profile).name;
+                  addNotice(
+                    group.id,
+                    endsAt === undefined
+                      ? endNotice({ by, kind: "endCleared" }, today)
+                      : endSetNotice(by, endsAt)
+                  );
+                }}
                 onMuted={(muted) => {
                   setMuted(groupChat, muted);
                 }}
@@ -609,6 +628,11 @@ export function DesignGroup({
 
 function defaultLayout(count: number): Layout {
   return count <= marksUpTo ? "days" : "weeks";
+}
+
+// The line the group chat gets when someone sets or moves its end.
+function endSetNotice(by: string, endsAt: number) {
+  return endNotice({ by, day: endDay(endsAt), kind: "endSet" }, today);
 }
 
 // The line the group chat gets when someone saves a new name or icon.

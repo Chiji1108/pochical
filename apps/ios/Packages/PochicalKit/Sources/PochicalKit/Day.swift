@@ -14,15 +14,27 @@ public struct Day: Hashable, Comparable, Sendable {
     self.day = day
   }
 
-  /// The day `date` falls on in `calendar`, the device's own unless given.
+  /// The day `date` falls on by `calendar`'s clock, its time zone: a day
+  /// of the Gregorian calendar, as every day here is, whatever calendar
+  /// the device counts its years by (the Japanese eras, the Buddhist).
   public init(_ date: Date, in calendar: Calendar) {
-    let parts = calendar.dateComponents([.year, .month, .day], from: date)
+    let parts = Self.gregorian(in: calendar.timeZone)
+      .dateComponents([.year, .month, .day], from: date)
     self.init(year: parts.year!, month: parts.month!, day: parts.day!)
   }
 
-  /// The day's start in `calendar`, for the system's date pickers.
+  /// The day's start by `calendar`'s clock, its time zone, for the
+  /// system's date pickers, which show it in the device's own calendar.
   public func date(in calendar: Calendar) -> Date {
-    calendar.date(from: DateComponents(year: year, month: month, day: day)) ?? .now
+    Self.gregorian(in: calendar.timeZone)
+      .date(from: DateComponents(year: year, month: month, day: day)) ?? .now
+  }
+
+  /// The Gregorian calendar, which names the days, by `zone`'s clock.
+  static func gregorian(in zone: TimeZone) -> Calendar {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = zone
+    return calendar
   }
 
   /// Today, where the device is.
@@ -86,11 +98,7 @@ public struct Day: Hashable, Comparable, Sendable {
 
   // Days are counted in the Gregorian calendar at UTC, where every day is
   // 24 hours long.
-  private static let calendar: Calendar = {
-    var calendar = Calendar(identifier: .gregorian)
-    calendar.timeZone = TimeZone(identifier: "UTC")!
-    return calendar
-  }()
+  private static let calendar = gregorian(in: TimeZone(identifier: "UTC")!)
 
   private var date: Date {
     Self.calendar.date(from: DateComponents(year: year, month: month, day: day))!

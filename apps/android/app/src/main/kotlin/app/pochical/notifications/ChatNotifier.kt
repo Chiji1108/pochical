@@ -18,8 +18,11 @@ import androidx.core.app.Person
 import app.pochical.MainActivity
 import app.pochical.R
 import app.pochical.design.Chat
+import app.pochical.groups.groupEndsWords
 import app.pochical.kit.AppLink
 import app.pochical.kit.ChatWithdrawal
+import app.pochical.kit.GROUP_ENDS
+import app.pochical.kit.GROUP_THREAD
 import app.pochical.kit.GROUP_LINE_KEY
 import app.pochical.kit.GroupMemberRow
 import app.pochical.kit.LINE_KEY
@@ -27,6 +30,7 @@ import app.pochical.kit.body
 import app.pochical.kit.Localized
 import app.pochical.kit.NotifiedLine
 import app.pochical.kit.PushedAlert
+import app.pochical.kit.groupEndOf
 import app.pochical.kit.withdrawn
 import app.pochical.kit.GroupRow
 import app.pochical.kit.ReadState
@@ -35,6 +39,8 @@ import androidx.core.app.RemoteInput
 import androidx.core.content.pm.ShortcutInfoCompat
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import java.time.Instant
+import java.time.ZoneId
 import java.util.MissingFormatArgumentException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
@@ -42,8 +48,10 @@ import java.util.concurrent.atomic.AtomicReference
 /**
  * The chats' notifications (spec/chat.md, Notifications), as the server pushes them: shown as
  * Android shows a conversation, one notification a chat whose messages stack in it, each from its
- * writer; a tap opening the chat; and those of lines read taken back. One for anyone but the user
- * the device is signed in as shows nothing, and neither does one of the chat on the screen.
+ * writer; a tap opening the chat; and those of lines read taken back. That a group ends soon is the
+ * group's own word, of no line, and shows as a notification of its own ([showEnd]). One for anyone
+ * but the user the device is signed in as shows nothing, and neither does one of the chat on the
+ * screen.
  */
 class ChatNotifier(
   private val context: Context,
@@ -56,6 +64,8 @@ class ChatNotifier(
   /** The faces, the marks and the conversation shortcuts. */
   private val conversations: Conversations,
   private val now: () -> Long = System::currentTimeMillis,
+  /** The device's time zone, which a group's end is worded as a day in. */
+  private val zone: () -> ZoneId = ZoneId::systemDefault,
 ) {
   private val manager = NotificationManagerCompat.from(context)
 
@@ -92,6 +102,9 @@ class ChatNotifier(
     if (alert.recipientId != me) return
     val tag = tagOf(alert.groupId, alert.threadId)
     if (tag == onScreen.get()) return
+    // That its group ends, to an app that has words for it: the group's own notification. One
+    // without them is told to update, as for any body it cannot word (`Localized.body`).
+    if (stoodIn(alert.body).key == GROUP_ENDS) return showEnd(alert)
     // A group left while the line is made ready ([forgetPlace]) shows nothing of it: its leaving
     // is counted under the lock the post takes, so it comes either before the post, which then
     // shows nothing, or after it, taking it away.
@@ -106,6 +119,43 @@ class ChatNotifier(
       val seq = alert.line?.seq
       if (seq != null && shown?.seqs?.contains(seq) == true) return
       post(tag, line.after(shown))
+    }
+  }
+
+  /**
+   * That the group ends soon (spec/sync-protocol.md, A group's end): the group's own word, not a
+   * message of anyone's, so a notification of its own beside the chat's conversation, as Android
+   * keeps a conversation to what people wrote: titled with the group under its mark, its body the
+   * chat's line as this device's clock words the day. It is of no line: no 返信, and no read takes
+   * it back, as it holds no seq and the chat's own notification none of it. A tap opens 全体チャット,
+   * where the line is, and it goes with the group's other notifications as the group does
+   * ([forgetPlace]). An end the device cannot read shows nothing.
+   */
+  private suspend fun showEnd(alert: PushedAlert) {
+    val endsAtMs = groupEndOf(alert.body) ?: return
+    val tag = endTagOf(alert.groupId)
+    val leaves = leftCount[alert.groupId]
+    val mark = group(alert.groupId)?.let { conversations.mark(it.mark, it.name, it.id) }
+    val words = worded(alert.body)
+    synchronized(lock) {
+      if (leftCount[alert.groupId] != leaves) return
+      // One the server tried again after a try that did reach the device is shown once; an end
+      // moved is said anew.
+      val shown = posted[tag] ?: manager.activeNotifications.find { it.tag == tag && it.id == ID }?.notification
+      if (shown?.extras?.getLong(ENDS_AT) == endsAtMs) return
+      post(
+        tag,
+        NotificationCompat.Builder(context, Channels.CHAT)
+          .setSmallIcon(R.drawable.ic_notification)
+          .setLargeIcon(mark?.toIcon(context))
+          .setContentTitle(worded(alert.title))
+          .setContentText(words)
+          .setStyle(NotificationCompat.BigTextStyle().bigText(words))
+          .addExtras(Bundle().apply { putLong(ENDS_AT, endsAtMs) })
+          .setContentIntent(opening(alert))
+          .setDeleteIntent(dismissing(tag))
+          .build(),
+      )
     }
   }
 
@@ -229,8 +279,15 @@ class ChatNotifier(
     onScreen.updateAndGet { if (it == tag) null else it }
   }
 
-  /** The chat's notification was tapped, opening it: it goes, as the system's auto cancel would. */
-  fun opened(groupId: String, threadId: String) = synchronized(lock) { cancel(tagOf(groupId, threadId)) }
+  /**
+   * The chat's notification was tapped, opening it: it goes, as the system's auto cancel would, and
+   * with 全体チャット's the group's word that it ends, whose line the chat then shows.
+   */
+  fun opened(groupId: String, threadId: String) =
+    synchronized(lock) {
+      cancel(tagOf(groupId, threadId))
+      if (threadId == GROUP_THREAD) cancel(endTagOf(groupId))
+    }
 
   /** The person dismissed the chat [tag]'s notification. */
   fun dismissed(tag: String) {
@@ -312,7 +369,7 @@ class ChatNotifier(
     // name, as 設定's row names it, and the app's icon (spec/chat.md, The chat with Pochical's people).
     val support = alert.groupId == Chat.supportPlace
     // What the app has no words for is what stands in for it (`Localized.body`).
-    val body = alert.body.body { it in WORDS }
+    val body = stoodIn(alert.body)
     val inGroup = !support && body.key.startsWith(GROUP_LINE_KEY)
     val held = members(alert.groupId)
     val authorId = alert.line?.authorId.orEmpty()
@@ -436,12 +493,21 @@ class ChatNotifier(
    */
   private fun worded(localized: Localized): String {
     val id = WORDS[localized.key] ?: return context.getString(R.string.app_name)
+    // A group's end comes as a moment, said as the day this device's clock shows for it, in the
+    // chat's line's own words; one that is no moment is never said ([showEnd]).
+    if (localized.key == GROUP_ENDS) {
+      val today = Instant.ofEpochMilli(now()).atZone(zone()).toLocalDate()
+      return groupEndOf(localized)?.let { groupEndsWords(context.resources, it, today, zone()) }.orEmpty()
+    }
     return try {
       context.getString(id, *localized.args.toTypedArray())
     } catch (e: MissingFormatArgumentException) {
       localized.args.joinToString(" ")
     }
   }
+
+  /** [body] as the app words it: its own when the app has words for its key, else what stands in for it (`Localized.body`). */
+  private fun stoodIn(body: Localized): Localized = body.body { it in WORDS }
 
   /** Shows [notification] as the chat [tag]'s, while the system lets the app notify. */
   private fun post(tag: String, notification: Notification) {
@@ -478,6 +544,15 @@ class ChatNotifier(
     /** A chat's notification's tag. */
     fun tagOf(groupId: String, threadId: String) = "$groupId/$threadId"
 
+    /**
+     * The tag of the notification that the group ends: one of the group's, which go with it
+     * ([forgetPlace]), and no chat's, so no read of a chat finds it.
+     */
+    fun endTagOf(groupId: String) = tagOf(groupId, "$GROUP_THREAD#end")
+
+    /** Where the notification that a group ends keeps the end it said, in ms since the epoch. */
+    private const val ENDS_AT = "app.pochical.endsAt"
+
     /** The chat a notification's tap opens the app at, if [intent] is one's. */
     fun openedChat(intent: Intent): AppLink.Chat? {
       if (intent.action != ACTION_OPEN_CHAT) return null
@@ -498,6 +573,8 @@ class ChatNotifier(
         "CHAT_GROUP_DAYS" to R.string.push_chat_group_days,
         "CHAT_GROUP_POLL" to R.string.push_chat_group_poll,
         "SUPPORT_TITLE" to R.string.push_support_title,
+        // Its argument the end in ms, worded as a day (`groupEndsWords`).
+        GROUP_ENDS to R.string.group_ends_on,
         // What stands in for a body this app has no words for (`Localized.body`); the server sends neither.
         "CHAT_MESSAGE" to R.string.push_chat_message,
         "UPDATE_TO_SEE" to R.string.push_update_to_see,

@@ -124,6 +124,25 @@ public class GroupServiceClient(
 
 
   /**
+   *  Gives the group an end, changes it or takes it away
+   *  (spec/sync-protocol.md, A group's end), which every member sees. Members
+   *  only, and none are once its end has come (PERMISSION_DENIED).
+   *  INVALID_ARGUMENT for a time less than GROUP_END_MIN_HOURS away, or
+   *  that no date can be.
+   */
+  override suspend fun setGroupEnd(request: SetGroupEndRequest, headers: Headers): ResponseMessage<SetGroupEndResponse> = client.unary(
+    request,
+    headers,
+    MethodSpec(
+    "pochical.v1.GroupService/SetGroupEnd",
+      app.pochical.v1.SetGroupEndRequest::class,
+      app.pochical.v1.SetGroupEndResponse::class,
+      StreamType.UNARY,
+    ),
+  )
+
+
+  /**
    *  How the caller appears in the group from now on. Members only.
    */
   override suspend fun setDisplayName(request: SetDisplayNameRequest, headers: Headers): ResponseMessage<SetDisplayNameResponse> = client.unary(

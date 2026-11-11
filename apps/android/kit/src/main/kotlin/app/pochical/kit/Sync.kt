@@ -23,10 +23,11 @@ import app.pochical.v1.RepeatOrdersEdits
  * their preferences and memberships, and the groups' members and their shared values. 2: a
  * preference's value as its key's message (`PreferenceValue.message`). 3: the user's `Profile`,
  * their usual name and photo. 4: the chats' lines and read marks, the unread counts, blocks, chats
- * turned off and メンションはいつも通知. `mise run sync:check` fails when `Change`'s messages in
+ * turned off and メンションはいつも通知. 5: a group's end (`GroupProfile.ends_at_ms`) and the chat's
+ * lines of it. `mise run sync:check` fails when `Change`'s messages in
  * proto/ change while this stays.
  */
-const val SYNC_SCHEMA = 4
+const val SYNC_SCHEMA = 5
 
 // What the user's socket brings into the device's database (spec/sync-protocol.md, Sockets; Change
 // log and cursor), each in one transaction with the cursor it moves.
@@ -62,6 +63,7 @@ internal suspend fun SyncDao.eraseUserData() {
   deleteAllMemberPatterns()
   deleteAllMemberOrders()
   deleteGroupCursors()
+  deleteGroupEnds()
   eraseChats()
   upsert(state().copy(cursor = 0, owner = ""))
 }
