@@ -16,6 +16,7 @@ import type { Photo } from "./design-sample-photos";
 import { sampleRosterPhoto } from "./design-sample-photos";
 import { designToday } from "./design-today";
 import { drawings } from "./drawings";
+import { STORE_SCENE } from "./store-scene";
 import { firstCharacter } from "./text-limits";
 
 // The prototype's sample person's world: the people in their groups, with
@@ -284,20 +285,23 @@ export const schoolFriends = (): Member[] => [
 const drawingOf = (id: (typeof drawings)[number]["id"]) =>
   drawings.find((drawing) => drawing.id === id)?.src;
 
-// 職場のみんな: the group the stores' screenshots are photographed in
-// (tools/store-screenshots/seed.ts), which the site's top page shows too.
-// Three coworkers on 二交代制 who have not exchanged contacts, so they
-// speak politely, and whose photos are the seed's own, drawings of things
-// rather than pictures of themselves. Each one's eight days end on the same two
-// days off, the days everyone is off.
+// 職場のみんな: the group the stores' screenshots are photographed in,
+// which the site's top page shows too. Its name, its people with their
+// faces and what they say are the scene's (STORE_SCENE), which the seed of
+// the stores' screenshots reads too; their shifts are the sample's own,
+// on the prototype's today, where the seed arranges its people's from the
+// day it runs: three on 二交代制, each one's eight days ending on the same
+// two days off, the days everyone is off.
+const atWork = STORE_SCENE.coworkers;
+const [tanaka, kobayashi, mori] = atWork.people;
 const workplaceRounds = [
-  ["tanaka", "田中", "coffee", "day night after off day day off off"],
-  ["kobayashi", "小林", "cat", "night after off day day day off off"],
-  ["mori", "森", "flower", "day day off night after day off off"],
+  ["tanaka", tanaka, "day night after off day day off off"],
+  ["kobayashi", kobayashi, "night after off day day day off off"],
+  ["mori", mori, "day day off night after day off off"],
 ] as const;
 
 export const workplace = (): Member[] =>
-  workplaceRounds.map(([id, name, photo, shifts]) => {
+  workplaceRounds.map(([id, { name, photo }, shifts]) => {
     const round = shifts.split(" ");
     return {
       id,
@@ -314,24 +318,30 @@ export const workplace = (): Member[] =>
 // private, as in her ward's.
 export const workplaceGroup: GroupSummary = {
   id: "workplace",
-  mark: { emoji: "🏥", kind: "emoji" },
+  mark: { emoji: atWork.emoji, kind: "emoji" },
   mine: { name: "佐藤", noPhoto: true },
-  name: "職場のみんな",
+  name: atWork.name,
 };
 
-// 学生時代の友だち: the other group the stores' screenshots are
-// photographed in, which the site's top page shows in its shift table:
-// あや and みさき with the drawings the seed gives them.
+// 学生時代の友だち: the other group of the scene, which the site's top
+// page shows in its shift table. The first two of the scene's three
+// friends, あや and みさき, with the scene's faces and the samples' own
+// shifts: a table of four columns runs past a phone's width.
+const fromSchool = STORE_SCENE.friends;
+
 export const oldFriendsGroup: GroupSummary = {
   id: "old-friends",
-  mark: { emoji: "🎓", kind: "emoji" },
-  name: "学生時代の友だち",
+  mark: { emoji: fromSchool.emoji, kind: "emoji" },
+  name: fromSchool.name,
 };
 
-const oldFriends = (): Member[] => [
-  { ...aya(), photo: drawingOf("rabbit") },
-  { ...misaki(), photo: drawingOf("penguin") },
-];
+const oldFriends = (): Member[] => {
+  const [first, second] = fromSchool.people;
+  return [
+    { ...aya(), name: first.name, photo: drawingOf(first.photo) },
+    { ...misaki(), name: second.name, photo: drawingOf(second.photo) },
+  ];
+};
 
 // The days of the week ahead when the three are off: the ones put to the
 // vote.
@@ -807,16 +817,16 @@ export const sampleChats: Record<string, Chat> = {
     ],
     unread: 2,
   },
-  // The stores' scene (tools/store-screenshots/seed.ts), without its two
-  // lines of thanks and agreement, so the phone holds it from the question
-  // to the vote: something small asked of people at work, and a meal fixed
-  // on a day they are all off, minutes before the phone's clock.
+  // The scene's chat (STORE_SCENE) from the question to the vote, which
+  // is what the phone holds without scrolling: the greetings before it,
+  // the photos of what was left in the break room and their line, which
+  // the stores' picture has above, are left out.
   "workplace:group": {
     messages: [
       {
         content: {
           kind: "words",
-          text: "すみません、モバイルバッテリー、休憩室にあったりしますか…？",
+          text: atWork.says.asked,
         },
         from: "kobayashi",
         id: "c1",
@@ -826,7 +836,7 @@ export const sampleChats: Record<string, Chat> = {
       {
         content: {
           kind: "words",
-          text: "ありましたよ！ロッカーの上に置いておきますね",
+          text: atWork.says.found,
         },
         from: "mori",
         id: "c2",
@@ -837,7 +847,7 @@ export const sampleChats: Record<string, Chat> = {
       {
         content: {
           kind: "words",
-          text: "今度のごはん会、みんなの休みが合う日で決めませんか？",
+          text: atWork.says.meal,
         },
         from: "tanaka",
         id: "c3",

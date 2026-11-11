@@ -46,6 +46,7 @@ import type {
 } from "../../apps/server/src/gen/pochical/v1/sync_pb";
 import { SERVER_DEVICE } from "../../apps/server/src/hlc";
 import { tick } from "../../packages/prototype/src/lib/hlc";
+import { STORE_SCENE } from "../../packages/prototype/src/lib/store-scene";
 import { devServer } from "../dev-server";
 import {
   fail,
@@ -96,24 +97,25 @@ type Member = {
 // 二交代制's patterns (rosterTemplates' two-shift).
 const TWO_SHIFT = ["day", "night", "after", "off"] as const;
 
+// The groups' names, their people and what the coworkers say are the
+// scene's (STORE_SCENE), which the site's top page draws too.
+const { coworkers: atWork, friends: fromSchool } = STORE_SCENE;
+
 const COWORKERS = {
-  mark: { emoji: "🏥" },
+  mark: { emoji: atWork.emoji },
   members: [
     {
-      name: "田中",
-      photo: "coffee",
+      ...atWork.people[0],
       round: ["day", "day", "night", "off", "day", "night", "off", "off"],
       shifts: TWO_SHIFT,
     },
     {
-      name: "小林",
-      photo: "cat",
+      ...atWork.people[1],
       round: ["day", "night", "off", "off", "day", "day", "day", "off"],
       shifts: TWO_SHIFT,
     },
     {
-      name: "森",
-      photo: "flower",
+      ...atWork.people[2],
       round: [
         "night",
         "off",
@@ -128,34 +130,31 @@ const COWORKERS = {
       shifts: TWO_SHIFT,
     },
   ],
-  name: "職場のみんな",
+  name: atWork.name,
 } as const satisfies Group;
 
 // Friends from school, each at a workplace of their own: a shop's 早番 and
 // 遅番, a ward's two shifts, and a part-time job.
 const FRIENDS = {
-  mark: { emoji: "🎓" },
+  mark: { emoji: fromSchool.emoji },
   members: [
     {
-      name: "あや",
-      photo: "rabbit",
+      ...fromSchool.people[0],
       round: ["early", "early", "late", "off", "late", "early", "off"],
       shifts: ["early", "late", "off"],
     },
     {
-      name: "みさき",
-      photo: "penguin",
+      ...fromSchool.people[1],
       round: ["day", "night", "off", "day", "day", "off"],
       shifts: TWO_SHIFT,
     },
     {
-      name: "ゆうか",
-      photo: "strawberry",
+      ...fromSchool.people[2],
       round: ["part", "off", "part", "part", "off"],
       shifts: ["part", "off"],
     },
   ],
-  name: "学生時代の友だち",
+  name: fromSchool.name,
 } as const satisfies Group;
 
 // Days are counted from the Unix epoch, and written YYYY-MM-DD.
@@ -565,13 +564,13 @@ await words(tanaka, "おつかれさまです！");
 await words(kobayashi, "おつかれさまです〜");
 await album(mori, coworkers.groupId);
 await words(mori, "休憩室に差し入れあります！");
-await words(kobayashi, "すみません、モバイルバッテリー、休憩室にありますか…？");
-const found = await words(mori, "ありましたよ！ロッカーの上に置いておきますね");
+await words(kobayashi, atWork.says.asked);
+const found = await words(mori, atWork.says.found);
 await edit(tanaka, {
   case: "react",
   value: { emoji: "👍", on: true, seq: found, threadId: GROUP_THREAD },
 });
-await words(tanaka, "今度のごはん会、みんなの休みが合う日で決めませんか？");
+await words(tanaka, atWork.says.meal);
 const poll = await say(tanaka, {
   case: "poll",
   value: { days: allOff.map(keyOf) },
