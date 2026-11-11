@@ -180,7 +180,7 @@ fun PhotoEditor(
               pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
             },
             // A face may be a drawing; a group's mark has its emoji and icons.
-            if (shape == PhotoCropShape.Round) LineMenuItem(stringResource(R.string.photo_drawing), R.drawable.ic_palette) { drawing = true } else null,
+            if (shape == PhotoCropShape.Round) LineMenuItem(stringResource(R.string.photo_drawing), R.drawable.ic_mood) { drawing = true } else null,
             onUsual?.let { usual -> LineMenuItem(stringResource(R.string.photo_usual), R.drawable.ic_undo, startsGroup = true) { change(usual) } },
             onRemove?.let { remove ->
               LineMenuItem(stringResource(R.string.photo_remove), R.drawable.ic_delete, destructive = true, startsGroup = onUsual == null) { change(remove) }
