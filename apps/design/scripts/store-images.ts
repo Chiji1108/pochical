@@ -6,9 +6,11 @@ import { fileURLToPath } from "node:url";
 // test photographed into .build/store-screenshots/<store>
 // (`mise run store:shots:ios`, `mise run store:shots:android`): each shot of @pochical/prototype's
 // lib/store-shots.ts from /_render/store-shot into
-// store/screenshots/<store>, and Google Play's feature graphic into
-// store/feature-graphic.png, on a dev server of its own. A store whose
-// screens are not there is left as it is. Run again after changing the
+// store/screenshots/<store>, each picture drawn from the wall of widgets
+// (WALL_PICTURES) into its own file, and Google Play's feature graphic
+// into store/feature-graphic.png, on a dev server of its own. A store
+// whose screens are not there is left as it is, and so are the pictures
+// drawn from its widgets. Run again after changing the
 // page or the shots: pnpm run image:store
 import {
   calloutOf,
@@ -18,6 +20,8 @@ import {
   STORE_SHOTS,
   STORES,
   storeShotFile,
+  WALL_PICTURES,
+  WALL_SHOT,
 } from "@pochical/prototype/lib/store-shots";
 import type { Rect, StoreId } from "@pochical/prototype/lib/store-shots";
 import {
@@ -188,6 +192,18 @@ await photographDevServer(
           STORES[store],
           path.join(OUTPUT, "screenshots", store, storeShotFile(shot.name)),
           path.join(RAW, store)
+        );
+      }
+    }
+    for (const picture of WALL_PICTURES) {
+      if (photographed.includes(picture.store)) {
+        findScreens(picture.store, WALL_SHOT);
+        // oxlint-disable-next-line no-await-in-loop -- one page at a time
+        await photograph(
+          { shot: picture.name },
+          picture,
+          path.join(ROOT, picture.file),
+          path.join(RAW, picture.store)
         );
       }
     }
