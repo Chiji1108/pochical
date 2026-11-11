@@ -1,6 +1,7 @@
 package app.pochical.kit
 
 import app.pochical.design.Chat
+import app.pochical.v1.ChatContent
 import app.pochical.v1.ChatLine as WireLine
 import app.pochical.v1.ChatNotice
 import app.pochical.v1.change
@@ -43,9 +44,15 @@ internal data class ChatVectors(
   val albumRows: List<AlbumRows>,
   val folded: List<Folded>,
   val reportable: List<Reportable>,
+  val content: List<Content>,
   val withdrawn: List<Withdrawn>,
   val readNotified: List<ReadNotified>,
 ) {
+  @Serializable data class ContentExpected(val kind: String, val words: String? = null)
+
+  /** A pochical.v1.ChatContent as the wire carries it, its [bytes] in hex. */
+  @Serializable data class Content(override val name: String, val bytes: String, val expected: ContentExpected) : VectorCase
+
   @Serializable
   data class ReadNotified(override val name: String, val shown: List<Shown>, val read: KnownRead, val expected: List<String>) : VectorCase
 
@@ -194,6 +201,13 @@ class ChatVectorsTest {
       reportable(kind(case.kind), case.mine, placeRules(if (case.place == "support") Chat.supportPlace else "group-1"))
     }
 
+  @Test
+  fun content() =
+    chat.content.checkEach({ it.expected.kind to it.expected.words.takeIf { _ -> it.expected.kind == "words" } }) { case ->
+      val content = LineContent.of(ChatContent.parseFrom(case.bytes.chunked(2).map { it.toInt(16).toByte() }.toByteArray()))
+      content.kind.key to (content as? LineContent.Words)?.text
+    }
+
   @Test fun albumRows() = chat.albumRows.checkEach({ it.expected }) { albumRows(it.count) }
 
   @Test fun openingFrom() = chat.openingFrom.checkEach({ it.expected }) { openingFrom(it.latest, it.read) }
@@ -292,6 +306,19 @@ class ChatVectorsTest {
 }
 
 /** A line of words [seq] by [author], as the group sends it. */
+/**
+ * A line of a kind added after the app, as the group's socket brings it: a field its content has
+ * not (spec/vectors/chat.json, content).
+ */
+internal fun laterKindLine(seq: Long, author: String): WireLine =
+  WireLine.parseFrom(
+    wordsLine(seq, author)
+      .toBuilder()
+      .setContent(ChatContent.parseFrom(byteArrayOf(0x7a, 0x08, 0x0a, 0x06, 0x70, 0x6f, 0x6f, 0x64, 0x6c, 0x65)))
+      .build()
+      .toByteArray()
+  )
+
 internal fun wordsLine(seq: Long, author: String, text: String = "$seq", thread: String = GROUP_THREAD, opId: String = "op-$seq"): WireLine =
   chatLine {
     threadId = thread
@@ -339,8 +366,7 @@ internal suspend fun SyncDao.takeChanges(lines: List<WireLine>, groupId: String)
 
 class LineContentTest {
   @Test
-  fun aNoticeOrKindThisAppDoesNotKnowIsHidden() {
-    assertEquals(LineContent.Hidden, LineContent.of(chatContent {}))
+  fun aNoticeThisAppCannotWordIsHidden() {
     assertEquals(LineContent.Hidden, LineContent.of(chatContent { notice = chatNotice {} }))
     assertEquals(LineContent.Hidden, LineContent.of(chatContent { hidden = chatHidden {} }))
     assertEquals(LineContent.Unsent, LineContent.of(chatContent { unsent = chatTakenBack {} }))

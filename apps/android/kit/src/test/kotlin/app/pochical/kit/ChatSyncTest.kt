@@ -603,6 +603,25 @@ class ChatValuesTest {
   }
 
   @Test
+  fun aLineOfAKindTheAppDoesNotKnowIsSomeonesMessage() = runTest {
+    val chats = Chats(database, testLinePhotos())
+    val later = laterKindLine(2, "u2").copy { pinnedOrder = 2; replyTo = 1 }
+    database.write { takeChanges(listOf(wordsLine(1, "u2"), later), "g1") }
+    // Kept as its own kind, with all a line has besides its kind.
+    val state = database.read { chatState("g1", GROUP_THREAD, "me", null, now = 0) }
+    val line = state.lines.last()
+    assertEquals(LineContent.Unknown, line.content)
+    assertEquals("u2", line.authorId)
+    assertEquals(1L, line.replyTo)
+    assertEquals(listOf(2L), state.pins.map { it.seq })
+    // Unread as anyone's line is, and the chat's latest line in the list.
+    assertEquals(2, state.unread("me"))
+    assertEquals(LineWriter.Others, line.writer("me"))
+    val summary = chats.summary("g1", GROUP_THREAD, "me").first()
+    assertEquals(LineContent.Unknown, summary.last?.content)
+  }
+
+  @Test
   fun theMembersReactionShowsAtOnceAsTheirs() = runTest {
     database.write { upsert(state().copy(owner = "me")) }
     val chats = Chats(database, testLinePhotos(), now = { 0 })

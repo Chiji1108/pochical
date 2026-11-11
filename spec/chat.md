@@ -24,7 +24,15 @@ A line is one thing to its reader, so it is one kind of thing in the data: the s
 - **poll** (`ChatPoll`): `POLL_MIN_DAYS` days or more put to the vote, who can come on each, and the day settled on (Polls).
 - **notice** (`ChatNotice`): a line from the app (Notices).
 - **unsent**: taken back by its writer (送信取消). Nothing of what it was is left, whatever its kind was, as Telegram, LINE and iMessage show one line in its place; it answers no line and is pinned nowhere.
-- **hidden**: how a one-to-one line from someone the reader blocked comes to them (Reporting and blocking): it shows nothing. A device that gets a line of a kind it does not know (from an app newer than itself) shows it as hidden, until the app is updated and takes its lines again (spec/sync-protocol.md, Change log and cursor).
+- **hidden**: how a one-to-one line from someone the reader blocked comes to them (Reporting and blocking): it shows nothing.
+- **unknown**: a line of a kind the reader's app does not know, from an app newer than itself, which only a device holds: the wire's content is of a kind its app has not, read as none. Someone wrote the reader something, so it is not hidden: it is a message, saying このメッセージを見るには、アプリをアップデートしてください in its place (`spec/vectors/chat.json`, content), as Telegram puts "This message is not supported by your version of Telegram" where the message would be and Signal asks to update to the latest version to see it.
+  - The words stand wherever the line's own would: in its bubble, drawn as a line of words is, with its writer's face and name, its time and its place in the order as any message has them; in a quote of it, in the pin bar, in the chats' list (自分： before one's own, sent from a newer app of theirs), and to a screen reader.
+  - What it has besides its kind the app reads as ever, so it has it as any message does: its reactions, the line it answers and its pin show, it counts as unread and under ここから新着, and a blocked writer's folds (`spec/vectors/chat.json`, writer, folded).
+  - Its menu has what any message's has, which act on the line and not on what it says: 返信, the reactions, ピン留め, 通報 on someone else's (the server holds what was sent) and 送信取消 on one's own. It has nothing that needs its content: no コピー, 保存 or 編集.
+  - The words are all there is: no tap opens the store, as the app has no way to open its own page there.
+  - Its notification is worded as a message of no kind the app can name (spec/sync-protocol.md, Push).
+  - Once the app is updated, its chats' lines come again and the line shows as what it is (spec/sync-protocol.md, Change log and cursor); the device keeps nothing of the line that outlasts that.
+  - A notice of something the app cannot word (a `ChatNotice` kind newer than itself) is not someone's message: it shows nothing, as a hidden line does.
 
 What any line has besides is not its kind: who wrote it, when, its place, its reactions, the line it answers and its pin. A notice takes none of the last three, and a line taken back loses them.
 

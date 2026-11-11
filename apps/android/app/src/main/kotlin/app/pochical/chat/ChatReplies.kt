@@ -40,7 +40,7 @@ fun lineQuote(seq: Long, line: ChatLine?, nameOf: (String) -> String, blocked: S
   line ?: return LineQuote(seq, null, stringResource(R.string.chat_quote_earlier))
   return when (val content = line.content) {
     LineContent.Unsent -> LineQuote(seq, nameOf(line.authorId), stringResource(R.string.chat_quote_unsent))
-    // A notice takes no reply; a line of a kind the app does not know is quoted as one not held.
+    // A notice takes no reply, nor a line never delivered: quoted as one not held.
     is LineContent.Notice,
     LineContent.Hidden -> LineQuote(seq, null, stringResource(R.string.chat_quote_earlier))
     else ->

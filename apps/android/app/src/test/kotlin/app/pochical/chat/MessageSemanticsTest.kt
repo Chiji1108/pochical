@@ -24,46 +24,47 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
+/** What a message's row is handed in these tests: nothing but what a test listens for. */
+internal fun testHandlers(
+  choosers: (LineReaction) -> Unit = {},
+  jump: (Long) -> Unit = {},
+  openLink: (String) -> Unit = {},
+  openProfile: ((GroupMemberRow) -> Unit)? = null,
+  readFrom: Lit? = null,
+) =
+  MessageHandlers(
+    menu = LineMenuState(),
+    items = { emptyList() },
+    reply = {},
+    jump = jump,
+    nameOf = { it },
+    notKept = {},
+    reducedMotion = true,
+    lit = null,
+    litShown = {},
+    reading = readFrom != null,
+    readFrom = readFrom,
+    me = "me",
+    writers = emptyMap(),
+    react = { _, _, _ -> },
+    moreReactions = {},
+    choosers = choosers,
+    spray = null,
+    openLink = openLink,
+    together = { _, _ -> emptySet() },
+    vote = { _, _, _ -> },
+    decide = {},
+    voters = { _, _ -> },
+    groupId = "g1",
+    stopSending = {},
+    openPhoto = { _, _ -> }, openOwnPhoto = { _, _ -> },
+    openProfile = openProfile,
+  )
+
 /** A line is one element to a screen reader, whatever it does by a gesture being among its actions (spec/chat.md, Screen readers). */
 @RunWith(RobolectricTestRunner::class)
 class MessageSemanticsTest {
   @get:Rule val compose = createComposeRule()
-
-  private fun handlers(
-    choosers: (LineReaction) -> Unit = {},
-    jump: (Long) -> Unit = {},
-    openLink: (String) -> Unit = {},
-    openProfile: ((GroupMemberRow) -> Unit)? = null,
-    readFrom: Lit? = null,
-  ) =
-    MessageHandlers(
-      menu = LineMenuState(),
-      items = { emptyList() },
-      reply = {},
-      jump = jump,
-      nameOf = { it },
-      notKept = {},
-      reducedMotion = true,
-      lit = null,
-      litShown = {},
-      reading = readFrom != null,
-      readFrom = readFrom,
-      me = "me",
-      writers = emptyMap(),
-      react = { _, _, _ -> },
-      moreReactions = {},
-      choosers = choosers,
-      spray = null,
-      openLink = openLink,
-      together = { _, _ -> emptySet() },
-      vote = { _, _, _ -> },
-      decide = {},
-      voters = { _, _ -> },
-      groupId = "g1",
-      stopSending = {},
-      openPhoto = { _, _ -> }, openOwnPhoto = { _, _ -> },
-      openProfile = openProfile,
-    )
 
   private fun look(content: LineContent, parts: List<LinePart>, said: String) =
     MessageLook("line-1", false, content, true, null, true, "9:41", null, 1, ReplySwipe.Rightward, said, parts)
@@ -79,7 +80,7 @@ class MessageSemanticsTest {
   @Test
   fun aLineGoneToSaysItIsFocused() {
     val line = look(LineContent.Words("明日休み？"), emptyList(), "あや、明日休み？")
-    compose.setContent { Message(line, handlers(readFrom = Lit(1, 0))) }
+    compose.setContent { Message(line, testHandlers(readFrom = Lit(1, 0))) }
     compose.onNode(SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription, listOf(line.said))).assertIsFocused()
   }
 
@@ -88,7 +89,7 @@ class MessageSemanticsTest {
     var opened: GroupMemberRow? = null
     val aya = GroupMemberRow("g1", "u2", "あや", 0, left = false, deleted = false, ownName = false, photoId = "", ownPhoto = false, markStyle = "", markFill = true)
     val line = MessageLook("line-1", false, LineContent.Words("明日休み？"), false, aya, false, "9:41", null, 1, ReplySwipe.Rightward, "あや、明日休み？")
-    compose.setContent { Message(line, handlers(openProfile = { opened = it })) }
+    compose.setContent { Message(line, testHandlers(openProfile = { opened = it })) }
     val profile = actionsOf(line.said).single { it.label == "あやのプロフィール" }
     profile.action()
     assertEquals(aya, opened)
@@ -99,7 +100,7 @@ class MessageSemanticsTest {
     var listed: LineReaction? = null
     val thumbs = LineReaction("👍", listOf("u2", "u3"))
     val line = look(LineContent.Words("明日休み？"), listOf(ReactionsPart(listOf(thumbs), counted = false)), "あや、明日休み？")
-    compose.setContent { Message(line, handlers(choosers = { listed = it })) }
+    compose.setContent { Message(line, testHandlers(choosers = { listed = it })) }
     val actions = actionsOf(line.said)
     assertEquals(listOf("リアクション", "👍を付ける", "👍をリアクションした人"), actions.map { it.label })
     actions.first { it.label == "👍をリアクションした人" }.action()
@@ -123,7 +124,7 @@ class MessageSemanticsTest {
         ),
         "自分、ここ",
       )
-    compose.setContent { Message(line, handlers(jump = { went = it }, openLink = { opened = it })) }
+    compose.setContent { Message(line, testHandlers(jump = { went = it }, openLink = { opened = it })) }
     val actions = actionsOf(line.said)
     assertEquals(listOf("リアクション", "返信元を表示", "リンクを開く（cafe.example）", "リンクを開く（b.example）"), actions.map { it.label })
     actions.first { it.label == "返信元を表示" }.action()
@@ -137,7 +138,7 @@ class MessageSemanticsTest {
     var opened: String? = null
     val page = linkPreview { url = "https://cafe.example/menu"; title = "カフェ" }
     val line = look(LineContent.Words("ここ", preview = page), listOf(PagePart(page, inWords = false)), "自分、ここ")
-    compose.setContent { Message(line, handlers(openLink = { opened = it })) }
+    compose.setContent { Message(line, testHandlers(openLink = { opened = it })) }
     actionsOf(line.said).single().action()
     assertEquals("https://cafe.example/menu", opened)
   }

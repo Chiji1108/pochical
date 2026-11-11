@@ -46,7 +46,7 @@ final class NotificationService: UNNotificationServiceExtension {
   @MainActor private static func message(
     from request: UNNotificationRequest
   ) async -> UNNotificationContent {
-    let content = request.content
+    let content = withWords(request.content)
     let payload = content.userInfo
     // The chat with Pochical's people stays a plain notification: only
     // they write there, so it has no writer of its own to show.
@@ -60,8 +60,10 @@ final class NotificationService: UNNotificationServiceExtension {
     guard let worded = content.mutableCopy() as? UNMutableNotificationContent else {
       return content
     }
-    if from.group != nil, let words = wordsAlone(content) {
-      worded.body = words
+    if from.group != nil, let sent = sentBody(content), sent.key.hasPrefix(groupKey) {
+      worded.body = String(
+        format: format(for: oneKey + sent.key.dropFirst(groupKey.count)),
+        arguments: Array(sent.args.dropFirst()))
     }
     let intent = intent(for: line, from: from, authorID: authorID, content: worded)
     let interaction = INInteraction(intent: intent, response: nil)
@@ -70,19 +72,45 @@ final class NotificationService: UNNotificationServiceExtension {
     return (try? worded.updating(from: intent)) ?? worded
   }
 
-  /// A group chat's line as the app words a one-to-one chat's, without who
-  /// wrote it: `CHAT_GROUP_{…}` as `CHAT_{…}`, its arguments after the
-  /// writer's name (spec/sync-protocol.md, Push).
-  private static func wordsAlone(_ content: UNNotificationContent) -> String? {
-    let group = "CHAT_GROUP_"
+  /// The keys of a line's body (spec/sync-protocol.md, Push): a group
+  /// chat's `CHAT_GROUP_{…}`, its writer's name its first argument, which
+  /// the app words without who wrote it as a one-to-one chat's `CHAT_{…}`.
+  private static let groupKey = "CHAT_GROUP_"
+  private static let oneKey = "CHAT_"
+
+  /// The body's key and arguments as the server sent them.
+  private static func sentBody(_ content: UNNotificationContent) -> (key: String, args: [String])? {
     guard let aps = content.userInfo["aps"] as? [String: Any],
       let alert = aps["alert"] as? [String: Any],
-      let key = alert["loc-key"] as? String, key.hasPrefix(group),
+      let key = alert["loc-key"] as? String,
       let args = alert["loc-args"] as? [String]
     else { return nil }
-    let format = Bundle.main.localizedString(
-      forKey: "CHAT_\(key.dropFirst(group.count))", value: nil, table: nil)
-    return String(format: format, arguments: Array(args.dropFirst()))
+    return (key, args)
+  }
+
+  /// Whether the app has words for `key`: the bundle answers the key
+  /// itself for one it has none for.
+  private static func hasWords(for key: String) -> Bool {
+    Bundle.main.localizedString(forKey: key, value: nil, table: nil) != key
+  }
+
+  /// The app's words for a body's `key`; for a kind of line added after
+  /// the app, which it has none for, those of a message of no kind it can
+  /// name.
+  private static func format(for key: String) -> String {
+    let known =
+      hasWords(for: key) ? key : key.hasPrefix(groupKey) ? "CHAT_GROUP_MESSAGE" : "CHAT_MESSAGE"
+    return Bundle.main.localizedString(forKey: known, value: nil, table: nil)
+  }
+
+  /// The notification as the system worded it, but for a body whose key
+  /// the app has no words for, which the system has none for either.
+  private static func withWords(_ content: UNNotificationContent) -> UNNotificationContent {
+    guard let sent = sentBody(content), !hasWords(for: sent.key),
+      let worded = content.mutableCopy() as? UNMutableNotificationContent
+    else { return content }
+    worded.body = String(format: format(for: sent.key), arguments: sent.args)
+    return worded
   }
 
   /// Who the line is from, as the app keeps them in the App Group.

@@ -56,7 +56,7 @@ struct ChatVectors: Decodable, Sendable {
 
   struct Writer: VectorCase {
     enum Kind: String, Decodable, Sendable {
-      case words, notice, hidden
+      case words, notice, hidden, unknown
     }
     let name: String
     let author: String
@@ -69,7 +69,29 @@ struct ChatVectors: Decodable, Sendable {
       case .words: .words(LineContent.Words(text: "了解"))
       case .notice: .notice(LineNotice(kind: .joined))
       case .hidden: .hidden
+      case .unknown: .unknown
       }
+    }
+  }
+
+  struct Content: VectorCase {
+    struct Expected: Decodable, Sendable {
+      let kind: LineContent.Kind
+      let words: String?
+    }
+    let name: String
+    /// A pochical.v1.ChatContent as the wire carries it, in hex.
+    let bytes: String
+    let expected: Expected
+
+    var wire: Data {
+      var data = Data()
+      var rest = bytes[...]
+      while let byte = UInt8(rest.prefix(2), radix: 16) {
+        data.append(byte)
+        rest = rest.dropFirst(2)
+      }
+      return data
     }
   }
 
@@ -96,6 +118,7 @@ struct ChatVectors: Decodable, Sendable {
   let folded: [Folded]
   let reportable: [Reportable]
   let writer: [Writer]
+  let content: [Content]
   let directThread: [DirectThread]
   let edited: [Edited]
   struct FirstComing: VectorCase {
@@ -417,6 +440,53 @@ func writerOfALine(_ vector: ChatVectors.Writer) {
   #expect(row.writer(for: vector.me) == vector.expected)
 }
 
+@Test(arguments: try vectors("chat", as: ChatVectors.self).content)
+func aLinesContentFromTheWire(_ vector: ChatVectors.Content) throws {
+  let content = LineContent(try Pochical_V1_ChatContent(serializedBytes: vector.wire))
+  #expect(content.kind == vector.expected.kind)
+  switch content {
+  case .words(let words): #expect(words.text == vector.expected.words)
+  case .unknown: #expect(LineContent.unknownWords == vector.expected.words)
+  case .photos, .days, .poll, .notice, .unsent, .hidden: #expect(vector.expected.words == nil)
+  }
+}
+
+/// A line of a kind added after the app, as the group's socket brings it:
+/// a field its content has not.
+private func lineOfALaterKind(_ seq: UInt64, by author: String = "u1") throws -> Pochical_V1_Change {
+  var change = line(seq, "")
+  change.chatLine.authorID = author
+  change.chatLine.content = try Pochical_V1_ChatContent(
+    serializedBytes: Data([0x7a, 0x08, 0x0a, 0x06, 0x70, 0x6f, 0x6f, 0x64, 0x6c, 0x65]))
+  return try Pochical_V1_Change(serializedBytes: change.serializedData())
+}
+
+@Test func aLineOfAKindTheAppDoesNotKnowIsSomeonesMessage() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    var later = try lineOfALaterKind(2)
+    later.chatLine.pinnedOrder = 2
+    later.chatLine.replyTo = 1
+    var reaction = Pochical_V1_ChatReaction()
+    reaction.emoji = "👍"
+    reaction.userIds = ["u3"]
+    later.chatLine.reactions = [reaction]
+    try GroupSync.take([line(1, "a"), later], of: "g", in: db)
+    // Kept as its own kind, with all a line has besides its kind.
+    let state = try Chats.state(of: groupThread, in: "g", me: "me", now: early, db: db)
+    #expect(state.lines.map(\.content) == [.words(LineContent.Words(text: "a")), .unknown])
+    #expect(state.lines.last?.authorID == "u1")
+    #expect(state.lines.last?.replyTo == 1)
+    #expect(state.lines.last?.reactions == [LineReaction(emoji: "👍", userIDs: ["u3"])])
+    #expect(state.pins.map(\.seq) == [2])
+    // Unread as anyone's line is, and the chat's latest line in the list.
+    #expect(state.unread(by: "me") == 2)
+    #expect(state.lines.last?.writer(for: "me") == .others)
+    let summary = try Chats.summary(of: groupThread, in: "g", me: "me", now: early, db: db)
+    #expect(summary.last?.content == .unknown)
+  }
+}
+
 @Test(arguments: try vectors("chat", as: ChatVectors.self).folded)
 func aBlockedWritersLineFolds(_ vector: ChatVectors.Folded) {
   #expect(
@@ -536,7 +606,7 @@ private func line(_ seq: UInt64, _ text: String, op: String = "") -> Pochical_V1
         .photos(wirePhotos(["a", "b"]).map(LinePhoto.init)),
         .days([november3]),
         .poll(LineContent.Poll(days: [november3, Day(year: 2026, month: 11, day: 4)])),
-        .hidden,
+        .unknown,
       ])
   }
 }
@@ -1170,7 +1240,7 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
       == "ゆうきがグループから外されました")
 }
 
-@Test func aNoticeIsKeptAsOneAndALineOfNoKnownKindAsNothing() throws {
+@Test func aNoticeIsKeptAsOneAndALineOfNoKnownKindAsUnknown() throws {
   let database = try appDatabase()
   try database.write { db in
     var notice = line(1, "")
@@ -1182,7 +1252,7 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
     let state = try Chats.state(of: groupThread, in: "g", now: early, db: db)
     #expect(
       state.lines.map(\.content) == [
-        .notice(LineNotice(kind: .removed, subjectID: "u3")), .hidden,
+        .notice(LineNotice(kind: .removed, subjectID: "u3")), .unknown,
       ])
     // Nor can a line of no kind be kept.
     #expect(throws: (any Error).self) {

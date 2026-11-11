@@ -16,9 +16,17 @@ public enum LineContent: Hashable, Sendable {
   case notice(LineNotice)
   /// Taken back by its writer (送信取消): nothing of it is left.
   case unsent
-  /// Sent in a one-to-one chat by someone the reader had blocked, or of a
-  /// kind this app does not know: shown as nothing.
+  /// Sent in a one-to-one chat by someone the reader had blocked: shown as
+  /// nothing.
   case hidden
+  /// Of a kind this app does not know, from an app newer than itself:
+  /// someone's message all the same, saying `unknownWords` in its place
+  /// until the app is updated and takes its lines again.
+  case unknown
+
+  /// What a line of a kind this app does not know says in its place,
+  /// wherever a line is drawn or named (`spec/vectors/chat.json`, content).
+  public static let unknownWords = "このメッセージを見るには、アプリをアップデートしてください"
 
   public struct Words: Hashable, Sendable, Codable {
     public var text: String
@@ -50,7 +58,7 @@ public enum LineContent: Hashable, Sendable {
   }
 
   public enum Kind: String, Codable, Sendable, QueryBindable {
-    case words, photos, days, poll, notice, unsent, hidden
+    case words, photos, days, poll, notice, unsent, hidden, unknown
   }
 
   public var kind: Kind {
@@ -62,6 +70,7 @@ public enum LineContent: Hashable, Sendable {
     case .notice: .notice
     case .unsent: .unsent
     case .hidden: .hidden
+    case .unknown: .unknown
     }
   }
 
@@ -81,12 +90,13 @@ public enum LineContent: Hashable, Sendable {
     switch self {
     case .days(let days): days
     case .poll(let poll): poll.days
-    case .words, .photos, .notice, .unsent, .hidden: []
+    case .words, .photos, .notice, .unsent, .hidden, .unknown: []
     }
   }
 
-  /// The line's content as the group sent it; none, or a kind or notice
-  /// this app does not know, is nothing to show.
+  /// The line's content as the group sent it. A kind this app does not
+  /// know reaches it as none, the wire's field being one its content has
+  /// not; a notice it cannot word is nothing to show.
   init(_ wire: Pochical_V1_ChatContent) {
     switch wire.kind {
     case .words(let words):
@@ -106,13 +116,13 @@ public enum LineContent: Hashable, Sendable {
           decided: Day(poll.decided)))
     case .notice(let notice): self = LineNotice(notice).map(LineContent.notice) ?? .hidden
     case .unsent: self = .unsent
-    case .hidden, nil: self = .hidden
+    case .hidden: self = .hidden
+    case nil: self = .unknown
     }
   }
 
   /// The line a send makes, as the group will hold it: its words not
-  /// changed yet, its poll open; none, or a kind this app does not know,
-  /// is nothing to show.
+  /// changed yet, its poll open.
   init(_ wire: Pochical_V1_ChatSendContent) {
     var line = Pochical_V1_ChatContent()
     switch wire.kind {
@@ -144,6 +154,7 @@ extension LineContent: Codable {
     case .notice: self = .notice(try container.decode(LineNotice.self, forKey: .notice))
     case .unsent: self = .unsent
     case .hidden: self = .hidden
+    case .unknown: self = .unknown
     }
   }
 
@@ -156,7 +167,7 @@ extension LineContent: Codable {
     case .days(let days): try container.encode(days, forKey: .days)
     case .poll(let poll): try poll.encode(to: encoder)
     case .notice(let notice): try container.encode(notice, forKey: .notice)
-    case .unsent, .hidden: break
+    case .unsent, .hidden, .unknown: break
     }
   }
 }

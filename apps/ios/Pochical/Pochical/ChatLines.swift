@@ -411,7 +411,7 @@ struct LineView: View {
   private var carded: Bool {
     switch content {
     case .days, .poll: true
-    case .words, .photos, .notice, .unsent, .hidden: false
+    case .words, .photos, .notice, .unsent, .hidden, .unknown: false
     }
   }
 
@@ -451,7 +451,7 @@ struct LineView: View {
       if let preview = words.preview, !preview.title.isEmpty {
         parts.append("リンク「\(preview.title)」")
       }
-    case .days, .poll, .notice, .unsent, .hidden:
+    case .days, .poll, .notice, .unsent, .hidden, .unknown:
       parts.append(lineWords(content, nameOf: nameOf))
     }
     parts.append(ChatTime.clock(time))
@@ -529,6 +529,7 @@ struct LineView: View {
       // Emoji drawn large stand without a bubble.
       case .words(let words): quote != nil || words.preview != nil || drawing.largeEmoji == 0
       case .photos: quote != nil
+      case .unknown: true
       case .days, .poll, .notice, .unsent, .hidden: false
       }
     return bubbled
@@ -697,6 +698,11 @@ struct LineBody: View {
     case .days(let days):
       DayCard(days: days, members: members)
         .dimmedWhileWaiting(waiting, in: RoundedRectangle(cornerRadius: Radius.lg))
+    case .unknown:
+      // What it says in its place, in the bubble its words would have.
+      MessageBubble(
+        text: LineContent.unknownWords, mine: mine, first: first, waiting: waiting,
+        nameOf: nameOf, quote: quote, shelf: shelf, onOpenQuote: onOpenQuote)
     case .notice, .unsent, .hidden:
       // Drawn by the chat as a line of its own, not in a bubble.
       EmptyView()

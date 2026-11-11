@@ -16,13 +16,15 @@ func daysSummary(_ days: [Day]) -> String {
 
 /// A line in a line of words: its photos as 📷 写真, or 📷 写真3枚 for
 /// several; its days as daysSummary, a poll as pollSummary; its words with
-/// their mentions as names; nothing for what is not a message.
+/// their mentions as names; what a line of a kind the app does not know
+/// says in its place; nothing for what is not a message.
 func lineWords(_ content: LineContent, nameOf: (String) -> String) -> String {
   switch content {
   case .words(let words): plainText(words.text, nameOf: nameOf)
   case .photos(let photos): photos.count == 1 ? "📷 写真" : "📷 写真\(photos.count)枚"
   case .days(let days): daysSummary(days)
   case .poll(let poll): pollSummary(poll.days, decided: poll.decided)
+  case .unknown: LineContent.unknownWords
   case .notice, .unsent, .hidden: ""
   }
 }
