@@ -2,6 +2,7 @@ package app.pochical
 
 import androidx.compose.runtime.mutableStateOf
 import androidx.navigation3.runtime.NavBackStack
+import app.pochical.design.Chat
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -83,5 +84,41 @@ class RootNavigatorTest {
     // The same page picked again stays the one open, not a second copy of it.
     navigator.show(RootPage.GroupShifts("g1"))
     assertEquals(listOf(Tabs, RootPage.GroupShifts("g1")), navigator.routes)
+  }
+
+  @Test
+  fun aGroupGoneTakesEveryPageOfItsOwnBackToTheTabs() {
+    navigator.showGroup("g1", RootPage.Chat("g1", "group"))
+    navigator.open(RootPage.GroupSettings("g1"))
+    navigator.open(RootPage.GroupEnd("g1"))
+    navigator.hold(setOf("g1", "g2"))
+    assertEquals(listOf(Tabs, RootPage.Chat("g1", "group"), RootPage.GroupSettings("g1"), RootPage.GroupEnd("g1")), navigator.routes)
+
+    // Ended, left from elsewhere or taken out: the person lands on グループ, whatever was on top.
+    navigator.hold(setOf("g2"))
+    assertEquals(listOf(Tabs), navigator.routes)
+    assertEquals(RootTab.Groups, navigator.tab)
+  }
+
+  @Test
+  fun pagesOfNoGroupAndTheChatWithPochicalsPeopleStayAsGroupsGo() {
+    navigator.showOver(RootTab.Settings, RootPage.Chat(Chat.supportPlace, "group"))
+    navigator.open(RootPage.Appearance)
+    navigator.hold(emptySet())
+    assertEquals(listOf(Tabs, RootPage.Chat(Chat.supportPlace, "group"), RootPage.Appearance), navigator.routes)
+  }
+
+  @Test
+  fun aGroupJustMadeShowsWithItsInvitationOnceTheDeviceHoldsIt() {
+    navigator.select(RootTab.Groups)
+    navigator.show(RootPage.NewGroup)
+    navigator.made = "g1"
+    navigator.hold(emptySet())
+    assertEquals(listOf(Tabs, RootPage.NewGroup), navigator.routes)
+
+    navigator.hold(setOf("g1"))
+    assertEquals(listOf(Tabs, RootPage.GroupInvite("g1")), navigator.routes)
+    assertEquals("g1", navigator.openGroup)
+    assertEquals(null, navigator.made)
   }
 }

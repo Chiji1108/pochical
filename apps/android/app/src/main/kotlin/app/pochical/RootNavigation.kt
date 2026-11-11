@@ -16,6 +16,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.serialization.NavBackStackSerializer
+import app.pochical.design.Chat
 import app.pochical.repeat.RepeatMode
 import java.time.LocalDate
 import kotlinx.serialization.Serializable
@@ -55,6 +56,13 @@ data object Tabs : RootRoute
 /** A page over the tabs. */
 @Serializable
 sealed interface RootPage : RootRoute, NavKey {
+  /**
+   * The group a page is of, none for a page of no group: it is open only while the device holds
+   * that group ([RootNavigator.hold]).
+   */
+  val groupId: String?
+    get() = null
+
   /** アカウント, from 設定. */
   @Serializable data object Account : RootPage
 
@@ -92,28 +100,31 @@ sealed interface RootPage : RootRoute, NavKey {
   @Serializable data object NewGroup : RootPage
 
   /** メンバーを招待, from a group's bar or its settings, and once it is made. */
-  @Serializable data class GroupInvite(val groupId: String) : RootPage
+  @Serializable data class GroupInvite(override val groupId: String) : RootPage
 
   /** グループの設定, from a group's bar. */
-  @Serializable data class GroupSettings(val groupId: String) : RootPage
+  @Serializable data class GroupSettings(override val groupId: String) : RootPage
 
   /** グループを編集, from its settings. */
-  @Serializable data class GroupEdit(val groupId: String) : RootPage
+  @Serializable data class GroupEdit(override val groupId: String) : RootPage
+
+  /** 終了日, from its settings. */
+  @Serializable data class GroupEnd(override val groupId: String) : RootPage
 
   /** このグループでのあなた, from its settings. */
-  @Serializable data class GroupProfile(val groupId: String) : RootPage
+  @Serializable data class GroupProfile(override val groupId: String) : RootPage
 
   /** みんなのシフト, from the group's hub: on `date` ("YYYY-MM-DD") with its sheet up when given. */
-  @Serializable data class GroupShifts(val groupId: String, val date: String? = null) : RootPage
+  @Serializable data class GroupShifts(override val groupId: String, val date: String? = null) : RootPage
 
   /**
    * A chat of the group's, `threadId` its own (全体チャット) or a one-to-one chat, from its hub; with
    * `sharing` ("YYYY-MM-DD") from みんなのシフト's 全体チャットで共有, the day set over its composer.
    */
-  @Serializable data class Chat(val groupId: String, val threadId: String, val sharing: String? = null) : RootPage
+  @Serializable data class Chat(override val groupId: String, val threadId: String, val sharing: String? = null) : RootPage
 
   /** 写真, the photos of a chat alone, from its ⋯. */
-  @Serializable data class ChatPhotos(val groupId: String, val threadId: String) : RootPage
+  @Serializable data class ChatPhotos(override val groupId: String, val threadId: String) : RootPage
 
   /** QRコードで参加, from グループ. */
   @Serializable data object Scan : RootPage
@@ -258,6 +269,25 @@ class RootNavigator(
     pages.clear()
     tab = RootTab.Calendar
     openingDay = day
+  }
+
+  /** The group just made, shown with its invitation once the device holds it ([hold]). */
+  var made by mutableStateOf<String?>(null)
+
+  /**
+   * Keeps the pages to the groups the device holds, [groupIds]: a group the person is no longer in
+   * (left from elsewhere, taken out, or ended, spec/sync-protocol.md, A group's end) takes its pages
+   * with it, every one of them and whichever is on top, back to the tabs, and so do pages kept from
+   * before the app was last ended. A group just made comes a moment after the call's answer, on the
+   * user's socket: it is shown with its invitation once it is there, so no page of a group is ever
+   * open before the device holds it. The chat with Pochical's people is of no group.
+   */
+  fun hold(groupIds: Set<String>) {
+    pages.removeAll { page -> page.groupId.let { it != null && it != Chat.supportPlace && it !in groupIds } }
+    made?.takeIf { it in groupIds }?.let {
+      made = null
+      showGroup(it, RootPage.GroupInvite(it))
+    }
   }
 
   /** Takes away every page, back to the tabs, as leaving a group does from its pages. */

@@ -106,8 +106,8 @@ enum ChatPhotoLoading {
   }
 
   /// Lets go of the photos the device lets go of (`ChatPhotos.forget`,
-  /// `ChatPhotos.eraseAll`): a line taken back, every photo with the
-  /// account. What memory holds of one taken back goes as it is let go,
+  /// `ChatPhotos.eraseAll`, `groupLeft`): a line taken back, every photo
+  /// with the account, a group's with the group. What memory holds of one taken back goes as it is let go,
   /// its line no longer drawn.
   static func followErasing() {
     let center = NotificationCenter.default
@@ -120,8 +120,13 @@ enum ChatPhotoLoading {
           for: key(photoID, in: shelf, small: small))
       }
     }
-    center.addObserver(forName: ChatPhotos.erased, object: nil, queue: nil) { _ in
-      pipeline.cache.removeAll()
+    // A group left or ended takes its photos with it. Nuke's caches cannot
+    // let go of one group's alone, so all go, and the others' come again as
+    // they show.
+    for name in [ChatPhotos.erased, groupLeft] {
+      center.addObserver(forName: name, object: nil, queue: nil) { _ in
+        pipeline.cache.removeAll()
+      }
     }
   }
 

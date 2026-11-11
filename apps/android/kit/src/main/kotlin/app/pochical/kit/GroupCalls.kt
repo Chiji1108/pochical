@@ -20,6 +20,7 @@ import app.pochical.v1.renameGroupRequest
 import app.pochical.v1.reportRequest
 import app.pochical.v1.reportedLine
 import app.pochical.v1.setDisplayNameRequest
+import app.pochical.v1.setGroupEndRequest
 import app.pochical.v1.setGroupPhotoRequest
 import app.pochical.v1.setBlockedRequest
 import app.pochical.v1.setChatMutedRequest
@@ -136,6 +137,7 @@ class GroupCalls internal constructor(
             mark = request.mark.proto
             displayName = request.displayName
             requestId = request.id
+            endsAtMs = request.endsAtMs
           },
           headers,
         )
@@ -235,6 +237,7 @@ class GroupCalls internal constructor(
       members = invite.membersList.map { InvitedMember(it.displayName, it.photoId) },
       alreadyMember = invite.alreadyMember,
       full = invite.full,
+      endsAtMs = invite.endsAtMs,
     )
   }
 
@@ -270,6 +273,23 @@ class GroupCalls internal constructor(
       )
       .answer()
     releaseMark(mark)
+  }
+
+  /**
+   * Gives the group an end, changes it or, with 0, takes it away (spec/sync-protocol.md, A group's
+   * end), which every member sees: [endsAtMs] as [groupEndsAt] gives it for the day picked.
+   */
+  suspend fun setEnd(groupId: String, endsAtMs: Long) = call { headers ->
+    groups
+      .setGroupEnd(
+        setGroupEndRequest {
+          this.groupId = groupId
+          this.endsAtMs = endsAtMs
+        },
+        headers,
+      )
+      .answer()
+    Unit
   }
 
   /**

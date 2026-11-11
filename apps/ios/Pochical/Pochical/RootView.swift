@@ -130,6 +130,14 @@ struct RootView: View {
         over: .groups)
     }
     .onChange(of: groups.map(\.id)) { inviteMade() }
+    // A group the device has let go of, taken out of it by a member or by
+    // the group's end (spec/sync-protocol.md, A group's end), takes its
+    // pages with it, as one the person leaves does.
+    .task {
+      for await note in NotificationCenter.default.notifications(named: groupLeft) {
+        if let groupID = note.userInfo?["groupID"] as? String { close(groupID) }
+      }
+    }
     .fullScreenCover(isPresented: $scanning) {
       if let scanned {
         invite = scanned
@@ -192,10 +200,7 @@ struct RootView: View {
     switch page {
     case .group(let route):
       GroupPage(route: route) { left in
-        // Its pages go, wherever the person is now; the rail opens on the
-        // first group if it was the one open.
-        if openGroupID == left { openGroupID = nil }
-        navigator.close(left)
+        close(left)
       } onMade: { made in
         inviting = made
         inviteMade()
@@ -207,6 +212,13 @@ struct RootView: View {
     case .linked(let linked):
       LinkedPageView(page: linked)
     }
+  }
+
+  /// A group the person is no longer in: its pages go, wherever the person
+  /// is now, and the rail opens on the first group if it was the one open.
+  private func close(_ groupID: String) {
+    if openGroupID == groupID { openGroupID = nil }
+    navigator.close(groupID)
   }
 
   /// The tabs, or a page over them, given what the app's screens are given:

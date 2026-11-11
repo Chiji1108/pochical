@@ -204,9 +204,10 @@ func linksTheProviderOnTheSessionAndSaysWhenTheAccountIsInUse(
 @Test func erasingTakesEveryTableButTheDevicesOwn() throws {
   let usersTables: Set = [
     "blocks", "chatDrafts", "chatLines", "chatMutes", "chatNotificationSettings", "chatOutbox",
-    "coworkerOrder", "coworkers", "days", "groupCursors", "groupMembers", "groups", "memberDays",
-    "memberOrders", "memberPatterns", "outbox", "patternOrder", "patterns", "preferences",
-    "profile", "readMarks", "repeatOrders", "serverValues", "syncState", "unreadCounts",
+    "coworkerOrder", "coworkers", "days", "groupCursors", "groupEnds", "groupMembers", "groups",
+    "memberDays", "memberOrders", "memberPatterns", "outbox", "patternOrder", "patterns",
+    "preferences", "profile", "readMarks", "repeatOrders", "serverValues", "syncState",
+    "unreadCounts",
   ]
   #expect(LocalData.deviceTables == ["grdb_migrations"])
   let database = try appDatabase()

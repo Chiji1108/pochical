@@ -287,6 +287,13 @@
   <string name="group_settings">グループの設定</string>
   <string name="group_settings_note">グループ名とアイコンは、メンバー全員に表示されます。</string>
   <string name="group_edit">グループを編集</string>
+  <string name="group_end">終了日</string>
+  <string name="group_end_on">終了日をつける</string>
+  <string name="group_end_day">日付</string>
+  <string name="group_end_settings_note">終了日を過ぎると、このグループはメンバー全員から消えます。</string>
+  <string name="group_end_note">終了日を過ぎると、このグループはメンバー全員から消えます。チャット、写真、シフトの共有も消え、元に戻せません。終了日は、メンバーならだれでも変更できます。</string>
+  <string name="group_end_not_changed">終了日を変更できませんでした</string>
+  <string name="group_ends_on">このグループは%1$sに終了します</string>
   <string name="group_me">このグループでのあなた</string>
   <string name="group_only">このグループだけ</string>
   <string name="usual_same">いつもと同じ</string>

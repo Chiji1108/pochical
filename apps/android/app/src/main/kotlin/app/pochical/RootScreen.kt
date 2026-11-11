@@ -35,6 +35,7 @@ import app.pochical.chat.ChatPhotosPage
 import app.pochical.design.Chat
 import app.pochical.groups.GroupButtons
 import app.pochical.groups.GroupEditPage
+import app.pochical.groups.GroupEndPage
 import app.pochical.groups.GroupProfilePage
 import app.pochical.groups.GroupSettingsPage
 import app.pochical.groups.GroupShiftsPage
@@ -104,6 +105,8 @@ fun RootScreen(navigator: RootNavigator) {
     }
     links.consume()
   }
+  // The pages follow the groups the device holds, as they are read and as they change.
+  LaunchedEffect(groups, navigator.made) { groups?.let { held -> navigator.hold(held.map { it.id }.toSet()) } }
   val motion = rememberPageMotion()
   val push = remember(motion) { motion.push<RootRoute>() }
   val pop = remember(motion) { motion.pop<RootRoute>() }
@@ -141,7 +144,7 @@ private fun Page(route: RootRoute, navigator: RootNavigator) {
     is RootPage.MonthPicture -> MonthPicturePage(java.time.YearMonth.parse(route.month), onBack = rememberPageNavigation(navigator)::back)
     is RootPage.DeviceCalendar -> DeviceCalendarPage(java.time.YearMonth.parse(route.month), rememberPageNavigation(navigator))
     is RootPage.DeviceCalendarPatterns -> DeviceCalendarPatternsPage(java.time.YearMonth.parse(route.month), onBack = rememberPageNavigation(navigator)::back)
-    RootPage.NewGroup -> NewGroupPage(onBack = rememberPageNavigation(navigator)::back, onMade = { navigator.showGroup(it, RootPage.GroupInvite(it)) })
+    RootPage.NewGroup -> NewGroupPage(onBack = rememberPageNavigation(navigator)::back, onMade = { navigator.made = it })
     RootPage.Scan -> {
       val navigation = rememberPageNavigation(navigator)
       ScanScreen(onClose = navigation::back, onInvite = { navigation.replace(RootPage.Join(it)) })
@@ -154,6 +157,7 @@ private fun Page(route: RootRoute, navigator: RootNavigator) {
         route.groupId,
         onBack = navigation::back,
         onEdit = { navigation.open(RootPage.GroupEdit(route.groupId)) },
+        onEnd = { navigation.open(RootPage.GroupEnd(route.groupId)) },
         onProfile = { navigation.open(RootPage.GroupProfile(route.groupId)) },
         onInvite = { navigation.open(RootPage.GroupInvite(route.groupId)) },
         onLeft = navigator::closePages,
@@ -175,6 +179,7 @@ private fun Page(route: RootRoute, navigator: RootNavigator) {
     }
     is RootPage.ChatPhotos -> ChatPhotosPage(route.groupId, route.threadId, onBack = rememberPageNavigation(navigator)::back)
     is RootPage.GroupEdit -> GroupEditPage(route.groupId, onBack = rememberPageNavigation(navigator)::back)
+    is RootPage.GroupEnd -> GroupEndPage(route.groupId, onBack = rememberPageNavigation(navigator)::back)
     is RootPage.GroupProfile -> GroupProfilePage(route.groupId, onBack = rememberPageNavigation(navigator)::back)
     is RootPage.ShiftChoice -> ShiftChoicePage(LocalDate.parse(route.date), onBack = rememberPageNavigation(navigator)::back)
     RootPage.Patterns -> PatternsPage(rememberPageNavigation(navigator))

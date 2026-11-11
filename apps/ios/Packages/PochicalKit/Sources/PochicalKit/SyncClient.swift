@@ -641,10 +641,12 @@ public actor SyncClient {
     try await socket.send(.data(frame.serializedData()))
   }
 
-  /// Tells the app of the groups left, for what it keeps of them beside
-  /// the database (their notifications) to go too.
+  /// Lets go of the photos the device keeps of the groups left, and tells
+  /// the app of each, for what it keeps of them beside the database (their
+  /// notifications, their pages, the photos it drew) to go too.
   private static func tellLeft(_ groupIDs: [String]) {
     for groupID in groupIDs {
+      ChatPhotos.forgetAll(in: .group(groupID))
       NotificationCenter.default.post(name: groupLeft, object: nil, userInfo: ["groupID": groupID])
     }
   }

@@ -6,6 +6,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import android.content.res.Resources
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -34,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -46,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.calendar.fullText
+import app.pochical.calendar.monthDayText
 import app.pochical.calendar.rememberToday
 import app.pochical.design.Chat
 import app.pochical.design.Radius
@@ -53,6 +56,7 @@ import app.pochical.kit.GroupMemberRow
 import app.pochical.kit.LineContent
 import app.pochical.kit.PhotoShelf
 import app.pochical.kit.WaitingLine
+import app.pochical.kit.groupEndDay
 import app.pochical.kit.plainText
 import app.pochical.v1.ChatNotice
 import java.time.Instant
@@ -269,19 +273,32 @@ fun lineWords(content: LineContent, nameOf: (String) -> String): String =
 /** A notice's words, [by] and [subject] the names the group shows now (spec/chat.md, Notices). */
 @Composable
 fun noticeWords(notice: ChatNotice, by: String, subject: String): String =
-  when (notice.kind) {
-    ChatNotice.Kind.KIND_JOINED -> stringResource(R.string.chat_notice_joined, by)
-    ChatNotice.Kind.KIND_LEFT -> stringResource(R.string.chat_notice_left, by)
-    ChatNotice.Kind.KIND_REMOVED -> stringResource(R.string.chat_notice_removed, by, subject)
-    ChatNotice.Kind.KIND_REMOVED_BY_POCHICAL -> stringResource(R.string.chat_notice_removed_by_pochical, by)
-    ChatNotice.Kind.KIND_INVITE_REMADE -> stringResource(R.string.chat_notice_invite_remade, by)
+  noticeWords(LocalResources.current, notice, by, subject, LocalDate.now(), ZoneId.systemDefault())
+
+/**
+ * A notice's words on a device whose day is [today] in [zone]: a group's end is the day that moment
+ * closes by its clock (spec/vectors/group-end.json, notices), and the line that the group ends soon
+ * is no one's, so [by] is not said.
+ */
+fun noticeWords(resources: Resources, notice: ChatNotice, by: String, subject: String, today: LocalDate, zone: ZoneId): String {
+  val end by lazy { groupEndDay(notice.endsAtMs, zone).monthDayText(today) }
+  return when (notice.kind) {
+    ChatNotice.Kind.KIND_JOINED -> resources.getString(R.string.chat_notice_joined, by)
+    ChatNotice.Kind.KIND_LEFT -> resources.getString(R.string.chat_notice_left, by)
+    ChatNotice.Kind.KIND_REMOVED -> resources.getString(R.string.chat_notice_removed, by, subject)
+    ChatNotice.Kind.KIND_REMOVED_BY_POCHICAL -> resources.getString(R.string.chat_notice_removed_by_pochical, by)
+    ChatNotice.Kind.KIND_INVITE_REMADE -> resources.getString(R.string.chat_notice_invite_remade, by)
+    ChatNotice.Kind.KIND_END_SET -> resources.getString(R.string.chat_notice_end_set, by, end)
+    ChatNotice.Kind.KIND_END_CLEARED -> resources.getString(R.string.chat_notice_end_cleared, by)
+    ChatNotice.Kind.KIND_ENDS_SOON -> resources.getString(R.string.group_ends_on, end)
     else ->
       when {
-        notice.name.isNotEmpty() && notice.markChanged -> stringResource(R.string.chat_notice_renamed_and_mark, by, notice.name)
-        notice.name.isNotEmpty() -> stringResource(R.string.chat_notice_renamed, by, notice.name)
-        else -> stringResource(R.string.chat_notice_mark, by)
+        notice.name.isNotEmpty() && notice.markChanged -> resources.getString(R.string.chat_notice_renamed_and_mark, by, notice.name)
+        notice.name.isNotEmpty() -> resources.getString(R.string.chat_notice_renamed, by, notice.name)
+        else -> resources.getString(R.string.chat_notice_mark, by)
       }
   }
+}
 
 /** The time by a line: 9:41. */
 fun clock(ms: Long, zone: ZoneId = ZoneId.systemDefault()): String {
