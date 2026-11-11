@@ -112,6 +112,40 @@ const styles = {
     paddingBottom: "calc(var(--u) * 5)",
     position: "absolute",
   }),
+  // A tile's part of its screen, the screen as wide as the tile and cut
+  // off at its foot: a card as a widget on the wall is.
+  tilePart: css({
+    "& img": { display: "block", width: "100%" },
+    bg: "white",
+    borderRadius: "calc(var(--u) * 4.25)",
+    boxShadow:
+      "0 calc(var(--u) * 1) calc(var(--u) * 3.5) rgba(60, 70, 60, 0.2)",
+    flex: 1,
+    minHeight: 0,
+    overflow: "hidden",
+  }),
+  tileWords: css({
+    fontSize: "calc(var(--u) * 4.8)",
+    fontWeight: 700,
+    lineHeight: 1.3,
+    paddingBottom: "calc(var(--u) * 1.6)",
+    paddingLeft: "calc(var(--u) * 1.5)",
+  }),
+  // The tiles one over the other, sharing the room under the headline.
+  tiles: css({
+    "& figure": {
+      display: "flex",
+      flex: 1,
+      flexDirection: "column",
+      margin: 0,
+      minHeight: 0,
+    },
+    display: "flex",
+    flexDirection: "column",
+    gap: "calc(var(--u) * 3.5)",
+    inset: "var(--headline) calc(var(--u) * 5) calc(var(--u) * 5)",
+    position: "absolute",
+  }),
   // The widgets on a Home Screen's grid, tilted, running off every edge
   // and fading into the sky under the headline.
   wall: css({
@@ -199,6 +233,22 @@ function StoreShotPage() {
             className={cx(styles.screen, styles.single)}
             src={RAW + shot.raw}
           />
+        </div>
+      )}
+      {shot.kind === "tiles" && (
+        <div className={styles.tiles}>
+          {shot.tiles.map((tile) => (
+            <figure key={tile.raw}>
+              <figcaption className={styles.tileWords}>{tile.words}</figcaption>
+              <div className={styles.tilePart}>
+                <img
+                  alt=""
+                  src={RAW + tile.raw}
+                  style={{ marginTop: `${-100 * tile.top[store]}%` }}
+                />
+              </div>
+            </figure>
+          ))}
         </div>
       )}
       {shot.kind === "pair" && (

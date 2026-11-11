@@ -45,7 +45,9 @@ const photographed = storeIds.filter((store) =>
 // a wall: the same ones in each of its looks' folders.
 const screensOf = (store: StoreId, shot: (typeof STORE_SHOTS)[number]) => {
   const folder = path.join(RAW, store);
-  const files = shot.kind === "screen" ? [shot.raw] : shot.raw;
+  const tiles = shot.kind === "tiles" ? shot.tiles.map(({ raw }) => raw) : [];
+  const raw = shot.kind === "tiles" ? [] : shot.raw;
+  const files = [...tiles, ...(typeof raw === "string" ? [raw] : raw)];
   for (const file of files) {
     if (!existsSync(path.join(folder, file))) {
       throw new Error(`${shot.name} has no ${path.join(folder, file)}`);

@@ -119,7 +119,9 @@ test("the wall alternates its two looks, no widget beside itself, the pinned whe
   };
   const tiles = wallOf(WIDGETS, 2, pinned);
   for (const pin of pinned) {
-    expect(tiles).toContainEqual(expect.objectContaining(pin));
+    expect(
+      tiles.filter((tile) => tile.file === pin.file && tile.look === pin.look)
+    ).toEqual([expect.objectContaining(pin)]);
   }
   const first = tiles.filter((tile) => tile.look === 0).length;
   expect(Math.abs(tiles.length - 2 * first)).toBeLessThanOrEqual(2);

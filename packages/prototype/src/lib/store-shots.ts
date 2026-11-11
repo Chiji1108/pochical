@@ -35,15 +35,26 @@ export const FEATURE_GRAPHIC = {
 // fifth of a screenshot, and the App Store's pictures keep to it too.
 export const HEADLINE_SHARE = 0.2;
 
-// What a shot is drawn from: one screen; two screens side by side; or a
-// wall of the widgets in the looks it mixes, each look a folder of `raw`
+// What a shot is drawn from: one screen; two screens side by side; tiles,
+// each a part of a screen under its words; or a wall of the widgets in the
+// looks it mixes, each look a folder of `raw`
 // holding every widget as a PNG named
 // `<widget>-<small | medium | large>.png`, the same names in each.
 type StoreShot = { headline: readonly string[]; name: string } & (
   | { kind: "pair"; raw: readonly [string, string] }
   | { kind: "screen"; raw: string }
+  | { kind: "tiles"; tiles: readonly Tile[] }
   | { kind: "wall"; pinned: readonly WallPin[]; raw: readonly string[] }
 );
+
+// A tile of a shot of details: the part of a screen that shows one, as
+// wide as the screen, under a line of words. `top` is where the part
+// starts on each store's screen, in the screen's widths from its top.
+export type Tile = {
+  raw: string;
+  top: { android: number; ios: number };
+  words: string;
+};
 
 // A widget the wall shows whole where the eye lands first, under the
 // headline in its middle columns: its file, the look it is in, counted in
@@ -67,9 +78,9 @@ export type WallPin = {
 // mixes the two, the widgets set to someone or to the group among them,
 // with 次の休み and いまのシフト, its ring drawn while a shift is on,
 // pinned where they show whole; the themes' shot sets the month in 墨 and
-// in letters side by side, the app as it starts being in the others. Both platforms also photograph `details-repeat.png`,
-// 繰り返しを直す on a fixed cycle, which no shot here draws yet: it is a
-// tile of the details shot to come (#806).
+// in letters side by side, the app as it starts being in the others; the
+// details' shot sets three parts of screens one over the other, each for
+// those whose roster has that way of its own.
 export const STORE_SHOTS = [
   {
     headline: ["勤務表を見ながら、", "ポチポチ。"],
@@ -110,6 +121,28 @@ export const STORE_SHOTS = [
     kind: "screen",
     name: "device-calendar",
     raw: "06-device-calendar.png",
+  },
+  {
+    headline: ["勤務表のクセにも、", "合わせます。"],
+    kind: "tiles",
+    name: "details",
+    tiles: [
+      {
+        raw: "07-details-next-day.png",
+        top: { android: 0.546, ios: 0.523 },
+        words: "夜勤を入れると、翌日に明け",
+      },
+      {
+        raw: "07-details-period.png",
+        top: { android: 0.185, ios: 0.163 },
+        words: "15日始まりの月にも",
+      },
+      {
+        raw: "07-details-repeat.png",
+        top: { android: 0.31, ios: 0.144 },
+        words: "決まった並びは、繰り返しで",
+      },
+    ],
   },
 ] as const satisfies readonly StoreShot[];
 
@@ -181,7 +214,8 @@ export type WallTile = {
 // widget and the look that there touch the least of the same widget,
 // then of the same look, then were used the least so far. So the looks
 // alternate across the wall, and no widget sits beside itself where
-// another fits. The `pinned` are put first, where they are told.
+// another fits. The `pinned` are put first, where they are told, and nowhere
+// else in that look: once, whole.
 export const wallOf = (
   files: readonly string[],
   looks: number,
@@ -243,7 +277,12 @@ export const wallOf = (
               ...place,
               file,
               look,
-            }))
+            })).filter(
+              (tile) =>
+                !pinned.some(
+                  (pin) => pin.file === tile.file && pin.look === tile.look
+                )
+            )
           : [];
       });
       const costOf = (tile: WallTile) => [
