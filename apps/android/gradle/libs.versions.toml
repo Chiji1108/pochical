@@ -122,6 +122,8 @@ androidx-test-junit = { module = "androidx.test.ext:junit", version.ref = "andro
 reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
 glance-appwidget = { module = "androidx.glance:glance-appwidget", version.ref = "glance" }
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
+# The faces' drawings, SVGs as design/ draws them, read by the same loader.
+coil-svg = { module = "io.coil-kt.coil3:coil-svg", version.ref = "coil" }
 telephoto-zoomable-image-coil3 = { module = "me.saket.telephoto:zoomable-image-coil3", version.ref = "telephoto" }
 telephoto-flick = { module = "me.saket.telephoto:flick", version.ref = "telephoto" }
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebase-bom" }

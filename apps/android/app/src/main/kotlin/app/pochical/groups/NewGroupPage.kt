@@ -12,14 +12,16 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import android.widget.Toast
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
@@ -41,6 +43,7 @@ import app.pochical.kit.fitsGroupMark
 import app.pochical.kit.fitsGroupName
 import app.pochical.kit.fitsPersonName
 import app.pochical.kit.groupEndsAt
+import app.pochical.people.usualProfile
 import app.pochical.kit.guessGroupMark
 import app.pochical.kit.nextGroupColor
 import app.pochical.pageInsets
@@ -62,11 +65,13 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
   val calls = LocalGroupCalls.current
   val values = LocalValues.current
   val groups by remember(values) { values.groups() }.collectAsStateWithLifecycle(emptyList())
-  val usualName = remember(values) { values.profile() }.collectAsStateWithLifecycle(null).value?.name.orEmpty()
+  val usualName = usualProfile()?.name.orEmpty()
+  val context = LocalContext.current
+  val resources = LocalResources.current
+  val profile = rememberJoinProfile()
+  val myName = profile.name(usualName)
   val slots = LocalThemeColors.current.marks.size
   var name by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
-  var myName by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
-  var myNameTouched by rememberSaveable { mutableStateOf(false) }
   // The mark picked by hand, which then stays as the name changes; none while it follows the name.
   var picked by rememberSaveable(stateSaver = MarkSaver) { mutableStateOf<GroupMarkValue?>(null) }
   // What 作る sent last, sent again as it was while nothing on the page has changed, so a retry
@@ -81,9 +86,6 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
   var editingEnd by rememberSaveable { mutableStateOf(false) }
   val scope = rememberCoroutineScope()
 
-  // The field starts with the usual name (設定 › プロフィール) until the person types their own.
-  LaunchedEffect(usualName) { if (!myNameTouched) myName = TextFieldValue(usualName) }
-
   val groupName = name.text.trim()
   // The first color the user's groups do not use yet, for the guess and for a mark picked from an
   // emoji or a photo into an icon or letters.
@@ -93,20 +95,33 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
       ?: sent?.takeIf { it.name == groupName }?.mark
       ?: guessGroupMark(name.text, freeColor)
   // Only what the server takes (spec/vectors/fits.json), so the call is never refused for it.
-  val canMake = fitsGroupName(groupName) && fitsGroupMark(mark) && myName.text.isNotBlank() && fitsPersonName(myName.text)
+  val canMake = fitsGroupName(groupName) && fitsGroupMark(mark) && myName.isNotEmpty() && fitsPersonName(myName)
 
   fun make() {
     // The moment the day picked ends on this device: the same day asked again is the same request.
     val endsAtMs = endDay?.let { groupEndsAt(it, ZoneId.systemDefault()) } ?: 0
-    val request = NewGroupRequest.asking(groupName, mark, myName.text.trim(), sent, endsAtMs)
+    val request = NewGroupRequest.asking(groupName, mark, myName, sent, endsAtMs)
     sent = request
     making = true
+    val asUsual = profile.goingOn(usualName)
+    val face = profile.face
     scope.launch {
       try {
         // A picked photo goes up first, for the group to take.
         if (request.mark.photoId.isNotEmpty()) calls.sendHeldPhoto(request.mark.photoId, PhotoShelf.Mine)
+        val made = calls.create(request)
+        // Once the group is made, so one that fails changes nothing; kept by the kit, whether this
+        // page still waits or not.
+        try {
+          calls.keepFace(face, asUsual, made).await()
+        } catch (e: CancellationException) {
+          throw e
+        } catch (_: Exception) {
+          ReviewPrompt.troubled = true
+          Toast.makeText(context, resources.getString(R.string.join_face_failed), Toast.LENGTH_LONG).show()
+        }
         // Still making as the page gives way to the group, so 作る is not there to tap again.
-        onMade(calls.create(request))
+        onMade(made)
         return@launch
       } catch (e: CancellationException) {
         throw e
@@ -147,20 +162,8 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
           row { SettingsRow(stringResource(R.string.group_end), R.drawable.ic_event, onClick = { editingEnd = true }, value = groupEndValue(endDay)) }
         }
       }
-      item {
-        LimitedTextField(
-          myName,
-          {
-            myName = it
-            myNameTouched = true
-          },
-          TextLimits.personName,
-          stringResource(R.string.group_my_name),
-          Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-          placeholder = stringResource(R.string.person_name_example),
-        )
-      }
       item { Footnote(stringResource(R.string.new_group_mark_note)) }
+      item { JoinProfileSection(profile, groupName, stringResource(R.string.new_group_going)) }
     }
   }
   if (editingMark) {

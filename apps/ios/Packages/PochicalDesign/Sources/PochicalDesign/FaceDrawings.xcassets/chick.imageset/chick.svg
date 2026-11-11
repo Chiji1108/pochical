@@ -1,0 +1,5 @@
+<!-- Code generated from design/ by `mise run gen`. Do not edit. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+  <rect width="640" height="640" fill="#e6dcf2"/>
+<ellipse cx="320" cy="165" rx="18" ry="46" fill="#f8d560"/><ellipse cx="288" cy="178" rx="14" ry="36" transform="rotate(-28 288 178)" fill="#f8d560"/><ellipse cx="352" cy="178" rx="14" ry="36" transform="rotate(28 352 178)" fill="#f8d560"/><ellipse cx="128" cy="430" rx="38" ry="72" transform="rotate(22 128 430)" fill="#f1c443"/><ellipse cx="512" cy="430" rx="38" ry="72" transform="rotate(-22 512 430)" fill="#f1c443"/><circle cx="320" cy="380" r="200" fill="#f8d560"/><ellipse cx="245" cy="345" rx="20" ry="27" fill="#4a3b32"/><ellipse cx="395" cy="345" rx="20" ry="27" fill="#4a3b32"/><circle cx="251" cy="336" r="7" fill="#fff"/><circle cx="401" cy="336" r="7" fill="#fff"/><path d="M290 385 h60 l-30 36 Z" fill="#f2954a"/><circle cx="205" cy="405" r="22" fill="#f4b8a8" opacity="0.7"/><circle cx="435" cy="405" r="22" fill="#f4b8a8" opacity="0.7"/>
+</svg>

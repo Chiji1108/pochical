@@ -47,6 +47,30 @@ public struct UsualProfile: Hashable, Sendable {
   }
 }
 
+/// How someone joining a group or making one is asked for their name and
+/// photo (spec/sync-protocol.md, Profile; spec/vectors/profile.json):
+/// `asUsual` with no usual name yet, the name and face asked becoming the
+/// usual ones, and a `drawing` put in place with no usual photo either.
+public struct ProfileAsking: Equatable, Sendable {
+  public let asUsual: Bool
+  public let drawing: Bool
+
+  public init(asUsual: Bool, drawing: Bool) {
+    self.asUsual = asUsual
+    self.drawing = drawing
+  }
+}
+
+/// How the person is asked, once the device knows the account's usual
+/// name and photo: nil until the user's socket has caught up, as a device
+/// just signed in to an account in use holds no profile until then, which
+/// says nothing of the account's.
+public func profileAsking(caughtUp: Bool, usual: UsualProfile) -> ProfileAsking? {
+  guard caughtUp else { return nil }
+  let asUsual = usual.name.isEmpty
+  return ProfileAsking(asUsual: asUsual, drawing: asUsual && usual.photoID.isEmpty)
+}
+
 /// The usual name: what creating or joining a group starts with, each
 /// group keeping its own after.
 public enum Profile {

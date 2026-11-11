@@ -3,22 +3,24 @@ import PochicalKit
 import SQLiteData
 import SwiftUI
 
-/// グループを作る (/design's NewGroupPage): its name, its mark, how the
-/// person is called in it and, for one made for an occasion, its end date
-/// (spec/sync-protocol.md, A group's end). The mark follows the name until one is picked:
+/// グループを作る (/design's NewGroupPage): its name, its mark and, for one
+/// made for an occasion, its end date (spec/sync-protocol.md, A group's
+/// end), then how the person will appear in it, as the join screen asks
+/// (`JoinProfileSection`). The mark follows the name until one is picked:
 /// a fitting emoji, else its first letter in a color the user's other
 /// groups do not use yet.
 struct NewGroupPage: View {
-  @Environment(\.dynamicTypeSize) private var typeSize
   @Environment(\.themeColors) private var colors
   @Environment(\.groupCalls) private var groupCalls
   @FetchAll private var groups: [GroupRow]
   /// Called with the new group's id once it is made.
   let onMade: (String) -> Void
   @State private var name = ""
-  @State private var myName = ""
-  /// The usual name, which the field starts with (設定 › プロフィール).
+  /// How the person will appear in the group, sent once it is made.
+  @State private var profile = JoinProfile()
+  /// The usual name, which the group shows unless another is given.
   @Fetch(ProfileNameRequest()) private var usualName = ""
+  @Environment(\.say) private var say
   /// The mark picked by hand, which then stays as the name changes; none
   /// while the mark follows the name.
   @State private var pickedMark: GroupMarkValue?
@@ -36,7 +38,7 @@ struct NewGroupPage: View {
     // Only what the server takes (spec/vectors/fits.json), so the call
     // is never refused for it.
     let canMake =
-      fitsGroupName(trimmed(name)) && fitsGroupMark(mark) && !trimmed(myName).isEmpty
+      fitsGroupName(trimmed(name)) && fitsGroupMark(mark) && !myName.isEmpty
       && fitsPersonName(myName)
     List {
       Section {
@@ -50,26 +52,18 @@ struct NewGroupPage: View {
             GroupMarkBadge(mark: mark)
           }
         }
-        LabeledContent {
-          LimitedTextField(placeholder: "例：さくら", text: $myName, limit: TextLimits.personName)
-        } label: {
-          // Whole on a narrow screen too, the field taking what is left;
-          // wrapping instead at the largest text sizes.
-          Text("このグループでの名前")
-            .fixedSize(horizontal: !typeSize.isAccessibilitySize, vertical: false)
-        }
         GroupEndLink(end: end) { end = $0 }
       } footer: {
         Text("アイコンはグループ名から自動で入ります。\(end == nil ? "" : groupEndNote)")
       }
       .settingsRows()
+      JoinProfileSection(
+        profile: $profile, groupName: trimmed(name), going: "作ると、",
+        onNavigator: true)
     }
     .settingsList()
     .navigationTitle("グループを作る")
     .navigationBarTitleDisplayMode(.inline)
-    .onChange(of: usualName, initial: true) { _, usual in
-      if myName.isEmpty { myName = usual }
-    }
     .toolbar {
       ToolbarItem(placement: .confirmationAction) {
         if making {
@@ -102,16 +96,21 @@ struct NewGroupPage: View {
     return guessedMark(for: name, color: freeColor)
   }
 
+  /// The name the group will show: its own, else the usual one.
+  private var myName: String { profile.name(usual: usualName) }
+
   /// The first color the user's groups do not use yet, for the guess and
   /// for a mark picked from an emoji or a photo into an icon or letters.
   private var freeColor: Int { nextGroupColor(groups.map(\.mark), slots: colors.marks.count) }
 
   private func make() {
     let request = NewGroupRequest.asking(
-      name: trimmed(name), mark: mark, displayName: trimmed(myName), endsAtMs: groupEndsAt(end),
+      name: trimmed(name), mark: mark, displayName: myName, endsAtMs: groupEndsAt(end),
       after: sent)
     sent = request
     making = true
+    let asUsual = profile.goingOn(usualName: usualName)
+    let face = profile.face
     Task {
       do {
         // A picked photo goes up first, for the group to take.
@@ -119,6 +118,10 @@ struct NewGroupPage: View {
           try await groupCalls.sendMarkPhoto(request.mark.photoID)
         }
         let made = try await groupCalls.create(request)
+        // Once the group is made, so one that fails changes nothing.
+        if !(await groupCalls.keep(face, asUsual: asUsual, in: made)) {
+          say(joinFaceNotKept)
+        }
         // Still making until the group has come and the page has turned
         // into メンバーを招待 (GroupsScreen), so 作る is not there to tap
         // again meanwhile.

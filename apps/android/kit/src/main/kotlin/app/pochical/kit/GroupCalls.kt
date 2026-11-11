@@ -116,6 +116,52 @@ class GroupCalls internal constructor(
     setProfile(name, photoId)
   }
 
+  /**
+   * Keeps the face picked while joining or making the group [groupId], now the person is in it
+   * (spec/sync-protocol.md, Profile), as [keepProfile] keeps the usual ones: taken at once and sent
+   * by the kit whether the screen still waits or not, as it gives way to the group. Someone who had
+   * no usual name ([asUsual]), whose name joining or making the group made the usual one, keeps the
+   * face as theirs everywhere too, which the group then shows as it shows anyone's usual ones;
+   * anyone else's face, or one not kept as usual, is the group's own. A photo held for it goes from
+   * the device once kept.
+   */
+  fun keepFace(face: JoinFace, asUsual: Boolean, groupId: String): Deferred<Unit> = keep {
+    val usual =
+      asUsual &&
+        try {
+          when (face) {
+            JoinFace.Usual -> Unit
+            is JoinFace.Held -> {
+              sendHeldPhoto(face.photoId, PhotoShelf.Mine)
+              setProfile(name = null, photoId = face.photoId)
+            }
+            JoinFace.None -> setProfile(name = null, photoId = "")
+          }
+          true
+        } catch (e: CancellationException) {
+          throw e
+        } catch (_: Exception) {
+          false
+        }
+    if (!usual) {
+      when (face) {
+        JoinFace.Usual -> Unit
+        is JoinFace.Held -> {
+          sendHeldPhoto(face.photoId, PhotoShelf.Group(groupId))
+          setGroupPhoto(groupId, usual = false, photoId = face.photoId)
+        }
+        JoinFace.None -> setGroupPhoto(groupId, usual = false)
+      }
+    }
+    if (face is JoinFace.Held) releasePhoto(face.photoId)
+  }
+
+  /**
+   * Lets go of a held photo the person no longer means to send ([releasePhoto]), in turn after what
+   * was kept before it: a screen left as its face is being kept lets go only once it has gone.
+   */
+  fun letGoOfPhoto(photoId: String): Deferred<Unit> = keep { releasePhoto(photoId) }
+
   private fun keep(send: suspend () -> Unit): Deferred<Unit> {
     val call = Kept(send)
     kept.trySend(call)

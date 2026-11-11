@@ -56,6 +56,13 @@ import {
 import type { Preset } from "../src/themes";
 import { monoFont, textStyles } from "../src/type";
 import { widgetRules } from "../src/widgets";
+import {
+  kotlinDrawingResources,
+  kotlinDrawings,
+  swiftDrawingAssets,
+  swiftDrawings,
+  webDrawings,
+} from "./drawing-code";
 import { kotlinHolidays, swiftHolidays, webHolidays } from "./holidays";
 import {
   kotlinMarkIconNames,
@@ -728,6 +735,11 @@ const outputs = {
   [`${KOTLIN_DIR}/Skies.kt`]: kotlinFile(kotlinSkies()),
   [`${SWIFT_DIR}/Notices.swift`]: swiftFile(swiftNotices()),
   [`${KOTLIN_DIR}/Notices.kt`]: kotlinFile(kotlinNotices()),
+  [`${SWIFT_DIR}/FaceDrawings.swift`]: swiftFile(swiftDrawings()),
+  ...swiftDrawingAssets(`${SWIFT_DIR}/FaceDrawings.xcassets`, HEADER),
+  [`${KOTLIN_DIR}/FaceDrawings.kt`]: kotlinFile(kotlinDrawings()),
+  ...kotlinDrawingResources("apps/android/design/src/main/res/raw", HEADER),
+  "packages/prototype/src/lib/drawings.ts": webDrawings(HEADER),
   "packages/prototype/src/lib/holiday-names.ts": webHolidays(HEADER),
   "packages/prototype/src/lib/notices.ts": webNotices(HEADER),
   ...sharedOutputs,

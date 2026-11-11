@@ -1,0 +1,12 @@
+<!-- Code generated from design/ by `mise run gen`. Do not edit. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+  <rect width="640" height="640" fill="#cfe3ee"/>
+  <ellipse cx="320" cy="520" rx="230" ry="42" fill="#f7f3ec"/>
+  <ellipse cx="320" cy="514" rx="150" ry="22" fill="#e4ddd2"/>
+  <path d="M455 330 h30 a62 62 0 0 1 0 124 h-48" fill="none" stroke="#fffdf8" stroke-width="30" stroke-linecap="round"/>
+  <path d="M165 290 h310 v90 a155 140 0 0 1 -310 0 Z" fill="#fffdf8"/>
+  <ellipse cx="320" cy="290" rx="155" ry="34" fill="#fffdf8"/>
+  <ellipse cx="320" cy="292" rx="134" ry="24" fill="#8a5a3c"/>
+  <path d="M320 276 c-22 -14 -44 6 -22 22 l22 12 l22 -12 c22 -16 0 -36 -22 -22 Z" fill="#f1dcc4"/>
+  <path d="M250 215 c-24 -34 24 -50 0 -88 M320 205 c-24 -34 24 -50 0 -88 M390 215 c-24 -34 24 -50 0 -88" fill="none" stroke="#fffdf8" stroke-width="14" stroke-linecap="round" opacity="0.85"/>
+</svg>

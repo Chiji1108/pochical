@@ -10,11 +10,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -42,86 +40,37 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.Saver
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.pochical.Footnote
 import app.pochical.Headline
-import app.pochical.LimitedTextField
 import app.pochical.ListSheet
 import app.pochical.MarkFrame
 import app.pochical.MarkFrameSize
 import app.pochical.R
 import app.pochical.ReviewPrompt
-import app.pochical.SectionHeader
-import app.pochical.SectionRow
-import app.pochical.SettingsRow
 import app.pochical.design.GROUP_MAX_MEMBERS
 import app.pochical.design.Metrics
-import app.pochical.design.TextLimits
 import app.pochical.calendar.rememberToday
 import app.pochical.kit.InviteDetails
 import app.pochical.kit.InviteFailure
 import app.pochical.kit.PhotoShelf
 import app.pochical.kit.fitsPersonName
+import kotlin.coroutines.cancellation.CancellationException
+import app.pochical.people.usualProfile
 import app.pochical.rowColors
 import app.pochical.segmentShapes
-import java.io.IOException
-import kotlin.coroutines.cancellation.CancellationException
 import java.time.ZoneId
 import kotlinx.coroutines.launch
-
-/**
- * The face a group shows of the person joining it: their usual one, one picked here (held on the
- * device under the id it is sent as, `GroupCalls.holdPhoto`), or none.
- */
-sealed interface JoinFace {
-  data object Usual : JoinFace
-
-  data class Held(val photoId: String) : JoinFace
-
-  data object None : JoinFace
-}
-
-/**
- * The choice kept across the activity made anew and the process's death, as the name typed beside
- * it is: a face removed on purpose must not come back as the usual one. A picked photo is kept by
- * its held id, its bytes in the app's cache.
- */
-val JoinFaceSaver: Saver<JoinFace, String> =
-  Saver(
-    save = {
-      when (it) {
-        JoinFace.Usual -> "usual"
-        JoinFace.None -> "none"
-        is JoinFace.Held -> "held:${it.photoId}"
-      }
-    },
-    restore = {
-      when {
-        it == "none" -> JoinFace.None
-        it.startsWith("held:") -> JoinFace.Held(it.removePrefix("held:"))
-        else -> JoinFace.Usual
-      }
-    },
-  )
 
 /**
  * 参加の画面 (/design's JoinScreen), opened by an invitation's link or its QR code: the group, its
@@ -138,20 +87,15 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
   val resources = LocalResources.current
   val context = LocalContext.current
   val scope = rememberCoroutineScope()
-  val profile by remember(values) { values.profile() }.collectAsStateWithLifecycle(null)
-  val usualName = profile?.name.orEmpty()
-  val usualPhoto = profile?.photoId.orEmpty()
+  val usualName = usualProfile()?.name.orEmpty()
   var details by remember { mutableStateOf<InviteDetails?>(null) }
   var loadError by remember { mutableStateOf<InviteFailure.Reason?>(null) }
   var loads by remember { mutableStateOf(0) }
-  // A name of its own for this group; empty follows the usual one.
-  var ownName by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
-  var face by rememberSaveable(stateSaver = JoinFaceSaver) { mutableStateOf<JoinFace>(JoinFace.Usual) }
+  val profile = rememberJoinProfile()
   var joining by remember { mutableStateOf(false) }
   var joinError by remember { mutableStateOf<InviteFailure.Reason?>(null) }
   var showingMembers by remember { mutableStateOf(false) }
-  var editingProfile by remember { mutableStateOf(false) }
-  val myName = ownName.text.trim().ifEmpty { usualName }
+  val myName = profile.name(usualName)
 
   LaunchedEffect(code, loads) {
     try {
@@ -167,27 +111,22 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
     }
   }
 
-  /** A photo picked here and let go of, by another, by none, or by closing, goes from the device. */
-  fun letGo(picked: JoinFace) {
-    if (picked is JoinFace.Held) scope.launch { calls.releasePhoto(picked.photoId) }
-  }
-
-  fun close() {
-    letGo(face)
-    onClose()
-  }
-  BackHandler(onBack = ::close)
+  BackHandler(onBack = onClose)
 
   fun join() {
     joining = true
+    val asUsual = profile.goingOn(usualName)
+    val face = profile.face
     scope.launch {
       try {
         val groupId = calls.join(code, myName)
-        // Once in the group: someone with no usual name yet keeps these as theirs everywhere, which
-        // the group then shows as it shows anyone's usual ones; anyone else's face is the group's.
-        val faced = if (usualName.isEmpty()) keepAsUsual(calls, face) else setFace(calls, face, groupId)
-        (face as? JoinFace.Held)?.let { calls.releasePhoto(it.photoId) }
-        if (!faced) {
+        // Once in the group, so a join that fails changes nothing; kept by the kit, whether this
+        // screen still waits or not.
+        try {
+          calls.keepFace(face, asUsual, groupId).await()
+        } catch (e: CancellationException) {
+          throw e
+        } catch (_: Exception) {
           ReviewPrompt.troubled = true
           // Said past this screen, which gives way to the group at once.
           Toast.makeText(context, resources.getString(R.string.join_face_failed), Toast.LENGTH_LONG).show()
@@ -205,7 +144,7 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
     topBar = {
       TopAppBar(
         title = {},
-        navigationIcon = { IconButton(onClick = ::close) { Icon(painterResource(R.drawable.ic_close), stringResource(R.string.close)) } },
+        navigationIcon = { IconButton(onClick = onClose) { Icon(painterResource(R.drawable.ic_close), stringResource(R.string.close)) } },
       )
     }
   ) { padding ->
@@ -215,20 +154,7 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
         Column(Modifier.padding(padding).fillMaxSize()) {
           Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
             Invitation(shown, code) { showingMembers = true }
-            SectionHeader(stringResource(if (usualName.isEmpty()) R.string.join_you_usual else R.string.group_me))
-            SectionRow(0, 1) {
-              SettingsRow(
-                myName.ifEmpty { stringResource(R.string.join_name_needed) },
-                icon = null,
-                onClick = { editingProfile = true },
-                leading = { JoinFacePicture(face, myName, usualPhoto, 32.dp) },
-                value =
-                  stringResource(
-                    if (usualName.isEmpty() || (myName == usualName && face == JoinFace.Usual)) R.string.usual_same else R.string.group_only
-                  ),
-                oneLine = true,
-              )
-            }
+            JoinProfileSection(profile, shown.name, stringResource(R.string.join_going))
           }
           Column(
             Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp),
@@ -264,22 +190,6 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
   }
 
   if (showingMembers) details?.let { MembersSheet(it, code) { showingMembers = false } }
-  if (editingProfile) {
-    JoinProfileDialog(
-      groupName = details?.name.orEmpty(),
-      usualName = usualName,
-      ownName = ownName,
-      onOwnName = { ownName = it },
-      face = face,
-      onFace = { chosen ->
-        if (chosen != face) letGo(face)
-        face = chosen
-      },
-      usualPhoto = usualPhoto,
-      myName = myName,
-      onClose = { editingProfile = false },
-    )
-  }
   joinError?.let { reason ->
     AlertDialog(
       onDismissRequest = { joinError = null },
@@ -393,119 +303,3 @@ private fun MembersSheet(details: InviteDetails, code: String, onDismiss: () -> 
     }
   }
 }
-
-/** The face the group will show: the one picked here, the usual one, or the name's letter. */
-@Composable
-private fun JoinFacePicture(face: JoinFace, name: String, usualPhoto: String, size: Dp) {
-  when (face) {
-    is JoinFace.Held -> PhotoPicture(face.photoId, PhotoShelf.Mine, Modifier.size(size).clip(CircleShape))
-    JoinFace.Usual -> MemberAvatar(name, usualPhoto, PhotoShelf.Mine, size, me = true)
-    JoinFace.None -> MemberAvatar(name, "", null, size, me = true)
-  }
-}
-
-/**
- * このグループでのあなた before joining (/design's GroupProfilePage on the join screen), or あなたの名前と写真
- * for someone with no usual name yet: the face and a name of its own, kept here and sent as the
- * person joins.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun JoinProfileDialog(
-  groupName: String,
-  usualName: String,
-  ownName: TextFieldValue,
-  onOwnName: (TextFieldValue) -> Unit,
-  face: JoinFace,
-  onFace: (JoinFace) -> Unit,
-  usualPhoto: String,
-  myName: String,
-  onClose: () -> Unit,
-) {
-  val calls = LocalGroupCalls.current
-  var photoFailed by remember { mutableStateOf(false) }
-  if (photoFailed) FailedDialog(stringResource(R.string.mark_photo_failed)) { photoFailed = false }
-  Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-    Scaffold(
-      topBar = {
-        TopAppBar(
-          title = { Text(stringResource(if (usualName.isEmpty()) R.string.join_you_usual else R.string.group_me)) },
-          navigationIcon = { IconButton(onClick = onClose) { Icon(painterResource(R.drawable.ic_close), stringResource(R.string.close)) } },
-        )
-      }
-    ) { padding ->
-      Column(Modifier.consumeWindowInsets(padding).imePadding().verticalScroll(rememberScrollState()).padding(padding), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        val hasPhoto = face is JoinFace.Held || (face == JoinFace.Usual && usualPhoto.isNotEmpty())
-        PhotoEditor(
-          label = stringResource(R.string.photo_edit),
-          shape = PhotoCropShape.Round,
-          onPhoto = {
-            try {
-              onFace(JoinFace.Held(calls.holdPhoto(it)))
-            } catch (_: IOException) {
-              ReviewPrompt.troubled = true
-              photoFailed = true
-            }
-          },
-          modifier = Modifier.padding(top = 16.dp),
-          onUsual = if (face == JoinFace.Usual || usualPhoto.isEmpty()) null else ({ onFace(JoinFace.Usual) }),
-          onRemove = if (hasPhoto) ({ onFace(JoinFace.None) }) else null,
-        ) {
-          JoinFacePicture(face, myName, usualPhoto, 88.dp)
-        }
-        LimitedTextField(
-          ownName,
-          onOwnName,
-          TextLimits.personName,
-          stringResource(R.string.name),
-          Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-          placeholder = usualName.ifEmpty { stringResource(R.string.person_name_example) },
-        )
-        Footnote(
-          if (usualName.isEmpty()) stringResource(R.string.join_you_usual_note)
-          else stringResource(R.string.join_you_note, groupName, usualName)
-        )
-      }
-    }
-  }
-}
-
-/**
- * The face as the usual one (設定 › プロフィール), for someone who had no usual name, whose name the
- * join itself made their usual one; the usual photo, if there is one, stays as it is. Whether it was
- * kept.
- */
-private suspend fun keepAsUsual(calls: app.pochical.kit.GroupCalls, face: JoinFace): Boolean =
-  try {
-    when (face) {
-      JoinFace.Usual -> Unit
-      is JoinFace.Held -> {
-        calls.sendHeldPhoto(face.photoId, PhotoShelf.Mine)
-        calls.setProfile(name = null, photoId = face.photoId)
-      }
-      JoinFace.None -> calls.setProfile(name = null, photoId = "")
-    }
-    true
-  } catch (e: CancellationException) {
-    throw e
-  } catch (_: Exception) {
-    false
-  }
-
-/** The face picked here, set now the person is in the group; the usual one needs nothing. Whether it was. */
-private suspend fun setFace(calls: app.pochical.kit.GroupCalls, face: JoinFace, groupId: String): Boolean =
-  try {
-    when (face) {
-      JoinFace.Usual -> Unit
-      is JoinFace.Held -> {
-        calls.sendHeldPhoto(face.photoId, PhotoShelf.Group(groupId))
-        calls.setGroupPhoto(groupId, usual = false, photoId = face.photoId)
-      }
-      JoinFace.None -> calls.setGroupPhoto(groupId, usual = false)
-    }
-    true
-  } catch (e: CancellationException) {
-    throw e
-  } catch (_: Exception) {
-    false
-  }

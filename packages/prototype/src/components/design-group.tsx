@@ -112,6 +112,7 @@ export function DesignGroup({
 }) {
   const groups = useUser((state) => state.groups);
   const setGroups = useUser((state) => state.setGroups);
+  const setProfile = useUser((state) => state.setProfile);
   const [groupId, setGroupId] = useState(initialGroupId);
   const chats = useUser((state) => state.chats);
   const setChats = useUser((state) => state.setChats);
@@ -220,12 +221,20 @@ export function DesignGroup({
         onBack={() => {
           setPage({ name: "hub" });
         }}
-        onCreate={({ myName, ...created }) => {
+        onCreate={({ mine: picked, ...created }) => {
           const id = `group-${groups.length}`;
-          const mine = myName === profile.name ? undefined : { name: myName };
+          // With no usual name yet, the name and face become the usual
+          // ones, which the group then shows as anyone's.
+          const first = profile.name === "";
+          if (first) {
+            // A usual photo stays unless one was picked or it was taken off.
+            setProfile(profileIn({ ...created, id, mine: picked }, profile));
+          }
+          const mine = first ? undefined : picked;
           setGroups([...groups, { ...created, id, mine }]);
           if (created.endsAt !== undefined) {
-            addNotice(id, endSetNotice(myName, created.endsAt));
+            const by = profileIn({ ...created, id, mine: picked }, profile);
+            addNotice(id, endSetNotice(by.name, created.endsAt));
           }
           setGroupId(id);
           setPage({ name: "invite" });

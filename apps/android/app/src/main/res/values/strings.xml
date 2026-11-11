@@ -228,6 +228,7 @@
   <string name="photo_crop_choose">選択</string>
   <string name="photo_take">写真を撮る</string>
   <string name="photo_pick">写真を選ぶ</string>
+  <string name="photo_drawing">イラストを選ぶ</string>
   <string name="photo_usual">いつもの写真に戻す</string>
   <string name="photo_remove">写真を削除</string>
   <string name="photo_unreadable">写真を読み込めませんでした</string>
@@ -251,12 +252,13 @@
   <string name="group_mark_note">メンバー全員に、このアイコンがそのまま表示されます。スタイルの「シフトの見た目」には左右されません。</string>
   <string name="group_name">グループ名</string>
   <string name="group_name_example">例：家族</string>
-  <string name="group_my_name">このグループでの名前</string>
   <string name="group_members">メンバー</string>
   <string name="member_me">%1$s（自分）</string>
   <string name="new_group">グループを作る</string>
   <string name="new_group_make">作る</string>
   <string name="new_group_mark_note">アイコンはグループ名から自動で入ります。</string>
+  <string name="new_group_going">作ると、</string>
+  <string name="this_group">このグループ</string>
   <string name="new_group_failed">グループを作れませんでした</string>
   <string name="invite">メンバーを招待</string>
   <string name="invite_qr">招待のQRコード</string>
@@ -330,8 +332,9 @@
   <string name="join_already_in">「%1$s」にはもう参加しています</string>
   <string name="join_you_usual">あなたの名前と写真</string>
   <string name="join_name_needed">名前を入れてください</string>
-  <string name="join_you_usual_note">参加すると、この名前と写真がいつもの名前と写真になり、ほかのグループでも使われます。設定 › プロフィールで変えられます。</string>
-  <string name="join_you_note">参加すると、%1$sの人にだけ、この名前と写真で表示されます。名前が空欄なら「%2$s」、写真を入れなければいつもの写真のままです。</string>
+  <string name="join_going">参加すると、</string>
+  <string name="join_you_usual_note">%1$sこの名前と写真がいつもの名前と写真になり、ほかのグループでも使われます。設定 › プロフィールで変えられます。</string>
+  <string name="join_you_note">%1$s%2$sの人にだけ、この名前と写真で表示されます。名前が空欄なら「%3$s」、写真を入れなければいつもの写真のままです。</string>
   <string name="join_face_failed">写真を設定できませんでした。グループの設定から変えられます</string>
   <string name="join_members_one">%1$sが参加中</string>
   <string name="join_members_few">%1$sの%2$d人が参加中</string>
