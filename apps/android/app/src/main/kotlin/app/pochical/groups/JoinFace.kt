@@ -131,8 +131,10 @@ class JoinProfile(ownName: TextFieldValue = TextFieldValue(), face: JoinFace = J
  * none until then; before that the row shows the usual ones as it reads them and nothing is put in
  * place. A drawing that cannot be drawn or held is none put in place.
  *
- * A photo held for the face goes from the device as the screen is left for good, in turn after
- * the kit has kept it if the person went on ([GroupCalls.letGoOfPhoto]); not as the phone turns.
+ * A photo held for the face goes from the device as the screen is left for good, in turn
+ * ([GroupCalls.letGoOfPhoto]): after the kit's call into the group, which keeps the face, if the
+ * person went on, though the screen was left while that call was still under way; not as the
+ * phone turns.
  */
 @Composable
 fun rememberJoinProfile(): JoinProfile {

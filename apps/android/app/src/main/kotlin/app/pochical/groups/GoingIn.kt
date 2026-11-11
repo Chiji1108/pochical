@@ -1,80 +1,70 @@
 package app.pochical.groups
 
 import android.widget.Toast
+import androidx.activity.compose.LocalActivity
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.retain.retain
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.R
 import app.pochical.ReviewPrompt
-import app.pochical.kit.InGroup
+import app.pochical.kit.GoingIn
 import kotlin.coroutines.cancellation.CancellationException
-import kotlinx.coroutines.Deferred
 
 /**
- * The person going into a group from a page, made (グループを作る) or joined (参加の画面): the kit's
- * call ([app.pochical.kit.GroupCalls.make], `joining`), which the page [begin]s and then waits on.
- * The call is the kit's and is held here over the window made anew, so the screen turned while it
- * is under way neither stops it nor leaves the page behind once the person is in the group: the
- * page there awaits the same call (#1178).
- */
-@Stable
-class GoingIn internal constructor(private val held: Held) {
-  /** The call under way, kept while the window is made anew; none once its answer is taken. */
-  internal class Held {
-    var call by mutableStateOf<Deferred<InGroup>?>(null)
-  }
-
-  /** In the group, the page giving way to it. */
-  internal var gone by mutableStateOf(false)
-
-  /** Under way, and still as the page gives way to the group, so its button is not there to tap again. */
-  val busy: Boolean
-    get() = held.call != null || gone
-
-  fun begin(call: Deferred<InGroup>) {
-    held.call = call
-  }
-}
-
-/**
- * A page's [GoingIn]: once the person is in the group [onIn] gets its id, a face that could not be
- * kept said past the page, which gives way to the group at once; a call that fails goes to
- * [onFailed], the page free to ask again.
+ * A page waiting on the kit's call into a group ([GoingIn]), グループを作る's or 参加の画面's, while
+ * the call is [mine]: whether its button is busy. The call is the kit's, so the page drawn again
+ * after the screen turned, or opened again after it was left, finds it under way and waits on
+ * (#1178). Once the person is in the group [onIn] gets its id, a face that could not be kept said
+ * past the page, which gives way to the group at once; a call that fails goes to [onFailed], the
+ * page free to ask again. A page left for good while it waits tells the kit so, which then
+ * forgets the call as it ends: the group is in the person's list, and nothing opens by itself.
  */
 @Composable
-fun rememberGoingIn(onIn: (String) -> Unit, onFailed: (Exception) -> Unit): GoingIn {
-  val held = retain { GoingIn.Held() }
-  val going = remember(held) { GoingIn(held) }
+fun <Asked> waitingOn(going: GoingIn<Asked>, mine: (Asked) -> Boolean = { true }, onIn: (String) -> Unit, onFailed: (Exception) -> Unit): Boolean {
+  val call by going.underWay.collectAsStateWithLifecycle()
+  // In the group, the page giving way to it: busy still, so its button is not there to tap again.
+  var gone by remember { mutableStateOf(false) }
   val context = LocalContext.current
   val resources = LocalResources.current
+  val activity = LocalActivity.current
   val entered by rememberUpdatedState(onIn)
   val failed by rememberUpdatedState(onFailed)
-  LaunchedEffect(held.call) {
-    val call = held.call ?: return@LaunchedEffect
+  val waited = call?.takeIf { mine(it.asked) }
+  LaunchedEffect(waited) {
+    val waitedOn = waited ?: return@LaunchedEffect
+    going.waitOn(waitedOn)
     try {
-      val group = call.await()
+      val group = waitedOn.answer.await()
       if (!group.faceKept) {
         ReviewPrompt.troubled = true
         Toast.makeText(context, resources.getString(R.string.join_face_failed), Toast.LENGTH_LONG).show()
       }
-      // Taken once: nothing is held for a page opened after this one.
-      going.gone = true
-      held.call = null
+      gone = true
+      going.took(waitedOn)
       entered(group.groupId)
     } catch (e: CancellationException) {
+      // The page going, never the call: the kit's scope ends with the app alone.
       throw e
     } catch (e: Exception) {
-      held.call = null
+      going.took(waitedOn)
       failed(e)
     }
   }
-  return going
+  val isMine by rememberUpdatedState(mine)
+  DisposableEffect(going) {
+    onDispose {
+      // Not as the phone turns: the page drawn again waits on. The call as the kit has it now,
+      // which the page may have begun without having been drawn waiting yet.
+      if (activity?.isChangingConfigurations != true) going.underWay.value?.takeIf { isMine(it.asked) }?.let(going::left)
+    }
+  }
+  return call != null || gone
 }

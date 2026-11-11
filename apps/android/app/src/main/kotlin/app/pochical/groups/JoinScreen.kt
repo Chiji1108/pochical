@@ -63,6 +63,7 @@ import app.pochical.design.Metrics
 import app.pochical.calendar.rememberToday
 import app.pochical.kit.InviteDetails
 import app.pochical.kit.InviteFailure
+import app.pochical.kit.JoinAsk
 import app.pochical.kit.PhotoShelf
 import app.pochical.kit.fitsPersonName
 import app.pochical.people.usualProfile
@@ -109,19 +110,21 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
 
   BackHandler(onBack = onClose)
 
+  // This invitation's, as one join is under way at a time: another's leaves the button busy alone.
   val joining =
-    rememberGoingIn(onIn = onGroup) { failure ->
+    waitingOn(calls.joining, mine = { it.code == code }, onIn = onGroup) { failure ->
       ReviewPrompt.troubled = true
       joinError = (failure as? InviteFailure)?.reason ?: InviteFailure.Reason.Failed
     }
 
-  // The kit's from here, the face once the person is in the group, whether this screen still
-  // waits or not.
   fun join() {
     // The name as the screen holds it now: 参加する may be tapped before the screen is drawn again
     // with the last letter (#1185). As the button is off for, one the server would refuse is not sent.
     val name = profile.name(usualName)
-    if (name.isNotEmpty() && fitsPersonName(name)) joining.begin(calls.joining(code, name, profile.face, profile.goingOn(usualName)))
+    if (details?.full != false || name.isEmpty() || !fitsPersonName(name)) return
+    // The kit's from here, the face once the person is in the group, whether this screen still
+    // waits or not; tapped again before the screen is drawn busy, the same call.
+    calls.joining.begin(JoinAsk(code, name), profile.face, profile.goingOn(usualName))
   }
 
   Scaffold(
@@ -160,8 +163,8 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
               textAlign = TextAlign.Center,
             )
             val canJoin = !shown.full && myName.isNotEmpty() && fitsPersonName(myName)
-            Button(onClick = ::join, shapes = ButtonDefaults.shapes(), enabled = canJoin && !joining.busy, modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
-              if (joining.busy) CircularProgressIndicator(Modifier.size(20.dp)) else Text(stringResource(R.string.join))
+            Button(onClick = ::join, shapes = ButtonDefaults.shapes(), enabled = canJoin && !joining, modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
+              if (joining) CircularProgressIndicator(Modifier.size(20.dp)) else Text(stringResource(R.string.join))
             }
           }
         }

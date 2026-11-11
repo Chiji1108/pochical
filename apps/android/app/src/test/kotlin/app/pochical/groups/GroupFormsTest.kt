@@ -16,6 +16,7 @@ import app.pochical.LocalAccount
 import app.pochical.LocalDeviceSettings
 import app.pochical.PochicalTheme
 import app.pochical.kit.DeviceSettings
+import app.pochical.kit.GoingIn
 import app.pochical.kit.GroupMarkValue
 import app.pochical.kit.GroupRow
 import app.pochical.kit.InGroup
@@ -30,9 +31,9 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 
 /**
- * グループを編集 and グループを作る send what the page holds at the tap: their button's own action is
- * run with no frame after the name is typed, as a touch's frames would let the page be drawn
- * again before it (#1185).
+ * グループを編集 and グループを作る act on what the page holds at the tap: their button's own action
+ * is run with no frame after the name is typed, and again at once, as a touch's frames would let
+ * the page be drawn again in between (#1185).
  */
 @RunWith(RobolectricTestRunner::class)
 class GroupFormsTest {
@@ -55,36 +56,55 @@ class GroupFormsTest {
     compose.waitForIdle()
   }
 
-  /** Types [name] into the field labelled [label] and runs [button]'s action before any frame. */
-  private fun typeAndTap(label: String, name: String, button: String) {
+  /** Types [name] into the field labelled [label] and runs [button]'s action twice, before any frame. */
+  private fun typeAndTapTwice(label: String, name: String, button: String) {
     compose.mainClock.autoAdvance = false
     compose.onNode(hasSetTextAction() and hasText(label)).performTextReplacement(name)
-    compose.onNodeWithText(button).performSemanticsAction(SemanticsActions.OnClick)
+    repeat(2) { compose.onNodeWithText(button).performSemanticsAction(SemanticsActions.OnClick) }
     compose.mainClock.autoAdvance = true
     compose.waitForIdle()
   }
 
   @Test
-  fun aGroupsNameSavedBeforeThePageIsDrawnAgainIsTheNameTyped() {
-    val renamed = mutableListOf<String>()
+  fun aGroupsNameSavedBeforeThePageIsDrawnAgainIsTheNameTypedSavedOnce() {
+    val saved = mutableListOf<String>()
     val group = GroupRow("group-1", "家族", joinedAtMs = 0, mark = GroupMarkValue(emoji = "🏠"))
-    show { EditForm(group, onBack = {}) { name, _ -> renamed += name } }
+    // A save still under way as the second tap comes.
+    show {
+      EditForm(group, onBack = {}) { name, _ ->
+        saved += name
+        CompletableDeferred<Unit>().await()
+      }
+    }
 
-    typeAndTap("グループ名", "実家", "保存")
-    assertEquals(listOf("実家"), renamed)
+    typeAndTapTwice("グループ名", "実家", "保存")
+    assertEquals(listOf("実家"), saved)
   }
 
   @Test
-  fun aGroupMadeBeforeThePageIsDrawnAgainHasTheNameTyped() {
+  fun aGroupMadeBeforeThePageIsDrawnAgainHasTheNameTypedAndIsAskedForOnce() {
     val asked = mutableListOf<NewGroupRequest>()
-    show { NewGroupPage(onBack = {}, onMade = {}, make = { request, _, _ -> asked += request; CompletableDeferred<InGroup>() }) }
+    val making = GoingIn<NewGroupRequest> { request, _, _ -> CompletableDeferred<InGroup>().also { asked += request } }
+    show { NewGroupPage(onBack = {}, onMade = {}, making = making) }
     // The person's name first, asked for as they have no usual one.
     compose.onNodeWithText("名前を入れてください").performClick()
     compose.onNode(hasSetTextAction() and hasText("名前")).performTextReplacement("さくら")
     compose.onNodeWithContentDescription("閉じる").performClick()
     compose.waitForIdle()
 
-    typeAndTap("グループ名", "忘年会", "作る")
+    typeAndTapTwice("グループ名", "忘年会", "作る")
     assertEquals(listOf("忘年会" to "さくら"), asked.map { it.name to it.displayName })
+  }
+
+  /** The page opened again while its group is still being made shows it under way, not an empty form. */
+  @Test
+  fun thePageOpenedWhileAGroupIsBeingMadeShowsItUnderWay() {
+    val making = GoingIn<NewGroupRequest> { _, _, _ -> CompletableDeferred() }
+    val call = making.begin(NewGroupRequest.asking("忘年会", GroupMarkValue(emoji = "🍻"), "さくら", last = null), app.pochical.kit.JoinFace.Usual, asUsual = false)
+    making.left(call)
+    show { NewGroupPage(onBack = {}, onMade = {}, making = making) }
+
+    compose.onNode(hasSetTextAction() and hasText("忘年会")).assertExists()
+    compose.onNodeWithText("作る").assertDoesNotExist()
   }
 }

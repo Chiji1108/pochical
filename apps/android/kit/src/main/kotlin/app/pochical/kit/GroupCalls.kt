@@ -39,7 +39,6 @@ import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import okhttp3.HttpUrl
@@ -75,21 +74,12 @@ class GroupCalls internal constructor(
   private val chats
     get() = ChatServiceClient(client)
 
-  /** The names and profiles kept, sent one at a time in the order they were kept. */
-  private val kept = Channel<Kept>(Channel.UNLIMITED)
+  /** The names, profiles and ways into a group kept, sent one at a time in the order they were kept. */
+  private val kept = Channel<Kept<*>>(Channel.UNLIMITED)
 
   init {
     scope.launch {
-      for (kept in kept) {
-        try {
-          kept.send()
-          kept.answer.complete(Unit)
-        } catch (e: CancellationException) {
-          throw e
-        } catch (e: Exception) {
-          kept.answer.completeExceptionally(e)
-        }
-      }
+      for (kept in kept) kept.run()
     }
   }
 
@@ -126,7 +116,9 @@ class GroupCalls internal constructor(
    * anyone else's face, or one not kept as usual, is the group's own. A photo held for it goes from
    * the device once kept.
    */
-  fun keepFace(face: JoinFace, asUsual: Boolean, groupId: String): Deferred<Unit> = keep {
+  fun keepFace(face: JoinFace, asUsual: Boolean, groupId: String): Deferred<Unit> = keep { sendFace(face, asUsual, groupId) }
+
+  private suspend fun sendFace(face: JoinFace, asUsual: Boolean, groupId: String) {
     val usual =
       asUsual &&
         try {
@@ -159,45 +151,59 @@ class GroupCalls internal constructor(
 
   /**
    * Lets go of a held photo the person no longer means to send ([releasePhoto]), in turn after what
-   * was kept before it: a screen left as its face is being kept lets go only once it has gone.
+   * was kept before it: a screen left as its face is being kept, or as the group it is for is still
+   * being made or joined ([making], [joining]), lets go only once that has gone.
    */
   fun letGoOfPhoto(photoId: String): Deferred<Unit> = keep { releasePhoto(photoId) }
 
-  private fun keep(send: suspend () -> Unit): Deferred<Unit> {
+  private fun <T> keep(send: suspend () -> T): Deferred<T> {
     val call = Kept(send)
     kept.trySend(call)
     return call.answer
   }
 
-  private class Kept(val send: suspend () -> Unit) {
-    val answer = CompletableDeferred<Unit>()
+  private class Kept<T>(private val send: suspend () -> T) {
+    val answer = CompletableDeferred<T>()
+
+    suspend fun run() {
+      try {
+        answer.complete(send())
+      } catch (e: CancellationException) {
+        throw e
+      } catch (e: Exception) {
+        answer.completeExceptionally(e)
+      }
+    }
   }
 
   /**
-   * Makes the group [request] asks for and keeps [face] in it ([keepFace]), a photo picked for its
-   * mark sent first for the group to take: begun at once and carried by the kit, whether the page
-   * that asked still waits or not, so a window made anew under it (the screen turned) neither stops
-   * the call nor loses its answer, which the page there then awaits (#1178). It fails as [create]
-   * does, or with [MarkPhotoGone].
+   * グループを作る's way into the group a request asks for ([GoingIn]): a photo picked for its mark
+   * sent first for the group to take, the group made ([create]), then the face kept in it. It
+   * fails as [create] does, or with [MarkPhotoGone].
    */
-  fun make(request: NewGroupRequest, face: JoinFace, asUsual: Boolean): Deferred<InGroup> = entering(face, asUsual) {
-    if (request.mark.photoId.isNotEmpty()) sendHeldPhoto(request.mark.photoId, PhotoShelf.Mine)
-    create(request)
-  }
+  val making =
+    GoingIn<NewGroupRequest> { request, face, asUsual ->
+      entering(face, asUsual) {
+        if (request.mark.photoId.isNotEmpty()) sendHeldPhoto(request.mark.photoId, PhotoShelf.Mine)
+        create(request)
+      }
+    }
 
-  /** Joins the group [code] opens as [displayName] ([join]) and keeps [face] in it, carried by the kit as [make] is. */
-  fun joining(code: String, displayName: String, face: JoinFace, asUsual: Boolean): Deferred<InGroup> =
-    entering(face, asUsual) { join(code, displayName) }
+  /** 参加の画面's way into the group an invitation opens ([GoingIn]): joined ([join]), then the face kept in it. */
+  val joining = GoingIn<JoinAsk> { ask, face, asUsual -> entering(face, asUsual) { join(ask.code, ask.displayName) } }
 
   /**
-   * [enter] puts the person in a group, and the face picked on the way is kept once they are in it,
-   * so one that fails changes nothing; a face not kept leaves them in the group all the same.
+   * [enter] puts the person in a group, and the face picked on the way is kept once they are in it
+   * ([keepFace]), so one that fails changes nothing; a face not kept leaves them in the group all
+   * the same. One of what the kit keeps, in its turn and whole: the photo held for the face is the
+   * call's until it has ended, so a screen left meanwhile, which lets go of its photo in turn
+   * ([letGoOfPhoto]), never takes it from under the call.
    */
-  private fun entering(face: JoinFace, asUsual: Boolean, enter: suspend () -> String): Deferred<InGroup> = scope.async {
+  private fun entering(face: JoinFace, asUsual: Boolean, enter: suspend () -> String): Deferred<InGroup> = keep {
     val groupId = enter()
     val faceKept =
       try {
-        keepFace(face, asUsual, groupId).await()
+        sendFace(face, asUsual, groupId)
         true
       } catch (e: CancellationException) {
         throw e
@@ -535,9 +541,6 @@ class GroupCalls internal constructor(
       throw InviteFailure(InviteFailure.Reason.Failed, e)
     }
 }
-
-/** The group the person made or joined, and whether the face they picked on the way was kept in it. */
-data class InGroup(val groupId: String, val faceKept: Boolean)
 
 private fun <T> ResponseMessage<T>.answer(): T =
   when (this) {

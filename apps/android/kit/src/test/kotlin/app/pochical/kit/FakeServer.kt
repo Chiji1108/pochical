@@ -16,6 +16,7 @@ import app.pochical.v1.SetProfileRequest
 import app.pochical.v1.setProfileResponse
 import app.pochical.v1.createGroupResponse
 import app.pochical.v1.setDisplayNameResponse
+import app.pochical.v1.setGroupPhotoResponse
 import app.pochical.v1.deleteAccountResponse
 import app.pochical.v1.getMeResponse
 import app.pochical.v1.peekAccountResponse
@@ -357,6 +358,11 @@ class FakeServer : AutoCloseable {
                 }
               }
             }
+            "/pochical.v1.GroupService/SetGroupPhoto" ->
+              when (userOf(request.headers["Authorization"])) {
+                null -> refused("unauthenticated")
+                else -> proto(setGroupPhotoResponse {})
+              }
             "/pochical.v1.GroupService/SetDisplayName" -> {
               Thread.sleep(displayNameDelayMs)
               when (userOf(request.headers["Authorization"])) {
