@@ -62,10 +62,13 @@ fun MacrobenchmarkScope.prepare() {
   // グループ shows the person's first group, or with none yet, only how to make or join one.
   tap(By.text("グループ"), Until.hasObject(By.text(Pattern.compile("全体チャット|グループを作る"))))
   if (device.hasObject(groupShown)) return
-  tap(By.text("グループを作る"), By.text("このグループでの名前"))
-  val (group, me) = device.findObjects(By.clazz("android.widget.EditText"))
-  group.text = "Perf"
-  me.text = "Bench"
+  val field = By.clazz("android.widget.EditText")
+  tap(By.text("グループを作る"), By.text("作る"))
+  find(field).text = "Perf"
+  // The person's name, asked for in the row's sheet as someone new has no usual one (#1163).
+  tap(By.text("名前を入れてください"), By.desc("閉じる"))
+  device.findObjects(field).first { it.text != "Perf" }.text = "Bench"
+  tap(By.desc("閉じる"), By.text("Bench"))
   tap(By.text("作る"), By.desc("招待のQRコード"))
   back(By.desc("招待のQRコード"))
   find(groupShown)

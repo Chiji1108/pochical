@@ -1,6 +1,5 @@
 package app.pochical.groups
 
-import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -47,9 +46,11 @@ import app.pochical.ReviewPrompt
 import app.pochical.SectionHeader
 import app.pochical.SectionRow
 import app.pochical.SettingsRow
+import app.pochical.OnLeftForGood
 import app.pochical.design.FaceDrawing
 import app.pochical.design.TextLimits
 import app.pochical.kit.GroupCalls
+import app.pochical.kit.GoingIn
 import app.pochical.kit.JoinFace
 import app.pochical.kit.PhotoShelf
 import app.pochical.kit.SocketState
@@ -85,6 +86,13 @@ class JoinProfile(ownName: TextFieldValue = TextFieldValue(), face: JoinFace = J
   fun goingOn(usualName: String): Boolean = (asUsual ?: usualName.isEmpty()).also { asUsual = it }
 
   companion object {
+    /**
+     * The profile a call into a group was begun with, the person appearing as [displayName]: what
+     * the screen opened again while the call is under way starts from, so it shows and sends again
+     * the name and face that were asked ([rememberJoinProfile]'s `begun`).
+     */
+    fun asked(displayName: String, call: GoingIn.Call<*>) = JoinProfile(TextFieldValue(displayName), call.face, call.asUsual)
+
     /**
      * Kept across the activity made anew and the process's death: a face removed on purpose must
      * not come back as the usual one, nor a drawing be picked again. A picked photo is kept by its
@@ -131,15 +139,16 @@ class JoinProfile(ownName: TextFieldValue = TextFieldValue(), face: JoinFace = J
  * none until then; before that the row shows the usual ones as it reads them and nothing is put in
  * place. A drawing that cannot be drawn or held is none put in place.
  *
- * A photo held for the face goes from the device as the screen is left for good, in turn after
- * the kit has kept it if the person went on ([GroupCalls.letGoOfPhoto]); not as the phone turns.
+ * A photo held for the face is let go of by the screen as it is left for good, in turn
+ * ([GroupCalls.letGoOfPhoto]), not as the phone turns; it goes from the device once the call into
+ * the group begun with it, and a screen opened again that took it up, have let go of it too.
  */
 @Composable
-fun rememberJoinProfile(): JoinProfile {
+fun rememberJoinProfile(begun: JoinProfile? = null): JoinProfile {
   val context = LocalContext.current
   val calls = LocalGroupCalls.current
-  val activity = LocalActivity.current
-  val profile = rememberSaveable(saver = JoinProfile.Saver) { JoinProfile() }
+  // A photo held for the face of a call under way is held by the screen that takes it up too.
+  val profile = rememberSaveable(saver = JoinProfile.Saver) { begun?.also { (it.face as? JoinFace.Held)?.let { held -> calls.holdPhotoAgain(held.photoId) } } ?: JoinProfile() }
   val usual = usualProfile()
   val userSocket by LocalAccount.current.userSocket.collectAsStateWithLifecycle(SocketState.Closed)
   val asking = usual?.let { profileAsking(userSocket, it) }
@@ -153,11 +162,7 @@ fun rememberJoinProfile(): JoinProfile {
     }
     drawing?.let { calls.letGoOfPhoto(it.photoId) }
   }
-  DisposableEffect(profile) {
-    onDispose {
-      if (activity?.isChangingConfigurations != true) (profile.face as? JoinFace.Held)?.let { calls.letGoOfPhoto(it.photoId) }
-    }
-  }
+  OnLeftForGood { (profile.face as? JoinFace.Held)?.let { calls.letGoOfPhoto(it.photoId) } }
   return profile
 }
 
