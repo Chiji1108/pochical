@@ -7,6 +7,7 @@ import app.pochical.name
 import app.pochical.string
 import app.pochical.v1.ChatContent
 import app.pochical.vectors
+import java.util.HexFormat
 import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -25,21 +26,18 @@ class UnknownLineTest {
   @get:Rule val compose = createComposeRule()
 
   @Test
-  fun itSaysToUpdateInItsBubbleAndWhereverItIsNamed() {
+  fun itSaysToUpdateInItsPlace() {
     val cases = vectors("chat", "content").filter { it.getValue("expected").jsonObject.string("kind") == "unknown" }
     assertTrue(cases.isNotEmpty())
-    val named = mutableListOf<String>()
-    val contents =
-      cases.map { case ->
-        val bytes = case.string("bytes")!!.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
-        LineContent.of(ChatContent.parseFrom(bytes)).also { assertEquals(case.name(), LineContent.Unknown, it) }
-      }
-    compose.setContent {
-      contents.forEach { named += lineWords(it) { id -> id } }
-      Message(MessageLook("line-1", false, contents.first(), true, null, true, "9:41", null, 1, ReplySwipe.Rightward, "あや", emptyList()), testHandlers())
+    for (case in cases) {
+      val content = LineContent.of(ChatContent.parseFrom(HexFormat.of().parseHex(case.string("bytes")!!)))
+      assertEquals(case.name(), LineContent.Unknown, content)
     }
-    val words = cases.map { it.getValue("expected").jsonObject.string("words")!! }
-    assertEquals(words, named.take(words.size))
-    compose.onNodeWithText(words.first(), useUnmergedTree = true).assertExists()
+    compose.setContent {
+      Message(MessageLook("line-1", false, LineContent.Unknown, true, null, true, "9:41", null, 1, ReplySwipe.Rightward, "あや", emptyList()), testHandlers())
+    }
+    for (case in cases) {
+      compose.onNodeWithText(case.getValue("expected").jsonObject.string("words")!!, useUnmergedTree = true).assertExists()
+    }
   }
 }

@@ -307,9 +307,7 @@ struct BlockQuestion: Identifiable {
   }
 }
 
-/// A blocked member's line in a group chat, folded to one line; a tap
-/// shows it this once (spec/chat.md, Reporting and blocking).
-/// What stands where a message's bubble would be without being the
+/// Stands where a message's bubble would be without being the
 /// message: small words in a dashed outline, not a bubble, so they are
 /// not taken for what its writer wrote. A blocked member's line folded
 /// away, and a line of a kind the app does not know.
@@ -327,6 +325,8 @@ struct StandInOutline: ViewModifier {
   }
 }
 
+/// A blocked member's line in a group chat, folded to one line; a tap
+/// shows it this once (spec/chat.md, Reporting and blocking).
 struct BlockedLine: View {
   @Environment(\.themeColors) private var colors
   let onShow: () -> Void

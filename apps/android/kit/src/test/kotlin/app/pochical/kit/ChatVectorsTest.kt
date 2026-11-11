@@ -12,6 +12,7 @@ import app.pochical.v1.chatLine
 import app.pochical.v1.chatNotice
 import app.pochical.v1.chatTakenBack
 import app.pochical.v1.chatWords
+import java.util.HexFormat
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.Serializable
 import org.junit.After
@@ -45,13 +46,21 @@ internal data class ChatVectors(
   val folded: List<Folded>,
   val reportable: List<Reportable>,
   val content: List<Content>,
+  val pushBody: List<PushBody>,
   val withdrawn: List<Withdrawn>,
   val readNotified: List<ReadNotified>,
 ) {
   @Serializable data class ContentExpected(val kind: String, val words: String? = null)
 
   /** A pochical.v1.ChatContent as the wire carries it, its [bytes] in hex. */
-  @Serializable data class Content(override val name: String, val bytes: String, val expected: ContentExpected) : VectorCase
+  @Serializable
+  data class Content(override val name: String, val bytes: String, val expected: ContentExpected) : VectorCase {
+    val wire: ChatContent
+      get() = ChatContent.parseFrom(HexFormat.of().parseHex(bytes))
+  }
+
+  @Serializable
+  data class PushBody(override val name: String, val key: String, val args: List<String>, val known: List<String>, val expected: Localized) : VectorCase
 
   @Serializable
   data class ReadNotified(override val name: String, val shown: List<Shown>, val read: KnownRead, val expected: List<String>) : VectorCase
@@ -204,9 +213,11 @@ class ChatVectorsTest {
   @Test
   fun content() =
     chat.content.checkEach({ it.expected.kind to it.expected.words.takeIf { _ -> it.expected.kind == "words" } }) { case ->
-      val content = LineContent.of(ChatContent.parseFrom(case.bytes.chunked(2).map { it.toInt(16).toByte() }.toByteArray()))
+      val content = LineContent.of(case.wire)
       content.kind.key to (content as? LineContent.Words)?.text
     }
+
+  @Test fun pushBody() = chat.pushBody.checkEach({ it.expected }) { case -> Localized(case.key, case.args).body { it in case.known } }
 
   @Test fun albumRows() = chat.albumRows.checkEach({ it.expected }) { albumRows(it.count) }
 
@@ -306,19 +317,6 @@ class ChatVectorsTest {
 }
 
 /** A line of words [seq] by [author], as the group sends it. */
-/**
- * A line of a kind added after the app, as the group's socket brings it: a field its content has
- * not (spec/vectors/chat.json, content).
- */
-internal fun laterKindLine(seq: Long, author: String): WireLine =
-  WireLine.parseFrom(
-    wordsLine(seq, author)
-      .toBuilder()
-      .setContent(ChatContent.parseFrom(byteArrayOf(0x7a, 0x08, 0x0a, 0x06, 0x70, 0x6f, 0x6f, 0x64, 0x6c, 0x65)))
-      .build()
-      .toByteArray()
-  )
-
 internal fun wordsLine(seq: Long, author: String, text: String = "$seq", thread: String = GROUP_THREAD, opId: String = "op-$seq"): WireLine =
   chatLine {
     threadId = thread
@@ -328,6 +326,15 @@ internal fun wordsLine(seq: Long, author: String, text: String = "$seq", thread:
     this.opId = opId
     content = chatContent { words = chatWords { this.text = text } }
   }
+
+/**
+ * A line of a kind added after the app, as the group's socket brings it: a field its content has
+ * not, the first such of spec/vectors/chat.json's content.
+ */
+internal fun laterKindLine(seq: Long, author: String): WireLine {
+  val later = chat.content.first { it.expected.kind == LineKind.Unknown.key && it.bytes.isNotEmpty() }
+  return WireLine.parseFrom(wordsLine(seq, author).toBuilder().setContent(later.wire).build().toByteArray())
+}
 
 @RunWith(RobolectricTestRunner::class)
 class ChatWindowTest {

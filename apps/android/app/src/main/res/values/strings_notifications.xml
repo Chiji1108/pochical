@@ -22,6 +22,7 @@
   <string name="push_chat_days">日にちを共有しました</string>
   <string name="push_chat_poll">日にちの投票を始めました</string>
   <string name="push_chat_message">メッセージを送りました</string>
+  <string name="push_update_to_see">この通知を見るには、アプリをアップデートしてください</string>
   <!-- An answer in the chat with Pochical's people: the chat, as 設定's row names it. -->
   <string name="push_support_title">作っている人とチャット</string>
   <!-- 返信 on a line's notification, as iOS's action words it. -->

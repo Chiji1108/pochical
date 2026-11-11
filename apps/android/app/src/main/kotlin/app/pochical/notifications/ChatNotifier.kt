@@ -20,7 +20,10 @@ import app.pochical.R
 import app.pochical.design.Chat
 import app.pochical.kit.AppLink
 import app.pochical.kit.ChatWithdrawal
+import app.pochical.kit.GROUP_LINE_KEY
 import app.pochical.kit.GroupMemberRow
+import app.pochical.kit.LINE_KEY
+import app.pochical.kit.body
 import app.pochical.kit.Localized
 import app.pochical.kit.NotifiedLine
 import app.pochical.kit.PushedAlert
@@ -308,18 +311,19 @@ class ChatNotifier(
     // The chat with Pochical's people is a conversation of two, with them under the chat's own
     // name, as 設定's row names it, and the app's icon (spec/chat.md, The chat with Pochical's people).
     val support = alert.groupId == Chat.supportPlace
-    val inGroup = !support && alert.body.key.startsWith(GROUP_KEY)
-    val kind = alert.body.key.removePrefix(GROUP_KEY).removePrefix(KEY)
+    // What the app has no words for is what stands in for it (`Localized.body`).
+    val body = alert.body.body { it in WORDS }
+    val inGroup = !support && body.key.startsWith(GROUP_LINE_KEY)
     val held = members(alert.groupId)
     val authorId = alert.line?.authorId.orEmpty()
     val writerRow = held.find { it.userId == authorId }
     val writerName =
       when {
         support -> worded(alert.title)
-        else -> writerRow?.displayName ?: (if (inGroup) alert.body.args else alert.title.args).firstOrNull().orEmpty()
+        else -> writerRow?.displayName ?: (if (inGroup) body.args else alert.title.args).firstOrNull().orEmpty()
       }
-    // A kind of line added after this app, which it has no words for, is a message of no kind it can name.
-    val words = worded(Localized((KEY + kind).takeIf { it in WORDS } ?: MESSAGE_KEY, if (inGroup) alert.body.args.drop(1) else alert.body.args))
+    // A group chat's line is worded as a one-to-one chat's, the system showing who wrote it.
+    val words = worded(if (inGroup) Localized(LINE_KEY + body.key.removePrefix(GROUP_LINE_KEY), body.args.drop(1)) else body)
     val mine = held.find { it.userId == me }
     // The style takes no user without a name: one the group does not name yet is あなた.
     val userName = mine?.displayName?.takeIf { it.isNotBlank() } ?: context.getString(R.string.push_me)
@@ -425,9 +429,13 @@ class ChatNotifier(
       PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
 
-  /** The words the server sent, put together from the app's strings; its arguments alone for a key this app does not know. */
+  /**
+   * The words the server sent, put together from the app's strings. A key this app has no words
+   * for is a title's, a body's being stood in for before it comes here: the app's name, as iOS
+   * heads a notification with no title (spec/sync-protocol.md, Push).
+   */
   private fun worded(localized: Localized): String {
-    val id = WORDS[localized.key] ?: return localized.args.joinToString(" ")
+    val id = WORDS[localized.key] ?: return context.getString(R.string.app_name)
     return try {
       context.getString(id, *localized.args.toTypedArray())
     } catch (e: MissingFormatArgumentException) {
@@ -451,12 +459,6 @@ class ChatNotifier(
 
     /** Where the notification keeps its lines' seqs, for taking them back once read. */
     private const val SEQS = "app.pochical.seqs"
-
-    private const val KEY = "CHAT_"
-    private const val GROUP_KEY = "CHAT_GROUP_"
-
-    /** What a line's body of a key this app does not know is worded as; the server sends no such key. */
-    private const val MESSAGE_KEY = "CHAT_MESSAGE"
 
     /** The intent a notification's tap opens the app with. */
     const val ACTION_OPEN_CHAT = "app.pochical.OPEN_CHAT"
@@ -491,12 +493,14 @@ class ChatNotifier(
         "CHAT_PHOTO" to R.string.push_chat_photo,
         "CHAT_DAYS" to R.string.push_chat_days,
         "CHAT_POLL" to R.string.push_chat_poll,
-        MESSAGE_KEY to R.string.push_chat_message,
         "CHAT_GROUP_TEXT" to R.string.push_chat_group_text,
         "CHAT_GROUP_PHOTO" to R.string.push_chat_group_photo,
         "CHAT_GROUP_DAYS" to R.string.push_chat_group_days,
         "CHAT_GROUP_POLL" to R.string.push_chat_group_poll,
         "SUPPORT_TITLE" to R.string.push_support_title,
+        // What stands in for a body this app has no words for (`Localized.body`); the server sends neither.
+        "CHAT_MESSAGE" to R.string.push_chat_message,
+        "UPDATE_TO_SEE" to R.string.push_update_to_see,
       )
   }
 }

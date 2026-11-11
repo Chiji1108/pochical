@@ -74,6 +74,14 @@ struct ChatVectors: Decodable, Sendable {
     }
   }
 
+  struct PushBody: VectorCase {
+    let name: String
+    let key: String
+    let args: [String]
+    let known: [String]
+    let expected: PushWords
+  }
+
   struct Content: VectorCase {
     struct Expected: Decodable, Sendable {
       let kind: LineContent.Kind
@@ -119,6 +127,7 @@ struct ChatVectors: Decodable, Sendable {
   let reportable: [Reportable]
   let writer: [Writer]
   let content: [Content]
+  let pushBody: [PushBody]
   let directThread: [DirectThread]
   let edited: [Edited]
   struct FirstComing: VectorCase {
@@ -451,13 +460,21 @@ func aLinesContentFromTheWire(_ vector: ChatVectors.Content) throws {
   }
 }
 
+@Test(arguments: try vectors("chat", as: ChatVectors.self).pushBody)
+func aBodyTheAppHasNoWordsForIsStoodInFor(_ vector: ChatVectors.PushBody) {
+  let body = PushWords(key: vector.key, args: vector.args)
+  #expect(body.body(known: vector.known.contains) == vector.expected)
+}
+
 /// A line of a kind added after the app, as the group's socket brings it:
-/// a field its content has not.
-private func lineOfALaterKind(_ seq: UInt64, by author: String = "u1") throws -> Pochical_V1_Change {
+/// a field its content has not, the first such of the vectors' content.
+private func lineOfALaterKind(_ seq: UInt64) throws -> Pochical_V1_Change {
+  let later = try #require(
+    try vectors("chat", as: ChatVectors.self).content.first {
+      $0.expected.kind == .unknown && !$0.bytes.isEmpty
+    })
   var change = line(seq, "")
-  change.chatLine.authorID = author
-  change.chatLine.content = try Pochical_V1_ChatContent(
-    serializedBytes: Data([0x7a, 0x08, 0x0a, 0x06, 0x70, 0x6f, 0x6f, 0x64, 0x6c, 0x65]))
+  change.chatLine.content = try Pochical_V1_ChatContent(serializedBytes: later.wire)
   return try Pochical_V1_Change(serializedBytes: change.serializedData())
 }
 
@@ -606,7 +623,7 @@ private func line(_ seq: UInt64, _ text: String, op: String = "") -> Pochical_V1
         .photos(wirePhotos(["a", "b"]).map(LinePhoto.init)),
         .days([november3]),
         .poll(LineContent.Poll(days: [november3, Day(year: 2026, month: 11, day: 4)])),
-        .unknown,
+        .hidden,
       ])
   }
 }

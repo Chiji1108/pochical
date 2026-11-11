@@ -122,7 +122,8 @@ public enum LineContent: Hashable, Sendable {
   }
 
   /// The line a send makes, as the group will hold it: its words not
-  /// changed yet, its poll open.
+  /// changed yet, its poll open. Only this app writes its sends, each of a
+  /// kind: one of none is nothing to show.
   init(_ wire: Pochical_V1_ChatSendContent) {
     var line = Pochical_V1_ChatContent()
     switch wire.kind {
@@ -132,7 +133,7 @@ public enum LineContent: Hashable, Sendable {
     case .photos(let album): line.photos = album
     case .days(let days): line.days = days
     case .poll(let poll): line.poll.days = poll.days
-    case nil: break
+    case nil: line.hidden = Pochical_V1_ChatHidden()
     }
     self.init(line)
   }

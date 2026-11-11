@@ -120,8 +120,9 @@ sealed interface LineContent {
         ChatSendContent.KindCase.PHOTOS -> Photos(send.photos.photosList)
         ChatSendContent.KindCase.DAYS -> Days(send.days.daysList)
         ChatSendContent.KindCase.POLL -> Poll(ChatPoll.newBuilder().addAllDays(send.poll.daysList).build())
+        // Only this app writes its sends, each of a kind: one of none is nothing to show.
         ChatSendContent.KindCase.KIND_NOT_SET,
-        null -> Unknown
+        null -> Hidden
       }
   }
 }

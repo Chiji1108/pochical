@@ -79,9 +79,20 @@ class ChatNotifierTest {
   @Test
   fun aLineOfAKindTheAppHasNoWordsForIsAMessage() = runTest {
     notifier.show(groupLine(2, "", kind = "STICKER"))
-    notifier.show(groupLine(3, "今週どう？").copy(body = Localized("CHAT_STICKER", emptyList()), threadId = "direct:$ME:$WRITER"))
     assertEquals(listOf("メッセージを送りました"), messagesOf().messages.map { it.text.toString() })
-    assertEquals(listOf("メッセージを送りました"), messagesOf(1).messages.map { it.text.toString() })
+    assertEquals("いとこ会", messagesOf().conversationTitle)
+  }
+
+  @Test
+  fun aOneToOneLineOfAKindTheAppHasNoWordsForIsAMessage() = runTest {
+    notifier.show(groupLine(2, "").copy(body = Localized("CHAT_STICKER", emptyList()), threadId = "direct:$ME:$WRITER"))
+    assertEquals(listOf("メッセージを送りました"), messagesOf().messages.map { it.text.toString() })
+  }
+
+  @Test
+  fun aKeyThatIsNoChatLinesAsksToUpdate() = runTest {
+    notifier.show(groupLine(2, "").copy(title = Localized("NEWS_TITLE", listOf("いとこ会")), body = Localized("GROUP_NEWS", listOf("いとこ会"))))
+    assertEquals(listOf("この通知を見るには、アプリをアップデートしてください"), messagesOf().messages.map { it.text.toString() })
   }
 
   @Test

@@ -11,7 +11,8 @@ import UserNotifications
 /// chat the group's name and mark, as the system shows a conversation. What
 /// it cannot read yet, before the app has the group, shows as it came.
 final class NotificationService: UNNotificationServiceExtension {
-  /// What to show should iOS end the extension first: as it came.
+  /// What to show should iOS end the extension first: as it came, in the
+  /// app's words.
   private var cut: (() -> Void)?
 
   override func didReceive(
@@ -29,12 +30,15 @@ final class NotificationService: UNNotificationServiceExtension {
       return
     }
     nonisolated(unsafe) let show = contentHandler
-    nonisolated(unsafe) let request = request
+    // Worded before anything is waited for, so it is worded however the
+    // extension ends.
+    nonisolated(unsafe) let content = Self.withWords(request.content)
+    let id = request.identifier
     let once = Once()
-    cut = { once.run { show(request.content) } }
+    cut = { once.run { show(content) } }
     Task { @MainActor in
-      let content = await Self.message(from: request)
-      once.run { show(content) }
+      let message = await Self.message(from: content, id: id)
+      once.run { show(message) }
     }
   }
 
@@ -44,13 +48,12 @@ final class NotificationService: UNNotificationServiceExtension {
 
   /// The notification as a message from its writer, or as it came.
   @MainActor private static func message(
-    from request: UNNotificationRequest
+    from content: UNNotificationContent, id: String
   ) async -> UNNotificationContent {
-    let content = withWords(request.content)
     let payload = content.userInfo
     // The chat with Pochical's people stays a plain notification: only
     // they write there, so it has no writer of its own to show.
-    guard let line = NotifiedLine(id: request.identifier, payload: payload),
+    guard let line = NotifiedLine(id: id, payload: payload),
       line.groupID != ChatPlace.supportID,
       let authorID = payload["authorId"] as? String,
       let from = from(line, authorID: authorID)
@@ -60,10 +63,11 @@ final class NotificationService: UNNotificationServiceExtension {
     guard let worded = content.mutableCopy() as? UNMutableNotificationContent else {
       return content
     }
-    if from.group != nil, let sent = sentBody(content), sent.key.hasPrefix(groupKey) {
-      worded.body = String(
-        format: format(for: oneKey + sent.key.dropFirst(groupKey.count)),
-        arguments: Array(sent.args.dropFirst()))
+    if from.group != nil, let sent = sentBody(content), sent.key.hasPrefix(PushWords.groupKey) {
+      let alone = PushWords(
+        key: PushWords.chatKey + sent.key.dropFirst(PushWords.groupKey.count),
+        args: Array(sent.args.dropFirst()))
+      worded.body = words(alone.body(known: hasWords))
     }
     let intent = intent(for: line, from: from, authorID: authorID, content: worded)
     let interaction = INInteraction(intent: intent, response: nil)
@@ -72,20 +76,17 @@ final class NotificationService: UNNotificationServiceExtension {
     return (try? worded.updating(from: intent)) ?? worded
   }
 
-  /// The keys of a line's body (spec/sync-protocol.md, Push): a group
-  /// chat's `CHAT_GROUP_{…}`, its writer's name its first argument, which
-  /// the app words without who wrote it as a one-to-one chat's `CHAT_{…}`.
-  private static let groupKey = "CHAT_GROUP_"
-  private static let oneKey = "CHAT_"
+  /// The alert as the server sent it (spec/sync-protocol.md, Push).
+  private static func sentAlert(_ content: UNNotificationContent) -> [String: Any]? {
+    (content.userInfo["aps"] as? [String: Any])?["alert"] as? [String: Any]
+  }
 
   /// The body's key and arguments as the server sent them.
-  private static func sentBody(_ content: UNNotificationContent) -> (key: String, args: [String])? {
-    guard let aps = content.userInfo["aps"] as? [String: Any],
-      let alert = aps["alert"] as? [String: Any],
-      let key = alert["loc-key"] as? String,
+  private static func sentBody(_ content: UNNotificationContent) -> PushWords? {
+    guard let alert = sentAlert(content), let key = alert["loc-key"] as? String,
       let args = alert["loc-args"] as? [String]
     else { return nil }
-    return (key, args)
+    return PushWords(key: key, args: args)
   }
 
   /// Whether the app has words for `key`: the bundle answers the key
@@ -94,22 +95,30 @@ final class NotificationService: UNNotificationServiceExtension {
     Bundle.main.localizedString(forKey: key, value: nil, table: nil) != key
   }
 
-  /// The app's words for a body's `key`; for a kind of line added after
-  /// the app, which it has none for, those of a message of no kind it can
-  /// name.
-  private static func format(for key: String) -> String {
-    let known =
-      hasWords(for: key) ? key : key.hasPrefix(groupKey) ? "CHAT_GROUP_MESSAGE" : "CHAT_MESSAGE"
-    return Bundle.main.localizedString(forKey: known, value: nil, table: nil)
+  /// `sent` as the app's strings word it. A format reads no more
+  /// arguments than it has %, so with as many blanks after those that
+  /// came it never reads one that is not there.
+  private static func words(_ sent: PushWords) -> String {
+    let format = Bundle.main.localizedString(forKey: sent.key, value: nil, table: nil)
+    let blanks = Array(repeating: "", count: format.count { $0 == "%" })
+    return String(format: format, arguments: sent.args + blanks)
   }
 
-  /// The notification as the system worded it, but for a body whose key
-  /// the app has no words for, which the system has none for either.
+  /// The notification as the system worded it, but for keys the app has
+  /// no words for, which the system has none for either (spec/sync-protocol.md,
+  /// Push): such a body is what stands in for it (`PushWords.body`), and
+  /// such a title is none, the system heading the notification with the
+  /// app's name.
   private static func withWords(_ content: UNNotificationContent) -> UNNotificationContent {
-    guard let sent = sentBody(content), !hasWords(for: sent.key),
+    guard let alert = sentAlert(content),
       let worded = content.mutableCopy() as? UNMutableNotificationContent
     else { return content }
-    worded.body = String(format: format(for: sent.key), arguments: sent.args)
+    if let sent = sentBody(content), !hasWords(for: sent.key) {
+      worded.body = words(sent.body(known: hasWords))
+    }
+    if let title = alert["title-loc-key"] as? String, !hasWords(for: title) {
+      worded.title = ""
+    }
     return worded
   }
 

@@ -32,6 +32,7 @@ import { GroupMarkSchema } from "../src/gen/pochical/v1/marks_pb";
 import type { GroupMark } from "../src/gen/pochical/v1/marks_pb";
 import {
   ChatContentSchema,
+  ChatNotice_Kind,
   ChatEditSchema,
   DayField,
   PatternSchema,
@@ -86,7 +87,12 @@ describe("spec/vectors/chat.json", () => {
       Number.parseInt(byte, 16)
     );
     const { kind } = fromBinary(ChatContentSchema, wireBytes);
-    const wire = kind.case === "notice" ? "hidden" : kind.case;
+    // A notice the apps cannot word, of no kind they name, is hidden to them.
+    const worded =
+      kind.case !== "notice" ||
+      (kind.value.kind !== ChatNotice_Kind.UNSPECIFIED &&
+        kind.value.kind in ChatNotice_Kind);
+    const wire = worded ? kind.case : "hidden";
     const words = kind.case === "words" ? kind.value.text : undefined;
     expect({ kind: wire ?? "unknown", words }).toStrictEqual({
       kind: expected.kind,
