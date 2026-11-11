@@ -391,6 +391,11 @@ describe("a group ended", () => {
     const guestId = await userIdOf(guest);
     const endsAt = Date.now() + DAY_MS;
     await setEnd(groupId, endsAt, maker);
+    // An end this near is said at once, by the group's alarm, which gives
+    // each member's DO their count with its notification: a first count
+    // of a chat is told to their devices. Run before the phone connects,
+    // so what the phone hears next is the group's ending alone.
+    await runAlarm(env.GROUPS.getByName(groupId));
     const phone = await device(guest);
     await phone.frames.next();
     const open = await groupSocket(groupId, maker);
