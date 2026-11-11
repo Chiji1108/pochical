@@ -2045,8 +2045,10 @@ public nonisolated struct Pochical_V1_ChatNotice: Sendable {
     /// 〇〇が終了日を解除しました
     case endCleared // = 8
 
-    /// このグループは12月31日に終了します: the group's own line,
-    /// GROUP_END_NOTICE_DAYS before ends_at_ms, with no author.
+    /// このグループは12月31日に終了し、チャットや写真も消えます: the group's
+    /// own line, GROUP_END_NOTICE_HOURS before ends_at_ms or as an end
+    /// nearer than that is set, with no author; the one notice that
+    /// notifies (spec/sync-protocol.md, A group's end).
     case endsSoon // = 9
     case UNRECOGNIZED(Int)
 

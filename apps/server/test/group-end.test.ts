@@ -1,9 +1,9 @@
-import { GROUP_END_NOTICE_DAYS } from "@pochical/design/limits";
+import { GROUP_END_NOTICE_HOURS } from "@pochical/design/limits";
 import { socketRules } from "@pochical/design/socket";
 import { env, exports } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { invites } from "../src/db/schema";
 import { ChatNotice_Kind } from "../src/gen/pochical/v1/sync_pb";
@@ -23,7 +23,37 @@ import {
 // A group's end: set by any member, said in its chat, and the group gone
 // for everyone once it has passed (spec/sync-protocol.md, A group's end).
 
-const DAY_MS = 24 * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
+// How long before its end a group says it ends soon.
+const NOTICE_MS = GROUP_END_NOTICE_HOURS * HOUR_MS;
+// An end far enough off that its coming is not yet said.
+const FAR_MS = 30 * DAY_MS;
+// Two devices' APNs tokens.
+const MAKER_TOKEN = "a1".repeat(32);
+const GUEST_TOKEN = "c3".repeat(32);
+
+const registerToken = async (session: string, token: string): Promise<void> => {
+  await call(
+    "UserService/RegisterPushToken",
+    { platform: "PUSH_PLATFORM_APNS", sandbox: true, token },
+    session
+  );
+};
+
+/** What reached APNs, each with the device it was for, all taken. */
+const apnsCalls = () => {
+  const calls: { body: unknown; token: string }[] = [];
+  vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+    const request = new Request(input, init);
+    calls.push({
+      body: await request.json(),
+      token: request.url.split("/").at(-1) ?? "",
+    });
+    return new Response(null, { status: 200 });
+  });
+  return calls;
+};
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0xff, 0xd9]);
 
 /** SetGroupEnd as the apps call it: the answer's status. */
@@ -129,7 +159,7 @@ describe("setting a group's end", () => {
     const { groupId, guest, maker, makerId } = await pair();
     const guestId = await userIdOf(guest);
     const mine = await groupSocket(groupId, maker);
-    const first = Date.now() + DAY_MS;
+    const first = Date.now() + FAR_MS;
 
     await setEnd(groupId, first, maker);
     expect(endIn(await mine.frames.next())).toMatchObject([
@@ -157,7 +187,7 @@ describe("setting a group's end", () => {
 
   it("is taken away by any member, said in the chat", async () => {
     const { groupId, guest, maker } = await pair();
-    await setEnd(groupId, Date.now() + DAY_MS, maker);
+    await setEnd(groupId, Date.now() + FAR_MS, maker);
     const mine = await groupSocket(groupId, maker, PAIR_ROSTER + 2n);
 
     await expect(setEnd(groupId, 0, guest)).resolves.toBe(200);
@@ -174,7 +204,7 @@ describe("setting a group's end", () => {
   it("is members' alone, and never a time already past", async () => {
     const { groupId, maker } = await pair();
     const stranger = await signInAnonymously();
-    await expect(setEnd(groupId, Date.now() + DAY_MS, stranger)).resolves.toBe(
+    await expect(setEnd(groupId, Date.now() + FAR_MS, stranger)).resolves.toBe(
       403
     );
     await expect(setEnd(groupId, Date.now() - 1, maker)).resolves.toBe(400);
@@ -183,7 +213,7 @@ describe("setting a group's end", () => {
 
   it("comes with a group made with one, and shows before joining", async () => {
     const maker = await signInAnonymously();
-    const endsAt = Date.now() + DAY_MS;
+    const endsAt = Date.now() + FAR_MS;
     const made = await createGroup(endsAt, maker);
     const { groupId, inviteCode } = (await made.json()) as {
       groupId: string;
@@ -212,12 +242,16 @@ describe("setting a group's end", () => {
 });
 
 describe("a group's end coming", () => {
-  it("is said in the chat once, GROUP_END_NOTICE_DAYS before, by no one", async () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("is said in the chat once, GROUP_END_NOTICE_HOURS before, by no one", async () => {
     const { groupId, maker } = await pair();
-    const endsAt = Date.now() + (GROUP_END_NOTICE_DAYS + 2) * DAY_MS;
+    const endsAt = Date.now() + NOTICE_MS + 2 * DAY_MS;
     await setEnd(groupId, endsAt, maker);
     const mine = await groupSocket(groupId, maker, PAIR_ROSTER + 2n);
-    const soon = endsAt - GROUP_END_NOTICE_DAYS * DAY_MS;
+    const soon = endsAt - NOTICE_MS;
 
     // Not before its time.
     await alarmAt(groupId, soon - 1);
@@ -231,29 +265,123 @@ describe("a group's end coming", () => {
       },
     ]);
     // Once: a later run says nothing more, and the group is still there.
-    await alarmAt(groupId, soon + DAY_MS);
+    await alarmAt(groupId, soon + HOUR_MS);
     await expect(quiet(mine)).resolves.toBeTruthy();
     await expect(isThere(groupId)).resolves.toBeTruthy();
   });
 
-  it("is not said of an end set inside those days, nor of one taken away", async () => {
-    const { groupId, maker } = await pair();
+  it("notifies every member once, a chat turned off too, worded by the app", async () => {
+    const { groupId, guest, maker } = await pair();
+    await registerToken(maker, MAKER_TOKEN);
+    await registerToken(guest, GUEST_TOKEN);
+    await call(
+      "UserService/SetChatMuted",
+      { groupId, muted: true, threadId: "group" },
+      guest
+    );
+    const endsAt = Date.now() + NOTICE_MS + 2 * DAY_MS;
+    const calls = apnsCalls();
+    await setEnd(groupId, endsAt, maker);
+    // Setting it notifies no one.
+    await alarmAt(groupId, endsAt - NOTICE_MS - 1);
+    expect(calls).toHaveLength(0);
+
+    await alarmAt(groupId, endsAt - NOTICE_MS);
+    expect(calls.map(({ token }) => token).toSorted()).toStrictEqual(
+      [MAKER_TOKEN, GUEST_TOKEN].toSorted()
+    );
+    const toGuest = calls.find(({ token }) => token === GUEST_TOKEN);
+    // The moment it ends, which each device words as its own day; of no
+    // line, so with no writer and nothing to answer.
+    expect(toGuest?.body).toStrictEqual({
+      aps: {
+        alert: {
+          "loc-args": [String(endsAt)],
+          "loc-key": "GROUP_ENDS",
+          "title-loc-args": ["いとこ会"],
+          "title-loc-key": "CHAT_TITLE",
+        },
+        badge: 0,
+        "mutable-content": 1,
+        sound: "default",
+        "thread-id": `${groupId}/group`,
+      },
+      groupId,
+      recipientId: await userIdOf(guest),
+      threadId: "group",
+    });
+    await alarmAt(groupId, endsAt - HOUR_MS);
+    expect(calls).toHaveLength(2);
+  });
+
+  it("is said and notified at once for an end set nearer than that", async () => {
+    const { groupId, guest, maker } = await pair();
+    await registerToken(guest, GUEST_TOKEN);
+    const calls = apnsCalls();
     const near = Date.now() + DAY_MS;
     await setEnd(groupId, near, maker);
     const mine = await groupSocket(groupId, maker, PAIR_ROSTER + 2n);
-    await alarmAt(groupId, near - 1);
-    await expect(quiet(mine)).resolves.toBeTruthy();
+    await runAlarm(env.GROUPS.getByName(groupId));
+    expect(endIn(await mine.frames.next())).toMatchObject([
+      {
+        authorId: "",
+        notice: { endsAtMs: BigInt(near), kind: ChatNotice_Kind.ENDS_SOON },
+      },
+    ]);
+    expect(calls).toHaveLength(1);
 
-    // Moved far ahead, then taken away: the time of its line goes too,
-    // and the group stays past the end it had.
-    const far = Date.now() + (GROUP_END_NOTICE_DAYS + 30) * DAY_MS;
+    // Moved, still near: said and notified anew, with the new end.
+    const nearer = near - HOUR_MS;
+    await setEnd(groupId, nearer, guest);
+    await runAlarm(env.GROUPS.getByName(groupId));
+    expect(calls.map(({ body }) => body)).toMatchObject([
+      { aps: { alert: { "loc-args": [String(near)] } } },
+      { aps: { alert: { "loc-args": [String(nearer)] } } },
+    ]);
+  });
+
+  it("comes anew for an end moved later, and not at all for one taken away", async () => {
+    const { groupId, guest, maker } = await pair();
+    await registerToken(guest, GUEST_TOKEN);
+    const calls = apnsCalls();
+    await setEnd(groupId, Date.now() + DAY_MS, maker);
+    await runAlarm(env.GROUPS.getByName(groupId));
+    expect(calls).toHaveLength(1);
+
+    // Moved out past the hours: nothing until its own time comes.
+    const far = Date.now() + NOTICE_MS + 30 * DAY_MS;
     await setEnd(groupId, far, maker);
-    await mine.frames.next();
+    await alarmAt(groupId, far - NOTICE_MS - 1);
+    expect(calls).toHaveLength(1);
+    await alarmAt(groupId, far - NOTICE_MS);
+    expect(calls).toHaveLength(2);
+
+    // Taken away after an end moved again: its time goes with it, and
+    // the group stays past the end it had.
+    await setEnd(groupId, far + DAY_MS, maker);
     await setEnd(groupId, 0, maker);
-    await mine.frames.next();
-    await alarmAt(groupId, far + DAY_MS);
-    await expect(quiet(mine)).resolves.toBeTruthy();
+    await alarmAt(groupId, far + 2 * DAY_MS);
+    expect(calls).toHaveLength(2);
     await expect(isThere(groupId)).resolves.toBeTruthy();
+  });
+
+  it("is told as a mention is: not to a chat turned off once mentions do not notify", async () => {
+    const { groupId, guest, maker } = await pair();
+    await registerToken(guest, GUEST_TOKEN);
+    await call(
+      "UserService/SetChatMuted",
+      { groupId, muted: true, threadId: "group" },
+      guest
+    );
+    await call(
+      "UserService/SetChatNotifications",
+      { mentionsWhenMuted: false },
+      guest
+    );
+    const calls = apnsCalls();
+    await setEnd(groupId, Date.now() + DAY_MS, maker);
+    await runAlarm(env.GROUPS.getByName(groupId));
+    expect(calls).toHaveLength(0);
   });
 });
 

@@ -26,7 +26,7 @@ export const profile = sqliteTable(
     // Set when the group's mark is an emoji.
     emoji: text(),
     // When the chat says the group ends soon (group-end.ts), until it has;
-    // none for an end set too near for it, or no end.
+    // none with no end.
     endNoticeAt: integer("end_notice_at", { mode: "timestamp_ms" }),
     // When the group ends for everyone (spec/sync-protocol.md, A group's
     // end), or none.

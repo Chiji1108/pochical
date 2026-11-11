@@ -67,7 +67,7 @@ export const endNotice = (notice: EndNotice, on: string): string => {
   const day = endWords(notice.day, on);
   return notice.kind === "endSet"
     ? `${notice.by}が終了日を${day}に設定しました`
-    : `このグループは${day}に終了します`;
+    : `このグループは${day}に終了し、チャットや写真も消えます`;
 };
 
 /** The note under a group's end, where it is set and where it shows. */

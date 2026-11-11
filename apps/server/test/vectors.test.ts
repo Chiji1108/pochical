@@ -382,9 +382,9 @@ describe("spec/vectors/unread.json", () => {
 
 describe("spec/vectors/group-end.json", () => {
   it.each(groupEnd.noticeAt)(
-    "noticeAt: set at $setAt, $noticeDays days before $endsAt",
-    ({ endsAt, setAt, noticeDays, expected }) => {
-      expect(endNoticeAt(endsAt, setAt, noticeDays)).toBe(expected);
+    "noticeAt: set at $setAt, $noticeHours hours before $endsAt",
+    ({ endsAt, setAt, noticeHours, expected }) => {
+      expect(endNoticeAt(endsAt, setAt, noticeHours)).toBe(expected);
     }
   );
 });

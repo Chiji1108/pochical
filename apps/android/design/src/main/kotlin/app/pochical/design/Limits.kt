@@ -42,8 +42,8 @@ const val POLL_MIN_DAYS = 2
 /** The most people in one group. */
 const val GROUP_MAX_MEMBERS = 100
 
-/** How many days before a group's end its chat says it ends soon. */
-const val GROUP_END_NOTICE_DAYS = 7
+/** How many hours before a group's end its chat says it ends soon and its members are notified. */
+const val GROUP_END_NOTICE_HOURS = 36
 
 /** The most people one person keeps in 一緒に働く人. */
 const val COWORKERS_MAX = 100

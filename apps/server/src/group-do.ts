@@ -36,6 +36,7 @@ import {
   chatChangesAfter,
   chatHead,
   chatPage,
+  endAlertOf,
   alertOf,
   eraseMemberChat,
   GROUP_THREAD,
@@ -403,7 +404,8 @@ export class GroupDO extends DurableObject<Env> {
 
   /**
    * What the group's end asks for by now: its chat's line that it ends
-   * soon, once, or the end itself (spec/sync-protocol.md, A group's end).
+   * soon, once for each end set, with its notification to every member,
+   * or the end itself (spec/sync-protocol.md, A group's end).
    * When the alarm is to come back for it: for what is still ahead, or
    * after `bucketRetryWait` for an ending that failed, which is then run
    * again whole.
@@ -441,8 +443,33 @@ export class GroupDO extends DurableObject<Env> {
         );
       });
       broadcastChanges(this.ctx, [notice]);
+      await this.notifyEnd(endsAt);
     }
     return this.endDue();
+  }
+
+  /**
+   * Notifies every member that the group ends soon, the one notice that
+   * does: what it tells cannot be undone, and a member who never opens
+   * the group would learn nothing. Told as a line that mentions them is,
+   * so a chat turned off hears it too while mentions notify; their
+   * counts stay as they are, a notice being no line to read.
+   */
+  private async notifyEnd(endsAt: number): Promise<void> {
+    const alert = endAlertOf(
+      { id: this.placeId() ?? "", name: this.getProfile()?.name ?? "" },
+      endsAt
+    );
+    const userIds = this.memberList().map(({ userId }) => userId);
+    await this.tellUnread(
+      new Map([[GROUP_THREAD, new Set(userIds)]]),
+      new Map(
+        userIds.map((userId) => [
+          readerKey(GROUP_THREAD, userId),
+          { alert, mentioned: true },
+        ])
+      )
+    );
   }
 
   /**

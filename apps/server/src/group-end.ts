@@ -1,18 +1,15 @@
-import { GROUP_END_NOTICE_DAYS } from "@pochical/design/limits";
+import { GROUP_END_NOTICE_HOURS } from "@pochical/design/limits";
 
-const DAY_MS = 24 * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
 
 /**
- * When a group's chat says it ends soon (spec/sync-protocol.md, A group's
- * end; spec/vectors/group-end.json, noticeAt): `noticeDays` days of 24
- * hours before its end, or null when the end was set (`setAt`) inside
- * them, as the line of its setting has just said it.
+ * When a group's chat says it ends soon and its members are notified
+ * (spec/sync-protocol.md, A group's end; spec/vectors/group-end.json,
+ * noticeAt): `noticeHours` before its end, or as the end is set (`setAt`)
+ * when that is already past, so no end comes without it.
  */
 export const endNoticeAt = (
   endsAt: number,
   setAt: number,
-  noticeDays: number = GROUP_END_NOTICE_DAYS
-): number | null => {
-  const at = endsAt - noticeDays * DAY_MS;
-  return at > setAt ? at : null;
-};
+  noticeHours: number = GROUP_END_NOTICE_HOURS
+): number => Math.max(endsAt - noticeHours * HOUR_MS, setAt);

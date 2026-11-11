@@ -100,8 +100,10 @@ public  final class ChatNotice extends
     KIND_END_CLEARED(8),
     /**
      * <pre>
-     * このグループは12月31日に終了します: the group's own line,
-     * GROUP_END_NOTICE_DAYS before ends_at_ms, with no author.
+     * このグループは12月31日に終了し、チャットや写真も消えます: the group's
+     * own line, GROUP_END_NOTICE_HOURS before ends_at_ms or as an end
+     * nearer than that is set, with no author; the one notice that
+     * notifies (spec/sync-protocol.md, A group's end).
      * </pre>
      *
      * <code>KIND_ENDS_SOON = 9;</code>
@@ -182,8 +184,10 @@ public  final class ChatNotice extends
     public static final int KIND_END_CLEARED_VALUE = 8;
     /**
      * <pre>
-     * このグループは12月31日に終了します: the group's own line,
-     * GROUP_END_NOTICE_DAYS before ends_at_ms, with no author.
+     * このグループは12月31日に終了し、チャットや写真も消えます: the group's
+     * own line, GROUP_END_NOTICE_HOURS before ends_at_ms or as an end
+     * nearer than that is set, with no author; the one notice that
+     * notifies (spec/sync-protocol.md, A group's end).
      * </pre>
      *
      * <code>KIND_ENDS_SOON = 9;</code>

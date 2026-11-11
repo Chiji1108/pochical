@@ -40,8 +40,8 @@ public let pollMinDays = 2
 /// The most people in one group.
 public let groupMaxMembers = 100
 
-/// How many days before a group's end its chat says it ends soon.
-public let groupEndNoticeDays = 7
+/// How many hours before a group's end its chat says it ends soon and its members are notified.
+public let groupEndNoticeHours = 36
 
 /// The most people one person keeps in 一緒に働く人.
 public let coworkersMax = 100

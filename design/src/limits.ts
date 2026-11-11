@@ -54,10 +54,12 @@ export const POLL_MIN_DAYS = 2;
 // it only caps what a leaked invitation link can let in.
 export const GROUP_MAX_MEMBERS = 100;
 
-// How many days before a group's end its chat says it ends soon
-// (spec/sync-protocol.md, A group's end): a week, so someone who opens the
-// group once a week still sees it in time to move the date.
-export const GROUP_END_NOTICE_DAYS = 7;
+// How many hours before a group's end its chat says it ends soon, and
+// its members' devices are notified (spec/sync-protocol.md, A group's end):
+// a day and a half, which is midday of the day before its last day where
+// the end date was picked, as an end is that day's end. Near enough to
+// the occasion to be remembered, and never in the middle of the night.
+export const GROUP_END_NOTICE_HOURS = 36;
 
 // The most people one person keeps in 一緒に働く人. Room for a whole
 // ward or shop, so it only caps what one account stores and syncs.
