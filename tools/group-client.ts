@@ -106,28 +106,42 @@ export const signIn = async (
   return { token, userId };
 };
 
-type Jpeg = { bytes: Uint8Array<ArrayBuffer>; file: string };
+// A JPEG, and its small version when it has one (spec/chat.md, Photos).
+type Jpeg = {
+  bytes: Uint8Array<ArrayBuffer>;
+  file: string;
+  small?: Uint8Array<ArrayBuffer>;
+};
 
-/** One JPEG put at `place`, a folder of photos the user may add to, by its new id. */
+/**
+ * One JPEG put at `place`, a folder of photos the user may add to, by its
+ * new id: its small version first, as the apps send them.
+ */
 const put = async (
   origin: string,
-  { bytes, file }: Jpeg,
+  { bytes, file, small }: Jpeg,
   place: string,
   token: string
 ): Promise<string> => {
   const id = crypto.randomUUID();
-  const response = await fetch(`${origin}${place}/${id}`, {
-    body: bytes,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "image/jpeg",
-    },
-    method: "PUT",
-  });
-  if (!response.ok) {
-    const answer = await response.text();
-    fail(`upload ${file}: ${response.status} ${answer}`);
+  const send = async (body: Uint8Array<ArrayBuffer>, query: string) => {
+    const response = await fetch(`${origin}${place}/${id}${query}`, {
+      body,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "image/jpeg",
+      },
+      method: "PUT",
+    });
+    if (!response.ok) {
+      const answer = await response.text();
+      fail(`upload ${file}: ${response.status} ${answer}`);
+    }
+  };
+  if (small !== undefined) {
+    await send(small, "?size=small");
   }
+  await send(bytes, "");
   return id;
 };
 

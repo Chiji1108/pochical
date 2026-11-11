@@ -3,8 +3,11 @@
 // 職場のみんな, three coworkers on a two-shift roster who speak politely,
 // as people who have not exchanged contacts do, with a little of
 // 全体チャット, a 日にちの投票 over the days
-// they are all off among it, written once the person photographed has
-// joined, so the chat says everyone's joining above its lines; and 学生時代の友だち, three friends who work
+// they are all off among it and two photos sent at once of what someone
+// left in the break room (photos/, where a JPEG put under the same name
+// is sent in its place), written
+// once the person photographed has joined, so the chat says everyone's
+// joining above its lines; and 学生時代の友だち, three friends who work
 // at different places, each on shifts of their own. Everyone's usual
 // photo is one of the faces' drawings the apps offer (design/src/drawings),
 // no two the same in a group. Both hold this month's and next month's
@@ -25,6 +28,7 @@ import { writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { MessageInitShape } from "@bufbuild/protobuf";
+import { chatRules } from "@pochical/design/chat";
 import type { drawings } from "@pochical/design/drawings";
 import { readyPatterns } from "@pochical/design/patterns";
 import type { ReadyPattern, ReadyPatternId } from "@pochical/design/patterns";
@@ -52,6 +56,7 @@ import {
   rpc,
   signIn,
   textOf,
+  upload,
   uploadOwn,
   USER_SOCKET,
 } from "../group-client";
@@ -347,6 +352,7 @@ type Person = {
   name: string;
   seqOfSend: Map<string, bigint>;
   socket: SyncSocket;
+  token: string;
   userId: string;
 };
 
@@ -383,6 +389,54 @@ const say = async (
 
 const words = async (person: Person, text: string): Promise<bigint> =>
   await say(person, { case: "words", value: { text } });
+
+// The photos sent at once in the coworkers' chat, of photos/.
+const ALBUM = ["treat-1.jpg", "treat-2.jpg"] as const;
+
+// A photo as the apps make it to send (spec/chat.md, Photos): turned
+// upright and written again as a JPEG no longer than `edge` on a side.
+const shrunk = async (file: string, edge: number) => {
+  const { data, info } = await sharp(file)
+    .rotate()
+    .resize({
+      fit: "inside",
+      height: edge,
+      width: edge,
+      withoutEnlargement: true,
+    })
+    .jpeg({ quality: 85 })
+    .toBuffer({ resolveWithObject: true });
+  return {
+    bytes: new Uint8Array(data),
+    height: info.height,
+    width: info.width,
+  };
+};
+
+/** Sends the photos of `ALBUM` at once as a member of the group. */
+const album = async (person: Person, groupId: string): Promise<bigint> => {
+  const photos = await Promise.all(
+    ALBUM.map(async (file) => {
+      const photograph = path.join(import.meta.dirname, "photos", file);
+      const { bytes, height, width } = await shrunk(
+        photograph,
+        chatRules.photoMaxEdge
+      );
+      const small =
+        Math.max(height, width) > chatRules.photoSmallEdge
+          ? await shrunk(photograph, chatRules.photoSmallEdge)
+          : undefined;
+      const id = await upload(
+        devServer,
+        { bytes, file, small: small?.bytes },
+        groupId,
+        person.token
+      );
+      return { height, id, width };
+    })
+  );
+  return await say(person, { case: "photos", value: { photos } });
+};
 
 /**
  * Makes `group` with its members, the first making it, each with their
@@ -469,6 +523,7 @@ const make = async ({ mark, members, name }: Group) => {
         token,
         onGroupChange
       ),
+      token,
       userId,
     }))
   );
@@ -481,7 +536,7 @@ const make = async ({ mark, members, name }: Group) => {
     })
   );
   await inTime(projected.promise);
-  return { inviteCode, joined: joined.promise, people, rostered };
+  return { groupId, inviteCode, joined: joined.promise, people, rostered };
 };
 
 const coworkers = await make(COWORKERS);
@@ -506,21 +561,17 @@ const [tanaka, kobayashi, mori] = people;
 if (tanaka === undefined || kobayashi === undefined || mori === undefined) {
   fail("no members");
 }
-await words(tanaka, "来月の勤務表、休憩室に貼ってあります");
-await words(kobayashi, "ありがとうございます、見てきます！");
-await words(mori, "わたしもあとで確認します！");
-await words(
-  kobayashi,
-  "すみません、モバイルバッテリー、休憩室にあったりしますか…？"
-);
+await words(tanaka, "おつかれさまです！");
+await words(kobayashi, "おつかれさまです〜");
+await album(mori, coworkers.groupId);
+await words(mori, "休憩室に差し入れあります！");
+await words(kobayashi, "すみません、モバイルバッテリー、休憩室にありますか…？");
 const found = await words(mori, "ありましたよ！ロッカーの上に置いておきますね");
-await words(kobayashi, "助かります、ありがとうございます！");
 await edit(tanaka, {
   case: "react",
   value: { emoji: "👍", on: true, seq: found, threadId: GROUP_THREAD },
 });
 await words(tanaka, "今度のごはん会、みんなの休みが合う日で決めませんか？");
-await words(mori, "いいですね、行きたいです！");
 const poll = await say(tanaka, {
   case: "poll",
   value: { days: allOff.map(keyOf) },

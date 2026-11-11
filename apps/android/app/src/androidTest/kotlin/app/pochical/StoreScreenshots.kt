@@ -40,8 +40,6 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
 import java.util.regex.Pattern
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -54,8 +52,8 @@ import org.junit.runner.RunWith
 
 /**
  * The screens the stores' screenshots are made of (#806), photographed as they are on an emulator
- * in the order the app is walked rather than the stores': the sample month as a new user's, its day of
- * 早出 opened and リマインド's reminder of the evening before, who
+ * in the order the app is walked rather than the stores': the sample month as a new user's,
+ * リマインド's reminder of the evening before, who
  * joins the groups tools/store-screenshots/seed.ts made, the friends' as まい and the coworkers' as 佐藤; a page of a シフトの期間 from the 15th; the widgets, each kind by itself at
  * each size it offers, those that can be set to someone also set to the group's first member and
  * to the group; the month and the widgets in 墨, in black and white ([Style.Sumi]), and the month with its shifts as
@@ -101,7 +99,6 @@ class StoreScreenshots {
     for (permission in listOf("ACCESS_LOCAL_NETWORK", "READ_CALENDAR", "WRITE_CALENDAR")) {
       device.executeShellCommand("pm grant $PACKAGE android.permission.$permission")
     }
-    showTime(LocalTime.now())
     launch()
     runBlocking { becomeNewUser() }
     launch("sample", "firstRunDone")
@@ -134,21 +131,21 @@ class StoreScreenshots {
     awaitFaces(COWORKERS)
 
     // The chat, which the seed writes once 佐藤 is in, so every joining is said above its lines: read
-    // down to the latest, the poll with its votes, a page at a time as a screen reader scrolls (a
-    // finger's drag would leave the day floating over the lines for a while after),
+    // down to the latest, the poll with its votes, by its ↓, there while lines under the screen's
+    // foot are not yet seen,
     val votes = By.descEndsWith("に行ける人：森、小林")
+    val down = By.desc(Pattern.compile("(最新のメッセージへ|ここから新着へ).*"))
     device.tap(By.text("全体チャット"), By.text("メッセージ"))
-    repeat(CHAT_PAGES) {
-      if (device.wait(Until.hasObject(votes), WAIT)) return@repeat
-      checkNotNull(scrollable(instrumentation.uiAutomation.rootInActiveWindow)) { "No lines to scroll" }
-        .performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_DOWN.id)
+    repeat(CHAT_READS) {
+      if (device.wait(Until.hasObject(votes), WAIT) && !device.hasObject(down)) return@repeat
+      device.findObject(down)?.click()
+      device.wait(Until.gone(down), WAIT)
     }
-    device.find(votes)
-    // and opened again, as it is with nothing new in it: on its latest line. The clock, two minutes after the lines.
+    check(device.hasObject(votes) && !device.hasObject(down)) { "The chat is not read to its latest line" }
+    // and opened again, as it is with nothing new in it: on its latest line.
     device.back(By.text("メッセージ"))
     device.tap(By.text("全体チャット"), votes)
     check(!device.hasObject(By.text("ここから新着"))) { "The chat still has new lines" }
-    showTime(LocalTime.now().plusMinutes(2))
     photograph("04-chat")
     device.back(By.text("メッセージ"))
 
@@ -156,18 +153,17 @@ class StoreScreenshots {
     pickPeriod("15日〜翌月14日")
     launch()
     device.find(calendar)
-    // The page's heading, with the room over it that it has at its side, and the week its first day is in.
+    // The page's heading and the week its first day is in.
     val first = LocalDate.now().let { if (it.dayOfMonth < 15) it.minusMonths(1) else it }.withDayOfMonth(15)
-    val heading = device.find(By.descContains("日〜")).visibleBounds
-    photograph("07-details-period", top = heading.top - heading.left, foot = topOf(dayOf(first.plusDays(7))))
+    photograph("07-details-period", top = topOf(By.descContains("日〜")), foot = topOf(dayOf(first.plusDays(7))))
     pickPeriod("1日〜末日")
 
-    photographWidgets("02-widgets")
+    photographWidgetStates("02-widgets", calendar)
     pick(Style.Sumi)
     launch()
     device.find(calendar)
     photograph("05-calendar-sumi")
-    photographWidgets("02-widgets-sumi")
+    photographWidgetStates("02-widgets-sumi", calendar)
 
     pick(Style.Letters)
     launch()
@@ -179,14 +175,8 @@ class StoreScreenshots {
     device.find(calendar)
     enterHalfTheMonth()
     photograph("01-entry")
-    // 夜勤 entered brings the next day's 明け.
-    val month = LocalDate.now().monthValue
-    device.tap(By.text("夜勤"), By.desc(Pattern.compile("${month}月${HALF + 1}日、明け.*")))
-    // The week of the two days.
-    val entered = LocalDate.now().withDayOfMonth(HALF)
-    photograph("07-details-next-day", top = topOf(dayOf(entered)), foot = topOf(dayOf(entered.plusDays(7))))
     enterShiftOn()
-    photographWidgets("02-widgets", only = "now")
+    photographWidgets("02-widgets", only = setOf("now"))
     // Out of ポチポチ入力 as the app starts again: its 完了 would ask about the days left blank.
     launch("sample", "firstRunDone")
     device.find(calendar)
@@ -213,25 +203,15 @@ class StoreScreenshots {
   }
 
   /**
-   * What the cares' shot shows of the app as it starts: the sample's day of 早出 opened, which folds
-   * the month to its week, and リマインド's reminder of the evening before, the next notification as
-   * its page draws it.
+   * What the cares' shot shows of the app as it starts: リマインド's reminder of the evening before,
+   * the next notification as its page draws it.
    */
   private fun photographCares() {
-    val month = LocalDate.now().monthValue
-    val early = By.desc(Pattern.compile("${month}月${EARLY}日、日勤、早出.*"))
-    val opened = By.textStartsWith("${month}月${EARLY}日(")
-    device.tap(early, opened)
-    // From under the month's name, the weekdays and the day's week, down to the day's own name.
-    photograph("08-cares-hours", top = device.find(By.desc(Pattern.compile("\\d+年\\d+月"))).visibleBounds.bottom, foot = between(early, opened))
-    device.tap(By.desc("閉じる"), By.text("ポチポチ入力"))
-
     device.tap(By.text("設定"), By.text("リマインド"))
     device.tap(By.text("リマインド"), By.text("リマインドを追加"))
     device.tap(By.textStartsWith("前日"), By.text("リマインドを編集"))
-    // The notification under its heading, with the room around them that it has at its sides.
-    val banner = device.find(By.descStartsWith("明日は")).visibleBounds
-    photograph("08-cares-reminder", top = topOf(By.textStartsWith("次の通知")) - banner.left, foot = banner.bottom + banner.left)
+    // The notification under its heading.
+    photograph("08-cares-reminder", top = topOf(By.textStartsWith("次の通知")), foot = device.find(By.descStartsWith("明日は")).visibleBounds.bottom)
   }
 
   /**
@@ -459,12 +439,43 @@ class StoreScreenshots {
   }
 
   /**
+   * The widgets on each of today's shifts the wall shows them on ([STATES]), entered in ポチポチ入力
+   * as the ring's is: all of them on a day off, and on a working day those whose picture today's
+   * shift changes. Today and, as 夜勤 brings the day after its 明け, tomorrow are put back as they
+   * were, the app on its calendar again.
+   */
+  private fun photographWidgetStates(folder: String, calendar: BySelector) {
+    launch("sample", "firstRunDone")
+    device.find(calendar)
+    fun holding(day: String, shift: String) = By.desc(Pattern.compile("$day、(.+、)?$shift(、.*)?"))
+    val (today, tomorrow) = listOf(0L, 1L).map { LocalDate.now().plusDays(it).let { day -> "${day.monthValue}月${day.dayOfMonth}日" } }
+    val was = listOf(today, tomorrow).map { day -> day to STATES.map { it.shift }.first { device.hasObject(holding(day, it)) } }
+    device.tap(By.text("ポチポチ入力"), By.text("完了"))
+    fun enter(day: String, shift: String) {
+      device.tap(By.desc(Pattern.compile("$day、.*")), By.desc("入力する日付：$day"))
+      device.tap(By.text(shift), holding(day, shift))
+    }
+    for (state in STATES) {
+      enter(today, state.shift)
+      photographWidgets(folder, state.widgets, state.word)
+    }
+    for ((day, shift) in was) enter(day, shift)
+    // Out of ポチポチ入力 as the app starts again: its 完了 would ask about the days left blank.
+    launch("sample", "firstRunDone")
+    device.find(calendar)
+  }
+
+  /** One of today's shifts the widgets are photographed on: the word their files take for it, none on a day off, and which widgets, all when not said. */
+  private class State(val shift: String, val word: String?, val widgets: Set<String>?)
+
+  /**
    * Every kind of widget by itself at each size it offers, as [folder]/<kind>-<size>.png, in the
    * look the app is in, from the days and the group the app holds: set to nobody, and those that
    * can be, to the group's first member (-person) and to the group itself (-group). [only] names
-   * the one to photograph, when not all.
+   * those to photograph, when not all; [state] the word their files take before the size
+   * (<kind>-<state>-<size>.png), with which none is set to anyone.
    */
-  private fun photographWidgets(folder: String, only: String? = null) = runBlocking {
+  private fun photographWidgets(folder: String, only: Set<String>? = null, state: String? = null) = runBlocking {
     val group = seededGroup(COWORKERS)
     val person = WidgetChoice.Member(group.group.id, group.members.first().userId)
     val widgets: List<Triple<String, PochicalWidget, WidgetChoice?>> =
@@ -479,13 +490,13 @@ class StoreScreenshots {
         Triple("now", NowWidget(), null),
       )
     val sizes = mapOf(SMALL to "small", MEDIUM to "medium", LARGE to "large")
-    for ((name, widget, choice) in widgets.filter { only == null || it.first == only }) {
+    for ((name, widget, choice) in widgets.filter { (only == null || it.first in only) && (state == null || it.third == null) }) {
       val drawn = widget.drawnNow(app, choice)
       // The seed's people each show a photo.
       check(choice !is WidgetChoice.Member || drawn.faces.with != null) { "$name has no photo of whom it is set to" }
       for (size in widget.previews) {
         val picture = withContext(Dispatchers.Main) { widget.picture(app, drawn, size) }
-        val file = File(out, "$folder/$name-${sizes.getValue(size)}.png")
+        val file = File(out, "$folder/$name${state?.let { "-$it" }.orEmpty()}-${sizes.getValue(size)}.png")
         checkNotNull(file.parentFile).mkdirs()
         file.outputStream().use { check(picture.compress(Bitmap.CompressFormat.PNG, 100, it)) { "Could not keep ${file.name}" } }
       }
@@ -497,8 +508,17 @@ class StoreScreenshots {
     const val COWORKERS = "職場のみんな"
     const val FRIENDS = "学生時代の友だち"
 
-    /** More pages than the seed's chat is long. */
-    const val CHAT_PAGES = 4
+    /** Today's shifts the widgets are photographed on, the sample's: a day off first, as the wall's pinned 次の休み is. */
+    val STATES =
+      listOf(
+        State("休み", null, null),
+        State("日勤", "day", setOf("simple", "next-off", "upcoming")),
+        State("夜勤", "night", setOf("simple")),
+        State("明け", "after", setOf("simple")),
+      )
+
+    /** More presses of the chat's ↓ than reading the seed's chat to its end takes. */
+    const val CHAT_READS = 4
 
     /** How long a notification is put off for: longer than a run. */
     const val SNOOZE_MS = 3_600_000
@@ -506,23 +526,11 @@ class StoreScreenshots {
     /** The drags that take シフトの期間's list from one end to the other, and more. */
     const val PERIOD_DRAGS = 12
 
-    /** The sample's day of 早出 (SampleDays). */
-    const val EARLY = 13
-
     /** The first day ポチポチ入力 has yet to enter. */
     const val HALF = 16
 
     /** A size to read a face's photo at, any: the loader keeps the file whatever is asked of it. */
     const val FACE_PX = 96
-  }
-
-  /**
-   * Shows [time] in the status bar, by SystemUI's demo mode, which the script has it in, and waits
-   * for the clock there to say its minute: it is drawn a little after it is told.
-   */
-  private fun showTime(time: LocalTime) {
-    device.executeShellCommand("am broadcast -a com.android.systemui.demo -e command clock -e hhmm ${time.format(DateTimeFormatter.ofPattern("HHmm"))}")
-    device.find(By.pkg("com.android.systemui").textEndsWith(time.format(DateTimeFormatter.ofPattern(":mm"))))
   }
 
   /** The app opened anew on its calendar, with a debug build's [options] (LaunchOptions). */
@@ -542,10 +550,6 @@ class StoreScreenshots {
     if (before is AccountState.SignedIn) account.signOut() else account.startAfresh()
     account.state.first { it is AccountState.SignedIn && it.userId != before.userId }
   }
-
-  /** What scrolls first under [node], itself included. */
-  private fun scrollable(node: AccessibilityNodeInfo): AccessibilityNodeInfo? =
-    if (node.isScrollable) node else (0 until node.childCount).firstNotNullOfOrNull { index -> node.getChild(index)?.let(::scrollable) }
 
   /** Where what [selector] finds begins on the screen: a row's top, by one of its days. */
   private fun topOf(selector: BySelector): Int = device.find(selector).visibleBounds.top

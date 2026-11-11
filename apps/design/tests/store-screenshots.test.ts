@@ -79,12 +79,21 @@ test("the shots are no more than both stores take", () => {
 const WIDGETS = [
   "calendar-large.png",
   "calendar-medium.png",
+  "next-off-day-small.png",
   "next-off-group-small.png",
   "next-off-person-small.png",
   "next-off-small.png",
   "now-small.png",
+  "simple-after-medium.png",
+  "simple-after-small.png",
+  "simple-day-medium.png",
+  "simple-day-small.png",
   "simple-medium.png",
+  "simple-night-medium.png",
+  "simple-night-small.png",
   "simple-small.png",
+  "upcoming-day-medium.png",
+  "upcoming-day-small.png",
   "upcoming-medium.png",
   "upcoming-person-medium.png",
   "upcoming-person-small.png",
@@ -106,21 +115,46 @@ const touch = (a: WallTile, b: WallTile): boolean => {
   return beside || above;
 };
 
-test("the wall holds each widget once in a look, and leaves no gap among them", () => {
+// How many cells lie between two tiles: none for two side by side or
+// corner to corner.
+const between = (a: WallTile, b: WallTile): number =>
+  Math.max(
+    a.column - b.column - b.columns,
+    b.column - a.column - a.columns,
+    a.row - b.row - b.rows,
+    b.row - a.row - a.rows
+  );
+
+test("the wall is covered, a picture on it again only once every one is on it, apart from itself, and never a pinned one", () => {
   const { alike, pinned } = STORE_SHOTS.find(
     (shot) => shot.kind === "wall"
   ) ?? { alike: [], pinned: [] };
   const tiles = wallOf(WIDGETS, 2, pinned, alike);
-  const pictures = tiles.map(({ file, look }) =>
-    alike.includes(file) ? file : `${file} in look ${look}`
-  );
-  expect(new Set(pictures).size).toBe(pictures.length);
-  // Less than a row of it is left as sky.
+  const pictureOf = ({ file, look }: Pick<WallTile, "file" | "look">) =>
+    alike.includes(file) ? file : `${file} in look ${look}`;
   const covered = tiles.reduce(
     (cells, { columns, rows }) => cells + columns * rows,
     0
   );
-  expect(covered).toBeGreaterThan(WALL.columns * (WALL.rows - 1));
+  expect(covered).toBe(WALL.columns * WALL.rows);
+  const again = tiles.filter(
+    (tile, index) =>
+      tiles.findIndex((other) => pictureOf(other) === pictureOf(tile)) !== index
+  );
+  if (again.length > 0) {
+    const every = new Set(
+      WIDGETS.flatMap((file) => [0, 1].map((look) => pictureOf({ file, look })))
+    );
+    expect(new Set(tiles.map(pictureOf)).size).toBe(every.size);
+  }
+  for (const tile of again) {
+    expect(pinned.map((pin) => pin.file)).not.toContain(tile.file);
+    for (const other of tiles) {
+      if (other !== tile && pictureOf(other) === pictureOf(tile)) {
+        expect(between(tile, other)).toBeGreaterThan(0);
+      }
+    }
+  }
 });
 
 test("the wall alternates its two looks, no widget beside itself, the pinned where they are told", () => {
@@ -138,11 +172,11 @@ test("the wall alternates its two looks, no widget beside itself, the pinned whe
   for (const tile of tiles) {
     const neighbors = tiles.filter((other) => touch(tile, other));
     expect(neighbors.map((other) => other.file)).not.toContain(tile.file);
-    // Never more of its own look around a widget than of the other.
+    // Never only its own look around a widget: with each picture on the
+    // wall once, the looks cannot take turns everywhere.
     const own = neighbors.filter((other) => other.look === tile.look).length;
-    expect(
-      own,
-      `${tile.file} at ${tile.column}, ${tile.row}`
-    ).toBeLessThanOrEqual(neighbors.length - own);
+    expect(own, `${tile.file} at ${tile.column}, ${tile.row}`).toBeLessThan(
+      neighbors.length
+    );
   }
 });

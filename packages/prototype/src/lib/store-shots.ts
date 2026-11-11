@@ -1,3 +1,5 @@
+import type { PresetShift } from "./design-patterns";
+
 // The stores' screenshots (#806): each is a screen of the real app,
 // photographed by its platform's own UI test into
 // `.build/store-screenshots/<store>` under the name `raw` gives here, the
@@ -54,10 +56,35 @@ type StoreShot = { headline: readonly string[]; name: string } & (
     }
 );
 
-// A tile of a shot of details: a part of a screen under a line of words.
-// The part is whole rows of the screen, as wide as it, which the
-// platform's UI test cuts by where the screen's own pieces lie.
-export type Tile = { raw: string; words: string };
+// A tile of a shot of details, under a line of words: a part of a screen,
+// whole rows of it, as wide as it, which the platform's UI test cuts by
+// where the screen's own pieces lie; or `pieces`, which the page draws in
+// a row from the app's own marks, larger than a screen has them, with
+// words and lines of the picture's own that say what happens.
+export type Tile = { words: string } & (
+  | { raw: string }
+  | { pieces: readonly Piece[] }
+);
+
+// A piece of a tile the page draws: ポチポチ入力's key of a shift, being
+// pressed; an arrow to what comes of it; or a day of the calendar with its
+// shift, 早出 or 残業 on its mark, `tag` a word pinned to its corner and
+// `says` a word pointing at the mark's corner.
+export type Piece =
+  | { kind: "key"; shift: PresetShift }
+  | { kind: "then" }
+  | {
+      date: number;
+      early?: boolean;
+      kind: "day";
+      late?: boolean;
+      says?: string;
+      shift: PresetShift;
+      tag?: string;
+    };
+
+// How tall a tile of pieces is, in its widths.
+export const PIECES_TALL = 0.32;
 
 // A widget the wall shows whole where the eye lands first, under the
 // headline in its middle columns: its file, the look it is in, counted in
@@ -94,17 +121,17 @@ export const STORE_SHOTS = [
   },
   {
     alike: [
+      "next-off-day-small.png",
       "next-off-group-small.png",
       "next-off-person-small.png",
       "next-off-small.png",
-      "now-small.png",
     ],
     headline: ["次の休みも、", "ウィジェットで。"],
     kind: "wall",
     name: "widgets",
     pinned: [
-      { column: 2, file: "next-off-small.png", look: 0, row: 2 },
-      { column: 3, file: "now-small.png", look: 0, row: 3 },
+      { column: 2, file: "next-off-small.png", look: 0, row: 3 },
+      { column: 3, file: "now-small.png", look: 0, row: 4 },
     ],
     raw: ["02-widgets", "02-widgets-sumi"],
   },
@@ -138,8 +165,13 @@ export const STORE_SHOTS = [
     name: "details",
     tiles: [
       {
-        raw: "07-details-next-day.png",
-        words: "夜勤を入れると、翌日に明け",
+        pieces: [
+          { kind: "key", shift: "night" },
+          { kind: "then" },
+          { date: 16, kind: "day", shift: "night" },
+          { date: 17, kind: "day", shift: "after", tag: "自動" },
+        ],
+        words: "夜勤を入れると、明けも自動で",
       },
       {
         raw: "07-details-period.png",
@@ -157,7 +189,10 @@ export const STORE_SHOTS = [
     name: "cares",
     tiles: [
       {
-        raw: "08-cares-hours.png",
+        pieces: [
+          { date: 13, early: true, kind: "day", says: "早出", shift: "day" },
+          { date: 8, kind: "day", late: true, says: "残業", shift: "day" },
+        ],
         words: "早出・残業が、アイコンでわかる",
       },
       {
@@ -220,11 +255,10 @@ const cellsOf = (file: string) => {
   return WIDGET_CELLS[isWidgetSize(size) ? size : "small"];
 };
 
-// The wall's grid of a Home Screen's cells: no more of them than the
-// widgets cover with each on it once in each look, so nothing is there
-// twice, in cells large enough for the grid to run off the picture's
-// edges once tilted.
-export const WALL = { columns: 5, rows: 7 } as const;
+// The wall's grid of a Home Screen's cells: as wide as it must be to run
+// off the picture's edges once tilted, and as many rows as cover the
+// picture's height.
+export const WALL = { columns: 6, rows: 9 } as const;
 
 // A widget on the wall: its file in the look numbered `look`, and the
 // cells it covers, counted from 0.
@@ -237,15 +271,18 @@ export type WallTile = {
   rows: number;
 };
 
-// The wall, filled cell by cell from its first, each widget on it once
-// in a look at most, and one of the `alike` once in all: the same kind
-// comes again only as another picture, in another size, the other look,
-// or set to someone else. Each place
-// takes, of those not yet on the wall, the widget and the look that
-// there touch the least of the same widget, then of the same look, then
-// were used the least so far. So the looks alternate across the wall, and
-// no widget sits beside itself where another fits. The `pinned` are put
-// first, where they are told. A cell that nothing left fits stays sky.
+// The wall, filled cell by cell from its first. A picture is a widget in
+// a look, one of the `alike` in either: the same kind comes again as
+// another picture, in another size, the other look, set to someone else,
+// or on another of today's shifts. Each place takes, of the pictures not
+// yet on the wall, the one that there touches the least of the same
+// widget, then of the same look, then whose widget and look were used the
+// least so far: the looks alternate across the wall, and no widget sits
+// beside itself where another fits. Only where none of those fits does a
+// picture come again, never a pinned one, the one whose other self is
+// farthest off and not beside the place, even corner to corner. The
+// `pinned` are put first, where they are told. A cell that nothing fits
+// stays sky.
 export const wallOf = (
   files: readonly string[],
   looks: number,
@@ -253,6 +290,7 @@ export const wallOf = (
   alike: readonly string[] = []
 ): WallTile[] => {
   const tiles: WallTile[] = [];
+  const pins = new Set(pinned.map((pin) => pin.file));
   // Which tile covers each cell, by its place in `tiles`.
   const covered = new Map<string, number>();
   const used = new Map<string, number>();
@@ -279,6 +317,21 @@ export const wallOf = (
     }
     return edge;
   };
+  // How many cells lie between a tile there and the nearest of the same
+  // picture: none for one beside it, edge to edge or corner to corner.
+  const apart = (tile: WallTile): number =>
+    Math.min(
+      ...tiles
+        .filter((other) => on(other) === on(tile))
+        .map((other) =>
+          Math.max(
+            tile.column - other.column - other.columns,
+            other.column - tile.column - tile.columns,
+            tile.row - other.row - other.rows,
+            other.row - tile.row - tile.rows
+          )
+        )
+    );
   const put = (tile: WallTile) => {
     for (let across = 0; across < tile.columns; across += 1) {
       for (let down = 0; down < tile.rows; down += 1) {
@@ -286,7 +339,7 @@ export const wallOf = (
       }
     }
     tiles.push(tile);
-    used.set(on(tile), 1);
+    used.set(on(tile), usedOf(on(tile)) + 1);
     used.set(tile.file, usedOf(tile.file) + 1);
     used.set(`look ${tile.look}`, usedOf(`look ${tile.look}`) + 1);
   };
@@ -301,26 +354,32 @@ export const wallOf = (
       const fitting = files.flatMap((file) => {
         const place = { ...cellsOf(file), column, row };
         const fits =
+          column + place.columns <= WALL.columns &&
           row + place.rows <= WALL.rows &&
-          Array.from(
-            { length: place.columns },
-            (_, across) => column + across
-          ).every((at) => at < WALL.columns && !covered.has(`${at} ${row}`));
+          Array.from({ length: place.columns * place.rows }, (_, cell) => [
+            column + (cell % place.columns),
+            row + Math.floor(cell / place.columns),
+          ]).every(([across, down]) => !covered.has(`${across} ${down}`));
         return fits
           ? Array.from({ length: looks }, (_, look) => ({
               ...place,
               file,
               look,
-            })).filter((tile) => usedOf(on(tile)) === 0)
+            }))
           : [];
       });
+      const fresh = fitting.filter((tile) => usedOf(on(tile)) === 0);
+      const again = fitting.filter(
+        (tile) => !pins.has(tile.file) && apart(tile) > 0
+      );
       const costOf = (tile: WallTile) => [
+        fresh.length > 0 ? 0 : -apart(tile),
         touching(tile, (other) => other.file === tile.file),
         touching(tile, (other) => other.look === tile.look),
         usedOf(tile.file),
         usedOf(`look ${tile.look}`),
       ];
-      const [tile] = fitting.toSorted((a, b) => {
+      const [tile] = (fresh.length > 0 ? fresh : again).toSorted((a, b) => {
         const costs = costOf(b);
         return (
           costOf(a)
@@ -328,7 +387,8 @@ export const wallOf = (
             .find((difference) => difference !== 0) ?? 0
         );
       });
-      // No widget not yet on the wall is small enough for what is left here.
+      // Nothing is small enough for what is left here, or far enough from
+      // its other self.
       if (tile === undefined) {
         continue;
       }
