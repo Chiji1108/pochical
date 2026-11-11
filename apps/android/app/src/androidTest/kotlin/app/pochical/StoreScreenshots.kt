@@ -53,7 +53,7 @@ import org.junit.runner.RunWith
 /**
  * The screens the stores' screenshots are made of (#806), photographed as they are on an emulator
  * in the order the app is walked rather than the stores': the sample month as a new user's, who
- * joins the groups tools/store-screenshots/seed.ts made, the friends' as まい and the coworkers' as 佐藤; the widgets, each kind by itself at
+ * joins the groups tools/store-screenshots/seed.ts made, the friends' as まい and the coworkers' as 佐藤; a page of a シフトの期間 from the 15th; the widgets, each kind by itself at
  * each size it offers, those that can be set to someone also set to the group's first member and
  * to the group; the month and the widgets in 墨, in black and white ([Style.Sumi]), and the month with its shifts as
  * letters ([Style.Letters]); then, as
@@ -133,6 +133,13 @@ class StoreScreenshots {
     photograph("04-chat")
     device.back(By.text("メッセージ"))
 
+    // A month that runs from the 15th, the page holding today, and the month put back.
+    pickPeriod("15日〜翌月14日")
+    launch()
+    device.find(calendar)
+    photograph("07-details-period")
+    pickPeriod("1日〜末日")
+
     photographWidgets("02-widgets")
     pick(Style.Sumi)
     launch()
@@ -150,6 +157,9 @@ class StoreScreenshots {
     device.find(calendar)
     enterHalfTheMonth()
     photograph("01-entry")
+    // 夜勤 entered brings the next day's 明け.
+    device.tap(By.text("夜勤"), By.desc(Pattern.compile("${LocalDate.now().monthValue}月${HALF + 1}日、明け.*")))
+    photograph("07-details-next-day")
     enterShiftOn()
     photographWidgets("02-widgets", only = "now")
     // Out of ポチポチ入力 as the app starts again: its 完了 would ask about the days left blank.
@@ -157,7 +167,7 @@ class StoreScreenshots {
     device.find(calendar)
 
     startFixedCycle()
-    photograph("details-repeat")
+    photograph("07-details-repeat")
   }
 
   /**
@@ -224,6 +234,30 @@ class StoreScreenshots {
       reveal(By.text(day))
       device.tap(switch(day, !style.coloredDays), switch(day, style.coloredDays))
     }
+    device.back(By.text("週の始まり"))
+  }
+
+  /**
+   * Picks [period] as 設定 › カレンダー's シフトの期間, in its dialog: a list longer than the dialog,
+   * dragged until the row is in sight, on from where it opens and then back.
+   */
+  private fun pickPeriod(period: String) {
+    device.tap(By.text("設定"), By.text("スタイル"))
+    device.tap(By.textContains("曜はじまり"), By.text("週の始まり"))
+    reveal(By.text("1ページの期間"))
+    device.tap(By.text("1ページの期間"), By.text("キャンセル"))
+    val row = By.text(period)
+    val (across, middle) = device.displayWidth / 2 to device.displayHeight / 2
+    val reach = device.displayHeight / 4
+    fun inSight() = device.findObject(row)?.visibleBounds?.let { it.height() > 0 && it.top > middle - reach && it.bottom < middle + reach } == true
+    for (way in listOf(-1, 1)) {
+      repeat(PERIOD_DRAGS) {
+        if (inSight()) return@repeat
+        device.swipe(across, middle, across, middle + way * reach, 20)
+        device.waitForIdle()
+      }
+    }
+    device.tap(row, Until.gone(By.text("キャンセル")))
     device.back(By.text("週の始まり"))
   }
 
@@ -349,6 +383,12 @@ class StoreScreenshots {
   }
 
   private companion object {
+    /** How long a notification is put off for: longer than a run. */
+    const val SNOOZE_MS = 3_600_000
+
+    /** The drags that take シフトの期間's list from one end to the other, and more. */
+    const val PERIOD_DRAGS = 12
+
     /** The first day ポチポチ入力 has yet to enter. */
     const val HALF = 16
 
@@ -384,6 +424,12 @@ class StoreScreenshots {
    * window and waited for until it is committed.
    */
   private fun photograph(name: String) {
+    // Android 17's status bar keeps the notifications' icons through the demo's
+    // `notifications -e visible false`, and one may come at any time of a run: each there is
+    // snoozed, and comes back by itself.
+    for (key in device.executeShellCommand("cmd notification list").lines().filter { it.isNotBlank() }) {
+      device.executeShellCommand("cmd notification snooze --for $SNOOZE_MS $key")
+    }
     device.waitForIdle()
     val committed = CountDownLatch(1)
     instrumentation.runOnMainSync {

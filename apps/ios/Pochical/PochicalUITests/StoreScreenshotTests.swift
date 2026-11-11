@@ -3,7 +3,8 @@ import XCTest
 /// The screens the stores' screenshots are drawn from (#806), photographed
 /// in the order the app is walked rather than the stores': the sample
 /// month and 端末カレンダーに追加; 学生時代の友だち's 一覧, joined as まい,
-/// and 職場のみんな's 全体チャット, joined as 佐藤; the widgets, each put on the Home Screen in turn, those
+/// and 職場のみんな's 全体チャット, joined as 佐藤; a page of a シフトの期間
+/// from the 15th; the widgets, each put on the Home Screen in turn, those
 /// that can be set to someone also set to the group's first member and to
 /// the group; the month and the widgets in 墨, in black and white
 /// (`Style.sumi`), and the month with its shifts as letters
@@ -77,25 +78,35 @@ final class StoreScreenshotTests: XCTestCase {
     snap("04-chat", of: XCUIScreen.main, into: raw)
   }
 
+  /// A month that runs from the 15th: シフトの期間 set in 設定's カレンダー,
+  /// the page holding today photographed, and the month put back.
   @MainActor
-  func test04Widgets() throws {
+  func test04Period() throws {
+    launch()
+    pick(period: "15日〜翌月14日")
+    snap("07-details-period", of: XCUIScreen.main, into: raw)
+    pick(period: "1日〜末日")
+  }
+
+  @MainActor
+  func test05Widgets() throws {
     try photographWidgets(into: "02-widgets")
   }
 
   @MainActor
-  func test05Sumi() throws {
+  func test06Sumi() throws {
     launch()
     pick(.sumi)
     snap("05-calendar-sumi", of: XCUIScreen.main, into: raw)
   }
 
   @MainActor
-  func test06SumiWidgets() throws {
+  func test07SumiWidgets() throws {
     try photographWidgets(into: "02-widgets-sumi")
   }
 
   @MainActor
-  func test07Letters() throws {
+  func test08Letters() throws {
     launch()
     pick(.letters)
     snap("05-calendar-letters", of: XCUIScreen.main, into: raw)
@@ -105,7 +116,7 @@ final class StoreScreenshotTests: XCTestCase {
   /// month's days from the 16th taken out, as they are before they are
   /// entered, and the 16th the day to enter.
   @MainActor
-  func test08Entry() throws {
+  func test09Entry() throws {
     launch()
     pick(.started)
     app.buttons["ポチポチ入力"].tap()
@@ -122,6 +133,11 @@ final class StoreScreenshotTests: XCTestCase {
     XCTAssertTrue(clear.wait(for: \.isEnabled, toEqual: false, timeout: 5), "the last day is blank")
     pickDay(month, 16)
     snap("01-entry", of: XCUIScreen.main, into: raw)
+
+    // 夜勤 entered brings the next day's 明け.
+    enter("夜勤", month, 16)
+    XCTAssertTrue(day(month, 17, holding: "明け").waitForExistence(timeout: 5), "17日 is 明け")
+    snap("07-details-next-day", of: XCUIScreen.main, into: raw)
   }
 
   /// いまのシフト with its ring, which it draws while a shift is on: one of
@@ -131,7 +147,7 @@ final class StoreScreenshotTests: XCTestCase {
   /// the app starts. After the screens that show the month, as it changes a
   /// day of it.
   @MainActor
-  func test09Ring() throws {
+  func test10Ring() throws {
     launch()
     app.buttons["ポチポチ入力"].tap()
     let hour = Calendar.current.component(.hour, from: .now)
@@ -140,10 +156,7 @@ final class StoreScreenshotTests: XCTestCase {
     let month = Calendar.current.component(.month, from: on)
     let day = Calendar.current.component(.day, from: on)
     pickDay(month, day)
-    app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", shift)).firstMatch.tap()
-    let entered = app.descendants(matching: .any)
-      .matching(NSPredicate(format: "label BEGINSWITH %@", "\(month)月\(day)日、\(shift)")).firstMatch
-    XCTAssertTrue(entered.waitForExistence(timeout: 5), "\(day)日 is \(shift)")
+    enter(shift, month, day)
     try photographWidgets(into: "02-widgets", only: "いまのシフト")
   }
 
@@ -153,7 +166,7 @@ final class StoreScreenshotTests: XCTestCase {
   /// named as those who work the cycle call them. Last of all, as the days
   /// from then on are the new job's.
   @MainActor
-  func test10Repeat() throws {
+  func test11Repeat() throws {
     launch()
     app.tabBars.buttons["設定"].tap()
     open(page: "シフトパターン")
@@ -186,7 +199,7 @@ final class StoreScreenshotTests: XCTestCase {
     coming.tap()
     press("カレンダーで直す")
     XCTAssertTrue(app.navigationBars["繰り返しを直す"].waitForExistence(timeout: 5), "the order opens")
-    snap("details-repeat", of: XCUIScreen.main, into: raw)
+    snap("07-details-repeat", of: XCUIScreen.main, into: raw)
   }
 
   /// Taps the button whose words hold `name`, a page down where the page
@@ -232,6 +245,38 @@ final class StoreScreenshotTests: XCTestCase {
       if only != nil { break }
       page += 1
     }
+  }
+
+  /// The calendar's `day` once it holds `shift`.
+  @MainActor private func day(_ month: Int, _ day: Int, holding shift: String) -> XCUIElement {
+    app.descendants(matching: .any)
+      .matching(NSPredicate(format: "label BEGINSWITH %@", "\(month)月\(day)日、\(shift)")).firstMatch
+  }
+
+  /// Presses the tray's key of `shift` on the `day` being entered.
+  @MainActor private func enter(_ shift: String, _ month: Int, _ day: Int) {
+    app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", shift)).firstMatch.tap()
+    XCTAssertTrue(
+      self.day(month, day, holding: shift).waitForExistence(timeout: 5), "\(day)日 is \(shift)")
+  }
+
+  /// Picks `period` as 設定's カレンダー's シフトの期間, and comes back to the
+  /// calendar in it.
+  @MainActor private func pick(period: String) {
+    app.tabBars.buttons["設定"].tap()
+    open(page: "カレンダー")
+    // The list's last row, below the page as it opens.
+    let row = app.descendants(matching: .any)
+      .matching(NSPredicate(format: "label CONTAINS '1ページの期間'")).firstMatch
+    for _ in 0..<4 where !(row.exists && row.isHittable) { app.swipeUp() }
+    row.tap()
+    // The menu opens on the period in use: the month is its first, above.
+    let choice = app.buttons[period]
+    for _ in 0..<8 where !(choice.exists && choice.isHittable) { app.swipeDown() }
+    choice.tap()
+    app.navigationBars["カレンダー"].buttons.firstMatch.tap()
+    app.tabBars.buttons["カレンダー"].tap()
+    XCTAssertTrue(app.buttons["ポチポチ入力"].waitForExistence(timeout: 5), "the calendar shows")
   }
 
   /// Taps the calendar's `day` while entering, for the tray to enter it.
