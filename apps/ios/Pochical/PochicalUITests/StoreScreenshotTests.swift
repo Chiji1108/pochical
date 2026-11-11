@@ -2,12 +2,15 @@ import XCTest
 
 /// The screens the stores' screenshots are drawn from (#806), photographed
 /// in the order the app is walked rather than the stores': the sample
-/// month and 端末カレンダーに追加; 職場のみんな's 一覧 and 全体チャット,
-/// joined as 佐藤; the widgets, each put on the Home Screen in turn, those
+/// month and 端末カレンダーに追加; 学生時代の友だち's 一覧, joined as まい,
+/// and 職場のみんな's 全体チャット, joined as 佐藤; the widgets, each put on the Home Screen in turn, those
 /// that can be set to someone also set to the group's first member and to
-/// the group; the month and the widgets again in 墨, in black and white
-/// (`Style.sumi`); and last, as it takes days out of the month, ポチポチ入力
-/// halfway through it, as the app starts again. Each is kept as the file
+/// the group; the month and the widgets in 墨, in black and white
+/// (`Style.sumi`), and the month with its shifts as letters
+/// (`Style.letters`); then, as they change the month's days, ポチポチ入力
+/// halfway through it, as the app starts again, and いまのシフト's widget
+/// once more with a shift on; and last, as it changes the job,
+/// 繰り返しを直す on a fixed cycle. Each is kept as the file
 /// `packages/prototype/src/lib/store-shots.ts` names. Run by
 /// `mise run store:shots:ios`, against the local server it seeds; skipped
 /// without it.
@@ -26,9 +29,8 @@ final class StoreScreenshotTests: XCTestCase {
   }
 
   @MainActor
-  func test1Month() throws {
+  func test01Month() throws {
     launch()
-    snap("02-calendar", of: XCUIScreen.main, into: raw)
 
     // 端末カレンダーに追加, with 自動で反映 turned on.
     let save = app.buttons["この月のシフトを保存"]
@@ -44,20 +46,27 @@ final class StoreScreenshotTests: XCTestCase {
     for _ in 0..<4 where !(toggle.exists && toggle.isHittable) { app.swipeUp() }
     toggle.switches.firstMatch.tap()
     XCTAssertEqual(toggle.value as? String, "1", "自動で反映 is on")
-    snap("03-device-calendar", of: XCUIScreen.main, into: raw)
+    snap("06-device-calendar", of: XCUIScreen.main, into: raw)
   }
 
+  /// The friends' group, joined as まい, the name typed there the usual
+  /// one from then on.
   @MainActor
-  func test2Group() throws {
+  func test02Friends() throws {
     launch()
-    try app.joins(invitation: raw.appending(path: "invite"), named: "佐藤")
+    try app.joins(invitation: raw.appending(path: "invite-friends"), named: "まい")
     app.buttons["月で見る"].tap()
     let row = app.buttons.matching(NSPredicate(format: "label MATCHES '[0-9]{1,2}月[0-9]{1,2}日.*'"))
       .firstMatch
     XCTAssertTrue(row.waitForExistence(timeout: 10), "一覧's rows show")
-    snap("05-group-shifts", of: XCUIScreen.main, into: raw)
-    app.navigationBars.firstMatch.buttons.firstMatch.tap()
+    snap("03-group-shifts", of: XCUIScreen.main, into: raw)
+  }
 
+  /// The coworkers' group, joined as 佐藤 there alone.
+  @MainActor
+  func test03Coworkers() throws {
+    launch()
+    try app.joins(invitation: raw.appending(path: "invite"), named: "佐藤", over: "まい")
     app.buttons.matching(NSPredicate(format: "label BEGINSWITH '全体チャット'")).firstMatch.tap()
     XCTAssertTrue(
       app.navigationBars.firstMatch.buttons["チャットのメニュー"].waitForExistence(timeout: 15),
@@ -65,31 +74,38 @@ final class StoreScreenshotTests: XCTestCase {
     let found = app.staticTexts
       .matching(NSPredicate(format: "label CONTAINS 'モバイルバッテリー'")).firstMatch
     XCTAssertTrue(found.waitForExistence(timeout: 10), "the chat's lines show")
-    snap("06-chat", of: XCUIScreen.main, into: raw)
+    snap("04-chat", of: XCUIScreen.main, into: raw)
   }
 
   @MainActor
-  func test3Widgets() throws {
-    try photographWidgets(into: "04-widgets")
+  func test04Widgets() throws {
+    try photographWidgets(into: "02-widgets")
   }
 
   @MainActor
-  func test4Sumi() throws {
+  func test05Sumi() throws {
     launch()
     pick(.sumi)
-    snap("07-calendar-sumi", of: XCUIScreen.main, into: raw)
+    snap("05-calendar-sumi", of: XCUIScreen.main, into: raw)
   }
 
   @MainActor
-  func test5SumiWidgets() throws {
-    try photographWidgets(into: "04-widgets-sumi")
+  func test06SumiWidgets() throws {
+    try photographWidgets(into: "02-widgets-sumi")
+  }
+
+  @MainActor
+  func test07Letters() throws {
+    launch()
+    pick(.letters)
+    snap("05-calendar-letters", of: XCUIScreen.main, into: raw)
   }
 
   /// ポチポチ入力 halfway through the month, as the app starts: the sample
   /// month's days from the 16th taken out, as they are before they are
   /// entered, and the 16th the day to enter.
   @MainActor
-  func test6Entry() throws {
+  func test08Entry() throws {
     launch()
     pick(.started)
     app.buttons["ポチポチ入力"].tap()
@@ -108,12 +124,87 @@ final class StoreScreenshotTests: XCTestCase {
     snap("01-entry", of: XCUIScreen.main, into: raw)
   }
 
+  /// いまのシフト with its ring, which it draws while a shift is on: one of
+  /// the sample's that is on now is entered for it, 夜勤 (16:30 to 9:30 the
+  /// next day) on the day before until 9:00, 日勤 (9:00 to 18:00) today
+  /// until 18:00 and 夜勤 today after, and the widget photographed again as
+  /// the app starts. After the screens that show the month, as it changes a
+  /// day of it.
+  @MainActor
+  func test09Ring() throws {
+    launch()
+    app.buttons["ポチポチ入力"].tap()
+    let hour = Calendar.current.component(.hour, from: .now)
+    let on = Calendar.current.date(byAdding: .day, value: hour < 9 ? -1 : 0, to: .now)!
+    let shift = (9..<18).contains(hour) ? "日勤" : "夜勤"
+    let month = Calendar.current.component(.month, from: on)
+    let day = Calendar.current.component(.day, from: on)
+    pickDay(month, day)
+    app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", shift)).firstMatch.tap()
+    let entered = app.descendants(matching: .any)
+      .matching(NSPredicate(format: "label BEGINSWITH %@", "\(month)月\(day)日、\(shift)")).firstMatch
+    XCTAssertTrue(entered.waitForExistence(timeout: 5), "\(day)日 is \(shift)")
+    try photographWidgets(into: "02-widgets", only: "いまのシフト")
+  }
+
+  /// 繰り返しを直す on a fixed cycle of three days, 当務・非番・週休, in the
+  /// month after this one: the job changed in 設定 to the ready-made
+  /// 当番・非番・休み, from next month's 1st as it offers, then 当番 and 休み
+  /// named as those who work the cycle call them. Last of all, as the days
+  /// from then on are the new job's.
+  @MainActor
+  func test10Repeat() throws {
+    launch()
+    app.tabBars.buttons["設定"].tap()
+    open(page: "シフトパターン")
+    for step in ["新しい仕事にする", "次へ", "繰り返しがある", "当番・非番・休み", "次へ"] { press(step) }
+    XCTAssertTrue(
+      app.navigationBars["「当番」の日を押す"].waitForExistence(timeout: 5), "the order is typed")
+    app.navigationBars.buttons["完了"].tap()
+    let change = app.alerts.buttons["切り替える"]
+    XCTAssertTrue(change.waitForExistence(timeout: 5), "完了 asks first")
+    change.tap()
+    for (name, called) in [("当番", "当務"), ("休み", "週休")] {
+      XCTAssertTrue(
+        app.navigationBars["シフトパターン"].waitForExistence(timeout: 5), "the patterns show")
+      press(name)
+      XCTAssertTrue(app.navigationBars["パターンを編集"].waitForExistence(timeout: 5), "\(name) opens")
+      let field = app.textFields.firstMatch
+      // The name, one word at the field's trailing edge, picked by two taps and typed over.
+      field.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).doubleTap()
+      field.typeText(called)
+      XCTAssertEqual(field.value as? String, called, "\(name) is named \(called)")
+      app.navigationBars["パターンを編集"].buttons["保存"].tap()
+    }
+    XCTAssertTrue(
+      app.navigationBars["シフトパターン"].waitForExistence(timeout: 5), "the patterns show")
+    app.navigationBars["シフトパターン"].buttons.firstMatch.tap()
+    open(page: "繰り返し")
+    let coming = app.buttons.matching(NSPredicate(format: "label ENDSWITH 'からの繰り返し'"))
+      .firstMatch
+    XCTAssertTrue(coming.waitForExistence(timeout: 5), "the new job's period is listed")
+    coming.tap()
+    press("カレンダーで直す")
+    XCTAssertTrue(app.navigationBars["繰り返しを直す"].waitForExistence(timeout: 5), "the order opens")
+    snap("details-repeat", of: XCUIScreen.main, into: raw)
+  }
+
+  /// Taps the button whose words hold `name`, a page down where the page
+  /// does not show it yet.
+  @MainActor private func press(_ name: String) {
+    let button = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", name)).firstMatch
+    XCTAssertTrue(button.waitForExistence(timeout: 5), "\(name) is offered")
+    for _ in 0..<4 where !button.isHittable { app.swipeUp() }
+    button.tap()
+  }
+
   /// Each widget the gallery offers for the Home Screen, put on it,
   /// photographed by itself once it has drawn the person's days, then set
   /// to each of whom it can be and photographed again
   /// (`<widget>-<person | group>-<size>`), and taken off, so only one is
-  /// ever there to find: into `folder`, in the look the app is in.
-  @MainActor private func photographWidgets(into folder: String) throws {
+  /// ever there to find: into `folder`, in the look the app is in. `only`
+  /// names the one widget to photograph, when not all.
+  @MainActor private func photographWidgets(into folder: String, only: String? = nil) throws {
     let home = HomeScreen()
     let widgets = raw.appending(path: folder)
     try FileManager.default.createDirectory(at: widgets, withIntermediateDirectories: true)
@@ -122,7 +213,12 @@ final class StoreScreenshotTests: XCTestCase {
     var pages = 1
     while page <= pages {
       pages = home.openGallery()
-      let (name, size) = home.show(page: page)
+      var (name, size) = home.show(page: page)
+      while let only, name != only, page < pages {
+        page += 1
+        (name, size) = home.show(page: page, from: page - 1)
+      }
+      if let only { XCTAssertEqual(name, only, "the gallery offers \(only)") }
       guard let file = Self.widgetFiles[name], let suffix = Self.widgetSizes[size] else {
         return XCTFail("the widget \(name) (\(size)) has no file name")
       }
@@ -133,6 +229,7 @@ final class StoreScreenshotTests: XCTestCase {
         snap("\(file)-\(whom)-\(suffix)", of: home.widgetFace, into: widgets)
       }
       home.removeWidget()
+      if only != nil { break }
       page += 1
     }
   }
@@ -156,13 +253,21 @@ final class StoreScreenshotTests: XCTestCase {
   /// the page's order (シフトの見た目, テーマ, シフトの色, 休みの見せ方), and
   /// whether カレンダー's 色をつける日 are on.
   private struct Style {
-    let choices: [String]
+    let shape: String
+    let theme: String
+    let colors: String
+    let off: String
     let coloredDays: Bool
 
     /// As the app starts.
-    static let started = Style(choices: ["塗り", "ポチカル", "色分け", "強調"], coloredDays: true)
+    static let started = Style(
+      shape: "塗り", theme: "ポチカル", colors: "色分け", off: "強調", coloredDays: true)
     /// 墨 with nothing colored and nothing filled: black and white.
-    static let sumi = Style(choices: ["線", "墨", "ワントーン", "印だけ"], coloredDays: false)
+    static let sumi = Style(
+      shape: "線", theme: "墨", colors: "ワントーン", off: "印だけ", coloredDays: false)
+    /// The shifts as letters, each in its color, in ソーダ.
+    static let letters = Style(
+      shape: "文字", theme: "ソーダ", colors: "色分け", off: "印だけ", coloredDays: true)
   }
 
   /// Picks `style` in 設定, as the person would: スタイル's choices and
@@ -170,8 +275,16 @@ final class StoreScreenshotTests: XCTestCase {
   @MainActor private func pick(_ style: Style) {
     app.tabBars.buttons["設定"].tap()
     open(page: "スタイル")
-    for choice in style.choices {
+    for choice in [style.shape, style.theme, style.colors, style.off] {
       let tile = app.buttons[choice]
+      if choice == style.theme {
+        // テーマ's pages, a few テーマ each: turned by their dots to the one holding it.
+        let dots = app.otherElements["テーマのページ"]
+        for _ in 0..<4 where !(dots.exists && dots.isHittable) { app.swipeUp() }
+        for dot in dots.buttons.allElementsBoundByIndex where !(tile.exists && tile.isHittable) {
+          dot.tap()
+        }
+      }
       for _ in 0..<4 where !(tile.exists && tile.isHittable) { app.swipeUp() }
       tile.tap()
       XCTAssertTrue(tile.isSelected, "\(choice) is picked")
@@ -276,10 +389,10 @@ final class StoreScreenshotTests: XCTestCase {
     return count ?? 0
   }
 
-  /// Turns the open gallery to its `page`, counted from 1, and says which
-  /// widget it shows and in which size.
-  func show(page: Int) -> (name: String, size: String) {
-    for turned in 1..<page {
+  /// Turns the open gallery, on the page `from`, to its `page`, counted
+  /// from 1, and says which widget it shows and in which size.
+  func show(page: Int, from: Int = 1) -> (name: String, size: String) {
+    for turned in from..<page {
       springboard.swipeLeft()
       let next = XCTNSPredicateExpectation(
         predicate: NSPredicate(format: "value ENDSWITH %@", "の\(turned + 1)ページ目"), object: pages)

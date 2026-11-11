@@ -24,8 +24,10 @@ extension XCUIApplication {
 
   /// Joins the group whose invitation code the test's script kept in
   /// `invitation`, as `name` if given (else as the user already is), its
-  /// hub shown.
-  @MainActor func joins(invitation: URL, named name: String?) throws {
+  /// hub shown. The name is typed in the row that says one is needed, or
+  /// where the device has a usual name already, in the row showing it,
+  /// `usual`, for this group alone.
+  @MainActor func joins(invitation: URL, named name: String?, over usual: String? = nil) throws {
     let code = try String(contentsOf: invitation, encoding: .utf8)
       .trimmingCharacters(in: .whitespacesAndNewlines)
     open(URL(string: "pochical://invite/\(code)")!)
@@ -34,8 +36,8 @@ extension XCUIApplication {
       .firstMatch
     if confirm.waitForExistence(timeout: 5) { confirm.tap() }
     if let name {
-      let profile = buttons.matching(NSPredicate(format: "label BEGINSWITH '名前を入れてください'"))
-        .firstMatch
+      let profile = buttons
+        .matching(NSPredicate(format: "label BEGINSWITH %@", usual ?? "名前を入れてください")).firstMatch
       XCTAssertTrue(profile.waitForExistence(timeout: 15), "the join screen opens")
       profile.tap()
       let field = textFields.firstMatch

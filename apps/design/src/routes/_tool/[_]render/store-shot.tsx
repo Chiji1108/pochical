@@ -7,7 +7,7 @@ import {
   WALL,
   wallOf,
 } from "@pochical/prototype/lib/store-shots";
-import type { StoreId } from "@pochical/prototype/lib/store-shots";
+import type { StoreId, WallPin } from "@pochical/prototype/lib/store-shots";
 import { css, cx } from "@pochical/styled-system/css";
 import { createFileRoute } from "@tanstack/react-router";
 
@@ -176,6 +176,7 @@ function StoreShotPage() {
       {shot.kind === "wall" && (
         <Wall
           looks={shot.raw}
+          pinned={shot.pinned}
           row={widgetRow}
           widgets={widgets.split(",").filter(Boolean)}
         />
@@ -222,10 +223,12 @@ function StoreShotPage() {
 // A cell is `row` times as tall as it is wide.
 function Wall({
   looks,
+  pinned,
   row,
   widgets,
 }: {
   looks: readonly string[];
+  pinned: readonly WallPin[];
   row: number;
   widgets: string[];
 }) {
@@ -238,7 +241,7 @@ function Wall({
           gridTemplateRows: `repeat(${WALL.rows}, calc(${WIDGET_CELL} * ${row}))`,
         }}
       >
-        {wallOf(widgets, looks.length).map((tile) => (
+        {wallOf(widgets, looks.length, pinned).map((tile) => (
           <div
             className={styles.widget}
             key={`${tile.column} ${tile.row}`}

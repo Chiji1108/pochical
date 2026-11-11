@@ -68,15 +68,17 @@ test("the site's wall of widgets is drawn at its size", () => {
   });
 });
 
-// Google Play's own asks of a screenshot, kept by the App Store's too:
+// Google Play asks that a tagline take no more than a fifth of a
+// screenshot, which the App Store's pictures keep to too; every shot is
+// the app itself under one, its screens or its widgets:
 // https://support.google.com/googleplay/android-developer/answer/9866151
-test("the first three shots show the app, under a headline of a fifth at most", () => {
-  expect(STORE_SHOTS.slice(0, 3).map((shot) => shot.kind)).toEqual([
-    "screen",
-    "screen",
-    "screen",
-  ]);
+test("a headline takes a fifth of its picture at most", () => {
   expect(HEADLINE_SHARE).toBeLessThanOrEqual(0.2);
+});
+
+// Google Play takes eight screenshots of a phone at most, the App Store ten.
+test("the shots are no more than both stores take", () => {
+  expect(STORE_SHOTS.length).toBeLessThanOrEqual(8);
 });
 
 // The wall of widgets mixes its looks (the app as it starts, and 墨 in
@@ -111,8 +113,14 @@ const touch = (a: WallTile, b: WallTile): boolean => {
   return beside || above;
 };
 
-test("the wall alternates its two looks, no widget beside itself", () => {
-  const tiles = wallOf(WIDGETS, 2);
+test("the wall alternates its two looks, no widget beside itself, the pinned where they are told", () => {
+  const { pinned } = STORE_SHOTS.find((shot) => shot.kind === "wall") ?? {
+    pinned: [],
+  };
+  const tiles = wallOf(WIDGETS, 2, pinned);
+  for (const pin of pinned) {
+    expect(tiles).toContainEqual(expect.objectContaining(pin));
+  }
   const first = tiles.filter((tile) => tile.look === 0).length;
   expect(Math.abs(tiles.length - 2 * first)).toBeLessThanOrEqual(2);
   for (const tile of tiles) {
