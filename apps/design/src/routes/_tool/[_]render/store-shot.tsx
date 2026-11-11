@@ -4,9 +4,10 @@ import {
   SITE_WALL,
   STORE_SHOTS,
   STORES,
-  WIDGET_CELLS,
+  WALL,
+  wallOf,
 } from "@pochical/prototype/lib/store-shots";
-import type { StoreId, WidgetSize } from "@pochical/prototype/lib/store-shots";
+import type { StoreId } from "@pochical/prototype/lib/store-shots";
 import { css, cx } from "@pochical/styled-system/css";
 import { createFileRoute } from "@tanstack/react-router";
 
@@ -31,15 +32,8 @@ import {
 
 const RAW = "/_render/store-raw/";
 
-// Where the wall's grid is as wide as it must be to run off the picture's
-// edges once tilted, and how many of its rows cover the picture's height.
-const WALL = { columns: 6, rows: 9 };
-
 const isStore = (value: unknown): value is StoreId =>
   typeof value === "string" && Object.hasOwn(STORES, value);
-
-const isWidgetSize = (value: string | undefined): value is WidgetSize =>
-  value !== undefined && Object.hasOwn(WIDGET_CELLS, value);
 
 export const Route = createFileRoute("/_tool/_render/store-shot")({
   component: StoreShotPage,
@@ -47,7 +41,8 @@ export const Route = createFileRoute("/_tool/_render/store-shot")({
   validateSearch: (search: Record<string, unknown>) => ({
     shot: typeof search.shot === "string" ? search.shot : "",
     store: isStore(search.store) ? search.store : "ios",
-    // The wall's widgets' files, with commas between them.
+    // The wall's widgets' files, each in every look's folder, with commas
+    // between them.
     widgets: typeof search.widgets === "string" ? search.widgets : "",
   }),
 });
@@ -128,7 +123,6 @@ const styles = {
   wallGrid: css({
     display: "grid",
     gap: "calc(var(--u) * 3.5)",
-    gridAutoFlow: "dense",
     left: "50%",
     position: "absolute",
     top: "54%",
@@ -181,7 +175,7 @@ function StoreShotPage() {
       {!site && <PictureSky height="100%" />}
       {shot.kind === "wall" && (
         <Wall
-          folder={shot.raw}
+          looks={shot.raw}
           row={widgetRow}
           widgets={widgets.split(",").filter(Boolean)}
         />
@@ -224,64 +218,38 @@ function StoreShotPage() {
   );
 }
 
-// The cells a widget covers, by its size, the last word of its file's name.
-const cellsOf = (file: string) => {
-  const size = file
-    .replace(/\.png$/u, "")
-    .split("-")
-    .at(-1);
-  return WIDGET_CELLS[isWidgetSize(size) ? size : "small"];
-};
-
-// The widgets over and over, each round starting further along so the
-// same two are not neighbors again, until the wall's cells are covered.
+// The widgets where wallOf puts them, each from the folder of its look.
 // A cell is `row` times as tall as it is wide.
 function Wall({
-  folder,
+  looks,
   row,
   widgets,
 }: {
-  folder: string;
+  looks: readonly string[];
   row: number;
   widgets: string[];
 }) {
-  let cells = 0;
-  for (const file of widgets) {
-    const { columns, rows } = cellsOf(file);
-    cells += columns * rows;
-  }
-  const rounds =
-    cells === 0 ? 0 : Math.ceil((WALL.columns * WALL.rows) / cells);
-  const tiles = Array.from({ length: rounds }, (_, round) =>
-    widgets.map((_file, index) => {
-      const file = widgets[(index + round * 5) % widgets.length] ?? "";
-      return { file, key: `${round} ${file}` };
-    })
-  ).flat();
   return (
     <div className={styles.wall}>
       <div
         className={styles.wallGrid}
         style={{
-          gridAutoRows: `calc(${WIDGET_CELL} * ${row})`,
           gridTemplateColumns: `repeat(${WALL.columns}, ${WIDGET_CELL})`,
+          gridTemplateRows: `repeat(${WALL.rows}, calc(${WIDGET_CELL} * ${row}))`,
         }}
       >
-        {tiles.map(({ file, key }) => {
-          const { columns, rows } = cellsOf(file);
-          return (
-            <div
-              className={styles.widget}
-              key={key}
-              style={{
-                gridColumn: `span ${columns}`,
-                gridRow: `span ${rows}`,
-              }}
-            >
-              <img alt="" src={`${RAW}${folder}/${file}`} />
-            </div>
-          );
-        })}
+        {wallOf(widgets, looks.length).map((tile) => (
+          <div
+            className={styles.widget}
+            key={`${tile.column} ${tile.row}`}
+            style={{
+              gridColumn: `${tile.column + 1} / span ${tile.columns}`,
+              gridRow: `${tile.row + 1} / span ${tile.rows}`,
+            }}
+          >
+            <img alt="" src={`${RAW}${looks[tile.look]}/${tile.file}`} />
+          </div>
+        ))}
       </div>
     </div>
   );
