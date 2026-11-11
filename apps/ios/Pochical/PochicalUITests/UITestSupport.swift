@@ -26,8 +26,12 @@ extension XCUIApplication {
   /// `invitation`, as `name` if given (else as the user already is), its
   /// hub shown. The name is typed in the row that says one is needed, or
   /// where the device has a usual name already, in the row showing it,
-  /// `usual`, for this group alone.
-  @MainActor func joins(invitation: URL, named name: String?, over usual: String? = nil) throws {
+  /// `usual`, for this group alone. `face` names the drawing to show as
+  /// their photo, picked in place of the one a new person is given at
+  /// random.
+  @MainActor func joins(
+    invitation: URL, named name: String?, over usual: String? = nil, face: String? = nil
+  ) throws {
     let code = try String(contentsOf: invitation, encoding: .utf8)
       .trimmingCharacters(in: .whitespacesAndNewlines)
     open(URL(string: "pochical://invite/\(code)")!)
@@ -40,6 +44,15 @@ extension XCUIApplication {
         .matching(NSPredicate(format: "label BEGINSWITH %@", usual ?? "名前を入れてください")).firstMatch
       XCTAssertTrue(profile.waitForExistence(timeout: 15), "the join screen opens")
       profile.tap()
+      if let face {
+        let photo = buttons.matching(NSPredicate(format: "label CONTAINS '写真を編集'")).firstMatch
+        XCTAssertTrue(photo.waitForExistence(timeout: 5), "the photo can be changed")
+        photo.tap()
+        buttons["イラストを選ぶ"].tap()
+        let drawing = buttons[face]
+        XCTAssertTrue(drawing.waitForExistence(timeout: 5), "\(face) is among the drawings")
+        drawing.tap()
+      }
       let field = textFields.firstMatch
       XCTAssertTrue(field.waitForExistence(timeout: 5), "the name can be typed")
       field.tap()

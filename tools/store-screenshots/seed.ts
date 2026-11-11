@@ -1,12 +1,13 @@
 // Puts on `mise run server` the groups the stores' screenshots are
 // photographed in (#806), each made by the same piece from its own people:
 // 職場のみんな, three coworkers on a two-shift roster who speak politely,
-// as people who have not exchanged contacts do, each with a usual photo
-// (avatars/, pictures drawn for this, which any square JPEG of the same
-// name replaces) and a little of 全体チャット, a 日にちの投票 over the days
+// as people who have not exchanged contacts do, with a little of
+// 全体チャット, a 日にちの投票 over the days
 // they are all off among it; and 学生時代の友だち, three friends who work
-// at different places, each on shifts of their own. Both hold this month's
-// and next month's shifts.
+// at different places, each on shifts of their own. Everyone's usual
+// photo is one of the faces' drawings the apps offer (design/src/drawings),
+// no two the same in a group. Both hold this month's and next month's
+// shifts.
 //
 //   pnpm exec tsx tools/store-screenshots/seed.ts <file for the coworkers' invite code> <file for the friends'>
 //
@@ -18,12 +19,14 @@
 // (POCHICAL_DEV_SERVER, http://localhost:8787 by default); each run makes
 // the groups and their people anew.
 
-import { readFile, writeFile } from "node:fs/promises";
+import { writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { MessageInitShape } from "@bufbuild/protobuf";
+import type { drawings } from "@pochical/design/drawings";
 import { readyPatterns } from "@pochical/design/patterns";
 import type { ReadyPattern, ReadyPatternId } from "@pochical/design/patterns";
+import sharp from "sharp";
 
 import {
   DayField,
@@ -75,11 +78,10 @@ type Group = {
 // A member: the ready-made patterns they use, the first the plain day's
 // work and `off` among them; the shifts they are given in turn from the
 // first of the month, where one that brings the next day's (夜勤's 明け)
-// names it not; and the usual photo they show, a JPEG of avatars/, when
-// they show one.
+// names it not; and the drawing they show as their usual photo.
 type Member = {
   name: string;
-  photo?: string;
+  photo: (typeof drawings)[number]["id"];
   round: readonly Shift[];
   shifts: readonly [Shift, ...Shift[]];
 };
@@ -92,19 +94,19 @@ const COWORKERS = {
   members: [
     {
       name: "田中",
-      photo: "coffee.jpg",
+      photo: "coffee",
       round: ["day", "day", "night", "off", "day", "night", "off", "off"],
       shifts: TWO_SHIFT,
     },
     {
       name: "小林",
-      photo: "cat.jpg",
+      photo: "cat",
       round: ["day", "night", "off", "off", "day", "day", "day", "off"],
       shifts: TWO_SHIFT,
     },
     {
       name: "森",
-      photo: "flower.jpg",
+      photo: "flower",
       round: [
         "night",
         "off",
@@ -129,16 +131,19 @@ const FRIENDS = {
   members: [
     {
       name: "あや",
+      photo: "rabbit",
       round: ["early", "early", "late", "off", "late", "early", "off"],
       shifts: ["early", "late", "off"],
     },
     {
       name: "みさき",
+      photo: "penguin",
       round: ["day", "night", "off", "day", "day", "off"],
       shifts: TWO_SHIFT,
     },
     {
       name: "ゆうか",
+      photo: "strawberry",
       round: ["part", "off", "part", "part", "off"],
       shifts: ["part", "off"],
     },
@@ -312,11 +317,23 @@ const enter = async (
   socket.close();
 };
 
-/** Makes the JPEG `photo` of avatars/ a member's usual photo (spec/sync-protocol.md, Profile). */
-const showPhoto = async (token: string, photo: string): Promise<void> => {
-  const file = path.join(import.meta.dirname, "avatars", photo);
-  const bytes = new Uint8Array(await readFile(file));
-  const photoId = await uploadOwn(devServer, { bytes, file }, token);
+/**
+ * Makes the drawing `photo` a member's usual photo (spec/sync-protocol.md,
+ * Profile), as a JPEG, the way the apps send one picked.
+ */
+const showPhoto = async (token: string, photo: Member["photo"]) => {
+  const drawing = path.join(
+    import.meta.dirname,
+    `../../design/src/drawings/${photo}.svg`
+  );
+  const bytes = new Uint8Array(
+    await sharp(drawing).jpeg({ quality: 90 }).toBuffer()
+  );
+  const photoId = await uploadOwn(
+    devServer,
+    { bytes, file: `${photo}.jpg` },
+    token
+  );
   await rpc(devServer, "UserService/SetProfile", { photoId }, token);
 };
 
@@ -422,8 +439,7 @@ const make = async ({ mark, members, name }: Group) => {
       shownPhotos.add(kind.value.userId);
     }
     if (
-      shownPhotos.size ===
-        members.filter(({ photo }) => photo !== undefined).length &&
+      shownPhotos.size === members.length &&
       shownPatterns.size ===
         members.reduce((count, { shifts }) => count + shifts.length, 0) &&
       shownDays.size === members.length * days.length
@@ -449,7 +465,7 @@ const make = async ({ mark, members, name }: Group) => {
     [maker, ...guests].map(async ({ photo, roster, shifts, token }) => {
       await Promise.all([
         enter(token, shifts, roster),
-        photo === undefined ? undefined : showPhoto(token, photo),
+        showPhoto(token, photo),
       ]);
     })
   );

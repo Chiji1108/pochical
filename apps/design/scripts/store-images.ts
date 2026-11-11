@@ -22,6 +22,8 @@ import {
   waitUntilDrawn,
 } from "@pochical/prototype/scripts/photograph";
 
+import { pngHeader } from "./png.ts";
+
 const ROOT = fileURLToPath(new URL("../../..", import.meta.url));
 const RAW = path.join(ROOT, ".build/store-screenshots");
 const OUTPUT = path.join(ROOT, "store");
@@ -63,6 +65,15 @@ const screensOf = (store: StoreId, shot: (typeof STORE_SHOTS)[number]) => {
   }
   return widgets;
 };
+
+// How tall each tile's part is in its widths, as the screens were cut.
+const partsOf = (store: StoreId, shot: (typeof STORE_SHOTS)[number]) =>
+  shot.kind === "tiles"
+    ? shot.tiles.map(({ raw }) => {
+        const { height, width } = pngHeader(path.join(RAW, store, raw));
+        return height / width;
+      })
+    : [];
 
 await photographDevServer(
   {
@@ -106,6 +117,7 @@ await photographDevServer(
         // oxlint-disable-next-line no-await-in-loop -- one page at a time
         await photograph(
           {
+            parts: partsOf(store, shot).join(","),
             shot: shot.name,
             store,
             widgets: screensOf(store, shot).join(","),
