@@ -111,8 +111,9 @@ class StoreScreenshots {
     photograph("06-device-calendar")
     device.back(By.text("追加先"))
 
-    // The friends' group first, as まい, the name typed there the usual one from then on.
-    join(checkNotNull(friends), "まい", shown = "名前を入れてください")
+    // The friends' group first, as まい with ひよこ for a face, the usual ones from then on.
+    join(checkNotNull(friends), "まい", shown = "名前を入れてください", face = "ひよこ")
+    awaitFaces(FRIENDS)
     // The table once the group shows まい's shifts too, sent from this device.
     device.tap(By.text("月で見る"), By.desc(Pattern.compile(".*まい：(日勤|夜勤|明け|休み).*")))
     photograph("03-group-shifts")
@@ -121,7 +122,7 @@ class StoreScreenshots {
     launch("sample", "firstRunDone")
     device.find(calendar)
     join(checkNotNull(invite), "佐藤", shown = "まい")
-    awaitFaces()
+    awaitFaces(COWORKERS)
 
     // The chat from its first line, the words about the mobile battery in the middle.
     device.tap(By.text("全体チャット"), By.text("メッセージ"))
@@ -137,7 +138,9 @@ class StoreScreenshots {
     pickPeriod("15日〜翌月14日")
     launch()
     device.find(calendar)
-    photograph("07-details-period")
+    // The page's heading and the week its first day is in.
+    val first = LocalDate.now().let { if (it.dayOfMonth < 15) it.minusMonths(1) else it }.withDayOfMonth(15)
+    photograph("07-details-period", from = By.descContains("日〜"), until = dayOf(first.plusDays(7)))
     pickPeriod("1日〜末日")
 
     photographWidgets("02-widgets")
@@ -158,8 +161,11 @@ class StoreScreenshots {
     enterHalfTheMonth()
     photograph("01-entry")
     // 夜勤 entered brings the next day's 明け.
-    device.tap(By.text("夜勤"), By.desc(Pattern.compile("${LocalDate.now().monthValue}月${HALF + 1}日、明け.*")))
-    photograph("07-details-next-day")
+    val month = LocalDate.now().monthValue
+    device.tap(By.text("夜勤"), By.desc(Pattern.compile("${month}月${HALF + 1}日、明け.*")))
+    // The week of the two days, between the weeks before and after it.
+    val entered = LocalDate.now().withDayOfMonth(HALF)
+    photograph("07-details-next-day", from = dayOf(entered.minusDays(7)), until = dayOf(entered.plusDays(14)))
     enterShiftOn()
     photographWidgets("02-widgets", only = "now")
     // Out of ポチポチ入力 as the app starts again: its 完了 would ask about the days left blank.
@@ -167,7 +173,8 @@ class StoreScreenshots {
     device.find(calendar)
 
     startFixedCycle()
-    photograph("07-details-repeat")
+    // The month's name and its first two weeks, the cycle come round in them.
+    photograph("07-details-repeat", from = By.desc(Pattern.compile("\\d+年\\d+月")), until = dayOf(LocalDate.now().plusMonths(1).withDayOfMonth(1).plusDays(14)))
   }
 
   /**
@@ -207,12 +214,18 @@ class StoreScreenshots {
 
   /**
    * Joins the group of the invitation [code] as [name], typed in the row that shows [shown]: that a
-   * name is needed, or once one was typed, that usual name.
+   * name is needed, or once one was typed, that usual name. [face] names the drawing to show as
+   * their photo, picked in place of the one a new person is given at random.
    */
-  private fun join(code: String, name: String, shown: String) {
+  private fun join(code: String, name: String, shown: String, face: String? = null) {
     app.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("pochical://invite/$code")).setPackage(PACKAGE).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     val field = By.clazz("android.widget.EditText")
     device.tap(By.text(shown), field)
+    if (face != null) {
+      device.tap(By.desc("写真を編集"), By.text("イラストを選ぶ"))
+      device.tap(By.text("イラストを選ぶ"), By.desc(face))
+      device.tap(By.desc(face), Until.gone(By.desc(face)))
+    }
     device.find(field).text = name
     device.tap(By.desc("閉じる"), By.text("参加する"))
     device.tap(By.text("参加する"), By.text("全体チャット"))
@@ -329,19 +342,19 @@ class StoreScreenshots {
     device.tap(By.text(shift), By.desc(Pattern.compile("$day、$shift.*")))
   }
 
-  /** The seed's coworkers, the group whose people show photos, once the app holds them with theirs. */
-  private suspend fun seededGroup(): ChoiceGroup =
+  /** The seed's group named [name], once the app holds its people with the photos they show. */
+  private suspend fun seededGroup(name: String): ChoiceGroup =
     (app as PochicalApplication).widgetSources.values.choiceGroups()
-      .mapNotNull { groups -> groups.firstOrNull { group -> group.members.isNotEmpty() && group.members.all { it.photoId.isNotEmpty() } } }
+      .mapNotNull { groups -> groups.firstOrNull { it.group.name == name && it.members.isNotEmpty() && it.members.all { member -> member.photoId.isNotEmpty() } } }
       .first()
 
   /**
-   * Waits for the photos of the group's people to have come to the app's image loader, which the
+   * Waits for the photos of the people of the group named [name] to have come to the app's image loader, which the
    * faces on its screens are drawn from: a face is its letter until its photo comes, and says
    * nothing of which it shows.
    */
-  private fun awaitFaces() = runBlocking {
-    val group = seededGroup()
+  private fun awaitFaces(name: String) = runBlocking {
+    val group = seededGroup(name)
     val loader = SingletonImageLoader.get(app)
     for (member in group.members) {
       checkNotNull(photoBitmap(app, loader, member.photoId, PhotoShelf.place(group.group.id), FACE_PX, WAIT)) { "${member.name}'s photo did not come" }
@@ -355,7 +368,7 @@ class StoreScreenshots {
    * the one to photograph, when not all.
    */
   private fun photographWidgets(folder: String, only: String? = null) = runBlocking {
-    val group = seededGroup()
+    val group = seededGroup(COWORKERS)
     val person = WidgetChoice.Member(group.group.id, group.members.first().userId)
     val widgets: List<Triple<String, PochicalWidget, WidgetChoice?>> =
       listOf(
@@ -383,6 +396,10 @@ class StoreScreenshots {
   }
 
   private companion object {
+    /** The seed's groups, by their names. */
+    const val COWORKERS = "職場のみんな"
+    const val FRIENDS = "学生時代の友だち"
+
     /** How long a notification is put off for: longer than a run. */
     const val SNOOZE_MS = 3_600_000
 
@@ -418,12 +435,17 @@ class StoreScreenshots {
   private fun scrollable(node: AccessibilityNodeInfo): AccessibilityNodeInfo? =
     if (node.isScrollable) node else (0 until node.childCount).firstNotNullOfOrNull { index -> node.getChild(index)?.let(::scrollable) }
 
+  /** The calendar's day [date], whatever it holds: a day of the month before or after shows in the month's weeks too. */
+  private fun dayOf(date: LocalDate): BySelector = By.desc(Pattern.compile("${date.monthValue}月${date.dayOfMonth}日、.*"))
+
   /**
    * The screen as it is, kept as [name], once the app's window has drawn what it holds: the words a
    * walk waits for are on a page before the page is on the screen, so a frame is asked of the
-   * window and waited for until it is committed.
+   * window and waited for until it is committed. With [from] and [until], only the part from the
+   * top of the one down to the top of the other, as wide as the screen: whole rows of it, up to the
+   * row [until] is in, for a tile of the details' shot.
    */
-  private fun photograph(name: String) {
+  private fun photograph(name: String, from: BySelector? = null, until: BySelector? = null) {
     // Android 17's status bar keeps the notifications' icons through the demo's
     // `notifications -e visible false`, and one may come at any time of a run: each there is
     // snoozed, and comes back by itself.
@@ -438,6 +460,10 @@ class StoreScreenshots {
       window.invalidate()
     }
     check(committed.await(WAIT, TimeUnit.MILLISECONDS)) { "No frame drawn for $name" }
-    check(device.takeScreenshot(File(out, "$name.png"))) { "Could not photograph $name" }
+    val screen = checkNotNull(instrumentation.uiAutomation.takeScreenshot()) { "Could not photograph $name" }
+    val top = from?.let { device.find(it).visibleBounds.top } ?: 0
+    val foot = until?.let { device.find(it).visibleBounds.top } ?: screen.height
+    val part = Bitmap.createBitmap(screen, 0, top, screen.width, foot - top)
+    File(out, "$name.png").outputStream().use { check(part.compress(Bitmap.CompressFormat.PNG, 100, it)) { "Could not keep $name" } }
   }
 }

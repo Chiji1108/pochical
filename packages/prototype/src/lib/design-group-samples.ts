@@ -1,6 +1,3 @@
-import cat from "../../../../tools/store-screenshots/avatars/cat.jpg?url";
-import coffee from "../../../../tools/store-screenshots/avatars/coffee.jpg?url";
-import flower from "../../../../tools/store-screenshots/avatars/flower.jpg?url";
 import { holidayName } from "../components/design-week";
 import { guessLook, sampleLooks } from "../components/shift-mark";
 import type { Look } from "../components/shift-mark";
@@ -18,6 +15,7 @@ import { presetList } from "./design-patterns";
 import type { Photo } from "./design-sample-photos";
 import { sampleRosterPhoto } from "./design-sample-photos";
 import { designToday } from "./design-today";
+import { drawings } from "./drawings";
 import { firstCharacter } from "./text-limits";
 
 // The prototype's sample person's world: the people in their groups, with
@@ -281,16 +279,21 @@ export const schoolFriends = (): Member[] => [
   },
 ];
 
+// One of the faces' drawings the apps offer (design/src/drawings), as a
+// sample person's photo.
+const drawingOf = (id: (typeof drawings)[number]["id"]) =>
+  drawings.find((drawing) => drawing.id === id)?.src;
+
 // 職場のみんな: the group the stores' screenshots are photographed in
 // (tools/store-screenshots/seed.ts), which the site's top page shows too.
 // Three coworkers on 二交代制 who have not exchanged contacts, so they
-// speak politely, and whose photos are the seed's own, pictures of things
-// rather than of themselves. Each one's eight days end on the same two
+// speak politely, and whose photos are the seed's own, drawings of things
+// rather than pictures of themselves. Each one's eight days end on the same two
 // days off, the days everyone is off.
 const workplaceRounds = [
-  ["tanaka", "田中", coffee, "day night after off day day off off"],
-  ["kobayashi", "小林", cat, "night after off day day day off off"],
-  ["mori", "森", flower, "day day off night after day off off"],
+  ["tanaka", "田中", "coffee", "day night after off day day off off"],
+  ["kobayashi", "小林", "cat", "night after off day day day off off"],
+  ["mori", "森", "flower", "day day off night after day off off"],
 ] as const;
 
 export const workplace = (): Member[] =>
@@ -302,7 +305,7 @@ export const workplace = (): Member[] =>
       patterns: presetList(["day", "night", "after", "off"]).map(
         memberPatternOf
       ),
-      photo,
+      photo: drawingOf(photo),
       shiftOn: (date: Date) => round[(dayNumber(date) + 5) % round.length],
     };
   });
@@ -315,6 +318,20 @@ export const workplaceGroup: GroupSummary = {
   mine: { name: "佐藤", noPhoto: true },
   name: "職場のみんな",
 };
+
+// 学生時代の友だち: the other group the stores' screenshots are
+// photographed in, which the site's top page shows in its shift table:
+// あや and みさき with the drawings the seed gives them.
+export const oldFriendsGroup: GroupSummary = {
+  id: "old-friends",
+  mark: { emoji: "🎓", kind: "emoji" },
+  name: "学生時代の友だち",
+};
+
+const oldFriends = (): Member[] => [
+  { ...aya(), photo: drawingOf("rabbit") },
+  { ...misaki(), photo: drawingOf("penguin") },
+];
 
 // The days of the week ahead when the three are off: the ones put to the
 // vote.
@@ -864,8 +881,8 @@ export const sampleChats: Record<string, Chat> = {
 };
 
 // The sample groups' other members, by group id: the four the sample
-// person is in, the cousins' group of the sample invitation and
-// 職場のみんな. A group
+// person is in, the cousins' group of the sample invitation, and
+// 職場のみんな and 学生時代の友だち. A group
 // made on /design starts with no one else.
 export function sampleOthers(groupId: string): Member[] {
   switch (groupId) {
@@ -886,6 +903,9 @@ export function sampleOthers(groupId: string): Member[] {
     }
     case workplaceGroup.id: {
       return workplace();
+    }
+    case oldFriendsGroup.id: {
+      return oldFriends();
     }
     default: {
       return [];

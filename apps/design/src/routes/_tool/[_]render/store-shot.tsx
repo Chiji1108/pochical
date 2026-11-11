@@ -39,6 +39,8 @@ export const Route = createFileRoute("/_tool/_render/store-shot")({
   component: StoreShotPage,
   head: () => pageMeta("ストアの画像", "ストアに載せる、ポチカルの画像"),
   validateSearch: (search: Record<string, unknown>) => ({
+    // How tall each tile's part is in its widths, with commas between them.
+    parts: typeof search.parts === "string" ? search.parts : "",
     shot: typeof search.shot === "string" ? search.shot : "",
     store: isStore(search.store) ? search.store : "ios",
     // The wall's widgets' files, each in every look's folder, with commas
@@ -51,6 +53,31 @@ export const Route = createFileRoute("/_tool/_render/store-shot")({
 // picture's width, so each store's picture is laid out alike at its size.
 // The width of a widget's cell on the wall, in them.
 const WIDGET_CELL = "calc(var(--u) * 25)";
+
+// A shot of tiles, in --u: its words' size, line and the room under them,
+// the gap between tiles, the room at the picture's foot, and how wide a
+// tile is at most.
+const TILES = {
+  foot: 5,
+  gap: 3.5,
+  line: 1.3,
+  under: 1.6,
+  widest: 90,
+  words: 4.8,
+};
+
+// How wide the tiles are, in --u: as wide as lets them all, each part as
+// tall as `parts` says in its widths, fit under the headline of a picture
+// `tall` times as tall as it is wide.
+const tileWidth = (parts: number[], tall: number): number => {
+  const room =
+    100 * tall * (1 - HEADLINE_SHARE) -
+    TILES.foot -
+    TILES.gap * (parts.length - 1) -
+    (TILES.words * TILES.line + TILES.under) * parts.length;
+  const tallness = parts.reduce((sum, part) => sum + part, 0);
+  return Math.min(TILES.widest, room / tallness);
+};
 
 const styles = {
   feature: css({
@@ -112,38 +139,32 @@ const styles = {
     paddingBottom: "calc(var(--u) * 5)",
     position: "absolute",
   }),
-  // A tile's part of its screen, the screen as wide as the tile and cut
-  // off at its foot: a card as a widget on the wall is.
+  // A tile's part of its screen: a card as a widget on the wall is.
   tilePart: css({
-    "& img": { display: "block", width: "100%" },
     bg: "white",
     borderRadius: "calc(var(--u) * 4.25)",
     boxShadow:
       "0 calc(var(--u) * 1) calc(var(--u) * 3.5) rgba(60, 70, 60, 0.2)",
-    flex: 1,
-    minHeight: 0,
-    overflow: "hidden",
+    display: "block",
+    width: "100%",
   }),
   tileWords: css({
-    fontSize: "calc(var(--u) * 4.8)",
+    fontSize: `calc(var(--u) * ${TILES.words})`,
     fontWeight: 700,
-    lineHeight: 1.3,
-    paddingBottom: "calc(var(--u) * 1.6)",
+    lineHeight: TILES.line,
+    paddingBottom: `calc(var(--u) * ${TILES.under})`,
     paddingLeft: "calc(var(--u) * 1.5)",
   }),
-  // The tiles one over the other, sharing the room under the headline.
+  // The tiles one over the other, in the middle of the room under the
+  // headline.
   tiles: css({
-    "& figure": {
-      display: "flex",
-      flex: 1,
-      flexDirection: "column",
-      margin: 0,
-      minHeight: 0,
-    },
+    "& figure": { margin: 0 },
+    alignItems: "center",
     display: "flex",
     flexDirection: "column",
-    gap: "calc(var(--u) * 3.5)",
-    inset: "var(--headline) calc(var(--u) * 5) calc(var(--u) * 5)",
+    gap: `calc(var(--u) * ${TILES.gap})`,
+    inset: `var(--headline) 0 calc(var(--u) * ${TILES.foot})`,
+    justifyContent: "center",
     position: "absolute",
   }),
   // The widgets on a Home Screen's grid, tilted, running off every edge
@@ -182,7 +203,7 @@ const styles = {
 };
 
 function StoreShotPage() {
-  const { shot: name, store, widgets } = Route.useSearch();
+  const { parts, shot: name, store, widgets } = Route.useSearch();
   if (name === FEATURE_GRAPHIC.name) {
     return <FeatureGraphic />;
   }
@@ -238,15 +259,14 @@ function StoreShotPage() {
       {shot.kind === "tiles" && (
         <div className={styles.tiles}>
           {shot.tiles.map((tile) => (
-            <figure key={tile.raw}>
+            <figure
+              key={tile.raw}
+              style={{
+                width: `calc(var(--u) * ${tileWidth(parts.split(",").map(Number), height / width)})`,
+              }}
+            >
               <figcaption className={styles.tileWords}>{tile.words}</figcaption>
-              <div className={styles.tilePart}>
-                <img
-                  alt=""
-                  src={RAW + tile.raw}
-                  style={{ marginTop: `${-100 * tile.top[store]}%` }}
-                />
-              </div>
+              <img alt="" className={styles.tilePart} src={RAW + tile.raw} />
             </figure>
           ))}
         </div>

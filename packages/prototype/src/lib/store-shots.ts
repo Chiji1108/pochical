@@ -47,14 +47,10 @@ type StoreShot = { headline: readonly string[]; name: string } & (
   | { kind: "wall"; pinned: readonly WallPin[]; raw: readonly string[] }
 );
 
-// A tile of a shot of details: the part of a screen that shows one, as
-// wide as the screen, under a line of words. `top` is where the part
-// starts on each store's screen, in the screen's widths from its top.
-export type Tile = {
-  raw: string;
-  top: { android: number; ios: number };
-  words: string;
-};
+// A tile of a shot of details: a part of a screen under a line of words.
+// The part is whole rows of the screen, as wide as it, which the
+// platform's UI test cuts by where the screen's own pieces lie.
+export type Tile = { raw: string; words: string };
 
 // A widget the wall shows whole where the eye lands first, under the
 // headline in its middle columns: its file, the look it is in, counted in
@@ -129,17 +125,14 @@ export const STORE_SHOTS = [
     tiles: [
       {
         raw: "07-details-next-day.png",
-        top: { android: 0.546, ios: 0.523 },
         words: "夜勤を入れると、翌日に明け",
       },
       {
         raw: "07-details-period.png",
-        top: { android: 0.185, ios: 0.163 },
         words: "15日始まりの月にも",
       },
       {
         raw: "07-details-repeat.png",
-        top: { android: 0.31, ios: 0.144 },
         words: "決まった並びは、繰り返しで",
       },
     ],

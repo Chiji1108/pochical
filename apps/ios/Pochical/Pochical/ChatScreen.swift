@@ -715,7 +715,7 @@ struct ChatScreen: View {
   /// a line taken back, which sits apart from the runs of messages.
   private func isMessage(_ line: ChatLineRow) -> Bool {
     switch line.content {
-    case .words, .photos, .days, .poll, .hidden: true
+    case .words, .photos, .days, .poll, .hidden, .unknown: true
     case .notice, .unsent: false
     }
   }
@@ -764,7 +764,7 @@ struct ChatScreen: View {
           .multilineTextAlignment(.center)
           .frame(maxWidth: .infinity)
           .padding(.vertical, 8)
-      case .words, .photos, .days, .poll:
+      case .words, .photos, .days, .poll, .unknown:
         if folded(line) {
           BlockedLine { shownBlocked.insert(line.seq) }
         } else {
@@ -836,7 +836,7 @@ struct ChatScreen: View {
       return notice.words(by: name, subject: nameOf(notice.subjectID))
     case .photos(let photos):
       words = photoWords(photos)
-    case .words, .days, .poll:
+    case .words, .days, .poll, .unknown:
       words = lineWords(line.content, nameOf: nameOf)
     }
     guard !line.folds(blocked: blocked) else { return nil }
@@ -1573,10 +1573,10 @@ struct ChatScreen: View {
     case .unsent:
       return LineQuote(seq: seq, writer: writer, words: "取り消されたメッセージ")
     case .notice, .hidden:
-      // A notice takes no reply; a line of a kind the app does not know
-      // is quoted as one not held.
+      // A notice takes no reply, nor a line never delivered: quoted as
+      // one not held.
       return LineQuote(seq: seq, words: "以前のメッセージ")
-    case .words, .photos, .days, .poll:
+    case .words, .photos, .days, .poll, .unknown:
       if line.folds(blocked: blocked) {
         return LineQuote(seq: seq, words: "ブロック中のメンバーのメッセージ")
       }
@@ -1616,7 +1616,8 @@ struct ChatScreen: View {
     var actions = [
       MessageAction(title: "返信", systemImage: "arrowshape.turn.up.left") { reply(to: line) }
     ]
-    // Shared days and polls have no words to copy or change.
+    // Shared days and polls have no words to copy or change, nor a line
+    // of a kind the app does not know.
     var words = false
     var poll: LineContent.Poll?
     switch line.content {
@@ -1628,7 +1629,7 @@ struct ChatScreen: View {
         MessageAction(title: "保存", systemImage: "square.and.arrow.down") { save(photos) })
     case .poll(let asked):
       poll = asked
-    case .days, .notice, .unsent, .hidden:
+    case .days, .notice, .unsent, .hidden, .unknown:
       break
     }
     // Anyone's line, for everyone in the chat (spec/chat.md, Pins).

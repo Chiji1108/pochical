@@ -337,7 +337,7 @@ extension Chats {
     let gone = lines.filter { line in
       switch line.content {
       case .unsent, .hidden: true
-      case .words, .photos, .days, .poll, .notice: false
+      case .words, .photos, .days, .poll, .notice, .unknown: false
       }
     }
     return PhotoLines(

@@ -32,9 +32,8 @@ import {
   initialDesignSchedule,
 } from "@pochical/prototype/lib/design-days";
 import { calendarAlone } from "@pochical/prototype/lib/design-features";
-import type { GroupSummary } from "@pochical/prototype/lib/design-group-data";
 import {
-  sampleGroups,
+  oldFriendsGroup,
   workplaceGroup,
 } from "@pochical/prototype/lib/design-group-samples";
 import { presetList } from "@pochical/prototype/lib/design-patterns";
@@ -334,17 +333,8 @@ type Feature = "entry" | "deviceCalendar" | "repeat" | "share" | "chat";
 
 const atWork = { groups: [workplaceGroup] };
 
-// The sample person's friends, the group named as the stores' is
-// (tools/store-screenshots/seed.ts).
-const withFriends = {
-  groups: sampleGroups()
-    .filter((group) => group.id === "friends")
-    .map((group): GroupSummary => ({
-      ...group,
-      mark: { emoji: "🎓", kind: "emoji" },
-      name: "学生時代の友だち",
-    })),
-};
+// Friends, in the shift table, as the stores' picture has them.
+const withFriends = { groups: [oldFriendsGroup] };
 
 // 繰り返し is for work that comes round in a fixed order, so the page
 // shows the order はじめの設定 offers for it, as the stores' picture does:

@@ -50,12 +50,12 @@ final class StoreScreenshotTests: XCTestCase {
     snap("06-device-calendar", of: XCUIScreen.main, into: raw)
   }
 
-  /// The friends' group, joined as まい, the name typed there the usual
-  /// one from then on.
+  /// The friends' group, joined as まい with ひよこ for a face, the name
+  /// and the drawing picked there the usual ones from then on.
   @MainActor
   func test02Friends() throws {
     launch()
-    try app.joins(invitation: raw.appending(path: "invite-friends"), named: "まい")
+    try app.joins(invitation: raw.appending(path: "invite-friends"), named: "まい", face: "ひよこ")
     app.buttons["月で見る"].tap()
     let row = app.buttons.matching(NSPredicate(format: "label MATCHES '[0-9]{1,2}月[0-9]{1,2}日.*'"))
       .firstMatch
@@ -84,7 +84,13 @@ final class StoreScreenshotTests: XCTestCase {
   func test04Period() throws {
     launch()
     pick(period: "15日〜翌月14日")
-    snap("07-details-period", of: XCUIScreen.main, into: raw)
+    // The page's heading and the week its first day is in.
+    let now = Calendar.current.dateComponents([.year, .month, .day], from: .now)
+    let first = DateComponents(year: now.year, month: now.month! - (now.day! < 15 ? 1 : 0), day: 15)
+    let heading = app.descendants(matching: .any)
+      .matching(NSPredicate(format: "label CONTAINS '日〜'")).firstMatch
+    XCTAssertTrue(heading.waitForExistence(timeout: 5), "the page is named by its days")
+    try snap("07-details-period", from: heading.frame.minY, until: rowTop(first, after: 7))
     pick(period: "1日〜末日")
   }
 
@@ -137,7 +143,11 @@ final class StoreScreenshotTests: XCTestCase {
     // 夜勤 entered brings the next day's 明け.
     enter("夜勤", month, 16)
     XCTAssertTrue(day(month, 17, holding: "明け").waitForExistence(timeout: 5), "17日 is 明け")
-    snap("07-details-next-day", of: XCUIScreen.main, into: raw)
+    // The week of the two days, between the weeks before and after it.
+    let entered = DateComponents(
+      year: Calendar.current.component(.year, from: .now), month: month, day: 16)
+    try snap(
+      "07-details-next-day", from: rowTop(entered, after: -7), until: rowTop(entered, after: 14))
   }
 
   /// いまのシフト with its ring, which it draws while a shift is on: one of
@@ -199,7 +209,13 @@ final class StoreScreenshotTests: XCTestCase {
     coming.tap()
     press("カレンダーで直す")
     XCTAssertTrue(app.navigationBars["繰り返しを直す"].waitForExistence(timeout: 5), "the order opens")
-    snap("07-details-repeat", of: XCUIScreen.main, into: raw)
+    // The month's name and its first two weeks, the cycle come round in them.
+    let today = Calendar.current.dateComponents([.year, .month], from: .now)
+    let title = app.buttons.matching(NSPredicate(format: "label MATCHES '[0-9]+年[0-9]+月.*'"))
+      .firstMatch
+    try snap(
+      "07-details-repeat", from: title.frame.minY,
+      until: rowTop(DateComponents(year: today.year, month: today.month! + 1, day: 1), after: 14))
   }
 
   /// Taps the button whose words hold `name`, a page down where the page
@@ -247,10 +263,45 @@ final class StoreScreenshotTests: XCTestCase {
     }
   }
 
-  /// The calendar's `day` once it holds `shift`.
-  @MainActor private func day(_ month: Int, _ day: Int, holding shift: String) -> XCUIElement {
-    app.descendants(matching: .any)
-      .matching(NSPredicate(format: "label BEGINSWITH %@", "\(month)月\(day)日、\(shift)")).firstMatch
+  /// The calendar's `day`, once it holds `shift` when one is named: the
+  /// one on the screen, as the months beside the one shown hold its first
+  /// and last days too.
+  @MainActor private func day(_ month: Int, _ day: Int, holding shift: String = "") -> XCUIElement {
+    let days = app.descendants(matching: .any)
+      .matching(NSPredicate(format: "label BEGINSWITH %@", "\(month)月\(day)日、\(shift)"))
+    return days.allElementsBoundByIndex.first { app.frame.contains($0.frame) } ?? days.firstMatch
+  }
+
+  /// The calendar's day `days` after `date`, whatever it holds: a day of
+  /// the month before or after shows in the month's weeks too.
+  @MainActor private func day(_ date: DateComponents, after days: Int) -> XCUIElement {
+    let on = Calendar.current.date(
+      byAdding: .day, value: days, to: Calendar.current.date(from: date)!)!
+    return day(
+      Calendar.current.component(.month, from: on), Calendar.current.component(.day, from: on))
+  }
+
+  /// Where the row of the calendar's day `days` after `date` begins on the
+  /// screen: midway between the foot of the days in the row over it and
+  /// its own top, as a day's element holds its date and mark, not the room
+  /// around them.
+  @MainActor private func rowTop(_ date: DateComponents, after days: Int) -> CGFloat {
+    let top = day(date, after: days).frame.minY
+    let over = (1...7).map { day(date, after: days - $0).frame }
+      .filter { app.frame.contains($0) && $0.maxY <= top }.map(\.maxY).max()
+    return ((over ?? top) + top) / 2
+  }
+
+  /// Keeps as `name` the part of the screen from `top` down to `foot`, as
+  /// wide as the screen: whole rows of it, for a tile of the details'
+  /// shot.
+  @MainActor private func snap(_ name: String, from top: CGFloat, until foot: CGFloat) throws {
+    let screen = XCUIScreen.main.screenshot().image
+    let rows = CGRect(
+      x: 0, y: top * screen.scale, width: screen.size.width * screen.scale,
+      height: (foot - top) * screen.scale)
+    let part = try XCTUnwrap(screen.cgImage?.cropping(to: rows), "\(name) is cut from the screen")
+    try XCTUnwrap(UIImage(cgImage: part).pngData()).write(to: raw.appending(path: "\(name).png"))
   }
 
   /// Presses the tray's key of `shift` on the `day` being entered.

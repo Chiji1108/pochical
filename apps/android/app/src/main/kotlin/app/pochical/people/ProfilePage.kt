@@ -49,7 +49,7 @@ import kotlinx.coroutines.flow.map
 
 /** The user's usual name and photo as the account last said, empty before they set either; null until read. */
 @Composable
-private fun usualProfile(): ProfileRow? {
+fun usualProfile(): ProfileRow? {
   val values = LocalValues.current
   return rememberRead(values) { values.profile().map { it ?: ProfileRow(name = "", photoId = "") } }
 }
