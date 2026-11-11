@@ -45,7 +45,7 @@ final class StoreScreenshotTests: XCTestCase {
     let banner = app.otherElements.matching(NSPredicate(format: "label BEGINSWITH '通知：'")).firstMatch
     XCTAssertTrue(banner.waitForExistence(timeout: 5), "the next notification is drawn")
     // The notification under its heading.
-    try snap("08-cares-reminder", from: heading.frame.minY, until: banner.frame.maxY)
+    try snap("tile-reminder", from: heading.frame.minY, until: banner.frame.maxY)
   }
 
   @MainActor
@@ -126,7 +126,7 @@ final class StoreScreenshotTests: XCTestCase {
       .matching(NSPredicate(format: "label CONTAINS '日〜'")).firstMatch
     XCTAssertTrue(heading.waitForExistence(timeout: 5), "the page is named by its days")
     try snap(
-      "07-details-period", from: heading.frame.minY,
+      "tile-period", from: heading.frame.minY,
       until: rowTop(first, after: 7))
     pick(period: "1日〜末日")
   }
@@ -242,7 +242,7 @@ final class StoreScreenshotTests: XCTestCase {
     let title = app.buttons.matching(NSPredicate(format: "label MATCHES '[0-9]+年[0-9]+月.*'"))
       .firstMatch
     try snap(
-      "07-details-repeat", from: title.frame.minY,
+      "tile-repeat", from: title.frame.minY,
       until: rowTop(DateComponents(year: today.year, month: today.month! + 1, day: 1), after: 14))
   }
 
@@ -272,7 +272,7 @@ final class StoreScreenshotTests: XCTestCase {
     let rows = app.collectionViews.firstMatch
     let after = rows.staticTexts["このグループでのあなた"]
     XCTAssertTrue(after.waitForExistence(timeout: 5), "the settings show")
-    try snap("08-cares-group-end", from: rows.staticTexts["グループ"].frame.maxY, until: after.frame.minY)
+    try snap("tile-group-end", from: rows.staticTexts["グループ"].frame.maxY, until: after.frame.minY)
   }
 
   /// Taps the button whose words hold `name`, a page down where the page

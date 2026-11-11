@@ -155,7 +155,7 @@ class StoreScreenshots {
     device.find(calendar)
     // The page's heading and the week its first day is in.
     val first = LocalDate.now().let { if (it.dayOfMonth < 15) it.minusMonths(1) else it }.withDayOfMonth(15)
-    photograph("07-details-period", top = topOf(By.descContains("日〜")), foot = topOf(dayOf(first.plusDays(7))))
+    photograph("tile-period", top = topOf(By.descContains("日〜")), foot = topOf(dayOf(first.plusDays(7))))
     pickPeriod("1日〜末日")
 
     photographWidgetStates("02-widgets", calendar)
@@ -184,7 +184,7 @@ class StoreScreenshots {
     startFixedCycle()
     // The month's name and its first two weeks, the cycle come round in them.
     photograph(
-      "07-details-repeat",
+      "tile-repeat",
       top = topOf(By.desc(Pattern.compile("\\d+年\\d+月"))),
       foot = topOf(dayOf(LocalDate.now().plusMonths(1).withDayOfMonth(1).plusDays(14))),
     )
@@ -196,7 +196,7 @@ class StoreScreenshots {
     makeGroupWithEnd()
     // The section グループ's rows and what is said under them, from under its name to the section after it.
     photograph(
-      "08-cares-group-end",
+      "tile-group-end",
       top = between(By.text("グループ"), By.text("忘年会")),
       foot = between(By.textStartsWith("グループ名とアイコンは"), By.text("このグループでのあなた")),
     )
@@ -211,7 +211,7 @@ class StoreScreenshots {
     device.tap(By.text("リマインド"), By.text("リマインドを追加"))
     device.tap(By.textStartsWith("前日"), By.text("リマインドを編集"))
     // The notification under its heading.
-    photograph("08-cares-reminder", top = topOf(By.textStartsWith("次の通知")), foot = device.find(By.descStartsWith("明日は")).visibleBounds.bottom)
+    photograph("tile-reminder", top = topOf(By.textStartsWith("次の通知")), foot = device.find(By.descStartsWith("明日は")).visibleBounds.bottom)
   }
 
   /**

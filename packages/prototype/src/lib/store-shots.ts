@@ -107,9 +107,10 @@ export type WallPlace = {
 // one, and いまのシフト, its ring drawn while a shift is on, together
 // where they show whole; the themes' shot sets the month in 墨 and
 // in letters side by side, the app as it starts being in the others; the
-// details' shot sets three parts of screens one over the other, each for
-// those whose roster has that way of its own, and the cares' shot three
-// more, each a small thing the app looks after.
+// details' shot sets three tiles one over the other, each a way a roster
+// has of its own, and the cares' shot three more, each a thing the app
+// does for the person. A tile's part of a screen is named for what it is,
+// not for the shot it is in.
 export const STORE_SHOTS = [
   {
     headline: ["勤務表を見ながら、", "ポチポチ。"],
@@ -190,21 +191,19 @@ export const STORE_SHOTS = [
     name: "details",
     tiles: [
       {
-        pieces: [
-          { kind: "key", shift: "night" },
-          { kind: "then" },
-          { date: 16, kind: "day", shift: "night" },
-          { date: 17, kind: "day", shift: "after", tag: "自動" },
-        ],
-        words: "夜勤を入れると、明けも自動で",
+        raw: "tile-repeat.png",
+        words: "決まった並びは、繰り返しで",
       },
       {
-        raw: "07-details-period.png",
+        raw: "tile-period.png",
         words: "15日始まりの月にも",
       },
       {
-        raw: "07-details-repeat.png",
-        words: "決まった並びは、繰り返しで",
+        pieces: [
+          { date: 13, early: true, kind: "day", says: "早出", shift: "day" },
+          { date: 8, kind: "day", late: true, says: "残業", shift: "day" },
+        ],
+        words: "早出・残業が、アイコンでわかる",
       },
     ],
   },
@@ -215,17 +214,19 @@ export const STORE_SHOTS = [
     tiles: [
       {
         pieces: [
-          { date: 13, early: true, kind: "day", says: "早出", shift: "day" },
-          { date: 8, kind: "day", late: true, says: "残業", shift: "day" },
+          { kind: "key", shift: "night" },
+          { kind: "then" },
+          { date: 16, kind: "day", shift: "night" },
+          { date: 17, kind: "day", shift: "after", tag: "自動" },
         ],
-        words: "早出・残業が、アイコンでわかる",
+        words: "夜勤を入れると、明けも自動で",
       },
       {
-        raw: "08-cares-reminder.png",
+        raw: "tile-reminder.png",
         words: "前の晩、明日のシフトをお知らせ",
       },
       {
-        raw: "08-cares-group-end.png",
+        raw: "tile-group-end.png",
         words: "グループに、終了日をつけられる",
       },
     ],
