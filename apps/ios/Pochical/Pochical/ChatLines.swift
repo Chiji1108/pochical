@@ -529,8 +529,7 @@ struct LineView: View {
       // Emoji drawn large stand without a bubble.
       case .words(let words): quote != nil || words.preview != nil || drawing.largeEmoji == 0
       case .photos: quote != nil
-      case .unknown: true
-      case .days, .poll, .notice, .unsent, .hidden: false
+      case .days, .poll, .notice, .unsent, .hidden, .unknown: false
       }
     return bubbled
       ? AnyShape(BubbleShape(mine: mine, first: first))
@@ -699,10 +698,18 @@ struct LineBody: View {
       DayCard(days: days, members: members)
         .dimmedWhileWaiting(waiting, in: RoundedRectangle(cornerRadius: Radius.lg))
     case .unknown:
-      // What it says in its place, in the bubble its words would have.
-      MessageBubble(
-        text: LineContent.unknownWords, mine: mine, first: first, waiting: waiting,
-        nameOf: nameOf, quote: quote, shelf: shelf, onOpenQuote: onOpenQuote)
+      // What it says in its place, not in a bubble: these are not its
+      // writer's words. The line it answers shows over them all the same.
+      VStack(alignment: .leading, spacing: 8) {
+        if let quote {
+          BubbleQuote(quote: quote, shelf: shelf, onOpen: onOpenQuote)
+            .foregroundStyle(colors.textPrimary)
+        }
+        Text(LineContent.unknownWords)
+          .foregroundStyle(colors.textTertiary)
+          .fixedSize(horizontal: false, vertical: true)
+      }
+      .modifier(StandInOutline())
     case .notice, .unsent, .hidden:
       // Drawn by the chat as a line of its own, not in a bubble.
       EmptyView()
