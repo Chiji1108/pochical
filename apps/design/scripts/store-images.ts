@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 // page or the shots: pnpm run image:store
 import {
   FEATURE_GRAPHIC,
+  PIECES_TALL,
   STORE_SHOTS,
   STORES,
   storeShotFile,
@@ -22,7 +23,7 @@ import {
   waitUntilDrawn,
 } from "@pochical/prototype/scripts/photograph";
 
-import { pngHeader } from "./png.ts";
+import { pngFirstPixel, pngHeader } from "./png.ts";
 
 const ROOT = fileURLToPath(new URL("../../..", import.meta.url));
 const RAW = path.join(ROOT, ".build/store-screenshots");
@@ -39,7 +40,10 @@ const photographed = storeIds.filter((store) =>
 // a wall: the same ones in each of its looks' folders.
 const screensOf = (store: StoreId, shot: (typeof STORE_SHOTS)[number]) => {
   const folder = path.join(RAW, store);
-  const tiles = shot.kind === "tiles" ? shot.tiles.map(({ raw }) => raw) : [];
+  const tiles =
+    shot.kind === "tiles"
+      ? shot.tiles.flatMap((tile) => ("raw" in tile ? [tile.raw] : []))
+      : [];
   const raw = shot.kind === "tiles" ? [] : shot.raw;
   const files = [...tiles, ...(typeof raw === "string" ? [raw] : raw)];
   for (const file of files) {
@@ -66,14 +70,18 @@ const screensOf = (store: StoreId, shot: (typeof STORE_SHOTS)[number]) => {
   return widgets;
 };
 
-// How tall each tile's part is in its widths, as the screens were cut.
-const partsOf = (store: StoreId, shot: (typeof STORE_SHOTS)[number]) =>
-  shot.kind === "tiles"
-    ? shot.tiles.map(({ raw }) => {
-        const { height, width } = pngHeader(path.join(RAW, store, raw));
-        return height / width;
-      })
-    : [];
+// How tall each tile is in its widths, a part of a screen as it was cut,
+// and its ground, the color of the part's first pixel, which the tile's
+// card takes around it.
+const tilesOf = (store: StoreId, shot: (typeof STORE_SHOTS)[number]) =>
+  (shot.kind === "tiles" ? shot.tiles : []).map((tile) => {
+    if (!("raw" in tile)) {
+      return { ground: "ffffff", part: PIECES_TALL };
+    }
+    const file = path.join(RAW, store, tile.raw);
+    const { height, width } = pngHeader(file);
+    return { ground: pngFirstPixel(file), part: height / width };
+  });
 
 await photographDevServer(
   {
@@ -114,10 +122,12 @@ await photographDevServer(
 
     for (const store of photographed) {
       for (const shot of STORE_SHOTS) {
+        const tiles = tilesOf(store, shot);
         // oxlint-disable-next-line no-await-in-loop -- one page at a time
         await photograph(
           {
-            parts: partsOf(store, shot).join(","),
+            grounds: tiles.map(({ ground }) => ground).join(","),
+            parts: tiles.map(({ part }) => part).join(","),
             shot: shot.name,
             store,
             widgets: screensOf(store, shot).join(","),

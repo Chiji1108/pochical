@@ -71,11 +71,12 @@ demo network -e wifi show -e level 4 -e fully true
 # The emulator's mobile network reads 3G whatever the demo is told, so Wi-Fi alone is the signal.
 demo network -e mobile hide
 
+# The status bar's time, whenever the run is.
+demo clock -e hhmm 0941
+
 start_server
 # The seed makes the groups, writes their invitations, and writes the
-# coworkers' chat once the walk has joined it; the walk then sets the status
-# bar's time two minutes after the chat's lines, whose times are when the
-# seed sent them.
+# coworkers' chat once the walk has joined it.
 pnpm --dir "$root" exec tsx "$root/tools/store-screenshots/seed.ts" "$work/invite" "$work/invite-friends" &
 seed=$!
 until [ -s "$work/invite" ]; do
