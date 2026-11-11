@@ -40,6 +40,8 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 import java.util.regex.Pattern
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -99,6 +101,7 @@ class StoreScreenshots {
     for (permission in listOf("ACCESS_LOCAL_NETWORK", "READ_CALENDAR", "WRITE_CALENDAR")) {
       device.executeShellCommand("pm grant $PACKAGE android.permission.$permission")
     }
+    showTime(LocalTime.now())
     launch()
     runBlocking { becomeNewUser() }
     launch("sample", "firstRunDone")
@@ -111,16 +114,17 @@ class StoreScreenshots {
 
     device.tap(By.desc("この月のシフトを保存"), By.text("端末カレンダーに追加"))
     device.tap(By.text("端末カレンダーに追加"), By.text("追加先"))
-    // The switch by what it is set to, so a tap made again finds none to turn back off.
-    device.tap(switch("自動で反映", on = false), switch("自動で反映", on = true))
+    turnOn("自動で反映")
     photograph("06-device-calendar")
     device.back(By.text("追加先"))
 
     // The friends' group first, as まい with ひよこ for a face, the usual ones from then on.
     join(checkNotNull(friends), "まい", shown = "名前を入れてください", face = "ひよこ")
     awaitFaces(FRIENDS)
-    // The table once the group shows まい's shifts too, sent from this device.
-    device.tap(By.text("月で見る"), By.desc(Pattern.compile(".*まい：(日勤|夜勤|明け|休み).*")))
+    // The table, by its month's name, which the hub has none of, once the group shows まい's shifts
+    // too, sent from this device: the hub's week says them as the table does.
+    device.find(By.desc(Pattern.compile(".*まい：(日勤|夜勤|明け|休み).*")))
+    device.tap(By.text("月で見る"), By.text(Pattern.compile("\\d+年\\d+月")))
     photograph("03-group-shifts")
 
     // The coworkers' from the calendar again, so the only group in sight after is theirs: as 佐藤 there alone.
@@ -129,13 +133,22 @@ class StoreScreenshots {
     join(checkNotNull(invite), "佐藤", shown = "まい")
     awaitFaces(COWORKERS)
 
-    // The chat from its first line, the words about the mobile battery in the middle.
+    // The chat, which the seed writes once 佐藤 is in, so every joining is said above its lines: read
+    // down to the latest, the poll with its votes, a page at a time as a screen reader scrolls (a
+    // finger's drag would leave the day floating over the lines for a while after),
+    val votes = By.descEndsWith("に行ける人：森、小林")
     device.tap(By.text("全体チャット"), By.text("メッセージ"))
-    // A page up, scrolled as a screen reader does, shows the seeded chat's first line: a finger's drag
-    // would leave the day floating over the lines for a while after.
-    val lines = checkNotNull(scrollable(instrumentation.uiAutomation.rootInActiveWindow)) { "No lines to scroll" }
-    check(lines.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_UP.id)) { "The lines did not scroll" }
-    device.find(By.text("小林がグループに参加しました"))
+    repeat(CHAT_PAGES) {
+      if (device.wait(Until.hasObject(votes), WAIT)) return@repeat
+      checkNotNull(scrollable(instrumentation.uiAutomation.rootInActiveWindow)) { "No lines to scroll" }
+        .performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_DOWN.id)
+    }
+    device.find(votes)
+    // and opened again, as it is with nothing new in it: on its latest line. The clock, two minutes after the lines.
+    device.back(By.text("メッセージ"))
+    device.tap(By.text("全体チャット"), votes)
+    check(!device.hasObject(By.text("ここから新着"))) { "The chat still has new lines" }
+    showTime(LocalTime.now().plusMinutes(2))
     photograph("04-chat")
     device.back(By.text("メッセージ"))
 
@@ -169,9 +182,9 @@ class StoreScreenshots {
     // 夜勤 entered brings the next day's 明け.
     val month = LocalDate.now().monthValue
     device.tap(By.text("夜勤"), By.desc(Pattern.compile("${month}月${HALF + 1}日、明け.*")))
-    // The week of the two days, between the weeks before and after it.
+    // The week of the two days.
     val entered = LocalDate.now().withDayOfMonth(HALF)
-    photograph("07-details-next-day", top = topOf(dayOf(entered.minusDays(7))), foot = topOf(dayOf(entered.plusDays(14))))
+    photograph("07-details-next-day", top = topOf(dayOf(entered)), foot = topOf(dayOf(entered.plusDays(7))))
     enterShiftOn()
     photographWidgets("02-widgets", only = "now")
     // Out of ポチポチ入力 as the app starts again: its 完了 would ask about the days left blank.
@@ -191,18 +204,18 @@ class StoreScreenshots {
     launch("sample", "firstRunDone")
     device.tap(By.text("あとで"), Until.gone(By.text("あとで")))
     makeGroupWithEnd()
-    // The section グループ, between the page's name and the section after it.
+    // The section グループ's rows and what is said under them, from under its name to the section after it.
     photograph(
       "08-cares-group-end",
-      top = between(By.text("グループの設定"), By.text("グループ")),
+      top = between(By.text("グループ"), By.text("忘年会")),
       foot = between(By.textStartsWith("グループ名とアイコンは"), By.text("このグループでのあなた")),
     )
   }
 
   /**
-   * What the cares' shot shows of the app as it starts: the sample's day of 早出 opened, its week
-   * alone, as Google Play's picture is shorter than the App Store's, which has the day's 時間 under
-   * it; and リマインド's reminder of the evening before, the next notification as its page draws it.
+   * What the cares' shot shows of the app as it starts: the sample's day of 早出 opened, which folds
+   * the month to its week, and リマインド's reminder of the evening before, the next notification as
+   * its page draws it.
    */
   private fun photographCares() {
     val month = LocalDate.now().monthValue
@@ -262,6 +275,8 @@ class StoreScreenshots {
     for ((name, called) in listOf("当番" to "当務", "休み" to "週休")) {
       device.tap(By.text(name), By.text("パターンを編集"))
       device.find(By.clazz("android.widget.EditText")).text = called
+      // 保存 keeps the name the page last drew: pressed before the field shows the new one, it keeps the old (#1180).
+      device.find(By.clazz("android.widget.EditText").text(called))
       device.tap(By.text("保存"), Until.gone(By.text("パターンを編集")))
       device.find(By.text(called))
     }
@@ -355,6 +370,28 @@ class StoreScreenshots {
       if (device.wait(there, WAIT / 5)) return
     }
   }
+
+  /**
+   * Turns on the switch named [name] by its own action, as a screen reader does. A finger's press
+   * shades the row for a moment after it is let go, and nothing on the screen says when that has
+   * gone, so a photograph taken next may hold it.
+   */
+  private fun turnOn(name: String) {
+    val roots = instrumentation.uiAutomation.windows.mapNotNull { it.root }
+    val row = checkNotNull(roots.firstNotNullOfOrNull { pressable(it, name) }) { "No switch named $name" }
+    check(row.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_CLICK.id)) { "$name did not turn" }
+    device.find(switch(name, on = true))
+  }
+
+  /** What takes a press nearest around the words [name], under [node] or itself. */
+  private fun pressable(node: AccessibilityNodeInfo, name: String): AccessibilityNodeInfo? {
+    val children = (0 until node.childCount).mapNotNull(node::getChild)
+    return children.firstNotNullOfOrNull { pressable(it, name) } ?: node.takeIf { it.isClickable && says(it, name) }
+  }
+
+  /** Whether [node] or anything under it says [name]. */
+  private fun says(node: AccessibilityNodeInfo, name: String): Boolean =
+    node.text?.toString() == name || (0 until node.childCount).any { index -> node.getChild(index)?.let { says(it, name) } == true }
 
   /** The switch named [name], while it is [on] or off. */
   private fun switch(name: String, on: Boolean): BySelector = By.checked(on).hasDescendant(By.text(name))
@@ -460,6 +497,9 @@ class StoreScreenshots {
     const val COWORKERS = "職場のみんな"
     const val FRIENDS = "学生時代の友だち"
 
+    /** More pages than the seed's chat is long. */
+    const val CHAT_PAGES = 4
+
     /** How long a notification is put off for: longer than a run. */
     const val SNOOZE_MS = 3_600_000
 
@@ -474,6 +514,15 @@ class StoreScreenshots {
 
     /** A size to read a face's photo at, any: the loader keeps the file whatever is asked of it. */
     const val FACE_PX = 96
+  }
+
+  /**
+   * Shows [time] in the status bar, by SystemUI's demo mode, which the script has it in, and waits
+   * for the clock there to say its minute: it is drawn a little after it is told.
+   */
+  private fun showTime(time: LocalTime) {
+    device.executeShellCommand("am broadcast -a com.android.systemui.demo -e command clock -e hhmm ${time.format(DateTimeFormatter.ofPattern("HHmm"))}")
+    device.find(By.pkg("com.android.systemui").textEndsWith(time.format(DateTimeFormatter.ofPattern(":mm"))))
   }
 
   /** The app opened anew on its calendar, with a debug build's [options] (LaunchOptions). */

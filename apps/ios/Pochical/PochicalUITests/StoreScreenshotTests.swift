@@ -33,18 +33,23 @@ final class StoreScreenshotTests: XCTestCase {
   }
 
   /// What the cares' shot shows of the app as it starts: the sample's day of
-  /// 早出 opened, its week over its 時間, and リマインド's reminder of the
-  /// evening before, the next notification as its page draws it.
+  /// 早出 opened, which folds the month to its week, and リマインド's
+  /// reminder of the evening before, the next notification as its page
+  /// draws it.
   @MainActor
   func test00Cares() throws {
     launch()
-    day(Calendar.current.component(.month, from: .now), 13, holding: "日勤、早出").tap()
-    let reset = app.buttons.matching(NSPredicate(format: "label BEGINSWITH '標準'")).firstMatch
-    XCTAssertTrue(reset.waitForExistence(timeout: 5), "the day's hours differ from 日勤's")
-    // From under the month's name, the weekdays and the day's week, to the foot of 時間.
-    let month = app.staticTexts.matching(NSPredicate(format: "label MATCHES '[0-9]+年[0-9]+月'"))
+    let month = Calendar.current.component(.month, from: .now)
+    day(month, 13, holding: "日勤、早出").tap()
+    XCTAssertTrue(app.buttons["閉じる"].waitForExistence(timeout: 5), "the day opens")
+    // From under the month's name, the weekdays and the day's week, with the
+    // room under the week that it has over it.
+    let name = app.staticTexts.matching(NSPredicate(format: "label MATCHES '[0-9]+年[0-9]+月'"))
       .firstMatch
-    try snap("08-cares-hours", from: month.frame.maxY, until: reset.frame.minY)
+    let week = day(month, 13).frame
+    try snap(
+      "08-cares-hours", from: name.frame.maxY,
+      until: week.maxY + week.minY - app.staticTexts["土"].frame.maxY)
     app.buttons["閉じる"].tap()
 
     app.tabBars.buttons["設定"].tap()
@@ -93,18 +98,32 @@ final class StoreScreenshotTests: XCTestCase {
     snap("03-group-shifts", of: XCUIScreen.main, into: raw)
   }
 
-  /// The coworkers' group, joined as 佐藤 there alone.
+  /// The coworkers' group, joined as 佐藤 there alone, and its chat, which
+  /// the seed writes once 佐藤 is in, so every joining is said above its
+  /// lines: read down to the latest, the poll with its votes, and opened
+  /// again, as it is with nothing new in it. The script sets the clock
+  /// after the lines and says so (`clock-set`).
   @MainActor
   func test03Coworkers() throws {
     launch()
     try app.joins(invitation: raw.appending(path: "invite"), named: "佐藤", over: "まい")
-    app.buttons.matching(NSPredicate(format: "label BEGINSWITH '全体チャット'")).firstMatch.tap()
-    XCTAssertTrue(
-      app.navigationBars.firstMatch.buttons["チャットのメニュー"].waitForExistence(timeout: 15),
-      "the chat opens")
-    let found = app.staticTexts
-      .matching(NSPredicate(format: "label CONTAINS 'モバイルバッテリー'")).firstMatch
-    XCTAssertTrue(found.waitForExistence(timeout: 10), "the chat's lines show")
+    let chat = app.buttons.matching(NSPredicate(format: "label BEGINSWITH '全体チャット'")).firstMatch
+    let menu = app.navigationBars.firstMatch.buttons["チャットのメニュー"]
+    let votes = app.descendants(matching: .any)
+      .matching(NSPredicate(format: "label ENDSWITH 'に行ける人：森、小林'")).firstMatch
+    chat.tap()
+    XCTAssertTrue(menu.waitForExistence(timeout: 15), "the chat opens")
+    for _ in 0..<6 where !(votes.waitForExistence(timeout: 10) && votes.isHittable) { app.swipeUp() }
+    XCTAssertTrue(votes.isHittable, "the chat is read to the poll's votes")
+    app.navigationBars.firstMatch.buttons.firstMatch.tap()
+    chat.tap()
+    XCTAssertTrue(menu.waitForExistence(timeout: 15), "the chat opens again")
+    XCTAssertTrue(votes.waitForExistence(timeout: 10) && votes.isHittable, "on its latest line")
+    XCTAssertFalse(app.staticTexts["ここから新着"].exists, "with nothing new")
+    let clock = raw.appending(path: "clock-set").path
+    let set = XCTNSPredicateExpectation(
+      predicate: NSPredicate { _, _ in FileManager.default.fileExists(atPath: clock) }, object: nil)
+    XCTAssertEqual(XCTWaiter().wait(for: [set], timeout: 30), .completed, "the clock follows the lines")
     snap("04-chat", of: XCUIScreen.main, into: raw)
   }
 
@@ -115,7 +134,7 @@ final class StoreScreenshotTests: XCTestCase {
     launch()
     pick(period: "15日〜翌月14日")
     // The page's heading, with the room over it that it has at its side, and
-    // its first two weeks.
+    // its first week.
     let now = Calendar.current.dateComponents([.year, .month, .day], from: .now)
     let first = DateComponents(year: now.year, month: now.month! - (now.day! < 15 ? 1 : 0), day: 15)
     let heading = app.descendants(matching: .any)
@@ -123,7 +142,7 @@ final class StoreScreenshotTests: XCTestCase {
     XCTAssertTrue(heading.waitForExistence(timeout: 5), "the page is named by its days")
     try snap(
       "07-details-period", from: heading.frame.minY - heading.frame.minX,
-      until: rowTop(first, after: 14))
+      until: rowTop(first, after: 7))
     pick(period: "1日〜末日")
   }
 
@@ -176,11 +195,11 @@ final class StoreScreenshotTests: XCTestCase {
     // 夜勤 entered brings the next day's 明け.
     enter("夜勤", month, 16)
     XCTAssertTrue(day(month, 17, holding: "明け").waitForExistence(timeout: 5), "17日 is 明け")
-    // The week of the two days, between the weeks before and after it.
+    // The week of the two days.
     let entered = DateComponents(
       year: Calendar.current.component(.year, from: .now), month: month, day: 16)
     try snap(
-      "07-details-next-day", from: rowTop(entered, after: -7), until: rowTop(entered, after: 14))
+      "07-details-next-day", from: rowTop(entered, after: 0), until: rowTop(entered, after: 7))
   }
 
   /// いまのシフト with its ring, which it draws while a shift is on: one of
@@ -242,13 +261,13 @@ final class StoreScreenshotTests: XCTestCase {
     coming.tap()
     press("カレンダーで直す")
     XCTAssertTrue(app.navigationBars["繰り返しを直す"].waitForExistence(timeout: 5), "the order opens")
-    // The month's name and its first three weeks, the cycle come round in them.
+    // The month's name and its first two weeks, the cycle come round in them.
     let today = Calendar.current.dateComponents([.year, .month], from: .now)
     let title = app.buttons.matching(NSPredicate(format: "label MATCHES '[0-9]+年[0-9]+月.*'"))
       .firstMatch
     try snap(
       "07-details-repeat", from: title.frame.minY,
-      until: rowTop(DateComponents(year: today.year, month: today.month! + 1, day: 1), after: 21))
+      until: rowTop(DateComponents(year: today.year, month: today.month! + 1, day: 1), after: 14))
   }
 
   /// A group with an end, 忘年会, made in グループを作る with 終了日をつける on,
@@ -272,11 +291,12 @@ final class StoreScreenshotTests: XCTestCase {
     app.navigationBars["メンバーを招待"].buttons.firstMatch.tap()
     press("グループの設定")
     XCTAssertTrue(app.navigationBars["グループの設定"].waitForExistence(timeout: 5), "its settings open")
-    // The section グループ, down to the one after it.
+    // The section グループ's rows and what is said under them, from under
+    // its name down to the section after it.
     let rows = app.collectionViews.firstMatch
     let after = rows.staticTexts["このグループでのあなた"]
     XCTAssertTrue(after.waitForExistence(timeout: 5), "the settings show")
-    try snap("08-cares-group-end", from: rows.staticTexts["グループ"].frame.minY, until: after.frame.minY)
+    try snap("08-cares-group-end", from: rows.staticTexts["グループ"].frame.maxY, until: after.frame.minY)
   }
 
   /// Taps the button whose words hold `name`, a page down where the page

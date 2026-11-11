@@ -52,17 +52,20 @@ export const Route = createFileRoute("/_tool/_render/store-shot")({
 // Every length but the headline's room is in --u, a hundredth of the
 // picture's width, so each store's picture is laid out alike at its size.
 // The width of a widget's cell on the wall, in them.
-const WIDGET_CELL = "calc(var(--u) * 25)";
+const WIDGET_CELL = "calc(var(--u) * 30)";
 
 // A shot of tiles, in --u: its words' size, line and the room under them,
-// the gap between tiles, the room at the picture's foot, and how wide a
-// tile is at most.
+// the gap from a tile to the next one's words, several times that room so
+// that words read as their own tile's, the room at the picture's foot, and
+// how wide a tile is at most: as the phone is in the App Store's pictures
+// of one screen, the sky at its sides. Google Play's phone is narrower
+// than a line of words, so its tiles keep to the same width.
 const TILES = {
   foot: 5,
-  gap: 3.5,
+  gap: 8,
   line: 1.3,
   under: 1.6,
-  widest: 90,
+  widest: 78,
   words: 4.8,
 };
 
@@ -155,8 +158,8 @@ const styles = {
     paddingBottom: `calc(var(--u) * ${TILES.under})`,
     paddingLeft: "calc(var(--u) * 1.5)",
   }),
-  // The tiles one over the other from under the headline, as a phone is,
-  // what room they leave shared between them.
+  // The tiles one over the other, each as tall as its part is, together in
+  // the middle of the room under the headline.
   tiles: css({
     "& figure": { margin: 0 },
     alignItems: "center",
@@ -164,7 +167,7 @@ const styles = {
     flexDirection: "column",
     gap: `calc(var(--u) * ${TILES.gap})`,
     inset: `var(--headline) 0 calc(var(--u) * ${TILES.foot})`,
-    justifyContent: "space-between",
+    justifyContent: "center",
     position: "absolute",
   }),
   // The widgets on a Home Screen's grid, tilted, running off every edge
@@ -230,6 +233,7 @@ function StoreShotPage() {
       {!site && <PictureSky height="100%" />}
       {shot.kind === "wall" && (
         <Wall
+          alike={shot.alike}
           looks={shot.raw}
           pinned={shot.pinned}
           row={widgetRow}
@@ -292,11 +296,13 @@ function StoreShotPage() {
 // The widgets where wallOf puts them, each from the folder of its look.
 // A cell is `row` times as tall as it is wide.
 function Wall({
+  alike,
   looks,
   pinned,
   row,
   widgets,
 }: {
+  alike: readonly string[];
   looks: readonly string[];
   pinned: readonly WallPin[];
   row: number;
@@ -311,7 +317,7 @@ function Wall({
           gridTemplateRows: `repeat(${WALL.rows}, calc(${WIDGET_CELL} * ${row}))`,
         }}
       >
-        {wallOf(widgets, looks.length, pinned).map((tile) => (
+        {wallOf(widgets, looks.length, pinned, alike).map((tile) => (
           <div
             className={styles.widget}
             key={`${tile.column} ${tile.row}`}

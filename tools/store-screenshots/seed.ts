@@ -3,7 +3,8 @@
 // 職場のみんな, three coworkers on a two-shift roster who speak politely,
 // as people who have not exchanged contacts do, with a little of
 // 全体チャット, a 日にちの投票 over the days
-// they are all off among it; and 学生時代の友だち, three friends who work
+// they are all off among it, written once the person photographed has
+// joined, so the chat says everyone's joining above its lines; and 学生時代の友だち, three friends who work
 // at different places, each on shifts of their own. Everyone's usual
 // photo is one of the faces' drawings the apps offer (design/src/drawings),
 // no two the same in a group. Both hold this month's and next month's
@@ -12,7 +13,8 @@
 //   pnpm exec tsx tools/store-screenshots/seed.ts <file for the coworkers' invite code> <file for the friends'>
 //
 // The app photographed joins each as one more member through
-// pochical://invite/<code>. Everything is arranged from today (in Japan):
+// pochical://invite/<code>, which this waits for after writing the codes,
+// and ends once the chat is written. Everything is arranged from today (in Japan):
 // the seven days after it hold two days at least when everyone of a group
 // is off, chosen among the days the apps' own sample month (`-sample`,
 // SampleDays.swift) is off too, when it has any there. Local only
@@ -427,6 +429,9 @@ const make = async ({ mark, members, name }: Group) => {
   const lines = new Map<bigint, ChatLine>();
   const seqOfSend = new Map<string, bigint>();
   const projected = Promise.withResolvers<undefined>();
+  // Everyone the group has said is in it, and one more than its own come.
+  const inGroup = new Set<string>();
+  const joined = Promise.withResolvers<undefined>();
   const onGroupChange = ({ kind }: Change): void => {
     if (kind.case === "chatLine") {
       lines.set(kind.value.seq, kind.value);
@@ -435,8 +440,14 @@ const make = async ({ mark, members, name }: Group) => {
       shownPatterns.add(`${kind.value.userId} ${kind.value.pattern?.id}`);
     } else if (kind.case === "memberDay") {
       shownDays.add(`${kind.value.userId} ${kind.value.day?.date}`);
-    } else if (kind.case === "member" && kind.value.photoId !== "") {
-      shownPhotos.add(kind.value.userId);
+    } else if (kind.case === "member") {
+      inGroup.add(kind.value.userId);
+      if (kind.value.photoId !== "") {
+        shownPhotos.add(kind.value.userId);
+      }
+      if (inGroup.size > members.length) {
+        joined.resolve(undefined);
+      }
     }
     if (
       shownPhotos.size === members.length &&
@@ -470,7 +481,7 @@ const make = async ({ mark, members, name }: Group) => {
     })
   );
   await inTime(projected.promise);
-  return { inviteCode, people, rostered };
+  return { inviteCode, joined: joined.promise, people, rostered };
 };
 
 const coworkers = await make(COWORKERS);
@@ -479,7 +490,13 @@ for (const { socket } of friends.people) {
   socket.close();
 }
 await writeFile(friendsFile, `${friends.inviteCode}\n`);
+await writeFile(coworkersFile, `${coworkers.inviteCode}\n`);
+console.log(`招待コードを ${coworkersFile} と ${friendsFile} に書きました`);
 
+// The coworkers talk once the person photographed is among them, however
+// long the app takes to come: the chat then says every joining before
+// its first line.
+await coworkers.joined;
 const { people } = coworkers;
 // The days of the week ahead when all the coworkers are off: the poll's.
 const allOff = week.filter((day) =>
@@ -489,6 +506,9 @@ const [tanaka, kobayashi, mori] = people;
 if (tanaka === undefined || kobayashi === undefined || mori === undefined) {
   fail("no members");
 }
+await words(tanaka, "来月の勤務表、休憩室に貼ってあります");
+await words(kobayashi, "ありがとうございます、見てきます！");
+await words(mori, "わたしもあとで確認します！");
 await words(
   kobayashi,
   "すみません、モバイルバッテリー、休憩室にあったりしますか…？"
@@ -538,8 +558,6 @@ if (reacted !== true || !voted) {
   fail("refused by the group: the reaction or a vote");
 }
 
-await writeFile(coworkersFile, `${coworkers.inviteCode}\n`);
-
 const markOf = (shift: Shift | undefined): string =>
   shift === undefined ? "・" : readyPatterns[shift].symbol;
 console.log(`今日 ${todayKey}、明日からの7日（${keyOf(today + 1)}〜）:`);
@@ -562,4 +580,3 @@ console.log(`みんな休み（投票の日）: ${allOff.map(keyOf).join("、")}
 console.log(
   `サンプルの月も休み: ${allOff.filter(sampleIsOff).map(keyOf).join("、") || "なし"}`
 );
-console.log(`招待コードを ${coworkersFile} と ${friendsFile} に書きました`);

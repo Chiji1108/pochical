@@ -43,7 +43,9 @@ scales="window_animation_scale transition_animation_scale animator_duration_scal
 
 night=$(adb shell cmd uimode night | sed 's/.*: //')
 for scale in $scales; do declare "was_$scale=$(adb shell settings get global "$scale")"; done
+seed=""
 restore() {
+  [ -z "$seed" ] || kill "$seed" 2>/dev/null || true
   stop_server
   demo exit
   adb shell cmd uimode night "$night" >/dev/null
@@ -70,10 +72,16 @@ demo network -e wifi show -e level 4 -e fully true
 demo network -e mobile hide
 
 start_server
-pnpm --dir "$root" exec tsx "$root/tools/store-screenshots/seed.ts" "$work/invite" "$work/invite-friends"
-# The status bar's time for the whole run: two minutes after the chat's
-# lines, whose times are when the seed sent them, on the emulator's clock.
-demo clock -e hhmm "$(adb shell 'date -d @$(($(date +%s) + 120)) +%H%M')"
+# The seed makes the groups, writes their invitations, and writes the
+# coworkers' chat once the walk has joined it; the walk then sets the status
+# bar's time two minutes after the chat's lines, whose times are when the
+# seed sent them.
+pnpm --dir "$root" exec tsx "$root/tools/store-screenshots/seed.ts" "$work/invite" "$work/invite-friends" &
+seed=$!
+until [ -s "$work/invite" ]; do
+  kill -0 "$seed" 2>/dev/null || { echo "the seed made no groups" >&2; exit 1; }
+  sleep 1
+done
 pulled=$root/apps/android/app/build/outputs/connected_android_test_additional_output
 rm -rf "$pulled"
 gradle :app:connectedDebugAndroidTest "-PpochicalServer=http://10.0.2.2:$port" \
