@@ -1,3 +1,4 @@
+import { rotationTemplates } from "@pochical/design/patterns";
 import { themeSkyId } from "@pochical/design/skies";
 import { DesignApp } from "@pochical/prototype/components/design-app";
 import {
@@ -31,7 +32,12 @@ import {
   initialDesignSchedule,
 } from "@pochical/prototype/lib/design-days";
 import { calendarAlone } from "@pochical/prototype/lib/design-features";
-import { workplaceGroup } from "@pochical/prototype/lib/design-group-samples";
+import type { GroupSummary } from "@pochical/prototype/lib/design-group-data";
+import {
+  sampleGroups,
+  workplaceGroup,
+} from "@pochical/prototype/lib/design-group-samples";
+import { presetList } from "@pochical/prototype/lib/design-patterns";
 import { useSamplePerson } from "@pochical/prototype/lib/design-sample-person";
 import { designMonth } from "@pochical/prototype/lib/design-today";
 import {
@@ -321,12 +327,32 @@ const screenStyle = cva({
 });
 
 // How each feature's screen opens, and the part of it shown: entering with
-// the hero's month and its sheet of shifts, the calendar as it is, adding
-// the month to the phone's calendar, and the shift table and chat of the
-// group the stores' screenshots show, people at work.
-type Feature = "entry" | "calendar" | "deviceCalendar" | "share" | "chat";
+// the hero's month and its sheet of shifts, adding the month to the phone's
+// calendar, 繰り返し on a fixed order, and the groups the stores'
+// screenshots show: friends in the shift table, people at work in the chat.
+type Feature = "entry" | "deviceCalendar" | "repeat" | "share" | "chat";
 
 const atWork = { groups: [workplaceGroup] };
+
+// The sample person's friends, the group named as the stores' is
+// (tools/store-screenshots/seed.ts).
+const withFriends = {
+  groups: sampleGroups()
+    .filter((group) => group.id === "friends")
+    .map((group): GroupSummary => ({
+      ...group,
+      mark: { emoji: "🎓", kind: "emoji" },
+      name: "学生時代の友だち",
+    })),
+};
+
+// 繰り返し is for work that comes round in a fixed order, so the page
+// shows the order はじめの設定 offers for it, as the stores' picture does:
+// 当番・非番・休み.
+const duty = rotationTemplates.find((template) => template.id === "duty");
+if (duty?.sequence === undefined) {
+  throw new Error("はじめの設定 has no 当番・非番・休み order");
+}
 
 const featureScreens: Record<
   Feature,
@@ -336,7 +362,6 @@ const featureScreens: Record<
     shown?: "foot" | "whole";
   }
 > = {
-  calendar: {},
   chat: {
     opening: { initialGroupPage: "chat", initialTab: "group" },
     own: atWork,
@@ -348,9 +373,19 @@ const featureScreens: Record<
     own: { schedule: heroSchedule },
     shown: "foot",
   },
+  repeat: {
+    opening: { initialSettingsPage: "repeat-new", initialTab: "settings" },
+    own: {
+      patterns: presetList(duty.patternKeys),
+      // From 4/1, as /demo's order, so it is the one in use on the
+      // prototype's today (9/24).
+      rules: [{ sequence: duty.sequence, start: new Date(2026, 3, 1) }],
+      schedule: {},
+    },
+  },
   share: {
     opening: { initialGroupPage: "shifts", initialTab: "group" },
-    own: atWork,
+    own: withFriends,
   },
 };
 
@@ -437,10 +472,10 @@ function PhoneGallery({
   );
 }
 
-// The calendar in a few looks, each set as someone might set theirs:
-// 墨 with outlined marks in its one tone, さくら with emoji, and ソーダ
-// with letters and their names under them; days off left plain in all
-// three, so nothing competes with the marks.
+// The calendar in the two looks the stores' picture sets side by side,
+// each as someone might set theirs: 墨 with outlined marks in its one
+// tone, and ソーダ with letters and their names under them; days off left
+// plain in both, so nothing competes with the marks.
 type GalleryLook = {
   id: string;
   preset: PresetId;
@@ -457,14 +492,6 @@ const galleryLooks: GalleryLook[] = [
     names: false,
     preset: "sumi",
     style: "icon",
-  },
-  {
-    fill: true,
-    id: "sakura-emoji",
-    monochrome: false,
-    names: false,
-    preset: "sakura",
-    style: "emoji",
   },
   {
     fill: true,

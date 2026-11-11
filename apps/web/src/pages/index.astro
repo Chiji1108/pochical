@@ -7,10 +7,10 @@ import { SITE_WALL } from "@pochical/prototype/lib/store-shots";
 import { css } from "@pochical/styled-system/css";
 import {
   BellRing,
-  CalendarRange,
   ImageDown,
   MegaphoneOff,
-  Repeat,
+  Shapes,
+  SunMoon,
   UserRound,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -215,9 +215,9 @@ const extras: { Icon: LucideIcon; title: string; body: string }[] = [
     title: "前の晩にお知らせ",
   },
   {
-    Icon: Repeat,
-    body: "決まった順番で回るシフトは、一度決めれば先の月まで入ります。",
-    title: "決まった順番なら、一度だけ",
+    Icon: Shapes,
+    body: "日勤、夜勤、明け、早番、遅番など、名前・時間・印を自由に作れます。",
+    title: "シフトは自由に作れる",
   },
   {
     Icon: ImageDown,
@@ -225,9 +225,9 @@ const extras: { Icon: LucideIcon; title: string; body: string }[] = [
     title: "月まるごと画像で保存",
   },
   {
-    Icon: CalendarRange,
-    body: "15日始まりなど、月の途中から始まる勤務表にも合わせられます。",
-    title: "月の途中から始まる勤務表にも",
+    Icon: SunMoon,
+    body: "ライトとダークの外観に対応しています。",
+    title: "ライトでも、ダークでも",
   },
   {
     Icon: UserRound,
@@ -346,11 +346,12 @@ const closing = {
         <HeroPhone action={primaryAction(appStoreUrl())} client:idle />
       </div>
     </section>
-    {/* What the app does, in the order someone on shifts comes to use it
-       (store/README.md), each headline its store screenshot's
-       (@pochical/prototype's lib/store-shots.ts). Beside each, its own
-       screen, not touchable, so the page never drifts from the app; the
-       widgets are the real ones, photographed for the stores. */}
+    {/* What the app does, in the stores' order (store/README.md), each
+       headline its store screenshot's (@pochical/prototype's
+       lib/store-shots.ts). Beside each, its own screen, not touchable, so
+       the page never drifts from the app; the widgets are the real ones,
+       photographed for the stores. The last is the details shot the
+       stores have yet to draw (#806), beside 繰り返し's screen. */}
     <ol aria-label="ポチカルでできること" class={feature.list}>
       <li class={feature.row}>
         <div class={feature.copy}>
@@ -363,53 +364,27 @@ const closing = {
           <p class={feature.body}>
             シフトのボタンを押すと、その日に入って次の日へ。
             <br />
-            夜勤を入れると、次の日の明けも一緒に入ります。
+            早出や残業は、その日だけ時間を変えられます。
           </p>
         </div>
         <FeatureScreen client:visible={NEAR} feature="entry" />
       </li>
       <li class={feature.row}>
         <div class={feature.copy}>
-          <p class={feature.label}>CALENDAR</p>
+          <p class={feature.label}>WIDGET</p>
           <h2 class={feature.title}>
-            夜勤も明けも、
+            次の休みも、
             <br />
-            ひと目で。
+            ウィジェットで。
           </h2>
           <p class={feature.body}>
-            シフトの名前も時間も印も、自由に作れます。
+            次の休みも、今日のシフトも、アプリを開かずに。
             <br />
-            早出や残業は、その日だけ時間を変えられます。
-          </p>
-        </div>
-        <FeatureScreen client:visible={NEAR} feature="calendar" />
-      </li>
-      <li class={feature.row}>
-        <div class={feature.copy}>
-          <p class={feature.label}>YOUR CALENDAR</p>
-          <h2 class={feature.title}>いつものカレンダーにも。</h2>
-          <p class={feature.body}>
-            シフトを、端末のカレンダーに入れられます。
-            <br />
-            Googleカレンダーの人も、ふだんの予定と並べて。
-            <br />
-            一度入れたあとは、シフトを変えると予定も変わるようにできます。
-          </p>
-        </div>
-        <FeatureScreen client:visible={NEAR} feature="deviceCalendar" />
-      </li>
-      <li class={feature.row}>
-        <div class={feature.copy}>
-          <p class={feature.label}>WIDGET</p>
-          <h2 class={feature.title}>ホーム画面にも。</h2>
-          <p class={feature.body}>
-            今日のシフトも、次の休みも、アプリを開かずに。
-            <br />
-            ひと月のカレンダーも置けます。
+            ひと月のカレンダーも、ホーム画面に置けます。
           </p>
         </div>
         <img
-          alt="ポチカルのウィジェット。今日のシフト、これからの予定、ひと月のカレンダーが並ぶ。"
+          alt="ポチカルのウィジェット。次の休み、今日のシフト、ひと月のカレンダーが並ぶ。"
           class={feature.wall}
           decoding="async"
           height={SITE_WALL.height / 2}
@@ -422,12 +397,12 @@ const closing = {
         <div class={feature.copy}>
           <p class={feature.label}>SHARE</p>
           <h2 class={feature.title}>
-            「いつ休み？」が、
+            家族や友人と、
             <br />
-            ひと目で。
+            シフトを共有。
           </h2>
           <p class={feature.body}>
-            家族や友だち、職場の人のシフトを、ひとつの表に。
+            みんなのシフトが、ひとつの表に並びます。
             <br />
             みんなが休みの日も、すぐ見つかります。
           </p>
@@ -465,6 +440,42 @@ const closing = {
           </p>
         </div>
         <ThemeGallery client:visible={NEAR} />
+      </li>
+      <li class={feature.row}>
+        <div class={feature.copy}>
+          <p class={feature.label}>YOUR CALENDAR</p>
+          <h2 class={feature.title}>
+            いつものカレンダーに、
+            <br />
+            自動で反映。
+          </h2>
+          <p class={feature.body}>
+            シフトを、端末のカレンダーに入れられます。
+            <br />
+            Googleカレンダーの人も、ふだんの予定と並べて。
+            <br />
+            一度入れたあとは、シフトを変えると予定にも自動で反映できます。
+          </p>
+        </div>
+        <FeatureScreen client:visible={NEAR} feature="deviceCalendar" />
+      </li>
+      <li class={feature.row}>
+        <div class={feature.copy}>
+          <p class={feature.label}>DETAILS</p>
+          <h2 class={feature.title}>
+            勤務表のクセにも、
+            <br />
+            合わせます。
+          </h2>
+          <p class={feature.body}>
+            夜勤を入れると、次の日に明けが入ります。
+            <br />
+            15日始まりなど、月の途中から始まる勤務表にも。
+            <br />
+            決まった並びのシフトは、繰り返しで先の月まで。
+          </p>
+        </div>
+        <FeatureScreen client:visible={NEAR} feature="repeat" />
       </li>
     </ol>
     <section aria-labelledby="more-title" class={more.root}>
