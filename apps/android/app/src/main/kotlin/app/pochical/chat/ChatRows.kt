@@ -249,7 +249,8 @@ fun TypingRow(typers: List<GroupMemberRow>, modifier: Modifier = Modifier) {
 
 /**
  * A line as a line of words reads it, as a quote and the chat list read it, each mention as @ and
- * the member's name ([nameOf]) (spec/chat.md).
+ * the member's name ([nameOf]) (spec/chat.md); one of a kind the app does not know as what it says
+ * in its place (spec/vectors/chat.json, content).
  */
 @Composable
 fun lineWords(content: LineContent, nameOf: (String) -> String): String =
@@ -266,6 +267,7 @@ fun lineWords(content: LineContent, nameOf: (String) -> String): String =
       if (poll.decided.isNotEmpty()) stringResource(R.string.chat_poll_decided, LocalDate.parse(poll.decided).fullText)
       else stringResource(R.string.chat_poll, poll.daysList.firstOrNull()?.let { LocalDate.parse(it).fullText }.orEmpty())
     }
+    LineContent.Unknown -> stringResource(R.string.chat_unknown_line)
     is LineContent.Notice,
     LineContent.Unsent,
     LineContent.Hidden -> ""

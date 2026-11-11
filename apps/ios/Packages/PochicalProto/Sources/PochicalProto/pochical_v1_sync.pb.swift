@@ -1770,9 +1770,10 @@ public nonisolated struct Pochical_V1_ChatLine: Sendable {
   /// and none for a notice or once unsent.
   public var replyTo: UInt64 = 0
 
-  /// What the line is: always one of its kinds. A device that gets none,
-  /// or one it does not know (from an app newer than itself), shows
-  /// nothing in its place.
+  /// What the line is: always one of its kinds. A device that gets one
+  /// it does not know (from an app newer than itself), which it reads as
+  /// none, says in its place that the app must be updated to see it
+  /// (spec/chat.md, What a line is).
   public var content: Pochical_V1_ChatContent {
     get {_content ?? Pochical_V1_ChatContent()}
     set {_content = newValue}

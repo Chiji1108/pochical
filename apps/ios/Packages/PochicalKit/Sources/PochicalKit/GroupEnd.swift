@@ -58,22 +58,7 @@ public enum GroupEnd {
   }
 
   /// The key of the notification that a group ends soon, its one argument
-  /// the end in ms since the epoch (spec/sync-protocol.md, A group's end).
+  /// the end in ms since the epoch (spec/sync-protocol.md, A group's end),
+  /// which the device words with every other body's (`PushWords.words`).
   public static let notificationKey = "GROUP_ENDS"
-
-  /// The words of the notification `payload` that a group ends soon, as a
-  /// device in `zone` says them on `today`: the chat line's own. Nil for
-  /// any other notification, or one whose argument is no moment, which
-  /// shows as it came.
-  public static func notificationWords(
-    payload: [AnyHashable: Any], in zone: TimeZone, today: Day
-  ) -> String? {
-    guard let aps = payload["aps"] as? [String: Any],
-      let alert = aps["alert"] as? [String: Any],
-      alert["loc-key"] as? String == notificationKey,
-      let args = alert["loc-args"] as? [String], args.count == 1,
-      let ms = Int64(args[0]), ms > 0
-    else { return nil }
-    return coming(ms, in: zone, today: today)
-  }
 }

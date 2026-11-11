@@ -53,6 +53,7 @@
   <string name="chat_unmuted_said">通知をオンにしました</string>
   <string name="chat_mentioned">自分へのメンションあり</string>
   <string name="chat_blocked_line">ブロック中のメンバーのメッセージ</string>
+  <string name="chat_unknown_line">このメッセージを見るには、アプリをアップデートしてください</string>
   <string name="chat_sent_photos">写真を送りました</string>
   <string name="chat_shared">%1$sを共有しました</string>
   <string name="chat_reply">返信</string>

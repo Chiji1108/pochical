@@ -79,6 +79,26 @@ class ChatNotifierTest {
     assertEquals(listOf("今週どう？", "土曜とか", "写真を送りました"), messagesOf().messages.map { it.text.toString() })
   }
 
+  /** A kind of line added after this app, whose key it has no words for (spec/sync-protocol.md, Push). */
+  @Test
+  fun aLineOfAKindTheAppHasNoWordsForIsAMessage() = runTest {
+    notifier.show(groupLine(2, "", kind = "STICKER"))
+    assertEquals(listOf("メッセージを送りました"), messagesOf().messages.map { it.text.toString() })
+    assertEquals("いとこ会", messagesOf().conversationTitle)
+  }
+
+  @Test
+  fun aOneToOneLineOfAKindTheAppHasNoWordsForIsAMessage() = runTest {
+    notifier.show(groupLine(2, "").copy(body = Localized("CHAT_STICKER", emptyList()), threadId = "direct:$ME:$WRITER"))
+    assertEquals(listOf("メッセージを送りました"), messagesOf().messages.map { it.text.toString() })
+  }
+
+  @Test
+  fun aKeyThatIsNoChatLinesAsksToUpdate() = runTest {
+    notifier.show(groupLine(2, "").copy(title = Localized("NEWS_TITLE", listOf("いとこ会")), body = Localized("GROUP_NEWS", listOf("いとこ会"))))
+    assertEquals(listOf("この通知を見るには、アプリをアップデートしてください"), messagesOf().messages.map { it.text.toString() })
+  }
+
   @Test
   fun aLineTheServerTriedAgainShowsOnce() = runTest {
     notifier.show(groupLine(2, "今週どう？"))

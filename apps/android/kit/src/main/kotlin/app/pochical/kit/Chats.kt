@@ -577,7 +577,7 @@ internal suspend fun SyncDao.chatState(groupId: String, threadId: String, me: St
       .mapNotNull { seq -> shownLine(groupId, threadId, seq, waiting)?.let { seq to it } }
       .toMap()
   val byLine = lines.associateBy { it.seq }
-  // A line shown as nothing (of a kind this app does not know) is pinned nowhere it can show.
+  // A line shown as nothing is pinned nowhere it can show.
   val pins =
     pinned(groupId, threadId, waiting).mapNotNull { seq -> byLine[seq] ?: shownLine(groupId, threadId, seq, waiting) }.filter {
       it.content != LineContent.Unsent && it.content != LineContent.Hidden

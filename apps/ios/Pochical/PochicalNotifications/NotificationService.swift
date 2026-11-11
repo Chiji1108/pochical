@@ -12,7 +12,8 @@ import UserNotifications
 /// words the notification that a group ends soon. What it cannot read yet,
 /// before the app has the group, shows as it came.
 final class NotificationService: UNNotificationServiceExtension {
-  /// What to show should iOS end the extension first: as it came.
+  /// What to show should iOS end the extension first: as it came, in the
+  /// app's words.
   private var cut: (() -> Void)?
 
   override func didReceive(
@@ -30,12 +31,15 @@ final class NotificationService: UNNotificationServiceExtension {
       return
     }
     nonisolated(unsafe) let show = contentHandler
-    nonisolated(unsafe) let request = request
+    // Worded before anything is waited for, so it is worded however the
+    // extension ends.
+    nonisolated(unsafe) let content = Self.withWords(request.content)
+    let id = request.identifier
     let once = Once()
-    cut = { once.run { show(request.content) } }
+    cut = { once.run { show(content) } }
     Task { @MainActor in
-      let content = await Self.message(from: request)
-      once.run { show(content) }
+      let message = await Self.message(from: content, id: id)
+      once.run { show(message) }
     }
   }
 
@@ -45,23 +49,14 @@ final class NotificationService: UNNotificationServiceExtension {
 
   /// The notification as a message from its writer, or as it came.
   @MainActor private static func message(
-    from request: UNNotificationRequest
+    from content: UNNotificationContent, id: String
   ) async -> UNNotificationContent {
-    let content = request.content
     let payload = content.userInfo
-    // That the group ends soon (spec/sync-protocol.md, A group's end): the
-    // chat line's own words, the day by this device's clock, under the
-    // group's name as it came. It is the group's own, of no line and no
-    // writer, so it stays a plain notification, not a message from someone.
-    if let words = GroupEnd.notificationWords(payload: payload, in: .current, today: .today),
-      let worded = content.mutableCopy() as? UNMutableNotificationContent
-    {
-      worded.body = words
-      return worded
-    }
     // The chat with Pochical's people stays a plain notification: only
-    // they write there, so it has no writer of its own to show.
-    guard let line = NotifiedLine(id: request.identifier, payload: payload),
+    // they write there, so it has no writer of its own to show. So does
+    // the one that a group ends soon (spec/sync-protocol.md, A group's
+    // end), worded already: the group's own, of no line and no writer.
+    guard let line = NotifiedLine(id: id, payload: payload),
       line.groupID != ChatPlace.supportID,
       let authorID = payload["authorId"] as? String,
       let from = from(line, authorID: authorID)
@@ -71,8 +66,11 @@ final class NotificationService: UNNotificationServiceExtension {
     guard let worded = content.mutableCopy() as? UNMutableNotificationContent else {
       return content
     }
-    if from.group != nil, let words = wordsAlone(content) {
-      worded.body = words
+    if from.group != nil, let sent = sentBody(content), sent.key.hasPrefix(PushWords.groupKey) {
+      let alone = PushWords(
+        key: PushWords.chatKey + sent.key.dropFirst(PushWords.groupKey.count),
+        args: Array(sent.args.dropFirst()))
+      worded.body = words(alone)
     }
     let intent = intent(for: line, from: from, authorID: authorID, content: worded)
     let interaction = INInteraction(intent: intent, response: nil)
@@ -81,19 +79,51 @@ final class NotificationService: UNNotificationServiceExtension {
     return (try? worded.updating(from: intent)) ?? worded
   }
 
-  /// A group chat's line as the app words a one-to-one chat's, without who
-  /// wrote it: `CHAT_GROUP_{…}` as `CHAT_{…}`, its arguments after the
-  /// writer's name (spec/sync-protocol.md, Push).
-  private static func wordsAlone(_ content: UNNotificationContent) -> String? {
-    let group = "CHAT_GROUP_"
-    guard let aps = content.userInfo["aps"] as? [String: Any],
-      let alert = aps["alert"] as? [String: Any],
-      let key = alert["loc-key"] as? String, key.hasPrefix(group),
+  /// The alert as the server sent it (spec/sync-protocol.md, Push).
+  private static func sentAlert(_ content: UNNotificationContent) -> [String: Any]? {
+    (content.userInfo["aps"] as? [String: Any])?["alert"] as? [String: Any]
+  }
+
+  /// The body's key and arguments as the server sent them.
+  private static func sentBody(_ content: UNNotificationContent) -> PushWords? {
+    guard let alert = sentAlert(content), let key = alert["loc-key"] as? String,
       let args = alert["loc-args"] as? [String]
     else { return nil }
-    let format = Bundle.main.localizedString(
-      forKey: "CHAT_\(key.dropFirst(group.count))", value: nil, table: nil)
-    return String(format: format, arguments: Array(args.dropFirst()))
+    return PushWords(key: key, args: args)
+  }
+
+  /// Whether the app has words for `key`: the bundle answers the key
+  /// itself for one it has none for.
+  private static func hasWords(for key: String) -> Bool {
+    Bundle.main.localizedString(forKey: key, value: nil, table: nil) != key
+  }
+
+  /// `sent` as the device says it now (`PushWords.words`), in the app's
+  /// strings.
+  private static func words(_ sent: PushWords) -> String {
+    sent.words(
+      known: hasWords,
+      format: { Bundle.main.localizedString(forKey: $0, value: nil, table: nil) },
+      in: .current, today: .today)
+  }
+
+  /// The notification as the system worded it, but where its wording is
+  /// not the device's (spec/sync-protocol.md, Push): a body whose key the
+  /// app has no words for, which the system has none for either, is what
+  /// stands in for it, and that a group ends soon says its day
+  /// (`PushWords.words`); a title the app has no words for is none, the
+  /// system heading the notification with the app's name.
+  private static func withWords(_ content: UNNotificationContent) -> UNNotificationContent {
+    guard let alert = sentAlert(content),
+      let worded = content.mutableCopy() as? UNMutableNotificationContent
+    else { return content }
+    if let sent = sentBody(content), !sent.saysItsFormat(known: hasWords) {
+      worded.body = words(sent)
+    }
+    if let title = alert["title-loc-key"] as? String, !hasWords(for: title) {
+      worded.title = ""
+    }
+    return worded
   }
 
   /// Who the line is from, as the app keeps them in the App Group.

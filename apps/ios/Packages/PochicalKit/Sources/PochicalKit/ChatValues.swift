@@ -49,11 +49,12 @@ public struct ChatLineRow: Hashable, Sendable, Identifiable {
 
   /// Whose line it is to `me`, for what is unread: the app's notices and
   /// a line never delivered to the reader are neither the reader's nor
-  /// others' to count (`spec/vectors/chat.json`, writer).
+  /// others' to count; one of a kind the app does not know is its
+  /// writer's (`spec/vectors/chat.json`, writer).
   public func writer(for me: String) -> LineWriter {
     switch content {
     case .notice, .hidden: .app
-    case .words, .photos, .days, .poll, .unsent: authorID == me ? .me : .others
+    case .words, .photos, .days, .poll, .unsent, .unknown: authorID == me ? .me : .others
     }
   }
 
@@ -218,7 +219,7 @@ extension DatabaseMigrator {
           "opID" TEXT NOT NULL,
           "content" TEXT NOT NULL CHECK (
             json_extract("content", '$.kind')
-              IN ('words', 'photos', 'days', 'poll', 'notice', 'unsent', 'hidden')
+              IN ('words', 'photos', 'days', 'poll', 'notice', 'unsent', 'hidden', 'unknown')
           ),
           "reactionsJSON" TEXT NOT NULL DEFAULT '[]',
           "pinnedOrder" INTEGER NOT NULL DEFAULT 0,
@@ -1216,11 +1217,12 @@ public struct LineNotice: Codable, Hashable, Sendable {
 /// Reporting and blocking as every platform decides them (spec/chat.md,
 /// Reporting and blocking; spec/vectors/chat.json, folded and reportable).
 extension LineContent.Kind {
-  /// A line someone wrote and the reader sees: not the app's notice, one
-  /// taken back, or one not delivered to them.
+  /// A line someone wrote and the reader sees, one of a kind the app does
+  /// not know among them: not the app's notice, one taken back, or one
+  /// not delivered to them.
   public var isMessage: Bool {
     switch self {
-    case .words, .photos, .days, .poll: true
+    case .words, .photos, .days, .poll, .unknown: true
     case .notice, .unsent, .hidden: false
     }
   }

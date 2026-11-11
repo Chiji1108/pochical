@@ -1,4 +1,4 @@
-import { create } from "@bufbuild/protobuf";
+import { create, fromBinary } from "@bufbuild/protobuf";
 import { chatPlaces } from "@pochical/design/chat";
 import { syncLimits } from "@pochical/design/limits";
 import { characterCount, fitsText, isEmoji } from "@pochical/design/text";
@@ -32,6 +32,8 @@ import { fitsField } from "../src/day-values";
 import { GroupMarkSchema } from "../src/gen/pochical/v1/marks_pb";
 import type { GroupMark } from "../src/gen/pochical/v1/marks_pb";
 import {
+  ChatContentSchema,
+  ChatNotice_Kind,
   ChatEditSchema,
   DayField,
   PatternSchema,
@@ -77,6 +79,27 @@ describe("spec/vectors/chat.json", () => {
 
   it.each(chat.directThread)("directThread: $name", ({ a, b, expected }) => {
     expect(directThread(a, b)).toBe(expected);
+  });
+
+  // The bytes are the wire's: a kind the apps are to read is that kind to
+  // the server, and one they are to take as unknown is no kind of the
+  // ChatContent they are generated from either.
+  it.each(chat.content)("content: $name", ({ bytes, expected }) => {
+    const wireBytes = Uint8Array.from(bytes.match(/../gu) ?? [], (byte) =>
+      Number.parseInt(byte, 16)
+    );
+    const { kind } = fromBinary(ChatContentSchema, wireBytes);
+    // A notice the apps cannot word, of no kind they name, is hidden to them.
+    const worded =
+      kind.case !== "notice" ||
+      (kind.value.kind !== ChatNotice_Kind.UNSPECIFIED &&
+        kind.value.kind in ChatNotice_Kind);
+    const wire = worded ? kind.case : "hidden";
+    const words = kind.case === "words" ? kind.value.text : undefined;
+    expect({ kind: wire ?? "unknown", words }).toStrictEqual({
+      kind: expected.kind,
+      words: expected.kind === "words" ? expected.words : undefined,
+    });
   });
 
   it.each(chat.pins)("pins: $name", ({ pins, step, expected }) => {

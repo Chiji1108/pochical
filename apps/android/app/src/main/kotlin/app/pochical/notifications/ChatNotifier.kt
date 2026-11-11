@@ -23,7 +23,10 @@ import app.pochical.kit.AppLink
 import app.pochical.kit.ChatWithdrawal
 import app.pochical.kit.GROUP_ENDS
 import app.pochical.kit.GROUP_THREAD
+import app.pochical.kit.GROUP_LINE_KEY
 import app.pochical.kit.GroupMemberRow
+import app.pochical.kit.LINE_KEY
+import app.pochical.kit.body
 import app.pochical.kit.Localized
 import app.pochical.kit.NotifiedLine
 import app.pochical.kit.PushedAlert
@@ -99,7 +102,9 @@ class ChatNotifier(
     if (alert.recipientId != me) return
     val tag = tagOf(alert.groupId, alert.threadId)
     if (tag == onScreen.get()) return
-    if (alert.body.key == GROUP_ENDS) return showEnd(alert)
+    // That its group ends, to an app that has words for it: the group's own notification. One
+    // without them is told to update, as for any body it cannot word (`Localized.body`).
+    if (stoodIn(alert.body).key == GROUP_ENDS) return showEnd(alert)
     // A group left while the line is made ready ([forgetPlace]) shows nothing of it: its leaving
     // is counted under the lock the post takes, so it comes either before the post, which then
     // shows nothing, or after it, taking it away.
@@ -131,8 +136,7 @@ class ChatNotifier(
     val tag = endTagOf(alert.groupId)
     val leaves = leftCount[alert.groupId]
     val mark = group(alert.groupId)?.let { conversations.mark(it.mark, it.name, it.id) }
-    val today = Instant.ofEpochMilli(now()).atZone(zone()).toLocalDate()
-    val words = groupEndsWords(context.resources, endsAtMs, today, zone())
+    val words = worded(alert.body)
     synchronized(lock) {
       if (leftCount[alert.groupId] != leaves) return
       // One the server tried again after a try that did reach the device is shown once; an end
@@ -364,17 +368,19 @@ class ChatNotifier(
     // The chat with Pochical's people is a conversation of two, with them under the chat's own
     // name, as 設定's row names it, and the app's icon (spec/chat.md, The chat with Pochical's people).
     val support = alert.groupId == Chat.supportPlace
-    val inGroup = !support && alert.body.key.startsWith(GROUP_KEY)
-    val kind = alert.body.key.removePrefix(GROUP_KEY).removePrefix(KEY)
+    // What the app has no words for is what stands in for it (`Localized.body`).
+    val body = stoodIn(alert.body)
+    val inGroup = !support && body.key.startsWith(GROUP_LINE_KEY)
     val held = members(alert.groupId)
     val authorId = alert.line?.authorId.orEmpty()
     val writerRow = held.find { it.userId == authorId }
     val writerName =
       when {
         support -> worded(alert.title)
-        else -> writerRow?.displayName ?: (if (inGroup) alert.body.args else alert.title.args).firstOrNull().orEmpty()
+        else -> writerRow?.displayName ?: (if (inGroup) body.args else alert.title.args).firstOrNull().orEmpty()
       }
-    val words = worded(Localized(KEY + kind, if (inGroup) alert.body.args.drop(1) else alert.body.args))
+    // A group chat's line is worded as a one-to-one chat's, the system showing who wrote it.
+    val words = worded(if (inGroup) Localized(LINE_KEY + body.key.removePrefix(GROUP_LINE_KEY), body.args.drop(1)) else body)
     val mine = held.find { it.userId == me }
     // The style takes no user without a name: one the group does not name yet is あなた.
     val userName = mine?.displayName?.takeIf { it.isNotBlank() } ?: context.getString(R.string.push_me)
@@ -480,15 +486,28 @@ class ChatNotifier(
       PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
 
-  /** The words the server sent, put together from the app's strings; its arguments alone for a key this app does not know. */
+  /**
+   * The words the server sent, put together from the app's strings. A key this app has no words
+   * for is a title's, a body's being stood in for before it comes here: the app's name, as iOS
+   * heads a notification with no title (spec/sync-protocol.md, Push).
+   */
   private fun worded(localized: Localized): String {
-    val id = WORDS[localized.key] ?: return localized.args.joinToString(" ")
+    val id = WORDS[localized.key] ?: return context.getString(R.string.app_name)
+    // A group's end comes as a moment, said as the day this device's clock shows for it, in the
+    // chat's line's own words; one that is no moment is never said ([showEnd]).
+    if (localized.key == GROUP_ENDS) {
+      val today = Instant.ofEpochMilli(now()).atZone(zone()).toLocalDate()
+      return groupEndOf(localized)?.let { groupEndsWords(context.resources, it, today, zone()) }.orEmpty()
+    }
     return try {
       context.getString(id, *localized.args.toTypedArray())
     } catch (e: MissingFormatArgumentException) {
       localized.args.joinToString(" ")
     }
   }
+
+  /** [body] as the app words it: its own when the app has words for its key, else what stands in for it (`Localized.body`). */
+  private fun stoodIn(body: Localized): Localized = body.body { it in WORDS }
 
   /** Shows [notification] as the chat [tag]'s, while the system lets the app notify. */
   private fun post(tag: String, notification: Notification) {
@@ -506,9 +525,6 @@ class ChatNotifier(
 
     /** Where the notification keeps its lines' seqs, for taking them back once read. */
     private const val SEQS = "app.pochical.seqs"
-
-    private const val KEY = "CHAT_"
-    private const val GROUP_KEY = "CHAT_GROUP_"
 
     /** The intent a notification's tap opens the app with. */
     const val ACTION_OPEN_CHAT = "app.pochical.OPEN_CHAT"
@@ -557,6 +573,11 @@ class ChatNotifier(
         "CHAT_GROUP_DAYS" to R.string.push_chat_group_days,
         "CHAT_GROUP_POLL" to R.string.push_chat_group_poll,
         "SUPPORT_TITLE" to R.string.push_support_title,
+        // Its argument the end in ms, worded as a day (`groupEndsWords`).
+        GROUP_ENDS to R.string.group_ends_on,
+        // What stands in for a body this app has no words for (`Localized.body`); the server sends neither.
+        "CHAT_MESSAGE" to R.string.push_chat_message,
+        "UPDATE_TO_SEE" to R.string.push_update_to_see,
       )
   }
 }

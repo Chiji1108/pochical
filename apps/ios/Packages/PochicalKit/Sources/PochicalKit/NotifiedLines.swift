@@ -161,3 +161,67 @@ public func notifiedFrom(
       WidgetWith(kind: .person, name: $0.shownName, groupID: groupID, photoID: $0.photoID)
     })
 }
+
+/// A notification's words as the server sends them: a key of the app's
+/// strings and its arguments (spec/sync-protocol.md, Push).
+public struct PushWords: Hashable, Sendable, Decodable {
+  public var key: String
+  public var args: [String]
+
+  public init(key: String, args: [String]) {
+    self.key = key
+    self.args = args
+  }
+
+  /// A group chat's line, its writer's name its first argument, and a
+  /// one-to-one chat's.
+  public static let groupKey = "CHAT_GROUP_"
+  public static let chatKey = "CHAT_"
+
+  /// The body the app words: its own when the app has words for its key
+  /// (`known`), and else what stands in for it, by keys the server never
+  /// sends: a chat line's of a kind added after the app as a message, from
+  /// its writer where their name came, and any other as asking to update
+  /// (`spec/vectors/chat.json`, pushBody).
+  public func body(known: (String) -> Bool) -> PushWords {
+    if known(key) { return self }
+    if key.hasPrefix(Self.groupKey), let writer = args.first {
+      return PushWords(key: "CHAT_GROUP_MESSAGE", args: [writer])
+    }
+    return PushWords(key: key.hasPrefix(Self.chatKey) ? "CHAT_MESSAGE" : "UPDATE_TO_SEE", args: [])
+  }
+
+  /// The end a body that a group ends soon tells, in ms since the epoch
+  /// (`GroupEnd.notificationKey`); nil for any other body, or one whose
+  /// argument is no moment.
+  var groupEnd: Int64? {
+    guard key == GroupEnd.notificationKey, args.count == 1, let ms = Int64(args[0]), ms > 0
+    else { return nil }
+    return ms
+  }
+
+  /// The body as the device says it, on `today` by `zone`'s clock: the
+  /// body the app words (`body`), in the app's strings' `format` of its
+  /// key. That a group ends soon says the chat line's own words, its day
+  /// from the end it carries (`GroupEnd.coming`), as no format can; with
+  /// no moment to read it says its strings', which name no day. A format
+  /// reads no more arguments than it has %, so with as many blanks after
+  /// those that came it never reads one that is not there.
+  public func words(
+    known: (String) -> Bool, format: (String) -> String, in zone: TimeZone, today: Day
+  ) -> String {
+    let body = body(known: known)
+    if let ms = body.groupEnd { return GroupEnd.coming(ms, in: zone, today: today) }
+    let format = format(body.key)
+    let blanks = Array(repeating: "", count: format.count { $0 == "%" })
+    return String(format: format, arguments: body.args + blanks)
+  }
+
+  /// Whether the system's own wording of the body, its key's format in the
+  /// app's strings, is what the device says (`words`): not for a key the
+  /// app has no words for, nor that a group ends soon, whose day no format
+  /// gives.
+  public func saysItsFormat(known: (String) -> Bool) -> Bool {
+    known(key) && groupEnd == nil
+  }
+}

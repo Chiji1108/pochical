@@ -16,10 +16,20 @@
 "CHAT_DAYS" = "日にちを共有しました";
 "CHAT_POLL" = "日にちの投票を始めました";
 
-/* That a group ends soon (spec/sync-protocol.md, A group's end), should
-   iOS show it as it came: the Notification Service Extension words it with
-   the day, from its argument, the end in ms, which is never shown. */
+/* That a group ends soon (spec/sync-protocol.md, A group's end). Its
+   argument is the end in ms, never shown: the Notification Service
+   Extension says the day it reads from it (PushWords.words), and these
+   words, which name no day, stand where iOS shows the notification as it
+   came, the extension not run, or where the argument is no moment. */
 "GROUP_ENDS" = "このグループはまもなく終了し、チャットや写真も消えます";
+
+/* What stands in for a body whose key this app has no words for
+   (spec/vectors/chat.json, pushBody): a chat line of a kind added after
+   it is a message of no kind it can name, and anything else asks to
+   update. The server sends none of these keys. */
+"CHAT_GROUP_MESSAGE" = "%@がメッセージを送りました";
+"CHAT_MESSAGE" = "メッセージを送りました";
+"UPDATE_TO_SEE" = "この通知を見るには、アプリをアップデートしてください";
 
 /* The title of an answer's notification in the chat with Pochical's
    people: the chat, as 設定's row names it, its words worded as a

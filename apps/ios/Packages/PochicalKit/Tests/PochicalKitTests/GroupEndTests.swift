@@ -140,59 +140,69 @@ func everyDaysEndShowsAsThatDay(_ identifier: String) throws {
   }
 }
 
-/// The server's notification that a group ends soon (apns.ts payloadOf),
-/// its alert's body `key` with `args`.
-private func endsPayload(key: String = "GROUP_ENDS", args: Any? = ["1798729200000"])
-  -> [AnyHashable: Any]
-{
-  var alert: [String: Any] = [
-    "title-loc-key": "CHAT_TITLE", "title-loc-args": ["忘年会"], "loc-key": key,
-  ]
-  alert["loc-args"] = args
-  return [
-    "aps": ["alert": alert, "mutable-content": 1, "thread-id": "g1/group"],
-    "groupId": "g1", "threadId": "group", "recipientId": "u1",
-  ]
+/// The app's strings, as the notifications' extension reads them.
+private let strings = [
+  "GROUP_ENDS": "このグループはまもなく終了し、チャットや写真も消えます",
+  "CHAT_GROUP_TEXT": "%1$@: %2$@",
+  "CHAT_GROUP_PHOTO": "%@が写真を送りました",
+  "CHAT_GROUP_MESSAGE": "%@がメッセージを送りました",
+  "UPDATE_TO_SEE": "この通知を見るには、アプリをアップデートしてください",
+]
+
+private func said(
+  _ key: String, _ args: [String], known: [String: String] = strings,
+  zone: String = "Asia/Tokyo"
+) throws -> String {
+  PushWords(key: key, args: args).words(
+    known: { known[$0] != nil }, format: { known[$0] ?? $0 },
+    in: try #require(TimeZone(identifier: zone)), today: Day(year: 2026, month: 12, day: 30))
 }
 
 @Test func theNotificationThatAGroupEndsSaysTheChatLinesWordsByTheDevicesClock() throws {
   let tokyo = try #require(TimeZone(identifier: "Asia/Tokyo"))
-  let auckland = try #require(TimeZone(identifier: "Pacific/Auckland"))
-  let today = Day(year: 2026, month: 12, day: 30)
   let line = LineNotice(kind: .endsSoon, endsAtMs: 1_798_729_200_000)
+  let words = try said("GROUP_ENDS", ["1798729200000"])
+  #expect(words == "このグループは12月31日に終了し、チャットや写真も消えます")
   #expect(
-    GroupEnd.notificationWords(payload: endsPayload(), in: tokyo, today: today)
-      == "このグループは12月31日に終了し、チャットや写真も消えます")
+    words
+      == line.words(
+        by: "", subject: "", zone: tokyo, today: Day(year: 2026, month: 12, day: 30)))
   #expect(
-    GroupEnd.notificationWords(payload: endsPayload(), in: tokyo, today: today)
-      == line.words(by: "", subject: "", zone: tokyo, today: today))
-  #expect(
-    GroupEnd.notificationWords(payload: endsPayload(), in: auckland, today: today)
+    try said("GROUP_ENDS", ["1798729200000"], zone: "Pacific/Auckland")
       == "このグループは2027年1月1日に終了し、チャットや写真も消えます")
+  // The system's own wording of it, its strings' format, names no day.
+  let body = PushWords(key: "GROUP_ENDS", args: ["1798729200000"])
+  #expect(!body.saysItsFormat(known: { strings[$0] != nil }))
 }
 
-@Test(arguments: [
-  endsPayload(key: "CHAT_GROUP_TEXT", args: ["さくら", "1798729200000"]),
-  endsPayload(key: "CHAT_TEXT"),
-  endsPayload(args: nil),
-  endsPayload(args: []),
-  endsPayload(args: ["あした"]),
-  endsPayload(args: ["0"]),
-  endsPayload(args: ["-5"]),
-  endsPayload(args: [1_798_729_200_000]),
-  endsPayload(args: ["1798729200000", "1798729200000"]),
-  ["groupId": "g1"],
-].map(Payload.init))
-func aNotificationOfAnythingElseOrWithNoMomentShowsAsItCame(_ payload: Payload) throws {
-  let tokyo = try #require(TimeZone(identifier: "Asia/Tokyo"))
-  let today = Day(year: 2026, month: 12, day: 30)
-  #expect(GroupEnd.notificationWords(payload: payload.value, in: tokyo, today: today) == nil)
+/// An argument that is no moment: the strings' words, which name no day
+/// and are true of any end, never the number nor a request to update.
+@Test(arguments: [[], ["あした"], ["0"], ["-5"], ["1798729200000", "1798729200000"]])
+func aGroupsEndWithNoMomentToReadNamesNoDay(_ args: [String]) throws {
+  #expect(try said("GROUP_ENDS", args) == "このグループはまもなく終了し、チャットや写真も消えます")
+  #expect(PushWords(key: "GROUP_ENDS", args: args).saysItsFormat(known: { strings[$0] != nil }))
 }
 
-/// A notification's payload, which is not Sendable, as a test's argument.
-struct Payload: @unchecked Sendable, CustomTestStringConvertible {
-  let value: [AnyHashable: Any]
-  var testDescription: String { String(describing: value["aps"] ?? value) }
+@Test func anAppWithNoWordsForAGroupsEndAsksToUpdate() throws {
+  var older = strings
+  older["GROUP_ENDS"] = nil
+  #expect(
+    try said("GROUP_ENDS", ["1798729200000"], known: older)
+      == "この通知を見るには、アプリをアップデートしてください")
+}
+
+@Test func otherBodiesSayTheirStringsFormats() throws {
+  #expect(try said("CHAT_GROUP_TEXT", ["さくら", "今週どう？"]) == "さくら: 今週どう？")
+  #expect(try said("CHAT_GROUP_PHOTO", ["さくら"]) == "さくらが写真を送りました")
+  // Fewer arguments than the format reads: blanks, never a crash.
+  #expect(try said("CHAT_GROUP_TEXT", ["さくら"]) == "さくら: ")
+  #expect(try said("CHAT_GROUP_STICKER", ["さくら", "poodle"]) == "さくらがメッセージを送りました")
+  // A line whose words are a moment's digits is no group's end.
+  #expect(try said("CHAT_GROUP_TEXT", ["さくら", "1798729200000"]) == "さくら: 1798729200000")
+  let known = PushWords(key: "CHAT_GROUP_TEXT", args: ["さくら", "今週どう？"])
+  #expect(known.saysItsFormat(known: { strings[$0] != nil }))
+  let later = PushWords(key: "CHAT_GROUP_STICKER", args: ["さくら", "poodle"])
+  #expect(!later.saysItsFormat(known: { strings[$0] != nil }))
 }
 
 private func change(_ cursor: UInt64, _ fill: (inout Pochical_V1_Change) -> Void)

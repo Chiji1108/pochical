@@ -11,6 +11,24 @@ import kotlinx.serialization.json.Json
 /** Words the app puts together itself, from a key in its strings and the arguments. */
 @Serializable data class Localized(val key: String, val args: List<String>)
 
+/** The keys of a chat line's body: a group chat's, its writer's name its first argument, and a one-to-one chat's. */
+const val GROUP_LINE_KEY = "CHAT_GROUP_"
+const val LINE_KEY = "CHAT_"
+
+/**
+ * The body the app words: its own when the app has words for its key ([known]), and else what
+ * stands in for it, by keys the server never sends: a chat line's of a kind added after the app as
+ * a message, from its writer where their name came, and any other as asking to update
+ * (spec/vectors/chat.json, pushBody).
+ */
+fun Localized.body(known: (String) -> Boolean): Localized =
+  when {
+    known(key) -> this
+    key.startsWith(GROUP_LINE_KEY) && args.isNotEmpty() -> Localized("CHAT_GROUP_MESSAGE", args.take(1))
+    key.startsWith(LINE_KEY) -> Localized("CHAT_MESSAGE", emptyList())
+    else -> Localized("UPDATE_TO_SEE", emptyList())
+  }
+
 /** A notification as the server words it: `data.alert`. */
 @Serializable
 data class PushedAlert(

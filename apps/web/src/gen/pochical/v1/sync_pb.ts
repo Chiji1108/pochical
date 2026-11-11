@@ -1800,9 +1800,10 @@ export type ChatLine = Message<"pochical.v1.ChatLine"> & {
   replyTo: bigint;
 
   /**
-   * What the line is: always one of its kinds. A device that gets none,
-   * or one it does not know (from an app newer than itself), shows
-   * nothing in its place.
+   * What the line is: always one of its kinds. A device that gets one
+   * it does not know (from an app newer than itself), which it reads as
+   * none, says in its place that the app must be updated to see it
+   * (spec/chat.md, What a line is).
    *
    * @generated from field: pochical.v1.ChatContent content = 22;
    */

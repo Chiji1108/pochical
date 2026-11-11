@@ -432,9 +432,34 @@ private fun LineBody(look: MessageLook, handlers: MessageHandlers, live: Boolean
     poll != null -> PollCard(poll, handlers, look.seq.takeIf { live }, live)
     shared != null -> SharedDaysBody(shared, look, handlers)
     photos != null -> PhotoBody(look, photos, handlers, live, onQuote)
+    look.content == LineContent.Unknown -> StandIn(look, handlers, onQuote)
     // Nothing but a few emoji, large and without a bubble; a reply keeps its bubble for its quote.
     words != null && look.quote == null && remember(words.text) { largeEmojiCount(words.text) } > 0 -> LargeEmoji(words.text, look, handlers)
     else -> Bubble(look, handlers, onQuote, live, links)
+  }
+}
+
+/**
+ * What a line of a kind the app does not know says in its place (spec/chat.md, What a line is): not
+ * in a bubble, as these are not its writer's words, but small in the outline a folded line has, the
+ * line it answers over them all the same.
+ */
+@Composable
+private fun StandIn(look: MessageLook, handlers: MessageHandlers, onQuote: () -> Unit) {
+  val colors = LocalThemeColors.current
+  Column(
+    Modifier.standInOutline(colors.borderStrong)
+      .litWhenGoneTo(handlers.lit?.takeIf { it.seq == look.seq }, StandInShape, handlers.reducedMotion, handlers.litShown)
+      .padding(vertical = 8.dp)
+      .width(IntrinsicSize.Max)
+  ) {
+    look.quote?.let { BubbleQuote(it, colors.textPrimary, inset = 12.dp, onOpen = onQuote) }
+    Text(
+      lineWords(look.content, handlers.nameOf),
+      Modifier.padding(horizontal = 12.dp),
+      style = MaterialTheme.typography.bodySmall,
+      color = colors.textTertiary,
+    )
   }
 }
 
