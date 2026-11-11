@@ -48,9 +48,16 @@ final class FaceDrawingTests: XCTestCase {
     let new = app.buttons["グループを作る"].firstMatch
     XCTAssertTrue(new.waitForExistence(timeout: 5))
     new.tap()
-    let face = self.face
-    XCTAssertTrue(face.waitForExistence(timeout: 5), "グループを作る asks for the face too")
+    // The group above; below it, the person, in the row the join screen has.
+    XCTAssertTrue(app.staticTexts["あなたの名前と写真"].waitForExistence(timeout: 5))
+    let profile = app.buttons.matching(NSPredicate(format: "label BEGINSWITH '名前を入れてください'"))
+      .firstMatch
+    XCTAssertTrue(profile.waitForExistence(timeout: 5), "グループを作る asks how the person appears")
+    XCTAssertEqual(app.textFields.count, 1, "the name is asked in the row's page")
     snap("3a-new-group-opened")
+    profile.tap()
+    XCTAssertTrue(app.navigationBars["あなたの名前と写真"].waitForExistence(timeout: 5))
+    let face = self.face
     face.tap()
     XCTAssertTrue(app.buttons["写真を削除"].waitForExistence(timeout: 5), "a drawing is in place")
     snap("3-new-group-drawing")
@@ -58,12 +65,16 @@ final class FaceDrawingTests: XCTestCase {
     app.buttons["イラストを選ぶ"].tap()
     XCTAssertTrue(app.buttons["月"].waitForExistence(timeout: 5))
     app.buttons["月"].tap()
-    let fields = app.textFields
-    XCTAssertTrue(fields.firstMatch.waitForExistence(timeout: 5))
-    fields.element(boundBy: 0).tap()
-    fields.element(boundBy: 0).typeText("病棟")
-    fields.element(boundBy: 1).tap()
-    fields.element(boundBy: 1).typeText("さくら")
+    let name = app.textFields.firstMatch
+    XCTAssertTrue(name.waitForExistence(timeout: 5))
+    name.tap()
+    name.typeText("さくら")
+    snap("3b-new-group-profile")
+    app.navigationBars.buttons.firstMatch.tap()
+    let group = app.textFields.firstMatch
+    XCTAssertTrue(group.waitForExistence(timeout: 5))
+    group.tap()
+    group.typeText("病棟")
     snap("4-new-group-changed")
     app.navigationBars.buttons["作る"].tap()
 
@@ -90,6 +101,23 @@ final class FaceDrawingTests: XCTestCase {
     snap("6-profile-after-making")
     face.tap()
     XCTAssertTrue(app.buttons["写真を削除"].waitForExistence(timeout: 5), "the drawing is the usual photo")
+  }
+
+  func testSomeoneWithAUsualNameMakingAGroupIsAskedAsOnJoining() {
+    continueAfterFailure = false
+    app.launchArguments += ["-firstRunDone", "YES"]
+    app.launch()
+    let groups = app.tabBars.buttons["グループ"]
+    XCTAssertTrue(groups.waitForExistence(timeout: 20))
+    groups.tap()
+    let new = app.buttons["グループを作る"].firstMatch
+    XCTAssertTrue(new.waitForExistence(timeout: 15))
+    new.tap()
+    XCTAssertTrue(app.staticTexts["このグループでのあなた"].waitForExistence(timeout: 5))
+    let profile = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'さくら'")).firstMatch
+    XCTAssertTrue(profile.waitForExistence(timeout: 5), "the row shows the usual name")
+    XCTAssertTrue(profile.label.contains("いつもと同じ"), "and says it is the usual one: \(profile.label)")
+    snap("12-new-group-usual-name")
   }
 
   func testSomeoneNewJoiningStartsWithADrawing() throws {

@@ -220,16 +220,15 @@ export function DesignGroup({
         onBack={() => {
           setPage({ name: "hub" });
         }}
-        onCreate={({ myName, myPhoto, ...created }) => {
+        onCreate={({ mine: picked, ...created }) => {
           const id = `group-${groups.length}`;
           // With no usual name yet, the name and face become the usual
           // ones, which the group then shows as anyone's.
           const first = profile.name === "";
           if (first) {
-            setProfile({ name: myName, photo: myPhoto });
+            setProfile({ name: picked?.name ?? "", photo: picked?.photo });
           }
-          const mine =
-            first || myName === profile.name ? undefined : { name: myName };
+          const mine = first ? undefined : picked;
           setGroups([...groups, { ...created, id, mine }]);
           setGroupId(id);
           setPage({ name: "invite" });

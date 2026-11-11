@@ -430,7 +430,7 @@ export function JoinScreen({
           <GroupProfilePage
             back={invite.group}
             group={group}
-            joining
+            going="参加すると、"
             onBack={() => {
               setEditing(false);
             }}

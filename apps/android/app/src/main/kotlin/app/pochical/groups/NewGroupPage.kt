@@ -12,7 +12,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,22 +61,16 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
   val calls = LocalGroupCalls.current
   val values = LocalValues.current
   val groups by remember(values) { values.groups() }.collectAsStateWithLifecycle(emptyList())
-  val profile = usualProfile()
-  val usualName = profile?.name.orEmpty()
-  val usualPhoto = profile?.photoId.orEmpty()
+  val usualName = usualProfile()?.name.orEmpty()
   val context = LocalContext.current
   val resources = LocalResources.current
-  // The face of someone with no usual name yet, asked here with the name and kept as the usual one
-  // once the group is made.
+  // A name of its own for this group, empty following the usual one, and the face for it, sent once
+  // the group is made.
+  var ownName by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
   var face by rememberSaveable(stateSaver = JoinFaceSaver) { mutableStateOf<JoinFace>(JoinFace.Usual) }
-  StartsWithADrawing(firstAsked = profile?.let { it.name.isEmpty() && it.photoId.isEmpty() } == true, face) { face = it }
-  // Whether the name and face are asked as the usual ones: no usual name yet, or a face already
-  // picked here, which stays as the group is made and its name becomes the usual one.
-  val firstAsked = usualName.isEmpty() || face != JoinFace.Usual
+  val myName = ownName.text.trim().ifEmpty { usualName }
   val slots = LocalThemeColors.current.marks.size
   var name by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
-  var myName by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
-  var myNameTouched by rememberSaveable { mutableStateOf(false) }
   // The mark picked by hand, which then stays as the name changes; none while it follows the name.
   var picked by rememberSaveable(stateSaver = MarkSaver) { mutableStateOf<GroupMarkValue?>(null) }
   // What 作る sent last, sent again as it was while nothing on the page has changed, so a retry
@@ -89,9 +82,6 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
   var editingMark by rememberSaveable { mutableStateOf(false) }
   val scope = rememberCoroutineScope()
 
-  // The field starts with the usual name (設定 › プロフィール) until the person types their own.
-  LaunchedEffect(usualName) { if (!myNameTouched) myName = TextFieldValue(usualName) }
-
   val groupName = name.text.trim()
   // The first color the user's groups do not use yet, for the guess and for a mark picked from an
   // emoji or a photo into an icon or letters.
@@ -101,24 +91,24 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
       ?: sent?.takeIf { it.name == groupName }?.mark
       ?: guessGroupMark(name.text, freeColor)
   // Only what the server takes (spec/vectors/fits.json), so the call is never refused for it.
-  val canMake = fitsGroupName(groupName) && fitsGroupMark(mark) && myName.text.isNotBlank() && fitsPersonName(myName.text)
+  val canMake = fitsGroupName(groupName) && fitsGroupMark(mark) && myName.isNotEmpty() && fitsPersonName(myName)
 
   fun make() {
-    val request = NewGroupRequest.asking(groupName, mark, myName.text.trim(), sent)
+    val request = NewGroupRequest.asking(groupName, mark, myName, sent)
     sent = request
     making = true
+    // Decided by the page the person saw: making the group makes their name the usual one, which
+    // comes back on the user's socket while it is still going.
+    val asUsual = usualName.isEmpty()
     scope.launch {
       try {
         // A picked photo goes up first, for the group to take.
         if (request.mark.photoId.isNotEmpty()) calls.sendHeldPhoto(request.mark.photoId, PhotoShelf.Mine)
         val made = calls.create(request)
-        // Once the group is made, so one that fails changes nothing: a face asked here goes with
-        // the name the group made the usual one; a retry after a lost answer sends it again.
-        if (keepAsUsual(calls, face)) {
-          (face as? JoinFace.Held)?.let { calls.releasePhoto(it.photoId) }
-        } else {
+        // Once the group is made, so one that fails changes nothing.
+        if (!keepFace(calls, face, asUsual, made)) {
           ReviewPrompt.troubled = true
-          Toast.makeText(context, resources.getString(R.string.new_group_face_failed), Toast.LENGTH_LONG).show()
+          Toast.makeText(context, resources.getString(R.string.join_face_failed), Toast.LENGTH_LONG).show()
         }
         // Still making as the page gives way to the group, so 作る is not there to tap again.
         onMade(made)
@@ -146,22 +136,6 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
     contentWindowInsets = pageInsets,
   ) { padding ->
     LazyColumn(contentPadding = padding) {
-      // With no usual name yet, the name and face asked here become the usual ones, as on the join
-      // screen (あなたの名前と写真).
-      if (firstAsked) {
-        item {
-          JoinFaceEditor(
-            face,
-            { chosen ->
-              (face as? JoinFace.Held)?.takeIf { chosen != face }?.let { scope.launch { calls.releasePhoto(it.photoId) } }
-              face = chosen
-            },
-            usualPhoto,
-            myName.text.trim(),
-            Modifier.padding(vertical = 8.dp),
-          )
-        }
-      }
       item {
         LimitedTextField(
           name,
@@ -177,20 +151,8 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
           SettingsRow(stringResource(R.string.group_mark), R.drawable.ic_palette, onClick = { editingMark = true }, valueContent = { GroupMarkBadge(mark) })
         }
       }
-      item {
-        LimitedTextField(
-          myName,
-          {
-            myName = it
-            myNameTouched = true
-          },
-          TextLimits.personName,
-          stringResource(R.string.group_my_name),
-          Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-          placeholder = stringResource(R.string.person_name_example),
-        )
-      }
-      item { Footnote(stringResource(R.string.new_group_mark_note) + if (firstAsked) stringResource(R.string.new_group_usual_note) else "") }
+      item { Footnote(stringResource(R.string.new_group_mark_note)) }
+      item { JoinProfileSection(ownName, { ownName = it }, face, { face = it }, groupName, stringResource(R.string.new_group_going)) }
     }
   }
   if (editingMark) {
