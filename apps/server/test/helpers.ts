@@ -162,12 +162,16 @@ export const failTelling = async (
   userId: string,
   takeMembership: (...news: unknown[]) => Promise<void> = () => {
     throw new Error("unreachable");
-  }
+  },
+  // The calls of their DO that still go through, none unless given.
+  reached: Record<string, unknown> = {}
 ): Promise<() => Promise<void>> => {
   const group = env.GROUPS.getByName(groupId);
   const users = {
     getByName: (name: string) =>
-      name === userId ? { takeMembership } : env.USERS.getByName(name),
+      name === userId
+        ? { ...reached, takeMembership }
+        : env.USERS.getByName(name),
   };
   await runInDurableObject(group, (instance) => {
     Reflect.set(

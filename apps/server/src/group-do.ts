@@ -517,7 +517,8 @@ export class GroupDO extends DurableObject<Env> {
    * mentions them is, so a chat turned off hears it too while mentions
    * notify; their count goes with it as it is, a notice being no line to
    * read. Owed until their DO, which sends it to their devices, has taken
-   * it: one not taken is told again as membership news is (`tellOwed`).
+   * it: one not taken, a DO that does not list the group yet among them,
+   * is told again as membership news is (`tellOwed`).
    */
   private async notifyEnd(): Promise<void> {
     const groupId = this.placeId();
@@ -534,13 +535,18 @@ export class GroupDO extends DurableObject<Env> {
     await this.tellOwed(
       owed,
       async ({ userId, endsAt }) => {
-        await this.env.USERS.getByName(userId).setUnread(
+        const taken = await this.env.USERS.getByName(userId).setUnread(
           groupId,
           GROUP_THREAD,
           unreadCount(this.db, userId, GROUP_THREAD),
           cursor,
           { alert: endAlertOf(group, endsAt.getTime()), mentioned: true }
         );
+        // Their DO does not list the group yet, the news of their joining
+        // still owed it: not taken, whichever of the two is told first.
+        if (!taken) {
+          throw new Error("Their own DO does not have them in the group yet");
+        }
       },
       ({ userId, endsAt }, again) => {
         const told = and(

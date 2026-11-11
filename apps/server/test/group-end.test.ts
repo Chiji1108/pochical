@@ -110,9 +110,35 @@ const atTime = async <T>(time: number, run: () => Promise<T>): Promise<T> => {
   }
 };
 
-/** The notifications that the group ends soon still owed, made due now. */
+/**
+ * The group's telling `userId`'s DO of their place in it failing until
+ * restored, its other calls to that DO going through.
+ */
+const failJoiningNews = async (
+  groupId: string,
+  userId: string
+): Promise<() => Promise<void>> => {
+  const theirs = env.USERS.getByName(userId);
+  return await failTelling(
+    groupId,
+    userId,
+    () => {
+      throw new Error("unreachable");
+    },
+    {
+      setUnread: async (...count: Parameters<typeof theirs.setUnread>) =>
+        await theirs.setUnread(...count),
+    }
+  );
+};
+
+/**
+ * What the group still owes its members' DOs made due now, its news and
+ * its notifications that it ends soon: how many of those are still owed.
+ */
 const owedDueNow = async (groupId: string): Promise<number> =>
   await runInDurableObject(env.GROUPS.getByName(groupId), (_, state) => {
+    state.storage.sql.exec("update membership_outbox set due_at = 0");
     state.storage.sql.exec("update end_notice_outbox set due_at = 0");
     return state.storage.sql
       .exec("select user_id from end_notice_outbox")
@@ -555,6 +581,36 @@ describe("the notification that a group ends soon", () => {
     await expect(owedDueNow(groupId)).resolves.toBe(0);
     await runAlarm(env.GROUPS.getByName(groupId));
     expect(calls).toHaveLength(2);
+  });
+
+  it("stays owed to a member whose own DO has not heard they joined", async () => {
+    const { groupId, inviteCode, maker } = await pair();
+    const late = await signInAnonymously();
+    const lateId = await userIdOf(late);
+    await registerToken(late, GUEST_TOKEN);
+    const calls = apnsCalls();
+    // In the group, the news of it not reaching their own DO: only that
+    // call fails, the rest going to their DO as ever.
+    const restore = await failJoiningNews(groupId, lateId);
+    await call(
+      "GroupService/JoinGroup",
+      { displayName: "あや", inviteCode },
+      late
+    );
+    await setEnd(groupId, Date.now() + DAY_MS, maker);
+    await runAlarm(env.GROUPS.getByName(groupId));
+    // Their DO, not listing the group, sends nothing: still owed.
+    expect(calls).toHaveLength(0);
+
+    await restore();
+    await owedDueNow(groupId);
+    await runAlarm(env.GROUPS.getByName(groupId));
+    // The alarm tried the notice before the news went: owed until the
+    // run after, whichever order the two are told in.
+    await owedDueNow(groupId);
+    await runAlarm(env.GROUPS.getByName(groupId));
+    expect(calls.map(({ token }) => token)).toStrictEqual([GUEST_TOKEN]);
+    await expect(owedDueNow(groupId)).resolves.toBe(0);
   });
 
   it("is owed no more to a member who left, nor of an end since moved", async () => {

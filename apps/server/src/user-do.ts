@@ -541,7 +541,10 @@ export class UserDO extends DurableObject<Env> {
    * devices' badges, sent to them when it changed. One counted no later
    * than the count kept, or for a group they are not in, changes nothing.
    * Done once the pushes it sets off are, which the group waits on; one
-   * that fails is logged.
+   * that fails is logged. Whether the user's own DO has them in the place:
+   * false, having kept and sent nothing, while the news of their joining
+   * is still on its way to it, for a group that owes them the word to
+   * keep owing it.
    */
   async setUnread(
     groupId: string,
@@ -553,7 +556,10 @@ export class UserDO extends DurableObject<Env> {
     line?: { alert: Alert; mentioned: boolean },
     // Where the user's read mark in the chat is, when they read.
     read?: number
-  ): Promise<void> {
+  ): Promise<boolean> {
+    if (!this.hasPlace(groupId)) {
+      return false;
+    }
     this.storeUnread(groupId, threadId, unread, groupCursor);
     const pushes = await Promise.allSettled([
       line !== undefined && this.notifies(groupId, threadId, line.mentioned)
@@ -571,6 +577,7 @@ export class UserDO extends DurableObject<Env> {
         });
       }
     }
+    return true;
   }
 
   /**
