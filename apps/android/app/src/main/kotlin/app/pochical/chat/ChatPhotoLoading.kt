@@ -20,6 +20,7 @@ import coil3.fetch.SourceFetchResult
 import coil3.key.Keyer
 import coil3.memory.MemoryCache
 import coil3.request.Options
+import coil3.svg.SvgDecoder
 import okio.Buffer
 import okio.FileSystem
 import okio.Path.Companion.toOkioPath
@@ -69,6 +70,8 @@ fun chatImageLoader(context: Context, calls: GroupCalls, files: ChatPhotoFiles):
       add(ChatPhotoFetcher.Factory(calls, files))
       add(Keyer<Picture> { data, _ -> data.key })
       add(PictureFetcher.Factory(calls))
+      // The faces' drawings, the app's own SVGs (FaceDrawing).
+      add(SvgDecoder.Factory())
     }
     .build()
 

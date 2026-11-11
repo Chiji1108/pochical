@@ -64,7 +64,8 @@ import kotlinx.coroutines.withContext
  * A face's or a mark's photo with a way to change it (/design's PhotoEditor): [label] opens a menu
  * of 写真を撮る, through the camera app, and 写真を選ぶ, through the system's Photo Picker, each then
  * cut in [PhotoCrop] to [shape] before [onPhoto] gets it, so a photo taken is cut as one picked;
- * いつもの写真に戻す ([onUsual]) and 写真を削除 ([onRemove]) when given.
+ * for a face イラストを選ぶ too, one of the drawings ([FaceDrawingSheet]), which [onPhoto] gets as
+ * it is drawn; いつもの写真に戻す ([onUsual]) and 写真を削除 ([onRemove]) when given.
  */
 @Composable
 fun PhotoEditor(
@@ -80,6 +81,7 @@ fun PhotoEditor(
   val scope = rememberCoroutineScope()
   var menu by remember { mutableStateOf(false) }
   var cropping by remember { mutableStateOf<Bitmap?>(null) }
+  var drawing by remember { mutableStateOf(false) }
   var working by remember { mutableStateOf(false) }
   var unreadable by remember { mutableStateOf(false) }
   // Where the camera app writes, kept across the process's death while it is open.
@@ -177,6 +179,8 @@ fun PhotoEditor(
             LineMenuItem(stringResource(R.string.photo_pick), R.drawable.ic_photo_library) {
               pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
             },
+            // A face may be a drawing; a group's mark has its emoji and icons.
+            if (shape == PhotoCropShape.Round) LineMenuItem(stringResource(R.string.photo_drawing), R.drawable.ic_palette) { drawing = true } else null,
             onUsual?.let { usual -> LineMenuItem(stringResource(R.string.photo_usual), R.drawable.ic_undo, startsGroup = true) { change(usual) } },
             onRemove?.let { remove ->
               LineMenuItem(stringResource(R.string.photo_remove), R.drawable.ic_delete, destructive = true, startsGroup = onUsual == null) { change(remove) }
@@ -192,6 +196,7 @@ fun PhotoEditor(
       if (jpeg != null) change { onPhoto(jpeg) }
     }
   }
+  if (drawing) FaceDrawingSheet(onPick = { picked -> change { onPhoto(faceDrawingJpeg(context, picked)) } }, onDismiss = { drawing = false })
   if (cameraRefused) {
     AlertDialog(
       onDismissRequest = { cameraRefused = false },

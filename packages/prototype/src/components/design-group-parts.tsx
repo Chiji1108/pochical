@@ -1,15 +1,16 @@
 import { markIconGlyphs } from "@pochical/design/mark-icons";
 import { css, cva } from "@pochical/styled-system/css";
-import { Camera, ImageIcon, RotateCcw, Trash } from "lucide-react";
+import { Camera, ImageIcon, RotateCcw, Smile, Trash } from "lucide-react";
 import { useContext, useId, useState } from "react";
 import type { ReactNode } from "react";
 
 import { changeOn, patternOn } from "../lib/design-group-data";
 import type { GroupMark, Member } from "../lib/design-group-data";
+import { drawings } from "../lib/drawings";
 import { firstCharacter } from "../lib/text-limits";
 import { List, ListRow } from "./design-list";
 import { PhotoCrop } from "./design-photo-crop";
-import { Sheet } from "./design-sheet";
+import { Sheet, SheetHeading } from "./design-sheet";
 import { srOnly } from "./design-ui";
 import type { DayTone } from "./design-week";
 import {
@@ -298,6 +299,23 @@ export const photoPicker = {
     textStyle: "callout",
     width: "100%",
   }),
+  // One of the drawings, round as a face shows it.
+  drawing: css({
+    aspectRatio: 1,
+    bg: "transparent",
+    border: 0,
+    borderRadius: "circle",
+    cursor: "pointer",
+    display: "block",
+    overflow: "hidden",
+    padding: 0,
+    width: "100%",
+  }),
+  drawings: css({
+    display: "grid",
+    gap: "16px",
+    gridTemplateColumns: "repeat(4, 1fr)",
+  }),
   // The picture and its words, one button.
   edit: css({
     alignItems: "center",
@@ -497,9 +515,11 @@ export function Mark({
 
 // A picture with one way in, as in other apps: tapping it or the link
 // under it opens a sheet to take or pick a photo, and to go back to the
-// usual one or delete it when that applies. Its rows act rather than go
+// usual one or delete it when that applies. Those rows act rather than go
 // on, so none has an arrow. A photo taken or picked is moved and zoomed
-// inside its frame before it is used.
+// inside its frame before it is used. A face may be one of the drawings
+// too (design/src/drawings.ts): イラストを選ぶ goes on to them in the same
+// sheet, and one picked is used as it is drawn.
 export function PhotoPicker({
   picture,
   label,
@@ -520,9 +540,12 @@ export function PhotoPicker({
 }) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [picked, setPicked] = useState<string>();
+  // Whether the sheet shows the drawings in place of its rows.
+  const [drawing, setDrawing] = useState(false);
   const cameraId = useId();
   const libraryId = useId();
   const open = () => {
+    setDrawing(false);
     setSheetOpen(true);
   };
   const close = () => {
@@ -566,60 +589,107 @@ export function PhotoPicker({
         type="file"
       />
       <Sheet label={label} onOpenChange={setSheetOpen} open={sheetOpen}>
-        <List>
-          <ListRow
-            htmlFor={cameraId}
-            label="写真を撮る"
-            leading={
-              <>
-                <Camera aria-hidden="true" size={20} />
-              </>
-            }
-          />
-          <ListRow
-            htmlFor={libraryId}
-            label="写真を選ぶ"
-            leading={
-              <>
-                <ImageIcon aria-hidden="true" size={20} />
-              </>
-            }
-          />
-          {onUsual && (
-            <ListRow
-              arrow={false}
-              onClick={() => {
-                onUsual();
-                close();
+        {drawing ? (
+          <>
+            <SheetHeading
+              onBack={() => {
+                setDrawing(false);
               }}
-              label="いつもの写真に戻す"
-              leading={
-                <>
-                  <RotateCcw aria-hidden="true" size={20} />
-                </>
-              }
+              onClose={close}
+              title="イラストを選ぶ"
             />
-          )}
-          {onRemove && (
-            <ListRow
-              arrow={false}
-              onClick={() => {
-                onRemove();
-                close();
-              }}
-              label="写真を削除"
-              leading={
-                <>
-                  <Trash aria-hidden="true" size={20} />
-                </>
-              }
-              danger
-            />
-          )}
-        </List>
-        <button className={photoPicker.cancel} onClick={close} type="button">
-          キャンセル
-        </button>
+            <div className={photoPicker.drawings}>
+              {drawings.map(({ id, name, src }) => (
+                <button
+                  aria-label={name}
+                  className={photoPicker.drawing}
+                  key={id}
+                  onClick={() => {
+                    onPhoto(src);
+                    close();
+                  }}
+                  type="button"
+                >
+                  <img alt="" height="100%" src={src} width="100%" />
+                </button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <List>
+              <ListRow
+                htmlFor={cameraId}
+                label="写真を撮る"
+                leading={
+                  <>
+                    <Camera aria-hidden="true" size={20} />
+                  </>
+                }
+              />
+              <ListRow
+                htmlFor={libraryId}
+                label="写真を選ぶ"
+                leading={
+                  <>
+                    <ImageIcon aria-hidden="true" size={20} />
+                  </>
+                }
+              />
+              {shape !== "square" && (
+                <ListRow
+                  onClick={() => {
+                    setDrawing(true);
+                  }}
+                  label="イラストを選ぶ"
+                  leading={
+                    <>
+                      <Smile aria-hidden="true" size={20} />
+                    </>
+                  }
+                />
+              )}
+              {onUsual && (
+                <ListRow
+                  arrow={false}
+                  onClick={() => {
+                    onUsual();
+                    close();
+                  }}
+                  label="いつもの写真に戻す"
+                  leading={
+                    <>
+                      <RotateCcw aria-hidden="true" size={20} />
+                    </>
+                  }
+                />
+              )}
+              {onRemove && (
+                <ListRow
+                  arrow={false}
+                  onClick={() => {
+                    onRemove();
+                    close();
+                  }}
+                  label="写真を削除"
+                  leading={
+                    <>
+                      <Trash aria-hidden="true" size={20} />
+                    </>
+                  }
+                  danger
+                />
+              )}
+            </List>
+            <button
+              className={photoPicker.cancel}
+              onClick={close}
+              type="button"
+            >
+              キャンセル
+            </button>
+          </>
+        )}
       </Sheet>
       <PhotoCrop
         onDone={(cut) => {

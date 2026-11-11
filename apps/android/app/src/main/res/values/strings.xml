@@ -228,6 +228,7 @@
   <string name="photo_crop_choose">選択</string>
   <string name="photo_take">写真を撮る</string>
   <string name="photo_pick">写真を選ぶ</string>
+  <string name="photo_drawing">イラストを選ぶ</string>
   <string name="photo_usual">いつもの写真に戻す</string>
   <string name="photo_remove">写真を削除</string>
   <string name="photo_unreadable">写真を読み込めませんでした</string>

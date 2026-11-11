@@ -193,12 +193,15 @@ private fun cutJpeg(photo: Bitmap, cut: Triple<Int, Int, Int>): ByteArray {
   val (left, top, length) = cut
   val edge = min(length, Chat.pictureMaxEdge)
   val square = Bitmap.createBitmap(photo, left, top, length, length)
-  val shrunk = if (edge == length) square else Bitmap.createScaledBitmap(square, edge, edge, true)
-  return ByteArrayOutputStream().use {
-    shrunk.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, it)
+  return faceJpeg(if (edge == length) square else Bitmap.createScaledBitmap(square, edge, edge, true))
+}
+
+/** [picture] as the JPEG a face or a group's photo mark is kept as. */
+fun faceJpeg(picture: Bitmap): ByteArray =
+  ByteArrayOutputStream().use {
+    picture.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, it)
     it.toByteArray()
   }
-}
 
 /** As iOS keeps a face, jpegData(compressionQuality: 0.9). */
 private const val JPEG_QUALITY = 90

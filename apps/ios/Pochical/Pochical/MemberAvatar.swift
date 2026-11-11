@@ -48,9 +48,10 @@ struct MemberAvatar: View {
 let samplePhoto = "sample:"
 
 /// A picture to change (/design's PhotoPicker): tapping it, or the label
-/// under it, offers taking a photo or picking one, and going back to the
-/// usual one or deleting it when that applies. A photo taken or picked is
-/// moved and zoomed in its frame (`PhotoCrop`) before it is used.
+/// under it, offers taking a photo or picking one, for a face one of the
+/// drawings too, and going back to the usual one or deleting it when that
+/// applies. A photo taken or picked is moved and zoomed in its frame
+/// (`PhotoCrop`) before it is used; a drawing is used as it is drawn.
 struct PhotoEditor<Picture: View>: View {
   @Environment(\.themeColors) private var colors
   /// Said under the picture, as what tapping it does.
@@ -72,6 +73,8 @@ struct PhotoEditor<Picture: View>: View {
   @State private var pending: UIImage?
   /// A photo taken or picked, being cut.
   @State private var cropping: CroppingPhoto?
+  /// Whether the drawings are open to pick one from.
+  @State private var drawing = false
   @State private var busy = false
 
   var body: some View {
@@ -85,6 +88,10 @@ struct PhotoEditor<Picture: View>: View {
         }
       }
       Button("写真を選ぶ", systemImage: "photo.on.rectangle") { picking = true }
+      // A face may be a drawing; a group's mark has its emoji and icons.
+      if shape == .round {
+        Button("イラストを選ぶ", systemImage: "face.smiling") { drawing = true }
+      }
       if let onUsual {
         Button("いつもの写真に戻す", systemImage: "arrow.uturn.backward") {
           run(onUsual)
@@ -151,6 +158,12 @@ struct PhotoEditor<Picture: View>: View {
         take(cut)
       }
     }
+    .sheet(isPresented: $drawing) {
+      FaceDrawingSheet { picked in
+        guard let picture = picked.picture else { return }
+        take(picture)
+      }
+    }
   }
 
   /// The camera has gone: a photo taken is cut.
@@ -176,6 +189,58 @@ struct PhotoEditor<Picture: View>: View {
       defer { busy = false }
       await action()
     }
+  }
+}
+
+/// イラストを選ぶ: the drawings a face can be in place of a photo, round as
+/// a face shows them. Picking one closes it.
+private struct FaceDrawingSheet: View {
+  @Environment(\.themeColors) private var colors
+  @Environment(\.dismiss) private var dismiss
+  let onPick: (FaceDrawing) -> Void
+
+  var body: some View {
+    NavigationStack {
+      ScrollView {
+        let columns = Array(repeating: GridItem(.flexible(), spacing: 16), count: 4)
+        LazyVGrid(columns: columns, spacing: 16) {
+          ForEach(FaceDrawing.all) { drawing in
+            Button {
+              onPick(drawing)
+              dismiss()
+            } label: {
+              drawing.image
+                .resizable()
+                .aspectRatio(1, contentMode: .fit)
+                .clipShape(.circle)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(drawing.name)
+          }
+        }
+        .padding(16)
+      }
+      .background(colors.backgroundBase)
+      .navigationTitle("イラストを選ぶ")
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        ToolbarItem(placement: .cancellationAction) {
+          Button("閉じる", systemImage: "xmark", role: .close) { dismiss() }
+        }
+      }
+    }
+    .presentationDetents([.medium, .large])
+  }
+}
+
+extension FaceDrawing {
+  /// The drawing as a picture at the size a face is kept, to go the way a
+  /// photo does.
+  @MainActor fileprivate var picture: UIImage? {
+    let edge = CGFloat(Chat.pictureMaxEdge)
+    let renderer = ImageRenderer(content: image.resizable().frame(width: edge, height: edge))
+    renderer.scale = 1
+    return renderer.uiImage
   }
 }
 
