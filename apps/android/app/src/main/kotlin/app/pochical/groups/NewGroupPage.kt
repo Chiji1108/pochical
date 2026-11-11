@@ -32,11 +32,10 @@ import app.pochical.SettingsRow
 import app.pochical.SettingsSection
 import app.pochical.design.TextLimits
 import app.pochical.kit.GroupMarkValue
+import app.pochical.kit.InGroup
+import app.pochical.kit.JoinFace
 import app.pochical.kit.MarkPhotoGone
 import app.pochical.kit.NewGroupRequest
-import app.pochical.kit.fitsGroupMark
-import app.pochical.kit.fitsGroupName
-import app.pochical.kit.fitsPersonName
 import app.pochical.kit.groupEndsAt
 import app.pochical.people.usualProfile
 import app.pochical.kit.guessGroupMark
@@ -44,6 +43,7 @@ import app.pochical.kit.nextGroupColor
 import app.pochical.pageInsets
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlinx.coroutines.Deferred
 
 /**
  * グループを作る (/design's NewGroupPage): its name, its mark, its end if it has one, and how the
@@ -54,13 +54,15 @@ import java.time.ZoneId
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
-  val calls = LocalGroupCalls.current
+fun NewGroupPage(
+  onBack: () -> Unit,
+  onMade: (String) -> Unit,
+  make: (NewGroupRequest, JoinFace, asUsual: Boolean) -> Deferred<InGroup> = LocalGroupCalls.current::make,
+) {
   val values = LocalValues.current
   val groups by remember(values) { values.groups() }.collectAsStateWithLifecycle(emptyList())
   val usualName = usualProfile()?.name.orEmpty()
   val profile = rememberJoinProfile()
-  val myName = profile.name(usualName)
   val slots = LocalThemeColors.current.marks.size
   var name by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
   // The mark picked by hand, which then stays as the name changes; none while it follows the name.
@@ -86,31 +88,41 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
       }
     }
 
-  val groupName = name.text.trim()
   // The first color the user's groups do not use yet, for the guess and for a mark picked from an
   // emoji or a photo into an icon or letters.
   val freeColor = nextGroupColor(groups.map { it.mark }, slots)
-  val mark =
-    picked
-      ?: sent?.takeIf { it.name == groupName }?.mark
-      ?: guessGroupMark(name.text, freeColor)
-  // Only what the server takes (spec/vectors/fits.json), so the call is never refused for it.
-  val canMake = fitsGroupName(groupName) && fitsGroupMark(mark) && myName.isNotEmpty() && fitsPersonName(myName)
-
-  fun make() {
+  // The group asked for as the page holds it at the moment it is asked for, read from its state:
+  // 作る may be tapped before the page is drawn again with the last change, and sends what was
+  // typed, never the page as it was last drawn (#1185). The same request again while nothing of
+  // it has changed, so a retry after a lost answer makes no second group.
+  fun asked(): NewGroupRequest {
+    val groupName = name.text.trim()
+    val mark = picked ?: sent?.takeIf { it.name == groupName }?.mark ?: guessGroupMark(name.text, freeColor)
     // The moment the day picked ends on this device: the same day asked again is the same request.
     val endsAtMs = endDay?.let { groupEndsAt(it, ZoneId.systemDefault()) } ?: 0
-    val request = NewGroupRequest.asking(groupName, mark, myName, sent, endsAtMs)
+    return NewGroupRequest.asking(groupName, mark, profile.name(usualName), sent, endsAtMs)
+  }
+  // With a name for the person in it, their usual one or one typed here.
+  fun canMake(request: NewGroupRequest) = request.fits && request.displayName.isNotEmpty()
+  val request = asked()
+  val groupName = request.name
+  val mark = request.mark
+
+  fun make() {
+    val request = asked()
+    // Only what the server takes (spec/vectors/fits.json), as the button is off for, should the
+    // tap come before it is drawn so.
+    if (!canMake(request)) return
     sent = request
     // The kit's from here, a picked photo first and the face once the group is made, whether this
     // page still waits or not.
-    making.begin(calls.make(request, profile.face, profile.goingOn(usualName)))
+    making.begin(make(request, profile.face, profile.goingOn(usualName)))
   }
 
   Scaffold(
     topBar = {
       PageBar(stringResource(R.string.new_group), onBack) {
-        ConfirmAction(stringResource(R.string.new_group_make), onClick = ::make, enabled = canMake, busy = making.busy)
+        ConfirmAction(stringResource(R.string.new_group_make), onClick = ::make, enabled = canMake(request), busy = making.busy)
       }
     },
     contentWindowInsets = pageInsets,

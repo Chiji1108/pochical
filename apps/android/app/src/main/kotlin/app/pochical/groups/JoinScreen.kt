@@ -117,7 +117,12 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
 
   // The kit's from here, the face once the person is in the group, whether this screen still
   // waits or not.
-  fun join() = joining.begin(calls.joining(code, myName, profile.face, profile.goingOn(usualName)))
+  fun join() {
+    // The name as the screen holds it now: 参加する may be tapped before the screen is drawn again
+    // with the last letter (#1185). As the button is off for, one the server would refuse is not sent.
+    val name = profile.name(usualName)
+    if (name.isNotEmpty() && fitsPersonName(name)) joining.begin(calls.joining(code, name, profile.face, profile.goingOn(usualName)))
+  }
 
   Scaffold(
     topBar = {

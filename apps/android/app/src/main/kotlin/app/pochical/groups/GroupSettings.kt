@@ -253,11 +253,13 @@ fun GroupSettingsPage(
  */
 @Composable
 fun GroupEditPage(groupId: String, onBack: () -> Unit) {
-  GroupPage(groupId, stringResource(R.string.group_edit), onBack) { group -> EditForm(group, onBack) }
+  val calls = LocalGroupCalls.current
+  GroupPage(groupId, stringResource(R.string.group_edit), onBack) { group -> EditForm(group, onBack) { name, mark -> calls.rename(group.id, name, mark) } }
 }
 
+/** グループを編集's draft of [group], which 保存 gives to [rename] and then goes back. */
 @Composable
-private fun EditForm(group: GroupRow, onBack: () -> Unit) {
+internal fun EditForm(group: GroupRow, onBack: () -> Unit, rename: suspend (name: String, mark: GroupMarkValue) -> Unit) {
   val calls = LocalGroupCalls.current
   val resources = LocalResources.current
   val scope = rememberCoroutineScope()
@@ -273,18 +275,24 @@ private fun EditForm(group: GroupRow, onBack: () -> Unit) {
   var saving by remember { mutableStateOf(false) }
   var failed by remember { mutableStateOf(false) }
   var photoGone by remember { mutableStateOf(false) }
-  val shown = mark ?: group.mark
-  val trimmed = name.text.trim()
+  // The name and mark as the page holds them at the moment they are asked for, read from its
+  // state: 保存 may be tapped before the page is drawn again with the last change, and sends
+  // what was typed, never the page as it was last drawn (#1185).
+  fun edited() = name.text.trim() to (mark ?: group.mark)
   // Only what the server takes (spec/vectors/fits.json), so the call is never refused for it.
-  val canSave = fitsGroupName(trimmed) && fitsGroupMark(shown) && (trimmed != group.name || shown != group.mark)
+  fun canSave(name: String, mark: GroupMarkValue) = fitsGroupName(name) && fitsGroupMark(mark) && (name != group.name || mark != group.mark)
+  val (trimmed, shown) = edited()
 
   fun save() {
+    val (trimmed, shown) = edited()
+    // As the button is off for, should the tap come before it is drawn so.
+    if (!canSave(trimmed, shown)) return
     saving = true
     scope.launch {
       try {
         // A newly picked photo goes up first, for the group to take.
         if (shown.photoId.isNotEmpty() && shown.photoId != group.mark.photoId) calls.sendHeldPhoto(shown.photoId, PhotoShelf.Mine)
-        calls.rename(groupId, trimmed, shown)
+        rename(trimmed, shown)
         onBack()
       } catch (e: CancellationException) {
         throw e
@@ -302,7 +310,7 @@ private fun EditForm(group: GroupRow, onBack: () -> Unit) {
   Scaffold(
     topBar = {
       PageBar(stringResource(R.string.group_edit), onBack) {
-        ConfirmAction(stringResource(R.string.save), onClick = ::save, enabled = canSave, busy = saving)
+        ConfirmAction(stringResource(R.string.save), onClick = ::save, enabled = canSave(trimmed, shown), busy = saving)
       }
     }
   ) { padding ->
