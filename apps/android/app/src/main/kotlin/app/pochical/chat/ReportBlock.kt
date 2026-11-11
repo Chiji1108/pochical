@@ -33,6 +33,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
@@ -390,6 +391,26 @@ fun BlockDialog(question: BlockQuestion, onDismiss: () -> Unit, onConfirm: () ->
   )
 }
 
+/** The shape of what stands where a message's bubble would be without being the message. */
+val StandInShape = RoundedCornerShape(Radius.lg)
+
+/**
+ * The outline of what stands where a message's bubble would be without being the message: dashed,
+ * not a bubble, so its small words are not taken for what its writer wrote. A blocked member's line
+ * folded away, and a line of a kind the app does not know.
+ */
+fun Modifier.standInOutline(outline: Color): Modifier =
+  clip(StandInShape).drawBehind {
+    val stroke = 1.dp.toPx()
+    drawRoundRect(
+      outline,
+      topLeft = Offset(stroke / 2, stroke / 2),
+      size = Size(size.width - stroke, size.height - stroke),
+      cornerRadius = CornerRadius(Radius.lg.toPx()),
+      style = Stroke(stroke, pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 3.dp.toPx()))),
+    )
+  }
+
 /**
  * A blocked member's line in the place's own chat, folded to one line: not a bubble but a dashed
  * outline where one would be, with 表示 to show it this once (/design's), past the room of a face.
@@ -397,22 +418,11 @@ fun BlockDialog(question: BlockQuestion, onDismiss: () -> Unit, onConfirm: () ->
 @Composable
 fun FoldedLine(onShow: () -> Unit, modifier: Modifier = Modifier) {
   val colors = LocalThemeColors.current
-  val outline = colors.borderStrong
   val hint = stringResource(R.string.blocked_line_hint)
   val words = stringResource(R.string.chat_blocked_line)
   Box(modifier.fillMaxWidth().padding(start = FACE + TAIL, top = Chat.runGap.dp)) {
     Row(
-      Modifier.clip(RoundedCornerShape(Radius.lg))
-        .drawBehind {
-          val stroke = 1.dp.toPx()
-          drawRoundRect(
-            outline,
-            topLeft = Offset(stroke / 2, stroke / 2),
-            size = Size(size.width - stroke, size.height - stroke),
-            cornerRadius = CornerRadius(Radius.lg.toPx()),
-            style = Stroke(stroke, pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 3.dp.toPx()))),
-          )
-        }
+      Modifier.standInOutline(colors.borderStrong)
         .clickable(onClick = onShow)
         .clearAndSetSemantics {
           contentDescription = words

@@ -554,9 +554,10 @@ message ChatLine {
   // The line it answers (返信), by its seq in the same chat; 0 for none,
   // and none for a notice or once unsent.
   uint64 reply_to = 18;
-  // What the line is: always one of its kinds. A device that gets none,
-  // or one it does not know (from an app newer than itself), shows
-  // nothing in its place.
+  // What the line is: always one of its kinds. A device that gets one
+  // it does not know (from an app newer than itself), which it reads as
+  // none, says in its place that the app must be updated to see it
+  // (spec/chat.md, What a line is).
   ChatContent content = 22;
   reserved 4, 6, 7, 11, 12, 13, 14, 15, 16, 17, 19, 20, 21;
   reserved "text", "edited", "unsent", "days", "poll", "votes", "decided", "photo", "album", "preview", "hidden", "notice", "photos";

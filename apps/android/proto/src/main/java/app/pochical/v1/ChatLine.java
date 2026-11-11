@@ -539,9 +539,10 @@ public  final class ChatLine extends
   private app.pochical.v1.ChatContent content_;
   /**
    * <pre>
-   * What the line is: always one of its kinds. A device that gets none,
-   * or one it does not know (from an app newer than itself), shows
-   * nothing in its place.
+   * What the line is: always one of its kinds. A device that gets one
+   * it does not know (from an app newer than itself), which it reads as
+   * none, says in its place that the app must be updated to see it
+   * (spec/chat.md, What a line is).
    * </pre>
    *
    * <code>.pochical.v1.ChatContent content = 22 [json_name = "content"];</code>
@@ -552,9 +553,10 @@ public  final class ChatLine extends
   }
   /**
    * <pre>
-   * What the line is: always one of its kinds. A device that gets none,
-   * or one it does not know (from an app newer than itself), shows
-   * nothing in its place.
+   * What the line is: always one of its kinds. A device that gets one
+   * it does not know (from an app newer than itself), which it reads as
+   * none, says in its place that the app must be updated to see it
+   * (spec/chat.md, What a line is).
    * </pre>
    *
    * <code>.pochical.v1.ChatContent content = 22 [json_name = "content"];</code>
@@ -565,9 +567,10 @@ public  final class ChatLine extends
   }
   /**
    * <pre>
-   * What the line is: always one of its kinds. A device that gets none,
-   * or one it does not know (from an app newer than itself), shows
-   * nothing in its place.
+   * What the line is: always one of its kinds. A device that gets one
+   * it does not know (from an app newer than itself), which it reads as
+   * none, says in its place that the app must be updated to see it
+   * (spec/chat.md, What a line is).
    * </pre>
    *
    * <code>.pochical.v1.ChatContent content = 22 [json_name = "content"];</code>
@@ -579,9 +582,10 @@ public  final class ChatLine extends
   }
   /**
    * <pre>
-   * What the line is: always one of its kinds. A device that gets none,
-   * or one it does not know (from an app newer than itself), shows
-   * nothing in its place.
+   * What the line is: always one of its kinds. A device that gets one
+   * it does not know (from an app newer than itself), which it reads as
+   * none, says in its place that the app must be updated to see it
+   * (spec/chat.md, What a line is).
    * </pre>
    *
    * <code>.pochical.v1.ChatContent content = 22 [json_name = "content"];</code>
@@ -600,9 +604,10 @@ public  final class ChatLine extends
   }
   /**
    * <pre>
-   * What the line is: always one of its kinds. A device that gets none,
-   * or one it does not know (from an app newer than itself), shows
-   * nothing in its place.
+   * What the line is: always one of its kinds. A device that gets one
+   * it does not know (from an app newer than itself), which it reads as
+   * none, says in its place that the app must be updated to see it
+   * (spec/chat.md, What a line is).
    * </pre>
    *
    * <code>.pochical.v1.ChatContent content = 22 [json_name = "content"];</code>
@@ -1253,9 +1258,10 @@ public  final class ChatLine extends
 
     /**
      * <pre>
-     * What the line is: always one of its kinds. A device that gets none,
-     * or one it does not know (from an app newer than itself), shows
-     * nothing in its place.
+     * What the line is: always one of its kinds. A device that gets one
+     * it does not know (from an app newer than itself), which it reads as
+     * none, says in its place that the app must be updated to see it
+     * (spec/chat.md, What a line is).
      * </pre>
      *
      * <code>.pochical.v1.ChatContent content = 22 [json_name = "content"];</code>
@@ -1266,9 +1272,10 @@ public  final class ChatLine extends
     }
     /**
      * <pre>
-     * What the line is: always one of its kinds. A device that gets none,
-     * or one it does not know (from an app newer than itself), shows
-     * nothing in its place.
+     * What the line is: always one of its kinds. A device that gets one
+     * it does not know (from an app newer than itself), which it reads as
+     * none, says in its place that the app must be updated to see it
+     * (spec/chat.md, What a line is).
      * </pre>
      *
      * <code>.pochical.v1.ChatContent content = 22 [json_name = "content"];</code>
@@ -1279,9 +1286,10 @@ public  final class ChatLine extends
     }
     /**
      * <pre>
-     * What the line is: always one of its kinds. A device that gets none,
-     * or one it does not know (from an app newer than itself), shows
-     * nothing in its place.
+     * What the line is: always one of its kinds. A device that gets one
+     * it does not know (from an app newer than itself), which it reads as
+     * none, says in its place that the app must be updated to see it
+     * (spec/chat.md, What a line is).
      * </pre>
      *
      * <code>.pochical.v1.ChatContent content = 22 [json_name = "content"];</code>
@@ -1293,9 +1301,10 @@ public  final class ChatLine extends
       }
     /**
      * <pre>
-     * What the line is: always one of its kinds. A device that gets none,
-     * or one it does not know (from an app newer than itself), shows
-     * nothing in its place.
+     * What the line is: always one of its kinds. A device that gets one
+     * it does not know (from an app newer than itself), which it reads as
+     * none, says in its place that the app must be updated to see it
+     * (spec/chat.md, What a line is).
      * </pre>
      *
      * <code>.pochical.v1.ChatContent content = 22 [json_name = "content"];</code>
@@ -1308,9 +1317,10 @@ public  final class ChatLine extends
     }
     /**
      * <pre>
-     * What the line is: always one of its kinds. A device that gets none,
-     * or one it does not know (from an app newer than itself), shows
-     * nothing in its place.
+     * What the line is: always one of its kinds. A device that gets one
+     * it does not know (from an app newer than itself), which it reads as
+     * none, says in its place that the app must be updated to see it
+     * (spec/chat.md, What a line is).
      * </pre>
      *
      * <code>.pochical.v1.ChatContent content = 22 [json_name = "content"];</code>
@@ -1322,9 +1332,10 @@ public  final class ChatLine extends
     }
     /**
      * <pre>
-     * What the line is: always one of its kinds. A device that gets none,
-     * or one it does not know (from an app newer than itself), shows
-     * nothing in its place.
+     * What the line is: always one of its kinds. A device that gets one
+     * it does not know (from an app newer than itself), which it reads as
+     * none, says in its place that the app must be updated to see it
+     * (spec/chat.md, What a line is).
      * </pre>
      *
      * <code>.pochical.v1.ChatContent content = 22 [json_name = "content"];</code>

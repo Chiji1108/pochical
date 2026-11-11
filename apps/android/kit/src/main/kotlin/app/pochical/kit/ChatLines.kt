@@ -71,17 +71,27 @@ sealed interface LineContent {
       get() = LineKind.Unsent
   }
 
-  /**
-   * Sent in a one-to-one chat by someone the reader had blocked, or of a kind this app does not
-   * know (from an app newer than itself): shown as nothing.
-   */
+  /** Sent in a one-to-one chat by someone the reader had blocked: shown as nothing. */
   data object Hidden : LineContent {
     override val kind
       get() = LineKind.Hidden
   }
 
+  /**
+   * Of a kind this app does not know, from an app newer than itself: someone's message all the
+   * same, saying in its place that the app must be updated to see it, until the app is updated and
+   * takes its lines again (spec/vectors/chat.json, content).
+   */
+  data object Unknown : LineContent {
+    override val kind
+      get() = LineKind.Unknown
+  }
+
   companion object {
-    /** The content as the group sent it; none, or a kind or notice this app does not know, is hidden. */
+    /**
+     * The content as the group sent it. A kind this app does not know reaches it as none, the
+     * wire's field being one its content has not; a notice it cannot word is nothing to show.
+     */
     fun of(wire: ChatContent): LineContent =
       when (wire.kindCase) {
         ChatContent.KindCase.WORDS ->
@@ -97,7 +107,9 @@ sealed interface LineContent {
             else -> Notice(wire.notice)
           }
         ChatContent.KindCase.UNSENT -> Unsent
-        else -> Hidden
+        ChatContent.KindCase.HIDDEN -> Hidden
+        ChatContent.KindCase.KIND_NOT_SET,
+        null -> Unknown
       }
 
     /** The line a send makes, as the group will hold it: its words not changed yet, its poll open. */
@@ -108,7 +120,9 @@ sealed interface LineContent {
         ChatSendContent.KindCase.PHOTOS -> Photos(send.photos.photosList)
         ChatSendContent.KindCase.DAYS -> Days(send.days.daysList)
         ChatSendContent.KindCase.POLL -> Poll(ChatPoll.newBuilder().addAllDays(send.poll.daysList).build())
-        else -> Hidden
+        // Only this app writes its sends, each of a kind: one of none is nothing to show.
+        ChatSendContent.KindCase.KIND_NOT_SET,
+        null -> Hidden
       }
   }
 }
@@ -122,6 +136,7 @@ enum class LineKind(val key: String) {
   Notice("notice"),
   Unsent("unsent"),
   Hidden("hidden"),
+  Unknown("unknown"),
 }
 
 /** Whose a line is, as every count of unread lines and ここから新着 go by (spec/vectors/chat.json, writer). */

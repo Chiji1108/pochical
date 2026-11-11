@@ -411,7 +411,7 @@ struct LineView: View {
   private var carded: Bool {
     switch content {
     case .days, .poll: true
-    case .words, .photos, .notice, .unsent, .hidden: false
+    case .words, .photos, .notice, .unsent, .hidden, .unknown: false
     }
   }
 
@@ -451,7 +451,7 @@ struct LineView: View {
       if let preview = words.preview, !preview.title.isEmpty {
         parts.append("リンク「\(preview.title)」")
       }
-    case .days, .poll, .notice, .unsent, .hidden:
+    case .days, .poll, .notice, .unsent, .hidden, .unknown:
       parts.append(lineWords(content, nameOf: nameOf))
     }
     parts.append(ChatTime.clock(time))
@@ -529,7 +529,7 @@ struct LineView: View {
       // Emoji drawn large stand without a bubble.
       case .words(let words): quote != nil || words.preview != nil || drawing.largeEmoji == 0
       case .photos: quote != nil
-      case .days, .poll, .notice, .unsent, .hidden: false
+      case .days, .poll, .notice, .unsent, .hidden, .unknown: false
       }
     return bubbled
       ? AnyShape(BubbleShape(mine: mine, first: first))
@@ -697,6 +697,19 @@ struct LineBody: View {
     case .days(let days):
       DayCard(days: days, members: members)
         .dimmedWhileWaiting(waiting, in: RoundedRectangle(cornerRadius: Radius.lg))
+    case .unknown:
+      // What it says in its place, not in a bubble: these are not its
+      // writer's words. The line it answers shows over them all the same.
+      VStack(alignment: .leading, spacing: 8) {
+        if let quote {
+          BubbleQuote(quote: quote, shelf: shelf, onOpen: onOpenQuote)
+            .foregroundStyle(colors.textPrimary)
+        }
+        Text(LineContent.unknownWords)
+          .foregroundStyle(colors.textTertiary)
+          .fixedSize(horizontal: false, vertical: true)
+      }
+      .modifier(StandInOutline())
     case .notice, .unsent, .hidden:
       // Drawn by the chat as a line of its own, not in a bubble.
       EmptyView()

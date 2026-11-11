@@ -23,9 +23,22 @@ fun ChatLine.folds(blocked: Set<String>): Boolean = folds(content.kind, ownChat 
 /** Whether a line of [kind] offers 通報 in its menu: someone else's message ([mine] false), where the place's [rules] take reports. */
 fun reportable(kind: LineKind, mine: Boolean, rules: ChatPlaceRules): Boolean = !mine && rules.reports && kind.isMessage
 
-/** A line someone wrote and the reader sees: not the app's notice, one taken back, or one not delivered to them. */
+/**
+ * A line someone wrote and the reader sees, one of a kind the app does not know among them: not the
+ * app's notice, one taken back, or one not delivered to them.
+ */
 private val LineKind.isMessage: Boolean
-  get() = this == LineKind.Words || this == LineKind.Photos || this == LineKind.Days || this == LineKind.Poll
+  get() =
+    when (this) {
+      LineKind.Words,
+      LineKind.Photos,
+      LineKind.Days,
+      LineKind.Poll,
+      LineKind.Unknown -> true
+      LineKind.Notice,
+      LineKind.Unsent,
+      LineKind.Hidden -> false
+    }
 
 /** What is reported (`ChatService.Report`): someone else's line, sent with the few around it, or a member. */
 sealed interface Reported {

@@ -307,6 +307,24 @@ struct BlockQuestion: Identifiable {
   }
 }
 
+/// Stands where a message's bubble would be without being the
+/// message: small words in a dashed outline, not a bubble, so they are
+/// not taken for what its writer wrote. A blocked member's line folded
+/// away, and a line of a kind the app does not know.
+struct StandInOutline: ViewModifier {
+  @Environment(\.themeColors) private var colors
+
+  func body(content: Content) -> some View {
+    content
+      .font(.footnote)
+      .padding(.horizontal, 12)
+      .padding(.vertical, 8)
+      .overlay(
+        RoundedRectangle(cornerRadius: Radius.lg)
+          .strokeBorder(colors.borderStrong, style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
+  }
+}
+
 /// A blocked member's line in a group chat, folded to one line; a tap
 /// shows it this once (spec/chat.md, Reporting and blocking).
 struct BlockedLine: View {
@@ -314,7 +332,7 @@ struct BlockedLine: View {
   let onShow: () -> Void
 
   var body: some View {
-    // Not a bubble: a dashed outline where one would be, with 表示 to
+    // Not a bubble: the outline of what stands in for one, with 表示 to
     // show it this once, as /design's.
     Button(action: onShow) {
       HStack(spacing: 8) {
@@ -324,12 +342,7 @@ struct BlockedLine: View {
           .fontWeight(.semibold)
           .foregroundStyle(colors.accentDefault)
       }
-      .font(.footnote)
-      .padding(.horizontal, 12)
-      .padding(.vertical, 8)
-      .overlay(
-        RoundedRectangle(cornerRadius: Radius.lg)
-          .strokeBorder(colors.borderStrong, style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
+      .modifier(StandInOutline())
       .contentShape(.rect)
     }
     .buttonStyle(.plain)

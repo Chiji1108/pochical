@@ -161,3 +161,33 @@ public func notifiedFrom(
       WidgetWith(kind: .person, name: $0.shownName, groupID: groupID, photoID: $0.photoID)
     })
 }
+
+/// A notification's words as the server sends them: a key of the app's
+/// strings and its arguments (spec/sync-protocol.md, Push).
+public struct PushWords: Hashable, Sendable, Decodable {
+  public var key: String
+  public var args: [String]
+
+  public init(key: String, args: [String]) {
+    self.key = key
+    self.args = args
+  }
+
+  /// A group chat's line, its writer's name its first argument, and a
+  /// one-to-one chat's.
+  public static let groupKey = "CHAT_GROUP_"
+  public static let chatKey = "CHAT_"
+
+  /// The body the app words: its own when the app has words for its key
+  /// (`known`), and else what stands in for it, by keys the server never
+  /// sends: a chat line's of a kind added after the app as a message, from
+  /// its writer where their name came, and any other as asking to update
+  /// (`spec/vectors/chat.json`, pushBody).
+  public func body(known: (String) -> Bool) -> PushWords {
+    if known(key) { return self }
+    if key.hasPrefix(Self.groupKey), let writer = args.first {
+      return PushWords(key: "CHAT_GROUP_MESSAGE", args: [writer])
+    }
+    return PushWords(key: key.hasPrefix(Self.chatKey) ? "CHAT_MESSAGE" : "UPDATE_TO_SEE", args: [])
+  }
+}
