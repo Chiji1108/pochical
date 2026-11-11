@@ -138,9 +138,10 @@ class StoreScreenshots {
     pickPeriod("15日〜翌月14日")
     launch()
     device.find(calendar)
-    // The page's heading and the week its first day is in.
+    // The page's heading, with the room over it that it has at its side, and the week its first day is in.
     val first = LocalDate.now().let { if (it.dayOfMonth < 15) it.minusMonths(1) else it }.withDayOfMonth(15)
-    photograph("07-details-period", from = By.descContains("日〜"), until = dayOf(first.plusDays(7)))
+    val heading = device.find(By.descContains("日〜")).visibleBounds
+    photograph("07-details-period", top = heading.top - heading.left, foot = topOf(dayOf(first.plusDays(7))))
     pickPeriod("1日〜末日")
 
     photographWidgets("02-widgets")
@@ -165,7 +166,7 @@ class StoreScreenshots {
     device.tap(By.text("夜勤"), By.desc(Pattern.compile("${month}月${HALF + 1}日、明け.*")))
     // The week of the two days, between the weeks before and after it.
     val entered = LocalDate.now().withDayOfMonth(HALF)
-    photograph("07-details-next-day", from = dayOf(entered.minusDays(7)), until = dayOf(entered.plusDays(14)))
+    photograph("07-details-next-day", top = topOf(dayOf(entered.minusDays(7))), foot = topOf(dayOf(entered.plusDays(14))))
     enterShiftOn()
     photographWidgets("02-widgets", only = "now")
     // Out of ポチポチ入力 as the app starts again: its 完了 would ask about the days left blank.
@@ -174,7 +175,11 @@ class StoreScreenshots {
 
     startFixedCycle()
     // The month's name and its first two weeks, the cycle come round in them.
-    photograph("07-details-repeat", from = By.desc(Pattern.compile("\\d+年\\d+月")), until = dayOf(LocalDate.now().plusMonths(1).withDayOfMonth(1).plusDays(14)))
+    photograph(
+      "07-details-repeat",
+      top = topOf(By.desc(Pattern.compile("\\d+年\\d+月"))),
+      foot = topOf(dayOf(LocalDate.now().plusMonths(1).withDayOfMonth(1).plusDays(14))),
+    )
   }
 
   /**
@@ -435,17 +440,19 @@ class StoreScreenshots {
   private fun scrollable(node: AccessibilityNodeInfo): AccessibilityNodeInfo? =
     if (node.isScrollable) node else (0 until node.childCount).firstNotNullOfOrNull { index -> node.getChild(index)?.let(::scrollable) }
 
+  /** Where what [selector] finds begins on the screen: a row's top, by one of its days. */
+  private fun topOf(selector: BySelector): Int = device.find(selector).visibleBounds.top
+
   /** The calendar's day [date], whatever it holds: a day of the month before or after shows in the month's weeks too. */
   private fun dayOf(date: LocalDate): BySelector = By.desc(Pattern.compile("${date.monthValue}月${date.dayOfMonth}日、.*"))
 
   /**
    * The screen as it is, kept as [name], once the app's window has drawn what it holds: the words a
    * walk waits for are on a page before the page is on the screen, so a frame is asked of the
-   * window and waited for until it is committed. With [from] and [until], only the part from the
-   * top of the one down to the top of the other, as wide as the screen: whole rows of it, up to the
-   * row [until] is in, for a tile of the details' shot.
+   * window and waited for until it is committed. With [top] and [foot], only the part between
+   * them, as wide as the screen: whole rows of it, for a tile of the details' shot.
    */
-  private fun photograph(name: String, from: BySelector? = null, until: BySelector? = null) {
+  private fun photograph(name: String, top: Int = 0, foot: Int? = null) {
     // Android 17's status bar keeps the notifications' icons through the demo's
     // `notifications -e visible false`, and one may come at any time of a run: each there is
     // snoozed, and comes back by itself.
@@ -461,9 +468,7 @@ class StoreScreenshots {
     }
     check(committed.await(WAIT, TimeUnit.MILLISECONDS)) { "No frame drawn for $name" }
     val screen = checkNotNull(instrumentation.uiAutomation.takeScreenshot()) { "Could not photograph $name" }
-    val top = from?.let { device.find(it).visibleBounds.top } ?: 0
-    val foot = until?.let { device.find(it).visibleBounds.top } ?: screen.height
-    val part = Bitmap.createBitmap(screen, 0, top, screen.width, foot - top)
+    val part = Bitmap.createBitmap(screen, 0, top, screen.width, (foot ?: screen.height) - top)
     File(out, "$name.png").outputStream().use { check(part.compress(Bitmap.CompressFormat.PNG, 100, it)) { "Could not keep $name" } }
   }
 }

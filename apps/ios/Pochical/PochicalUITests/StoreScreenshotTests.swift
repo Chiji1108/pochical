@@ -84,13 +84,16 @@ final class StoreScreenshotTests: XCTestCase {
   func test04Period() throws {
     launch()
     pick(period: "15日〜翌月14日")
-    // The page's heading and the week its first day is in.
+    // The page's heading, with the room over it that it has at its side, and
+    // its first two weeks.
     let now = Calendar.current.dateComponents([.year, .month, .day], from: .now)
     let first = DateComponents(year: now.year, month: now.month! - (now.day! < 15 ? 1 : 0), day: 15)
     let heading = app.descendants(matching: .any)
       .matching(NSPredicate(format: "label CONTAINS '日〜'")).firstMatch
     XCTAssertTrue(heading.waitForExistence(timeout: 5), "the page is named by its days")
-    try snap("07-details-period", from: heading.frame.minY, until: rowTop(first, after: 7))
+    try snap(
+      "07-details-period", from: heading.frame.minY - heading.frame.minX,
+      until: rowTop(first, after: 14))
     pick(period: "1日〜末日")
   }
 
@@ -209,13 +212,13 @@ final class StoreScreenshotTests: XCTestCase {
     coming.tap()
     press("カレンダーで直す")
     XCTAssertTrue(app.navigationBars["繰り返しを直す"].waitForExistence(timeout: 5), "the order opens")
-    // The month's name and its first two weeks, the cycle come round in them.
+    // The month's name and its first three weeks, the cycle come round in them.
     let today = Calendar.current.dateComponents([.year, .month], from: .now)
     let title = app.buttons.matching(NSPredicate(format: "label MATCHES '[0-9]+年[0-9]+月.*'"))
       .firstMatch
     try snap(
       "07-details-repeat", from: title.frame.minY,
-      until: rowTop(DateComponents(year: today.year, month: today.month! + 1, day: 1), after: 14))
+      until: rowTop(DateComponents(year: today.year, month: today.month! + 1, day: 1), after: 21))
   }
 
   /// Taps the button whose words hold `name`, a page down where the page
