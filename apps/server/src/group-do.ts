@@ -516,9 +516,12 @@ export class GroupDO extends DurableObject<Env> {
    * never opens the group would learn nothing. Told as a line that
    * mentions them is, so a chat turned off hears it too while mentions
    * notify; their count goes with it as it is, a notice being no line to
-   * read. Owed until their DO, which sends it to their devices, has taken
-   * it: one not taken, a DO that does not list the group yet among them,
-   * is told again as membership news is (`tellOwed`).
+   * read. Owed until their DO has taken it: handed it to the push service
+   * of each of their devices, or kept it to try again itself, or found
+   * nothing to send (no device, or a chat off with mentions not
+   * notifying). One not taken, by a DO that does not list the group yet
+   * or could not read their devices or keep a try, is told again as
+   * membership news is (`tellOwed`).
    */
   private async notifyEnd(): Promise<void> {
     const groupId = this.placeId();
@@ -540,7 +543,11 @@ export class GroupDO extends DurableObject<Env> {
           GROUP_THREAD,
           unreadCount(this.db, userId, GROUP_THREAD),
           cursor,
-          { alert: endAlertOf(group, endsAt.getTime()), mentioned: true }
+          {
+            alert: endAlertOf(group, endsAt.getTime()),
+            mentioned: true,
+            owed: true,
+          }
         );
         // Their DO does not list the group yet, the news of their joining
         // still owed it: not taken, whichever of the two is told first.

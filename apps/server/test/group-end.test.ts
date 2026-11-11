@@ -613,6 +613,70 @@ describe("the notification that a group ends soon", () => {
     await expect(owedDueNow(groupId)).resolves.toBe(0);
   });
 
+  it("stays owed while their DO cannot read their devices", async () => {
+    const { groupId, guest, maker } = await pair();
+    await registerToken(guest, GUEST_TOKEN);
+    const calls = apnsCalls();
+    const guestDo = env.USERS.getByName(await userIdOf(guest));
+    // D1 out of reach as the guest's DO looks their devices up.
+    await runInDurableObject(guestDo, (instance) => {
+      const failing = new Proxy(env.DB, {
+        get: (target, key): unknown =>
+          key === "prepare"
+            ? () => {
+                throw new Error("D1 out of reach");
+              }
+            : Reflect.get(target, key),
+      });
+      Reflect.set(
+        instance,
+        "env",
+        new Proxy(env, {
+          get: (target, key): unknown =>
+            key === "DB" ? failing : Reflect.get(target, key),
+        })
+      );
+    });
+    await setEnd(groupId, Date.now() + DAY_MS, maker);
+    await runAlarm(env.GROUPS.getByName(groupId));
+    expect(calls).toHaveLength(0);
+    await expect(owedDueNow(groupId)).resolves.toBe(1);
+
+    await runInDurableObject(guestDo, (instance) => {
+      Reflect.set(instance, "env", env);
+    });
+    await runAlarm(env.GROUPS.getByName(groupId));
+    expect(calls.map(({ token }) => token)).toStrictEqual([GUEST_TOKEN]);
+    await expect(owedDueNow(groupId)).resolves.toBe(0);
+  });
+
+  it("stays owed while their DO cannot keep a try the push service put off", async () => {
+    const { groupId, guest, maker } = await pair();
+    await registerToken(guest, GUEST_TOKEN);
+    const guestDo = env.USERS.getByName(await userIdOf(guest));
+    // APNs asks to be tried later, and the DO's own tries cannot be kept.
+    const answers = [503, 200];
+    const calls: unknown[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      calls.push(await new Request(input, init).json());
+      return new Response(null, { status: answers.shift() ?? 200 });
+    });
+    await runInDurableObject(guestDo, (_, state) => {
+      state.storage.sql.exec("alter table push_retries rename to put_away");
+    });
+    await setEnd(groupId, Date.now() + DAY_MS, maker);
+    await runAlarm(env.GROUPS.getByName(groupId));
+    expect(calls).toHaveLength(1);
+    await expect(owedDueNow(groupId)).resolves.toBe(1);
+
+    await runInDurableObject(guestDo, (_, state) => {
+      state.storage.sql.exec("alter table put_away rename to push_retries");
+    });
+    await runAlarm(env.GROUPS.getByName(groupId));
+    expect(calls).toHaveLength(2);
+    await expect(owedDueNow(groupId)).resolves.toBe(0);
+  });
+
   it("is owed no more to a member who left, nor of an end since moved", async () => {
     const { groupId, guest, maker } = await pair();
     await registerToken(guest, GUEST_TOKEN);

@@ -541,7 +541,12 @@ export class UserDO extends DurableObject<Env> {
    * devices' badges, sent to them when it changed. One counted no later
    * than the count kept, or for a group they are not in, changes nothing.
    * Done once the pushes it sets off are, which the group waits on; one
-   * that fails is logged. Whether the user's own DO has them in the place:
+   * that fails is logged, a chat line's notification being sent once and
+   * no more. One the group owes (`owed`, that it ends soon) is thrown
+   * instead when it could neither be handed to each device's push service
+   * nor kept to try again (push_retries), so the group, which keeps it
+   * until this answers, tells it again; past that the tries are this
+   * object's own (deliver). Whether the user's own DO has them in the place:
    * false, having kept and sent nothing, while the news of their joining
    * is still on its way to it, for a group that owes them the word to
    * keep owing it.
@@ -551,9 +556,9 @@ export class UserDO extends DurableObject<Env> {
     threadId: string,
     unread: Unread,
     groupCursor: number,
-    // A new line to tell the user's devices of, with the count, and
-    // whether it mentions the user.
-    line?: { alert: Alert; mentioned: boolean },
+    // A new line to tell the user's devices of, with the count, whether
+    // it mentions the user, and whether the group owes it until taken.
+    line?: { alert: Alert; mentioned: boolean; owed?: boolean },
     // Where the user's read mark in the chat is, when they read.
     read?: number
   ): Promise<boolean> {
@@ -576,6 +581,10 @@ export class UserDO extends DurableObject<Env> {
           threadId,
         });
       }
+    }
+    const [notified] = pushes;
+    if (line?.owed === true && notified.status === "rejected") {
+      throw notified.reason;
     }
     return true;
   }
