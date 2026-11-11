@@ -17,7 +17,18 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 @Serializable
-private data class GroupEndVectors(val endsAt: List<EndsAt>, val endDay: List<EndDay>) {
+private data class GroupEndVectors(
+  val endsAt: List<EndsAt>,
+  val endDay: List<EndDay>,
+  val firstDay: List<FirstDay>,
+) {
+  @Serializable
+  data class FirstDay(val today: String, val expected: String) : VectorCase {
+    override val name
+      get() = today
+  }
+
+
   @Serializable
   data class EndsAt(val day: String, val zone: String, val expected: Long) : VectorCase {
     override val name
@@ -38,6 +49,20 @@ class GroupEndVectorsTest {
   @Test fun endsAt() = vectors.endsAt.checkEach({ it.expected }) { groupEndsAt(LocalDate.parse(it.day), ZoneId.of(it.zone)) }
 
   @Test fun endDay() = vectors.endDay.checkEach({ LocalDate.parse(it.expected) }) { groupEndDay(it.ms, ZoneId.of(it.zone)) }
+
+  @Test fun firstDay() = vectors.firstDay.checkEach({ LocalDate.parse(it.expected) }) { firstGroupEndDay(LocalDate.parse(it.today)) }
+
+  @Test
+  fun thePickerOffersTomorrowOnAndAnEndThatIsTodayAlready() {
+    val today = LocalDate.parse("2026-12-31")
+    val tomorrow = LocalDate.parse("2027-01-01")
+    // No end yet, or one still ahead: from tomorrow.
+    assertEquals(tomorrow, groupEndPickerFirstDay(today, current = null))
+    assertEquals(tomorrow, groupEndPickerFirstDay(today, current = tomorrow))
+    assertEquals(tomorrow, groupEndPickerFirstDay(today, current = LocalDate.parse("2027-03-01")))
+    // An end set yesterday for today stays there to pick, which changes nothing.
+    assertEquals(today, groupEndPickerFirstDay(today, current = today))
+  }
 
   @Test
   fun theDevicePickingADayShowsThatDay() {

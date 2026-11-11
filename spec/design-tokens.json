@@ -3184,6 +3184,7 @@
   },
   "limits": {
     "coworkersMax": 100,
+    "groupEndMinHours": 20,
     "groupEndNoticeHours": 36,
     "groupMaxMembers": 100,
     "patternsPerPage": 10,

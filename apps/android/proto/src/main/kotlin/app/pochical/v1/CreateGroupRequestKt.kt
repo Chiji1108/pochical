@@ -160,8 +160,8 @@ public object CreateGroupRequestKt {
     /**
      * ```
      * When the group ends, as GroupProfile.ends_at_ms; 0 for a group with
-     * no end. INVALID_ARGUMENT for a time that is not after now, unless the
-     * request_id's group is made already, or that no date can be.
+     * no end. INVALID_ARGUMENT for a time less than GROUP_END_MIN_HOURS away,
+     * unless the request_id's group is made already, or that no date can be.
      * ```
      *
      * `int64 ends_at_ms = 6 [json_name = "endsAtMs"];`
@@ -176,8 +176,8 @@ public object CreateGroupRequestKt {
     /**
      * ```
      * When the group ends, as GroupProfile.ends_at_ms; 0 for a group with
-     * no end. INVALID_ARGUMENT for a time that is not after now, unless the
-     * request_id's group is made already, or that no date can be.
+     * no end. INVALID_ARGUMENT for a time less than GROUP_END_MIN_HOURS away,
+     * unless the request_id's group is made already, or that no date can be.
      * ```
      *
      * `int64 ends_at_ms = 6 [json_name = "endsAtMs"];`

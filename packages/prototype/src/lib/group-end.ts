@@ -14,6 +14,15 @@ export const dayOf = (date: Date): string =>
 /** The prototype's today, as a day. */
 export const today = dayOf(designToday);
 
+/**
+ * The first day that can be picked as an end date on a device whose day
+ * is `on`: the day after, never today.
+ */
+export const firstEndDay = (on: string): string => {
+  const [year = 0, month = 1, date = 1] = on.split("-").map(Number);
+  return dayOf(new Date(year, month - 1, date + 1));
+};
+
 /** A month after the prototype's today: where a new end's picker starts. */
 export const aMonthOn = dayOf(
   new Date(

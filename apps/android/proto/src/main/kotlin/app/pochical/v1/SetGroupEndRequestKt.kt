@@ -48,8 +48,8 @@ public object SetGroupEndRequestKt {
 
     /**
      * ```
-     * When the group ends, as GroupProfile.ends_at_ms: after now, or 0 for
-     * no end.
+     * When the group ends, as GroupProfile.ends_at_ms: GROUP_END_MIN_HOURS
+     * away or more, or 0 for no end.
      * ```
      *
      * `int64 ends_at_ms = 2 [json_name = "endsAtMs"];`
@@ -63,8 +63,8 @@ public object SetGroupEndRequestKt {
       }
     /**
      * ```
-     * When the group ends, as GroupProfile.ends_at_ms: after now, or 0 for
-     * no end.
+     * When the group ends, as GroupProfile.ends_at_ms: GROUP_END_MIN_HOURS
+     * away or more, or 0 for no end.
      * ```
      *
      * `int64 ends_at_ms = 2 [json_name = "endsAtMs"];`

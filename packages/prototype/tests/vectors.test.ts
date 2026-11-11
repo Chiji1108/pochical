@@ -174,7 +174,7 @@ import type {
   WidgetPerson,
   WidgetPersonDay,
 } from "../src/lib/design-widgets";
-import { endNotice, endWords } from "../src/lib/group-end";
+import { endNotice, endWords, firstEndDay } from "../src/lib/group-end";
 import type { EndNotice } from "../src/lib/group-end";
 import { clockOffset, receive, tick } from "../src/lib/hlc";
 import { noValue, shownValue, takeEvent } from "../src/lib/local-edits";
@@ -1432,6 +1432,11 @@ describe("spec/vectors/thumbhash.json", () => {
 // endsAt and endDay are the device's clock's, which a browser has one of:
 // the apps check them in each of the vectors' time zones.
 describe("spec/vectors/group-end.json", () => {
+  for (const { today, expected } of groupEnd.firstDay) {
+    test(`firstDay: after ${today}`, () => {
+      expect(firstEndDay(today)).toBe(expected);
+    });
+  }
   for (const { day, today, expected } of groupEnd.words) {
     test(`words: ${day} on ${today}`, () => {
       expect(endWords(day, today)).toBe(expected);

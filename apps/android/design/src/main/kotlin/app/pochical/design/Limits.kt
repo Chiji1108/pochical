@@ -42,6 +42,9 @@ const val POLL_MIN_DAYS = 2
 /** The most people in one group. */
 const val GROUP_MAX_MEMBERS = 100
 
+/** The fewest hours ahead a group's end may be set, as the server holds it: the apps offer days from tomorrow on. */
+const val GROUP_END_MIN_HOURS = 20
+
 /** How many hours before a group's end its chat says it ends soon and its members are notified. */
 const val GROUP_END_NOTICE_HOURS = 36
 

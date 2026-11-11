@@ -40,6 +40,9 @@ public let pollMinDays = 2
 /// The most people in one group.
 public let groupMaxMembers = 100
 
+/// The fewest hours ahead a group's end may be set, as the server holds it: the apps offer days from tomorrow on.
+public let groupEndMinHours = 20
+
 /// How many hours before a group's end its chat says it ends soon and its members are notified.
 public let groupEndNoticeHours = 36
 

@@ -32,6 +32,12 @@ struct GroupEndVectors: Decodable, Sendable {
     let expected: String
   }
 
+  struct FirstDay: Decodable, Sendable {
+    let today: String
+    let expected: String
+  }
+
+  let firstDay: [FirstDay]
   let endsAt: [EndsAt]
   let endDay: [EndDay]
   let words: [Words]
@@ -56,6 +62,24 @@ func anEndDateSaysItsYearWhenItIsNotThisYears(_ vector: GroupEndVectors.Words) t
   let day = try #require(Day(vector.day))
   let today = try #require(Day(vector.today))
   #expect(GroupEnd.words(day, today: today) == vector.expected)
+}
+
+@Test(arguments: try vectors("group-end", as: GroupEndVectors.self).firstDay)
+func anEndDateCanBeChosenFromTomorrowOn(_ vector: GroupEndVectors.FirstDay) throws {
+  let today = try #require(Day(vector.today))
+  #expect(GroupEnd.firstDay(today: today).key == vector.expected)
+}
+
+@Test func thePickerOffersTheGroupsOwnEndWhenThatIsBeforeTomorrow() {
+  let today = Day(year: 2026, month: 11, day: 11)
+  let tomorrow = Day(year: 2026, month: 11, day: 12)
+  // No end yet, or one from tomorrow on: from tomorrow.
+  #expect(GroupEnd.earliestDay(today: today, current: nil) == tomorrow)
+  #expect(GroupEnd.earliestDay(today: today, current: tomorrow) == tomorrow)
+  #expect(
+    GroupEnd.earliestDay(today: today, current: Day(year: 2026, month: 12, day: 31)) == tomorrow)
+  // One set yesterday for today stays shown as it is.
+  #expect(GroupEnd.earliestDay(today: today, current: today) == today)
 }
 
 @Test(arguments: try vectors("group-end", as: GroupEndVectors.self).notices)

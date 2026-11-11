@@ -19,3 +19,18 @@ fun groupEndsAt(day: LocalDate, zone: ZoneId): Long = day.plusDays(1).atStartOfD
  * before it falls on by that device's clock, so the device that picked a day shows that day.
  */
 fun groupEndDay(endsAtMs: Long, zone: ZoneId): LocalDate = Instant.ofEpochMilli(endsAtMs - 1).atZone(zone).toLocalDate()
+
+/**
+ * The first day that can be chosen as a group's end on a device whose day is [today]: tomorrow,
+ * never today, whose end could be minutes away and would take everyone's chat and photos with it
+ * (spec/vectors/group-end.json, firstDay).
+ */
+fun firstGroupEndDay(today: LocalDate): LocalDate = today.plusDays(1)
+
+/**
+ * The first day the date picker offers for a group whose end is [current], none for a group with
+ * no end: [firstGroupEndDay], or [current] when that is earlier, as an end set yesterday for today
+ * is: the day the group ends on stays there to see and to go back to, and picking it changes
+ * nothing.
+ */
+fun groupEndPickerFirstDay(today: LocalDate, current: LocalDate?): LocalDate = minOf(firstGroupEndDay(today), current ?: firstGroupEndDay(today))

@@ -68,8 +68,8 @@ public  final class SetGroupEndRequest extends
   private long endsAtMs_;
   /**
    * <pre>
-   * When the group ends, as GroupProfile.ends_at_ms: after now, or 0 for
-   * no end.
+   * When the group ends, as GroupProfile.ends_at_ms: GROUP_END_MIN_HOURS
+   * away or more, or 0 for no end.
    * </pre>
    *
    * <code>int64 ends_at_ms = 2 [json_name = "endsAtMs"];</code>
@@ -81,8 +81,8 @@ public  final class SetGroupEndRequest extends
   }
   /**
    * <pre>
-   * When the group ends, as GroupProfile.ends_at_ms: after now, or 0 for
-   * no end.
+   * When the group ends, as GroupProfile.ends_at_ms: GROUP_END_MIN_HOURS
+   * away or more, or 0 for no end.
    * </pre>
    *
    * <code>int64 ends_at_ms = 2 [json_name = "endsAtMs"];</code>
@@ -94,8 +94,8 @@ public  final class SetGroupEndRequest extends
   }
   /**
    * <pre>
-   * When the group ends, as GroupProfile.ends_at_ms: after now, or 0 for
-   * no end.
+   * When the group ends, as GroupProfile.ends_at_ms: GROUP_END_MIN_HOURS
+   * away or more, or 0 for no end.
    * </pre>
    *
    * <code>int64 ends_at_ms = 2 [json_name = "endsAtMs"];</code>
@@ -253,8 +253,8 @@ public  final class SetGroupEndRequest extends
 
     /**
      * <pre>
-     * When the group ends, as GroupProfile.ends_at_ms: after now, or 0 for
-     * no end.
+     * When the group ends, as GroupProfile.ends_at_ms: GROUP_END_MIN_HOURS
+     * away or more, or 0 for no end.
      * </pre>
      *
      * <code>int64 ends_at_ms = 2 [json_name = "endsAtMs"];</code>
@@ -266,8 +266,8 @@ public  final class SetGroupEndRequest extends
     }
     /**
      * <pre>
-     * When the group ends, as GroupProfile.ends_at_ms: after now, or 0 for
-     * no end.
+     * When the group ends, as GroupProfile.ends_at_ms: GROUP_END_MIN_HOURS
+     * away or more, or 0 for no end.
      * </pre>
      *
      * <code>int64 ends_at_ms = 2 [json_name = "endsAtMs"];</code>
@@ -281,8 +281,8 @@ public  final class SetGroupEndRequest extends
     }
     /**
      * <pre>
-     * When the group ends, as GroupProfile.ends_at_ms: after now, or 0 for
-     * no end.
+     * When the group ends, as GroupProfile.ends_at_ms: GROUP_END_MIN_HOURS
+     * away or more, or 0 for no end.
      * </pre>
      *
      * <code>int64 ends_at_ms = 2 [json_name = "endsAtMs"];</code>

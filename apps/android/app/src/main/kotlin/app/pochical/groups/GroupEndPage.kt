@@ -31,6 +31,7 @@ import app.pochical.SettingsSwitchRow
 import app.pochical.calendar.monthDayText
 import app.pochical.calendar.rememberToday
 import app.pochical.kit.groupEndDay
+import app.pochical.kit.groupEndPickerFirstDay
 import app.pochical.kit.groupEndsAt
 import app.pochical.pageInsets
 import app.pochical.repeat.DayPickerDialog
@@ -121,9 +122,11 @@ fun NewGroupEndPage(day: LocalDate?, onDay: (LocalDate?) -> Unit, onClose: () ->
 }
 
 /**
- * 終了日's page: 終了日をつける, and with it on the day, picked on the system's date picker from today
- * on (today's end is always still to come), starting at [current] or, for a new end, a month from
- * today. 保存 is there once the day shown, or none, is not [current], and gives it to [onSave];
+ * 終了日's page: 終了日をつける, and with it on the day, picked on the system's date picker from
+ * tomorrow on (`groupEndPickerFirstDay`: never today, but for an end that is today already, which
+ * stays as it is), starting at [current] or, for a new end, a month from today. The first day
+ * follows the device's day as the picker is opened. 保存 is there once the day shown, or none, is
+ * not [current], and gives it to [onSave];
  * going back keeps nothing.
  */
 @Composable
@@ -154,5 +157,5 @@ private fun GroupEndForm(current: LocalDate?, onBack: () -> Unit, saving: Boolea
       }
     }
   }
-  if (picking) DayPickerDialog(day, onPick = { day = it }, onDismiss = { picking = false }, from = today)
+  if (picking) DayPickerDialog(day, onPick = { day = it }, onDismiss = { picking = false }, from = groupEndPickerFirstDay(today, current))
 }

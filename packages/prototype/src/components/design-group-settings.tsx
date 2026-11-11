@@ -30,6 +30,7 @@ import {
   endNote,
   endsAt,
   endWords,
+  firstEndDay,
   today,
 } from "../lib/group-end";
 import { firstCharacter } from "../lib/text-limits";
@@ -353,7 +354,7 @@ function GroupEndPage({
               <>
                 <DayInput
                   label="日付"
-                  min={today}
+                  min={firstEndDay(today)}
                   onValueChange={setDay}
                   value={day}
                 />

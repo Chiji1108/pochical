@@ -2,6 +2,7 @@ package app.pochical.groups
 
 import androidx.compose.material3.ExperimentalMaterial3Api
 import app.pochical.kit.groupEndDay
+import app.pochical.kit.groupEndPickerFirstDay
 import app.pochical.kit.groupEndsAt
 import app.pochical.repeat.DaysFrom
 import app.pochical.repeat.pickerDay
@@ -62,19 +63,22 @@ class GroupEndPickedDayTest {
   }
 
   @Test
-  fun theDaysFromTodayAreTheDevicesNotUtcs() = eachZone { zone ->
+  fun theDaysFromTomorrowAreTheDevicesNotUtcs() = eachZone { zone ->
     // The device's today at moments when UTC's day is another: early morning east of UTC, late
     // evening west of it.
     for (moment in listOf("2026-11-11T00:30:00Z", "2026-11-11T11:30:00Z", "2026-11-11T23:30:00Z").map(Instant::parse)) {
       val today = moment.atZone(zone).toLocalDate()
-      val from = DaysFrom(today)
+      // A new end: from tomorrow on, never today.
+      val from = DaysFrom(groupEndPickerFirstDay(today, current = null))
       assertFalse("$moment in $zone", from.isSelectableDate(pickerMillis(today.minusDays(1))))
-      assertTrue("$moment in $zone", from.isSelectableDate(pickerMillis(today)))
+      assertFalse("$moment in $zone", from.isSelectableDate(pickerMillis(today)))
       assertTrue("$moment in $zone", from.isSelectableDate(pickerMillis(today.plusDays(1))))
-      assertTrue(from.isSelectableYear(today.year))
+      assertTrue(from.isSelectableYear(today.plusDays(1).year))
       assertFalse(from.isSelectableYear(today.year - 1))
-      // Today's end is still to come at any moment of today.
-      assertTrue("$moment in $zone", groupEndsAt(today, zone) > moment.toEpochMilli())
+      // An end that is today already stays there to pick.
+      assertTrue("$moment in $zone", DaysFrom(groupEndPickerFirstDay(today, current = today)).isSelectableDate(pickerMillis(today)))
+      // The first day's end is more than a day away at any moment of today but where a day is cut short.
+      assertTrue("$moment in $zone", groupEndsAt(today.plusDays(1), zone) - moment.toEpochMilli() > 23 * 3_600_000L)
     }
   }
 }

@@ -1,5 +1,23 @@
 {
-  "about": "A group's end (spec/sync-protocol.md, A group's end). endsAt: the moment a picked end date ends on the device that picks it, in ms since the epoch: the first moment of the day after `day` in the device's time zone `zone`, which is not always midnight (Asia/Beirut's clocks skip it as summer time begins) nor 24 hours after the day began. endDay: the day a device in `zone` shows for a group ending at `ms`: the day the moment just before it falls on by that device's clock, so the device that picked a day shows that day, and one far to its east the day after. words: how a day is said in the group's settings and its chat's lines, 12月31日, with its year when that is not the year of `today`, the device's own day. notices: the chat's lines of a group's end as a device words them, `by` being the name the group shows for who set it and `day` what endDay gives for the line's ends_at_ms. The endsSoon words are also the notification's body (the key GROUP_ENDS, its argument the end in ms) and the join screen's line. noticeAt: when the group's chat says it ends soon and notifies its members, the server's alone: `noticeHours` before `endsAt`, or `setAt`, when the end was set, if that is later.",
+  "about": "A group's end (spec/sync-protocol.md, A group's end). firstDay: the first day that can be picked as an end date on a device whose own day is `today`: the day after, never today, so no end is less than a day away. endsAt: the moment a picked end date ends on the device that picks it, in ms since the epoch: the first moment of the day after `day` in the device's time zone `zone`, which is not always midnight (Asia/Beirut's clocks skip it as summer time begins) nor 24 hours after the day began. endDay: the day a device in `zone` shows for a group ending at `ms`: the day the moment just before it falls on by that device's clock, so the device that picked a day shows that day, and one far to its east the day after. words: how a day is said in the group's settings and its chat's lines, 12月31日, with its year when that is not the year of `today`, the device's own day. notices: the chat's lines of a group's end as a device words them, `by` being the name the group shows for who set it and `day` what endDay gives for the line's ends_at_ms. The endsSoon words are also the notification's body (the key GROUP_ENDS, its argument the end in ms) and the join screen's line. noticeAt: when the group's chat says it ends soon and notifies its members, the server's alone: `noticeHours` before `endsAt`, or `setAt`, when the end was set, if that is later.",
+  "firstDay": [
+    {
+      "today": "2026-11-11",
+      "expected": "2026-11-12"
+    },
+    {
+      "today": "2026-11-30",
+      "expected": "2026-12-01"
+    },
+    {
+      "today": "2026-12-31",
+      "expected": "2027-01-01"
+    },
+    {
+      "today": "2028-02-28",
+      "expected": "2028-02-29"
+    }
+  ],
   "endsAt": [
     {
       "day": "2026-12-31",

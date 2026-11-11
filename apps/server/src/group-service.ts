@@ -1,7 +1,10 @@
 import { create } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
 import type { ConnectRouter, HandlerContext } from "@connectrpc/connect";
-import { GROUP_MAX_MEMBERS } from "@pochical/design/limits";
+import {
+  GROUP_END_MIN_HOURS,
+  GROUP_MAX_MEMBERS,
+} from "@pochical/design/limits";
 import { fitsGroupName, fitsPersonName, isId } from "@pochical/design/values";
 import { env } from "cloudflare:workers";
 
@@ -127,10 +130,14 @@ const endOf = (endsAtMs: bigint): number | null => {
   return Number(endsAtMs);
 };
 
-/** An end to set now: one still to come; INVALID_ARGUMENT otherwise. */
+/**
+ * An end to set now: one GROUP_END_MIN_HOURS away or more, so no member
+ * can have a group gone within the day; INVALID_ARGUMENT otherwise.
+ */
 const requireAhead = (endsAt: number | null): number | null => {
-  if (endsAt !== null && endsAt <= Date.now()) {
-    throw new ConnectError("ends_at_ms is not after now", Code.InvalidArgument);
+  const soonest = Date.now() + GROUP_END_MIN_HOURS * 60 * 60 * 1000;
+  if (endsAt !== null && endsAt < soonest) {
+    throw new ConnectError("ends_at_ms is too soon", Code.InvalidArgument);
   }
   return endsAt;
 };

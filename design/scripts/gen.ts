@@ -21,6 +21,7 @@ import { inviteRules } from "../src/invite";
 import {
   COWORKERS_MAX,
   PATTERNS_PER_PAGE,
+  GROUP_END_MIN_HOURS,
   GROUP_END_NOTICE_HOURS,
   GROUP_MAX_MEMBERS,
   POLL_MIN_DAYS,
@@ -175,6 +176,7 @@ function json() {
     invite: inviteRules,
     limits: {
       coworkersMax: COWORKERS_MAX,
+      groupEndMinHours: GROUP_END_MIN_HOURS,
       groupEndNoticeHours: GROUP_END_NOTICE_HOURS,
       groupMaxMembers: GROUP_MAX_MEMBERS,
       patternsPerPage: PATTERNS_PER_PAGE,
@@ -580,6 +582,8 @@ const CHAT_DOC =
 const SHARED_DAYS_DOC = "The most days one chat message shares.";
 const POLL_MIN_DAYS_DOC = "The fewest days a poll puts to the vote.";
 const GROUP_MEMBERS_DOC = "The most people in one group.";
+const GROUP_END_MIN_DOC =
+  "The fewest hours ahead a group's end may be set, as the server holds it: the apps offer days from tomorrow on.";
 const GROUP_END_NOTICE_DOC =
   "How many hours before a group's end its chat says it ends soon and its members are notified.";
 const COWORKERS_DOC = "The most people one person keeps in 一緒に働く人.";
@@ -672,6 +676,10 @@ const outputs = {
       `const val GROUP_MAX_MEMBERS = ${GROUP_MAX_MEMBERS}`,
     ],
     [
+      `/** ${GROUP_END_MIN_DOC} */`,
+      `const val GROUP_END_MIN_HOURS = ${GROUP_END_MIN_HOURS}`,
+    ],
+    [
       `/** ${GROUP_END_NOTICE_DOC} */`,
       `const val GROUP_END_NOTICE_HOURS = ${GROUP_END_NOTICE_HOURS}`,
     ],
@@ -692,6 +700,10 @@ const outputs = {
     [
       `/// ${GROUP_MEMBERS_DOC}`,
       `public let groupMaxMembers = ${GROUP_MAX_MEMBERS}`,
+    ],
+    [
+      `/// ${GROUP_END_MIN_DOC}`,
+      `public let groupEndMinHours = ${GROUP_END_MIN_HOURS}`,
     ],
     [
       `/// ${GROUP_END_NOTICE_DOC}`,

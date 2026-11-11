@@ -23,6 +23,22 @@ public enum GroupEnd {
     Day(Date(timeIntervalSince1970: Double(ms - 1) / 1000), in: Day.gregorian(in: zone))
   }
 
+  /// The first day that can be chosen as an end date on `today`, the
+  /// device's own day: the day after it (firstDay). Never today, which at
+  /// its last minute would take everyone's chat and photos a minute later.
+  public static func firstDay(today: Day) -> Day {
+    today.adding(days: 1)
+  }
+
+  /// The earliest day 終了日's date picker offers on `today`: the first day
+  /// that can be chosen, or the group's `current` end date when that is
+  /// earlier (one set yesterday for today), which may stay as it is, so
+  /// the picker shows it rather than moving it on.
+  public static func earliestDay(today: Day, current: Day?) -> Day {
+    let first = firstDay(today: today)
+    return min(first, current ?? first)
+  }
+
   /// How an end date is said, 12月31日, with its year when that is not the
   /// year of `today`, the device's own day (words).
   public static func words(_ day: Day, today: Day) -> String {

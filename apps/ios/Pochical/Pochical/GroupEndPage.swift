@@ -36,9 +36,9 @@ struct GroupEndLink: View {
   }
 }
 
-/// 終了日: whether the group has an end, and its day, from today on, as
-/// today's end is always still to come; kept as a draft until 保存, as
-/// グループを編集 keeps a name. An end someone else sets meanwhile leaves
+/// 終了日: whether the group has an end, and its day, from tomorrow on
+/// (`GroupEnd.firstDay`), with the group's own end when that is today,
+/// which may stay; kept as a draft until 保存, as グループを編集 keeps a name. An end someone else sets meanwhile leaves
 /// the draft as it is, and 保存 then sends it over theirs.
 private struct GroupEndPage: View {
   @Environment(\.dismiss) private var dismiss
@@ -47,6 +47,9 @@ private struct GroupEndPage: View {
   let save: (Day?) async throws -> Void
   @State private var on: Bool
   @State private var day: Day
+  /// The device's day, followed past midnight while the page is open, for
+  /// the first day the picker offers.
+  @State private var today = Day.today
   @State private var saving = false
   @State private var failed = false
 
@@ -59,7 +62,9 @@ private struct GroupEndPage: View {
     let calendar = Self.calendar
     let today = Day.today
     let monthOn = calendar.date(byAdding: .month, value: 1, to: today.date(in: calendar))
-    _day = State(initialValue: max(current ?? monthOn.map { Day($0, in: calendar) } ?? today, today))
+    _day = State(
+      initialValue: current ?? monthOn.map { Day($0, in: calendar) }
+        ?? GroupEnd.firstDay(today: today))
   }
 
   /// The device's calendar as it is at each use, the time zone it is in
@@ -78,7 +83,8 @@ private struct GroupEndPage: View {
           DatePicker(
             "終了日",
             selection: Binding { day.date(in: calendar) } set: { day = Day($0, in: calendar) },
-            in: Day.today.date(in: calendar)..., displayedComponents: .date
+            in: GroupEnd.earliestDay(today: today, current: current).date(in: calendar)...,
+            displayedComponents: .date
           )
           .datePickerStyle(.graphical)
         }
@@ -90,6 +96,13 @@ private struct GroupEndPage: View {
     .settingsList()
     .navigationTitle("終了日")
     .navigationBarTitleDisplayMode(.inline)
+    .task {
+      // Past midnight, while the page is open or the app waits in the
+      // background, as the calendar follows it.
+      for await _ in NotificationCenter.default.notifications(named: .NSCalendarDayChanged) {
+        today = .today
+      }
+    }
     .toolbar {
       ToolbarItem(placement: .confirmationAction) {
         if saving {

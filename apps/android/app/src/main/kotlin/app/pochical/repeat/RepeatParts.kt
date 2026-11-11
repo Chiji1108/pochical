@@ -210,7 +210,7 @@ internal fun pickerDay(utcMs: Long): LocalDate = Instant.ofEpochMilli(utcMs).atZ
 
 /**
  * The days from [first] on, the only ones the picker lets be picked: [first] is a day by the
- * device's own clock (its today), held against the day the picker names, never against the moment
+ * device's own clock (its tomorrow, for a group's end), held against the day the picker names, never against the moment
  * the picker names it by, which is another day's on a device west of UTC.
  */
 @OptIn(ExperimentalMaterial3Api::class)

@@ -1,4 +1,7 @@
-import { GROUP_END_NOTICE_HOURS } from "@pochical/design/limits";
+import {
+  GROUP_END_MIN_HOURS,
+  GROUP_END_NOTICE_HOURS,
+} from "@pochical/design/limits";
 import { socketRules } from "@pochical/design/socket";
 import { runInDurableObject } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
@@ -32,6 +35,8 @@ import {
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
+// The nearest an end may be set.
+const MIN_MS = GROUP_END_MIN_HOURS * HOUR_MS;
 // How long before its end a group says it ends soon.
 const NOTICE_MS = GROUP_END_NOTICE_HOURS * HOUR_MS;
 // An end far enough off that its coming is not yet said.
@@ -232,13 +237,16 @@ describe("setting a group's end", () => {
     await expect(env.GROUPS.getByName(groupId).endsAt()).resolves.toBeNull();
   });
 
-  it("is members' alone, and never a time already past", async () => {
+  it("is members' alone, and never less than GROUP_END_MIN_HOURS away", async () => {
     const { groupId, maker } = await pair();
     const stranger = await signInAnonymously();
     await expect(setEnd(groupId, Date.now() + FAR_MS, stranger)).resolves.toBe(
       403
     );
     await expect(setEnd(groupId, Date.now() - 1, maker)).resolves.toBe(400);
+    await expect(
+      setEnd(groupId, Date.now() + MIN_MS - HOUR_MS, maker)
+    ).resolves.toBe(400);
     await expect(env.GROUPS.getByName(groupId).endsAt()).resolves.toBeNull();
   });
 
@@ -267,8 +275,8 @@ describe("setting a group's end", () => {
       endsAtMs: String(endsAt),
     });
 
-    const past = await createGroup(Date.now() - 1, maker);
-    expect(past.status).toBe(400);
+    const soon = await createGroup(Date.now() + MIN_MS - HOUR_MS, maker);
+    expect(soon.status).toBe(400);
   });
 
   it("is a moment a date can be", async () => {
