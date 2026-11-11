@@ -1,10 +1,10 @@
 package app.pochical.groups
 
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.text.input.TextFieldValue
+import app.pochical.kit.JoinFace
 import app.pochical.name
 import app.pochical.string
 import app.pochical.strings
@@ -28,17 +28,34 @@ class JoinScreenTest {
     }
   }
 
+  /** The face, a drawing put in place among them, the name and how the person is asked: none picked or decided again. */
   @Test
-  fun aFaceChosenBeforeJoiningOutlivesTheActivityMadeAnew() {
-    val chosen = listOf(JoinFace.None, JoinFace.Held("photo-1"), JoinFace.Usual)
+  fun whatIsChosenBeforeGoingOnOutlivesTheActivityMadeAnew() {
+    val chosen = listOf(Triple(JoinFace.None, true, "みどり"), Triple(JoinFace.Held("photo-1"), false, ""), Triple(JoinFace.Usual, null, "さくら"))
     val restoration = StateRestorationTester(compose)
-    var faces = emptyList<MutableState<JoinFace>>()
-    restoration.setContent {
-      faces = chosen.map { rememberSaveable(stateSaver = JoinFaceSaver) { mutableStateOf<JoinFace>(JoinFace.Usual) } }
+    var profiles = emptyList<JoinProfile>()
+    restoration.setContent { profiles = chosen.map { rememberSaveable(saver = JoinProfile.Saver) { JoinProfile() } } }
+    compose.runOnIdle {
+      profiles.zip(chosen).forEach { (profile, choice) ->
+        profile.face = choice.first
+        profile.asUsual = choice.second
+        profile.ownName = TextFieldValue(choice.third)
+      }
     }
-    compose.runOnIdle { faces.zip(chosen).forEach { (face, choice) -> face.value = choice } }
-    faces = emptyList()
+    profiles = emptyList()
     restoration.emulateSavedInstanceStateRestore()
-    compose.runOnIdle { assertEquals(chosen, faces.map { it.value }) }
+    compose.runOnIdle { assertEquals(chosen, profiles.map { Triple(it.face, it.asUsual, it.ownName.text) }) }
+  }
+
+  /** Decided once: a retry after the name going on made usual has come back keeps what was decided. */
+  @Test
+  fun howThePersonIsAskedIsDecidedOnceThroughRetries() {
+    val first = JoinProfile()
+    assertEquals(true, first.goingOn(usualName = ""))
+    assertEquals(true, first.goingOn(usualName = "さくら"))
+    val named = JoinProfile()
+    assertEquals(false, named.goingOn(usualName = "さくら"))
+    val known = JoinProfile(asUsual = false)
+    assertEquals(false, known.goingOn(usualName = ""))
   }
 }

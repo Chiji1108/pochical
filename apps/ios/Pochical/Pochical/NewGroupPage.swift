@@ -14,13 +14,10 @@ struct NewGroupPage: View {
   /// Called with the new group's id once it is made.
   let onMade: (String) -> Void
   @State private var name = ""
-  /// A name of its own for this group; empty follows the usual one.
-  @State private var ownName = ""
-  /// The usual name, which the field starts with (設定 › プロフィール).
+  /// How the person will appear in the group, sent once it is made.
+  @State private var profile = JoinProfile()
+  /// The usual name, which the group shows unless another is given.
   @Fetch(ProfileNameRequest()) private var usualName = ""
-  /// The face for this group, sent once it is made: the usual photo,
-  /// another picked here, or none on purpose.
-  @State private var face = JoinFace.usual
   @Environment(\.say) private var say
   /// The mark picked by hand, which then stays as the name changes; none
   /// while the mark follows the name.
@@ -56,7 +53,7 @@ struct NewGroupPage: View {
       }
       .settingsRows()
       JoinProfileSection(
-        ownName: $ownName, face: $face, groupName: trimmed(name), going: "作ると、",
+        profile: $profile, groupName: trimmed(name), going: "作ると、",
         onNavigator: true)
     }
     .settingsList()
@@ -94,11 +91,11 @@ struct NewGroupPage: View {
     return guessedMark(for: name, color: freeColor)
   }
 
+  /// The name the group will show: its own, else the usual one.
+  private var myName: String { profile.name(usual: usualName) }
+
   /// The first color the user's groups do not use yet, for the guess and
   /// for a mark picked from an emoji or a photo into an icon or letters.
-  /// The name the group will show: its own, else the usual one.
-  private var myName: String { JoinFace.name(own: ownName, usual: usualName) }
-
   private var freeColor: Int { nextGroupColor(groups.map(\.mark), slots: colors.marks.count) }
 
   private func make() {
@@ -106,10 +103,8 @@ struct NewGroupPage: View {
       name: trimmed(name), mark: mark, displayName: myName, after: sent)
     sent = request
     making = true
-    // Decided by the page the person saw: making the group makes their
-    // name the usual one, which comes back on the user's socket while it
-    // is still going.
-    let asUsual = usualName.isEmpty
+    let asUsual = profile.goingOn(usualName: usualName)
+    let face = profile.face
     Task {
       do {
         // A picked photo goes up first, for the group to take.

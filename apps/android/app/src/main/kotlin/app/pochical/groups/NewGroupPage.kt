@@ -64,11 +64,8 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
   val usualName = usualProfile()?.name.orEmpty()
   val context = LocalContext.current
   val resources = LocalResources.current
-  // A name of its own for this group, empty following the usual one, and the face for it, sent once
-  // the group is made.
-  var ownName by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
-  var face by rememberSaveable(stateSaver = JoinFaceSaver) { mutableStateOf<JoinFace>(JoinFace.Usual) }
-  val myName = ownName.text.trim().ifEmpty { usualName }
+  val profile = rememberJoinProfile()
+  val myName = profile.name(usualName)
   val slots = LocalThemeColors.current.marks.size
   var name by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
   // The mark picked by hand, which then stays as the name changes; none while it follows the name.
@@ -97,16 +94,20 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
     val request = NewGroupRequest.asking(groupName, mark, myName, sent)
     sent = request
     making = true
-    // Decided by the page the person saw: making the group makes their name the usual one, which
-    // comes back on the user's socket while it is still going.
-    val asUsual = usualName.isEmpty()
+    val asUsual = profile.goingOn(usualName)
+    val face = profile.face
     scope.launch {
       try {
         // A picked photo goes up first, for the group to take.
         if (request.mark.photoId.isNotEmpty()) calls.sendHeldPhoto(request.mark.photoId, PhotoShelf.Mine)
         val made = calls.create(request)
-        // Once the group is made, so one that fails changes nothing.
-        if (!keepFace(calls, face, asUsual, made)) {
+        // Once the group is made, so one that fails changes nothing; kept by the kit, whether this
+        // page still waits or not.
+        try {
+          calls.keepFace(face, asUsual, made).await()
+        } catch (e: CancellationException) {
+          throw e
+        } catch (_: Exception) {
           ReviewPrompt.troubled = true
           Toast.makeText(context, resources.getString(R.string.join_face_failed), Toast.LENGTH_LONG).show()
         }
@@ -152,7 +153,7 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
         }
       }
       item { Footnote(stringResource(R.string.new_group_mark_note)) }
-      item { JoinProfileSection(ownName, { ownName = it }, face, { face = it }, groupName, stringResource(R.string.new_group_going)) }
+      item { JoinProfileSection(profile, groupName, stringResource(R.string.new_group_going)) }
     }
   }
   if (editingMark) {

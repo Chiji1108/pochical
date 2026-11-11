@@ -484,14 +484,16 @@ export function JoinScreen({
           onClick={() => {
             // Told here, so that joining from the hub's QR and from a
             // link opened on the calendar both say so in the chat.
-            const { name } = profileIn(group, profile);
+            const shown = profileIn(group, profile);
+            const { name } = shown;
             setChats((chats) =>
               withNotice(chats, group.id, `${name}がグループに参加しました`)
             );
             // With no usual name yet, the name and face become the usual
             // ones, which the group then shows as anyone's.
             if (profile.name === "") {
-              setProfile({ name, photo: mine?.photo });
+              // A usual photo stays unless one was picked or it was taken off.
+              setProfile(shown);
               onJoin({ ...group, mine: undefined });
               return;
             }

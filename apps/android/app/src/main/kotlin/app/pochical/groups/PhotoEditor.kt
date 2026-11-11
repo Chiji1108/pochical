@@ -196,7 +196,13 @@ fun PhotoEditor(
       if (jpeg != null) change { onPhoto(jpeg) }
     }
   }
-  if (drawing) FaceDrawingSheet(onPick = { picked -> change { onPhoto(faceDrawingJpeg(context, picked)) } }, onDismiss = { drawing = false })
+  if (drawing) {
+    FaceDrawingSheet(
+      // A drawing that cannot be drawn is said as a photo that cannot be read is.
+      onPick = { picked -> change { faceDrawingJpeg(context, picked)?.let { onPhoto(it) } ?: run { unreadable = true } } },
+      onDismiss = { drawing = false },
+    )
+  }
   if (cameraRefused) {
     AlertDialog(
       onDismissRequest = { cameraRefused = false },

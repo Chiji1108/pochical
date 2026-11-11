@@ -51,11 +51,13 @@ fun FaceDrawingSheet(onPick: (FaceDrawing) -> Unit, onDismiss: () -> Unit) {
   }
 }
 
-/** [drawing] as a picture at the size a face is kept (chatRules.pictureMaxEdge), to go the way a photo does. */
-suspend fun faceDrawingJpeg(context: Context, drawing: FaceDrawing): ByteArray {
+/**
+ * [drawing] as a picture at the size a face is kept (chatRules.pictureMaxEdge), to go the way a photo
+ * does; null when it could not be drawn, as a photo that cannot be read is none.
+ */
+suspend fun faceDrawingJpeg(context: Context, drawing: FaceDrawing): ByteArray? {
   val request = ImageRequest.Builder(context).data(drawing.picture).size(Chat.pictureMaxEdge).allowHardware(false).build()
-  val drawn = checkNotNull(SingletonImageLoader.get(context).execute(request).image) { "The drawing ${drawing.id} is the app's own." }
-  return faceJpeg(drawn.toBitmap())
+  return SingletonImageLoader.get(context).execute(request).image?.let { faceJpeg(it.toBitmap()) }
 }
 
 /** How many drawings a row holds. */

@@ -153,6 +153,34 @@ final class FaceDrawingTests: XCTestCase {
     XCTAssertTrue(app.buttons["コピーしました"].waitForExistence(timeout: 5))
   }
 
+  /// An account in use on a device that does not hold its profile yet (the
+  /// app put back, still signed in, the server out of reach as it opens):
+  /// nothing is put in place while the account's name and photo are not
+  /// known, and once the server is back they show as theirs. Run with the
+  /// server stopped, and start it while the test waits.
+  func testAnAccountNotYetCaughtUpGetsNoDrawing() {
+    continueAfterFailure = false
+    app.launchArguments += ["-firstRunDone", "YES"]
+    app.launch()
+    let groups = app.tabBars.buttons["グループ"]
+    XCTAssertTrue(groups.waitForExistence(timeout: 20))
+    groups.tap()
+    let new = app.buttons["グループを作る"].firstMatch
+    XCTAssertTrue(new.waitForExistence(timeout: 15))
+    new.tap()
+    let unknown = app.buttons.matching(NSPredicate(format: "label BEGINSWITH '名前を入れてください'"))
+      .firstMatch
+    XCTAssertTrue(unknown.waitForExistence(timeout: 10), "the device holds no usual name yet")
+    snap("14-not-caught-up")
+    // The catch-up brings the usual name and photo: the row is the usual
+    // ones, which a drawing put in place meanwhile would not be.
+    let known = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'さくら'")).firstMatch
+    XCTAssertTrue(known.waitForExistence(timeout: 180), "the catch-up brings the usual name")
+    XCTAssertTrue(app.staticTexts["このグループでのあなた"].exists)
+    XCTAssertTrue(known.label.contains("いつもと同じ"), "no drawing took the usual photo's place: \(known.label)")
+    snap("15-caught-up")
+  }
+
   func testSomeoneNewJoiningStartsWithADrawing() throws {
     continueAfterFailure = false
     let dir = try XCTUnwrap(shared, "FACE_DRAWING_DIR names where the invitation is")

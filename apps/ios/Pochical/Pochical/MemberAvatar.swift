@@ -160,8 +160,10 @@ struct PhotoEditor<Picture: View>: View {
     }
     .sheet(isPresented: $drawing) {
       FaceDrawingSheet { picked in
-        guard let picture = picked.picture else { return }
-        take(picture)
+        run {
+          guard let photo = await picked.photo() else { return }
+          await onPhoto(photo)
+        }
       }
     }
   }
@@ -235,19 +237,25 @@ private struct FaceDrawingSheet: View {
 
 extension FaceDrawing {
   /// One of the drawings at random, as the photo it goes as: what someone
-  /// first asked for their name and photo starts with (`startsWithADrawing`).
-  @MainActor static func randomPhoto() async -> Data? {
-    guard let picture = all.randomElement()?.picture else { return nil }
-    return await shrunkPicture(picture)?.jpeg
+  /// first asked for their name and photo starts with (`JoinProfileSection`).
+  static func randomPhoto() async -> Data? {
+    await all.randomElement()?.photo()
   }
 
-  /// The drawing as a picture at the size a face is kept, to go the way a
-  /// photo does.
-  @MainActor fileprivate var picture: UIImage? {
-    let edge = CGFloat(Chat.pictureMaxEdge)
-    let renderer = ImageRenderer(content: image.resizable().frame(width: edge, height: edge))
-    renderer.scale = 1
-    return renderer.uiImage
+  /// The drawing as the photo it goes as, the way a photo does: drawn at
+  /// the size a face is kept, off the main actor, as drawing it there
+  /// takes a frame or more while a screen may be opening.
+  @concurrent
+  fileprivate func photo() async -> Data? {
+    guard let drawing = uiImage else { return nil }
+    let frame = CGRect(x: 0, y: 0, width: Chat.pictureMaxEdge, height: Chat.pictureMaxEdge)
+    let format = UIGraphicsImageRendererFormat()
+    format.scale = 1
+    format.opaque = true
+    let picture = UIGraphicsImageRenderer(size: frame.size, format: format).image { _ in
+      drawing.draw(in: frame)
+    }
+    return await shrunkPicture(picture)?.jpeg
   }
 }
 

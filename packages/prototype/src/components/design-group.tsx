@@ -226,7 +226,8 @@ export function DesignGroup({
           // ones, which the group then shows as anyone's.
           const first = profile.name === "";
           if (first) {
-            setProfile({ name: picked?.name ?? "", photo: picked?.photo });
+            // A usual photo stays unless one was picked or it was taken off.
+            setProfile(profileIn({ ...created, id, mine: picked }, profile));
           }
           const mine = first ? undefined : picked;
           setGroups([...groups, { ...created, id, mine }]);

@@ -40,8 +40,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.Saver
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,7 +49,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -67,6 +64,7 @@ import app.pochical.kit.InviteDetails
 import app.pochical.kit.InviteFailure
 import app.pochical.kit.PhotoShelf
 import app.pochical.kit.fitsPersonName
+import kotlin.coroutines.cancellation.CancellationException
 import app.pochical.people.usualProfile
 import app.pochical.rowColors
 import app.pochical.segmentShapes
@@ -91,13 +89,11 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
   var details by remember { mutableStateOf<InviteDetails?>(null) }
   var loadError by remember { mutableStateOf<InviteFailure.Reason?>(null) }
   var loads by remember { mutableStateOf(0) }
-  // A name of its own for this group; empty follows the usual one.
-  var ownName by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
-  var face by rememberSaveable(stateSaver = JoinFaceSaver) { mutableStateOf<JoinFace>(JoinFace.Usual) }
+  val profile = rememberJoinProfile()
   var joining by remember { mutableStateOf(false) }
   var joinError by remember { mutableStateOf<InviteFailure.Reason?>(null) }
   var showingMembers by remember { mutableStateOf(false) }
-  val myName = ownName.text.trim().ifEmpty { usualName }
+  val myName = profile.name(usualName)
 
   LaunchedEffect(code, loads) {
     try {
@@ -113,29 +109,22 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
     }
   }
 
-  /** A photo picked here and let go of, by another, by none, or by closing, goes from the device. */
-  fun letGo(picked: JoinFace) {
-    if (picked is JoinFace.Held) scope.launch { calls.releasePhoto(picked.photoId) }
-  }
-
-  fun close() {
-    letGo(face)
-    onClose()
-  }
-  BackHandler(onBack = ::close)
+  BackHandler(onBack = onClose)
 
   fun join() {
     joining = true
-    // Decided by the screen the person saw: the join itself makes their name the usual one, which
-    // comes back on the user's socket while it is still going.
-    val asUsual = usualName.isEmpty()
+    val asUsual = profile.goingOn(usualName)
+    val face = profile.face
     scope.launch {
       try {
         val groupId = calls.join(code, myName)
-        // Once in the group, so a join that fails changes nothing.
-        val faced = keepFace(calls, face, asUsual, groupId)
-        (face as? JoinFace.Held)?.let { calls.releasePhoto(it.photoId) }
-        if (!faced) {
+        // Once in the group, so a join that fails changes nothing; kept by the kit, whether this
+        // screen still waits or not.
+        try {
+          calls.keepFace(face, asUsual, groupId).await()
+        } catch (e: CancellationException) {
+          throw e
+        } catch (_: Exception) {
           ReviewPrompt.troubled = true
           // Said past this screen, which gives way to the group at once.
           Toast.makeText(context, resources.getString(R.string.join_face_failed), Toast.LENGTH_LONG).show()
@@ -153,7 +142,7 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
     topBar = {
       TopAppBar(
         title = {},
-        navigationIcon = { IconButton(onClick = ::close) { Icon(painterResource(R.drawable.ic_close), stringResource(R.string.close)) } },
+        navigationIcon = { IconButton(onClick = onClose) { Icon(painterResource(R.drawable.ic_close), stringResource(R.string.close)) } },
       )
     }
   ) { padding ->
@@ -163,7 +152,7 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
         Column(Modifier.padding(padding).fillMaxSize()) {
           Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
             Invitation(shown, code) { showingMembers = true }
-            JoinProfileSection(ownName, { ownName = it }, face, { face = it }, shown.name, stringResource(R.string.join_going))
+            JoinProfileSection(profile, shown.name, stringResource(R.string.join_going))
           }
           Column(
             Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp),

@@ -26,3 +26,12 @@ public struct FaceDrawing: Sendable, Identifiable, Hashable {
     FaceDrawing(id: "moon", name: "月"),
   ]
 }
+
+#if canImport(UIKit)
+  import UIKit
+
+  extension FaceDrawing {
+    /// The picture for UIKit to draw, which may be off the main actor.
+    public var uiImage: UIImage? { UIImage(named: id, in: .module, with: nil) }
+  }
+#endif

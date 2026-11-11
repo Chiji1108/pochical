@@ -28,13 +28,10 @@ struct JoinScreen: View {
   let onAlreadyIn: (InviteDetails) -> Void
   @State private var details: InviteDetails?
   @State private var loadError: InviteError?
-  /// A name of its own for this group; empty follows the usual one.
-  @State private var ownName = ""
-  /// The usual name, which the field starts with (設定 › プロフィール).
+  /// How the person will appear in the group, sent as they join.
+  @State private var profile = JoinProfile()
+  /// The usual name, which the group shows unless another is given.
   @Fetch(ProfileNameRequest()) private var usualName = ""
-  /// The face for this group, sent once in it: the usual photo, another
-  /// picked here, or none on purpose.
-  @State private var face = JoinFace.usual
   /// Joined, but the photo picked could not be set: said, and the group
   /// opens anyway.
   @Environment(\.say) private var say
@@ -114,7 +111,7 @@ struct JoinScreen: View {
         }
         .settingsOnPage()
         JoinProfileSection(
-          ownName: $ownName, face: $face, groupName: details.name, going: "参加すると、")
+          profile: $profile, groupName: details.name, going: "参加すると、")
       }
       .settingsList()
       VStack(spacing: 12) {
@@ -208,18 +205,12 @@ struct JoinScreen: View {
     }
   }
 
-  /// The name the group will show: its own, else the usual one.
-  private var myName: String {
-    let own = trimmed(ownName)
-    return own.isEmpty ? usualName : own
-  }
+  private var myName: String { profile.name(usual: usualName) }
 
   private func join() {
     joining = true
-    // Decided by the screen the person saw: the join itself makes their
-    // name the usual one, which comes back on the user's socket while it
-    // is still going.
-    let asUsual = usualName.isEmpty
+    let asUsual = profile.goingOn(usualName: usualName)
+    let face = profile.face
     Task {
       defer { joining = false }
       do throws(InviteError) {

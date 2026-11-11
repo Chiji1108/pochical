@@ -60,6 +60,15 @@ export const swiftDrawings = () => [
   ),
   "  ]",
   "}",
+  "",
+  "#if canImport(UIKit)",
+  "  import UIKit",
+  "",
+  "  extension FaceDrawing {",
+  "    /// The picture for UIKit to draw, which may be off the main actor.",
+  "    public var uiImage: UIImage? { UIImage(named: id, in: .module, with: nil) }",
+  "  }",
+  "#endif",
 ];
 
 // The raw resources under `directory`: one SVG a drawing.
