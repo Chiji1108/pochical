@@ -24,6 +24,7 @@ import type {
   Profile,
 } from "../lib/design-group-data";
 import { useUser } from "../lib/design-user-store";
+import { drawings } from "../lib/drawings";
 import { firstCharacter } from "../lib/text-limits";
 import {
   Choice,
@@ -334,7 +335,8 @@ function GroupEditPage({
 }
 
 // How you appear in a group, as a row that opens GroupProfilePage: the
-// same in the group's settings and on the invitation to join it.
+// same in the group's settings, on the invitation to join it and where
+// one is made.
 export function GroupProfileRow({
   group,
   profile,
@@ -345,15 +347,15 @@ export function GroupProfileRow({
   onOpen: () => void;
 }) {
   const shown = profileIn(group, profile);
+  const sameOrOwn = group.mine ? "このグループだけ" : "いつもと同じ";
   return (
     <ListRow
       onClick={onOpen}
       label={shown.name || "名前を入れてください"}
       truncate
-      // With no usual name yet, these become the usual ones.
-      value={
-        group.mine && profile.name !== "" ? "このグループだけ" : "いつもと同じ"
-      }
+      // With no usual name yet there is no usual one to be the same as:
+      // the row says nothing there.
+      value={profile.name === "" ? undefined : sameOrOwn}
       leading={
         <>
           <PhotoAvatar name={shown.name} photo={shown.photo} size={28} />
@@ -365,19 +367,20 @@ export function GroupProfileRow({
 
 // How you appear in this group. It is yours, so changes apply at once. An
 // empty name or no photo of its own means the usual ones from settings.
-// Before joining, it changes what the invitation will join with.
+// Before joining a group or making one, it changes what going on will
+// keep, and `going` starts its note with what going on is.
 export function GroupProfilePage({
   group,
   profile,
   back,
-  joining = false,
+  going = "",
   onChange,
   onBack,
 }: {
   group: GroupSummary;
   profile: Profile;
   back: string;
-  joining?: boolean;
+  going?: Going;
   onChange: (mine: GroupProfile | undefined) => void;
   onBack: () => void;
 }) {
@@ -436,22 +439,80 @@ export function GroupProfilePage({
           }
         />
       </List>
-      {profile.name === "" ? (
-        <Note>
-          参加すると、この名前と写真がいつもの名前と写真になり、ほかのグループでも使われます。設定
-          › プロフィールで変えられます。
-        </Note>
-      ) : (
-        <Note>
-          {joining && "参加すると、"}
-          {group.name}
-          の人にだけ、この名前と写真で表示されます。名前が空欄なら「
-          {profile.name}
-          」、写真を入れなければいつもの写真のままです。
-        </Note>
-      )}
+      <GroupProfileNote going={going} group={group} profile={profile} />
     </>
   );
+}
+
+// What going on does with the name and face: with no usual name yet they
+// become the usual ones, else they are this group's alone.
+function GroupProfileNote({
+  group,
+  profile,
+  going,
+}: {
+  group: GroupSummary;
+  profile: Profile;
+  going: Going;
+}) {
+  return profile.name === "" ? (
+    <Note>
+      {going}
+      この名前と写真がいつもの名前と写真になり、ほかのグループでも使われます。設定
+      › プロフィールで変えられます。
+    </Note>
+  ) : (
+    <Note>
+      {going}
+      {group.name || "このグループ"}
+      の人にだけ、この名前と写真で表示されます。名前が空欄なら「
+      {profile.name}
+      」、写真を入れなければいつもの写真のままです。
+    </Note>
+  );
+}
+
+// What going on is, as the note starts: none where the group is yours
+// already.
+type Going = "" | "参加すると、" | "作ると、";
+
+// How you will appear in a group you are joining or making: its heading,
+// GroupProfileRow, and, with no usual name yet, what going on does with
+// the name and face, as the row's page says it.
+export function GroupProfileSection({
+  group,
+  profile,
+  going,
+  onOpen,
+}: {
+  group: GroupSummary;
+  profile: Profile;
+  going: Going;
+  onOpen: () => void;
+}) {
+  return (
+    <Section title={profileTitle(profile)}>
+      <List>
+        <GroupProfileRow group={group} onOpen={onOpen} profile={profile} />
+      </List>
+      {profile.name === "" && (
+        <GroupProfileNote going={going} group={group} profile={profile} />
+      )}
+    </Section>
+  );
+}
+
+// The face someone first asked for their name and photo starts with, with
+// no usual name and no usual photo yet: one of the drawings, picked at
+// random once as the screen opens. It is theirs as they go on, as if they
+// had picked it, and theirs to change or take off before that, which never
+// brings one back.
+export function firstFace(profile: Profile): GroupProfile | undefined {
+  if (profile.name !== "" || profile.photo !== undefined) {
+    return undefined;
+  }
+  const drawing = drawings[Math.floor(Math.random() * drawings.length)];
+  return drawing && { photo: drawing.src };
 }
 
 // What the name and face are asked as: this group's, or, with no usual
@@ -723,6 +784,8 @@ function MarkColors({
   );
 }
 
+// グループを作る: the group above, its name and its mark, and below it how
+// you will appear in it, in the row the invitation to join has.
 export function NewGroupPage({
   freeColor,
   profile,
@@ -733,29 +796,47 @@ export function NewGroupPage({
   freeColor: number;
   profile: Profile;
   onBack: () => void;
-  onCreate: (group: { name: string; mark: GroupMark; myName: string }) => void;
+  // `mine` is the name and face of its own picked here, if any.
+  onCreate: (group: {
+    name: string;
+    mark: GroupMark;
+    mine?: GroupProfile;
+  }) => void;
 }) {
   const [name, setName] = useState("");
-  // Starts as your usual name; change it only if this group calls you
-  // something else.
-  const [myName, setMyName] = useState(profile.name);
+  const [mine, setMine] = useState(() => firstFace(profile));
   // Once picked, the mark stays when the name changes afterwards; until
   // then it follows the name, in the first color the groups do not use.
   const [picked, setPicked] = useState<GroupMark>();
   const mark = picked ?? guessGroupMark(name, freeColor);
-  const [editingMark, setEditingMark] = useState(false);
-  const canCreate = fitsGroupName(name.trim()) && myName.trim() !== "";
-  if (editingMark) {
+  const [editing, setEditing] = useState<"mark" | "profile">();
+  const group: GroupSummary = { id: "", mark, mine, name: name.trim() };
+  const canCreate =
+    fitsGroupName(group.name) && profileIn(group, profile).name !== "";
+  const close = () => {
+    setEditing(undefined);
+  };
+  if (editing === "mark") {
     return (
       <GroupMarkPage
         back="グループを作る"
         mark={mark}
         name={name}
         freeColor={freeColor}
-        onBack={() => {
-          setEditingMark(false);
-        }}
+        onBack={close}
         onChange={setPicked}
+      />
+    );
+  }
+  if (editing === "profile") {
+    return (
+      <GroupProfilePage
+        back="グループを作る"
+        going="作ると、"
+        group={group}
+        onBack={close}
+        onChange={setMine}
+        profile={profile}
       />
     );
   }
@@ -769,7 +850,7 @@ export function NewGroupPage({
             disabled={!canCreate}
             prominent
             onClick={() => {
-              onCreate({ mark, myName: myName.trim(), name: name.trim() });
+              onCreate({ mark, mine, name: group.name });
             }}
           >
             作る
@@ -796,26 +877,19 @@ export function NewGroupPage({
         <MarkRow
           mark={mark}
           onOpen={() => {
-            setEditingMark(true);
+            setEditing("mark");
           }}
-        />
-        <ListRow
-          label="このグループでの名前"
-          control={
-            <>
-              <LimitedInput
-                align="end"
-                look="inline"
-                kind="personName"
-                onValueChange={setMyName}
-                placeholder="例：さくら"
-                value={myName}
-              />
-            </>
-          }
         />
       </List>
       <Note>アイコンはグループ名から自動で入ります。</Note>
+      <GroupProfileSection
+        going="作ると、"
+        group={group}
+        onOpen={() => {
+          setEditing("profile");
+        }}
+        profile={profile}
+      />
     </>
   );
 }

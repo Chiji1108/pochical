@@ -1,0 +1,47 @@
+{
+  "about": "How someone joining a group or making one is asked for their name and photo (spec/sync-protocol.md, Profile). asking: decided once, when the device knows the account's usual name and photo, which is once the user's socket has caught up in this run of the app (`caughtUp`); never from a database that holds no profile yet, as a device just signed in to an account in use holds none until then. `expected` is null while it is not known, and the screen then shows the usual ones as it reads them and puts nothing in place; else `asUsual` says the name and face asked become the usual ones (no usual name), and `drawing` that one of the drawings is put in place (no usual name and no usual photo).",
+  "asking": [
+    {
+      "name": "not caught up, nothing held: not known",
+      "caughtUp": false,
+      "usualName": "",
+      "usualPhoto": "",
+      "expected": null
+    },
+    {
+      "name": "not caught up, a profile held: not known",
+      "caughtUp": false,
+      "usualName": "さくら",
+      "usualPhoto": "photo",
+      "expected": null
+    },
+    {
+      "name": "caught up, no usual name or photo: asked as the usual ones, a drawing in place",
+      "caughtUp": true,
+      "usualName": "",
+      "usualPhoto": "",
+      "expected": { "asUsual": true, "drawing": true }
+    },
+    {
+      "name": "caught up, a usual photo and no name: asked as the usual ones, the photo stays",
+      "caughtUp": true,
+      "usualName": "",
+      "usualPhoto": "photo",
+      "expected": { "asUsual": true, "drawing": false }
+    },
+    {
+      "name": "caught up, a usual name and no photo: this group's own, no drawing",
+      "caughtUp": true,
+      "usualName": "さくら",
+      "usualPhoto": "",
+      "expected": { "asUsual": false, "drawing": false }
+    },
+    {
+      "name": "caught up, a usual name and photo: this group's own, no drawing",
+      "caughtUp": true,
+      "usualName": "さくら",
+      "usualPhoto": "photo",
+      "expected": { "asUsual": false, "drawing": false }
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+<!-- Code generated from design/ by `mise run gen`. Do not edit. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+  <rect width="640" height="640" fill="#dbe9f6"/>
+<path d="M262 345 h-62 q-42 0 -42 -42 v-48 M378 300 h62 q42 0 42 -42 v-40" fill="none" stroke="#7fb58a" stroke-width="58" stroke-linecap="round"/><rect x="252" y="130" width="136" height="340" rx="68" fill="#7fb58a"/><path d="M296 190 v230 M344 190 v230" stroke="#a9d3b0" stroke-width="8" stroke-linecap="round" opacity="0.7"/><circle cx="320" cy="128" r="32" fill="#f4a8b8"/><circle cx="320" cy="128" r="12" fill="#f3c44f"/><path d="M222 480 h196 l-22 160 h-152 Z" fill="#d98a6a"/><rect x="200" y="446" width="240" height="48" rx="14" fill="#e39c7c"/>
+</svg>

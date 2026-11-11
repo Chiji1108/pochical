@@ -16,7 +16,6 @@ import { withNotice } from "../lib/design-group-data";
 import type {
   Group,
   GroupMark,
-  GroupProfile,
   GroupSummary,
   Profile,
 } from "../lib/design-group-data";
@@ -26,10 +25,10 @@ import { useLongPress } from "./design-chat-actions";
 import { PhonePopover, PopoverMenuItem } from "./design-chat-popover";
 import { GroupIcon, PhotoAvatar, hub, markFrame } from "./design-group-parts";
 import {
+  firstFace,
   GroupProfilePage,
-  GroupProfileRow,
+  GroupProfileSection,
   profileIn,
-  profileTitle,
 } from "./design-group-settings";
 import { PageHeader } from "./design-header";
 import { List, ListRow } from "./design-list";
@@ -42,7 +41,6 @@ import {
   Note,
   Screen,
   ScreenScroll,
-  Section,
 } from "./design-ui";
 
 // Joining a group: reading a QR code, the invitation someone opens, and
@@ -388,7 +386,7 @@ export function JoinScreen({
   const invite = sampleInvite();
   const setChats = useUser((state) => state.setChats);
   const setProfile = useUser((state) => state.setProfile);
-  const [mine, setMine] = useState<GroupProfile>();
+  const [mine, setMine] = useState(() => firstFace(profile));
   const [editing, setEditing] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
   const names = invite.members.map((member) => member.name);
@@ -430,7 +428,7 @@ export function JoinScreen({
           <GroupProfilePage
             back={invite.group}
             group={group}
-            joining
+            going="参加すると、"
             onBack={() => {
               setEditing(false);
             }}
@@ -468,17 +466,14 @@ export function JoinScreen({
             {members}
           </button>
         </div>
-        <Section title={profileTitle(profile)}>
-          <List>
-            <GroupProfileRow
-              group={group}
-              onOpen={() => {
-                setEditing(true);
-              }}
-              profile={profile}
-            />
-          </List>
-        </Section>
+        <GroupProfileSection
+          going="参加すると、"
+          group={group}
+          onOpen={() => {
+            setEditing(true);
+          }}
+          profile={profile}
+        />
       </ScreenScroll>
       <div className={joinScreen.foot}>
         <p className={joinScreen.consent}>
@@ -489,14 +484,16 @@ export function JoinScreen({
           onClick={() => {
             // Told here, so that joining from the hub's QR and from a
             // link opened on the calendar both say so in the chat.
-            const { name } = profileIn(group, profile);
+            const shown = profileIn(group, profile);
+            const { name } = shown;
             setChats((chats) =>
               withNotice(chats, group.id, `${name}がグループに参加しました`)
             );
             // With no usual name yet, the name and face become the usual
             // ones, which the group then shows as anyone's.
             if (profile.name === "") {
-              setProfile({ name, photo: mine?.photo });
+              // A usual photo stays unless one was picked or it was taken off.
+              setProfile(shown);
               onJoin({ ...group, mine: undefined });
               return;
             }
