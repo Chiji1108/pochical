@@ -609,16 +609,21 @@ private struct LookEditor: View {
     let shown = tab ?? look.style
     Form {
       Section {
-        ShiftMark(pattern: draft, size: 48)
-          .environment(\.look, sampleLook(shown))
-          .frame(maxWidth: .infinity)
-          .padding(.vertical, 12)
-        Picker("印の種類", selection: Binding(get: { shown }, set: { tab = $0 })) {
-          Text("アイコン").tag(MarkStyle.icon)
-          Text("絵文字").tag(MarkStyle.emoji)
-          Text("文字").tag(MarkStyle.badge)
+        // One row, as the group's mark page's: the mark and the tabs that
+        // choose its look are one piece, with no separator between them.
+        VStack(spacing: 16) {
+          ShiftMark(pattern: draft, size: 48)
+            .environment(\.look, sampleLook(shown))
+            .frame(maxWidth: .infinity)
+            .padding(.top, 12)
+          Picker("印の種類", selection: Binding(get: { shown }, set: { tab = $0 })) {
+            Text("アイコン").tag(MarkStyle.icon)
+            Text("絵文字").tag(MarkStyle.emoji)
+            Text("文字").tag(MarkStyle.badge)
+          }
+          .pickerStyle(.segmented)
         }
-        .pickerStyle(.segmented)
+        .padding(.vertical, 8)
       }
       .settingsRows()
 

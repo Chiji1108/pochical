@@ -27,6 +27,7 @@ import monthWeeks from "../../../spec/vectors/month.json";
 import ownDays from "../../../spec/vectors/own-days.json";
 import patternChanges from "../../../spec/vectors/patterns.json";
 import periods from "../../../spec/vectors/periods.json";
+import profileVectors from "../../../spec/vectors/profile.json";
 import reconnect from "../../../spec/vectors/reconnect.json";
 import reminders from "../../../spec/vectors/reminders.json";
 import repeat from "../../../spec/vectors/repeat.json";
@@ -41,6 +42,7 @@ import widgets from "../../../spec/vectors/widgets.json";
 import { bytesOf } from "../src/components/design-chat-photos";
 import { memberLine } from "../src/components/design-group-join";
 import {
+  firstFace,
   guessGroupMark,
   nextGroupColor,
 } from "../src/components/design-group-settings";
@@ -799,6 +801,29 @@ describe("spec/vectors/groups.json", () => {
     test(`nextGroupColor: ${name}`, () => {
       expect(nextGroupColor(marks.map(groupMarkOf))).toBe(expected);
     });
+  }
+});
+
+// The prototype is one device that always knows its profile, so only the
+// cases where the account's is known apply: whether a drawing is put in
+// place.
+describe("spec/vectors/profile.json", () => {
+  for (const {
+    name,
+    caughtUp,
+    usualName,
+    usualPhoto,
+    expected,
+  } of profileVectors.asking) {
+    if (caughtUp && expected) {
+      test(`asking: ${name}`, () => {
+        const face = firstFace({
+          name: usualName,
+          photo: usualPhoto || undefined,
+        });
+        expect(face !== undefined).toBe(expected.drawing);
+      });
+    }
   }
 });
 

@@ -1,6 +1,7 @@
 package app.pochical.kit
 
 import app.pochical.design.Chat
+import app.pochical.v1.ChatContent
 import app.pochical.v1.ChatLine as WireLine
 import app.pochical.v1.ChatNotice
 import app.pochical.v1.change
@@ -11,6 +12,7 @@ import app.pochical.v1.chatLine
 import app.pochical.v1.chatNotice
 import app.pochical.v1.chatTakenBack
 import app.pochical.v1.chatWords
+import java.util.HexFormat
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.Serializable
 import org.junit.After
@@ -43,9 +45,23 @@ internal data class ChatVectors(
   val albumRows: List<AlbumRows>,
   val folded: List<Folded>,
   val reportable: List<Reportable>,
+  val content: List<Content>,
+  val pushBody: List<PushBody>,
   val withdrawn: List<Withdrawn>,
   val readNotified: List<ReadNotified>,
 ) {
+  @Serializable data class ContentExpected(val kind: String, val words: String? = null)
+
+  /** A pochical.v1.ChatContent as the wire carries it, its [bytes] in hex. */
+  @Serializable
+  data class Content(override val name: String, val bytes: String, val expected: ContentExpected) : VectorCase {
+    val wire: ChatContent
+      get() = ChatContent.parseFrom(HexFormat.of().parseHex(bytes))
+  }
+
+  @Serializable
+  data class PushBody(override val name: String, val key: String, val args: List<String>, val known: List<String>, val expected: Localized) : VectorCase
+
   @Serializable
   data class ReadNotified(override val name: String, val shown: List<Shown>, val read: KnownRead, val expected: List<String>) : VectorCase
 
@@ -194,6 +210,15 @@ class ChatVectorsTest {
       reportable(kind(case.kind), case.mine, placeRules(if (case.place == "support") Chat.supportPlace else "group-1"))
     }
 
+  @Test
+  fun content() =
+    chat.content.checkEach({ it.expected.kind to it.expected.words.takeIf { _ -> it.expected.kind == "words" } }) { case ->
+      val content = LineContent.of(case.wire)
+      content.kind.key to (content as? LineContent.Words)?.text
+    }
+
+  @Test fun pushBody() = chat.pushBody.checkEach({ it.expected }) { case -> Localized(case.key, case.args).body { it in case.known } }
+
   @Test fun albumRows() = chat.albumRows.checkEach({ it.expected }) { albumRows(it.count) }
 
   @Test fun openingFrom() = chat.openingFrom.checkEach({ it.expected }) { openingFrom(it.latest, it.read) }
@@ -302,6 +327,15 @@ internal fun wordsLine(seq: Long, author: String, text: String = "$seq", thread:
     content = chatContent { words = chatWords { this.text = text } }
   }
 
+/**
+ * A line of a kind added after the app, as the group's socket brings it: a field its content has
+ * not, the first such of spec/vectors/chat.json's content.
+ */
+internal fun laterKindLine(seq: Long, author: String): WireLine {
+  val later = chat.content.first { it.expected.kind == LineKind.Unknown.key && it.bytes.isNotEmpty() }
+  return WireLine.parseFrom(wordsLine(seq, author).toBuilder().setContent(later.wire).build().toByteArray())
+}
+
 @RunWith(RobolectricTestRunner::class)
 class ChatWindowTest {
   private val database = testDatabase()
@@ -339,8 +373,7 @@ internal suspend fun SyncDao.takeChanges(lines: List<WireLine>, groupId: String)
 
 class LineContentTest {
   @Test
-  fun aNoticeOrKindThisAppDoesNotKnowIsHidden() {
-    assertEquals(LineContent.Hidden, LineContent.of(chatContent {}))
+  fun aNoticeThisAppCannotWordIsHidden() {
     assertEquals(LineContent.Hidden, LineContent.of(chatContent { notice = chatNotice {} }))
     assertEquals(LineContent.Hidden, LineContent.of(chatContent { hidden = chatHidden {} }))
     assertEquals(LineContent.Unsent, LineContent.of(chatContent { unsent = chatTakenBack {} }))
