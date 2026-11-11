@@ -62,7 +62,7 @@ const groupSocket = async (
 // A frame's news of the group's end: the group's value, and the chat's
 // notice lines with who wrote each.
 const endIn = (frame: ServerFrame) =>
-  changesIn(frame).flatMap(({ kind }) => {
+  changesIn(frame).flatMap(({ kind }): object[] => {
     if (kind.case === "groupProfile") {
       return [{ endsAtMs: kind.value.endsAtMs }];
     }

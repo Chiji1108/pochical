@@ -57,6 +57,9 @@ export type Group = {
   // as LINE mutes a room. Yours alone, kept with your account so the
   // server leaves out the push.
   mutedChats?: string[];
+  // When the group ends for everyone, in ms since the epoch
+  // (lib/group-end.ts); none for a group with no end.
+  endsAt?: number;
   members: Member[];
 };
 

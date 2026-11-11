@@ -24,6 +24,14 @@ import type {
   Profile,
 } from "../lib/design-group-data";
 import { useUser } from "../lib/design-user-store";
+import {
+  aMonthOn,
+  endDay,
+  endNote,
+  endsAt,
+  endWords,
+  today,
+} from "../lib/group-end";
 import { firstCharacter } from "../lib/text-limits";
 import {
   Choice,
@@ -34,7 +42,12 @@ import {
   SegmentedControl,
 } from "./design-choices";
 import { EmojiPickerSheet } from "./design-emoji-picker";
-import { LimitedInput, MarkLetterInput, markValue } from "./design-fields";
+import {
+  DayInput,
+  LimitedInput,
+  MarkLetterInput,
+  markValue,
+} from "./design-fields";
 import {
   Avatar,
   GroupIcon,
@@ -82,6 +95,7 @@ export function GroupSettingsPage({
   profile,
   onChange,
   onEdit,
+  onEnd,
   onMuted,
   onInvite,
   onBack,
@@ -96,11 +110,15 @@ export function GroupSettingsPage({
   onMember?: (member: Member) => void;
   onLeave: () => void;
   onChange: (mine: GroupProfile | undefined) => void;
+  // The group's end set, changed or taken away (undefined).
+  onEnd: (endsAt: number | undefined) => void;
   onEdit: (edit: GroupEdit) => void;
   onInvite: () => void;
   onBack: () => void;
 }) {
-  const [view, setView] = useState<"settings" | "edit" | "profile">("settings");
+  const [view, setView] = useState<"settings" | "edit" | "end" | "profile">(
+    "settings"
+  );
   const mentionsWhenMuted = useUser((state) => state.mentionsWhenMuted);
   const [leaving, setLeaving] = useState(false);
   const segmented = useContext(SegmentedContext);
@@ -115,6 +133,20 @@ export function GroupSettingsPage({
         }}
         onSave={(edit) => {
           onEdit(edit);
+          setView("settings");
+        }}
+      />
+    );
+  }
+  if (view === "end") {
+    return (
+      <GroupEndPage
+        endsAt={group.endsAt}
+        onCancel={() => {
+          setView("settings");
+        }}
+        onSave={(end) => {
+          onEnd(end);
           setView("settings");
         }}
       />
@@ -153,8 +185,17 @@ export function GroupSettingsPage({
               </>
             }
           />
+          <GroupEndRow
+            endsAt={group.endsAt}
+            onOpen={() => {
+              setView("end");
+            }}
+          />
         </List>
-        <Note>グループ名とアイコンは、メンバー全員に表示されます。</Note>
+        <Note>
+          グループ名とアイコンは、メンバー全員に表示されます。
+          {group.endsAt !== undefined && endNote}
+        </Note>
       </Section>
       <Section title="このグループでのあなた">
         <List>
@@ -248,6 +289,86 @@ export function GroupSettingsPage({
 }
 
 export type GroupEdit = { name: string; mark: GroupMark };
+
+// The group's end as a row, in its settings and where a group is made:
+// the day it ends, or なし.
+function GroupEndRow({
+  endsAt: end,
+  onOpen,
+}: {
+  endsAt: number | undefined;
+  onOpen: () => void;
+}) {
+  return (
+    <ListRow
+      label="終了日"
+      onClick={onOpen}
+      value={end === undefined ? "なし" : endWords(endDay(end), today)}
+    />
+  );
+}
+
+// The group's end (spec/sync-protocol.md, A group's end): a draft until
+// 保存, as its name and icon are, so a day tapped on the way reaches no
+// one. Any member sets it, moves it or takes it away.
+function GroupEndPage({
+  endsAt: end,
+  onCancel,
+  onSave,
+}: {
+  endsAt: number | undefined;
+  onCancel: () => void;
+  onSave: (endsAt: number | undefined) => void;
+}) {
+  const [on, setOn] = useState(end !== undefined);
+  const [day, setDay] = useState(end === undefined ? aMonthOn : endDay(end));
+  const draft = on ? endsAt(day) : undefined;
+  return (
+    <>
+      <PageHeader
+        leading={
+          <IconButton label="キャンセル" onClick={onCancel}>
+            <X aria-hidden="true" size={22} />
+          </IconButton>
+        }
+        trailing={
+          <HeaderAction
+            disabled={draft === end}
+            prominent
+            onClick={() => {
+              onSave(draft);
+            }}
+          >
+            保存
+          </HeaderAction>
+        }
+        title="終了日"
+      />
+      <List>
+        <SwitchRow checked={on} label="終了日をつける" onChange={setOn} />
+        {on && (
+          <ListRow
+            label="日付"
+            control={
+              <>
+                <DayInput
+                  label="日付"
+                  min={today}
+                  onValueChange={setDay}
+                  value={day}
+                />
+              </>
+            }
+          />
+        )}
+      </List>
+      <Note>
+        {endNote}
+        チャット、写真、シフトの共有も消え、元に戻せません。終了日は、メンバーならだれでも変更できます。
+      </Note>
+    </>
+  );
+}
 
 // The group's name and icon, which everyone in it sees: changes stay a
 // draft until 保存, so picking a photo or an emoji on the way reaches no
@@ -733,8 +854,15 @@ export function NewGroupPage({
   freeColor: number;
   profile: Profile;
   onBack: () => void;
-  onCreate: (group: { name: string; mark: GroupMark; myName: string }) => void;
+  onCreate: (group: {
+    name: string;
+    mark: GroupMark;
+    myName: string;
+    endsAt?: number;
+  }) => void;
 }) {
+  const [end, setEnd] = useState<number>();
+  const [editingEnd, setEditingEnd] = useState(false);
   const [name, setName] = useState("");
   // Starts as your usual name; change it only if this group calls you
   // something else.
@@ -745,6 +873,20 @@ export function NewGroupPage({
   const mark = picked ?? guessGroupMark(name, freeColor);
   const [editingMark, setEditingMark] = useState(false);
   const canCreate = fitsGroupName(name.trim()) && myName.trim() !== "";
+  if (editingEnd) {
+    return (
+      <GroupEndPage
+        endsAt={end}
+        onCancel={() => {
+          setEditingEnd(false);
+        }}
+        onSave={(saved) => {
+          setEnd(saved);
+          setEditingEnd(false);
+        }}
+      />
+    );
+  }
   if (editingMark) {
     return (
       <GroupMarkPage
@@ -769,7 +911,12 @@ export function NewGroupPage({
             disabled={!canCreate}
             prominent
             onClick={() => {
-              onCreate({ mark, myName: myName.trim(), name: name.trim() });
+              onCreate({
+                endsAt: end,
+                mark,
+                myName: myName.trim(),
+                name: name.trim(),
+              });
             }}
           >
             作る
@@ -813,6 +960,12 @@ export function NewGroupPage({
               />
             </>
           }
+        />
+        <GroupEndRow
+          endsAt={end}
+          onOpen={() => {
+            setEditingEnd(true);
+          }}
         />
       </List>
       <Note>アイコンはグループ名から自動で入ります。</Note>
