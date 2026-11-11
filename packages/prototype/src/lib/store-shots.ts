@@ -101,6 +101,52 @@ export type WallPlace = {
   whole?: true;
 };
 
+// The shot the wall of widgets is, which other pictures are drawn from too
+// (WALL_PICTURES).
+export const WALL_SHOT = {
+  headline: ["次の休みも、", "ウィジェットで。"],
+  kind: "wall",
+  name: "widgets",
+  raw: ["02-widgets", "02-widgets-sumi"],
+  tiles: [
+    { column: 0, file: "calendar-large.png", look: 1, row: 0 },
+    { column: 2, file: "calendar-medium.png", look: 0, row: 0 },
+    { column: 4, file: "simple-day-medium.png", look: 0, row: 0 },
+    { column: 2, file: "simple-medium.png", look: 1, row: 1 },
+    { column: 4, file: "upcoming-day-medium.png", look: 1, row: 1 },
+    { column: 0, file: "upcoming-medium.png", look: 0, row: 2 },
+    { column: 2, file: "upcoming-small.png", look: 1, row: 2 },
+    { column: 3, file: "next-off-group-small.png", look: 0, row: 2 },
+    { column: 4, file: "next-off-person-small.png", look: 1, row: 2 },
+    { column: 5, file: "simple-after-small.png", look: 0, row: 2 },
+    { column: 0, file: "upcoming-person-medium.png", look: 1, row: 3 },
+    { column: 2, file: "next-off-small.png", look: 0, row: 3, whole: true },
+    { column: 3, file: "upcoming-person-small.png", look: 1, row: 3 },
+    { column: 4, file: "simple-night-medium.png", look: 0, row: 3 },
+    { column: 0, file: "calendar-large.png", look: 0, row: 4 },
+    {
+      column: 2,
+      file: "next-off-day-small.png",
+      look: 0,
+      row: 4,
+      whole: true,
+    },
+    { column: 3, file: "now-small.png", look: 0, row: 4, whole: true },
+    { column: 4, file: "simple-after-medium.png", look: 1, row: 4 },
+    { column: 2, file: "calendar-medium.png", look: 1, row: 5 },
+    { column: 4, file: "upcoming-person-small.png", look: 0, row: 5 },
+    { column: 5, file: "now-small.png", look: 1, row: 5 },
+    { column: 0, file: "simple-medium.png", look: 1, row: 6 },
+    { column: 2, file: "upcoming-medium.png", look: 0, row: 6 },
+    { column: 4, file: "upcoming-day-medium.png", look: 0, row: 6 },
+    { column: 0, file: "upcoming-person-medium.png", look: 0, row: 7 },
+    { column: 2, file: "calendar-large.png", look: 1, row: 7 },
+    { column: 4, file: "simple-day-medium.png", look: 1, row: 7 },
+    { column: 0, file: "simple-night-medium.png", look: 1, row: 8 },
+    { column: 4, file: "calendar-medium.png", look: 0, row: 8 },
+  ],
+} as const satisfies StoreShot;
+
 // The shots in the stores' order, each headline a line an entry. They speak
 // to people on night and rotating shifts. The first three are what a
 // search's results show, so they carry the look; Google Play takes eight
@@ -126,49 +172,7 @@ export const STORE_SHOTS = [
     name: "entry",
     raw: "01-entry.png",
   },
-  {
-    headline: ["次の休みも、", "ウィジェットで。"],
-    kind: "wall",
-    name: "widgets",
-    raw: ["02-widgets", "02-widgets-sumi"],
-    tiles: [
-      { column: 0, file: "calendar-large.png", look: 1, row: 0 },
-      { column: 2, file: "calendar-medium.png", look: 0, row: 0 },
-      { column: 4, file: "simple-day-medium.png", look: 0, row: 0 },
-      { column: 2, file: "simple-medium.png", look: 1, row: 1 },
-      { column: 4, file: "upcoming-day-medium.png", look: 1, row: 1 },
-      { column: 0, file: "upcoming-medium.png", look: 0, row: 2 },
-      { column: 2, file: "upcoming-small.png", look: 1, row: 2 },
-      { column: 3, file: "next-off-group-small.png", look: 0, row: 2 },
-      { column: 4, file: "next-off-person-small.png", look: 1, row: 2 },
-      { column: 5, file: "simple-after-small.png", look: 0, row: 2 },
-      { column: 0, file: "upcoming-person-medium.png", look: 1, row: 3 },
-      { column: 2, file: "next-off-small.png", look: 0, row: 3, whole: true },
-      { column: 3, file: "upcoming-person-small.png", look: 1, row: 3 },
-      { column: 4, file: "simple-night-medium.png", look: 0, row: 3 },
-      { column: 0, file: "calendar-large.png", look: 0, row: 4 },
-      {
-        column: 2,
-        file: "next-off-day-small.png",
-        look: 0,
-        row: 4,
-        whole: true,
-      },
-      { column: 3, file: "now-small.png", look: 0, row: 4, whole: true },
-      { column: 4, file: "simple-after-medium.png", look: 1, row: 4 },
-      { column: 2, file: "calendar-medium.png", look: 1, row: 5 },
-      { column: 4, file: "upcoming-person-small.png", look: 0, row: 5 },
-      { column: 5, file: "now-small.png", look: 1, row: 5 },
-      { column: 0, file: "simple-medium.png", look: 1, row: 6 },
-      { column: 2, file: "upcoming-medium.png", look: 0, row: 6 },
-      { column: 4, file: "upcoming-day-medium.png", look: 0, row: 6 },
-      { column: 0, file: "upcoming-person-medium.png", look: 0, row: 7 },
-      { column: 2, file: "calendar-large.png", look: 1, row: 7 },
-      { column: 4, file: "simple-day-medium.png", look: 1, row: 7 },
-      { column: 0, file: "simple-night-medium.png", look: 1, row: 8 },
-      { column: 4, file: "calendar-medium.png", look: 0, row: 8 },
-    ],
-  },
+  WALL_SHOT,
   {
     callout: "together",
     headline: ["家族や友人と、", "シフトを共有。"],
@@ -262,9 +266,10 @@ export type Rect = { height: number; left: number; top: number; width: number };
 // card's margin to the picture's sides; and the card in the picture, over
 // the part in the phone, which stands in the picture's middle as tall as
 // the room under the headline. The card reaches past its part by what the
-// part grows and its own room; where its upper or lower edge would cut
-// through a piece of the screen, the edge goes on to that piece's far
-// side, so that what shows over and under the card is whole.
+// part grows and its own room, and then takes in every piece of the
+// screen it would lie over a part of, on whichever side that is: what
+// shows beside the card is whole, and what it covers is covered whole.
+// The part is drawn in the card's middle.
 export const calloutOf = (
   measured: Rect,
   pieces: readonly Rect[],
@@ -279,33 +284,52 @@ export const calloutOf = (
     (100 - 2 * CALLOUT.margin - 2 * CALLOUT.pad) /
       ((screen.width * phone) / unit)
   );
-  const reach =
-    ((scale - 1) * measured.height) / 2 + (CALLOUT.pad * unit) / phone;
-  const cutBy = (edge: number) =>
-    pieces.find((piece) => piece.top < edge && edge < piece.top + piece.height);
-  let top = measured.top - reach;
-  let foot = measured.top + measured.height + reach;
-  // Until neither edge is inside a piece: each move takes an edge to a
-  // piece's end, of which there are no more than twice the pieces.
-  for (let moves = 0; moves <= pieces.length * 2; moves += 1) {
-    const over = cutBy(top);
-    const under = cutBy(foot);
-    if (over === undefined && under === undefined) {
-      break;
-    }
-    top = over?.top ?? top;
-    foot = under === undefined ? foot : under.top + under.height;
+  const pad = (CALLOUT.pad * unit) / phone;
+  const reach = (length: number) => ((scale - 1) * length) / 2 + pad;
+  const sides = pieces.map((piece) => ({
+    foot: piece.top + piece.height,
+    left: piece.left,
+    right: piece.left + piece.width,
+    top: piece.top,
+  }));
+  type Sides = (typeof sides)[number];
+  // A piece `card` lies over a part of.
+  const cutBy = (card: Sides) =>
+    sides.find(
+      (piece) =>
+        piece.left < card.right &&
+        card.left < piece.right &&
+        piece.top < card.foot &&
+        card.top < piece.foot &&
+        (piece.left < card.left ||
+          card.right < piece.right ||
+          piece.top < card.top ||
+          card.foot < piece.foot)
+    );
+  // The card over the phone, in the screen's pixels: each turn takes one
+  // more piece in whole, and none in leaves again.
+  let card = {
+    foot: measured.top + measured.height + reach(measured.height),
+    left: measured.left - reach(measured.width),
+    right: measured.left + measured.width + reach(measured.width),
+    top: measured.top - reach(measured.height),
+  };
+  let cut = cutBy(card);
+  while (cut !== undefined) {
+    card = {
+      foot: Math.max(card.foot, cut.foot),
+      left: Math.min(card.left, cut.left),
+      right: Math.max(card.right, cut.right),
+      top: Math.min(card.top, cut.top),
+    };
+    cut = cutBy(card);
   }
-  const width = measured.width * phone * scale + 2 * CALLOUT.pad * unit;
   return {
     card: {
-      height: (foot - top) * phone,
-      left:
-        picture.width / 2 +
-        (measured.left + measured.width / 2 - screen.width / 2) * phone -
-        width / 2,
-      top: headline + top * phone,
-      width,
+      height: (card.foot - card.top) * phone,
+      left: picture.width / 2 + (card.left - screen.width / 2) * phone,
+      top: headline + card.top * phone,
+      width: (card.right - card.left) * phone,
     },
     phone,
     scale,
@@ -317,23 +341,6 @@ export const calloutOf = (
 export const storeShotFile = (name: StoreShotName): string => {
   const order = STORE_SHOTS.findIndex((shot) => shot.name === name) + 1;
   return `${String(order).padStart(2, "0")}-${name}.png`;
-};
-
-// The wall of widgets once more, for the site's top page (apps/web): the
-// `shot` of `store` with no headline and no sky, on the paper alone, at
-// twice the size the page shows it, in assets/widget-wall.png.
-export const SITE_WALL = {
-  height: 1200,
-  name: "widget-wall",
-  shot: "widgets",
-  store: "ios",
-  width: 780,
-} as const satisfies {
-  height: number;
-  name: string;
-  shot: StoreShotName;
-  store: StoreId;
-  width: number;
 };
 
 // The sizes a widget on the wall comes in, by the cells of a Home Screen
@@ -363,11 +370,11 @@ const cellsOf = (file: string) => {
 // picture's height.
 export const WALL = { columns: 6, rows: 9 } as const;
 
-// How the wall lies in its picture, lengths in hundredths of the
-// picture's width: a cell's width and the gap between cells; how far down
-// the picture the grid's middle is, in its heights; how far the grid is
-// turned, in degrees; and where the fade under the headline ends, in the
-// headline's heights.
+// How the wall is shaped, lengths in units, a unit a hundredth of the
+// width of a store's picture: a cell's width and the gap between cells;
+// how far down a store's picture the grid's middle is, in its heights;
+// how far the grid is turned, in degrees; and where the fade under the
+// headline ends, in the headline's heights.
 export const WALL_SHAPE = {
   cell: 25,
   clear: 1.25,
@@ -375,6 +382,110 @@ export const WALL_SHAPE = {
   middle: 0.54,
   turn: -12,
 } as const;
+
+// Where the wall lies in a picture, in the picture's pixels: how long a
+// unit is, where the grid's middle is, and how many times the grid is laid
+// side by side, for a picture wider than one covers.
+export type WallLie = {
+  across: number;
+  middle: readonly [number, number];
+  unit: number;
+};
+
+// The wall as it lies in a store's picture, and in any other of its shape.
+export const wallLieOf = (picture: {
+  height: number;
+  width: number;
+}): WallLie => ({
+  across: 1,
+  middle: [picture.width / 2, picture.height * WALL_SHAPE.middle],
+  unit: picture.width / 100,
+});
+
+// A line of words a picture carries: its lines, their size in the
+// picture's pixels, and where their middle is.
+export type PictureLine = {
+  middle: readonly [number, number];
+  size: number;
+  words: readonly string[];
+};
+
+// How tall a line of a picture's title is in its size, and how far apart
+// its letters are set (site-picture.tsx's pictureTitle).
+export const TITLE = { line: 1.35, spacing: 0.01 } as const;
+
+// The room a picture's line takes at most, every letter as wide as it is
+// tall: what the wall clears around, and what a safe area is to hold.
+export const lineBoxOf = ({ middle, size, words }: PictureLine): Rect => {
+  const letters = Math.max(...words.map((line) => line.length));
+  const width = letters * size * (1 + TITLE.spacing);
+  const height = words.length * size * TITLE.line;
+  return {
+    height,
+    left: middle[0] - width / 2,
+    top: middle[1] - height / 2,
+    width,
+  };
+};
+
+// A picture drawn from the wall besides the stores' shot of it: the name
+// /_render/store-shot knows it by, its size, the file it is written to,
+// from the repository's root, and the store whose widgets it shows.
+// `lie` is where the wall lies in it, as in a store's picture without;
+// `line` the words it carries over the wall, which clears around them,
+// none without; and `safe` the part of it every device shows, which is to
+// hold the line and the widgets marked `whole`, anywhere without. A
+// `plain` one has no sky behind the wall, for a page that has its own
+// ground.
+export type WallPicture = {
+  file: string;
+  height: number;
+  lie?: WallLie;
+  line?: PictureLine;
+  name: string;
+  plain?: true;
+  safe?: Rect;
+  store: StoreId;
+  width: number;
+};
+
+// The site's top page (apps/web) shows the wall too, on its own paper: as
+// it lies in a store's picture, at twice the size the page shows it.
+export const SITE_WALL = {
+  file: "packages/prototype/src/assets/widget-wall.png",
+  height: 1200,
+  name: "widget-wall",
+  plain: true,
+  store: "ios",
+  width: 780,
+} as const satisfies WallPicture;
+
+// The pictures drawn from the wall. The App Store's product page header
+// (iOS 27) is 21:9, and devices crop it to no less than its art safe area:
+// the rectangle inside the line Apple's template draws, which is 4 pixels
+// wide from 1097, 493 to 2742, 1153.
+// https://developer.apple.com/help/app-store-connect/reference/app-information/creative-assets-specifications
+// The wall fills it at a quarter of the size a store's picture of that
+// width would have it, laid four times side by side, the widgets marked
+// `whole` at the safe area's leading side and the site's own line beside
+// them.
+export const WALL_PICTURES = [
+  SITE_WALL,
+  {
+    file: "store/product-page-header.png",
+    height: 1646,
+    lie: { across: 4, middle: [2294, 755], unit: 10 },
+    line: {
+      middle: [2360, 823],
+      size: 140,
+      words: ["シフトを、", "ポチッと。"],
+    },
+    name: "product-page-header",
+    safe: { height: 653, left: 1101, top: 497, width: 1638 },
+    store: "ios",
+    width: 3840,
+  },
+] as const satisfies readonly WallPicture[];
 
 // A widget on the wall: its file in the look numbered `look`, and the
 // cells it covers, counted from 0.
@@ -387,27 +498,31 @@ export type WallTile = {
   rows: number;
 };
 
-// The wall as it is placed: each widget with the cells its size covers.
-export const wallOf = (places: readonly WallPlace[]): WallTile[] =>
-  places.map(({ column, file, look, row }) => ({
-    ...cellsOf(file),
-    column,
-    file,
-    look,
-    row,
-  }));
+// The wall as it is placed, `across` times side by side: each widget with
+// the cells its size covers.
+export const wallOf = (places: readonly WallPlace[], across = 1): WallTile[] =>
+  Array.from({ length: across }, (_, copy) =>
+    places.map(({ column, file, look, row }) => ({
+      ...cellsOf(file),
+      column: column + copy * WALL.columns,
+      file,
+      look,
+      row,
+    }))
+  ).flat();
 
-// A widget's four corners on a picture `tall` times as tall as it is
-// wide, whose cells are `row` times as tall as they are wide, as [across,
-// down] in hundredths of the picture's width.
+// A widget's four corners in a picture the wall lies in as `lie` says,
+// its cells `cellRow` times as tall as they are wide, as [across, down] in
+// the picture's pixels.
 export const wallCornersOf = (
   { column, columns, row, rows }: WallTile,
   cellRow: number,
-  tall: number
+  lie: WallLie
 ): [number, number][] => {
-  const { cell, gap, middle, turn } = WALL_SHAPE;
+  const { cell, gap, turn } = WALL_SHAPE;
   const high = cell * cellRow;
-  const wide = WALL.columns * cell + (WALL.columns - 1) * gap;
+  const across = WALL.columns * lie.across;
+  const wide = across * cell + (across - 1) * gap;
   const down = WALL.rows * high + (WALL.rows - 1) * gap;
   const left = column * (cell + gap);
   const top = row * (high + gap);
@@ -419,12 +534,12 @@ export const wallCornersOf = (
     [right, top],
     [left, foot],
     [right, foot],
-  ].map(([across = 0, along = 0]) => {
-    const x = across - wide / 2;
-    const y = along - down / 2;
+  ].map(([along = 0, under = 0]) => {
+    const x = along - wide / 2;
+    const y = under - down / 2;
     return [
-      50 + x * Math.cos(angle) - y * Math.sin(angle),
-      100 * tall * middle + x * Math.sin(angle) + y * Math.cos(angle),
+      lie.middle[0] + lie.unit * (x * Math.cos(angle) - y * Math.sin(angle)),
+      lie.middle[1] + lie.unit * (x * Math.sin(angle) + y * Math.cos(angle)),
     ];
   });
 };

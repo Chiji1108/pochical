@@ -4,7 +4,14 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Rect
 import android.net.Uri
+import android.view.View
+import android.view.ViewGroup
 import android.view.accessibility.AccessibilityNodeInfo
+import androidx.compose.ui.node.RootForTest
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getAllSemanticsNodes
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.unit.roundToIntRect
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
@@ -114,7 +121,8 @@ class StoreScreenshots {
     device.tap(By.text("端末カレンダーに追加"), By.text("追加先"))
     turnOn("自動で反映")
     photograph("06-device-calendar")
-    measure("06-device-calendar", "reflect" to device.find(switch("自動で反映", on = true)).visibleBounds)
+    device.find(switch("自動で反映", on = true))
+    measure("06-device-calendar", "reflect", Regex("自動で反映.*"))
     device.back(By.text("追加先"))
 
     // The friends' group first, as まい with ひよこ for a face, the usual ones from then on.
@@ -126,8 +134,7 @@ class StoreScreenshots {
     device.tap(By.text("月で見る"), By.text(Pattern.compile("\\d+年\\d+月")))
     photograph("03-group-shifts")
     // The days everyone is off, the first of them and those right under it.
-    val off = device.findObjects(By.desc(Pattern.compile(".*、みんな休み、.*"))).map { it.visibleBounds }.sortedBy { it.top }
-    measure("03-group-shifts", "together" to off.drop(1).fold(off.first()) { run, row -> if (row.top - run.bottom < 2) Rect(run).apply { union(row) } else run })
+    measure("03-group-shifts", "together", Regex(".*、みんな休み、.*"))
 
     // The coworkers' from the calendar again, so the only group in sight after is theirs: as 佐藤 there alone.
     launch("sample", "firstRunDone")
@@ -154,7 +161,7 @@ class StoreScreenshots {
     photograph("04-chat")
     // The poll, by its line, which says what it is. (A line of words is one piece here, its reactions with
     // it: the line that asks for the poll taken in too, the card would cover the answer over it.)
-    measure("04-chat", "poll" to device.find(By.descContains("日にちの投票")).visibleBounds)
+    measure("04-chat", "poll", Regex(".*日にちの投票.*"))
     device.back(By.text("メッセージ"))
 
     // A month that runs from the 15th, the page holding today, and the month put back.
@@ -562,20 +569,46 @@ class StoreScreenshots {
   /** Where what [selector] finds begins on the screen: a row's top, by one of its days. */
   private fun topOf(selector: BySelector): Int = device.find(selector).visibleBounds.top
 
+  /** What a node of the page says, [words], where it is on the screen, [at], and whether no node within it says its own, [alone]. */
+  private class Said(val words: String, val at: Rect, val alone: Boolean)
+
   /**
-   * Writes beside the screen [name] what a callout of it takes (store-shots.ts): where its [parts]
-   * are, and every piece of the screen that says something, each its left, top, width and height in
-   * the screen's pixels.
+   * What the page says, node by node as Compose lays it out, a node that gathers the words within it
+   * read as one. (Not the accessibility tree's bounds: it gives a button smaller than a finger the
+   * place it takes touches in, larger than what is drawn.)
    */
-  private fun measure(name: String, vararg parts: Pair<String, Rect>) {
+  private fun said(): List<Said> {
+    lateinit var said: List<Said>
+    instrumentation.runOnMainSync {
+      val window = ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED).single().window.decorView
+      fun roots(view: View): List<RootForTest> =
+        listOfNotNull(view as? RootForTest) + if (view is ViewGroup) (0 until view.childCount).flatMap { roots(view.getChildAt(it)) } else emptyList()
+      val (left, top) = IntArray(2).also(window::getLocationOnScreen)
+      said =
+        roots(window).flatMap { it.semanticsOwner.getAllSemanticsNodes(mergingEnabled = true) }.mapNotNull { node ->
+          val words = node.config.getOrNull(SemanticsProperties.ContentDescription) ?: node.config.getOrNull(SemanticsProperties.Text)?.map { it.text }
+          val at = node.boundsInWindow.roundToIntRect()
+          if (words.isNullOrEmpty() || at.isEmpty) null
+          else Said(words.joinToString("、"), Rect(left + at.left, top + at.top, left + at.right, top + at.bottom), node.children.isEmpty())
+        }
+    }
+    return said
+  }
+
+  /**
+   * Writes beside the screen [name] what a callout of it takes (store-shots.ts): where its [part]
+   * is, the first node down the screen that says [words] and those saying it right under that one,
+   * with nothing but a line between them, and every piece of the screen that says something, each
+   * its left, top, width and height in the screen's pixels.
+   */
+  private fun measure(name: String, part: String, words: Regex) {
     fun pixels(at: Rect) = "[${at.left},${at.top},${at.width()},${at.height()}]"
-    fun said(node: AccessibilityNodeInfo): List<Rect> =
-      if (node.childCount > 0) (0 until node.childCount).mapNotNull(node::getChild).flatMap(::said)
-      else if (node.text.isNullOrEmpty() && node.contentDescription.isNullOrEmpty()) emptyList()
-      else listOf(Rect().also(node::getBoundsInScreen))
-    val pieces = said(instrumentation.uiAutomation.rootInActiveWindow).joinToString(",", transform = ::pixels)
-    val measured = parts.joinToString(",") { (part, at) -> "\"$part\":${pixels(at)}" }
-    File(out, "$name.json").writeText("{\"parts\":{$measured},\"pieces\":[$pieces]}")
+    val said = said()
+    val saying = said.filter { words.matches(it.words) }.map { it.at }.sortedBy { it.top }
+    check(saying.isNotEmpty()) { "Nothing on $name says $words" }
+    val measured = saying.drop(1).fold(saying.first()) { run, next -> if (next.top - run.bottom < next.height() / 2) Rect(run).apply { union(next) } else run }
+    val pieces = said.filter { it.alone }.joinToString(",") { pixels(it.at) }
+    File(out, "$name.json").writeText("{\"parts\":{\"$part\":${pixels(measured)}},\"pieces\":[$pieces]}")
   }
 
   /** Midway from the foot of what [over] finds to the top of what [under] finds: where one piece of a page gives way to the next. */

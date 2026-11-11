@@ -6,21 +6,22 @@ import { fileURLToPath } from "node:url";
 // test photographed into .build/store-screenshots/<store>
 // (`mise run store:shots:ios`, `mise run store:shots:android`): each shot of @pochical/prototype's
 // lib/store-shots.ts from /_render/store-shot into
-// store/screenshots/<store>, and Google Play's feature graphic into
-// store/feature-graphic.png, and the wall of widgets the site's top page
-// shows (SITE_WALL) into @pochical/prototype's assets, on a dev server of
-// its own. A store whose
-// screens are not there is left as it is. Run again after changing the
+// store/screenshots/<store>, each picture drawn from the wall of widgets
+// (WALL_PICTURES) into its own file, and Google Play's feature graphic
+// into store/feature-graphic.png, on a dev server of its own. A store
+// whose screens are not there is left as it is, and so are the pictures
+// drawn from its widgets. Run again after changing the
 // page or the shots: pnpm run image:store
 import {
   calloutOf,
   FEATURE_GRAPHIC,
   HEADLINE_SHARE,
   PIECES_TALL,
-  SITE_WALL,
   STORE_SHOTS,
   STORES,
   storeShotFile,
+  WALL_PICTURES,
+  WALL_SHOT,
 } from "@pochical/prototype/lib/store-shots";
 import type { Rect, StoreId } from "@pochical/prototype/lib/store-shots";
 import {
@@ -33,11 +34,6 @@ import { pngFirstPixel, pngHeader } from "./png.ts";
 const ROOT = fileURLToPath(new URL("../../..", import.meta.url));
 const RAW = path.join(ROOT, ".build/store-screenshots");
 const OUTPUT = path.join(ROOT, "store");
-const SITE_WALL_FILE = path.join(
-  ROOT,
-  "packages/prototype/src/assets",
-  `${SITE_WALL.name}.png`
-);
 // Where the page asks for a screen, answered with its file.
 const RAW_PATH = "/_render/store-raw/";
 
@@ -199,14 +195,17 @@ await photographDevServer(
         );
       }
     }
-    // The wall once more for the site's top page, from its store's widgets.
-    if (photographed.includes(SITE_WALL.store)) {
-      await photograph(
-        { shot: SITE_WALL.name, store: SITE_WALL.store },
-        SITE_WALL,
-        SITE_WALL_FILE,
-        path.join(RAW, SITE_WALL.store)
-      );
+    for (const picture of WALL_PICTURES) {
+      if (photographed.includes(picture.store)) {
+        findScreens(picture.store, WALL_SHOT);
+        // oxlint-disable-next-line no-await-in-loop -- one page at a time
+        await photograph(
+          { shot: picture.name },
+          picture,
+          path.join(ROOT, picture.file),
+          path.join(RAW, picture.store)
+        );
+      }
     }
     await photograph(
       { shot: FEATURE_GRAPHIC.name },

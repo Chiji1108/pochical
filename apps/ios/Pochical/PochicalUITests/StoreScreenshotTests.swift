@@ -119,13 +119,13 @@ final class StoreScreenshotTests: XCTestCase {
     XCTAssertTrue(votes.waitForExistence(timeout: 10) && votes.isHittable, "on its latest line")
     XCTAssertFalse(app.staticTexts["ここから新着"].exists, "with nothing new")
     snap("04-chat", of: XCUIScreen.main, into: raw)
-    // The poll, what holds its name and its days, with the words that ask for it over it.
-    let poll = app.descendants(matching: .any).matching(
-      NSPredicate(format: "label == '日にちの投票' OR label CONTAINS 'に行ける'")
-    ).allElementsBoundByIndex.map(\.frame)
-    let asking = app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'ごはん会'"))
-      .firstMatch.frame
-    try measure("04-chat", ["poll": holder(of: poll).union(asking)])
+    // The poll with the words that ask for it over it, each its whole line of the chat: who asks,
+    // the words, the poll and its time.
+    let lines = ["label CONTAINS 'ごはん会'", "label == '日にちの投票'"].map {
+      app.cells.containing(NSPredicate(format: $0)).firstMatch
+    }
+    XCTAssertTrue(lines.allSatisfy(\.exists), "the asking and the poll are lines of the chat")
+    try measure("04-chat", ["poll": lines[0].frame.union(lines[1].frame)])
   }
 
   /// A month that runs from the 15th: シフトの期間 set in 設定's カレンダー,
@@ -428,17 +428,6 @@ final class StoreScreenshotTests: XCTestCase {
       "parts": parts.mapValues(pixels), "pieces": pieces.map(pixels),
     ])
     try json.write(to: raw.appending(path: "\(name).json"))
-  }
-
-  /// The smallest thing on the screen that holds all of `frames`: what they
-  /// are parts of.
-  @MainActor private func holder(of frames: [CGRect]) throws -> CGRect {
-    let all = frames.reduce(frames[0]) { $0.union($1) }
-    func holders(_ element: any XCUIElementSnapshot) -> [CGRect] {
-      (element.frame.contains(all) ? [element.frame] : []) + element.children.flatMap(holders)
-    }
-    return try XCTUnwrap(
-      holders(try app.snapshot()).min { $0.width * $0.height < $1.width * $1.height })
   }
 
   /// Keeps as `name` the part of the screen from `top` down to `foot`, as

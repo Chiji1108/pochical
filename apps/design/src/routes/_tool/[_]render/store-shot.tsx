@@ -4,20 +4,24 @@ import {
   calloutOf,
   FEATURE_GRAPHIC,
   HEADLINE_SHARE,
+  lineBoxOf,
   PIECES_TALL,
-  SITE_WALL,
   STAGE_FOOT,
   STORE_SHOTS,
   STORES,
   WALL,
+  WALL_PICTURES,
   WALL_SHAPE,
+  WALL_SHOT,
+  wallLieOf,
   wallOf,
 } from "@pochical/prototype/lib/store-shots";
 import type {
   Piece,
   StoreId,
   Tile,
-  WallPlace,
+  WallLie,
+  WallPicture,
 } from "@pochical/prototype/lib/store-shots";
 import { css, cx } from "@pochical/styled-system/css";
 import { createFileRoute } from "@tanstack/react-router";
@@ -34,9 +38,9 @@ import {
 // rounded corners and no phone around it, on the site's sky under its
 // headline, at the size its store asks for
 // (@pochical/prototype's lib/store-shots.ts). `?store=ios&shot=calendar`
-// names the picture, `shot=feature-graphic` Google Play's feature graphic
-// and `shot=widget-wall` the wall of widgets as the site's top page shows
-// it, with no headline and no sky.
+// names the picture, `shot=feature-graphic` Google Play's feature graphic,
+// and a picture drawn from the wall of widgets (WALL_PICTURES) goes by its
+// own name.
 // The screens are not in the app: the script answers /_render/store-raw/
 // with the files the platform's UI test photographed.
 
@@ -62,40 +66,53 @@ export const Route = createFileRoute("/_tool/_render/store-shot")({
   }),
 });
 
-// Every length but the headline's room is in --u, a hundredth of the
+// Every length but the headline's room is in --u, a hundredth of a store's
 // picture's width, so each store's picture is laid out alike at its size.
 // The width of a widget's cell on the wall, in them.
 const WIDGET_CELL = `calc(var(--u) * ${WALL_SHAPE.cell})`;
 
 // A shot of tiles, in --u: its words' size, line and the room under them,
-// the gap from a tile to the next one's words, several times that room so
-// that words read as their own tile's, the room at the picture's foot,
-// the room a tile's card keeps around what it holds, and how wide a tile
-// is at most: as the phone is in the App Store's pictures of one screen,
-// the sky at its sides. Google Play's phone is narrower than a line of
-// words, so its tiles keep to the same width.
+// the gap from a tile to the next one's words, at least and at most,
+// several times that room so that words read as their own tile's, the room
+// a tile's card keeps around what it holds, and how wide a tile is at
+// most: as the phone is in the App Store's pictures of one screen, the sky
+// at its sides. Google Play's phone is narrower than a line of words, so
+// its tiles keep to the same width.
 const TILES = {
-  foot: 5,
   gap: 8,
   line: 1.3,
+  most: 28,
   pad: 4.25,
   under: 1.6,
   widest: 78,
   words: 4.8,
 };
 
-// How wide the tiles are, in --u: as wide as lets them all, each holding
-// a part as tall as `parts` says in its widths, fit under the headline of
-// a picture `tall` times as tall as it is wide.
-const tileWidth = (parts: number[], tall: number): number => {
+// How the tiles lie, in --u: from where a phone starts under the headline
+// to where it ends, in a picture `tall` times as tall as it is wide. Each
+// holds a part as tall as `parts` says in its widths; they are as wide as
+// lets them all fit there with the least gap, and share the room they
+// leave evenly as the gaps between them, up to the most a gap may be,
+// beyond which the rest is sky at the foot.
+const tilesLie = (parts: number[], tall: number) => {
+  const gaps = Math.max(parts.length - 1, 1);
   const room =
     100 * tall * (1 - HEADLINE_SHARE) -
-    TILES.foot -
-    TILES.gap * (parts.length - 1) -
+    STAGE_FOOT -
     (TILES.words * TILES.line + TILES.under + 2 * TILES.pad) * parts.length;
   const tallness = parts.reduce((sum, part) => sum + part, 0);
-  return Math.min(TILES.widest, room / tallness + 2 * TILES.pad);
+  const wide = Math.min(
+    TILES.widest,
+    (room - TILES.gap * gaps) / tallness + 2 * TILES.pad
+  );
+  const left = room - tallness * (wide - 2 * TILES.pad);
+  return { gap: Math.min(TILES.most, left / gaps), wide };
 };
+
+// The sky a wall's picture clears around its line: how far it reaches
+// from the line's middle, in the widths and heights of the line's room,
+// and how much of that reach has no wall at all.
+const LINE_CLEAR = { across: 0.87, down: 0.9, whole: 0.8 };
 
 const styles = {
   // A callout's card, as a tile's is, lifted over the phone from its
@@ -188,30 +205,30 @@ const styles = {
     whiteSpace: "nowrap",
   }),
   // The tiles one over the other, each as tall as its part is, from where a
-  // phone starts under the headline; what room is left is sky at the foot.
+  // phone starts under the headline (tilesLie).
   tiles: css({
     "& figure": { margin: 0 },
     alignItems: "center",
     display: "flex",
     flexDirection: "column",
-    gap: `calc(var(--u) * ${TILES.gap})`,
-    inset: `var(--headline) 0 calc(var(--u) * ${TILES.foot})`,
+    inset: `var(--headline) 0 calc(var(--u) * ${STAGE_FOOT})`,
     position: "absolute",
   }),
   // The widgets on a Home Screen's grid, tilted, running off every edge
-  // and fading into the sky under the headline.
-  wall: css({
-    inset: 0,
-    maskImage: `linear-gradient(to bottom, transparent calc(var(--headline) * 0.8), black calc(var(--headline) * ${WALL_SHAPE.clear}))`,
-    position: "absolute",
-  }),
+  // and fading into the sky where the picture's words are.
+  wall: css({ inset: 0, position: "absolute" }),
   wallGrid: css({
     display: "grid",
     gap: `calc(var(--u) * ${WALL_SHAPE.gap})`,
-    left: "50%",
     position: "absolute",
-    top: `${WALL_SHAPE.middle * 100}%`,
     transform: `translate(-50%, -50%) rotate(${WALL_SHAPE.turn}deg)`,
+  }),
+  // A picture of the wall's line, its middle where the picture says.
+  wallLine: css({
+    position: "absolute",
+    textAlign: "center",
+    transform: "translate(-50%, -50%)",
+    whiteSpace: "nowrap",
   }),
   // A widget's photograph holds the wallpaper beyond its corners, which
   // are rounder toward their ends than a circle's: its frame's corners
@@ -237,41 +254,43 @@ function StoreShotPage() {
   if (name === FEATURE_GRAPHIC.name) {
     return <FeatureGraphic />;
   }
-  const site = name === SITE_WALL.name;
-  const shot = STORE_SHOTS.find(
-    (one) => one.name === (site ? SITE_WALL.shot : name)
-  );
+  const wall = WALL_PICTURES.find((one) => one.name === name);
+  if (wall !== undefined) {
+    return <WallPicturePage picture={wall} />;
+  }
+  const shot = STORE_SHOTS.find((one) => one.name === name);
   if (shot === undefined) {
     return <p>No shot is named {name}.</p>;
   }
-  const { widgetRow } = STORES[store];
-  const { height, width } = site ? SITE_WALL : STORES[store];
+  const { height, widgetRow, width } = STORES[store];
   return (
     <div
       className={styles.root}
       data-store-shot
       style={{
-        "--headline": `${site ? 0 : height * HEADLINE_SHARE}px`,
+        "--headline": `${height * HEADLINE_SHARE}px`,
         "--u": `${width / 100}px`,
         height,
         width,
       }}
     >
-      {!site && <PictureSky height="100%" />}
+      <PictureSky height="100%" />
       {shot.kind === "wall" && (
-        <Wall looks={shot.raw} places={shot.tiles} row={widgetRow} />
+        <Wall
+          lie={wallLieOf({ height, width })}
+          mask={`linear-gradient(to bottom, transparent calc(var(--headline) * 0.8), black calc(var(--headline) * ${WALL_SHAPE.clear}))`}
+          row={widgetRow}
+        />
       )}
-      {!site && (
-        <h1 className={cx(pictureTitle, styles.headline)}>
-          <span>
-            {shot.headline.map((line) => (
-              <span className={styles.line} key={line}>
-                {line}
-              </span>
-            ))}
-          </span>
-        </h1>
-      )}
+      <h1 className={cx(pictureTitle, styles.headline)}>
+        <span>
+          {shot.headline.map((line) => (
+            <span className={styles.line} key={line}>
+              {line}
+            </span>
+          ))}
+        </span>
+      </h1>
       {shot.kind === "screen" && (
         <div className={styles.stage}>
           <img
@@ -291,9 +310,9 @@ function StoreShotPage() {
       {shot.kind === "tiles" && (
         <Tiles
           grounds={grounds.split(",")}
+          lie={tilesLie(parts.split(",").map(Number), height / width)}
           tiles={shot.tiles}
           unit={width / 100}
-          wide={tileWidth(parts.split(",").map(Number), height / width)}
         />
       )}
       {shot.kind === "pair" && (
@@ -379,22 +398,22 @@ function CalloutCard({
   );
 }
 
-// The tiles, each `wide` hundredths of the picture across: its words over
-// its card, which holds its part of a screen or its pieces. `unit` is a
-// hundredth of the picture's width in pixels.
+// The tiles, each `wide` hundredths of the picture across and `gap` from
+// the next: its words over its card, which holds its part of a screen or
+// its pieces. `unit` is a hundredth of the picture's width in pixels.
 function Tiles({
   grounds,
+  lie: { gap, wide },
   tiles,
   unit,
-  wide,
 }: {
   grounds: string[];
+  lie: { gap: number; wide: number };
   tiles: readonly Tile[];
   unit: number;
-  wide: number;
 }) {
   return (
-    <div className={styles.tiles}>
+    <div className={styles.tiles} style={{ gap: `calc(var(--u) * ${gap})` }}>
       {tiles.map((tile, index) => (
         <figure key={tile.words} style={{ width: `calc(var(--u) * ${wide})` }}>
           <figcaption className={styles.tileWords}>{tile.words}</figcaption>
@@ -595,27 +614,22 @@ function Pieces({ pieces, tall }: { pieces: readonly Piece[]; tall: number }) {
   );
 }
 
-// The widgets where they are placed, each from the folder of its look.
-// A cell is `row` times as tall as it is wide.
-function Wall({
-  looks,
-  places,
-  row,
-}: {
-  looks: readonly string[];
-  places: readonly WallPlace[];
-  row: number;
-}) {
+// The wall's widgets where they are placed, each from the folder of its
+// look, lying in the picture as `lie` says and seen through `mask`. A cell
+// is `row` times as tall as it is wide.
+function Wall({ lie, mask, row }: { lie: WallLie; mask: string; row: number }) {
   return (
-    <div className={styles.wall}>
+    <div className={styles.wall} style={{ maskImage: mask }}>
       <div
         className={styles.wallGrid}
         style={{
-          gridTemplateColumns: `repeat(${WALL.columns}, ${WIDGET_CELL})`,
+          gridTemplateColumns: `repeat(${WALL.columns * lie.across}, ${WIDGET_CELL})`,
           gridTemplateRows: `repeat(${WALL.rows}, calc(${WIDGET_CELL} * ${row}))`,
+          left: lie.middle[0],
+          top: lie.middle[1],
         }}
       >
-        {wallOf(places).map((tile) => (
+        {wallOf(WALL_SHOT.tiles, lie.across).map((tile) => (
           <div
             className={styles.widget}
             key={`${tile.column} ${tile.row}`}
@@ -624,10 +638,56 @@ function Wall({
               gridRow: `${tile.row + 1} / span ${tile.rows}`,
             }}
           >
-            <img alt="" src={`${RAW}${looks[tile.look]}/${tile.file}`} />
+            <img
+              alt=""
+              src={`${RAW}${WALL_SHOT.raw[tile.look]}/${tile.file}`}
+            />
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// A picture drawn from the wall (WALL_PICTURES): the wall on the sky,
+// filling it, and the picture's line over it, the wall fading to the sky
+// around the line's room as it does under a store's headline.
+function WallPicturePage({ picture }: { picture: WallPicture }) {
+  const { height, line, store, width } = picture;
+  const lie = picture.lie ?? wallLieOf(picture);
+  const box = line && lineBoxOf(line);
+  return (
+    <div
+      className={styles.root}
+      data-store-shot
+      style={{ "--u": `${lie.unit}px`, height, width }}
+    >
+      {picture.plain !== true && <PictureSky height="100%" />}
+      <Wall
+        lie={lie}
+        mask={
+          box === undefined
+            ? "none"
+            : `radial-gradient(ellipse ${box.width * LINE_CLEAR.across}px ${box.height * LINE_CLEAR.down}px at ${box.left + box.width / 2}px ${box.top + box.height / 2}px, transparent ${LINE_CLEAR.whole * 100}%, black)`
+        }
+        row={STORES[store].widgetRow}
+      />
+      {line !== undefined && (
+        <h1
+          className={cx(pictureTitle, styles.wallLine)}
+          style={{
+            fontSize: line.size,
+            left: line.middle[0],
+            top: line.middle[1],
+          }}
+        >
+          {line.words.map((words) => (
+            <span className={styles.line} key={words}>
+              {words}
+            </span>
+          ))}
+        </h1>
+      )}
     </div>
   );
 }

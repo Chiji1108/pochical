@@ -5,38 +5,51 @@ import {
   calloutOf,
   FEATURE_GRAPHIC,
   HEADLINE_SHARE,
-  SITE_WALL,
+  lineBoxOf,
   STORE_SHOTS,
   STORES,
   storeShotFile,
   WALL,
+  WALL_PICTURES,
   WALL_SHAPE,
+  WALL_SHOT,
   wallCornersOf,
+  wallLieOf,
   wallOf,
 } from "@pochical/prototype/lib/store-shots";
-import type { WallTile } from "@pochical/prototype/lib/store-shots";
+import type {
+  Rect,
+  WallPicture,
+  WallTile,
+} from "@pochical/prototype/lib/store-shots";
 import { expect, test } from "vitest";
 
 import { pngHeader } from "../scripts/png";
 
-// The stores' pictures (store/) are checked in, drawn by
+// The stores' pictures are checked in, drawn by
 // `mise run store:screenshots`: every shot of store-shots.ts has its
-// picture for each store at the size it asks for, without the alpha
-// channel the App Store refuses.
-const store = path.join(import.meta.dirname, "../../../store");
+// picture for each store at the size it asks for, and so has every
+// picture drawn from the wall, without the alpha channel the App Store
+// refuses.
+const root = path.join(import.meta.dirname, "../../..");
+const pictures: readonly WallPicture[] = WALL_PICTURES;
 
 const drawn = (["ios", "android"] as const).flatMap((id) =>
   STORE_SHOTS.map((shot) => ({
-    file: path.join("screenshots", id, storeShotFile(shot.name)),
+    file: path.join("store/screenshots", id, storeShotFile(shot.name)),
     size: STORES[id],
   }))
 );
 
 test.each([
   ...drawn,
-  { file: `${FEATURE_GRAPHIC.name}.png`, size: FEATURE_GRAPHIC },
+  ...pictures.map(({ file, height, width }) => ({
+    file,
+    size: { height, width },
+  })),
+  { file: `store/${FEATURE_GRAPHIC.name}.png`, size: FEATURE_GRAPHIC },
 ])("$file is drawn at its store's size", ({ file, size }) => {
-  const full = path.join(store, file);
+  const full = path.join(root, file);
   expect(existsSync(full), `${file}: run mise run store:screenshots`).toBe(
     true
   );
@@ -44,21 +57,6 @@ test.each([
     alpha: false,
     height: size.height,
     width: size.width,
-  });
-});
-
-// The wall of widgets the site's top page shows is drawn with them, into
-// @pochical/prototype's assets, where the site takes its pictures from.
-test("the site's wall of widgets is drawn at its size", () => {
-  const file = path.join(
-    import.meta.dirname,
-    "../../../packages/prototype/src/assets",
-    `${SITE_WALL.name}.png`
-  );
-  expect(existsSync(file), "run mise run store:images").toBe(true);
-  expect(pngHeader(file)).toMatchObject({
-    height: SITE_WALL.height,
-    width: SITE_WALL.width,
   });
 });
 
@@ -123,7 +121,21 @@ test.each(
   }
 );
 
-test("a callout's card cuts through no piece of the screen: its edge goes on to the piece's far side", () => {
+// A rectangle of a picture, back in its screen's pixels.
+const onScreen = (
+  card: Rect,
+  phone: number,
+  screen: { width: number },
+  picture: { height: number; width: number }
+) => ({
+  foot: (card.top + card.height - picture.height * HEADLINE_SHARE) / phone,
+  left: (card.left - picture.width / 2) / phone + screen.width / 2,
+  right:
+    (card.left + card.width - picture.width / 2) / phone + screen.width / 2,
+  top: (card.top - picture.height * HEADLINE_SHARE) / phone,
+});
+
+test("a callout's card cuts through no piece of the screen over or under it: it takes the piece in whole", () => {
   const screen = SCREENS.ios;
   const row = { height: 200, left: 0, top: 1400, width: screen.width };
   // A note close under the row, and rows of a list touching one another
@@ -136,9 +148,31 @@ test("a callout's card cuts through no piece of the screen: its edge goes on to 
     width: screen.width,
   }));
   const { card, phone } = calloutOf(row, [note, ...list], screen, STORES.ios);
-  const headline = STORES.ios.height * HEADLINE_SHARE;
-  expect((card.top - headline) / phone).toBeCloseTo(1300);
-  expect((card.top + card.height - headline) / phone).toBeCloseTo(1700);
+  const over = onScreen(card, phone, screen, STORES.ios);
+  expect(over.top).toBeCloseTo(1300);
+  expect(over.foot).toBeCloseTo(1700);
+});
+
+test("a callout's card cuts through no piece beside it either, and leaves alone what it does not reach", () => {
+  const screen = SCREENS.ios;
+  // A bubble set in from the screen's sides, a face its card's side would
+  // cut in two, and a button clear of the card.
+  const bubble = { height: 600, left: 300, top: 1500, width: 600 };
+  const face = { height: 96, left: 150, top: 1500, width: 96 };
+  const button = { height: 96, left: 1200, top: 1500, width: 96 };
+  const alone = calloutOf(bubble, [button], screen, STORES.ios);
+  const { card, phone } = calloutOf(bubble, [face, button], screen, STORES.ios);
+  const bare = onScreen(alone.card, alone.phone, screen, STORES.ios);
+  const over = onScreen(card, phone, screen, STORES.ios);
+  // The card's own side falls inside the face,
+  expect(bare.left).toBeGreaterThan(face.left);
+  expect(bare.left).toBeLessThan(face.left + face.width);
+  // so it goes on to the face's far side, and no other side moves.
+  expect(over.left).toBeCloseTo(face.left);
+  expect(over.right).toBeCloseTo(bare.right);
+  expect(over.top).toBeCloseTo(bare.top);
+  expect(over.foot).toBeCloseTo(bare.foot);
+  expect(over.right).toBeLessThan(button.left);
 });
 
 // The widgets both platforms photograph, in each look: every kind at each
@@ -169,10 +203,7 @@ const WIDGETS = [
   "upcoming-small.png",
 ];
 
-const [wall] = STORE_SHOTS.flatMap((shot) =>
-  shot.kind === "wall" ? [shot] : []
-);
-const tiles = wallOf(wall?.tiles ?? []);
+const tiles = wallOf(WALL_SHOT.tiles);
 
 test("the wall covers its grid with widgets both platforms photograph", () => {
   const cells = tiles.flatMap(({ column, columns, row, rows }) =>
@@ -186,7 +217,7 @@ test("the wall covers its grid with widgets both platforms photograph", () => {
   expect(cells).toHaveLength(WALL.columns * WALL.rows);
   for (const { column, columns, file, look, row, rows } of tiles) {
     expect(WIDGETS).toContain(file);
-    expect(look).toBeLessThan(wall?.raw.length ?? 0);
+    expect(look).toBeLessThan(WALL_SHOT.raw.length);
     expect(column + columns).toBeLessThanOrEqual(WALL.columns);
     expect(row + rows).toBeLessThanOrEqual(WALL.rows);
   }
@@ -219,35 +250,85 @@ test("no picture on the wall is beside itself, even corner to corner", () => {
   }
 });
 
-// The frames the wall is seen in: each store's picture under the fade
-// below its headline, and the frame the site's top page shows of the App
-// Store's wall, which has no headline (SITE_WALL, on the page's branch).
-const FRAMES = [
-  ...Object.values(STORES).map(({ height, widgetRow, width }) => ({
-    row: widgetRow,
-    tall: height / width,
-    top: HEADLINE_SHARE * WALL_SHAPE.clear,
-  })),
-  { row: STORES.ios.widgetRow, tall: 1200 / 780, top: 0 },
-];
+// The widgets marked whole, where the eye lands first.
+const whole = WALL_SHOT.tiles.flatMap((place, index) =>
+  "whole" in place ? [index] : []
+);
 
-test("the widgets marked whole show whole in every frame", () => {
-  const whole = (wall?.tiles ?? []).flatMap((place, index) =>
-    place.whole === true ? [tiles[index]] : []
-  );
-  expect(whole.map((tile) => tile?.file)).toEqual([
+test("the widgets marked whole show whole in every store's picture, clear of the fade under its headline", () => {
+  expect(whole.map((index) => tiles[index]?.file)).toEqual([
     "next-off-small.png",
     "next-off-day-small.png",
     "now-small.png",
   ]);
-  for (const { row, tall, top } of FRAMES) {
-    for (const tile of whole) {
-      for (const [across, down] of tile ? wallCornersOf(tile, row, tall) : []) {
-        expect(across).toBeGreaterThanOrEqual(0);
-        expect(across).toBeLessThanOrEqual(100);
-        expect(down).toBeGreaterThanOrEqual(100 * tall * top);
-        expect(down).toBeLessThanOrEqual(100 * tall);
-      }
+  for (const { height, widgetRow, width } of Object.values(STORES)) {
+    const corners = whole.flatMap((index) => {
+      const tile = tiles[index];
+      return tile
+        ? wallCornersOf(tile, widgetRow, wallLieOf({ height, width }))
+        : [];
+    });
+    expect(corners).toHaveLength(whole.length * 4);
+    for (const [across, down] of corners) {
+      expect(across).toBeGreaterThanOrEqual(0);
+      expect(across).toBeLessThanOrEqual(width);
+      expect(down).toBeGreaterThanOrEqual(
+        height * HEADLINE_SHARE * WALL_SHAPE.clear
+      );
+      expect(down).toBeLessThanOrEqual(height);
     }
   }
+});
+
+// A picture drawn from the wall: its line's room is inside its safe area,
+// the part of it every device shows, and so are the widgets marked whole,
+// in one of the wall's copies side by side, clear of the line. One with no
+// safe area shows them whole anywhere in it.
+test.each([...pictures])(
+  "$name holds its line and the widgets marked whole inside its safe area",
+  (picture) => {
+    const lie = picture.lie ?? wallLieOf(picture);
+    const safe = picture.safe ?? { ...picture, left: 0, top: 0 };
+    const inside = ([across, down]: [number, number]) =>
+      across >= safe.left &&
+      across <= safe.left + safe.width &&
+      down >= safe.top &&
+      down <= safe.top + safe.height;
+    const box = picture.line && lineBoxOf(picture.line);
+    if (box !== undefined) {
+      expect(inside([box.left, box.top])).toBe(true);
+      expect(inside([box.left + box.width, box.top + box.height])).toBe(true);
+    }
+    const copies = Array.from({ length: lie.across }, (_, copy) =>
+      whole.flatMap((index) => {
+        const tile = wallOf(WALL_SHOT.tiles, lie.across)[
+          copy * WALL_SHOT.tiles.length + index
+        ];
+        return tile
+          ? wallCornersOf(tile, STORES[picture.store].widgetRow, lie)
+          : [];
+      })
+    );
+    const shown = copies.filter(
+      (corners) =>
+        corners.length === whole.length * 4 &&
+        corners.every(inside) &&
+        corners.every(
+          ([across]) =>
+            box === undefined ||
+            across <= box.left ||
+            across >= box.left + box.width
+        )
+    );
+    expect(shown).toHaveLength(1);
+  }
+);
+
+// Apple's sizes for the pictures it takes besides screenshots: the product
+// page header is 3840 by 1646.
+// https://developer.apple.com/help/app-store-connect/reference/app-information/creative-assets-specifications
+test("the App Store's product page header is the size Apple asks for", () => {
+  expect(
+    pictures.find(({ name }) => name === "product-page-header")
+  ).toMatchObject({ height: 1646, width: 3840 });
 });

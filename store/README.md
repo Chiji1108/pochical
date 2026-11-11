@@ -25,8 +25,11 @@ The pages the forms ask for are the site's: サポート `https://pochical.app/s
 | `screenshots/ios/01-entry.png` … `08-cares.png` | iPhone 6.9インチのスクリーンショット (1320×2868) |  |
 | `screenshots/android/01-entry.png` … `08-cares.png` |  | スマートフォンのスクリーンショット (1080×1920) |
 | `feature-graphic.png` |  | フィーチャー グラフィック (1024×500) |
+| `product-page-header.png` | プロダクトページのヘッダー (3840×1646), with the other creative assets of the version's page |  |
 
 They are drawn from the real apps, in the listing's order, and never edited by hand: `ANDROID_SERIAL=emulator-<port> mise run store:screenshots` photographs each app's screens (Android's on that running emulator, iOS's in a simulator of its own) and draws each under its headline. The shots, their headlines and the sizes are in `packages/prototype/src/lib/store-shots.ts`; after a change to a headline alone, `mise run store:images` draws them again from the screens last photographed. `apps/design/tests/store-screenshots.test.ts` holds each picture to its store's size.
+
+The App Store's product page header (iOS 27) is drawn with them, from the wall of widgets of the second screenshot (`WALL_PICTURES` in the same file): the wall across the whole picture, and the site's line, シフトを、ポチッと。, beside the three widgets the wall is built around. Devices crop the header to no less than its art safe area, the rectangle in the middle that [Apple's template](https://developer.apple.com/app-store/asset-best-practices/) draws, so the line and those widgets are inside it and the rest is the wall running off. It carries no price, address or other platform's name, as [Apple asks](https://developer.apple.com/help/app-store-connect/reference/app-information/creative-assets-specifications). The search results' picture (3:2) is not made: search shows the first three screenshots in its place.
 
 `declarations.md` holds the answers to the forms beside the listing: what data is collected, the ratings' questions, the notes for review.
 
