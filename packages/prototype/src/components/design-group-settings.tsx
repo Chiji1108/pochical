@@ -347,15 +347,15 @@ export function GroupProfileRow({
   onOpen: () => void;
 }) {
   const shown = profileIn(group, profile);
+  const sameOrOwn = group.mine ? "このグループだけ" : "いつもと同じ";
   return (
     <ListRow
       onClick={onOpen}
       label={shown.name || "名前を入れてください"}
       truncate
-      // With no usual name yet, these become the usual ones.
-      value={
-        group.mine && profile.name !== "" ? "このグループだけ" : "いつもと同じ"
-      }
+      // With no usual name yet there is no usual one to be the same as:
+      // the row says nothing there.
+      value={profile.name === "" ? undefined : sameOrOwn}
       leading={
         <>
           <PhotoAvatar name={shown.name} photo={shown.photo} size={28} />
@@ -380,7 +380,7 @@ export function GroupProfilePage({
   group: GroupSummary;
   profile: Profile;
   back: string;
-  going?: "" | "参加すると、" | "作ると、";
+  going?: Going;
   onChange: (mine: GroupProfile | undefined) => void;
   onBack: () => void;
 }) {
@@ -439,22 +439,66 @@ export function GroupProfilePage({
           }
         />
       </List>
-      {profile.name === "" ? (
-        <Note>
-          {going}
-          この名前と写真がいつもの名前と写真になり、ほかのグループでも使われます。設定
-          › プロフィールで変えられます。
-        </Note>
-      ) : (
-        <Note>
-          {going}
-          {group.name || "このグループ"}
-          の人にだけ、この名前と写真で表示されます。名前が空欄なら「
-          {profile.name}
-          」、写真を入れなければいつもの写真のままです。
-        </Note>
-      )}
+      <GroupProfileNote going={going} group={group} profile={profile} />
     </>
+  );
+}
+
+// What going on does with the name and face: with no usual name yet they
+// become the usual ones, else they are this group's alone.
+function GroupProfileNote({
+  group,
+  profile,
+  going,
+}: {
+  group: GroupSummary;
+  profile: Profile;
+  going: Going;
+}) {
+  return profile.name === "" ? (
+    <Note>
+      {going}
+      この名前と写真がいつもの名前と写真になり、ほかのグループでも使われます。設定
+      › プロフィールで変えられます。
+    </Note>
+  ) : (
+    <Note>
+      {going}
+      {group.name || "このグループ"}
+      の人にだけ、この名前と写真で表示されます。名前が空欄なら「
+      {profile.name}
+      」、写真を入れなければいつもの写真のままです。
+    </Note>
+  );
+}
+
+// What going on is, as the note starts: none where the group is yours
+// already.
+type Going = "" | "参加すると、" | "作ると、";
+
+// How you will appear in a group you are joining or making: its heading,
+// GroupProfileRow, and, with no usual name yet, what going on does with
+// the name and face, as the row's page says it.
+export function GroupProfileSection({
+  group,
+  profile,
+  going,
+  onOpen,
+}: {
+  group: GroupSummary;
+  profile: Profile;
+  going: Going;
+  onOpen: () => void;
+}) {
+  return (
+    <Section title={profileTitle(profile)}>
+      <List>
+        <GroupProfileRow group={group} onOpen={onOpen} profile={profile} />
+      </List>
+      {profile.name === "" && (
+        <GroupProfileNote going={going} group={group} profile={profile} />
+      )}
+    </Section>
   );
 }
 
@@ -838,17 +882,14 @@ export function NewGroupPage({
         />
       </List>
       <Note>アイコンはグループ名から自動で入ります。</Note>
-      <Section title={profileTitle(profile)}>
-        <List>
-          <GroupProfileRow
-            group={group}
-            onOpen={() => {
-              setEditing("profile");
-            }}
-            profile={profile}
-          />
-        </List>
-      </Section>
+      <GroupProfileSection
+        going="作ると、"
+        group={group}
+        onOpen={() => {
+          setEditing("profile");
+        }}
+        profile={profile}
+      />
     </>
   );
 }

@@ -53,6 +53,7 @@ final class FaceDrawingTests: XCTestCase {
     let profile = app.buttons.matching(NSPredicate(format: "label BEGINSWITH '名前を入れてください'"))
       .firstMatch
     XCTAssertTrue(profile.waitForExistence(timeout: 5), "グループを作る asks how the person appears")
+    saysTheseBecomeTheUsualOnes(profile, going: "作ると、")
     XCTAssertEqual(app.textFields.count, 1, "the name is asked in the row's page")
     snap("3a-new-group-opened")
     profile.tap()
@@ -120,6 +121,38 @@ final class FaceDrawingTests: XCTestCase {
     snap("12-new-group-usual-name")
   }
 
+  func testSomeoneWithAUsualNameGivesANewGroupAFaceOfItsOwn() {
+    continueAfterFailure = false
+    app.launchArguments += ["-firstRunDone", "YES"]
+    app.launch()
+    let groups = app.tabBars.buttons["グループ"]
+    XCTAssertTrue(groups.waitForExistence(timeout: 20))
+    groups.tap()
+    let new = app.buttons["グループを作る"].firstMatch
+    XCTAssertTrue(new.waitForExistence(timeout: 15))
+    new.tap()
+    let profile = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'さくら'")).firstMatch
+    XCTAssertTrue(profile.waitForExistence(timeout: 5), "the row shows the usual name")
+    profile.tap()
+    XCTAssertTrue(app.navigationBars["このグループでのあなた"].waitForExistence(timeout: 5))
+    face.tap()
+    app.buttons["イラストを選ぶ"].tap()
+    XCTAssertTrue(app.buttons["サボテン"].waitForExistence(timeout: 5))
+    app.buttons["サボテン"].tap()
+    app.navigationBars.buttons.firstMatch.tap()
+    XCTAssertTrue(profile.waitForExistence(timeout: 5))
+    XCTAssertTrue(profile.label.contains("このグループだけ"), "the face is this group's own: \(profile.label)")
+    let group = app.textFields.firstMatch
+    group.tap()
+    group.typeText("夜勤")
+    snap("13-new-group-own-face")
+    app.navigationBars.buttons["作る"].tap()
+    let copy = app.buttons["リンクをコピー"]
+    XCTAssertTrue(copy.waitForExistence(timeout: 20), "メンバーを招待 follows")
+    copy.tap()
+    XCTAssertTrue(app.buttons["コピーしました"].waitForExistence(timeout: 5))
+  }
+
   func testSomeoneNewJoiningStartsWithADrawing() throws {
     continueAfterFailure = false
     let dir = try XCTUnwrap(shared, "FACE_DRAWING_DIR names where the invitation is")
@@ -135,6 +168,7 @@ final class FaceDrawingTests: XCTestCase {
     let profile = app.buttons.matching(NSPredicate(format: "label BEGINSWITH '名前を入れてください'"))
       .firstMatch
     XCTAssertTrue(profile.waitForExistence(timeout: 15), "the join screen opens")
+    saysTheseBecomeTheUsualOnes(profile, going: "参加すると、")
     snap("7-join-drawing")
     profile.tap()
     XCTAssertTrue(app.navigationBars["あなたの名前と写真"].waitForExistence(timeout: 5))
@@ -162,6 +196,16 @@ final class FaceDrawingTests: XCTestCase {
     join.tap()
     XCTAssertTrue(app.buttons["月で見る"].waitForExistence(timeout: 15), "the group's hub shows")
     snap("11-joined")
+  }
+
+  /// With no usual name yet there is no usual one for the row to be the
+  /// same as: what going on does with the name and face is said under it.
+  private func saysTheseBecomeTheUsualOnes(_ row: XCUIElement, going: String) {
+    XCTAssertFalse(row.label.contains("いつもと同じ"), "nothing is usual yet: \(row.label)")
+    let note = app.staticTexts.matching(
+      NSPredicate(format: "label BEGINSWITH %@", "\(going)この名前と写真がいつもの名前と写真になり")
+    ).firstMatch
+    XCTAssertTrue(note.exists, "the row's note says what \(going) does")
   }
 
   /// 設定 › プロフィール, and the face heading it.

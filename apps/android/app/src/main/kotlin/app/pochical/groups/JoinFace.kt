@@ -90,7 +90,7 @@ val JoinFaceSaver: Saver<JoinFace, String> =
 /**
  * あなたの名前と写真, or このグループでのあなた for someone with a usual name: how the person will appear
  * in the group they are joining or making (/design's GroupProfileRow), a row of the face and the name
- * the group will show, saying whether they are the usual ones, that opens the page changing them
+ * the group will show, saying for someone with a usual name whether they are the usual ones, that opens the page changing them
  * (/design's GroupProfilePage). The screen keeps [ownName] and [face], each across the activity made
  * anew, and sends them as the person goes on; [going] starts the page's note with what going on is
  * (参加すると、 or 作ると、), and [groupName] is empty while a group being made has no name.
@@ -127,6 +127,10 @@ fun JoinProfileSection(
     if (current == JoinFace.Usual) onFace(JoinFace.Held(held)) else calls.releasePhoto(held)
   }
 
+  // With no usual name yet the name and face become the usual ones, else they are this group's alone.
+  val note =
+    if (usualName.isEmpty()) stringResource(R.string.join_you_usual_note, going)
+    else stringResource(R.string.join_you_note, going, groupName.ifEmpty { stringResource(R.string.this_group) }, usualName)
   SectionHeader(stringResource(if (usualName.isEmpty()) R.string.join_you_usual else R.string.group_me))
   SectionRow(0, 1) {
     SettingsRow(
@@ -135,16 +139,16 @@ fun JoinProfileSection(
       onClick = { editing = true },
       leading = { JoinFacePicture(face, name, usualPhoto, 32.dp) },
       // The usual name typed again is still the usual one, as the group takes it. With no usual
-      // name yet, these become the usual ones.
-      value = stringResource(if (usualName.isEmpty() || (name == usualName && face == JoinFace.Usual)) R.string.usual_same else R.string.group_only),
+      // name yet there is no usual one to be the same as: the row says nothing there.
+      value = if (usualName.isEmpty()) null else stringResource(if (name == usualName && face == JoinFace.Usual) R.string.usual_same else R.string.group_only),
       oneLine = true,
     )
   }
+  // What going on does with these, said under the row as its page says it.
+  if (usualName.isEmpty()) Footnote(note)
   if (editing) {
     JoinProfileDialog(
-      note =
-        if (usualName.isEmpty()) stringResource(R.string.join_you_usual_note, going)
-        else stringResource(R.string.join_you_note, going, groupName.ifEmpty { stringResource(R.string.this_group) }, usualName),
+      note = note,
       usualName = usualName,
       ownName = ownName,
       onOwnName = onOwnName,

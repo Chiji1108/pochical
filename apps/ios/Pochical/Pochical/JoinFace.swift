@@ -38,7 +38,8 @@ struct JoinFacePicture: View {
 /// あなたの名前と写真, or このグループでのあなた for someone with a usual
 /// name: how the person will appear in the group they are joining or
 /// making (/design's GroupProfileRow), a row of the face and the name the
-/// group will show, saying whether they are the usual ones, that opens the
+/// group will show, saying for someone with a usual name whether they are
+/// the usual ones, that opens the
 /// page changing them (/design's GroupProfilePage). The screen keeps
 /// `ownName` and `face` and sends them as the person goes on.
 ///
@@ -64,12 +65,19 @@ struct JoinProfileSection: View {
   @Fetch(UsualProfileRequest()) private var usual = UsualProfile()
 
   var body: some View {
-    Section(title) {
+    Section {
       if onNavigator {
         PageLink(destination: page, label: row)
       } else {
         NavigationLink(destination: page, label: row)
       }
+    } header: {
+      Text(title)
+    } footer: {
+      // With no usual name yet there is no usual one to be the same as:
+      // the row says nothing there, and what going on does with these is
+      // said under it, as its page says it.
+      if usualName.isEmpty { Text(note) }
     }
     .settingsRows()
   }
@@ -85,10 +93,10 @@ struct JoinProfileSection: View {
   private func row() -> some View {
     LabeledContent {
       // The usual name typed again is still the usual one, as the group
-      // takes it. With no usual name yet, these become the usual ones.
-      Text(
-        usualName.isEmpty || (name == usualName && face == .usual)
-          ? "いつもと同じ" : "このグループだけ")
+      // takes it.
+      if !usualName.isEmpty {
+        Text(name == usualName && face == .usual ? "いつもと同じ" : "このグループだけ")
+      }
     } label: {
       Label {
         Text(name.isEmpty ? "名前を入れてください" : name)
@@ -104,6 +112,14 @@ struct JoinProfileSection: View {
       else { return }
       face = .picked(jpeg)
     }
+  }
+
+  /// What going on does with the name and face: with no usual name yet
+  /// they become the usual ones, else they are this group's alone.
+  private var note: String {
+    usualName.isEmpty
+      ? "\(going)この名前と写真がいつもの名前と写真になり、ほかのグループでも使われます。設定 › プロフィールで変えられます。"
+      : "\(going)\(groupName.isEmpty ? "このグループ" : groupName)の人にだけ、この名前と写真で表示されます。名前が空欄なら「\(usualName)」、写真を入れなければいつもの写真のままです。"
   }
 
   /// No usual name and no usual photo yet, once both are read.
@@ -132,11 +148,7 @@ struct JoinProfileSection: View {
             limit: TextLimits.personName)
         }
       } footer: {
-        Text(
-          usualName.isEmpty
-            ? "\(going)この名前と写真がいつもの名前と写真になり、ほかのグループでも使われます。設定 › プロフィールで変えられます。"
-            : "\(going)\(groupName.isEmpty ? "このグループ" : groupName)の人にだけ、この名前と写真で表示されます。名前が空欄なら「\(usualName)」、写真を入れなければいつもの写真のままです。"
-        )
+        Text(note)
       }
       .settingsRows()
     }

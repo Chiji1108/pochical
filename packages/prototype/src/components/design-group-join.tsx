@@ -27,9 +27,8 @@ import { GroupIcon, PhotoAvatar, hub, markFrame } from "./design-group-parts";
 import {
   firstFace,
   GroupProfilePage,
-  GroupProfileRow,
+  GroupProfileSection,
   profileIn,
-  profileTitle,
 } from "./design-group-settings";
 import { PageHeader } from "./design-header";
 import { List, ListRow } from "./design-list";
@@ -42,7 +41,6 @@ import {
   Note,
   Screen,
   ScreenScroll,
-  Section,
 } from "./design-ui";
 
 // Joining a group: reading a QR code, the invitation someone opens, and
@@ -468,17 +466,14 @@ export function JoinScreen({
             {members}
           </button>
         </div>
-        <Section title={profileTitle(profile)}>
-          <List>
-            <GroupProfileRow
-              group={group}
-              onOpen={() => {
-                setEditing(true);
-              }}
-              profile={profile}
-            />
-          </List>
-        </Section>
+        <GroupProfileSection
+          going="参加すると、"
+          group={group}
+          onOpen={() => {
+            setEditing(true);
+          }}
+          profile={profile}
+        />
       </ScreenScroll>
       <div className={joinScreen.foot}>
         <p className={joinScreen.consent}>
