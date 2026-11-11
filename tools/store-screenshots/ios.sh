@@ -1,8 +1,8 @@
 #!/bin/bash
 # Photographs the screens the App Store's screenshots are drawn from
 # (#806): runs StoreScreenshotTests (apps/ios/Pochical/PochicalUITests) in
-# a simulator against `mise run server`, seeded with 職場のみんな by
-# seed.ts, and keeps each screen under `.build/store-screenshots/ios`, by
+# a simulator against `mise run server`, seeded with 職場のみんな and
+# 学生時代の友だち by seed.ts, and keeps each screen under `.build/store-screenshots/ios`, by
 # the names packages/prototype/src/lib/store-shots.ts gives them.
 # `mise run store:images` draws the store's pictures from them.
 # It starts the server itself, so nothing else may be on
@@ -24,6 +24,7 @@ derived=${2:-$root/.build/DerivedData}
 raw=$root/.build/store-screenshots/ios
 shared=$(mktemp -d)
 server_log=$shared/server.log
+. "$root/tools/store-screenshots/when.sh"
 . "$root/tools/ios-ui/lib.sh"
 seed=""
 trap '[ -z "$seed" ] || kill "$seed" 2>/dev/null || true; stop_server' EXIT
@@ -63,6 +64,12 @@ TEST_RUNNER_STORE_SHOTS_DIR=$raw xcodebuild_for test-without-building -collect-t
   -parallel-testing-enabled NO -resultBundlePath "$shared/results.xcresult" \
   -only-testing:PochicalUITests/StoreScreenshotTests || failed=1
 xcrun simctl shutdown "$device" || true
+# The seed ends once the chat is written and the group has taken its
+# reaction and votes: the tests passed, it has had the join it waits for.
+if [ "$failed" = 0 ]; then
+  wait "$seed" || { echo "the seed failed" >&2; failed=1; }
+  seed=""
+fi
 echo "screens: $raw"
 echo "results: $shared"
 exit "$failed"

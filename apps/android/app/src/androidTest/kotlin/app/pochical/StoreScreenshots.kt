@@ -12,6 +12,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getAllSemanticsNodes
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.unit.roundToIntRect
+import androidx.glance.appwidget.SizeMode
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
@@ -24,7 +25,6 @@ import app.pochical.kit.AccountState
 import app.pochical.kit.PhotoShelf
 import app.pochical.kit.PochicalKit
 import app.pochical.walk.PACKAGE
-import app.pochical.walk.WAIT
 import app.pochical.walk.WAIT
 import app.pochical.walk.back
 import app.pochical.walk.find
@@ -41,6 +41,7 @@ import app.pochical.widgets.SimpleWidget
 import app.pochical.widgets.UpcomingWidget
 import app.pochical.widgets.WidgetChoice
 import app.pochical.widgets.choiceGroups
+import app.pochical.widgets.drawnNow
 import app.pochical.widgets.picture
 import coil3.SingletonImageLoader
 import java.io.File
@@ -54,6 +55,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import org.junit.After
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -61,18 +63,19 @@ import org.junit.runner.RunWith
 /**
  * The screens the stores' screenshots are made of (#806), photographed as they are on an emulator
  * in the order the app is walked rather than the stores': the sample month as a new user's,
- * リマインド's reminder of the evening before, who
- * joins the groups tools/store-screenshots/seed.ts made, the friends' as まい and the coworkers' as 佐藤; a page of a シフトの期間 from the 15th; the widgets, each kind by itself at
- * each size it offers, those that can be set to someone also set to the group's first member and
- * to the group; the month and the widgets in 墨, in black and white ([Style.Sumi]), and the month with its shifts as
- * letters ([Style.Letters]); then, as
- * they change the month's days, ポチポチ入力 halfway through it, as the app starts again, and
- * いまのシフト's widget once more with a shift on; as it changes the job, 繰り返しを直す on a
- * fixed cycle; and last, as it leaves a group, グループの設定 of one made with an end. Each is
- * kept under the name packages/prototype/src/lib/store-shots.ts gives it. Run by
- * `mise run store:shots:android` (tools/store-screenshots/android.sh), which sets the emulator up,
- * names the invitations (the arguments `invite`, the coworkers', and `friends`) and takes the PNGs from where Gradle pulls them
- * (`additionalTestOutputDir`); skipped in any other run.
+ * リマインド's reminder of the evening before, who joins the groups tools/store-screenshots/seed.ts
+ * made, the friends' as まい and the coworkers' as 佐藤; a page of a シフトの期間 from the 15th; the
+ * month in 墨, in black and white ([Style.Sumi]), and with its shifts as letters ([Style.Letters]);
+ * ポチポチ入力 halfway through the month, the days it takes out entered again after; then, every
+ * picture of the month taken, what changes its days: the widgets, each kind by itself at each
+ * size it offers, in the app's look and in 墨, on each of today's shifts the wall shows, those that
+ * can be set to someone also set to the group's first member and to the group, and いまのシフト's
+ * once more with a shift on; as it changes the job, 繰り返しを直す on a fixed cycle; and last, as it
+ * leaves a group, グループの設定 of one made with an end. Each is kept under the name
+ * packages/prototype/src/lib/store-shots.ts gives it. Run by `mise run store:shots:android`
+ * (tools/store-screenshots/android.sh), which sets the emulator up, names the invitations (the
+ * arguments `invite`, the coworkers', and `friends`) and takes the PNGs from where Gradle pulls
+ * them (`additionalTestOutputDir`); skipped in any other run.
  */
 @RunWith(AndroidJUnit4::class)
 class StoreScreenshots {
@@ -96,6 +99,14 @@ class StoreScreenshots {
 
     /** The shifts as letters, each in its color, in ソーダ. */
     Letters("文字", "ソーダ", "色分け", "印だけ", coloredDays = true),
+  }
+
+  /** The notifications a photograph put off, to bring back as the run ends. */
+  private val snoozed = mutableSetOf<String>()
+
+  @After
+  fun wakeNotifications() {
+    for (key in snoozed) device.executeShellCommand("cmd notification unsnooze $key")
   }
 
   @Test
@@ -148,8 +159,8 @@ class StoreScreenshots {
     val votes = By.descEndsWith("に行ける人：森、小林")
     val down = By.desc(Pattern.compile("(最新のメッセージへ|ここから新着へ).*"))
     device.tap(By.text("全体チャット"), By.text("メッセージ"))
-    repeat(CHAT_READS) {
-      if (device.wait(Until.hasObject(votes), WAIT) && !device.hasObject(down)) return@repeat
+    for (read in 1..CHAT_READS) {
+      if (device.wait(Until.hasObject(votes), WAIT) && !device.hasObject(down)) break
       device.findObject(down)?.click()
       device.wait(Until.gone(down), WAIT)
     }
@@ -173,12 +184,11 @@ class StoreScreenshots {
     photograph("tile-period", top = topOf(By.descContains("日〜")), foot = topOf(dayOf(first.plusDays(7))))
     pickPeriod("1日〜末日")
 
-    photographWidgetStates("02-widgets", calendar)
+    // Every picture of the month before the widgets change its days.
     pick(Style.Sumi)
     launch()
     device.find(calendar)
     photograph("05-calendar-sumi")
-    photographWidgetStates("02-widgets-sumi", calendar)
 
     pick(Style.Letters)
     launch()
@@ -188,10 +198,21 @@ class StoreScreenshots {
     pick(Style.Started)
     launch()
     device.find(calendar)
+    val month = monthSaid()
     enterHalfTheMonth()
     photograph("01-entry")
+    enterAgain(month)
+    launch("sample", "firstRunDone")
+    device.find(calendar)
+    // The page draws its days as they are read: it says what it did once all are there.
+    check(device.wait({ monthSaid() == month }, WAIT) == true) {
+      val now = monthSaid()
+      "The month is not as it was before ポチポチ入力: it had ${month - now.toSet()}, and has ${now - month.toSet()}"
+    }
+
+    photographWidgetStates(calendar)
     enterShiftOn()
-    photographWidgets("02-widgets", only = setOf("now"))
+    photographWidgets("02-widgets", only = setOf("now"), ring = true)
     // Out of ポチポチ入力 as the app starts again: its 完了 would ask about the days left blank.
     launch("sample", "firstRunDone")
     device.find(calendar)
@@ -315,7 +336,7 @@ class StoreScreenshots {
     device.tap(By.textContains("曜はじまり"), By.text("週の始まり"))
     for (day in listOf("土曜", "日曜", "祝日")) {
       reveal(By.text(day))
-      device.tap(switch(day, !style.coloredDays), switch(day, style.coloredDays))
+      if (!device.hasObject(switch(day, style.coloredDays))) device.tap(switch(day, !style.coloredDays), switch(day, style.coloredDays))
     }
     device.back(By.text("週の始まり"))
   }
@@ -334,8 +355,8 @@ class StoreScreenshots {
     val reach = device.displayHeight / 4
     fun inSight() = device.findObject(row)?.visibleBounds?.let { it.height() > 0 && it.top > middle - reach && it.bottom < middle + reach } == true
     for (way in listOf(-1, 1)) {
-      repeat(PERIOD_DRAGS) {
-        if (inSight()) return@repeat
+      for (drag in 1..PERIOD_DRAGS) {
+        if (inSight()) break
         device.swipe(across, middle, across, middle + way * reach, 20)
         device.waitForIdle()
       }
@@ -400,6 +421,24 @@ class StoreScreenshots {
     device.find(target)
   }
 
+  /** A day as the calendar and the tray say it. */
+  private fun said(day: LocalDate) = "${day.monthValue}月${day.dayOfMonth}日"
+
+  /** The calendar's [day] while it holds [shift], whatever else it says: a holiday's name before it, a change of hours after. */
+  private fun holding(day: String, shift: String): BySelector = By.desc(Pattern.compile("$day、(.+、)?$shift(、.*)?"))
+
+  /** What each day of this month says on the calendar, in the days' order, read at one moment. */
+  private fun monthSaid(): List<String> {
+    val day = Regex("${LocalDate.now().monthValue}月(\\d+)日、.*")
+    return said().mapNotNull { day.matchEntire(it.words) }.sortedBy { it.groupValues[1].toInt() }.map { it.value }.distinct()
+  }
+
+  /** Enters [shift] on [day] in ポチポチ入力, open: the day picked, and the tray's key of the shift pressed. */
+  private fun enter(day: String, shift: String) {
+    device.tap(By.desc(Pattern.compile("$day、.*")), By.desc("入力する日付：$day"))
+    device.tap(By.text(shift), holding(day, shift))
+  }
+
   /**
    * ポチポチ入力 halfway through the month, as iOS's shot: the sample month's days from the 16th
    * taken out, as they are before they are entered, and the 16th the day to enter.
@@ -421,17 +460,32 @@ class StoreScreenshots {
   }
 
   /**
+   * Enters again, ポチポチ入力 still open, the days it took out of the month that said [month]: each
+   * the sample's shift it held, by the tray's keys, which is all those days held; the run checks
+   * after that the month says what it did.
+   */
+  private fun enterAgain(month: List<String>) {
+    val today = LocalDate.now()
+    for (date in HALF..today.lengthOfMonth()) {
+      val day = said(today.withDayOfMonth(date))
+      val shift = STATES.map { it.shift }.first { shift -> month.any { Pattern.matches("$day、(.+、)?$shift(、.*)?", it) } }
+      enter(day, shift)
+    }
+  }
+
+  /**
    * Enters, in ポチポチ入力, one of the sample's shifts that is on now, for いまのシフト's ring, which it
    * draws while a shift is on: 夜勤 (16:30 to 9:30 the next day) on the day before until 9:00, 日勤
-   * (9:00 to 18:00) today until 18:00, and 夜勤 today after. After the screens that show the month.
+   * (9:00 to 18:00) today until 18:00, and 夜勤 today after. After every picture of the month, as
+   * it changes a day of it. The day before is on the month's page but on the month's 1st: before
+   * 9:00 then the run is not started (tools/store-screenshots/when.sh).
    */
   private fun enterShiftOn() {
     val now = LocalDateTime.now()
     val on = if (now.hour < 9) now.toLocalDate().minusDays(1) else now.toLocalDate()
-    val shift = if (now.hour in 9..17) "日勤" else "夜勤"
-    val day = "${on.monthValue}月${on.dayOfMonth}日"
-    device.tap(By.desc(Pattern.compile("$day、.*")), By.desc("入力する日付：$day"))
-    device.tap(By.text(shift), By.desc(Pattern.compile("$day、$shift.*")))
+    launch("sample", "firstRunDone")
+    device.tap(By.text("ポチポチ入力"), By.text("完了"))
+    enter(said(on), if (now.hour in 9..17) "日勤" else "夜勤")
   }
 
   /** The seed's group named [name], once the app holds its people with the photos they show. */
@@ -455,29 +509,35 @@ class StoreScreenshots {
 
   /**
    * The widgets on each of today's shifts the wall shows them on ([STATES]), entered in ポチポチ入力
-   * as the ring's is: all of them on a day off, and on a working day those whose picture today's
-   * shift changes. Today and, as 夜勤 brings the day after its 明け, tomorrow are put back as they
-   * were, the app on its calendar again.
+   * as the ring's is, in the app's look and in 墨: all of them on a day off, and on a working day
+   * those whose picture today's shift changes. A day is not put back: entering a shift takes a
+   * day's own hours off it, and 夜勤 gives the day after its 明け, so the shifts go in the order
+   * that leaves each the days it shows as the sample has them, both looks photographed on one
+   * before the next is entered, and no picture of the month is taken after.
    */
-  private fun photographWidgetStates(folder: String, calendar: BySelector) {
-    launch("sample", "firstRunDone")
-    device.find(calendar)
-    fun holding(day: String, shift: String) = By.desc(Pattern.compile("$day、(.+、)?$shift(、.*)?"))
-    val (today, tomorrow) = listOf(0L, 1L).map { LocalDate.now().plusDays(it).let { day -> "${day.monthValue}月${day.dayOfMonth}日" } }
-    val was = listOf(today, tomorrow).map { day -> day to STATES.map { it.shift }.first { device.hasObject(holding(day, it)) } }
-    device.tap(By.text("ポチポチ入力"), By.text("完了"))
-    fun enter(day: String, shift: String) {
-      device.tap(By.desc(Pattern.compile("$day、.*")), By.desc("入力する日付：$day"))
-      device.tap(By.text(shift), holding(day, shift))
+  private fun photographWidgetStates(calendar: BySelector) {
+    val looks = listOf(Style.Started to "02-widgets", Style.Sumi to "02-widgets-sumi")
+    var shown = Style.Started
+    for ((turn, state) in STATES.withIndex()) {
+      launch("sample", "firstRunDone")
+      device.find(calendar)
+      device.tap(By.text("ポチポチ入力"), By.text("完了"))
+      enter(said(LocalDate.now()), state.shift)
+      // Out of ポチポチ入力 as the app starts again: its 完了 would ask about the days left blank.
+      launch("sample", "firstRunDone")
+      device.find(calendar)
+      // The look the app is in first, so a shift costs one change of look.
+      for ((look, folder) in if (turn % 2 == 0) looks else looks.reversed()) {
+        if (look != shown) {
+          pick(look)
+          launch()
+          device.find(calendar)
+          shown = look
+        }
+        photographWidgets(folder, state.widgets, state.word)
+      }
     }
-    for (state in STATES) {
-      enter(today, state.shift)
-      photographWidgets(folder, state.widgets, state.word)
-    }
-    for ((day, shift) in was) enter(day, shift)
-    // Out of ポチポチ入力 as the app starts again: its 完了 would ask about the days left blank.
-    launch("sample", "firstRunDone")
-    device.find(calendar)
+    check(shown == Style.Started) { "The widgets leave the app in ${shown.theme}" }
   }
 
   /** One of today's shifts the widgets are photographed on: the word their files take for it, none on a day off, and which widgets, all when not said. */
@@ -488,9 +548,10 @@ class StoreScreenshots {
    * look the app is in, from the days and the group the app holds: set to nobody, and those that
    * can be, to the group's first member (-person) and to the group itself (-group). [only] names
    * those to photograph, when not all; [state] the word their files take before the size
-   * (<kind>-<state>-<size>.png), with which none is set to anyone.
+   * (<kind>-<state>-<size>.png), with which none is set to anyone; with [ring], each is to have a
+   * shift on, which いまのシフト draws its ring for.
    */
-  private fun photographWidgets(folder: String, only: Set<String>? = null, state: String? = null) = runBlocking {
+  private fun photographWidgets(folder: String, only: Set<String>? = null, state: String? = null, ring: Boolean = false) = runBlocking {
     val group = seededGroup(COWORKERS)
     val person = WidgetChoice.Member(group.group.id, group.members.first().userId)
     val widgets: List<Triple<String, PochicalWidget, WidgetChoice?>> =
@@ -505,11 +566,14 @@ class StoreScreenshots {
         Triple("now", NowWidget(), null),
       )
     val sizes = mapOf(SMALL to "small", MEDIUM to "medium", LARGE to "large")
-    for ((name, widget, choice) in widgets.filter { (only == null || it.first in only) && (state == null || it.third == null) }) {
+    val asked = widgets.filter { (only == null || it.first in only) && (state == null || it.third == null) }
+    check(asked.isNotEmpty()) { "No widget is named $only" }
+    for ((name, widget, choice) in asked) {
       val drawn = widget.drawnNow(app, choice)
+      check(!ring || drawn.entry.now.on != null) { "No shift is on for $name's ring" }
       // The seed's people each show a photo.
       check(choice !is WidgetChoice.Member || drawn.faces.with != null) { "$name has no photo of whom it is set to" }
-      for (size in widget.previews) {
+      for (size in (widget.previewSizeMode as SizeMode.Responsive).sizes) {
         val picture = withContext(Dispatchers.Main) { widget.picture(app, drawn, size) }
         val file = File(out, "$folder/$name${state?.let { "-$it" }.orEmpty()}-${sizes.getValue(size)}.png")
         checkNotNull(file.parentFile).mkdirs()
@@ -523,7 +587,11 @@ class StoreScreenshots {
     const val COWORKERS = "職場のみんな"
     const val FRIENDS = "学生時代の友だち"
 
-    /** Today's shifts the widgets are photographed on, the sample's: a day off first, as the wall's pinned 次の休み is. */
+    /**
+     * Today's shifts the widgets are photographed on, the sample's: a day off first, as most of the
+     * wall is, and 夜勤 after 日勤, the days after today as the sample has them until it gives
+     * tomorrow its 明け.
+     */
     val STATES =
       listOf(
         State("休み", null, null),
@@ -625,10 +693,11 @@ class StoreScreenshots {
    */
   private fun photograph(name: String, top: Int = 0, foot: Int? = null) {
     // Android 17's status bar keeps the notifications' icons through the demo's
-    // `notifications -e visible false`, and one may come at any time of a run: each there is
-    // snoozed, and comes back by itself.
+    // `notifications -e visible false` (#1189), and one may come at any time of a run: each there
+    // is snoozed until the run ends ([wakeNotifications]).
     for (key in device.executeShellCommand("cmd notification list").lines().filter { it.isNotBlank() }) {
       device.executeShellCommand("cmd notification snooze --for $SNOOZE_MS $key")
+      snoozed += key
     }
     device.waitForIdle()
     val committed = CountDownLatch(1)

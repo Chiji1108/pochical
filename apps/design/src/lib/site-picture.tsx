@@ -1,6 +1,7 @@
 import { themeSkyId } from "@pochical/design/skies";
 import siteIcon from "@pochical/prototype/assets/icon.png?url";
 import { paleSkyFromTop } from "@pochical/prototype/components/design-surprise";
+import { TITLE } from "@pochical/prototype/lib/store-shots";
 import { css } from "@pochical/styled-system/css";
 
 // What the pictures photographed from /_render share: the site's sky
@@ -27,13 +28,14 @@ const styles = {
 
 const skyBackground = paleSkyFromTop(themeSkyId("pochical"));
 
-// A title's weight and spacing, at the font size its picture gives it.
-export const pictureTitle = css({
-  fontWeight: 700,
-  letterSpacing: "0.01em",
-  lineHeight: 1.35,
-  margin: 0,
-});
+// A title's weight, at the font size its picture gives it, and its line
+// and spacing (TITLE, which the stores' pictures measure a line's room
+// by), given beside the class as a style.
+export const pictureTitle = css({ fontWeight: 700, margin: 0 });
+export const pictureTitleStyle = {
+  letterSpacing: `${TITLE.spacing}em`,
+  lineHeight: TITLE.line,
+};
 
 // The sky over the top of a picture, `height` down it.
 export function PictureSky({ height }: { height: string }) {

@@ -4,6 +4,8 @@ import path from "node:path";
 import { characterCount } from "@pochical/design/text";
 import { describe, expect, test } from "vitest";
 
+import { unsaid } from "./store-words";
+
 // The stores' listings (store/README.md), each text within the store's
 // limit, counted as a reader counts, and keeping to the words the listing
 // may say.
@@ -21,11 +23,6 @@ const texts = [
   limit,
   text: readFileSync(path.join(folder, file), "utf-8").trimEnd(),
 }));
-
-// A price or a rank, which both stores turn down; a promise of safety,
-// which the app does not make; and words that would say the phone's
-// calendar is kept both ways.
-const unsaid = ["無料", "No.1", "人気", "安全", "保存しない", "同期", "連携"];
 
 describe.each(texts)("$file", ({ limit, text }) => {
   test("says something within the store's limit", () => {

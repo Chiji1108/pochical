@@ -302,6 +302,20 @@ function inkRoles(preset: Preset, scheme: ColorScheme) {
   );
 }
 
+// What lies on a dark screen and is drawn a step off it: every ground
+// above the screen, and the lines.
+const raisedTokens = new Set([
+  "background-card",
+  "background-elevated",
+  "fill-quaternary",
+  "fill-tertiary",
+  "fill-secondary",
+  "fill-primary",
+  "border-default",
+  "separator",
+  "border-strong",
+]);
+
 // The grays leaning the テーマ's way, its text's ink, and its ground.
 function neutralsFor(preset: Preset, scheme: ColorScheme) {
   const roles = {
@@ -313,7 +327,22 @@ function neutralsFor(preset: Preset, scheme: ColorScheme) {
   }
   const ground = oklchToHex(preset.ground);
   if (scheme === "dark") {
-    return { ...roles, "background-base": ground };
+    // The grounds and lines on it rise as far as the screen does over
+    // the usual dark one, so cards, fields and lines keep their steps
+    // above it rather than sinking into a lighter screen.
+    const rise =
+      preset.ground.lightness -
+      hexToOklch(neutralRoles("dark")["background-base"]).lightness;
+    const raised = Object.fromEntries(
+      [...raisedTokens].map((name) => {
+        const color = hexToOklch(roles[name]);
+        return [
+          name,
+          oklchToHex({ ...color, lightness: color.lightness + rise }),
+        ];
+      })
+    );
+    return { ...roles, ...raised, "background-base": ground };
   }
   // Cards and sheets share a light screen's color, as white on white
   // does, so a tinted screen does not leave them floating pure white.

@@ -4,11 +4,14 @@ import path from "node:path";
 import {
   calloutOf,
   FEATURE_GRAPHIC,
+  HEADLINE,
   HEADLINE_SHARE,
   lineBoxOf,
+  lineClearOf,
   STORE_SHOTS,
   STORES,
   storeShotFile,
+  TITLE,
   WALL,
   WALL_PICTURES,
   WALL_SHAPE,
@@ -25,14 +28,46 @@ import type {
 import { expect, test } from "vitest";
 
 import { pngHeader } from "../scripts/png";
+import { unsaid } from "./store-words";
 
 // The stores' pictures are checked in, drawn by
-// `mise run store:screenshots`: every shot of store-shots.ts has its
-// picture for each store at the size it asks for, and so has every
-// picture drawn from the wall, without the alpha channel the App Store
-// refuses.
+// `mise run store:screenshots`. What each store asks of them, from its
+// own page, once:
+// - the App Store's screenshots of an iPhone with a 6.9-inch display,
+//   1320 by 2868, with no alpha channel:
+//   https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications
+// - its product page header, 3840 by 1646, with none either:
+//   https://developer.apple.com/help/app-store-connect/reference/app-information/creative-assets-specifications
+// - Google Play's feature graphic, 1024 by 500, and its screenshots, each
+//   side from 320 to 3840 pixels, the longer no more than twice the
+//   shorter, 9:16 for those it features, their words no more than a fifth
+//   of the picture, eight at most:
+//   https://support.google.com/googleplay/android-developer/answer/9866151
+const ASKED = {
+  appStoreScreenshot: { height: 2868, width: 1320 },
+  featureGraphic: { height: 500, width: 1024 },
+  headlineShare: 0.2,
+  productPageHeader: { height: 1646, width: 3840 },
+  screenshots: 8,
+  side: { least: 320, most: 3840 },
+} as const;
+
 const root = path.join(import.meta.dirname, "../../..");
 const pictures: readonly WallPicture[] = WALL_PICTURES;
+
+test("the pictures are of the sizes the stores ask for", () => {
+  expect(STORES.ios).toMatchObject(ASKED.appStoreScreenshot);
+  const { height, width } = STORES.android;
+  expect(width).toBeGreaterThanOrEqual(ASKED.side.least);
+  expect(height).toBeLessThanOrEqual(ASKED.side.most);
+  expect(height / width).toBeCloseTo(16 / 9);
+  expect(FEATURE_GRAPHIC).toMatchObject(ASKED.featureGraphic);
+  expect(
+    pictures.find(({ name }) => name === "product-page-header")
+  ).toMatchObject(ASKED.productPageHeader);
+  expect(STORE_SHOTS.length).toBeLessThanOrEqual(ASKED.screenshots);
+  expect(HEADLINE_SHARE).toBeLessThanOrEqual(ASKED.headlineShare);
+});
 
 const drawn = (["ios", "android"] as const).flatMap((id) =>
   STORE_SHOTS.map((shot) => ({
@@ -48,29 +83,72 @@ test.each([
     size: { height, width },
   })),
   { file: `store/${FEATURE_GRAPHIC.name}.png`, size: FEATURE_GRAPHIC },
-])("$file is drawn at its store's size", ({ file, size }) => {
-  const full = path.join(root, file);
-  expect(existsSync(full), `${file}: run mise run store:screenshots`).toBe(
-    true
-  );
-  expect(pngHeader(full)).toEqual({
-    alpha: false,
-    height: size.height,
-    width: size.width,
-  });
-});
+])(
+  "$file is drawn at its size, with no alpha channel",
+  async ({ file, size }) => {
+    const full = path.join(root, file);
+    expect(existsSync(full), `${file}: run mise run store:screenshots`).toBe(
+      true
+    );
+    expect(await pngHeader(full)).toEqual({
+      alpha: false,
+      height: size.height,
+      width: size.width,
+    });
+  }
+);
 
-// Google Play asks that a tagline take no more than a fifth of a
-// screenshot, which the App Store's pictures keep to too; every shot is
-// the app itself under one, its screens or its widgets:
-// https://support.google.com/googleplay/android-developer/answer/9866151
-test("a headline takes a fifth of its picture at most", () => {
-  expect(HEADLINE_SHARE).toBeLessThanOrEqual(0.2);
-});
+// A headline is set in rows that are never broken, every letter as wide
+// as it is tall at most: each row keeps the picture's margin at both
+// sides, and the rows, under the room over them, keep to the headline's
+// share of the shortest picture.
+test.each(STORE_SHOTS.map(({ headline, name }) => ({ headline, name })))(
+  "$name's headline fits its room",
+  ({ headline }) => {
+    for (const line of headline) {
+      expect(
+        line.length * HEADLINE.size * (1 + TITLE.spacing)
+      ).toBeLessThanOrEqual(100 - 2 * HEADLINE.margin);
+    }
+    for (const { height, width } of Object.values(STORES)) {
+      expect(headline.length * HEADLINE.size * TITLE.line).toBeLessThanOrEqual(
+        (100 * height * HEADLINE_SHARE) / width
+      );
+    }
+  }
+);
 
-// Google Play takes eight screenshots of a phone at most, the App Store ten.
-test("the shots are no more than both stores take", () => {
-  expect(STORE_SHOTS.length).toBeLessThanOrEqual(8);
+// Every word a picture is drawn with: the headlines, the tiles' words and
+// their pieces', the lines of the pictures drawn from the wall, and the
+// feature graphic's.
+const words = [
+  ...STORE_SHOTS.flatMap((shot) => [
+    ...shot.headline,
+    ...(shot.kind === "tiles"
+      ? shot.tiles.flatMap((tile) => [
+          tile.words,
+          ...("pieces" in tile
+            ? tile.pieces.flatMap((piece) =>
+                piece.kind === "day"
+                  ? [
+                      ...("says" in piece ? [piece.says] : []),
+                      ...("tag" in piece ? [piece.tag] : []),
+                    ]
+                  : []
+              )
+            : []),
+        ])
+      : []),
+  ]),
+  ...pictures.flatMap(({ line }) => line?.words ?? []),
+  FEATURE_GRAPHIC.line,
+];
+
+test.each(unsaid)("no picture says %s", (word) => {
+  expect(words.length).toBeGreaterThan(STORE_SHOTS.length * 2);
+  for (const said of words) {
+    expect(said).not.toContain(word);
+  }
 });
 
 // A callout's card: a part of a screen lifted over the phone. A phone's
@@ -175,37 +253,11 @@ test("a callout's card cuts through no piece beside it either, and leaves alone 
   expect(over.right).toBeLessThan(button.left);
 });
 
-// The widgets both platforms photograph, in each look: every kind at each
-// size it has for a Home Screen, those that can be set to someone set to
-// a person and to the group too, and those today's shift changes on a
-// working day's shifts (day, night, after) besides a day off.
-const WIDGETS = [
-  "calendar-large.png",
-  "calendar-medium.png",
-  "next-off-day-small.png",
-  "next-off-group-small.png",
-  "next-off-person-small.png",
-  "next-off-small.png",
-  "now-small.png",
-  "simple-after-medium.png",
-  "simple-after-small.png",
-  "simple-day-medium.png",
-  "simple-day-small.png",
-  "simple-medium.png",
-  "simple-night-medium.png",
-  "simple-night-small.png",
-  "simple-small.png",
-  "upcoming-day-medium.png",
-  "upcoming-day-small.png",
-  "upcoming-medium.png",
-  "upcoming-person-medium.png",
-  "upcoming-person-small.png",
-  "upcoming-small.png",
-];
-
 const tiles = wallOf(WALL_SHOT.tiles);
 
-test("the wall covers its grid with widgets both platforms photograph", () => {
+// Which widgets there are to place is the captures' to say: the script
+// fails a wall whose widget is not among those photographed.
+test("the wall covers its grid, each widget in one of its looks", () => {
   const cells = tiles.flatMap(({ column, columns, row, rows }) =>
     Array.from(
       { length: columns * rows },
@@ -215,8 +267,7 @@ test("the wall covers its grid with widgets both platforms photograph", () => {
   );
   expect(new Set(cells).size).toBe(cells.length);
   expect(cells).toHaveLength(WALL.columns * WALL.rows);
-  for (const { column, columns, file, look, row, rows } of tiles) {
-    expect(WIDGETS).toContain(file);
+  for (const { column, columns, look, row, rows } of tiles) {
     expect(look).toBeLessThan(WALL_SHOT.raw.length);
     expect(column + columns).toBeLessThanOrEqual(WALL.columns);
     expect(row + rows).toBeLessThanOrEqual(WALL.rows);
@@ -280,10 +331,26 @@ test("the widgets marked whole show whole in every store's picture, clear of the
   }
 });
 
+// Points over a widget, its corners and between them: what lies across
+// it lies across one of them, for anything as large as a line's clearing.
+const over = (corners: [number, number][]): [number, number][] => {
+  const [a = [0, 0], b = [0, 0], c = [0, 0], d = [0, 0]] = corners;
+  const steps = [0, 0.25, 0.5, 0.75, 1];
+  return steps.flatMap((down) =>
+    steps.map((across): [number, number] => [
+      (a[0] + (b[0] - a[0]) * across) * (1 - down) +
+        (c[0] + (d[0] - c[0]) * across) * down,
+      (a[1] + (b[1] - a[1]) * across) * (1 - down) +
+        (c[1] + (d[1] - c[1]) * across) * down,
+    ])
+  );
+};
+
 // A picture drawn from the wall: its line's room is inside its safe area,
 // the part of it every device shows, and so are the widgets marked whole,
-// in one of the wall's copies side by side, clear of the line. One with no
-// safe area shows them whole anywhere in it.
+// in one of the wall's copies side by side, none of them reached by the
+// clearing around the line, where the wall fades. One with no safe area
+// shows them whole anywhere in it.
 test.each([...pictures])(
   "$name holds its line and the widgets marked whole inside its safe area",
   (picture) => {
@@ -299,36 +366,29 @@ test.each([...pictures])(
       expect(inside([box.left, box.top])).toBe(true);
       expect(inside([box.left + box.width, box.top + box.height])).toBe(true);
     }
+    const clearing = picture.line && lineClearOf(picture.line);
+    const faded = ([across, down]: [number, number]) =>
+      clearing !== undefined &&
+      ((across - clearing.middle[0]) / clearing.across) ** 2 +
+        ((down - clearing.middle[1]) / clearing.down) ** 2 <
+        1;
+    const placed = wallOf(WALL_SHOT.tiles, lie.across);
     const copies = Array.from({ length: lie.across }, (_, copy) =>
-      whole.flatMap((index) => {
-        const tile = wallOf(WALL_SHOT.tiles, lie.across)[
-          copy * WALL_SHOT.tiles.length + index
-        ];
+      whole.map((index) => {
+        const tile = placed[copy * WALL_SHOT.tiles.length + index];
         return tile
           ? wallCornersOf(tile, STORES[picture.store].widgetRow, lie)
           : [];
       })
     );
-    const shown = copies.filter(
-      (corners) =>
-        corners.length === whole.length * 4 &&
-        corners.every(inside) &&
-        corners.every(
-          ([across]) =>
-            box === undefined ||
-            across <= box.left ||
-            across >= box.left + box.width
-        )
+    const shown = copies.filter((widgets) =>
+      widgets.every(
+        (corners) =>
+          corners.length === 4 &&
+          corners.every(inside) &&
+          !over(corners).some(faded)
+      )
     );
     expect(shown).toHaveLength(1);
   }
 );
-
-// Apple's sizes for the pictures it takes besides screenshots: the product
-// page header is 3840 by 1646.
-// https://developer.apple.com/help/app-store-connect/reference/app-information/creative-assets-specifications
-test("the App Store's product page header is the size Apple asks for", () => {
-  expect(
-    pictures.find(({ name }) => name === "product-page-header")
-  ).toMatchObject({ height: 1646, width: 3840 });
-});

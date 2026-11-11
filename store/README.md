@@ -2,7 +2,7 @@
 
 What the App Store and Google Play show of ポチカル, kept here to be reviewed like code and entered into App Store Connect and Play Console by hand. Nothing uploads it.
 
-The listing speaks to people who work nights and rotating shifts, young nurses first, in the order they would use the app: entering, the widgets, sharing, the chat, the look, the phone's own calendar, and what a roster may have of its own (明け after 夜勤, a month from the 15th, a fixed cycle, for those who work one: 消防, 警備, 工場).
+The listing speaks to people who work nights and rotating shifts, young nurses first. The pictures go in the order they would use the app: entering, the widgets, sharing, the chat, the look, the phone's own calendar, and what a roster may have of its own (明け after 夜勤, a month from the 15th, a fixed cycle, for those who work one: 消防, 警備, 工場); the description goes by its own headings, entering and a fixed cycle first.
 
 ## Where each file goes
 

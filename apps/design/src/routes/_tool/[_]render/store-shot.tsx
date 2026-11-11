@@ -3,8 +3,9 @@ import { presetPatterns } from "@pochical/prototype/lib/design-patterns";
 import {
   calloutOf,
   FEATURE_GRAPHIC,
+  HEADLINE,
   HEADLINE_SHARE,
-  lineBoxOf,
+  lineClearOf,
   PIECES_TALL,
   STAGE_FOOT,
   STORE_SHOTS,
@@ -31,13 +32,14 @@ import {
   PictureBrand,
   PictureSky,
   pictureTitle,
+  pictureTitleStyle,
 } from "../../../lib/site-picture";
 
 // One of the stores' pictures (#806), which pnpm run image:store takes
 // from /_render/store-shot into store/: a screen of the real app, with
 // rounded corners and no phone around it, on the site's sky under its
 // headline, at the size its store asks for
-// (@pochical/prototype's lib/store-shots.ts). `?store=ios&shot=calendar`
+// (@pochical/prototype's lib/store-shots.ts). `?store=ios&shot=entry`
 // names the picture, `shot=feature-graphic` Google Play's feature graphic,
 // and a picture drawn from the wall of widgets (WALL_PICTURES) goes by its
 // own name.
@@ -109,11 +111,6 @@ const tilesLie = (parts: number[], tall: number) => {
   return { gap: Math.min(TILES.most, left / gaps), wide };
 };
 
-// The sky a wall's picture clears around its line: how far it reaches
-// from the line's middle, in the widths and heights of the line's room,
-// and how much of that reach has no wall at all.
-const LINE_CLEAR = { across: 0.87, down: 0.9, whole: 0.8 };
-
 const styles = {
   // A callout's card, as a tile's is, lifted over the phone from its
   // middle.
@@ -141,7 +138,7 @@ const styles = {
     alignItems: "center",
     boxSizing: "border-box",
     display: "flex",
-    fontSize: "calc(var(--u) * 8.6)",
+    fontSize: `calc(var(--u) * ${HEADLINE.size})`,
     height: "var(--headline)",
     justifyContent: "center",
     paddingTop: "calc(var(--u) * 4)",
@@ -282,7 +279,10 @@ function StoreShotPage() {
           row={widgetRow}
         />
       )}
-      <h1 className={cx(pictureTitle, styles.headline)}>
+      <h1
+        className={cx(pictureTitle, styles.headline)}
+        style={pictureTitleStyle}
+      >
         <span>
           {shot.headline.map((line) => (
             <span className={styles.line} key={line}>
@@ -655,7 +655,7 @@ function Wall({ lie, mask, row }: { lie: WallLie; mask: string; row: number }) {
 function WallPicturePage({ picture }: { picture: WallPicture }) {
   const { height, line, store, width } = picture;
   const lie = picture.lie ?? wallLieOf(picture);
-  const box = line && lineBoxOf(line);
+  const clear = line && lineClearOf(line);
   return (
     <div
       className={styles.root}
@@ -666,9 +666,9 @@ function WallPicturePage({ picture }: { picture: WallPicture }) {
       <Wall
         lie={lie}
         mask={
-          box === undefined
+          clear === undefined
             ? "none"
-            : `radial-gradient(ellipse ${box.width * LINE_CLEAR.across}px ${box.height * LINE_CLEAR.down}px at ${box.left + box.width / 2}px ${box.top + box.height / 2}px, transparent ${LINE_CLEAR.whole * 100}%, black)`
+            : `radial-gradient(ellipse ${clear.across}px ${clear.down}px at ${clear.middle[0]}px ${clear.middle[1]}px, transparent ${clear.whole * 100}%, black)`
         }
         row={STORES[store].widgetRow}
       />
@@ -676,6 +676,7 @@ function WallPicturePage({ picture }: { picture: WallPicture }) {
         <h1
           className={cx(pictureTitle, styles.wallLine)}
           style={{
+            ...pictureTitleStyle,
             fontSize: line.size,
             left: line.middle[0],
             top: line.middle[1],
@@ -703,8 +704,11 @@ function FeatureGraphic() {
       <div className={styles.featureTitle}>
         <PictureBrand size={88} />
       </div>
-      <h1 className={cx(pictureTitle, styles.featureTitle)}>
-        シフトを、ポチッと。
+      <h1
+        className={cx(pictureTitle, styles.featureTitle)}
+        style={pictureTitleStyle}
+      >
+        {FEATURE_GRAPHIC.line}
       </h1>
     </div>
   );

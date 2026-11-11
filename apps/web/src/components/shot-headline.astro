@@ -1,11 +1,10 @@
 ---
 import { STORE_SHOTS } from "@pochical/prototype/lib/store-shots";
-import type { StoreShotName } from "@pochical/prototype/lib/store-shots";
 
 // A part of the top page under the headline of the stores' picture of it
 // (@pochical/prototype's lib/store-shots.ts), a line a line as the picture
 // sets it, so the page says what the stores say.
-type Props = { class: string; shot: StoreShotName };
+type Props = { class: string; shot: (typeof STORE_SHOTS)[number]["name"] };
 
 const { class: className, shot } = Astro.props;
 const lines = STORE_SHOTS.find((one) => one.name === shot)?.headline ?? [];
