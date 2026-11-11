@@ -57,8 +57,8 @@ data object Tabs : RootRoute
 @Serializable
 sealed interface RootPage : RootRoute, NavKey {
   /**
-   * The group a page is of, none for a page of no group: it is open only while the device holds
-   * that group ([RootNavigator.hold]).
+   * The group a page is of, none for a page of no group: it goes as the user leaves that group
+   * ([RootNavigator.left]).
    */
   val groupId: String?
     get() = null
@@ -272,41 +272,23 @@ class RootNavigator(
   }
 
   /**
-   * The groups a call's answer said the user is in, whose Membership is still on its way on the
-   * user's socket: one just made, shown at once ([showMade]). Each is here only until the device
-   * holds it ([hold]) or hears the user is out of it ([left]), and only in memory, so pages kept
-   * from before the app was last ended go by the groups the device holds alone.
-   */
-  private val coming = mutableSetOf<String>()
-
-  /**
-   * Shows the group [groupId] the user just made, with [page] over the tabs, as its call answers:
-   * its Membership comes a moment later, and its pages stay meanwhile.
-   */
-  fun showMade(groupId: String, page: RootPage) {
-    coming += groupId
-    showGroup(groupId, page)
-  }
-
-  /**
-   * Keeps the pages to the groups the device holds, [groupIds]: a group the person is no longer in
-   * (left from elsewhere, taken out, or ended, spec/sync-protocol.md, A group's end) takes its pages
-   * with it, every one of them and whichever is on top, back to the tabs, and so do pages kept from
-   * before the app was last ended. One just made is the user's by its call's answer, before the
-   * device holds it. The chat with Pochical's people is of no group.
-   */
-  fun hold(groupIds: Set<String>) {
-    coming -= groupIds
-    pages.removeAll { page -> page.groupId.let { it != null && it != Chat.supportPlace && it !in groupIds && it !in coming } }
-  }
-
-  /**
-   * The user is out of the group [groupId], as their own socket says: its pages go, one just made
-   * whose Membership the device never held too.
+   * The user is out of the group [groupId], as their own socket says (left from elsewhere, taken
+   * out, or the group ended, spec/sync-protocol.md, A group's end): its pages go, every one of them
+   * and whichever is on top, back to the tabs. Only this closes a group's pages as the app runs,
+   * never the list of groups as it changes: a Reset of the user's socket empties that list for a
+   * moment, and a group just made is not in it yet.
    */
   fun left(groupId: String) {
-    coming -= groupId
     pages.removeAll { it.groupId == groupId }
+  }
+
+  /**
+   * The pages as they are restored, kept from before the screen was last made, to the groups the
+   * device holds then, [held]: a group left while nothing was there to hear of it ([left]) takes
+   * its pages with it. The chat with Pochical's people is of no group.
+   */
+  fun restored(held: Set<String>) {
+    pages.removeAll { page -> page.groupId.let { it != null && it != Chat.supportPlace && it !in held } }
   }
 
   /** Takes away every page, back to the tabs, as leaving a group does from its pages. */

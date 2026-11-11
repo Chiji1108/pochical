@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.onSubscription
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
@@ -105,10 +106,11 @@ fun RootScreen(navigator: RootNavigator) {
     }
     links.consume()
   }
-  // The pages follow the groups the device holds, as they are read and as they change.
-  LaunchedEffect(groups) { groups?.let { held -> navigator.hold(held.map { it.id }.toSet()) } }
+  // A group the user is out of takes its pages with it, as the sync says so, and the pages kept
+  // from before this screen was made go by the groups held now, read once the leavings are heard,
+  // so none between the two is missed.
   val account = LocalAccount.current
-  LaunchedEffect(account) { account.left.collect(navigator::left) }
+  LaunchedEffect(account, navigator) { account.left.onSubscription { navigator.restored(account.groupsHeld()) }.collect(navigator::left) }
   val motion = rememberPageMotion()
   val push = remember(motion) { motion.push<RootRoute>() }
   val pop = remember(motion) { motion.pop<RootRoute>() }
@@ -146,7 +148,7 @@ private fun Page(route: RootRoute, navigator: RootNavigator) {
     is RootPage.MonthPicture -> MonthPicturePage(java.time.YearMonth.parse(route.month), onBack = rememberPageNavigation(navigator)::back)
     is RootPage.DeviceCalendar -> DeviceCalendarPage(java.time.YearMonth.parse(route.month), rememberPageNavigation(navigator))
     is RootPage.DeviceCalendarPatterns -> DeviceCalendarPatternsPage(java.time.YearMonth.parse(route.month), onBack = rememberPageNavigation(navigator)::back)
-    RootPage.NewGroup -> NewGroupPage(onBack = rememberPageNavigation(navigator)::back, onMade = { navigator.showMade(it, RootPage.GroupInvite(it)) })
+    RootPage.NewGroup -> NewGroupPage(onBack = rememberPageNavigation(navigator)::back, onMade = { navigator.showGroup(it, RootPage.GroupInvite(it)) })
     RootPage.Scan -> {
       val navigation = rememberPageNavigation(navigator)
       ScanScreen(onClose = navigation::back, onInvite = { navigation.replace(RootPage.Join(it)) })

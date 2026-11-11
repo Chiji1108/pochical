@@ -156,6 +156,14 @@ class SyncAccount internal constructor(
    */
   val left: SharedFlow<String> = mutableLeft.asSharedFlow()
 
+  /**
+   * The groups the device holds now, for what the app kept of a group from before it was last
+   * ended (a page open on it) to go if the group went meanwhile, when no one heard [left]: those
+   * listed, and those a Reset of the user's socket emptied the list of until its catch-up has come
+   * (spec/sync-protocol.md, Change log and cursor), which are not let go of.
+   */
+  suspend fun groupsHeld(): Set<String> = stretch.value?.user?.groupsHeld() ?: database.read { groupIds() }.toSet()
+
   /** The user's own socket, for the screens to say 接続中… while it is not current. */
   val userSocket: Flow<SocketState> = stretch.flatMapLatest { it?.user?.state ?: flowOf(SocketState.Closed) }
 
