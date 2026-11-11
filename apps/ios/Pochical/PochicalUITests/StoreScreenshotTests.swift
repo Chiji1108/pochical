@@ -67,6 +67,7 @@ final class StoreScreenshotTests: XCTestCase {
     toggle.switches.firstMatch.tap()
     XCTAssertEqual(toggle.value as? String, "1", "自動で反映 is on")
     snap("06-device-calendar", of: XCUIScreen.main, into: raw)
+    try measure("06-device-calendar", ["reflect": toggle.frame])
   }
 
   /// The friends' group, joined as まい with ひよこ for a face, the name
@@ -80,6 +81,13 @@ final class StoreScreenshotTests: XCTestCase {
       .firstMatch
     XCTAssertTrue(row.waitForExistence(timeout: 10), "一覧's rows show")
     snap("03-group-shifts", of: XCUIScreen.main, into: raw)
+    // The days everyone is off, the first of them and those right under it.
+    let off = app.buttons.matching(NSPredicate(format: "label ENDSWITH '、みんな休み'"))
+      .allElementsBoundByIndex.map(\.frame).filter { app.frame.contains($0) }
+    let together = off.dropFirst().reduce(try XCTUnwrap(off.first, "a day everyone is off shows")) {
+      $1.minY - $0.maxY < 1 ? $0.union($1) : $0
+    }
+    try measure("03-group-shifts", ["together": together])
   }
 
   /// The coworkers' group, joined as 佐藤 there alone, and its chat, which
@@ -111,6 +119,13 @@ final class StoreScreenshotTests: XCTestCase {
     XCTAssertTrue(votes.waitForExistence(timeout: 10) && votes.isHittable, "on its latest line")
     XCTAssertFalse(app.staticTexts["ここから新着"].exists, "with nothing new")
     snap("04-chat", of: XCUIScreen.main, into: raw)
+    // The poll, what holds its name and its days, with the words that ask for it over it.
+    let poll = app.descendants(matching: .any).matching(
+      NSPredicate(format: "label == '日にちの投票' OR label CONTAINS 'に行ける'")
+    ).allElementsBoundByIndex.map(\.frame)
+    let asking = app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'ごはん会'"))
+      .firstMatch.frame
+    try measure("04-chat", ["poll": holder(of: poll).union(asking)])
   }
 
   /// A month that runs from the 15th: シフトの期間 set in 設定's カレンダー,
@@ -392,6 +407,38 @@ final class StoreScreenshotTests: XCTestCase {
     let over = (1...7).map { day(date, after: days - $0).frame }
       .filter { app.frame.contains($0) && $0.maxY <= top }.map(\.maxY).max()
     return ((over ?? top) + top) / 2
+  }
+
+  /// Writes beside the screen `name` what a callout of it takes
+  /// (store-shots.ts): where its `parts` are, and every piece of the
+  /// screen that says something, each its left, top, width and height in
+  /// the screen's pixels.
+  @MainActor private func measure(_ name: String, _ parts: [String: CGRect]) throws {
+    let scale = XCUIScreen.main.screenshot().image.scale
+    func pixels(_ frame: CGRect) -> [Int] {
+      [frame.minX, frame.minY, frame.width, frame.height].map { Int(($0 * scale).rounded()) }
+    }
+    let saying: Set<XCUIElement.ElementType> = [.staticText, .button, .switch, .textField]
+    func said(_ element: any XCUIElementSnapshot) -> [CGRect] {
+      guard element.children.isEmpty else { return element.children.flatMap(said) }
+      return saying.contains(element.elementType) && !element.label.isEmpty ? [element.frame] : []
+    }
+    let pieces = said(try app.snapshot()).filter { app.frame.contains($0) }
+    let json = try JSONSerialization.data(withJSONObject: [
+      "parts": parts.mapValues(pixels), "pieces": pieces.map(pixels),
+    ])
+    try json.write(to: raw.appending(path: "\(name).json"))
+  }
+
+  /// The smallest thing on the screen that holds all of `frames`: what they
+  /// are parts of.
+  @MainActor private func holder(of frames: [CGRect]) throws -> CGRect {
+    let all = frames.reduce(frames[0]) { $0.union($1) }
+    func holders(_ element: any XCUIElementSnapshot) -> [CGRect] {
+      (element.frame.contains(all) ? [element.frame] : []) + element.children.flatMap(holders)
+    }
+    return try XCTUnwrap(
+      holders(try app.snapshot()).min { $0.width * $0.height < $1.width * $1.height })
   }
 
   /// Keeps as `name` the part of the screen from `top` down to `foot`, as

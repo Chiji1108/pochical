@@ -2,6 +2,7 @@ package app.pochical
 
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.Rect
 import android.net.Uri
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -113,6 +114,7 @@ class StoreScreenshots {
     device.tap(By.text("端末カレンダーに追加"), By.text("追加先"))
     turnOn("自動で反映")
     photograph("06-device-calendar")
+    measure("06-device-calendar", "reflect" to device.find(switch("自動で反映", on = true)).visibleBounds)
     device.back(By.text("追加先"))
 
     // The friends' group first, as まい with ひよこ for a face, the usual ones from then on.
@@ -123,6 +125,9 @@ class StoreScreenshots {
     device.find(By.desc(Pattern.compile(".*まい：(日勤|夜勤|明け|休み).*")))
     device.tap(By.text("月で見る"), By.text(Pattern.compile("\\d+年\\d+月")))
     photograph("03-group-shifts")
+    // The days everyone is off, the first of them and those right under it.
+    val off = device.findObjects(By.desc(Pattern.compile(".*、みんな休み、.*"))).map { it.visibleBounds }.sortedBy { it.top }
+    measure("03-group-shifts", "together" to off.drop(1).fold(off.first()) { run, row -> if (row.top - run.bottom < 2) Rect(run).apply { union(row) } else run })
 
     // The coworkers' from the calendar again, so the only group in sight after is theirs: as 佐藤 there alone.
     launch("sample", "firstRunDone")
@@ -147,6 +152,9 @@ class StoreScreenshots {
     device.tap(By.text("全体チャット"), votes)
     check(!device.hasObject(By.text("ここから新着"))) { "The chat still has new lines" }
     photograph("04-chat")
+    // The poll, by its line, which says what it is. (A line of words is one piece here, its reactions with
+    // it: the line that asks for the poll taken in too, the card would cover the answer over it.)
+    measure("04-chat", "poll" to device.find(By.descContains("日にちの投票")).visibleBounds)
     device.back(By.text("メッセージ"))
 
     // A month that runs from the 15th, the page holding today, and the month put back.
@@ -553,6 +561,22 @@ class StoreScreenshots {
 
   /** Where what [selector] finds begins on the screen: a row's top, by one of its days. */
   private fun topOf(selector: BySelector): Int = device.find(selector).visibleBounds.top
+
+  /**
+   * Writes beside the screen [name] what a callout of it takes (store-shots.ts): where its [parts]
+   * are, and every piece of the screen that says something, each its left, top, width and height in
+   * the screen's pixels.
+   */
+  private fun measure(name: String, vararg parts: Pair<String, Rect>) {
+    fun pixels(at: Rect) = "[${at.left},${at.top},${at.width()},${at.height()}]"
+    fun said(node: AccessibilityNodeInfo): List<Rect> =
+      if (node.childCount > 0) (0 until node.childCount).mapNotNull(node::getChild).flatMap(::said)
+      else if (node.text.isNullOrEmpty() && node.contentDescription.isNullOrEmpty()) emptyList()
+      else listOf(Rect().also(node::getBoundsInScreen))
+    val pieces = said(instrumentation.uiAutomation.rootInActiveWindow).joinToString(",", transform = ::pixels)
+    val measured = parts.joinToString(",") { (part, at) -> "\"$part\":${pixels(at)}" }
+    File(out, "$name.json").writeText("{\"parts\":{$measured},\"pieces\":[$pieces]}")
+  }
 
   /** Midway from the foot of what [over] finds to the top of what [under] finds: where one piece of a page gives way to the next. */
   private fun between(over: BySelector, under: BySelector): Int = (device.find(over).visibleBounds.bottom + topOf(under)) / 2
