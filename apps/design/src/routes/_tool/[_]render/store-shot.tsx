@@ -8,12 +8,14 @@ import {
   STORE_SHOTS,
   STORES,
   WALL,
+  WALL_SHAPE,
   wallOf,
 } from "@pochical/prototype/lib/store-shots";
 import type {
   Piece,
   StoreId,
-  WallPin,
+  Tile,
+  WallPlace,
 } from "@pochical/prototype/lib/store-shots";
 import { css, cx } from "@pochical/styled-system/css";
 import { createFileRoute } from "@tanstack/react-router";
@@ -34,8 +36,7 @@ import {
 // and `shot=widget-wall` the wall of widgets as the site's top page shows
 // it, with no headline and no sky.
 // The screens are not in the app: the script answers /_render/store-raw/
-// with the files the platform's UI test photographed, and names the
-// widgets it found for the wall in `widgets`.
+// with the files the platform's UI test photographed.
 
 const RAW = "/_render/store-raw/";
 
@@ -53,16 +54,13 @@ export const Route = createFileRoute("/_tool/_render/store-shot")({
     parts: typeof search.parts === "string" ? search.parts : "",
     shot: typeof search.shot === "string" ? search.shot : "",
     store: isStore(search.store) ? search.store : "ios",
-    // The wall's widgets' files, each in every look's folder, with commas
-    // between them.
-    widgets: typeof search.widgets === "string" ? search.widgets : "",
   }),
 });
 
 // Every length but the headline's room is in --u, a hundredth of the
 // picture's width, so each store's picture is laid out alike at its size.
 // The width of a widget's cell on the wall, in them.
-const WIDGET_CELL = "calc(var(--u) * 25)";
+const WIDGET_CELL = `calc(var(--u) * ${WALL_SHAPE.cell})`;
 
 // A shot of tiles, in --u: its words' size, line and the room under them,
 // the gap from a tile to the next one's words, several times that room so
@@ -187,17 +185,16 @@ const styles = {
   // and fading into the sky under the headline.
   wall: css({
     inset: 0,
-    maskImage:
-      "linear-gradient(to bottom, transparent calc(var(--headline) * 0.8), black calc(var(--headline) * 1.25))",
+    maskImage: `linear-gradient(to bottom, transparent calc(var(--headline) * 0.8), black calc(var(--headline) * ${WALL_SHAPE.clear}))`,
     position: "absolute",
   }),
   wallGrid: css({
     display: "grid",
-    gap: "calc(var(--u) * 3.5)",
+    gap: `calc(var(--u) * ${WALL_SHAPE.gap})`,
     left: "50%",
     position: "absolute",
-    top: "54%",
-    transform: "translate(-50%, -50%) rotate(-12deg)",
+    top: `${WALL_SHAPE.middle * 100}%`,
+    transform: `translate(-50%, -50%) rotate(${WALL_SHAPE.turn}deg)`,
   }),
   // A widget's photograph holds the wallpaper beyond its corners, which
   // are rounder toward their ends than a circle's: its frame's corners
@@ -219,7 +216,7 @@ const styles = {
 };
 
 function StoreShotPage() {
-  const { grounds, parts, shot: name, store, widgets } = Route.useSearch();
+  const { grounds, parts, shot: name, store } = Route.useSearch();
   if (name === FEATURE_GRAPHIC.name) {
     return <FeatureGraphic />;
   }
@@ -245,13 +242,7 @@ function StoreShotPage() {
     >
       {!site && <PictureSky height="100%" />}
       {shot.kind === "wall" && (
-        <Wall
-          alike={shot.alike}
-          looks={shot.raw}
-          pinned={shot.pinned}
-          row={widgetRow}
-          widgets={widgets.split(",").filter(Boolean)}
-        />
+        <Wall looks={shot.raw} places={shot.tiles} row={widgetRow} />
       )}
       {!site && (
         <h1 className={cx(pictureTitle, styles.headline)}>
@@ -309,11 +300,7 @@ function Tiles({
   wide,
 }: {
   grounds: string[];
-  tiles: (typeof STORE_SHOTS)[number] extends infer Shot
-    ? Shot extends { tiles: infer Held }
-      ? Held
-      : never
-    : never;
+  tiles: readonly Tile[];
   unit: number;
   wide: number;
 }) {
@@ -519,20 +506,16 @@ function Pieces({ pieces, tall }: { pieces: readonly Piece[]; tall: number }) {
   );
 }
 
-// The widgets where wallOf puts them, each from the folder of its look.
+// The widgets where they are placed, each from the folder of its look.
 // A cell is `row` times as tall as it is wide.
 function Wall({
-  alike,
   looks,
-  pinned,
+  places,
   row,
-  widgets,
 }: {
-  alike: readonly string[];
   looks: readonly string[];
-  pinned: readonly WallPin[];
+  places: readonly WallPlace[];
   row: number;
-  widgets: string[];
 }) {
   return (
     <div className={styles.wall}>
@@ -543,7 +526,7 @@ function Wall({
           gridTemplateRows: `repeat(${WALL.rows}, calc(${WIDGET_CELL} * ${row}))`,
         }}
       >
-        {wallOf(widgets, looks.length, pinned, alike).map((tile) => (
+        {wallOf(places).map((tile) => (
           <div
             className={styles.widget}
             key={`${tile.column} ${tile.row}`}

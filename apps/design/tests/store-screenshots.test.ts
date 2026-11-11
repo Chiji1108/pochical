@@ -9,6 +9,8 @@ import {
   STORES,
   storeShotFile,
   WALL,
+  WALL_SHAPE,
+  wallCornersOf,
   wallOf,
 } from "@pochical/prototype/lib/store-shots";
 import type { WallTile } from "@pochical/prototype/lib/store-shots";
@@ -72,10 +74,10 @@ test("the shots are no more than both stores take", () => {
   expect(STORE_SHOTS.length).toBeLessThanOrEqual(8);
 });
 
-// The wall of widgets mixes its looks (the app as it starts, and 墨 in
-// black and white), over the widgets both platforms photograph: every
-// kind at each size it has for a Home Screen, and those that can be set
-// to someone, set to a person and to the group too.
+// The widgets both platforms photograph, in each look: every kind at each
+// size it has for a Home Screen, those that can be set to someone set to
+// a person and to the group too, and those today's shift changes on a
+// working day's shifts (day, night, after) besides a day off.
 const WIDGETS = [
   "calendar-large.png",
   "calendar-medium.png",
@@ -100,20 +102,28 @@ const WIDGETS = [
   "upcoming-small.png",
 ];
 
-// Whether two runs of cells, each from a cell and so many long, share one.
-const overlap = (from: number, length: number, other: number, its: number) =>
-  from < other + its && other < from + length;
+const [wall] = STORE_SHOTS.flatMap((shot) =>
+  shot.kind === "wall" ? [shot] : []
+);
+const tiles = wallOf(wall?.tiles ?? []);
 
-// Whether two tiles share an edge.
-const touch = (a: WallTile, b: WallTile): boolean => {
-  const beside =
-    (a.column + a.columns === b.column || b.column + b.columns === a.column) &&
-    overlap(a.row, a.rows, b.row, b.rows);
-  const above =
-    (a.row + a.rows === b.row || b.row + b.rows === a.row) &&
-    overlap(a.column, a.columns, b.column, b.columns);
-  return beside || above;
-};
+test("the wall covers its grid with widgets both platforms photograph", () => {
+  const cells = tiles.flatMap(({ column, columns, row, rows }) =>
+    Array.from(
+      { length: columns * rows },
+      (_, cell) =>
+        `${column + (cell % columns)} ${row + Math.floor(cell / columns)}`
+    )
+  );
+  expect(new Set(cells).size).toBe(cells.length);
+  expect(cells).toHaveLength(WALL.columns * WALL.rows);
+  for (const { column, columns, file, look, row, rows } of tiles) {
+    expect(WIDGETS).toContain(file);
+    expect(look).toBeLessThan(wall?.raw.length ?? 0);
+    expect(column + columns).toBeLessThanOrEqual(WALL.columns);
+    expect(row + rows).toBeLessThanOrEqual(WALL.rows);
+  }
+});
 
 // How many cells lie between two tiles: none for two side by side or
 // corner to corner.
@@ -125,58 +135,52 @@ const between = (a: WallTile, b: WallTile): number =>
     b.row - a.row - a.rows
   );
 
-test("the wall is covered, a picture on it again only once every one is on it, apart from itself, and never a pinned one", () => {
-  const { alike, pinned } = STORE_SHOTS.find(
-    (shot) => shot.kind === "wall"
-  ) ?? { alike: [], pinned: [] };
-  const tiles = wallOf(WIDGETS, 2, pinned, alike);
-  const pictureOf = ({ file, look }: Pick<WallTile, "file" | "look">) =>
-    alike.includes(file) ? file : `${file} in look ${look}`;
-  const covered = tiles.reduce(
-    (cells, { columns, rows }) => cells + columns * rows,
-    0
-  );
-  expect(covered).toBe(WALL.columns * WALL.rows);
-  const again = tiles.filter(
-    (tile, index) =>
-      tiles.findIndex((other) => pictureOf(other) === pictureOf(tile)) !== index
-  );
-  if (again.length > 0) {
-    const every = new Set(
-      WIDGETS.flatMap((file) => [0, 1].map((look) => pictureOf({ file, look })))
-    );
-    expect(new Set(tiles.map(pictureOf)).size).toBe(every.size);
-  }
-  for (const tile of again) {
-    expect(pinned.map((pin) => pin.file)).not.toContain(tile.file);
+test("no picture on the wall is beside itself, even corner to corner", () => {
+  for (const tile of tiles) {
     for (const other of tiles) {
-      if (other !== tile && pictureOf(other) === pictureOf(tile)) {
-        expect(between(tile, other)).toBeGreaterThan(0);
+      if (
+        other !== tile &&
+        other.file === tile.file &&
+        other.look === tile.look
+      ) {
+        expect(
+          between(tile, other),
+          `${tile.file} at ${tile.column}, ${tile.row}`
+        ).toBeGreaterThan(0);
       }
     }
   }
 });
 
-test("the wall alternates its two looks, no widget beside itself, the pinned where they are told", () => {
-  const { alike, pinned } = STORE_SHOTS.find(
-    (shot) => shot.kind === "wall"
-  ) ?? { alike: [], pinned: [] };
-  const tiles = wallOf(WIDGETS, 2, pinned, alike);
-  for (const pin of pinned) {
-    expect(
-      tiles.filter((tile) => tile.file === pin.file && tile.look === pin.look)
-    ).toEqual([expect.objectContaining(pin)]);
-  }
-  const first = tiles.filter((tile) => tile.look === 0).length;
-  expect(Math.abs(tiles.length - 2 * first)).toBeLessThanOrEqual(2);
-  for (const tile of tiles) {
-    const neighbors = tiles.filter((other) => touch(tile, other));
-    expect(neighbors.map((other) => other.file)).not.toContain(tile.file);
-    // Never only its own look around a widget: with each picture on the
-    // wall once, the looks cannot take turns everywhere.
-    const own = neighbors.filter((other) => other.look === tile.look).length;
-    expect(own, `${tile.file} at ${tile.column}, ${tile.row}`).toBeLessThan(
-      neighbors.length
-    );
+// The frames the wall is seen in: each store's picture under the fade
+// below its headline, and the frame the site's top page shows of the App
+// Store's wall, which has no headline (SITE_WALL, on the page's branch).
+const FRAMES = [
+  ...Object.values(STORES).map(({ height, widgetRow, width }) => ({
+    row: widgetRow,
+    tall: height / width,
+    top: HEADLINE_SHARE * WALL_SHAPE.clear,
+  })),
+  { row: STORES.ios.widgetRow, tall: 1200 / 780, top: 0 },
+];
+
+test("the widgets marked whole show whole in every frame", () => {
+  const whole = (wall?.tiles ?? []).flatMap((place, index) =>
+    place.whole === true ? [tiles[index]] : []
+  );
+  expect(whole.map((tile) => tile?.file)).toEqual([
+    "next-off-small.png",
+    "next-off-day-small.png",
+    "now-small.png",
+  ]);
+  for (const { row, tall, top } of FRAMES) {
+    for (const tile of whole) {
+      for (const [across, down] of tile ? wallCornersOf(tile, row, tall) : []) {
+        expect(across).toBeGreaterThanOrEqual(0);
+        expect(across).toBeLessThanOrEqual(100);
+        expect(down).toBeGreaterThanOrEqual(100 * tall * top);
+        expect(down).toBeLessThanOrEqual(100 * tall);
+      }
+    }
   }
 });
