@@ -36,6 +36,7 @@ export function DesignApp({
   pendingInvite = false,
   initialTab = "calendar",
   initialSettingsPage,
+  initialGroupId,
   initialGroupPage,
   initialDetail,
   initialCalendarAdd,
@@ -52,14 +53,16 @@ export function DesignApp({
   // For the flow diagrams: a tab, and a settings page, to open on.
   initialTab?: Tab;
   initialSettingsPage?: SettingsPage;
-  // And the group tab's page: its hub, the shift table or the group chat.
+  // And the group tab's page: its hub, the shift table or the group chat,
+  // of the group named, the first of the samples' without.
+  initialGroupId?: string;
   initialGroupPage?: GroupStart;
   // A day of initialMonth to open on picked, its week folded out of the
   // month with the day's details under it, as a reminder opens it.
   initialDetail?: Date;
   // The calendar with 端末カレンダーに追加 open over it, as the top page
-  // shows it.
-  initialCalendarAdd?: boolean;
+  // shows it: 自動で反映 on when `reflecting`.
+  initialCalendarAdd?: boolean | "reflecting";
   // A group's invitation link was opened: ask about joining, in a screen
   // over the calendar.
   pendingInvite?: boolean;
@@ -75,7 +78,7 @@ export function DesignApp({
   const groups = useUser((state) => state.groups);
   const setGroups = useUser((state) => state.setGroups);
   // The group the group tab opens on, like one just joined from a link.
-  const [openGroup, setOpenGroup] = useState<string>();
+  const [openGroup, setOpenGroup] = useState(initialGroupId);
   const profile = useUser((state) => state.profile);
   const setProfile = useUser((state) => state.setProfile);
   const rules = useUser((state) => state.rules);

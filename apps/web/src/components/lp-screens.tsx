@@ -344,20 +344,41 @@ if (duty?.sequence === undefined) {
   throw new Error("はじめの設定 has no 当番・非番・休み order");
 }
 
+// Where a feature's screen opens: entering on a day, 端末カレンダーに追加
+// over the calendar, a page of the settings, or a page of a group.
+type AppProps = ComponentProps<typeof DesignApp>;
+type FeatureOpening =
+  | Required<Pick<AppProps, "initialDay" | "initialEditing">>
+  | Required<Pick<AppProps, "initialCalendarAdd">>
+  | (Required<Pick<AppProps, "initialSettingsPage">> & {
+      initialTab: "settings";
+    })
+  | (Required<Pick<AppProps, "initialGroupId" | "initialGroupPage">> & {
+      initialTab: "group";
+    });
+
 const featureScreens: Record<
   Feature,
   {
-    opening?: Partial<ComponentProps<typeof DesignApp>>;
+    opening: FeatureOpening;
     own?: Parameters<typeof useSamplePerson>[0];
     shown?: "foot" | "whole";
   }
 > = {
   chat: {
-    opening: { initialGroupPage: "chat", initialTab: "group" },
+    opening: {
+      initialGroupId: workplaceGroup.id,
+      initialGroupPage: "chat",
+      initialTab: "group",
+    },
     own: atWork,
     shown: "whole",
   },
-  deviceCalendar: { opening: { initialCalendarAdd: true }, shown: "whole" },
+  // 自動で反映 on, as the stores' picture and the part's headline have it.
+  deviceCalendar: {
+    opening: { initialCalendarAdd: "reflecting" },
+    shown: "whole",
+  },
   entry: {
     opening: { initialDay: HERO_FIRST_BLANK, initialEditing: true },
     own: { schedule: heroSchedule },
@@ -374,7 +395,11 @@ const featureScreens: Record<
     },
   },
   share: {
-    opening: { initialGroupPage: "shifts", initialTab: "group" },
+    opening: {
+      initialGroupId: oldFriendsGroup.id,
+      initialGroupPage: "shifts",
+      initialTab: "group",
+    },
     own: withFriends,
   },
 };

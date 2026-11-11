@@ -1,10 +1,11 @@
 ---
 import siteIcon from "@pochical/prototype/assets/icon.png?url";
-import widgetWall from "@pochical/prototype/assets/widget-wall.png?url";
+import widgetWall from "@pochical/prototype/assets/widget-wall.png";
 import { site } from "@pochical/prototype/lib/brand";
 import { defaultDayBeforeTime } from "@pochical/prototype/lib/design-reminders";
 import { SITE_WALL } from "@pochical/prototype/lib/store-shots";
 import { css } from "@pochical/styled-system/css";
+import { Picture } from "astro:assets";
 import {
   BellRing,
   CalendarOff,
@@ -21,6 +22,7 @@ import {
   Sky,
   ThemeGallery,
 } from "../components/lp-screens";
+import ShotHeadline from "../components/shot-headline.astro";
 import StoreLinks from "../components/store-links.astro";
 import Site from "../layouts/site.astro";
 import { primaryAction } from "../lib/primary-action";
@@ -139,14 +141,9 @@ const pressed = css({
   userSelect: "none",
 });
 
-// A feature's words: beside its screen, from the left when wide.
-const featureCopy = {
-  display: "flex",
-  flexDirection: "column",
-  gap: "18px",
-  maxWidth: "400px",
-  textAlign: "center",
-} as const;
+// The wall's width on the page: half its picture's, drawn for dense
+// screens.
+const WALL_SHOWN = SITE_WALL.width / 2;
 
 const feature = {
   body: css({
@@ -155,7 +152,15 @@ const feature = {
     letterSpacing: "0.035em",
     lineHeight: 2.1,
   }),
-  copy: css(featureCopy, { _wide: { textAlign: "left" } }),
+  // A feature's words: beside its screen, from the left when wide.
+  copy: css({
+    _wide: { textAlign: "left" },
+    display: "flex",
+    flexDirection: "column",
+    gap: "18px",
+    maxWidth: "400px",
+    textAlign: "center",
+  }),
   label: css({
     color: "var(--green)",
     fontSize: "11px",
@@ -195,13 +200,19 @@ const feature = {
   }),
   // The real widgets on a wall (SITE_WALL, drawn by mise run store:images),
   // at a phone's width beside the others, fading into the paper at every
-  // edge.
+  // edge: the picture above and below, and its frame at the sides, a mask
+  // each, so no browser has two to put together.
   wall: css({
-    flexShrink: 0,
+    display: "block",
     height: "auto",
-    maskComposite: "intersect",
     maskImage:
-      "linear-gradient(to bottom, transparent, black 14%, black 86%, transparent), linear-gradient(to right, transparent, black 10%, black 90%, transparent)",
+      "linear-gradient(to bottom, transparent, black 14%, black 86%, transparent)",
+    width: "100%",
+  }),
+  wallFrame: css({
+    flexShrink: 0,
+    maskImage:
+      "linear-gradient(to right, transparent, black 10%, black 90%, transparent)",
     width: "min(390px, 100%)",
   }),
 };
@@ -357,11 +368,7 @@ const closing = {
       <li class={feature.row}>
         <div class={feature.copy}>
           <p class={feature.label}>ENTRY</p>
-          <h2 class={feature.title}>
-            勤務表を見ながら、
-            <br />
-            ポチポチ。
-          </h2>
+          <ShotHeadline class={feature.title} shot="entry" />
           <p class={feature.body}>
             シフトのボタンを押すと、その日に入って次の日へ。
             <br />
@@ -373,35 +380,28 @@ const closing = {
       <li class={feature.row}>
         <div class={feature.copy}>
           <p class={feature.label}>WIDGET</p>
-          <h2 class={feature.title}>
-            次の休みも、
-            <br />
-            ウィジェットで。
-          </h2>
+          <ShotHeadline class={feature.title} shot="widgets" />
           <p class={feature.body}>
             次の休みも、今日のシフトも、アプリを開かずに。
             <br />
             ひと月のカレンダーも、ホーム画面に置けます。
           </p>
         </div>
-        <img
-          alt="ポチカルのウィジェット。次の休みまでの日数、今日のシフト、いまのシフトの残り時間が並ぶ。"
-          class={feature.wall}
-          decoding="async"
-          height={SITE_WALL.height / 2}
-          loading="lazy"
-          src={widgetWall}
-          width={SITE_WALL.width / 2}
-        />
+        <div class={feature.wallFrame}>
+          <Picture
+            alt="ポチカルのウィジェット。次の休みまでの日数、今日のシフト、いまのシフトの残り時間が並ぶ。"
+            class={feature.wall}
+            formats={["avif", "webp"]}
+            sizes={`min(${WALL_SHOWN}px, 100vw - 32px)`}
+            src={widgetWall}
+            widths={[WALL_SHOWN, SITE_WALL.width]}
+          />
+        </div>
       </li>
       <li class={feature.row}>
         <div class={feature.copy}>
           <p class={feature.label}>SHARE</p>
-          <h2 class={feature.title}>
-            家族や友人と、
-            <br />
-            シフトを共有。
-          </h2>
+          <ShotHeadline class={feature.title} shot="group-shifts" />
           <p class={feature.body}>
             みんなのシフトが、ひとつの表に並びます。
             <br />
@@ -413,11 +413,7 @@ const closing = {
       <li class={feature.row}>
         <div class={feature.copy}>
           <p class={feature.label}>CHAT</p>
-          <h2 class={feature.title}>
-            職場の人にも、
-            <br />
-            ちょっと聞ける。
-          </h2>
+          <ShotHeadline class={feature.title} shot="chat" />
           <p class={feature.body}>
             連絡先を交換していない人にも、グループのチャットで。
             <br />
@@ -429,11 +425,7 @@ const closing = {
       <li class={feature.row}>
         <div class={feature.copy}>
           <p class={feature.label}>STYLE</p>
-          <h2 class={feature.title}>
-            色も印も、
-            <br />
-            好きな見た目に。
-          </h2>
+          <ShotHeadline class={feature.title} shot="themes" />
           <p class={feature.body}>
             テーマは12種類。色を抑えた落ち着いたテーマも。
             <br />
@@ -445,17 +437,13 @@ const closing = {
       <li class={feature.row}>
         <div class={feature.copy}>
           <p class={feature.label}>YOUR CALENDAR</p>
-          <h2 class={feature.title}>
-            いつものカレンダーに、
-            <br />
-            自動で反映。
-          </h2>
+          <ShotHeadline class={feature.title} shot="device-calendar" />
           <p class={feature.body}>
             シフトを、端末のカレンダーに入れられます。
             <br />
             Googleカレンダーの人も、ふだんの予定と並べて。
             <br />
-            一度入れたあとは、シフトを変えると予定にも自動で反映できます。
+            自動で反映にすると、変えたシフトが予定にも入ります。
           </p>
         </div>
         <FeatureScreen client:visible={NEAR} feature="deviceCalendar" />
@@ -463,11 +451,7 @@ const closing = {
       <li class={feature.row}>
         <div class={feature.copy}>
           <p class={feature.label}>DETAILS</p>
-          <h2 class={feature.title}>
-            勤務表のクセにも、
-            <br />
-            合わせます。
-          </h2>
+          <ShotHeadline class={feature.title} shot="details" />
           <p class={feature.body}>
             決まった並びのシフトは、繰り返しで先の月まで。
             <br />
