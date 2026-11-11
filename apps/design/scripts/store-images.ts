@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readdirSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -36,38 +36,29 @@ const photographed = storeIds.filter((store) =>
   existsSync(path.join(RAW, store))
 );
 
-// The screens a shot is drawn from, each there, and the widgets found for
-// a wall: the same ones in each of its looks' folders.
-const screensOf = (store: StoreId, shot: (typeof STORE_SHOTS)[number]) => {
-  const folder = path.join(RAW, store);
+// Fails unless every screen a shot is drawn from is there: a wall's
+// widgets each in the folder of the look it is placed in.
+const findScreens = (store: StoreId, shot: (typeof STORE_SHOTS)[number]) => {
   const tiles =
     shot.kind === "tiles"
       ? shot.tiles.flatMap((tile) => ("raw" in tile ? [tile.raw] : []))
       : [];
-  const raw = shot.kind === "tiles" ? [] : shot.raw;
-  const files = [...tiles, ...(typeof raw === "string" ? [raw] : raw)];
-  for (const file of files) {
-    if (!existsSync(path.join(folder, file))) {
-      throw new Error(`${shot.name} has no ${path.join(folder, file)}`);
+  const wall =
+    shot.kind === "wall"
+      ? shot.tiles.map(({ file, look }) =>
+          path.join(shot.raw[look] ?? "", file)
+        )
+      : [];
+  const raw = shot.kind === "tiles" || shot.kind === "wall" ? [] : shot.raw;
+  for (const file of [
+    ...tiles,
+    ...wall,
+    ...(typeof raw === "string" ? [raw] : raw),
+  ]) {
+    if (!existsSync(path.join(RAW, store, file))) {
+      throw new Error(`${shot.name} has no ${path.join(RAW, store, file)}`);
     }
   }
-  if (shot.kind !== "wall") {
-    return [];
-  }
-  const [widgets = [], ...others] = shot.raw.map((look) =>
-    readdirSync(path.join(folder, look))
-      .filter((file) => file.endsWith(".png"))
-      .sort()
-  );
-  if (widgets.length === 0) {
-    throw new Error(`${shot.name} has no widget in ${folder}/${shot.raw[0]}`);
-  }
-  if (others.some((found) => found.join(",") !== widgets.join(","))) {
-    throw new Error(
-      `${shot.name}'s looks differ in their widgets: ${shot.raw.join(", ")} in ${folder}`
-    );
-  }
-  return widgets;
 };
 
 // How tall each tile is in its widths, a part of a screen as it was cut,
@@ -122,6 +113,7 @@ await photographDevServer(
 
     for (const store of photographed) {
       for (const shot of STORE_SHOTS) {
+        findScreens(store, shot);
         const tiles = tilesOf(store, shot);
         // oxlint-disable-next-line no-await-in-loop -- one page at a time
         await photograph(
@@ -130,7 +122,6 @@ await photographDevServer(
             parts: tiles.map(({ part }) => part).join(","),
             shot: shot.name,
             store,
-            widgets: screensOf(store, shot).join(","),
           },
           STORES[store],
           path.join(OUTPUT, "screenshots", store, storeShotFile(shot.name)),

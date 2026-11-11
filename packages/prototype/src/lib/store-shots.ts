@@ -41,19 +41,13 @@ export const HEADLINE_SHARE = 0.2;
 // each a part of a screen under its words; or a wall of the widgets in the
 // looks it mixes, each look a folder of `raw`
 // holding every widget as a PNG named
-// `<widget>-<small | medium | large>.png`, the same names in each;
-// `alike` are those the looks draw all but the same, words and a small
-// mark, which the wall holds in one look alone.
+// `<widget>-<small | medium | large>.png`, the same names in each, and
+// `tiles` saying which goes where.
 type StoreShot = { headline: readonly string[]; name: string } & (
   | { kind: "pair"; raw: readonly [string, string] }
   | { kind: "screen"; raw: string }
   | { kind: "tiles"; tiles: readonly Tile[] }
-  | {
-      alike: readonly string[];
-      kind: "wall";
-      pinned: readonly WallPin[];
-      raw: readonly string[];
-    }
+  | { kind: "wall"; raw: readonly string[]; tiles: readonly WallPlace[] }
 );
 
 // A tile of a shot of details, under a line of words: a part of a screen,
@@ -86,14 +80,17 @@ export type Piece =
 // How tall a tile of pieces is, in its widths.
 export const PIECES_TALL = 0.32;
 
-// A widget the wall shows whole where the eye lands first, under the
-// headline in its middle columns: its file, the look it is in, counted in
-// `raw`, and the cell its top leading corner takes, counted from 0.
-export type WallPin = {
+// A widget on the wall, placed by hand: its file, the look it is in,
+// counted in `raw`, and the cell its top leading corner takes, counted
+// from 0. One marked `whole` is to show whole, where the eye lands first:
+// in every store's picture, clear of the fade under the headline, and in
+// the frame the site's top page shows of the wall.
+export type WallPlace = {
   column: number;
   file: string;
   look: number;
   row: number;
+  whole?: true;
 };
 
 // The shots in the stores' order, each headline a line an entry. They speak
@@ -104,10 +101,11 @@ export type WallPin = {
 // シフトの色 ワントーン, シフトの見た目 線, 休みの見せ方 印だけ, and
 // 色をつける日 all off; one named `-letters` has the shifts as letters,
 // シフトの見た目 文字, in テーマ ソーダ. Everything else is as the app
-// starts. The wall
-// mixes the two, the widgets set to someone or to the group among them,
-// with 次の休み and いまのシフト, its ring drawn while a shift is on,
-// pinned where they show whole; the themes' shot sets the month in 墨 and
+// starts. The wall is placed by hand and mixes the two, medium and large
+// widgets carrying it and small ones its accents, those set to someone
+// or to the group among them, with 次の休み counting to a day off and on
+// one, and いまのシフト, its ring drawn while a shift is on, together
+// where they show whole; the themes' shot sets the month in 墨 and
 // in letters side by side, the app as it starts being in the others; the
 // details' shot sets three parts of screens one over the other, each for
 // those whose roster has that way of its own, and the cares' shot three
@@ -120,20 +118,47 @@ export const STORE_SHOTS = [
     raw: "01-entry.png",
   },
   {
-    alike: [
-      "next-off-day-small.png",
-      "next-off-group-small.png",
-      "next-off-person-small.png",
-      "next-off-small.png",
-    ],
     headline: ["次の休みも、", "ウィジェットで。"],
     kind: "wall",
     name: "widgets",
-    pinned: [
-      { column: 2, file: "next-off-small.png", look: 0, row: 3 },
-      { column: 3, file: "now-small.png", look: 0, row: 4 },
-    ],
     raw: ["02-widgets", "02-widgets-sumi"],
+    tiles: [
+      { column: 0, file: "calendar-large.png", look: 1, row: 0 },
+      { column: 2, file: "calendar-medium.png", look: 0, row: 0 },
+      { column: 4, file: "simple-day-medium.png", look: 0, row: 0 },
+      { column: 2, file: "simple-medium.png", look: 1, row: 1 },
+      { column: 4, file: "upcoming-day-medium.png", look: 1, row: 1 },
+      { column: 0, file: "upcoming-medium.png", look: 0, row: 2 },
+      { column: 2, file: "upcoming-small.png", look: 1, row: 2 },
+      { column: 3, file: "next-off-group-small.png", look: 0, row: 2 },
+      { column: 4, file: "next-off-person-small.png", look: 1, row: 2 },
+      { column: 5, file: "simple-after-small.png", look: 0, row: 2 },
+      { column: 0, file: "upcoming-person-medium.png", look: 1, row: 3 },
+      { column: 2, file: "next-off-small.png", look: 0, row: 3, whole: true },
+      { column: 3, file: "upcoming-person-small.png", look: 1, row: 3 },
+      { column: 4, file: "simple-night-medium.png", look: 0, row: 3 },
+      { column: 0, file: "calendar-large.png", look: 0, row: 4 },
+      {
+        column: 2,
+        file: "next-off-day-small.png",
+        look: 0,
+        row: 4,
+        whole: true,
+      },
+      { column: 3, file: "now-small.png", look: 0, row: 4, whole: true },
+      { column: 4, file: "simple-after-medium.png", look: 1, row: 4 },
+      { column: 2, file: "calendar-medium.png", look: 1, row: 5 },
+      { column: 4, file: "upcoming-person-small.png", look: 0, row: 5 },
+      { column: 5, file: "now-small.png", look: 1, row: 5 },
+      { column: 0, file: "simple-medium.png", look: 1, row: 6 },
+      { column: 2, file: "upcoming-medium.png", look: 0, row: 6 },
+      { column: 4, file: "upcoming-day-medium.png", look: 0, row: 6 },
+      { column: 0, file: "upcoming-person-medium.png", look: 0, row: 7 },
+      { column: 2, file: "calendar-large.png", look: 1, row: 7 },
+      { column: 4, file: "simple-day-medium.png", look: 1, row: 7 },
+      { column: 0, file: "simple-night-medium.png", look: 1, row: 8 },
+      { column: 4, file: "calendar-medium.png", look: 0, row: 8 },
+    ],
   },
   {
     headline: ["家族や友人と、", "シフトを共有。"],
@@ -243,6 +268,19 @@ const cellsOf = (file: string) => {
 // picture's height.
 export const WALL = { columns: 6, rows: 9 } as const;
 
+// How the wall lies in its picture, lengths in hundredths of the
+// picture's width: a cell's width and the gap between cells; how far down
+// the picture the grid's middle is, in its heights; how far the grid is
+// turned, in degrees; and where the fade under the headline ends, in the
+// headline's heights.
+export const WALL_SHAPE = {
+  cell: 25,
+  clear: 1.25,
+  gap: 3.5,
+  middle: 0.54,
+  turn: -12,
+} as const;
+
 // A widget on the wall: its file in the look numbered `look`, and the
 // cells it covers, counted from 0.
 export type WallTile = {
@@ -254,129 +292,44 @@ export type WallTile = {
   rows: number;
 };
 
-// The wall, filled cell by cell from its first. A picture is a widget in
-// a look, one of the `alike` in either: the same kind comes again as
-// another picture, in another size, the other look, set to someone else,
-// or on another of today's shifts. Each place takes, of the pictures not
-// yet on the wall, the one that there touches the least of the same
-// widget, then of the same look, then whose widget and look were used the
-// least so far: the looks alternate across the wall, and no widget sits
-// beside itself where another fits. Only where none of those fits does a
-// picture come again, never a pinned one, the one whose other self is
-// farthest off and not beside the place, even corner to corner. The
-// `pinned` are put first, where they are told. A cell that nothing fits
-// stays sky.
-export const wallOf = (
-  files: readonly string[],
-  looks: number,
-  pinned: readonly WallPin[] = [],
-  alike: readonly string[] = []
-): WallTile[] => {
-  const tiles: WallTile[] = [];
-  const pins = new Set(pinned.map((pin) => pin.file));
-  // Which tile covers each cell, by its place in `tiles`.
-  const covered = new Map<string, number>();
-  const used = new Map<string, number>();
-  const usedOf = (key: string) => used.get(key) ?? 0;
-  const on = ({ file, look }: Pick<WallTile, "file" | "look">) =>
-    alike.includes(file) ? file : `${file} in look ${look}`;
-  // How much of its edge a tile there would share with the tiles `counts`.
-  const touching = (
-    { column, columns, row, rows }: Omit<WallTile, "file" | "look">,
-    counts: (tile: WallTile) => boolean
-  ) => {
-    let edge = 0;
-    const count = (atColumn: number, atRow: number) => {
-      const tile = tiles[covered.get(`${atColumn} ${atRow}`) ?? -1];
-      edge += tile !== undefined && counts(tile) ? 1 : 0;
-    };
-    for (let at = column; at < column + columns; at += 1) {
-      count(at, row - 1);
-      count(at, row + rows);
-    }
-    for (let at = row; at < row + rows; at += 1) {
-      count(column - 1, at);
-      count(column + columns, at);
-    }
-    return edge;
-  };
-  // How many cells lie between a tile there and the nearest of the same
-  // picture: none for one beside it, edge to edge or corner to corner.
-  const apart = (tile: WallTile): number =>
-    Math.min(
-      ...tiles
-        .filter((other) => on(other) === on(tile))
-        .map((other) =>
-          Math.max(
-            tile.column - other.column - other.columns,
-            other.column - tile.column - tile.columns,
-            tile.row - other.row - other.rows,
-            other.row - tile.row - tile.rows
-          )
-        )
-    );
-  const put = (tile: WallTile) => {
-    for (let across = 0; across < tile.columns; across += 1) {
-      for (let down = 0; down < tile.rows; down += 1) {
-        covered.set(`${tile.column + across} ${tile.row + down}`, tiles.length);
-      }
-    }
-    tiles.push(tile);
-    used.set(on(tile), usedOf(on(tile)) + 1);
-    used.set(tile.file, usedOf(tile.file) + 1);
-    used.set(`look ${tile.look}`, usedOf(`look ${tile.look}`) + 1);
-  };
-  for (const pin of pinned) {
-    put({ ...cellsOf(pin.file), ...pin });
-  }
-  for (let row = 0; row < WALL.rows; row += 1) {
-    for (let column = 0; column < WALL.columns; column += 1) {
-      if (covered.has(`${column} ${row}`)) {
-        continue;
-      }
-      const fitting = files.flatMap((file) => {
-        const place = { ...cellsOf(file), column, row };
-        const fits =
-          column + place.columns <= WALL.columns &&
-          row + place.rows <= WALL.rows &&
-          Array.from({ length: place.columns * place.rows }, (_, cell) => [
-            column + (cell % place.columns),
-            row + Math.floor(cell / place.columns),
-          ]).every(([across, down]) => !covered.has(`${across} ${down}`));
-        return fits
-          ? Array.from({ length: looks }, (_, look) => ({
-              ...place,
-              file,
-              look,
-            }))
-          : [];
-      });
-      const fresh = fitting.filter((tile) => usedOf(on(tile)) === 0);
-      const again = fitting.filter(
-        (tile) => !pins.has(tile.file) && apart(tile) > 0
-      );
-      const costOf = (tile: WallTile) => [
-        fresh.length > 0 ? 0 : -apart(tile),
-        touching(tile, (other) => other.file === tile.file),
-        touching(tile, (other) => other.look === tile.look),
-        usedOf(tile.file),
-        usedOf(`look ${tile.look}`),
-      ];
-      const [tile] = (fresh.length > 0 ? fresh : again).toSorted((a, b) => {
-        const costs = costOf(b);
-        return (
-          costOf(a)
-            .map((cost, index) => cost - (costs[index] ?? 0))
-            .find((difference) => difference !== 0) ?? 0
-        );
-      });
-      // Nothing is small enough for what is left here, or far enough from
-      // its other self.
-      if (tile === undefined) {
-        continue;
-      }
-      put(tile);
-    }
-  }
-  return tiles;
+// The wall as it is placed: each widget with the cells its size covers.
+export const wallOf = (places: readonly WallPlace[]): WallTile[] =>
+  places.map(({ column, file, look, row }) => ({
+    ...cellsOf(file),
+    column,
+    file,
+    look,
+    row,
+  }));
+
+// A widget's four corners on a picture `tall` times as tall as it is
+// wide, whose cells are `row` times as tall as they are wide, as [across,
+// down] in hundredths of the picture's width.
+export const wallCornersOf = (
+  { column, columns, row, rows }: WallTile,
+  cellRow: number,
+  tall: number
+): [number, number][] => {
+  const { cell, gap, middle, turn } = WALL_SHAPE;
+  const high = cell * cellRow;
+  const wide = WALL.columns * cell + (WALL.columns - 1) * gap;
+  const down = WALL.rows * high + (WALL.rows - 1) * gap;
+  const left = column * (cell + gap);
+  const top = row * (high + gap);
+  const right = left + columns * cell + (columns - 1) * gap;
+  const foot = top + rows * high + (rows - 1) * gap;
+  const angle = (turn * Math.PI) / 180;
+  return [
+    [left, top],
+    [right, top],
+    [left, foot],
+    [right, foot],
+  ].map(([across = 0, along = 0]) => {
+    const x = across - wide / 2;
+    const y = along - down / 2;
+    return [
+      50 + x * Math.cos(angle) - y * Math.sin(angle),
+      100 * tall * middle + x * Math.sin(angle) + y * Math.cos(angle),
+    ];
+  });
 };
