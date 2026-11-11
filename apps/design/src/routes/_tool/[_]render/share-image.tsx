@@ -15,6 +15,7 @@ import {
   PictureBrand,
   PictureSky,
   pictureTitle,
+  pictureTitleStyle,
 } from "../../../lib/site-picture";
 
 export const Route = createFileRoute("/_tool/_render/share-image")({
@@ -103,7 +104,10 @@ function SiteShareImage({ person }: { person: UserStore }) {
       <PictureSky height="800px" />
       <div className={styles.copy}>
         <PictureBrand size={52} />
-        <h1 className={cx(pictureTitle, styles.title)}>
+        <h1
+          className={cx(pictureTitle, styles.title)}
+          style={pictureTitleStyle}
+        >
           シフトを、
           <br />
           ポチッと。

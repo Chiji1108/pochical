@@ -2,7 +2,7 @@
 # Photographs the Android app for the stores' screenshots (#806), raw, as
 # the emulator shows it, by the names
 # packages/prototype/src/lib/store-shots.ts gives them: the screens into
-# .build/store-screenshots/android (01-entry.png, 05-calendar.png, ...),
+# .build/store-screenshots/android (01-entry.png, 05-calendar-sumi.png, ...),
 # and each widget by itself at each size it offers into its 02-widgets/ and
 # 02-widgets-sumi/ (<kind>-<size>.png), drawn there from the app's own days
 # and group; StoreScreenshots in :app's androidTest walks them all.
@@ -30,6 +30,7 @@ gradle() { (cd "$root/apps/android" && ./gradlew "$@"); }
 
 work=$(mktemp -d)
 server_log=$work/server.log
+. "$root/tools/store-screenshots/when.sh"
 . "$root/tools/ios-ui/lib.sh"
 
 rm -rf "$out"
@@ -44,16 +45,22 @@ scales="window_animation_scale transition_animation_scale animator_duration_scal
 night=$(adb shell cmd uimode night | sed 's/.*: //')
 for scale in $scales; do declare "was_$scale=$(adb shell settings get global "$scale")"; done
 seed=""
+# Every step whatever became of the one before, and the run fails if one did.
 restore() {
-  [ -z "$seed" ] || kill "$seed" 2>/dev/null || true
-  stop_server
-  demo exit
-  adb shell cmd uimode night "$night" >/dev/null
+  local status=$? left=""
+  set +e
+  [ -z "$seed" ] || kill "$seed" 2>/dev/null
+  stop_server || left="$left the server,"
+  demo exit || left="$left the status bar,"
+  adb shell cmd uimode night "$night" >/dev/null || left="$left night mode,"
   for scale in $scales; do
     local was=was_$scale
-    if [ "${!was}" = null ]; then adb shell settings delete global "$scale" >/dev/null; else adb shell settings put global "$scale" "${!was}"; fi
+    if [ "${!was}" = null ]; then adb shell settings delete global "$scale" >/dev/null; else adb shell settings put global "$scale" "${!was}"; fi ||
+      left="$left $scale,"
   done
-  without_calendar
+  without_calendar || left="$left the calendar,"
+  [ -z "$left" ] || { echo "not put back:${left%,}" >&2; status=1; }
+  exit "$status"
 }
 trap restore EXIT
 
@@ -89,6 +96,9 @@ gradle :app:connectedDebugAndroidTest "-PpochicalServer=http://10.0.2.2:$port" \
   -Pandroid.testInstrumentationRunnerArguments.class=app.pochical.StoreScreenshots \
   "-Pandroid.testInstrumentationRunnerArguments.invite=$(cat "$work/invite")" \
   "-Pandroid.testInstrumentationRunnerArguments.friends=$(cat "$work/invite-friends")"
+# The seed ends once the chat is written and the group has taken its reaction and votes.
+wait "$seed" || { echo "the seed failed" >&2; exit 1; }
+seed=""
 # Where Gradle pulls what a test leaves in additionalTestOutputDir, under the device's name.
 cp -R "$pulled"/debugAndroidTest/connected/*/ "$out"
 ls -R "$out"

@@ -25,9 +25,10 @@ export const STORES = {
 export type StoreId = keyof typeof STORES;
 
 // Google Play's feature graphic, which needs no screen: the sky, the app's
-// icon and its name, in `store/feature-graphic.png`.
+// icon and its name over the site's line, in `store/feature-graphic.png`.
 export const FEATURE_GRAPHIC = {
   height: 500,
+  line: "シフトを、ポチッと。",
   name: "feature-graphic",
   width: 1024,
 } as const;
@@ -36,6 +37,16 @@ export const FEATURE_GRAPHIC = {
 // around it: Google Play asks that a tagline take no more than about a
 // fifth of a screenshot, and the App Store's pictures keep to it too.
 export const HEADLINE_SHARE = 0.2;
+
+// How large a headline's letters are, in hundredths of the picture's
+// width, and the room a line of it keeps to each of the picture's sides:
+// a line is one row, never broken.
+export const HEADLINE = { margin: 2, size: 8.6 } as const;
+
+// How a picture's title is set (apps/design's site-picture.tsx): how tall
+// a line is in its letters' size, and how far apart the letters are, in
+// it too.
+export const TITLE = { line: 1.35, spacing: 0.01 } as const;
 
 // A shot of one screen may lift a part of it, its `callout`: the part the
 // headline is about, drawn again larger on a card of the picture's over
@@ -92,7 +103,8 @@ export const PIECES_TALL = 0.32;
 // counted in `raw`, and the cell its top leading corner takes, counted
 // from 0. One marked `whole` is to show whole, where the eye lands first:
 // in every store's picture, clear of the fade under the headline, and in
-// the frame the site's top page shows of the wall.
+// every picture drawn from the wall (WALL_PICTURES), inside what it shows
+// on every device.
 export type WallPlace = {
   column: number;
   file: string;
@@ -135,7 +147,7 @@ export const WALL_SHOT = {
     { column: 4, file: "simple-after-medium.png", look: 1, row: 4 },
     { column: 2, file: "calendar-medium.png", look: 1, row: 5 },
     { column: 4, file: "upcoming-person-small.png", look: 0, row: 5 },
-    { column: 5, file: "now-small.png", look: 1, row: 5 },
+    { column: 5, file: "simple-night-small.png", look: 1, row: 5 },
     { column: 0, file: "simple-medium.png", look: 1, row: 6 },
     { column: 2, file: "upcoming-medium.png", look: 0, row: 6 },
     { column: 4, file: "upcoming-day-medium.png", look: 0, row: 6 },
@@ -248,7 +260,7 @@ export const STORE_SHOTS = [
   },
 ] as const satisfies readonly StoreShot[];
 
-export type StoreShotName = (typeof STORE_SHOTS)[number]["name"];
+type StoreShotName = (typeof STORE_SHOTS)[number]["name"];
 
 // The room under a phone, in hundredths of the picture's width.
 export const STAGE_FOOT = 5;
@@ -256,7 +268,7 @@ export const STAGE_FOOT = 5;
 // A callout's card, lengths in hundredths of the picture's width: the room
 // it keeps around its part, the room it leaves to the picture's sides, and
 // how many times larger than the phone has it the part is drawn at most.
-export const CALLOUT = { margin: 2, most: 1.35, pad: 1.5 } as const;
+const CALLOUT = { margin: 2, most: 1.35, pad: 1.5 } as const;
 
 // A rectangle of a screen or a picture, in its pixels.
 export type Rect = { height: number; left: number; top: number; width: number };
@@ -345,13 +357,13 @@ export const storeShotFile = (name: StoreShotName): string => {
 
 // The sizes a widget on the wall comes in, by the cells of a Home Screen
 // it covers across and down.
-export const WIDGET_CELLS = {
+const WIDGET_CELLS = {
   large: { columns: 2, rows: 2 },
   medium: { columns: 2, rows: 1 },
   small: { columns: 1, rows: 1 },
 } as const;
 
-export type WidgetSize = keyof typeof WIDGET_CELLS;
+type WidgetSize = keyof typeof WIDGET_CELLS;
 
 const isWidgetSize = (value: string | undefined): value is WidgetSize =>
   value !== undefined && Object.hasOwn(WIDGET_CELLS, value);
@@ -404,15 +416,11 @@ export const wallLieOf = (picture: {
 
 // A line of words a picture carries: its lines, their size in the
 // picture's pixels, and where their middle is.
-export type PictureLine = {
+type PictureLine = {
   middle: readonly [number, number];
   size: number;
   words: readonly string[];
 };
-
-// How tall a line of a picture's title is in its size, and how far apart
-// its letters are set (site-picture.tsx's pictureTitle).
-export const TITLE = { line: 1.35, spacing: 0.01 } as const;
 
 // The room a picture's line takes at most, every letter as wide as it is
 // tall: what the wall clears around, and what a safe area is to hold.
@@ -428,13 +436,32 @@ export const lineBoxOf = ({ middle, size, words }: PictureLine): Rect => {
   };
 };
 
+// The sky a wall's picture clears around its line: how far the clearing
+// reaches from the line's middle, in the widths and heights of the line's
+// room, and how much of that reach has no wall at all.
+const LINE_CLEAR = { across: 0.87, down: 0.9, whole: 0.8 } as const;
+
+// The clearing around a picture's line, an ellipse about the line's
+// middle: its reach across and down in the picture's pixels, inside which
+// the wall fades, and the share of it the wall is gone from.
+export const lineClearOf = (line: PictureLine) => {
+  const box = lineBoxOf(line);
+  return {
+    across: box.width * LINE_CLEAR.across,
+    down: box.height * LINE_CLEAR.down,
+    middle: line.middle,
+    whole: LINE_CLEAR.whole,
+  };
+};
+
 // A picture drawn from the wall besides the stores' shot of it: the name
 // /_render/store-shot knows it by, its size, the file it is written to,
 // from the repository's root, and the store whose widgets it shows.
 // `lie` is where the wall lies in it, as in a store's picture without;
-// `line` the words it carries over the wall, which clears around them,
-// none without; and `safe` the part of it every device shows, which is to
-// hold the line and the widgets marked `whole`, anywhere without.
+// `line` the words it carries over the wall, which clears around them
+// (lineClearOf), none without; and `safe` the part of it every device
+// shows, which is to hold the line and the widgets marked `whole`, clear
+// of the line's clearing, the whole picture without.
 export type WallPicture = {
   file: string;
   height: number;

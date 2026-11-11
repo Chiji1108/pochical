@@ -2,21 +2,21 @@ import XCTest
 
 /// The screens the stores' screenshots are drawn from (#806), photographed
 /// in the order the app is walked rather than the stores': the sample
-/// month's リマインド, its reminder of the evening before; the sample month and 端末カレンダーに追加; 学生時代の友だち's
-/// 一覧, joined as まい,
-/// and 職場のみんな's 全体チャット, joined as 佐藤; a page of a シフトの期間
-/// from the 15th; the widgets, each put on the Home Screen in turn, those
-/// that can be set to someone also set to the group's first member and to
-/// the group; the month and the widgets in 墨, in black and white
-/// (`Style.sumi`), and the month with its shifts as letters
-/// (`Style.letters`); then, as they change the month's days, ポチポチ入力
-/// halfway through it, as the app starts again, and いまのシフト's widget
-/// once more with a shift on; as it changes the job, 繰り返しを直す on a
-/// fixed cycle; and last, as it leaves a group, グループの設定 of one made
-/// with an end. Each is kept as the file
-/// `packages/prototype/src/lib/store-shots.ts` names. Run by
-/// `mise run store:shots:ios`, against the local server it seeds; skipped
-/// without it.
+/// month's リマインド, its reminder of the evening before; the sample month
+/// and 端末カレンダーに追加; 学生時代の友だち's 一覧, joined as まい, and
+/// 職場のみんな's 全体チャット, joined as 佐藤; a page of a シフトの期間 from
+/// the 15th; the month in 墨, in black and white (`Style.sumi`), and with
+/// its shifts as letters (`Style.letters`); ポチポチ入力 halfway through the
+/// month, the days it takes out entered again after; then, every picture
+/// of the month taken, what changes its days: the widgets, each put on the
+/// Home Screen in turn, in the app's look and in 墨, on each of today's
+/// shifts the wall shows, those that can be set to someone also set to the
+/// group's first member and to the group, and いまのシフト's once more with
+/// a shift on; as it changes the job, 繰り返しを直す on a fixed cycle; and
+/// last, as it leaves a group, グループの設定 of one made with an end. Each
+/// is kept as the file `packages/prototype/src/lib/store-shots.ts` names.
+/// Run by `mise run store:shots:ios`, against the local server it seeds;
+/// skipped without it.
 final class StoreScreenshotTests: XCTestCase {
   private var app: XCUIApplication!
   /// Where the screens are kept, and the script's invitation is.
@@ -77,17 +77,17 @@ final class StoreScreenshotTests: XCTestCase {
     launch()
     try app.joins(invitation: raw.appending(path: "invite-friends"), named: "まい", face: "ひよこ")
     app.buttons["月で見る"].tap()
-    let row = app.buttons.matching(NSPredicate(format: "label MATCHES '[0-9]{1,2}月[0-9]{1,2}日.*'"))
-      .firstMatch
-    XCTAssertTrue(row.waitForExistence(timeout: 10), "一覧's rows show")
+    // A day says everyone is off once all four's shifts are in the group, まい's sent from here
+    // among them: the table is whole then.
+    let together = app.buttons.matching(NSPredicate(format: "label ENDSWITH '、みんな休み'"))
+    XCTAssertTrue(together.firstMatch.waitForExistence(timeout: 20), "一覧 shows everyone's shifts")
     snap("03-group-shifts", of: XCUIScreen.main, into: raw)
     // The days everyone is off, the first of them and those right under it.
-    let off = app.buttons.matching(NSPredicate(format: "label ENDSWITH '、みんな休み'"))
-      .allElementsBoundByIndex.map(\.frame).filter { app.frame.contains($0) }
-    let together = off.dropFirst().reduce(try XCTUnwrap(off.first, "a day everyone is off shows")) {
+    let off = together.allElementsBoundByIndex.map(\.frame).filter { app.frame.contains($0) }
+    let days = off.dropFirst().reduce(try XCTUnwrap(off.first, "a day everyone is off shows")) {
       $1.minY - $0.maxY < 1 ? $0.union($1) : $0
     }
-    try measure("03-group-shifts", ["together": together])
+    try measure("03-group-shifts", ["together": days])
   }
 
   /// The coworkers' group, joined as 佐藤 there alone, and its chat, which
@@ -147,24 +147,14 @@ final class StoreScreenshotTests: XCTestCase {
   }
 
   @MainActor
-  func test05Widgets() throws {
-    try photographWidgetStates(into: "02-widgets")
-  }
-
-  @MainActor
-  func test06Sumi() throws {
+  func test05Sumi() throws {
     launch()
     pick(.sumi)
     snap("05-calendar-sumi", of: XCUIScreen.main, into: raw)
   }
 
   @MainActor
-  func test07SumiWidgets() throws {
-    try photographWidgetStates(into: "02-widgets-sumi")
-  }
-
-  @MainActor
-  func test08Letters() throws {
+  func test06Letters() throws {
     launch()
     pick(.letters)
     snap("05-calendar-letters", of: XCUIScreen.main, into: raw)
@@ -172,11 +162,14 @@ final class StoreScreenshotTests: XCTestCase {
 
   /// ポチポチ入力 halfway through the month, as the app starts: the sample
   /// month's days from the 16th taken out, as they are before they are
-  /// entered, and the 16th the day to enter.
+  /// entered, and the 16th the day to enter. The days taken out are entered
+  /// again after, each the sample's shift it held, by the tray's keys,
+  /// which is all those days held: the month then says what it did.
   @MainActor
-  func test09Entry() throws {
+  func test07Entry() throws {
     launch()
     pick(.started)
+    let before = try monthSaid()
     app.buttons["ポチポチ入力"].tap()
     let month = Calendar.current.component(.month, from: .now)
     let last = Calendar.current.range(of: .day, in: .month, for: .now)!.upperBound - 1
@@ -191,26 +184,45 @@ final class StoreScreenshotTests: XCTestCase {
     XCTAssertTrue(clear.wait(for: \.isEnabled, toEqual: false, timeout: 5), "the last day is blank")
     pickDay(month, 16)
     snap("01-entry", of: XCUIScreen.main, into: raw)
+    for day in 16...last {
+      let shift = Self.states.map(\.shift).first { shift in
+        before.contains { Self.says($0, month, day, holding: shift) }
+      }
+      let held = try XCTUnwrap(shift, "\(day)日 held one of the sample's shifts")
+      pickDay(month, day)
+      enter(held, month, day)
+    }
+    launch()
+    XCTAssertEqual(try monthSaid(), before, "the month is as it was before ポチポチ入力")
+  }
+
+  @MainActor
+  func test08Widgets() throws {
+    try photographWidgetStates()
   }
 
   /// いまのシフト with its ring, which it draws while a shift is on: one of
   /// the sample's that is on now is entered for it, 夜勤 (16:30 to 9:30 the
   /// next day) on the day before until 9:00, 日勤 (9:00 to 18:00) today
-  /// until 18:00 and 夜勤 today after, and the widget photographed again as
-  /// the app starts. After the screens that show the month, as it changes a
-  /// day of it.
+  /// until 18:00 and 夜勤 today after, and the widget photographed again
+  /// once it says the shift is on. After every picture of the month, as it
+  /// changes a day of it. The day before is on the month's page but on the
+  /// month's 1st: before 9:00 then the run is not started
+  /// (tools/store-screenshots/when.sh).
   @MainActor
   func test10Ring() throws {
+    let hour = Calendar.current.component(.hour, from: .now)
     launch()
     app.buttons["ポチポチ入力"].tap()
-    let hour = Calendar.current.component(.hour, from: .now)
     let on = Calendar.current.date(byAdding: .day, value: hour < 9 ? -1 : 0, to: .now)!
     let shift = (9..<18).contains(hour) ? "日勤" : "夜勤"
     let month = Calendar.current.component(.month, from: on)
     let day = Calendar.current.component(.day, from: on)
     pickDay(month, day)
     enter(shift, month, day)
-    try photographWidgets(into: "02-widgets", only: ["いまのシフト"])
+    try photographWidgets(into: "02-widgets", only: ["いまのシフト"], saying: { _ in
+      NSPredicate(format: "label CONTAINS %@", "\(shift)中")
+    })
   }
 
   /// 繰り返しを直す on a fixed cycle of three days, 当務・非番・週休, in the
@@ -300,41 +312,91 @@ final class StoreScreenshotTests: XCTestCase {
   }
 
   /// Today's shifts the widgets are photographed on, the sample's, a day
-  /// off first, as the wall's pinned 次の休み is: the word their files take
-  /// for each, none on a day off, and the widgets whose picture it changes,
-  /// all when not said.
+  /// off first, as most of the wall is, and 夜勤 after 日勤, the days after
+  /// today as the sample has them until it gives tomorrow its 明け: the
+  /// word their files take for each, none on a day off, and the widgets
+  /// whose picture it changes, all when not said.
   private static let states: [(shift: String, word: String?, widgets: Set<String>?)] = [
     ("休み", nil, nil), ("日勤", "day", ["シンプル", "次の休み", "これから"]),
     ("夜勤", "night", ["シンプル"]), ("明け", "after", ["シンプル"]),
   ]
 
   /// The widgets on each of today's shifts the wall shows them on
-  /// (`states`), entered in ポチポチ入力 as the ring's is, into `folder` in
-  /// the look the app is in; today and tomorrow are put back as they were.
-  @MainActor private func photographWidgetStates(into folder: String) throws {
-    launch()
+  /// (`states`), entered in ポチポチ入力 as the ring's is, in the app's look
+  /// and in 墨. A day is not put back: entering a shift takes a day's own
+  /// hours off it, and 夜勤 gives the day after its 明け, so the shifts go
+  /// in the order that leaves each the days it shows as the sample has
+  /// them, both looks photographed on one before the next is entered, and
+  /// no picture of the month is taken after.
+  @MainActor private func photographWidgetStates() throws {
     let today = Calendar.current.dateComponents([.month, .day], from: .now)
     let (month, date) = (today.month!, today.day!)
-    // What today holds and, as 夜勤 brings the day after its 明け, tomorrow.
-    let next = Calendar.current.dateComponents(
-      [.month, .day], from: Calendar.current.date(byAdding: .day, value: 1, to: .now)!)
-    let was = try [(month, date), (next.month!, next.day!)].map { month, date in
-      let held = day(month, date).label
-      let shift = Self.states.map(\.shift).first { held.contains("、\($0)") }
-      return (month, date, try XCTUnwrap(shift, "\(held) is one of the sample's shifts"))
-    }
-    app.buttons["ポチポチ入力"].tap()
-    for state in Self.states {
-      app.activate()
+    let looks: [(style: Style, folder: String)] = [(.started, "02-widgets"), (.sumi, "02-widgets-sumi")]
+    var shown = 0
+    for (turn, state) in Self.states.enumerated() {
+      launch()
+      app.buttons["ポチポチ入力"].tap()
       pickDay(month, date)
       enter(state.shift, month, date)
-      try photographWidgets(into: folder, only: state.widgets, state: state.word)
+      // Out of ポチポチ入力 as the app starts again: its 完了 would ask about the days left blank.
+      launch()
+      // The look the app is in first, so a shift costs one change of look.
+      for look in (turn % 2 == 0 ? [0, 1] : [1, 0]) {
+        if look != shown {
+          // From the Home Screen the widgets are photographed on.
+          launch()
+          pick(looks[look].style)
+          shown = look
+        }
+        try photographWidgets(
+          into: looks[look].folder, only: state.widgets, state: state.word,
+          saying: { Self.saying($0, month, date, state.shift) })
+      }
     }
-    app.activate()
-    for (month, date, shift) in was {
-      pickDay(month, date)
-      enter(shift, month, date)
+    XCTAssertEqual(shown, 0, "the widgets leave the app in its own look")
+  }
+
+  /// What the widget named `name` says once it shows today, `date`, as
+  /// `shift`: 次の休み that the day off is today or not, the others the day
+  /// with its shift, and いまのシフト and カレンダー, which say no day's
+  /// shift in words, anything.
+  private static func saying(_ name: String, _ month: Int, _ date: Int, _ shift: String)
+    -> NSPredicate
+  {
+    switch name {
+    case "次の休み":
+      return NSPredicate(
+        format: shift == "休み"
+          ? "label CONTAINS '今日'" : "label CONTAINS '次の休み' AND NOT (label CONTAINS '今日')")
+    case "いまのシフト", "カレンダー":
+      return NSPredicate(format: "label != ''")
+    default:
+      return NSPredicate(
+        format: "label CONTAINS %@ AND label CONTAINS %@", "\(month)月\(date)日(", shift)
     }
+  }
+
+  /// Whether `label`, a day of the calendar's, is of `day` holding
+  /// `shift`, whatever else it says: a holiday's name before the shift, a
+  /// change of hours after.
+  private static func says(_ label: String, _ month: Int, _ day: Int, holding shift: String) -> Bool {
+    label.range(
+      of: "^\(month)月\(day)日、(.+、)?\(shift)(、.*)?$", options: .regularExpression) != nil
+  }
+
+  /// What each day of the month on the screen says, in the days' order.
+  @MainActor private func monthSaid() throws -> [String] {
+    let month = Calendar.current.component(.month, from: .now)
+    func said(_ element: any XCUIElementSnapshot) -> [String] {
+      let own =
+        app.frame.contains(element.frame)
+          && element.label.range(of: "^\(month)月[0-9]+日、", options: .regularExpression) != nil
+      return (own ? [element.label] : []) + element.children.flatMap(said)
+    }
+    func date(_ label: String) -> Int {
+      Int(label.split(separator: "月")[1].prefix(while: \.isNumber)) ?? 0
+    }
+    return Set(said(try app.snapshot())).sorted { date($0) < date($1) }
   }
 
   /// Each widget the gallery offers for the Home Screen, put on it,
@@ -342,11 +404,14 @@ final class StoreScreenshotTests: XCTestCase {
   /// to each of whom it can be and photographed again
   /// (`<widget>-<person | group>-<size>`), and taken off, so only one is
   /// ever there to find: into `folder`, in the look the app is in. `only`
-  /// names the widgets to photograph, when not all; `state` the word their
-  /// files take before the size (`<widget>-<state>-<size>`), with which
-  /// none is set to anyone.
+  /// names the widgets to photograph, when not all, each of which is to be
+  /// in the gallery; `state` the word their files take before the size
+  /// (`<widget>-<state>-<size>`), with which none is set to anyone;
+  /// `saying` what a widget says once it has drawn the days the app holds
+  /// now, which it is photographed on.
   @MainActor private func photographWidgets(
-    into folder: String, only: Set<String>? = nil, state: String? = nil
+    into folder: String, only: Set<String>? = nil, state: String? = nil,
+    saying: (String) -> NSPredicate
   ) throws {
     let home = HomeScreen()
     let widgets = raw.appending(path: folder)
@@ -354,6 +419,11 @@ final class StoreScreenshotTests: XCTestCase {
     XCUIDevice.shared.press(.home)
     var page = 1
     var pages = 1
+    var taken: Set<String> = []
+    defer {
+      if let only { XCTAssertEqual(taken, only, "every widget asked for is in the gallery") }
+      XCTAssertFalse(taken.isEmpty, "the gallery has the app's widgets")
+    }
     while page <= pages {
       pages = home.openGallery()
       var (name, size) = home.show(page: page)
@@ -369,7 +439,8 @@ final class StoreScreenshotTests: XCTestCase {
       guard let file = Self.widgetFiles[name], let suffix = Self.widgetSizes[size] else {
         return XCTFail("the widget \(name) (\(size)) has no file name")
       }
-      home.addShown()
+      home.addShown(saying: saying(name))
+      taken.insert(name)
       snap("\(file)\(state.map { "-\($0)" } ?? "")-\(suffix)", of: home.widgetFace, into: widgets)
       for (whom, choice, says) in Self.widgetChoices[name] ?? [] where state == nil {
         home.setWidget(to: choice, saying: says)
@@ -380,12 +451,15 @@ final class StoreScreenshotTests: XCTestCase {
     }
   }
 
-  /// The calendar's `day`, once it holds `shift` when one is named: the
-  /// one on the screen, as the months beside the one shown hold its first
-  /// and last days too.
-  @MainActor private func day(_ month: Int, _ day: Int, holding shift: String = "") -> XCUIElement {
-    let days = app.descendants(matching: .any)
-      .matching(NSPredicate(format: "label BEGINSWITH %@", "\(month)月\(day)日、\(shift)"))
+  /// The calendar's `day`, holding `shift` when one is named, whatever
+  /// else it says (a holiday's name before the shift, a change of hours
+  /// after): the one on the screen, as the months beside the one shown
+  /// hold its first and last days too.
+  @MainActor private func day(_ month: Int, _ day: Int, holding shift: String? = nil) -> XCUIElement {
+    let said = "\(month)月\(day)日、"
+    let days = app.descendants(matching: .any).matching(
+      shift.map { NSPredicate(format: "label MATCHES %@", "\(said)(.+、)?\($0)(、.*)?") }
+        ?? NSPredicate(format: "label BEGINSWITH %@", said))
     return days.allElementsBoundByIndex.first { app.frame.contains($0.frame) } ?? days.firstMatch
   }
 
@@ -469,8 +543,7 @@ final class StoreScreenshotTests: XCTestCase {
 
   /// Taps the calendar's `day` while entering, for the tray to enter it.
   @MainActor private func pickDay(_ month: Int, _ day: Int) {
-    let cell = app.descendants(matching: .any)
-      .matching(NSPredicate(format: "label BEGINSWITH %@", "\(month)月\(day)日、")).firstMatch
+    let cell = self.day(month, day)
     XCTAssertTrue(cell.waitForExistence(timeout: 5), "the month shows \(day)日")
     cell.tap()
     XCTAssertTrue(entering(month, day).waitForExistence(timeout: 5), "the tray is on \(day)日")
@@ -643,8 +716,9 @@ final class StoreScreenshotTests: XCTestCase {
   }
 
   /// Puts the widget the gallery shows on the Home Screen, and waits for
-  /// it to have drawn what it shows.
-  func addShown() {
+  /// it to say what `saying` holds of: the days it is to be photographed
+  /// on, not those it drew last.
+  func addShown(saying: NSPredicate) {
     springboard.buttons.matching(NSPredicate(format: "label CONTAINS 'ウィジェットを追加'"))
       .firstMatch.tap()
     let done = springboard.buttons["完了"]
@@ -652,7 +726,8 @@ final class StoreScreenshotTests: XCTestCase {
     done.tap()
     XCTAssertTrue(widget.waitForExistence(timeout: 10), "the widget is on the Home Screen")
     XCTAssertTrue(
-      widget.staticTexts.firstMatch.waitForExistence(timeout: 20), "the widget has drawn its days")
+      widget.descendants(matching: .any).matching(saying).firstMatch.waitForExistence(timeout: 20),
+      "the widget has drawn its days: \(saying)")
   }
 
   /// Sets the widget on the Home Screen to `choice`, as its editing lists

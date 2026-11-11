@@ -87,7 +87,10 @@ type Measured = { parts: Record<string, number[]>; pieces: number[][] };
 // height in its screen's pixels, the screen's own width and height, and
 // the card's left, top, width and height in the picture's. Fails if the
 // card would leave the picture or reach into the headline.
-const calloutFor = (store: StoreId, shot: (typeof STORE_SHOTS)[number]) => {
+const calloutFor = async (
+  store: StoreId,
+  shot: (typeof STORE_SHOTS)[number]
+) => {
   if (shot.kind !== "screen" || !("callout" in shot)) {
     return "";
   }
@@ -99,7 +102,7 @@ const calloutFor = (store: StoreId, shot: (typeof STORE_SHOTS)[number]) => {
   if (part === undefined) {
     throw new Error(`${shot.name} has no part ${shot.callout} measured`);
   }
-  const screen = pngHeader(file);
+  const screen = await pngHeader(file);
   const picture = STORES[store];
   const { card } = calloutOf(
     rectOf(part),
@@ -129,15 +132,19 @@ const calloutFor = (store: StoreId, shot: (typeof STORE_SHOTS)[number]) => {
 // How tall each tile is in its widths, a part of a screen as it was cut,
 // and its ground, the color of the part's first pixel, which the tile's
 // card takes around it.
-const tilesOf = (store: StoreId, shot: (typeof STORE_SHOTS)[number]) =>
-  (shot.kind === "tiles" ? shot.tiles : []).map((tile) => {
-    if (!("raw" in tile)) {
-      return { ground: "ffffff", part: PIECES_TALL };
-    }
-    const file = path.join(RAW, store, tile.raw);
-    const { height, width } = pngHeader(file);
-    return { ground: pngFirstPixel(file), part: height / width };
-  });
+const tilesOf = async (store: StoreId, shot: (typeof STORE_SHOTS)[number]) => {
+  const tiles = await Promise.all(
+    (shot.kind === "tiles" ? shot.tiles : []).map(async (tile) => {
+      if (!("raw" in tile)) {
+        return { ground: "ffffff", part: PIECES_TALL };
+      }
+      const file = path.join(RAW, store, tile.raw);
+      const { height, width } = await pngHeader(file);
+      return { ground: await pngFirstPixel(file), part: height / width };
+    })
+  );
+  return tiles;
+};
 
 await photographDevServer(
   {
@@ -179,11 +186,13 @@ await photographDevServer(
     for (const store of photographed) {
       for (const shot of STORE_SHOTS) {
         findScreens(store, shot);
-        const tiles = tilesOf(store, shot);
+        // oxlint-disable-next-line no-await-in-loop -- one page at a time
+        const tiles = await tilesOf(store, shot);
         // oxlint-disable-next-line no-await-in-loop -- one page at a time
         await photograph(
           {
-            callout: calloutFor(store, shot),
+            // oxlint-disable-next-line no-await-in-loop -- one page at a time
+            callout: await calloutFor(store, shot),
             grounds: tiles.map(({ ground }) => ground).join(","),
             parts: tiles.map(({ part }) => part).join(","),
             shot: shot.name,

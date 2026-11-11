@@ -204,8 +204,8 @@ fun GlanceModifier.spoken(day: WidgetDay, words: WidgetWords): GlanceModifier = 
  * sizes the picker's preview is drawn at.
  */
 abstract class PochicalWidget(
-  private val chooses: Choosing = Choosing.Nobody,
-  val previews: Set<DpSize>,
+  internal val chooses: Choosing = Choosing.Nobody,
+  previews: Set<DpSize>,
 ) : GlanceAppWidget() {
   override val sizeMode: SizeMode = SizeMode.Exact
 
@@ -251,20 +251,8 @@ abstract class PochicalWidget(
     }
   }
 
-  /**
-   * What this kind draws now set to [choice], nobody for none, read once with its faces come: the
-   * stores' pictures of the widgets (StoreScreenshots), where a placed widget goes on reading.
-   */
-  suspend fun drawnNow(context: Context, choice: WidgetChoice?): Drawn {
-    val sources = (context.applicationContext as PochicalApplication).widgetSources
-    val companion = choice?.let { sources.values.companion(it, LocalDate.now()).first() }
-    val faces = companion?.let { widgetFaces(context, WidgetPhotos.of(it, ownFace = chooses == Choosing.People)) } ?: WidgetFaces()
-    val settings = sources.settings.first()
-    return Drawn(entryNow(sources.calendar.first(), settings, holidayCountry(), companion), settings, faces)
-  }
-
   /** The entry at the moment it is drawn, whatever brought it, with [companion] whom the widget is set to. */
-  private fun entryNow(calendar: OwnCalendar, settings: DeviceSettings, country: String, companion: WidgetCompanion?): WidgetEntry =
+  internal fun entryNow(calendar: OwnCalendar, settings: DeviceSettings, country: String, companion: WidgetCompanion?): WidgetEntry =
     calendar.widgetEntry(ZonedDateTime.now(), settings.week, { it.holidayName(country) != null }, companion)
 
   /** The picker's generated preview (Android 15 on): the sample week, in the person's settings. */
