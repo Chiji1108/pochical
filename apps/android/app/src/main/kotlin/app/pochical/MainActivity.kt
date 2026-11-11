@@ -63,36 +63,42 @@ class MainActivity(
     // Before the activity is created, as the Auth Tab's result launcher must be.
     appleSignIn.attach(this)
   }
-  private var calendarRead by mutableStateOf(false)
+  /** Whether what the launching intent asks of a debug build is taken: at once in an activity made anew, which has none to take. */
+  private var launchOptionsTaken by mutableStateOf(false)
   private val links = OpenedLinks()
 
   override fun onCreate(savedInstanceState: Bundle?) {
     // The splash stays until the first frame can be drawn in the person's テーマ, with their days:
     // what the device keeps alone, never the network or sync (Benchmarks' offline starts, #939).
-    installSplashScreen().setKeepOnScreenCondition { firstFrame.settings.value == null || !calendarRead || firstFrame.firstRunDone.value == null }
+    installSplashScreen().setKeepOnScreenCondition {
+      firstFrame.settings.value == null || !launchOptionsTaken || !firstFrame.daysRead.value || firstFrame.firstRunDone.value == null
+    }
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
     // Made again, the activity's navigation keeps the place the first intent opened.
     // From Recents, Android hands the intent the task began with again: no link was opened now.
     if (savedInstanceState == null && intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY == 0) take(intent)
     addOnNewIntentListener(::take)
-    lifecycleScope.launch {
-      // Not cancelled with the activity, so a sample is never left half put in. The calendar, which
-      // the reminders follow from the app's start, shows it as the database tells of its writes.
-      if (savedInstanceState == null) withContext(NonCancellable) { takeLaunchOptions(intent, kit) }
-      ownDays.awaitRead()
-      calendarRead = true
+    launchOptionsTaken = savedInstanceState != null
+    if (!launchOptionsTaken) {
+      lifecycleScope.launch {
+        // Not cancelled with the activity, so a sample is never left half put in. The calendar, which
+        // the reminders follow from the app's start, shows it as the database tells of its writes.
+        withContext(NonCancellable) { takeLaunchOptions(intent, kit) }
+        launchOptionsTaken = true
+      }
     }
     // The widgets' previews in the picker follow the settings the screens change.
     lifecycleScope.launch { followForWidgetPreviews(this@MainActivity, deviceSettings.settings) }
     // Set while the app is in front, where the system does not limit how often (spec/shortcuts.md).
     if (savedInstanceState == null) lifecycleScope.launch(Dispatchers.Default) { publishShortcuts(applicationContext) }
     setContent {
-      // Read while the activity is started, and there at once in an activity made anew (FirstFrame).
+      // There at once in an activity made anew (FirstFrame).
       val settings by firstFrame.settings.collectAsStateWithLifecycle()
       val firstRunDone by firstFrame.firstRunDone.collectAsStateWithLifecycle()
+      val daysRead by firstFrame.daysRead.collectAsStateWithLifecycle()
       val device = settings ?: return@setContent
-      if (!calendarRead) return@setContent
+      if (!launchOptionsTaken || !daysRead) return@setContent
       val done = firstRunDone ?: return@setContent
       val firstRun = remember(done) { FirstRunState(done, kit.firstRun) }
       val state = remember(device) { DeviceSettingsState(device, deviceSettings::change) }

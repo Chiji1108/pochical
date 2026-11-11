@@ -57,8 +57,8 @@ interface AppGraph : MetroAppComponentProviders {
   /** What the first frame is drawn with, kept through the activities made while the app runs. */
   @Provides
   @SingleIn(AppScope::class)
-  fun firstFrame(settings: SyncedSettings, kit: PochicalKit): FirstFrame =
-    FirstFrame(settings.settings, kit.firstRun.done, CoroutineScope(SupervisorJob() + Dispatchers.Default))
+  fun firstFrame(settings: SyncedSettings, kit: PochicalKit, days: OwnDays): FirstFrame =
+    FirstFrame(settings.settings, kit.firstRun.done, days, CoroutineScope(SupervisorJob() + Dispatchers.Default))
 
   @Provides
   @SingleIn(AppScope::class)
