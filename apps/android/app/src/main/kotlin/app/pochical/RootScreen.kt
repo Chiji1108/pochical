@@ -127,7 +127,10 @@ fun RootScreen(navigator: RootNavigator) {
       popTransitionSpec = pop,
       predictivePopTransitionSpec = predictivePop,
     ) { route ->
-      NavEntry(route, contentKey(route), paneOf(route) { navigator.tab }) { InPane(route) { Page(route, navigator) } }
+      NavEntry(route, contentKey(route), paneOf(route) { navigator.tab }) {
+        val onStack = remember(route, navigator) { { route in navigator.routes } }
+        CompositionLocalProvider(LocalOnStack provides onStack) { InPane(route) { Page(route, navigator) } }
+      }
     }
   }
 }

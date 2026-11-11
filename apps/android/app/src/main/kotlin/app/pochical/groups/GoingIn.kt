@@ -1,7 +1,6 @@
 package app.pochical.groups
 
 import android.widget.Toast
-import androidx.activity.compose.LocalActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -16,6 +15,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.R
 import app.pochical.ReviewPrompt
 import app.pochical.kit.GoingIn
+import app.pochical.rememberLeavingForGood
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -34,7 +34,7 @@ fun <Asked> waitingOn(going: GoingIn<Asked>, mine: (Asked) -> Boolean = { true }
   var gone by remember { mutableStateOf(false) }
   val context = LocalContext.current
   val resources = LocalResources.current
-  val activity = LocalActivity.current
+  val leavingForGood = rememberLeavingForGood()
   val entered by rememberUpdatedState(onIn)
   val failed by rememberUpdatedState(onFailed)
   val waited = call?.takeIf { mine(it.asked) }
@@ -63,7 +63,7 @@ fun <Asked> waitingOn(going: GoingIn<Asked>, mine: (Asked) -> Boolean = { true }
     onDispose {
       // Not as the phone turns: the page drawn again waits on. The call as the kit has it now,
       // which the page may have begun without having been drawn waiting yet.
-      if (activity?.isChangingConfigurations != true) going.underWay.value?.takeIf { isMine(it.asked) }?.let(going::left)
+      if (leavingForGood()) going.underWay.value?.takeIf { isMine(it.asked) }?.let(going::left)
     }
   }
   return call != null || gone

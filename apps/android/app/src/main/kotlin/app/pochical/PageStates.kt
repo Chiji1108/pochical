@@ -1,11 +1,13 @@
 package app.pochical
 
+import androidx.activity.compose.LocalActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.retain.retainRetainedValuesStoreRegistry
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.navigation3.runtime.NavEntryDecorator
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
@@ -48,4 +50,20 @@ fun <T : Any> rememberPageDecorators(onStack: Set<String>): List<NavEntryDecorat
   return remember(saved, stores) {
     listOf(saved, NavEntryDecorator(onPop = stores::clearChild) { entry -> stores.LocalRetainedValuesStoreProvider(entry.contentKey) { entry.Content() } })
   }
+}
+
+/** Whether the page this is in is on the stack still, as [RootScreen] has it; a page of no stack is. */
+val LocalOnStack = staticCompositionLocalOf<() -> Boolean> { { true } }
+
+/**
+ * Whether the page this is in is leaving for good, asked as it leaves the screen (a
+ * DisposableEffect's onDispose): not when the window is only being made anew (the screen turned)
+ * with the page still on the stack, which draws it again. A page taken off the stack in the
+ * moment the window is made anew is leaving for good too, though its going is never drawn.
+ */
+@Composable
+fun rememberLeavingForGood(): () -> Boolean {
+  val activity = LocalActivity.current
+  val onStack = LocalOnStack.current
+  return remember(activity, onStack) { { activity?.isChangingConfigurations != true || !onStack() } }
 }

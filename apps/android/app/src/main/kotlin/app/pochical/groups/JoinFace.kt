@@ -1,6 +1,5 @@
 package app.pochical.groups
 
-import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -47,6 +46,7 @@ import app.pochical.ReviewPrompt
 import app.pochical.SectionHeader
 import app.pochical.SectionRow
 import app.pochical.SettingsRow
+import app.pochical.rememberLeavingForGood
 import app.pochical.design.FaceDrawing
 import app.pochical.design.TextLimits
 import app.pochical.kit.GroupCalls
@@ -140,7 +140,7 @@ class JoinProfile(ownName: TextFieldValue = TextFieldValue(), face: JoinFace = J
 fun rememberJoinProfile(): JoinProfile {
   val context = LocalContext.current
   val calls = LocalGroupCalls.current
-  val activity = LocalActivity.current
+  val leavingForGood = rememberLeavingForGood()
   val profile = rememberSaveable(saver = JoinProfile.Saver) { JoinProfile() }
   val usual = usualProfile()
   val userSocket by LocalAccount.current.userSocket.collectAsStateWithLifecycle(SocketState.Closed)
@@ -157,7 +157,7 @@ fun rememberJoinProfile(): JoinProfile {
   }
   DisposableEffect(profile) {
     onDispose {
-      if (activity?.isChangingConfigurations != true) (profile.face as? JoinFace.Held)?.let { calls.letGoOfPhoto(it.photoId) }
+      if (leavingForGood()) (profile.face as? JoinFace.Held)?.let { calls.letGoOfPhoto(it.photoId) }
     }
   }
   return profile

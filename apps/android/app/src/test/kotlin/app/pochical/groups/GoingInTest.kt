@@ -2,10 +2,12 @@ package app.pochical.groups
 
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import app.pochical.LocalOnStack
 import app.pochical.kit.GoingIn
 import app.pochical.kit.InGroup
 import app.pochical.kit.JoinFace
@@ -84,6 +86,35 @@ class GoingInTest {
     compose.runOnIdle { assertTrue(busy) }
     answer.complete(InGroup("group-1", faceKept = true))
     compose.runOnIdle { assertEquals(listOf("group-1"), opened) }
+  }
+
+  /**
+   * Back while 作る waits, and the screen turned before the page's going is drawn: the page is off
+   * the stack as the window is made anew, so it is leaving for good, and the page opened next takes
+   * nothing of the call that ended meanwhile.
+   */
+  @Test
+  fun aPageTakenOffTheStackAsTheWindowIsMadeAnewHasLeftItsCall() {
+    var onStack = true
+    compose.activityRule.scenario.onActivity { activity ->
+      activity.setContent {
+        CompositionLocalProvider(LocalOnStack provides { onStack }) {
+          busy = waitingOn(going, onIn = { opened += it }, onFailed = { failures += it })
+        }
+      }
+    }
+    compose.runOnIdle { going.begin("忘年会", JoinFace.Usual, asUsual = false) }
+    onStack = false
+    compose.activityRule.scenario.recreate()
+    answer.complete(InGroup("group-1", faceKept = true))
+    compose.waitForIdle()
+    assertNull(going.underWay.value)
+
+    show()
+    compose.runOnIdle {
+      assertFalse(busy)
+      assertEquals(emptyList<String>(), opened)
+    }
   }
 
   /** Back while 作る waits, for good: the call ends with no page to open the group, and is forgotten. */
