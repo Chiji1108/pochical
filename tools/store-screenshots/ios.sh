@@ -40,7 +40,7 @@ xcrun simctl boot "$device"
 xcrun simctl bootstatus "$device" >/dev/null
 rm -rf "$raw"
 mkdir -p "$raw"
-pnpm --dir "$root" exec tsx "$root/tools/store-screenshots/seed.ts" "$raw/invite"
+pnpm --dir "$root" exec tsx "$root/tools/store-screenshots/seed.ts" "$raw/invite" "$raw/invite-friends"
 # The status bar the stores' pictures have: full signal and a full battery
 # off the charger, and for the whole run the time two minutes after the
 # chat's lines, whose times are when the seed sent them.

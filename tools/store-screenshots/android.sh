@@ -2,9 +2,9 @@
 # Photographs the Android app for the stores' screenshots (#806), raw, as
 # the emulator shows it, by the names
 # packages/prototype/src/lib/store-shots.ts gives them: the screens into
-# .build/store-screenshots/android (01-entry.png, 02-calendar.png, ...),
-# and each widget by itself at each size it offers into its 04-widgets/ and
-# 04-widgets-sumi/ (<kind>-<size>.png), drawn there from the app's own days
+# .build/store-screenshots/android (01-entry.png, 05-calendar.png, ...),
+# and each widget by itself at each size it offers into its 02-widgets/ and
+# 02-widgets-sumi/ (<kind>-<size>.png), drawn there from the app's own days
 # and group; StoreScreenshots in :app's androidTest walks them all.
 # `mise run store:images` draws Google Play's pictures from them.
 #
@@ -73,7 +73,7 @@ demo network -e mobile hide
 for key in $(adb shell cmd notification list); do adb shell "cmd notification snooze --for 1800000 '$key'" >/dev/null; done
 
 start_server
-pnpm --dir "$root" exec tsx "$root/tools/store-screenshots/seed.ts" "$work/invite"
+pnpm --dir "$root" exec tsx "$root/tools/store-screenshots/seed.ts" "$work/invite" "$work/invite-friends"
 # The status bar's time for the whole run: two minutes after the chat's
 # lines, whose times are when the seed sent them, on the emulator's clock.
 demo clock -e hhmm "$(adb shell 'date -d @$(($(date +%s) + 120)) +%H%M')"
@@ -81,7 +81,8 @@ pulled=$root/apps/android/app/build/outputs/connected_android_test_additional_ou
 rm -rf "$pulled"
 gradle :app:connectedDebugAndroidTest "-PpochicalServer=http://10.0.2.2:$port" \
   -Pandroid.testInstrumentationRunnerArguments.class=app.pochical.StoreScreenshots \
-  "-Pandroid.testInstrumentationRunnerArguments.invite=$(cat "$work/invite")"
+  "-Pandroid.testInstrumentationRunnerArguments.invite=$(cat "$work/invite")" \
+  "-Pandroid.testInstrumentationRunnerArguments.friends=$(cat "$work/invite-friends")"
 # Where Gradle pulls what a test leaves in additionalTestOutputDir, under the device's name.
 cp -R "$pulled"/debugAndroidTest/connected/*/ "$out"
 ls -R "$out"

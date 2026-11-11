@@ -42,17 +42,34 @@ export const HEADLINE_SHARE = 0.2;
 type StoreShot = { headline: readonly string[]; name: string } & (
   | { kind: "pair"; raw: readonly [string, string] }
   | { kind: "screen"; raw: string }
-  | { kind: "wall"; raw: readonly string[] }
+  | { kind: "wall"; pinned: readonly WallPin[]; raw: readonly string[] }
 );
 
+// A widget the wall shows whole where the eye lands first, under the
+// headline in its middle columns: its file, the look it is in, counted in
+// `raw`, and the cell its top leading corner takes, counted from 0.
+export type WallPin = {
+  column: number;
+  file: string;
+  look: number;
+  row: number;
+};
+
 // The shots in the stores' order, each headline a line an entry. They speak
-// to people on night and rotating shifts. The first three are screens,
-// which Google Play asks its first pictures to show the app by. A raw
-// file or folder named `-sumi` is in the look the app's own settings give
-// it in black and white: テーマ 墨, シフトの色 ワントーン, シフトの見た目
-// 線, 休みの見せ方 印だけ, and 色をつける日 all off. Everything else is as
-// the app starts. The wall mixes the two, the widgets set to someone or to
-// the group among them; the last shot sets the two months side by side.
+// to people on night and rotating shifts. The first three are what a
+// search's results show, so they carry the look; Google Play takes eight
+// at most, the App Store ten. A raw file or folder named `-sumi` is in the
+// look the app's own settings give it in black and white: テーマ 墨,
+// シフトの色 ワントーン, シフトの見た目 線, 休みの見せ方 印だけ, and
+// 色をつける日 all off; one named `-letters` has the shifts as letters,
+// シフトの見た目 文字, in テーマ ソーダ. Everything else is as the app
+// starts. The wall
+// mixes the two, the widgets set to someone or to the group among them,
+// with 次の休み and いまのシフト, its ring drawn while a shift is on,
+// pinned where they show whole; the themes' shot sets the month in 墨 and
+// in letters side by side, the app as it starts being in the others. Both platforms also photograph `details-repeat.png`,
+// 繰り返しを直す on a fixed cycle, which no shot here draws yet: it is a
+// tile of the details shot to come (#806).
 export const STORE_SHOTS = [
   {
     headline: ["勤務表を見ながら、", "ポチポチ。"],
@@ -61,40 +78,38 @@ export const STORE_SHOTS = [
     raw: "01-entry.png",
   },
   {
-    headline: ["夜勤も明けも、", "ひと目で。"],
-    kind: "screen",
-    name: "calendar",
-    raw: "02-calendar.png",
-  },
-  {
-    headline: ["いつもの", "カレンダーにも。"],
-    kind: "screen",
-    name: "device-calendar",
-    raw: "03-device-calendar.png",
-  },
-  {
-    headline: ["ホーム画面にも。"],
+    headline: ["次の休みも、", "ウィジェットで。"],
     kind: "wall",
     name: "widgets",
-    raw: ["04-widgets", "04-widgets-sumi"],
+    pinned: [
+      { column: 2, file: "next-off-small.png", look: 0, row: 3 },
+      { column: 3, file: "now-small.png", look: 0, row: 4 },
+    ],
+    raw: ["02-widgets", "02-widgets-sumi"],
   },
   {
-    headline: ["「いつ休み？」が、", "ひと目で。"],
+    headline: ["家族や友人と、", "シフトを共有。"],
     kind: "screen",
     name: "group-shifts",
-    raw: "05-group-shifts.png",
+    raw: "03-group-shifts.png",
   },
   {
     headline: ["職場の人にも、", "ちょっと聞ける。"],
     kind: "screen",
     name: "chat",
-    raw: "06-chat.png",
+    raw: "04-chat.png",
   },
   {
     headline: ["色も印も、", "好きな見た目に。"],
     kind: "pair",
     name: "themes",
-    raw: ["02-calendar.png", "07-calendar-sumi.png"],
+    raw: ["05-calendar-sumi.png", "05-calendar-letters.png"],
+  },
+  {
+    headline: ["いつものカレンダーに、", "自動で反映。"],
+    kind: "screen",
+    name: "device-calendar",
+    raw: "06-device-calendar.png",
   },
 ] as const satisfies readonly StoreShot[];
 
@@ -149,8 +164,12 @@ export type WallTile = {
 // widget and the look that there touch the least of the same widget,
 // then of the same look, then were used the least so far. So the looks
 // alternate across the wall, and no widget sits beside itself where
-// another fits.
-export const wallOf = (files: readonly string[], looks: number): WallTile[] => {
+// another fits. The `pinned` are put first, where they are told.
+export const wallOf = (
+  files: readonly string[],
+  looks: number,
+  pinned: readonly WallPin[] = []
+): WallTile[] => {
   const tiles: WallTile[] = [];
   // Which tile covers each cell, by its place in `tiles`.
   const covered = new Map<string, number>();
@@ -176,6 +195,19 @@ export const wallOf = (files: readonly string[], looks: number): WallTile[] => {
     }
     return edge;
   };
+  const put = (tile: WallTile) => {
+    for (let across = 0; across < tile.columns; across += 1) {
+      for (let down = 0; down < tile.rows; down += 1) {
+        covered.set(`${tile.column + across} ${tile.row + down}`, tiles.length);
+      }
+    }
+    tiles.push(tile);
+    used.set(tile.file, usedOf(tile.file) + 1);
+    used.set(`look ${tile.look}`, usedOf(`look ${tile.look}`) + 1);
+  };
+  for (const pin of pinned) {
+    put({ ...cellsOf(pin.file), ...pin });
+  }
   for (let row = 0; row < WALL.rows; row += 1) {
     for (let column = 0; column < WALL.columns; column += 1) {
       if (covered.has(`${column} ${row}`)) {
@@ -215,14 +247,7 @@ export const wallOf = (files: readonly string[], looks: number): WallTile[] => {
       if (tile === undefined) {
         continue;
       }
-      for (let across = 0; across < tile.columns; across += 1) {
-        for (let down = 0; down < tile.rows; down += 1) {
-          covered.set(`${column + across} ${row + down}`, tiles.length);
-        }
-      }
-      tiles.push(tile);
-      used.set(tile.file, usedOf(tile.file) + 1);
-      used.set(`look ${tile.look}`, usedOf(`look ${tile.look}`) + 1);
+      put(tile);
     }
   }
   return tiles;
