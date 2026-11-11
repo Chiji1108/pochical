@@ -26,7 +26,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.onSubscription
 import androidx.navigation3.runtime.NavEntry
-import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import app.pochical.calendar.CalendarScreen
 import app.pochical.calendar.LocalOwnDays
@@ -122,16 +121,21 @@ fun RootScreen(navigator: RootNavigator) {
       backStack = navigator.routes,
       onBack = navigator::back,
       sceneStrategies = listOf(rememberTabPanes(navigator.tab)),
-      entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator(), rememberHeldReadsDecorator()),
+      entryDecorators = rememberPageDecorators(navigator.routes.mapTo(HashSet(), ::contentKey)),
       sharedTransitionScope = this,
       transitionSpec = push,
       popTransitionSpec = pop,
       predictivePopTransitionSpec = predictivePop,
     ) { route ->
-      NavEntry(route, metadata = paneOf(route) { navigator.tab }) { InPane(route) { Page(route, navigator) } }
+      NavEntry(route, contentKey(route), paneOf(route) { navigator.tab }) {
+        InPane(route) { Page(route, navigator) }
+      }
     }
   }
 }
+
+/** What a route's entry is known by, to what is kept for it while it is on the stack: its saved state, what it read. */
+private fun contentKey(route: RootRoute): String = route.toString()
 
 /** What [route] shows. */
 @Composable

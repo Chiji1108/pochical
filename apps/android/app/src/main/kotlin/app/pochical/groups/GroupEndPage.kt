@@ -70,6 +70,13 @@ fun groupEndsWords(resources: Resources, endsAtMs: Long, today: LocalDate, zone:
 fun groupEndValue(day: LocalDate?): String = day?.monthDayText(rememberToday()) ?: stringResource(R.string.none)
 
 /**
+ * A section's [note] with what passing the end does said after it while there is an end, where its
+ * day is read: under グループの設定's and グループを作る's rows.
+ */
+@Composable
+fun noteWithEnd(note: String, ends: Boolean): String = note + if (ends) stringResource(R.string.group_end_settings_note) else ""
+
+/**
  * 終了日, from グループの設定: the group's end as a draft until 保存, which any member may set, change
  * or take away as any member renames the group. Someone else's change meanwhile leaves the draft,
  * which 保存 then sends: the last to save wins, as for the name.

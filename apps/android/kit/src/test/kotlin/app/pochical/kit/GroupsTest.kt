@@ -119,3 +119,43 @@ class ProfileTest {
     assertNull(database.values().profile().first())
   }
 }
+
+class NewGroupDraftTest {
+  private val zone = java.time.ZoneId.of("Asia/Tokyo")
+
+  /** What 作る sent: the draft with its request, as the call under way holds it and the page opened again takes it back. */
+  private fun NewGroupDraft.asSent() = copy(sent = request(freeColor = 2, displayName = "さくら", zone = zone))
+
+  /**
+   * A mark picked by hand is the person's: taken back from the call under way with the rest of the
+   * draft, it stays as the name is then changed, as it did before 作る.
+   */
+  @Test
+  fun aPickedMarkTakenBackFromTheCallStaysAsTheNameChanges() {
+    val picked = GroupMarkValue(icon = "house", color = 4)
+    val begun = NewGroupDraft("忘年会", pickedMark = picked).asSent()
+    assertEquals(picked, begun.sent?.mark)
+
+    val renamed = begun.copy(name = "新年会")
+    assertEquals(picked, renamed.mark(freeColor = 2))
+    assertEquals(picked, renamed.request(freeColor = 2, displayName = "さくら", zone = zone).mark)
+  }
+
+  /** A mark the name gave follows the name still, once sent and taken back: as sent while the name is, a new guess once it changes. */
+  @Test
+  fun aGuessedMarkTakenBackFromTheCallFollowsTheName() {
+    val begun = NewGroupDraft("テスト").asSent()
+    assertEquals(GroupMarkValue(letter = "テ", color = 2), begun.sent?.mark)
+    assertEquals("As sent, though the free color moved on", begun.sent?.mark, begun.mark(freeColor = 3))
+
+    assertEquals(GroupMarkValue(letter = "会", color = 3), begun.copy(name = "会議").mark(freeColor = 3))
+  }
+
+  /** Unchanged, the draft taken back asks again under the same request; changed, under a new one. */
+  @Test
+  fun aDraftTakenBackAsksAgainForTheSameRequestUntilItChanges() {
+    val begun = NewGroupDraft("忘年会", end = java.time.LocalDate.of(2026, 12, 31)).asSent()
+    assertSame(begun.sent, begun.request(freeColor = 5, displayName = "さくら", zone = zone))
+    assertNotEquals(begun.sent?.id, begun.copy(end = null).request(freeColor = 5, displayName = "さくら", zone = zone).id)
+  }
+}

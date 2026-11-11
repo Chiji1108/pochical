@@ -133,8 +133,10 @@ fun PatternEditor(id: String, isNew: Boolean, navigation: PageNavigation) {
   val repeating = repeats(id, calendar.orders)
   // Locked only where turning it off is refused: one turned off before an order took it on may be turned back on.
   val archivingRefused = refusesArchiving(id, saved?.archived ?: false, calendar.orders)
-  val shapedName = limitText(name.text, TextLimits.shiftName).trim()
-  val shaped = draft.copy(name = shapedName, time = if (allDay) null else time)
+  // The pattern as the page holds it at the moment it is asked for, read from the page's state:
+  // 保存 may be tapped before the page is drawn again with the last change, and keeps what was
+  // typed, never the page as it was last drawn (#1180).
+  fun shaped() = draft.copy(name = limitText(name.text, TextLimits.shiftName).trim(), time = if (allDay) null else time)
 
   fun rename(text: TextFieldValue) {
     name = text
@@ -164,10 +166,12 @@ fun PatternEditor(id: String, isNew: Boolean, navigation: PageNavigation) {
       ConfirmAction(
         stringResource(if (isNew) R.string.add else R.string.save),
         onClick = {
-          scope.launch { kept(days.savePattern(shaped)) { if (isNew) navigation.back(2) else navigation.back() } }
+          val pattern = shaped()
+          // As the button is off for, should the tap come before it is drawn so.
+          if (fitsPattern(pattern.row)) scope.launch { kept(days.savePattern(pattern)) { if (isNew) navigation.back(2) else navigation.back() } }
         },
         // Only what the server takes, so a pattern saved stays once sent.
-        enabled = fitsPattern(shaped.row),
+        enabled = fitsPattern(shaped().row),
       )
     },
   ) { padding ->

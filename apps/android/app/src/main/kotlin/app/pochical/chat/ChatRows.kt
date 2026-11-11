@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import app.pochical.LocalThemeColors
 import app.pochical.R
+import app.pochical.balanced
 import app.pochical.calendar.fullText
 import app.pochical.calendar.monthDayText
 import app.pochical.calendar.rememberToday
@@ -153,7 +154,7 @@ private fun AppLine(words: String, modifier: Modifier) {
   Text(
     words,
     modifier.fillMaxWidth().padding(top = Chat.runGap.dp, start = 24.dp, end = 24.dp),
-    style = MaterialTheme.typography.labelMedium,
+    style = MaterialTheme.typography.labelMedium.balanced(),
     color = LocalThemeColors.current.textTertiary,
     textAlign = TextAlign.Center,
   )

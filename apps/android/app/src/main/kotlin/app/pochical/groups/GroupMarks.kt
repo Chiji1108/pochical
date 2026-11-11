@@ -26,7 +26,9 @@ import app.pochical.chat.Picture
 import app.pochical.design.Radius
 import app.pochical.kit.GroupCalls
 import app.pochical.kit.GroupMarkValue
+import app.pochical.kit.NewGroupDraft
 import app.pochical.kit.NewGroupRequest
+import java.time.LocalDate
 import app.pochical.kit.PhotoShelf
 import app.pochical.kit.Values
 import app.pochical.mark
@@ -55,6 +57,16 @@ val RequestSaver: Saver<NewGroupRequest?, Any> =
     save = { request -> request?.let { listOf(it.name, it.displayName, it.id, it.endsAtMs) + it.mark.saved() } ?: emptyList<Any>() },
     restore = { saved ->
       (saved as List<*>).takeIf { it.isNotEmpty() }?.let { NewGroupRequest(it[0] as String, markOf(it.drop(4)), it[1] as String, it[2] as String, it[3] as Long) }
+    },
+  )
+
+/** グループを作る's draft kept so, whole, so the page made anew holds what the person left: the mark picked by hand and the request sent among it. */
+val DraftSaver: Saver<NewGroupDraft, Any> =
+  Saver(
+    save = { draft -> listOf(draft.name, draft.end?.toString().orEmpty(), with(MarkSaver) { save(draft.pickedMark) }, with(RequestSaver) { save(draft.sent) }) },
+    restore = { saved ->
+      val (name, end, picked, sent) = saved as List<*>
+      NewGroupDraft(name as String, picked?.let(MarkSaver::restore), (end as String).takeIf { it.isNotEmpty() }?.let(LocalDate::parse), sent?.let(RequestSaver::restore))
     },
   )
 

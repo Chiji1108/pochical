@@ -3,12 +3,14 @@ package app.pochical.patterns
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.hasScrollToNodeAction
 import androidx.compose.ui.test.hasText
@@ -141,5 +143,21 @@ class PatternPagesTest {
     compose.awaitRoutes(navigator, Tabs, RootPage.Patterns)
     val made = test.awaitCalendar(compose) { it.patterns.isNotEmpty() }.patterns.single()
     assertEquals(listOf("夜勤", "🌙", "moon", "夜"), listOf(made.name, made.emoji, made.icon, made.symbol))
+  }
+
+  /** 保存 tapped before the page is drawn again with the name just typed: no frame comes between the two (#1180). */
+  @Test
+  fun aNameKeptBeforeThePageIsDrawnAgainIsTheNameTyped() {
+    dayInAnOrderAndLateOnTwoDays()
+    show(listOf(RootPage.Patterns, RootPage.PatternEditor("late"))) { PatternEditor("late", isNew = false, navigation) }
+    compose.waitForIdle()
+    compose.mainClock.autoAdvance = false
+    compose.onNode(hasSetTextAction()).performTextReplacement("遅出")
+    // The button's own action, as a touch's frames would let the page be drawn again before it.
+    compose.onNodeWithText("保存").performSemanticsAction(SemanticsActions.OnClick)
+    compose.mainClock.autoAdvance = true
+    compose.awaitRoutes(navigator, Tabs, RootPage.Patterns)
+    val kept = test.awaitCalendar(compose) { calendar -> calendar.patterns.any { it.name == "遅出" } }
+    assertEquals(listOf("day" to "日勤", "late" to "遅出"), kept.patterns.map { it.id to it.name })
   }
 }
