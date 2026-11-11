@@ -129,3 +129,11 @@ export const issueInviteCode = async (
         .values({ code, groupId })
         .onConflictDoUpdate({ set: { code }, target: invites.groupId })
   );
+
+/** The group's live code gone, as the group goes: no link opens it. */
+export const dropInviteCode = async (
+  d1: D1Database,
+  groupId: string
+): Promise<void> => {
+  await drizzle(d1).delete(invites).where(eq(invites.groupId, groupId));
+};

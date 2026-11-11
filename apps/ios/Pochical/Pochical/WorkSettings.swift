@@ -242,8 +242,7 @@ private struct RepeatPeriodPage: View {
           DatePicker(
             "始まる日",
             selection: Binding {
-              Calendar.current.date(
-                from: DateComponents(year: start.year, month: start.month, day: start.day)) ?? .now
+              start.date(in: .current)
             } set: { move(order, index: index, to: Day($0, in: .current)) },
             displayedComponents: .date)
         } footer: {
@@ -608,8 +607,7 @@ private struct StopRepeatPage: View {
         DatePicker(
           "やめる日",
           selection: Binding {
-            Calendar.current.date(
-              from: DateComponents(year: day.year, month: day.month, day: day.day)) ?? .now
+            day.date(in: .current)
           } set: { day = Day($0, in: .current) },
           displayedComponents: .date)
       } footer: {

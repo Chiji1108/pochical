@@ -50,6 +50,14 @@ public protocol Pochical_V1_GroupServiceClientInterface: Sendable {
     @available(iOS 13, *)
     func `renameGroup`(request: Pochical_V1_RenameGroupRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_RenameGroupResponse>
 
+    /// Gives the group an end, changes it or takes it away
+    /// (spec/sync-protocol.md, A group's end), which every member sees. Members
+    /// only, and none are once its end has come (PERMISSION_DENIED).
+    /// INVALID_ARGUMENT for a time less than GROUP_END_MIN_HOURS away, or
+    /// that no date can be.
+    @available(iOS 13, *)
+    func `setGroupEnd`(request: Pochical_V1_SetGroupEndRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_SetGroupEndResponse>
+
     /// How the caller appears in the group from now on. Members only.
     @available(iOS 13, *)
     func `setDisplayName`(request: Pochical_V1_SetDisplayNameRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_SetDisplayNameResponse>
@@ -112,6 +120,11 @@ public final class Pochical_V1_GroupServiceClient: Pochical_V1_GroupServiceClien
     }
 
     @available(iOS 13, *)
+    public func `setGroupEnd`(request: Pochical_V1_SetGroupEndRequest, headers: Connect.Headers = [:]) async -> ResponseMessage<Pochical_V1_SetGroupEndResponse> {
+        return await self.client.unary(path: "/pochical.v1.GroupService/SetGroupEnd", idempotencyLevel: .unknown, request: request, headers: headers)
+    }
+
+    @available(iOS 13, *)
     public func `setDisplayName`(request: Pochical_V1_SetDisplayNameRequest, headers: Connect.Headers = [:]) async -> ResponseMessage<Pochical_V1_SetDisplayNameResponse> {
         return await self.client.unary(path: "/pochical.v1.GroupService/SetDisplayName", idempotencyLevel: .unknown, request: request, headers: headers)
     }
@@ -139,6 +152,7 @@ public final class Pochical_V1_GroupServiceClient: Pochical_V1_GroupServiceClien
             public static let getInvite = Connect.MethodSpec(name: "GetInvite", service: "pochical.v1.GroupService", type: .unary)
             public static let joinGroup = Connect.MethodSpec(name: "JoinGroup", service: "pochical.v1.GroupService", type: .unary)
             public static let renameGroup = Connect.MethodSpec(name: "RenameGroup", service: "pochical.v1.GroupService", type: .unary)
+            public static let setGroupEnd = Connect.MethodSpec(name: "SetGroupEnd", service: "pochical.v1.GroupService", type: .unary)
             public static let setDisplayName = Connect.MethodSpec(name: "SetDisplayName", service: "pochical.v1.GroupService", type: .unary)
             public static let setGroupPhoto = Connect.MethodSpec(name: "SetGroupPhoto", service: "pochical.v1.GroupService", type: .unary)
             public static let leaveGroup = Connect.MethodSpec(name: "LeaveGroup", service: "pochical.v1.GroupService", type: .unary)

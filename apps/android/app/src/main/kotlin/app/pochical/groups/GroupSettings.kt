@@ -72,7 +72,7 @@ import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.launch
 
 /**
- * グループの設定 (/design's GroupSettingsPage): the group's name and mark, how the person appears in
+ * グループの設定 (/design's GroupSettingsPage): the group's name and mark, its end, how the person appears in
  * it, its chat's 通知, who is in it with a way to invite more, and leaving. Someone else's row opens their sheet,
  * whose このグループから外す takes them out, asked first.
  */
@@ -81,6 +81,7 @@ fun GroupSettingsPage(
   groupId: String,
   onBack: () -> Unit,
   onEdit: () -> Unit,
+  onEnd: () -> Unit,
   onProfile: () -> Unit,
   onInvite: () -> Unit,
   onLeft: () -> Unit,
@@ -102,12 +103,15 @@ fun GroupSettingsPage(
   val blockRows by remember(values) { values.blocks() }.collectAsStateWithLifecycle(emptyList())
   val blocked = remember(blockRows) { blockRows.map { it.userId }.toSet() }
   var confirmingRemove by remember { mutableStateOf<GroupMemberRow?>(null) }
+  val end = groupEnd(groupId)
 
   GroupPage(groupId, stringResource(R.string.group_settings), onBack, loading = { title -> SettingsPage(title, onBack) { padding -> PageLoading(padding) } }) { group ->
     SettingsPage(stringResource(R.string.group_settings), onBack, snackbar = snackbar) { padding ->
       LazyColumn(contentPadding = padding) {
         item {
-          SettingsSection(stringResource(R.string.group), footnote = stringResource(R.string.group_settings_note)) {
+          // With an end, what passing it does is said here too, where the day is read.
+          val note = stringResource(R.string.group_settings_note) + if (end?.day != null) stringResource(R.string.group_end_settings_note) else ""
+          SettingsSection(stringResource(R.string.group), footnote = note) {
             row {
               SettingsRow(
                 group.name,
@@ -118,6 +122,7 @@ fun GroupSettingsPage(
                 value = stringResource(R.string.edit),
               )
             }
+            row { SettingsRow(stringResource(R.string.group_end), R.drawable.ic_event, onClick = onEnd, value = end?.let { groupEndValue(it.day) }) }
           }
         }
         item {

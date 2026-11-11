@@ -35,6 +35,8 @@ import app.pochical.v1.change
 import app.pochical.v1.changes
 import app.pochical.v1.dayValue
 import app.pochical.v1.hlc
+import app.pochical.v1.membership
+import app.pochical.v1.reset
 import app.pochical.v1.pong
 import app.pochical.v1.serverError
 import app.pochical.v1.serverFrame
@@ -434,6 +436,51 @@ class FakeServer : AutoCloseable {
     for (each in openOf(user)) each.send(serverFrame { changes = changes { changes += taken } })
   }
 
+  /** [user] is in the group [groupId], or with [left] out of it, as their DO lists it: sent to every socket of theirs open. */
+  @Synchronized
+  fun membership(groupId: String, left: Boolean = false, user: String = userId) {
+    val taken = change {
+      cursor = next(user)
+      membership = membership {
+        this.groupId = groupId
+        name = groupId
+        joinedAtMs = 1
+        this.left = left
+      }
+    }
+    valuesOf(user)["membership/$groupId"] = taken
+    for (each in openOf(user)) each.send(serverFrame { changes = changes { changes += taken } })
+  }
+
+  /**
+   * [user]'s DO restored from an older copy, which does not know the groups [forgetting]: the next
+   * socket's Hello is ahead of it, and gets a Reset and then everything the DO holds. With
+   * [holdingCatchUp] what follows the Reset, and the Pong after it, wait for [releaseCatchUp].
+   */
+  @Synchronized
+  fun restoreOlder(forgetting: Set<String> = emptySet(), holdingCatchUp: Boolean = false, user: String = userId) {
+    for (groupId in forgetting) valuesOf(user) -= "membership/$groupId"
+    restored += user
+    this.holdingCatchUp = holdingCatchUp
+  }
+
+  /** Sends what [restoreOlder] held back: everything the DO holds, and the Pongs asked for meanwhile. */
+  @Synchronized
+  fun releaseCatchUp() {
+    holdingCatchUp = false
+    heldCatchUps.forEach { it() }
+    heldCatchUps.clear()
+  }
+
+  private val restored = HashSet<String>()
+  private var holdingCatchUp = false
+  private val heldCatchUps = mutableListOf<() -> Unit>()
+
+  /** Sends now, or once [releaseCatchUp] says, in the order asked. */
+  private fun afterCatchUpHeld(send: () -> Unit) {
+    if (holdingCatchUp) heldCatchUps += send else send()
+  }
+
   /** The value [user]'s DO holds for the day's field, as it would send it. */
   @Synchronized fun day(date: String, field: Int, user: String = userId): Change? = valuesOf(user)["day/$date/$field"]
 
@@ -644,11 +691,14 @@ class FakeServer : AutoCloseable {
     when (frame.kindCase) {
       ClientFrame.KindCase.HELLO -> {
         socket.send(serverFrame { welcome = welcome { cursor = cursors[user] ?: 0L; serverMs = System.currentTimeMillis() } })
-        val after = values.values.filter { it.cursor > frame.hello.cursor }.sortedBy { it.cursor }
-        if (after.isNotEmpty()) socket.send(serverFrame { changes = changes { changes += after } })
+        // A DO restored from an older copy resets the device ahead of it, then sends all it holds.
+        val reset = restored.remove(user)
+        if (reset) socket.send(serverFrame { this.reset = reset {} })
+        val after = values.values.filter { reset || it.cursor > frame.hello.cursor }.sortedBy { it.cursor }
+        if (after.isNotEmpty()) afterCatchUpHeld { socket.send(serverFrame { changes = changes { changes += after } }) }
         openOf(user) += socket
       }
-      ClientFrame.KindCase.PING -> socket.send(serverFrame { pong = pong { nonce = frame.ping.nonce } })
+      ClientFrame.KindCase.PING -> afterCatchUpHeld { socket.send(serverFrame { pong = pong { nonce = frame.ping.nonce } }) }
       ClientFrame.KindCase.DAY_EDITS -> {
         val edits = frame.dayEdits.editsList
         if (edits.any { it.value.hlc.physicalMs > System.currentTimeMillis() + SyncLimits.clockAheadMs }) {

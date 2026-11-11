@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.onSubscription
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
@@ -35,6 +36,7 @@ import app.pochical.chat.ChatPhotosPage
 import app.pochical.design.Chat
 import app.pochical.groups.GroupButtons
 import app.pochical.groups.GroupEditPage
+import app.pochical.groups.GroupEndPage
 import app.pochical.groups.GroupProfilePage
 import app.pochical.groups.GroupSettingsPage
 import app.pochical.groups.GroupShiftsPage
@@ -104,6 +106,11 @@ fun RootScreen(navigator: RootNavigator) {
     }
     links.consume()
   }
+  // A group the user is out of takes its pages with it, as the sync says so, and the pages kept
+  // from before this screen was made go by the groups held now, read once the leavings are heard,
+  // so none between the two is missed.
+  val account = LocalAccount.current
+  LaunchedEffect(account, navigator) { account.left.onSubscription { navigator.restored(account.groupsHeld()) }.collect(navigator::left) }
   val motion = rememberPageMotion()
   val push = remember(motion) { motion.push<RootRoute>() }
   val pop = remember(motion) { motion.pop<RootRoute>() }
@@ -154,6 +161,7 @@ private fun Page(route: RootRoute, navigator: RootNavigator) {
         route.groupId,
         onBack = navigation::back,
         onEdit = { navigation.open(RootPage.GroupEdit(route.groupId)) },
+        onEnd = { navigation.open(RootPage.GroupEnd(route.groupId)) },
         onProfile = { navigation.open(RootPage.GroupProfile(route.groupId)) },
         onInvite = { navigation.open(RootPage.GroupInvite(route.groupId)) },
         onLeft = navigator::closePages,
@@ -175,6 +183,7 @@ private fun Page(route: RootRoute, navigator: RootNavigator) {
     }
     is RootPage.ChatPhotos -> ChatPhotosPage(route.groupId, route.threadId, onBack = rememberPageNavigation(navigator)::back)
     is RootPage.GroupEdit -> GroupEditPage(route.groupId, onBack = rememberPageNavigation(navigator)::back)
+    is RootPage.GroupEnd -> GroupEndPage(route.groupId, onBack = rememberPageNavigation(navigator)::back)
     is RootPage.GroupProfile -> GroupProfilePage(route.groupId, onBack = rememberPageNavigation(navigator)::back)
     is RootPage.ShiftChoice -> ShiftChoicePage(LocalDate.parse(route.date), onBack = rememberPageNavigation(navigator)::back)
     RootPage.Patterns -> PatternsPage(rememberPageNavigation(navigator))

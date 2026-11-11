@@ -59,12 +59,16 @@ nonisolated struct OpenedChat: Hashable, Sendable {
         identifier: chatLineCategory, actions: [reply], intentIdentifiers: [], options: [])
     ])
     Task { await register() }
-    // A group left takes its chats' notifications with it (spec/chat.md,
-    // Notifications).
+    // A group left takes its notifications with it (spec/chat.md,
+    // Notifications): its chats' lines', and the one that it ends soon,
+    // which is of no line.
     Task {
       for await note in NotificationCenter.default.notifications(named: groupLeft) {
         guard let groupID = note.userInfo?["groupID"] as? String else { continue }
-        await takeBack { $0.filter { $0.groupID == groupID }.map(\.id) }
+        let center = UNUserNotificationCenter.current()
+        let gone = await center.deliveredNotifications()
+          .filter { Self.chat(of: $0)?.groupID == groupID }.map(\.request.identifier)
+        if !gone.isEmpty { center.removeDeliveredNotifications(withIdentifiers: gone) }
       }
     }
   }

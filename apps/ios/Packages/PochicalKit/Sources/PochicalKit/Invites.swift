@@ -51,6 +51,8 @@ public struct InviteDetails: Hashable, Sendable {
   public var alreadyMember: Bool
   /// The group has its most members: joining would fail.
   public var full: Bool
+  /// When the group ends, in ms since the epoch; 0 for one with no end.
+  public var endsAtMs: Int64 = 0
 }
 
 /// Who is in a group as its join screen names them, in the order they
@@ -89,7 +91,7 @@ extension GroupCalls {
         groupID: invite.groupID, name: invite.groupName, mark: GroupMarkValue(invite.groupMark),
         members: invite.members.map(\.displayName),
         memberPhotos: invite.members.map(\.photoID), alreadyMember: invite.alreadyMember,
-        full: invite.full)
+        full: invite.full, endsAtMs: invite.endsAtMs)
     case .failure(let error):
       throw InviteError(error)
     }

@@ -8,8 +8,9 @@ import UserNotifications
 
 /// Puts a chat line's notification as a message from its writer
 /// (spec/chat.md, Notifications): their face and name, and for the group's
-/// chat the group's name and mark, as the system shows a conversation. What
-/// it cannot read yet, before the app has the group, shows as it came.
+/// chat the group's name and mark, as the system shows a conversation, and
+/// words the notification that a group ends soon. What it cannot read yet,
+/// before the app has the group, shows as it came.
 final class NotificationService: UNNotificationServiceExtension {
   /// What to show should iOS end the extension first: as it came, in the
   /// app's words.
@@ -52,7 +53,9 @@ final class NotificationService: UNNotificationServiceExtension {
   ) async -> UNNotificationContent {
     let payload = content.userInfo
     // The chat with Pochical's people stays a plain notification: only
-    // they write there, so it has no writer of its own to show.
+    // they write there, so it has no writer of its own to show. So does
+    // the one that a group ends soon (spec/sync-protocol.md, A group's
+    // end), worded already: the group's own, of no line and no writer.
     guard let line = NotifiedLine(id: id, payload: payload),
       line.groupID != ChatPlace.supportID,
       let authorID = payload["authorId"] as? String,
@@ -67,7 +70,7 @@ final class NotificationService: UNNotificationServiceExtension {
       let alone = PushWords(
         key: PushWords.chatKey + sent.key.dropFirst(PushWords.groupKey.count),
         args: Array(sent.args.dropFirst()))
-      worded.body = words(alone.body(known: hasWords))
+      worded.body = words(alone)
     }
     let intent = intent(for: line, from: from, authorID: authorID, content: worded)
     let interaction = INInteraction(intent: intent, response: nil)
@@ -95,26 +98,27 @@ final class NotificationService: UNNotificationServiceExtension {
     Bundle.main.localizedString(forKey: key, value: nil, table: nil) != key
   }
 
-  /// `sent` as the app's strings word it. A format reads no more
-  /// arguments than it has %, so with as many blanks after those that
-  /// came it never reads one that is not there.
+  /// `sent` as the device says it now (`PushWords.words`), in the app's
+  /// strings.
   private static func words(_ sent: PushWords) -> String {
-    let format = Bundle.main.localizedString(forKey: sent.key, value: nil, table: nil)
-    let blanks = Array(repeating: "", count: format.count { $0 == "%" })
-    return String(format: format, arguments: sent.args + blanks)
+    sent.words(
+      known: hasWords,
+      format: { Bundle.main.localizedString(forKey: $0, value: nil, table: nil) },
+      in: .current, today: .today)
   }
 
-  /// The notification as the system worded it, but for keys the app has
-  /// no words for, which the system has none for either (spec/sync-protocol.md,
-  /// Push): such a body is what stands in for it (`PushWords.body`), and
-  /// such a title is none, the system heading the notification with the
-  /// app's name.
+  /// The notification as the system worded it, but where its wording is
+  /// not the device's (spec/sync-protocol.md, Push): a body whose key the
+  /// app has no words for, which the system has none for either, is what
+  /// stands in for it, and that a group ends soon says its day
+  /// (`PushWords.words`); a title the app has no words for is none, the
+  /// system heading the notification with the app's name.
   private static func withWords(_ content: UNNotificationContent) -> UNNotificationContent {
     guard let alert = sentAlert(content),
       let worded = content.mutableCopy() as? UNMutableNotificationContent
     else { return content }
-    if let sent = sentBody(content), !hasWords(for: sent.key) {
-      worded.body = words(sent.body(known: hasWords))
+    if let sent = sentBody(content), !sent.saysItsFormat(known: hasWords) {
+      worded.body = words(sent)
     }
     if let title = alert["title-loc-key"] as? String, !hasWords(for: title) {
       worded.title = ""

@@ -46,7 +46,10 @@ fun YearMonth.shortMonth(english: Boolean): String = if (english) ENGLISH_MONTHS
 
 /** 11月1日, with the year before it for a day of another year than today's. */
 val LocalDate.monthDayText: String
-  get() = "${if (year != LocalDate.now().year) "${year}年" else ""}${monthValue}月${dayOfMonth}日"
+  get() = monthDayText(LocalDate.now())
+
+/** 11月1日, with the year before it for a day of another year than [today]'s (spec/vectors/group-end.json, words). */
+fun LocalDate.monthDayText(today: LocalDate): String = "${if (year != today.year) "${year}年" else ""}${monthValue}月${dayOfMonth}日"
 
 /** 11月1日(日) */
 val LocalDate.fullText: String

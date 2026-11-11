@@ -12,14 +12,17 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -167,17 +170,26 @@ fun HolidayChoice(patterns: List<Pattern>, on: Boolean, setting: HolidaySetting,
   }
 }
 
-/** A day picked on Material's date picker in a dialog, opened on [day]. */
+/**
+ * A day picked on Material's date picker in a dialog, opened on [day]: any day, or only those from
+ * [from] on. The picker names a day by the moment it starts in UTC, whatever the device's time zone,
+ * so a day goes to it and comes back from it as that, never as a moment of the device's own.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DayPickerDialog(day: LocalDate, onPick: (LocalDate) -> Unit, onDismiss: () -> Unit) {
-  val state = rememberDatePickerState(initialSelectedDateMillis = day.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli())
+fun DayPickerDialog(day: LocalDate, onPick: (LocalDate) -> Unit, onDismiss: () -> Unit, from: LocalDate? = null) {
+  val state =
+    rememberDatePickerState(
+      initialSelectedDateMillis = pickerMillis(day),
+      yearRange = (from?.year ?: DatePickerDefaults.YearRange.first)..DatePickerDefaults.YearRange.last,
+      selectableDates = remember(from) { if (from == null) DatePickerDefaults.AllDates else DaysFrom(from) },
+    )
   DatePickerDialog(
     onDismissRequest = onDismiss,
     confirmButton = {
       TextButton(
         onClick = {
-          state.selectedDateMillis?.let { onPick(Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate()) }
+          state.selectedDateMillis?.let { onPick(pickerDay(it)) }
           onDismiss()
         }
       ) {
@@ -188,4 +200,22 @@ fun DayPickerDialog(day: LocalDate, onPick: (LocalDate) -> Unit, onDismiss: () -
   ) {
     DatePicker(state, showModeToggle = false)
   }
+}
+
+/** How Material's date picker names [day]: the moment it starts in UTC, wherever the device is. */
+internal fun pickerMillis(day: LocalDate): Long = day.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+
+/** The day Material's date picker names by [utcMs], the moment it starts in UTC. */
+internal fun pickerDay(utcMs: Long): LocalDate = Instant.ofEpochMilli(utcMs).atZone(ZoneOffset.UTC).toLocalDate()
+
+/**
+ * The days from [first] on, the only ones the picker lets be picked: [first] is a day by the
+ * device's own clock (its tomorrow, for a group's end), held against the day the picker names, never against the moment
+ * the picker names it by, which is another day's on a device west of UTC.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+internal class DaysFrom(private val first: LocalDate) : SelectableDates {
+  override fun isSelectableDate(utcTimeMillis: Long) = !pickerDay(utcTimeMillis).isBefore(first)
+
+  override fun isSelectableYear(year: Int) = year >= first.year
 }

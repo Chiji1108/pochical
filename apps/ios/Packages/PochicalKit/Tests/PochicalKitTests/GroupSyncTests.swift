@@ -2,6 +2,7 @@ import Foundation
 import PochicalDesign
 import PochicalProto
 import SQLiteData
+import Synchronization
 import Testing
 
 @testable import PochicalKit
@@ -112,6 +113,56 @@ private func change(_ cursor: UInt64, _ fill: (inout Pochical_V1_Change) -> Void
     #expect(try GroupMemberRow.fetchCount(db) == 0)
     #expect(try GroupSync.cursor(of: "g1", in: db) == 0)
   }
+}
+
+@Test func onlyAGroupTheDeviceHeldGoesWhenTheUserLeftIt() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    let joined = change(1) { $0.membership.groupID = "g1"; $0.membership.name = "いとこ会" }
+    let left = [
+      change(2) { $0.membership.groupID = "g1"; $0.membership.left = true },
+      // One left long ago, which the device never held: every such group
+      // comes again whenever the device takes everything again.
+      change(3) { $0.membership.groupID = "g0"; $0.membership.left = true },
+    ]
+    try #expect(Sync.take([joined], in: db) == [])
+    try #expect(Sync.take(left, in: db) == ["g1"])
+    // Taken again, as after the app's sync schema is raised: nothing goes.
+    try #expect(Sync.take(left, in: db) == [])
+  }
+}
+
+@Test func aGroupHeldBeforeAResetGoesWhenItsCatchUpSaysItWasLeft() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    try Sync.take(
+      [change(1) { $0.membership.groupID = "g1"; $0.membership.name = "いとこ会" }], in: db)
+    let held = try Groups.held(in: db)
+    try Sync.reset(in: db)
+    let left = [
+      change(2) { $0.membership.groupID = "g1"; $0.membership.left = true },
+      change(3) { $0.membership.groupID = "g0"; $0.membership.left = true },
+    ]
+    try #expect(Sync.take(left, heldBeforeReset: held, in: db) == ["g1"])
+  }
+}
+
+@Test func aGroupThatWentIsToldOnceAndItsPhotosGo() throws {
+  let gone = "left-\(UUID().uuidString)"
+  try Data([1, 2, 3]).write(to: ChatPhotos.pending("p1", in: .group(gone)))
+  let told = Mutex<[String]>([])
+  let watching = NotificationCenter.default.addObserver(
+    forName: groupLeft, object: nil, queue: nil
+  ) { note in
+    guard let groupID = note.userInfo?["groupID"] as? String, groupID == gone else { return }
+    told.withLock { $0.append(groupID) }
+  }
+  defer { NotificationCenter.default.removeObserver(watching) }
+
+  Groups.tellLeft([gone])
+
+  #expect(told.withLock { $0 } == [gone])
+  #expect(ChatPhotos.heldFile("p1", in: .group(gone)) == nil)
 }
 
 @Test func aGroupAResetsCatchUpDoesNotMentionGoesAsOneLeft() throws {

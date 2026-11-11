@@ -36,6 +36,7 @@ import {
   chatChangesAfter,
   chatHead,
   chatPage,
+  endAlertOf,
   alertOf,
   eraseMemberChat,
   GROUP_THREAD,
@@ -43,6 +44,7 @@ import {
   latestPageAfter,
   mayRead,
   moveReadMark,
+  NO_AUTHOR,
   otherIn,
   pageToRead,
   photosPage,
@@ -60,6 +62,7 @@ import migrations from "./group-do-migrations/migrations.js";
 import {
   chatLines,
   chatRecalls,
+  endNoticeOutbox,
   logHead,
   memberDays,
   memberPatterns,
@@ -69,6 +72,7 @@ import {
   profile,
   supportSlackLines,
 } from "./group-do-schema";
+import { endNoticeAt } from "./group-end";
 import { markColumns, markOfRow, sameMark } from "./group-marks";
 import type { MarkValue } from "./group-marks";
 import {
@@ -91,6 +95,7 @@ import {
   takeMemberPattern,
   takeMemberRepeatOrders,
 } from "./group-shifts";
+import { dropInviteCode } from "./invite-codes";
 import { linkPreview } from "./link-preview";
 import { errorFields } from "./log";
 import {
@@ -163,19 +168,30 @@ const NEWS_RETRY_MOST_MS = 3_600_000;
 // DO's storage; the alarm sweeps again after bucketRetryWait.
 const SWEEP_FAILURES = "photoSweepFailures";
 
+// How many times the group's ending has failed in a row, kept the same
+// way; the alarm ends it again after bucketRetryWait.
+const END_FAILURES = "endFailures";
+
 /**
  * How a join went: in now, in already, kept out of a full group, or of
  * one not set up (gone as its last member's account was).
  */
 type JoinResult = "added" | "already" | "full" | "gone";
 
-type ProfileRow = { cursor: number } & GroupProfile;
+type ProfileRow = typeof profile.$inferSelect;
 type MemberRow = typeof members.$inferSelect;
 
-const profileChange = ({ cursor, mark, name }: ProfileRow): Change =>
+const profileChange = (row: ProfileRow): Change =>
   create(ChangeSchema, {
-    cursor: BigInt(cursor),
-    kind: { case: "groupProfile", value: { mark, name } },
+    cursor: BigInt(row.cursor),
+    kind: {
+      case: "groupProfile",
+      value: {
+        endsAtMs: BigInt(row.endsAt?.getTime() ?? 0),
+        mark: markOfRow(row),
+        name: row.name,
+      },
+    },
   });
 
 const memberChange = ({
@@ -293,22 +309,325 @@ export class GroupDO extends DurableObject<Env> {
     return row === undefined ? null : { mark: markOfRow(row), name: row.name };
   }
 
+  /** When the group ends, in ms since the epoch, or null for no end. */
+  endsAt(): number | null {
+    return (
+      this.db
+        .select({ endsAt: profile.endsAt })
+        .from(profile)
+        .get()
+        ?.endsAt?.getTime() ?? null
+    );
+  }
+
   /**
-   * Sets the group up with its first member, and tells their DO. False
-   * when it already is, so a group id is never set up twice; what is still
-   * to be told is told again.
+   * Whether the group's end has come: from that moment it is gone to
+   * everyone, whether or not its alarm has ended it yet, so nothing joins
+   * or changes it while it goes (spec/sync-protocol.md, A group's end).
    */
-  async create(group: GroupProfile, creator: NewMember): Promise<boolean> {
+  private hasEnded(): boolean {
+    const endsAt = this.endsAt();
+    return endsAt !== null && endsAt <= Date.now();
+  }
+
+  /**
+   * What an invitation to the group shows `userId` before joining: its
+   * name, mark and end, who is in it, and whether they are already, read
+   * as one. Null for no group to join: not set up, or ended.
+   */
+  invitation(userId: string): {
+    profile: GroupProfile;
+    endsAt: number | null;
+    members: { displayName: string; photoId: string }[];
+    alreadyMember: boolean;
+  } | null {
+    const shown = this.getProfile();
+    if (shown === null || this.hasEnded()) {
+      return null;
+    }
+    return {
+      alreadyMember: this.isMember(userId),
+      endsAt: this.endsAt(),
+      members: this.memberList(),
+      profile: shown,
+    };
+  }
+
+  /**
+   * Sets the group up with its first member, and with its end if it is
+   * made with one, said in the chat as setting it later is; and tells
+   * their DO. False when it already is, so a group id is never set up
+   * twice; what is still to be told is told again, and the alarm its end
+   * needs set again.
+   */
+  async create(
+    group: GroupProfile,
+    creator: NewMember,
+    endsAt: number | null = null
+  ): Promise<boolean> {
     const made = this.getProfile() === null;
     if (made) {
       this.ctx.storage.transactionSync(() => {
         this.writeProfile(group);
         this.writeMember(creator);
+        if (endsAt !== null) {
+          this.writeEnd(endsAt, creator.userId);
+        }
         this.queueNews(creator.userId, true);
       });
     }
+    await this.setEndAlarm();
     await this.tellMemberships(creator.userId);
     return made;
+  }
+
+  /**
+   * The group's end set, changed or taken away (null) by a member, said
+   * in the chat. The same end again changes nothing. False, changing
+   * nothing, for someone not in the group now, or a group whose end has
+   * come: it is gone to them, however far its ending has got.
+   */
+  async setEnd(endsAt: number | null, by: string): Promise<boolean> {
+    if (this.placeKind() !== "group" || !this.isMember(by)) {
+      return false;
+    }
+    if (this.endsAt() !== endsAt) {
+      const changes = this.ctx.storage.transactionSync(() =>
+        this.writeEnd(endsAt, by)
+      );
+      broadcastChanges(this.ctx, changes);
+    }
+    await this.setEndAlarm();
+    return true;
+  }
+
+  /**
+   * The group's end at the next cursor, with when its chat is to say it
+   * ends soon, and the chat's line of who set it: both, as changes.
+   */
+  private writeEnd(endsAt: number | null, by: string): Change[] {
+    const noticeAt = endsAt === null ? null : endNoticeAt(endsAt, Date.now());
+    // What is still owed of the end before goes: the new one is said anew.
+    this.db.delete(endNoticeOutbox).run();
+    const row = this.db
+      .update(profile)
+      .set({
+        cursor: this.nextCursor(),
+        endNoticeAt: noticeAt === null ? null : new Date(noticeAt),
+        endsAt: endsAt === null ? null : new Date(endsAt),
+      })
+      .returning()
+      .get();
+    const notice = writeNotice(
+      this.db,
+      by,
+      endsAt === null ? { kind: "endCleared" } : { endsAt, kind: "endSet" },
+      this.nextCursor()
+    );
+    return row === undefined ? [notice] : [profileChange(row), notice];
+  }
+
+  /**
+   * When the alarm is next due for the group's end, if it has one: for
+   * its line before, the notifications of it still owed, or the end.
+   */
+  private endDue(): number | undefined {
+    const row = this.db
+      .select({ endNoticeAt: profile.endNoticeAt, endsAt: profile.endsAt })
+      .from(profile)
+      .get();
+    const owed = this.db
+      .select({ dueAt: min(endNoticeOutbox.dueAt) })
+      .from(endNoticeOutbox)
+      .get()?.dueAt;
+    const dues = [row?.endNoticeAt ?? row?.endsAt, owed].flatMap((due) =>
+      due === null || due === undefined ? [] : [due.getTime()]
+    );
+    return dues.length === 0 ? undefined : Math.min(...dues);
+  }
+
+  /** The alarm set to come by the group's end, or its notice before. */
+  private async setEndAlarm(): Promise<void> {
+    const due = this.endDue();
+    if (due !== undefined) {
+      await this.alarms.setBy(due);
+    }
+  }
+
+  /**
+   * What the group's end asks for by now: its chat's line that it ends
+   * soon, once for each end set, with its notification to every member,
+   * or the end itself (spec/sync-protocol.md, A group's end).
+   * When the alarm is to come back for it: for what is still ahead, or
+   * after `bucketRetryWait` for an ending that failed, which is then run
+   * again whole.
+   */
+  private async takeEnd(): Promise<number | undefined> {
+    const row = this.db.select().from(profile).get();
+    if (row?.endsAt === null || row?.endsAt === undefined) {
+      return undefined;
+    }
+    const endsAt = row.endsAt.getTime();
+    if (endsAt <= Date.now()) {
+      try {
+        await this.end();
+      } catch (error) {
+        console.error({
+          error: errorFields(error),
+          groupId: this.ctx.id.name,
+          message: "Ending a group failed",
+        });
+        return (
+          Date.now() +
+          bucketRetryWait(countFailure(this.ctx.storage.kv, END_FAILURES))
+        );
+      }
+      return undefined;
+    }
+    if (row.endNoticeAt !== null && row.endNoticeAt.getTime() <= Date.now()) {
+      const notice = this.ctx.storage.transactionSync(() => {
+        this.db.update(profile).set({ endNoticeAt: null }).run();
+        // Owed to each member from the line's own transaction, so none
+        // is lost between the line and its telling.
+        const owed = this.memberList().map(({ userId }) => ({
+          dueAt: new Date(),
+          endsAt: new Date(endsAt),
+          userId,
+        }));
+        if (owed.length > 0) {
+          this.db.insert(endNoticeOutbox).values(owed).run();
+        }
+        return writeNotice(
+          this.db,
+          NO_AUTHOR,
+          { endsAt, kind: "endsSoon" },
+          this.nextCursor()
+        );
+      });
+      broadcastChanges(this.ctx, [notice]);
+    }
+    await this.notifyEnd();
+    return this.endDue();
+  }
+
+  /**
+   * Notifies each member still owed it that the group ends soon, the one
+   * notice that does: what it tells cannot be undone, and a member who
+   * never opens the group would learn nothing. Told as a line that
+   * mentions them is, so a chat turned off hears it too while mentions
+   * notify; their count goes with it as it is, a notice being no line to
+   * read. Owed until their DO has taken it: handed it to the push service
+   * of each of their devices, or kept it to try again itself, or found
+   * nothing to send (no device, or a chat off with mentions not
+   * notifying). One not taken, by a DO that does not list the group yet
+   * or could not read their devices or keep a try, is told again as
+   * membership news is (`tellOwed`).
+   */
+  private async notifyEnd(): Promise<void> {
+    const groupId = this.placeId();
+    const owed = this.db
+      .select()
+      .from(endNoticeOutbox)
+      .where(lte(endNoticeOutbox.dueAt, new Date()))
+      .all();
+    if (groupId === undefined || owed.length === 0) {
+      return;
+    }
+    const group = { id: groupId, name: this.getProfile()?.name ?? "" };
+    const cursor = this.head();
+    await this.tellOwed(
+      owed,
+      async ({ userId, endsAt }) => {
+        const taken = await this.env.USERS.getByName(userId).setUnread(
+          groupId,
+          GROUP_THREAD,
+          unreadCount(this.db, userId, GROUP_THREAD),
+          cursor,
+          {
+            alert: endAlertOf(group, endsAt.getTime()),
+            mentioned: true,
+            owed: true,
+          }
+        );
+        // Their DO does not list the group yet, the news of their joining
+        // still owed it: not taken, whichever of the two is told first.
+        if (!taken) {
+          throw new Error("Their own DO does not have them in the group yet");
+        }
+      },
+      ({ userId, endsAt }, again) => {
+        const told = and(
+          eq(endNoticeOutbox.userId, userId),
+          eq(endNoticeOutbox.endsAt, endsAt)
+        );
+        if (again === undefined) {
+          this.db.delete(endNoticeOutbox).where(told).run();
+        } else {
+          this.db.update(endNoticeOutbox).set(again).where(told).run();
+        }
+      },
+      "Telling a member their group ends soon failed"
+    );
+  }
+
+  /**
+   * Tells each user's DO what the group owes it, `owed`, with `tell`,
+   * and settles each row with `settle`: taken, or to be told `again`,
+   * due twice as long after each time it fails in a row (retryWait), for
+   * as long as it takes.
+   */
+  private async tellOwed<Owed extends { userId: string; failures: number }>(
+    owed: Owed[],
+    tell: (row: Owed) => Promise<void>,
+    settle: (row: Owed, again?: { dueAt: Date; failures: number }) => void,
+    message: string
+  ): Promise<void> {
+    await Promise.all(
+      owed.map(async (row) => {
+        try {
+          await tell(row);
+        } catch (error) {
+          console.error({
+            error: errorFields(error),
+            groupId: this.ctx.id.name,
+            message,
+            userId: row.userId,
+          });
+          const failures = row.failures + 1;
+          const wait = retryWait(
+            failures,
+            NEWS_RETRY_FIRST_MS,
+            NEWS_RETRY_MOST_MS
+          );
+          settle(row, { dueAt: new Date(Date.now() + wait), failures });
+          return;
+        }
+        settle(row);
+      })
+    );
+  }
+
+  /**
+   * The group ended for everyone: each member's DO is to hear they are
+   * out of it, as on leaving, so their devices drop it with what they
+   * hold of it; its invitation goes, and the group goes whole (`erase`,
+   * which keeps that news and goes on telling it). Each step can be run
+   * again.
+   */
+  private async end(): Promise<void> {
+    const groupId = this.ctx.id.name;
+    if (groupId === undefined) {
+      return;
+    }
+    this.ctx.storage.transactionSync(() => {
+      // A cursor of its own, so the news is newer than any told before.
+      this.nextCursor();
+      for (const { userId } of this.memberList()) {
+        this.queueNews(userId, false);
+      }
+    });
+    await dropInviteCode(this.env.DB, groupId);
+    await this.erase();
   }
 
   /**
@@ -324,7 +643,7 @@ export class GroupDO extends DurableObject<Env> {
 
   private admit(member: NewMember): JoinResult {
     const { userId } = member;
-    if (this.placeKind() !== "group") {
+    if (this.placeKind() !== "group" || this.hasEnded()) {
       return "gone";
     }
     if (this.isMember(userId)) {
@@ -492,6 +811,11 @@ export class GroupDO extends DurableObject<Env> {
         .run();
       // Their sends are taken no more, so none is to be kept from coming.
       this.db.delete(chatRecalls).where(eq(chatRecalls.userId, userId)).run();
+      // Nor are they owed word of an end that is theirs no more.
+      this.db
+        .delete(endNoticeOutbox)
+        .where(eq(endNoticeOutbox.userId, userId))
+        .run();
       const row = this.db
         .update(members)
         .set({
@@ -554,6 +878,10 @@ export class GroupDO extends DurableObject<Env> {
       this.db
         .delete(membershipOutbox)
         .where(eq(membershipOutbox.userId, userId))
+        .run();
+      this.db
+        .delete(endNoticeOutbox)
+        .where(eq(endNoticeOutbox.userId, userId))
         .run();
       const chat = eraseMemberChat(this.db, userId, () => this.nextCursor());
       const row = this.db
@@ -703,9 +1031,13 @@ export class GroupDO extends DurableObject<Env> {
     return this.db.select({ kind: profile.kind }).from(profile).get()?.kind;
   }
 
-  /** Whether the user is in the group. */
+  /**
+   * Whether the user is in the group; no one is once its end has come
+   * (`hasEnded`), so its calls and its socket refuse them from then.
+   */
   isMember(userId: string): boolean {
     return (
+      !this.hasEnded() &&
       this.db
         .select({ userId: members.userId })
         .from(members)
@@ -807,39 +1139,24 @@ export class GroupDO extends DurableObject<Env> {
       return;
     }
     const group = this.getProfile();
-    await Promise.all(
-      untold.map(async ({ userId, cursor, inGroup: member, failures }) => {
-        const news: MembershipNews = {
-          cursor,
-          group: member ? group : null,
-        };
+    await this.tellOwed(
+      untold,
+      async ({ userId, cursor, inGroup: member }) => {
+        const news: MembershipNews = { cursor, group: member ? group : null };
+        await this.env.USERS.getByName(userId).takeMembership(groupId, news);
+      },
+      ({ userId, cursor }, again) => {
         const sent = and(
           eq(membershipOutbox.userId, userId),
           eq(membershipOutbox.cursor, cursor)
         );
-        try {
-          await this.env.USERS.getByName(userId).takeMembership(groupId, news);
-        } catch (error) {
-          console.error({
-            error: errorFields(error),
-            groupId,
-            message: "Telling a member of their group failed",
-            userId,
-          });
-          const wait = retryWait(
-            failures + 1,
-            NEWS_RETRY_FIRST_MS,
-            NEWS_RETRY_MOST_MS
-          );
-          this.db
-            .update(membershipOutbox)
-            .set({ dueAt: new Date(Date.now() + wait), failures: failures + 1 })
-            .where(sent)
-            .run();
-          return;
+        if (again === undefined) {
+          this.db.delete(membershipOutbox).where(sent).run();
+        } else {
+          this.db.update(membershipOutbox).set(again).where(sent).run();
         }
-        this.db.delete(membershipOutbox).where(sent).run();
-      })
+      },
+      "Telling a member of their group failed"
     );
   }
 
@@ -868,14 +1185,15 @@ export class GroupDO extends DurableObject<Env> {
 
   /** The group's name and mark at the next cursor, as a change. */
   private writeProfile({ name, mark }: GroupProfile): Change {
-    const cursor = this.nextCursor();
-    const row = { cursor, name, ...markColumns(mark) };
-    this.db
-      .insert(profile)
-      .values({ id: 1, ...row })
-      .onConflictDoUpdate({ set: row, target: profile.id })
-      .run();
-    return profileChange({ cursor, mark, name });
+    const row = { cursor: this.nextCursor(), name, ...markColumns(mark) };
+    return profileChange(
+      this.db
+        .insert(profile)
+        .values({ id: 1, ...row })
+        .onConflictDoUpdate({ set: row, target: profile.id })
+        .returning()
+        .get()
+    );
   }
 
   /**
@@ -1446,7 +1764,8 @@ export class GroupDO extends DurableObject<Env> {
    * made while it runs has set the next alarm already, which is kept when
    * earlier. The photos nothing carries are swept, and the alarm comes
    * back for the next (`sweepPhotos`). News of a membership due is told,
-   * and the alarm comes back for any not taken, until it is.
+   * and the alarm comes back for any not taken, until it is. A group with
+   * an end says it ends soon and then ends (`takeEnd`).
    */
   async alarm(run: AlarmInvocationInfo): Promise<void> {
     await this.alarms.begin(run);
@@ -1455,11 +1774,13 @@ export class GroupDO extends DurableObject<Env> {
       userId === undefined
         ? null
         : await relaySupport(this.env, this.db, userId);
+    const endDue = await this.takeEnd();
     const photosDue = await this.sweepPhotos();
     await this.deliverNews(lte(membershipOutbox.dueAt, new Date()));
     const newsDue = this.newsDue();
     const dues = [
       ...(waitMs === null ? [] : [Date.now() + waitMs]),
+      ...(endDue === undefined ? [] : [endDue]),
       ...(photosDue === undefined ? [] : [photosDue]),
       ...(newsDue === undefined ? [] : [newsDue]),
     ];
@@ -1623,13 +1944,7 @@ export class GroupDO extends DurableObject<Env> {
             .from(profile)
             .where(gt(profile.cursor, cursor))
             .all()
-            .map((row) =>
-              profileChange({
-                cursor: row.cursor,
-                mark: markOfRow(row),
-                name: row.name,
-              })
-            ),
+            .map(profileChange),
       },
       {
         after: (cursor) =>

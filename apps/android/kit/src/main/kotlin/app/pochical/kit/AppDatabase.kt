@@ -39,6 +39,7 @@ import androidx.sqlite.execSQL
       MemberPatternRow::class,
       MemberOrderRow::class,
       GroupCursorRow::class,
+      GroupEndRow::class,
       ProfileRow::class,
       ChatLineRow::class,
       ReadMarkRow::class,
@@ -69,7 +70,7 @@ abstract class AppDatabase : RoomDatabase() {
   suspend fun owner(): String? = read { state().owner }.ifEmpty { null }
 
   companion object {
-    const val VERSION = 10
+    const val VERSION = 11
 
     /** The app's database in [context]'s files, or one in memory alone for tests. */
     fun open(context: Context, inMemory: Boolean = false): AppDatabase =

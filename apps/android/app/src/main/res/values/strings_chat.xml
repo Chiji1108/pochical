@@ -39,6 +39,8 @@
   <string name="chat_notice_renamed">%1$sがグループ名を「%2$s」に変更しました</string>
   <string name="chat_notice_mark">%1$sがグループのアイコンを変更しました</string>
   <string name="chat_notice_renamed_and_mark">%1$sがグループ名を「%2$s」にして、アイコンを変更しました</string>
+  <string name="chat_notice_end_set">%1$sが終了日を%2$sに設定しました</string>
+  <string name="chat_notice_end_cleared">%1$sが終了日を解除しました</string>
   <string name="deleted_account">削除されたアカウント</string>
   <string name="chat_start">個人チャットを始める</string>
   <string name="chat_start_note">%1$sでの名前とアイコンで話します。</string>

@@ -52,9 +52,9 @@ val MarkSaver: Saver<GroupMarkValue?, Any> =
 /** A request to make a group kept so, so a retry after the activity is made anew sends the same id. */
 val RequestSaver: Saver<NewGroupRequest?, Any> =
   Saver(
-    save = { request -> request?.let { listOf(it.name, it.displayName, it.id) + it.mark.saved() } ?: emptyList<Any>() },
+    save = { request -> request?.let { listOf(it.name, it.displayName, it.id, it.endsAtMs) + it.mark.saved() } ?: emptyList<Any>() },
     restore = { saved ->
-      (saved as List<*>).takeIf { it.isNotEmpty() }?.let { NewGroupRequest(it[0] as String, markOf(it.drop(3)), it[1] as String, it[2] as String) }
+      (saved as List<*>).takeIf { it.isNotEmpty() }?.let { NewGroupRequest(it[0] as String, markOf(it.drop(4)), it[1] as String, it[2] as String, it[3] as Long) }
     },
   )
 

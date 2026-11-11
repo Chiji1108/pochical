@@ -60,6 +60,7 @@ import app.pochical.R
 import app.pochical.ReviewPrompt
 import app.pochical.design.GROUP_MAX_MEMBERS
 import app.pochical.design.Metrics
+import app.pochical.calendar.rememberToday
 import app.pochical.kit.InviteDetails
 import app.pochical.kit.InviteFailure
 import app.pochical.kit.PhotoShelf
@@ -68,6 +69,7 @@ import kotlin.coroutines.cancellation.CancellationException
 import app.pochical.people.usualProfile
 import app.pochical.rowColors
 import app.pochical.segmentShapes
+import java.time.ZoneId
 import kotlinx.coroutines.launch
 
 /**
@@ -159,6 +161,14 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp),
           ) {
+            // The group's end, said where joining is decided, as this device's clock shows it.
+            if (shown.endsAtMs != 0L) {
+              Text(
+                groupEndsWords(LocalResources.current, shown.endsAtMs, rememberToday(), ZoneId.systemDefault()),
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+              )
+            }
             Text(
               if (shown.full) stringResource(R.string.join_full_body, GROUP_MAX_MEMBERS) else stringResource(R.string.join_shares),
               style = MaterialTheme.typography.bodySmall,

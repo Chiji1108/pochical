@@ -15,12 +15,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -48,22 +44,16 @@ fun PageBar(title: String, onBack: () -> Unit, scrollBehavior: TopAppBarScrollBe
 
 /**
  * The group [groupId] for one of its pages over the tabs, holding its socket while the page shows:
- * as the device holds it now, renamed meanwhile or not; null until it reaches the device, as one
- * just made may not have yet. Once there, a group the person is no longer in, left from elsewhere
- * or taken out, takes its page away ([onGone]).
+ * as the device holds it now, renamed meanwhile or not; null until it is read, or reaches the
+ * device, as one just made may not have yet. A group the person is no longer in takes its pages
+ * away with it (`RootNavigator.left`).
  */
 @Composable
-fun pageGroup(groupId: String, onGone: () -> Unit): GroupRow? {
+fun pageGroup(groupId: String): GroupRow? {
   HoldSocket(groupId)
   val values = LocalValues.current
   val groups by remember(values) { values.groups() }.collectAsStateWithLifecycle(null)
-  val group = groups?.firstOrNull { it.id == groupId }
-  var seen by remember { mutableStateOf(false) }
-  val gone by rememberUpdatedState(onGone)
-  LaunchedEffect(group != null) {
-    if (group != null) seen = true else if (seen) gone()
-  }
-  return group
+  return groups?.firstOrNull { it.id == groupId }
 }
 
 /**
@@ -78,7 +68,7 @@ fun GroupPage(
   loading: @Composable (String) -> Unit = { Scaffold(topBar = { PageBar(it, onBack) }) { padding -> PageLoading(padding) } },
   content: @Composable (GroupRow) -> Unit,
 ) {
-  val group = pageGroup(groupId, onBack)
+  val group = pageGroup(groupId)
   if (group != null) content(group) else loading(title)
 }
 

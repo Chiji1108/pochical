@@ -3,9 +3,21 @@ import PochicalProto
 import SQLiteData
 
 // What a group's socket brings (spec/sync-protocol.md, Groups; Group
-// projection): who is in the group, and each member's shared days,
-// patterns and repeating orders, kept for each group as the server last
-// sent them. Nothing here is edited on the device.
+// projection): when the group ends, who is in it, and each member's shared
+// days, patterns and repeating orders, kept for each group as the server
+// last sent them. Nothing here is edited on the device.
+
+/// When a group ends (`GroupProfile.ends_at_ms`; spec/sync-protocol.md, A
+/// group's end): kept here, with what comes again from the group's own
+/// log, rather than in the list of groups, which the user's socket makes
+/// again without it. A group with no end has no row.
+@Table("groupEnds")
+struct GroupEndRow: Hashable, Sendable {
+  @Column(primaryKey: true)
+  var groupID: String
+  /// In ms since the epoch.
+  var endsAtMs: Int64
+}
 
 /// Someone in a group, as they appear in it.
 @Table("groupMembers")
@@ -100,6 +112,15 @@ struct GroupCursorRow: Hashable, Sendable {
 extension DatabaseMigrator {
   mutating func registerGroupValues() {
     registerMigration("Create the groups' values") { db in
+      try #sql(
+        """
+        CREATE TABLE "groupEnds" (
+          "groupID" TEXT PRIMARY KEY NOT NULL,
+          "endsAtMs" INTEGER NOT NULL
+        ) STRICT
+        """
+      )
+      .execute(db)
       try #sql(
         """
         CREATE TABLE "groupMembers" (
@@ -207,6 +228,7 @@ public enum GroupSync {
   /// Reset: the group's values go, and its cursor goes back to the start
   /// for the Changes with everything that follow.
   public static func reset(_ groupID: String, in db: Database) throws {
+    try GroupEndRow.find(groupID).delete().execute(db)
     try GroupMemberRow.where { $0.groupID.eq(groupID) }.delete().execute(db)
     try MemberDayRow.where { $0.groupID.eq(groupID) }.delete().execute(db)
     try MemberPatternRow.where { $0.groupID.eq(groupID) }.delete().execute(db)
@@ -231,6 +253,11 @@ public enum GroupSync {
         $0.photoID = mark.photoID
       }
       .execute(db)
+      try GroupEndRow.find(groupID).delete().execute(db)
+      if profile.endsAtMs != 0 {
+        let row = GroupEndRow(groupID: groupID, endsAtMs: profile.endsAtMs)
+        try GroupEndRow.insert { row }.execute(db)
+      }
     case .member(let member):
       try GroupMemberRow.where { $0.groupID.eq(groupID) && $0.userID.eq(member.userID) }
         .delete().execute(db)
@@ -366,6 +393,11 @@ public struct MemberCalendar: Hashable, Sendable {
 }
 
 extension GroupSync {
+  /// When the group ends, in ms since the epoch; 0 for one with no end.
+  public static func endsAtMs(of groupID: String, in db: Database) throws -> Int64 {
+    try GroupEndRow.find(groupID).fetchOne(db)?.endsAtMs ?? 0
+  }
+
   /// Everyone in the group in the order they joined, each with what the
   /// group holds of their shifts, their own days read from `from` through
   /// `through`.

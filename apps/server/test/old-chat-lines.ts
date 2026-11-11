@@ -65,6 +65,11 @@ export const chatLinesBefore = (
   }
   sql.exec("DROP TABLE chat_reactions");
   sql.exec(OLD_CHAT_REACTIONS);
+  // What the later migrations added elsewhere goes too, to be added again:
+  // the group's end (0042) and who is owed word of it (0043).
+  sql.exec("DROP TABLE end_notice_outbox");
+  sql.exec("ALTER TABLE profile DROP COLUMN end_notice_at");
+  sql.exec("ALTER TABLE profile DROP COLUMN ends_at");
   sql.exec("DELETE FROM __drizzle_migrations WHERE created_at >= ?", from);
   for (const line of lines) {
     sql.exec(

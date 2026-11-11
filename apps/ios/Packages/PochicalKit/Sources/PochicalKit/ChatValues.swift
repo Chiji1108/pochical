@@ -1141,10 +1141,12 @@ extension Chats {
 }
 
 /// A line from the app in 全体チャット (spec/chat.md, Notices): what changed
-/// the group, its line's author being who did it.
+/// the group, its line's author being who did it; the line that the group
+/// ends soon is no one's.
 public struct LineNotice: Codable, Hashable, Sendable {
   public enum Kind: String, Codable, Sendable {
     case joined, left, removed, removedByPochical, inviteRemade, profileChanged
+    case endSet, endCleared, endsSoon
   }
   public var kind: Kind
   /// Who was taken out.
@@ -1153,28 +1155,40 @@ public struct LineNotice: Codable, Hashable, Sendable {
   public var name = ""
   /// The group's icon changed.
   public var markChanged = false
+  /// When the group ends, in ms since the epoch, on a line of its end set
+  /// or coming (spec/sync-protocol.md, A group's end).
+  public var endsAtMs: Int64 = 0
 
-  init(kind: Kind, subjectID: String = "", name: String = "", markChanged: Bool = false) {
+  init(
+    kind: Kind, subjectID: String = "", name: String = "", markChanged: Bool = false,
+    endsAtMs: Int64 = 0
+  ) {
     self.kind = kind
     self.subjectID = subjectID
     self.name = name
     self.markChanged = markChanged
+    self.endsAtMs = endsAtMs
   }
 
   init?(_ wire: Pochical_V1_ChatNotice) {
     let kinds: [Pochical_V1_ChatNotice.Kind: Kind] = [
       .joined: .joined, .left: .left, .removed: .removed,
       .removedByPochical: .removedByPochical, .inviteRemade: .inviteRemade,
-      .profileChanged: .profileChanged,
+      .profileChanged: .profileChanged, .endSet: .endSet, .endCleared: .endCleared,
+      .endsSoon: .endsSoon,
     ]
     guard let kind = kinds[wire.kind] else { return nil }
     self.init(
-      kind: kind, subjectID: wire.subjectID, name: wire.name, markChanged: wire.markChanged)
+      kind: kind, subjectID: wire.subjectID, name: wire.name, markChanged: wire.markChanged,
+      endsAtMs: wire.endsAtMs)
   }
 
   /// Its words, `by` and `subject` the names the group shows now (/design's
-  /// notices).
-  public func words(by: String, subject: String) -> String {
+  /// notices), and the group's end the day a device in `zone` shows for it,
+  /// as said on `today` (spec/vectors/group-end.json, notices).
+  public func words(
+    by: String, subject: String, zone: TimeZone = .current, today: Day = .today
+  ) -> String {
     switch kind {
     case .joined: "\(by)がグループに参加しました"
     case .left: "\(by)がグループを抜けました"
@@ -1191,6 +1205,11 @@ public struct LineNotice: Codable, Hashable, Sendable {
       } else {
         "\(by)がグループのアイコンを変更しました"
       }
+    case .endSet:
+      "\(by)が終了日を\(GroupEnd.words(endsAtMs: endsAtMs, in: zone, today: today))に設定しました"
+    case .endCleared: "\(by)が終了日を解除しました"
+    // The group's own line, with no author.
+    case .endsSoon: GroupEnd.coming(endsAtMs, in: zone, today: today)
     }
   }
 }
