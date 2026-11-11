@@ -33,7 +33,8 @@ public struct JoinAsk: Hashable, Sendable {
 /// has it, the group in their list, and the call is forgotten as it ends,
 /// nothing opening for a page that is gone; the page opened again meanwhile
 /// finds it `underWay` and waits on, so the same group is not asked for
-/// twice by mistake.
+/// twice by mistake. Whether a page is gone is its `Place` being let go
+/// of, never its leaving the screen.
 @MainActor @Observable
 public final class GoingIn<Asked: Sendable> {
   /// A call: what was asked for, and its answer, which fails as the call
@@ -88,6 +89,30 @@ public final class GoingIn<Asked: Sendable> {
   public func left(_ call: Call) {
     call.waitedOn = false
     if call.ended { forget(call) }
+  }
+
+  /// A page's place on the way in, held by the page for as long as it is
+  /// on the navigation stack and let go of with it: gone, the page has
+  /// left the call under way that is `mine`. A page only covered, by one
+  /// it pushed or a sheet, still holds it, so a call that ends meanwhile
+  /// keeps its answer for the page to take as it shows again.
+  @MainActor public final class Place {
+    private let going: GoingIn
+    private let mine: (Asked) -> Bool
+
+    fileprivate init(going: GoingIn, mine: @escaping (Asked) -> Bool) {
+      self.going = going
+      self.mine = mine
+    }
+
+    isolated deinit {
+      if let call = going.underWay, mine(call.asked) { going.left(call) }
+    }
+  }
+
+  /// A place for a page that waits on the calls that are `mine`.
+  public func place(mine: @escaping (Asked) -> Bool = { _ in true }) -> Place {
+    Place(going: self, mine: mine)
   }
 
   private func forget(_ call: Call) {

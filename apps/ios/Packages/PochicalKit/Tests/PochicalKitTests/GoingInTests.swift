@@ -106,3 +106,42 @@ private func settled(_ going: GoingIn<String>, _ call: GoingIn<String>.Call) asy
   going.left(call)
   #expect(going.underWay == nil)
 }
+
+@MainActor @Test func aPageCoveredKeepsItsPlaceAndTheAnswerOfACallThatEndsMeanwhile() async {
+  let going = GoingIn<String>()
+  let server = Held()
+  // On the stack, under a page it pushed: its place is held, nothing waits.
+  let place = going.place()
+  let call = going.begin("忘年会") { try await server.enter() }
+  await server.answer(.success(made))
+  await settled(going, call)
+  #expect(going.underWay === call, "Kept for the page to take as it shows again")
+  withExtendedLifetime(place) {}
+}
+
+@MainActor @Test func aPageOffTheStackHasLeftItsCall() async {
+  let going = GoingIn<String>()
+  let server = Held()
+  var place: GoingIn<String>.Place? = going.place()
+  let call = going.begin("忘年会") { try await server.enter() }
+  #expect(place != nil)
+  place = nil
+  #expect(going.underWay === call, "Still under way, for the page opened again")
+
+  await server.answer(.success(made))
+  await settled(going, call)
+  #expect(going.underWay == nil)
+}
+
+@MainActor @Test func aPlaceLetGoOfLeavesAnotherPagesCallAlone() async {
+  let going = GoingIn<String>()
+  let server = Held()
+  var other: GoingIn<String>.Place? = going.place(mine: { $0 == "別の招待" })
+  let call = going.begin("忘年会") { try await server.enter() }
+  #expect(other != nil)
+  other = nil
+
+  await server.answer(.success(made))
+  await settled(going, call)
+  #expect(going.underWay === call)
+}
