@@ -60,11 +60,14 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit, making: GoingIn<N
   val values = LocalValues.current
   val groups by remember(values) { values.groups() }.collectAsStateWithLifecycle(emptyList())
   val usualName = usualProfile()?.name.orEmpty()
-  val profile = rememberJoinProfile()
   val slots = LocalThemeColors.current.marks.size
-  // The group being made as the page opens, the page having been left while it was: the page shows
-  // it under way rather than an empty form, from which the same group could be asked for again.
-  val begun = remember { making.underWay.value?.asked }
+  // The group being made as the page opens, the page having been left while it was: the page
+  // starts from all the call was begun with, the group and how the person appears in it, so it
+  // shows what was asked rather than an empty form, and 作る tapped again after a failure asks for
+  // the same group under the same request.
+  val underWay = remember { making.underWay.value }
+  val begun = underWay?.asked
+  val profile = rememberJoinProfile(underWay?.let { JoinProfile.asked(it.asked.displayName, it) })
   var name by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue(begun?.name.orEmpty())) }
   // The mark picked by hand, which then stays as the name changes; none while it follows the name.
   var picked by rememberSaveable(stateSaver = MarkSaver) { mutableStateOf<GroupMarkValue?>(null) }

@@ -1,6 +1,27 @@
 import PochicalKit
 import SwiftUI
 
+/// 参加する as it was asked: the invitation, and how the person appears in
+/// its group, the screen's whole draft.
+struct JoiningAsk: Equatable, Sendable {
+  let code: String
+  let profile: JoinProfile
+}
+
+/// The app's own two, which every screen's environment gives: an entry's
+/// default is made anew for each environment that asks, so they are kept
+/// here, once.
+private let appMakingGroup = GoingIn<NewGroupDraft>()
+private let appJoiningGroup = GoingIn<JoiningAsk>()
+
+extension EnvironmentValues {
+  /// グループを作る's group being made, the app's one call under way
+  /// (`GoingIn`), begun with the page's whole draft.
+  @Entry var makingGroup = appMakingGroup
+  /// 参加の画面's group being joined, the one under way.
+  @Entry var joiningGroup = appJoiningGroup
+}
+
 extension View {
   /// The page waits on the app's call into a group (`GoingIn`), グループを
   /// 作る's or 参加の画面's, while the call is `mine`: `taken` gets its

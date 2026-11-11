@@ -274,10 +274,6 @@ public struct GroupCalls: Sendable {
   let client: Pochical_V1_GroupServiceClient
   let users: Pochical_V1_UserServiceClient
   let chats: Pochical_V1_ChatServiceClient
-  /// グループを作る's group being made, the one under way (`GoingIn`).
-  public let making = GoingIn<NewGroupRequest>()
-  /// 参加の画面's group being joined, the one under way.
-  public let joining = GoingIn<JoinAsk>()
 
   public init(current: CurrentAccount, server: URL = Server.url) {
     self.current = current

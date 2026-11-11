@@ -22,8 +22,12 @@ data class JoinAsk(val code: String, val displayName: String)
  * it under way, so the same group is not asked for twice by mistake (#1178).
  */
 class GoingIn<Asked>(private val enter: (Asked, JoinFace, asUsual: Boolean) -> Deferred<InGroup>) {
-  /** A call: what was [asked] for, and its [answer], which fails as the call does. */
-  class Call<Asked> internal constructor(val asked: Asked, val answer: Deferred<InGroup>) {
+  /**
+   * A call: what was [asked] for and how the person goes in ([face], [asUsual]), all the page asked
+   * with, so the page opened again while it is under way shows, and a retry sends, exactly that;
+   * and its [answer], which fails as the call does.
+   */
+  class Call<Asked> internal constructor(val asked: Asked, val face: JoinFace, val asUsual: Boolean, val answer: Deferred<InGroup>) {
     internal var waitedOn = true
   }
 
@@ -36,7 +40,7 @@ class GoingIn<Asked>(private val enter: (Asked, JoinFace, asUsual: Boolean) -> D
   @Synchronized
   fun begin(asked: Asked, face: JoinFace, asUsual: Boolean): Call<Asked> {
     mutableUnderWay.value?.let { return it }
-    val call = Call(asked, enter(asked, face, asUsual))
+    val call = Call(asked, face, asUsual, enter(asked, face, asUsual))
     mutableUnderWay.value = call
     call.answer.invokeOnCompletion { ended(call) }
     return call

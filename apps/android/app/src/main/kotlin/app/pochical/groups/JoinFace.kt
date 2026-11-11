@@ -50,6 +50,7 @@ import app.pochical.rememberLeavingForGood
 import app.pochical.design.FaceDrawing
 import app.pochical.design.TextLimits
 import app.pochical.kit.GroupCalls
+import app.pochical.kit.GoingIn
 import app.pochical.kit.JoinFace
 import app.pochical.kit.PhotoShelf
 import app.pochical.kit.SocketState
@@ -85,6 +86,13 @@ class JoinProfile(ownName: TextFieldValue = TextFieldValue(), face: JoinFace = J
   fun goingOn(usualName: String): Boolean = (asUsual ?: usualName.isEmpty()).also { asUsual = it }
 
   companion object {
+    /**
+     * The profile a call into a group was begun with, the person appearing as [displayName]: what
+     * the screen opened again while the call is under way starts from, so it shows and sends again
+     * the name and face that were asked ([rememberJoinProfile]'s `begun`).
+     */
+    fun asked(displayName: String, call: GoingIn.Call<*>) = JoinProfile(TextFieldValue(displayName), call.face, call.asUsual)
+
     /**
      * Kept across the activity made anew and the process's death: a face removed on purpose must
      * not come back as the usual one, nor a drawing be picked again. A picked photo is kept by its
@@ -137,11 +145,11 @@ class JoinProfile(ownName: TextFieldValue = TextFieldValue(), face: JoinFace = J
  * phone turns.
  */
 @Composable
-fun rememberJoinProfile(): JoinProfile {
+fun rememberJoinProfile(begun: JoinProfile? = null): JoinProfile {
   val context = LocalContext.current
   val calls = LocalGroupCalls.current
   val leavingForGood = rememberLeavingForGood()
-  val profile = rememberSaveable(saver = JoinProfile.Saver) { JoinProfile() }
+  val profile = rememberSaveable(saver = JoinProfile.Saver) { begun ?: JoinProfile() }
   val usual = usualProfile()
   val userSocket by LocalAccount.current.userSocket.collectAsStateWithLifecycle(SocketState.Closed)
   val asking = usual?.let { profileAsking(userSocket, it) }

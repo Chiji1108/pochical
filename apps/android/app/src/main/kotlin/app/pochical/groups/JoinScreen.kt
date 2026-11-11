@@ -89,7 +89,8 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
   var details by remember { mutableStateOf<InviteDetails?>(null) }
   var loadError by remember { mutableStateOf<InviteFailure.Reason?>(null) }
   var loads by remember { mutableStateOf(0) }
-  val profile = rememberJoinProfile()
+  // Opened again while this invitation's 参加する is under way: as it was asked.
+  val profile = rememberJoinProfile(remember { calls.joining.underWay.value?.takeIf { it.asked.code == code }?.let { JoinProfile.asked(it.asked.displayName, it) } })
   var joinError by remember { mutableStateOf<InviteFailure.Reason?>(null) }
   var showingMembers by remember { mutableStateOf(false) }
   val myName = profile.name(usualName)

@@ -2,6 +2,9 @@ package app.pochical.groups
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
@@ -106,5 +109,37 @@ class GroupFormsTest {
 
     compose.onNode(hasSetTextAction() and hasText("忘年会")).assertExists()
     compose.onNodeWithText("作る").assertDoesNotExist()
+  }
+
+  /**
+   * 作る asked with a name typed for the person, the page left and opened again while the group is
+   * being made, and the call failed: the page shows that name, and 作る again with nothing changed
+   * is the same request, so a group the server did make is not made twice.
+   */
+  @Test
+  fun thePageOpenedAgainRetriesExactlyWhatWasAsked() {
+    val asked = mutableListOf<NewGroupRequest>()
+    val answers = mutableListOf<CompletableDeferred<InGroup>>()
+    val making = GoingIn<NewGroupRequest> { request, _, _ -> CompletableDeferred<InGroup>().also { asked += request; answers += it } }
+    var open by mutableStateOf(true)
+    show { if (open) NewGroupPage(onBack = {}, onMade = {}, making = making) }
+    compose.onNodeWithText("名前を入れてください").performClick()
+    compose.onNode(hasSetTextAction() and hasText("名前")).performTextReplacement("幹事")
+    compose.onNodeWithContentDescription("閉じる").performClick()
+    compose.onNode(hasSetTextAction() and hasText("グループ名")).performTextReplacement("忘年会")
+    compose.onNodeWithText("作る").performClick()
+    compose.waitForIdle()
+
+    compose.runOnUiThread { open = false }
+    compose.waitForIdle()
+    compose.runOnUiThread { open = true }
+    compose.onNodeWithText("幹事").assertExists()
+    answers.single().completeExceptionally(IllegalStateException("offline"))
+    compose.onNodeWithText("OK").performClick()
+    compose.onNodeWithText("作る").performClick()
+    compose.waitForIdle()
+
+    assertEquals(2, asked.size)
+    assertEquals(asked[0], asked[1])
   }
 }

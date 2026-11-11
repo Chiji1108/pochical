@@ -19,6 +19,7 @@ struct OpenedInvite: Identifiable, Hashable {
 struct JoinScreen: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.groupCalls) private var groupCalls
+  @Environment(\.joiningGroup) private var joiningGroup
   @Environment(\.dismiss) private var dismiss
   let invite: OpenedInvite
   /// Called with the group's id once the person is in it.
@@ -37,6 +38,9 @@ struct JoinScreen: View {
   @Environment(\.say) private var say
   /// Joined, the screen giving way to the group: busy still.
   @State private var gone = false
+  /// Whether the screen has shown once: what is under way is taken as it
+  /// opens, not as it shows again from under a page it pushed.
+  @State private var opened = false
   @State private var joinError: InviteError?
   @State private var showingMembers = false
 
@@ -60,7 +64,15 @@ struct JoinScreen: View {
       }
     }
     .task { await load() }
-    .waiting(on: groupCalls.joining, mine: { $0.code == invite.code }) { joined in
+    .onAppear {
+      // Opened again while this invitation's 参加する is under way: as it was asked.
+      guard !opened else { return }
+      opened = true
+      if let begun = joiningGroup.underWay?.asked, begun.code == invite.code {
+        profile = begun.profile
+      }
+    }
+    .waiting(on: joiningGroup, mine: { $0.code == invite.code }) { joined in
       switch joined {
       case .success(let group):
         if !group.faceKept { say(joinFaceNotKept) }
@@ -229,7 +241,7 @@ struct JoinScreen: View {
 
   /// Whether 参加する is under way, the app's one call (`GoingIn`), or
   /// done: another invitation's leaves the button busy alone.
-  private var joining: Bool { groupCalls.joining.underWay != nil || gone }
+  private var joining: Bool { joiningGroup.underWay != nil || gone }
 
   private func join() {
     // As the button is off for.
@@ -237,11 +249,12 @@ struct JoinScreen: View {
     let asUsual = profile.goingOn(usualName: usualName)
     let face = profile.face
     let calls = groupCalls
-    let ask = JoinAsk(code: invite.code, displayName: myName)
+    let code = invite.code
+    let name = myName
     // The app's from here, whether this screen still waits or not; tapped
     // again before the screen is drawn busy, the same call.
-    groupCalls.joining.begin(ask) {
-      let groupID = try await calls.join(code: ask.code, displayName: ask.displayName)
+    joiningGroup.begin(JoiningAsk(code: code, profile: profile)) {
+      let groupID = try await calls.join(code: code, displayName: name)
       // Once in the group, so a join that fails changes nothing: someone
       // with no usual name yet has the join make theirs the usual one,
       // and keeps the face as theirs everywhere too, which the group

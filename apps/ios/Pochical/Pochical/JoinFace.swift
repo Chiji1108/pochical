@@ -6,7 +6,7 @@ import SwiftUI
 /// The face of the person joining a group or making one, as picked on
 /// that screen and sent once they are in it: the usual photo, another
 /// picked here, or none on purpose.
-enum JoinFace: Equatable {
+enum JoinFace: Equatable, Sendable {
   case usual
   case picked(Data)
   case none
@@ -14,7 +14,7 @@ enum JoinFace: Equatable {
 
 /// How the person will appear in the group they are joining or making, as
 /// that screen keeps it until they go on.
-struct JoinProfile: Equatable {
+struct JoinProfile: Equatable, Sendable {
   /// A name of its own for this group; empty follows the usual one.
   var ownName = ""
   var face = JoinFace.usual

@@ -13,17 +13,6 @@ public struct InGroup: Hashable, Sendable {
   }
 }
 
-/// An invitation's code, and the name the person joins its group as.
-public struct JoinAsk: Hashable, Sendable {
-  public let code: String
-  public let displayName: String
-
-  public init(code: String, displayName: String) {
-    self.code = code
-    self.displayName = displayName
-  }
-}
-
 /// The person on their way into a group, made (グループを作る) or joined
 /// (参加の画面): one call at a time, which is the app's from the moment it
 /// is asked for, whatever becomes of the page that asked
@@ -33,7 +22,9 @@ public struct JoinAsk: Hashable, Sendable {
 /// has it, the group in their list, and the call is forgotten as it ends,
 /// nothing opening for a page that is gone; the page opened again meanwhile
 /// finds it `underWay` and waits on, so the same group is not asked for
-/// twice by mistake. Whether a page is gone is its `Place` being let go
+/// twice by mistake: what was asked is the page's whole draft, the group
+/// and how the person appears in it, so the page opened again shows, and a
+/// retry sends, exactly that. Whether a page is gone is its `Place` being let go
 /// of, never its leaving the screen.
 @MainActor @Observable
 public final class GoingIn<Asked: Sendable> {
