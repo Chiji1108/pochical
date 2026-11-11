@@ -7,6 +7,7 @@ import {
   STORE_SHOTS,
   STORES,
   storeShotFile,
+  WALL,
   wallOf,
 } from "@pochical/prototype/lib/store-shots";
 import type { WallTile } from "@pochical/prototype/lib/store-shots";
@@ -56,7 +57,9 @@ test("the shots are no more than both stores take", () => {
 });
 
 // The wall of widgets mixes its looks (the app as it starts, and 墨 in
-// black and white), over the widgets both platforms photograph.
+// black and white), over the widgets both platforms photograph: every
+// kind at each size it has for a Home Screen, and those that can be set
+// to someone, set to a person and to the group too.
 const WIDGETS = [
   "calendar-large.png",
   "calendar-medium.png",
@@ -87,11 +90,28 @@ const touch = (a: WallTile, b: WallTile): boolean => {
   return beside || above;
 };
 
+test("the wall holds each widget once in a look, and leaves no gap among them", () => {
+  const { alike, pinned } = STORE_SHOTS.find(
+    (shot) => shot.kind === "wall"
+  ) ?? { alike: [], pinned: [] };
+  const tiles = wallOf(WIDGETS, 2, pinned, alike);
+  const pictures = tiles.map(({ file, look }) =>
+    alike.includes(file) ? file : `${file} in look ${look}`
+  );
+  expect(new Set(pictures).size).toBe(pictures.length);
+  // Less than a row of it is left as sky.
+  const covered = tiles.reduce(
+    (cells, { columns, rows }) => cells + columns * rows,
+    0
+  );
+  expect(covered).toBeGreaterThan(WALL.columns * (WALL.rows - 1));
+});
+
 test("the wall alternates its two looks, no widget beside itself, the pinned where they are told", () => {
-  const { pinned } = STORE_SHOTS.find((shot) => shot.kind === "wall") ?? {
-    pinned: [],
-  };
-  const tiles = wallOf(WIDGETS, 2, pinned);
+  const { alike, pinned } = STORE_SHOTS.find(
+    (shot) => shot.kind === "wall"
+  ) ?? { alike: [], pinned: [] };
+  const tiles = wallOf(WIDGETS, 2, pinned, alike);
   for (const pin of pinned) {
     expect(
       tiles.filter((tile) => tile.file === pin.file && tile.look === pin.look)

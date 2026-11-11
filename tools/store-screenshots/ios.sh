@@ -25,7 +25,8 @@ raw=$root/.build/store-screenshots/ios
 shared=$(mktemp -d)
 server_log=$shared/server.log
 . "$root/tools/ios-ui/lib.sh"
-trap stop_server EXIT
+seed=""
+trap 'stop_tests; [ -z "$seed" ] || kill "$seed" 2>/dev/null || true; stop_server' EXIT
 
 xcrun simctl list devices -j | jq -e --arg name "$device" 'any(.devices[][]; .name == $name)' >/dev/null ||
   xcrun simctl create "$device" "iPhone 18 Pro Max" >/dev/null
@@ -40,20 +41,41 @@ xcrun simctl boot "$device"
 xcrun simctl bootstatus "$device" >/dev/null
 rm -rf "$raw"
 mkdir -p "$raw"
-pnpm --dir "$root" exec tsx "$root/tools/store-screenshots/seed.ts" "$raw/invite" "$raw/invite-friends"
+# The seed makes the groups, writes their invitations, and writes the
+# coworkers' chat once the tests have joined it, and ends.
+pnpm --dir "$root" exec tsx "$root/tools/store-screenshots/seed.ts" "$raw/invite" "$raw/invite-friends" &
+seed=$!
+until [ -s "$raw/invite" ]; do
+  kill -0 "$seed" 2>/dev/null || { echo "the seed made no groups" >&2; exit 1; }
+  sleep 1
+done
 # The status bar the stores' pictures have: full signal and a full battery
-# off the charger, and for the whole run the time two minutes after the
-# chat's lines, whose times are when the seed sent them.
-xcrun simctl status_bar "$device" override --time "$(date -v+2M +%-H:%M)" --batteryState discharging --batteryLevel 100 \
-  --wifiBars 3 --cellularBars 4
+# off the charger, and the time two minutes on: from now, and once the
+# chat is written from then, its lines' times being when the seed sent
+# them. The time as a whole ISO date: simctl takes no H:MM on the hour.
+show_time() {
+  xcrun simctl status_bar "$device" override --time "$(date -u -v+2M +%Y-%m-%dT%H:%M:%S.000Z)" --batteryState discharging --batteryLevel 100 \
+    --wifiBars 3 --cellularBars 4
+}
+show_time
 xcrun simctl ui "$device" appearance light
 xcrun simctl privacy "$device" grant calendar app.pochical
 
 
-failed=0
 TEST_RUNNER_STORE_SHOTS_DIR=$raw xcodebuild_for test-without-building -collect-test-diagnostics never \
   -parallel-testing-enabled NO -resultBundlePath "$shared/results.xcresult" \
-  -only-testing:PochicalUITests/StoreScreenshotTests || failed=1
+  -only-testing:PochicalUITests/StoreScreenshotTests &
+tests=$!
+# The tests wait in the chat, once its lines are written, for the clock
+# to follow them.
+failed=0
+while kill -0 "$seed" 2>/dev/null && kill -0 "$tests" 2>/dev/null; do sleep 1; done
+if ! kill -0 "$seed" 2>/dev/null && wait "$seed"; then
+  show_time
+  touch "$raw/clock-set"
+fi
+wait "$tests" || failed=1
+tests=""
 xcrun simctl shutdown "$device" || true
 echo "screens: $raw"
 echo "results: $shared"
