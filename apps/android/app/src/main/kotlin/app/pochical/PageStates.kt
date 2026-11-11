@@ -1,13 +1,13 @@
 package app.pochical
 
-import androidx.activity.compose.LocalActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.retain.RetainObserver
+import androidx.compose.runtime.retain.retain
 import androidx.compose.runtime.retain.retainRetainedValuesStoreRegistry
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.navigation3.runtime.NavEntryDecorator
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
@@ -52,18 +52,34 @@ fun <T : Any> rememberPageDecorators(onStack: Set<String>): List<NavEntryDecorat
   }
 }
 
-/** Whether the page this is in is on the stack still, as [RootScreen] has it; a page of no stack is. */
-val LocalOnStack = staticCompositionLocalOf<() -> Boolean> { { true } }
-
 /**
- * Whether the page this is in is leaving for good, asked as it leaves the screen (a
- * DisposableEffect's onDispose): not when the window is only being made anew (the screen turned)
- * with the page still on the stack, which draws it again. A page taken off the stack in the
- * moment the window is made anew is leaving for good too, though its going is never drawn.
+ * Calls [left] once the page this is in has left for good: off the stack, the one rule, whether
+ * it was showing as it was taken off or covered by a page over it, or taken off in the moment the
+ * window was made anew; or its activity finished, the stack gone with it. Not as it leaves the
+ * screen: a page covered by another (a link's 参加の画面 over グループを作る) or drawn again as
+ * the screen turns is on the stack still, and has left nothing.
+ *
+ * It is a value the page holds ([retain]) in what is kept for its key ([rememberPageDecorators]),
+ * which Navigation 3 lets go of exactly then. A page of no stack holds it in its activity, and
+ * has left as it leaves the screen while the window stays.
  */
 @Composable
-fun rememberLeavingForGood(): () -> Boolean {
-  val activity = LocalActivity.current
-  val onStack = LocalOnStack.current
-  return remember(activity, onStack) { { activity?.isChangingConfigurations != true || !onStack() } }
+fun OnLeftForGood(left: () -> Unit) {
+  val place = retain { PagePlace() }
+  // As the page is now, which the page drawn again after the screen turned says anew.
+  SideEffect { place.left = left }
+}
+
+private class PagePlace : RetainObserver {
+  var left: () -> Unit = {}
+
+  override fun onRetired() = left()
+
+  override fun onRetained() {}
+
+  override fun onEnteredComposition() {}
+
+  override fun onExitedComposition() {}
+
+  override fun onUnused() {}
 }

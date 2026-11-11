@@ -46,7 +46,7 @@ import app.pochical.ReviewPrompt
 import app.pochical.SectionHeader
 import app.pochical.SectionRow
 import app.pochical.SettingsRow
-import app.pochical.rememberLeavingForGood
+import app.pochical.OnLeftForGood
 import app.pochical.design.FaceDrawing
 import app.pochical.design.TextLimits
 import app.pochical.kit.GroupCalls
@@ -147,7 +147,6 @@ class JoinProfile(ownName: TextFieldValue = TextFieldValue(), face: JoinFace = J
 fun rememberJoinProfile(begun: JoinProfile? = null): JoinProfile {
   val context = LocalContext.current
   val calls = LocalGroupCalls.current
-  val leavingForGood = rememberLeavingForGood()
   // A photo held for the face of a call under way is held by the screen that takes it up too.
   val profile = rememberSaveable(saver = JoinProfile.Saver) { begun?.also { (it.face as? JoinFace.Held)?.let { held -> calls.holdPhotoAgain(held.photoId) } } ?: JoinProfile() }
   val usual = usualProfile()
@@ -163,11 +162,7 @@ fun rememberJoinProfile(begun: JoinProfile? = null): JoinProfile {
     }
     drawing?.let { calls.letGoOfPhoto(it.photoId) }
   }
-  DisposableEffect(profile) {
-    onDispose {
-      if (leavingForGood()) (profile.face as? JoinFace.Held)?.let { calls.letGoOfPhoto(it.photoId) }
-    }
-  }
+  OnLeftForGood { (profile.face as? JoinFace.Held)?.let { calls.letGoOfPhoto(it.photoId) } }
   return profile
 }
 
