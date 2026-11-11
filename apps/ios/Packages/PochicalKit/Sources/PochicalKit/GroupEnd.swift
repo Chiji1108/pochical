@@ -8,15 +8,19 @@ public enum GroupEnd {
   /// the epoch: the first moment of the day after it there, which is not
   /// always midnight nor 24 hours after the day began (endsAt).
   public static func endsAt(_ day: Day, in zone: TimeZone) -> Int64 {
-    let calendar = calendar(in: zone)
-    let end = calendar.dateInterval(of: .day, for: day.date(in: calendar))!.end
+    // The Gregorian calendar has every day in every time zone: no day
+    // stands in for one it cannot find, which would end the group early.
+    let calendar = Day.gregorian(in: zone)
+    let within = calendar.date(
+      from: DateComponents(year: day.year, month: day.month, day: day.day))!
+    let end = calendar.dateInterval(of: .day, for: within)!.end
     return Int64((end.timeIntervalSince1970 * 1000).rounded())
   }
 
   /// The day a device in `zone` shows for a group ending at `ms`: the day
   /// the moment just before it falls on there (endDay).
   public static func endDay(_ ms: Int64, in zone: TimeZone) -> Day {
-    Day(Date(timeIntervalSince1970: Double(ms - 1) / 1000), in: calendar(in: zone))
+    Day(Date(timeIntervalSince1970: Double(ms - 1) / 1000), in: Day.gregorian(in: zone))
   }
 
   /// How an end date is said, 12月31日, with its year when that is not the
@@ -55,12 +59,5 @@ public enum GroupEnd {
       let ms = Int64(args[0]), ms > 0
     else { return nil }
     return coming(ms, in: zone, today: today)
-  }
-
-  /// The days of `zone`'s clock, as `Day` names them.
-  private static func calendar(in zone: TimeZone) -> Calendar {
-    var calendar = Calendar(identifier: .gregorian)
-    calendar.timeZone = zone
-    return calendar
   }
 }

@@ -52,7 +52,9 @@ public protocol Pochical_V1_GroupServiceClientInterface: Sendable {
 
     /// Gives the group an end, changes it or takes it away
     /// (spec/sync-protocol.md, A group's end), which every member sees. Members
-    /// only. INVALID_ARGUMENT for a time that is not after now.
+    /// only, and none are once its end has come (PERMISSION_DENIED).
+    /// INVALID_ARGUMENT for a time that is not after now, or that no date
+    /// can be.
     @available(iOS 13, *)
     func `setGroupEnd`(request: Pochical_V1_SetGroupEndRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_SetGroupEndResponse>
 

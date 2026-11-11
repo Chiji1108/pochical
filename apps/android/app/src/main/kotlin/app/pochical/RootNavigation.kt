@@ -271,23 +271,42 @@ class RootNavigator(
     openingDay = day
   }
 
-  /** The group just made, shown with its invitation once the device holds it ([hold]). */
-  var made by mutableStateOf<String?>(null)
+  /**
+   * The groups a call's answer said the user is in, whose Membership is still on its way on the
+   * user's socket: one just made, shown at once ([showMade]). Each is here only until the device
+   * holds it ([hold]) or hears the user is out of it ([left]), and only in memory, so pages kept
+   * from before the app was last ended go by the groups the device holds alone.
+   */
+  private val coming = mutableSetOf<String>()
+
+  /**
+   * Shows the group [groupId] the user just made, with [page] over the tabs, as its call answers:
+   * its Membership comes a moment later, and its pages stay meanwhile.
+   */
+  fun showMade(groupId: String, page: RootPage) {
+    coming += groupId
+    showGroup(groupId, page)
+  }
 
   /**
    * Keeps the pages to the groups the device holds, [groupIds]: a group the person is no longer in
    * (left from elsewhere, taken out, or ended, spec/sync-protocol.md, A group's end) takes its pages
    * with it, every one of them and whichever is on top, back to the tabs, and so do pages kept from
-   * before the app was last ended. A group just made comes a moment after the call's answer, on the
-   * user's socket: it is shown with its invitation once it is there, so no page of a group is ever
-   * open before the device holds it. The chat with Pochical's people is of no group.
+   * before the app was last ended. One just made is the user's by its call's answer, before the
+   * device holds it. The chat with Pochical's people is of no group.
    */
   fun hold(groupIds: Set<String>) {
-    pages.removeAll { page -> page.groupId.let { it != null && it != Chat.supportPlace && it !in groupIds } }
-    made?.takeIf { it in groupIds }?.let {
-      made = null
-      showGroup(it, RootPage.GroupInvite(it))
-    }
+    coming -= groupIds
+    pages.removeAll { page -> page.groupId.let { it != null && it != Chat.supportPlace && it !in groupIds && it !in coming } }
+  }
+
+  /**
+   * The user is out of the group [groupId], as their own socket says: its pages go, one just made
+   * whose Membership the device never held too.
+   */
+  fun left(groupId: String) {
+    coming -= groupId
+    pages.removeAll { it.groupId == groupId }
   }
 
   /** Takes away every page, back to the tabs, as leaving a group does from its pages. */

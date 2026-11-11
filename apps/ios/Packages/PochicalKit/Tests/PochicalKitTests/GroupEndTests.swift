@@ -69,6 +69,53 @@ func theChatSaysAGroupsEnd(_ vector: GroupEndVectors.Notice) throws {
     notice.words(by: vector.by ?? "", subject: "", zone: zone, today: today) == vector.expected)
 }
 
+/// A date picker's day, in a device's own calendar and time zone, read as
+/// the app reads it and sent as a group's end, comes back as that day.
+@Test(arguments: [
+  Calendar.Identifier.gregorian, .japanese, .buddhist, .republicOfChina, .hebrew,
+  .islamicUmmAlQura, .persian,
+])
+func aDayPickedInAnyCalendarEndsTheGroupAsThatDayEnds(_ identifier: Calendar.Identifier) throws {
+  for zone in ["Asia/Tokyo", "Pacific/Auckland", "Pacific/Honolulu", "America/New_York", "UTC"] {
+    var device = Calendar(identifier: identifier)
+    device.timeZone = try #require(TimeZone(identifier: zone))
+    let picked = Day(year: 2026, month: 12, day: 31)
+    // What the picker hands back for the day: a moment of it, by the
+    // device's clock, late in it as much as at its start.
+    let start = picked.date(in: device)
+    for moment in [start, start.addingTimeInterval(23 * 3600 + 59 * 60)] {
+      let day = Day(moment, in: device)
+      #expect(day == picked, "\(identifier) \(zone)")
+      let endsAtMs = GroupEnd.endsAt(day, in: device.timeZone)
+      #expect(GroupEnd.endDay(endsAtMs, in: device.timeZone) == picked)
+      // The end is the next day's first moment there, after every moment
+      // of the day picked.
+      #expect(Double(endsAtMs) / 1000 > moment.timeIntervalSince1970)
+      #expect(
+        Day(Date(timeIntervalSince1970: Double(endsAtMs) / 1000), in: device)
+          == picked.adding(days: 1))
+    }
+  }
+}
+
+/// Every day of two years, in time zones whose clocks change: the end is
+/// the next day's start, and shows as the day itself.
+@Test(arguments: ["Asia/Tokyo", "America/New_York", "Asia/Beirut", "Pacific/Apia", "Africa/Cairo"])
+func everyDaysEndShowsAsThatDay(_ identifier: String) throws {
+  let zone = try #require(TimeZone(identifier: identifier))
+  var day = Day(year: 2026, month: 1, day: 1)
+  var last: Int64 = 0
+  for _ in 0..<730 {
+    let endsAtMs = GroupEnd.endsAt(day, in: zone)
+    #expect(GroupEnd.endDay(endsAtMs, in: zone) == day)
+    #expect(GroupEnd.endDay(endsAtMs + 1, in: zone) == day.adding(days: 1))
+    // Later days end later, each day 23 to 25 hours long.
+    #expect((23...25).contains((endsAtMs - last) / 3_600_000) || last == 0, "\(day)")
+    last = endsAtMs
+    day = day.adding(days: 1)
+  }
+}
+
 /// The server's notification that a group ends soon (apns.ts payloadOf),
 /// its alert's body `key` with `args`.
 private func endsPayload(key: String = "GROUP_ENDS", args: Any? = ["1798729200000"])

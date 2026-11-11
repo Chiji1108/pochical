@@ -1,5 +1,6 @@
 import { GROUP_END_NOTICE_HOURS } from "@pochical/design/limits";
 import { socketRules } from "@pochical/design/socket";
+import { runInDurableObject } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
@@ -9,8 +10,14 @@ import { invites } from "../src/db/schema";
 import { ChatNotice_Kind } from "../src/gen/pochical/v1/sync_pb";
 import type { ServerFrame } from "../src/gen/pochical/v1/sync_pb";
 import { photoKey } from "../src/photos";
-import { runAlarm } from "./alarms";
-import { call, ORIGIN, signInAnonymously, userIdOf } from "./helpers";
+import { alarmOf, runAlarm } from "./alarms";
+import {
+  call,
+  failTelling,
+  ORIGIN,
+  signInAnonymously,
+  userIdOf,
+} from "./helpers";
 import {
   changesIn,
   device,
@@ -70,7 +77,11 @@ const setEnd = async (
   return response.status;
 };
 
-const createGroup = async (endsAt: number, token: string): Promise<Response> =>
+const createGroup = async (
+  endsAt: number,
+  token: string,
+  requestId: string = crypto.randomUUID()
+): Promise<Response> =>
   await call(
     "GroupService/CreateGroup",
     {
@@ -78,10 +89,30 @@ const createGroup = async (endsAt: number, token: string): Promise<Response> =>
       endsAtMs: String(endsAt),
       mark: { emoji: "🍻" },
       name: "忘年会",
-      requestId: crypto.randomUUID(),
+      requestId,
     },
     token
   );
+
+/** What `run` gives with the clock at `at`, the group's alarm not run. */
+const atTime = async <T>(time: number, run: () => Promise<T>): Promise<T> => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(time);
+  try {
+    return await run();
+  } finally {
+    vi.useRealTimers();
+  }
+};
+
+/** The notifications that the group ends soon still owed, made due now. */
+const owedDueNow = async (groupId: string): Promise<number> =>
+  await runInDurableObject(env.GROUPS.getByName(groupId), (_, state) => {
+    state.storage.sql.exec("update end_notice_outbox set due_at = 0");
+    return state.storage.sql
+      .exec("select user_id from end_notice_outbox")
+      .toArray().length;
+  });
 
 const groupSocket = async (
   groupId: string,
@@ -239,6 +270,62 @@ describe("setting a group's end", () => {
     const past = await createGroup(Date.now() - 1, maker);
     expect(past.status).toBe(400);
   });
+
+  it("is a moment a date can be", async () => {
+    const { groupId, maker } = await pair();
+    // Past the last moment there is: no date, so no end to keep or tell.
+    await expect(setEnd(groupId, 8_640_000_000_000_001, maker)).resolves.toBe(
+      400
+    );
+    await expect(setEnd(groupId, Number.MAX_SAFE_INTEGER, maker)).resolves.toBe(
+      400
+    );
+    await expect(setEnd(groupId, -1, maker)).resolves.toBe(400);
+    await expect(env.GROUPS.getByName(groupId).endsAt()).resolves.toBeNull();
+  });
+
+  it("is not set by someone taken out as the call came", async () => {
+    const { groupId, maker } = await pair();
+    const stranger = await userIdOf(await signInAnonymously());
+    const group = env.GROUPS.getByName(groupId);
+    await expect(
+      group.setEnd(Date.now() + FAR_MS, stranger)
+    ).resolves.toBeFalsy();
+    await expect(group.endsAt()).resolves.toBeNull();
+    await expect(setEnd(groupId, Date.now() + FAR_MS, maker)).resolves.toBe(
+      200
+    );
+  });
+
+  it("answers a group made again with the group, its end come since", async () => {
+    const maker = await signInAnonymously();
+    const endsAt = Date.now() + DAY_MS;
+    const requestId = crypto.randomUUID();
+    const made = await createGroup(endsAt, maker, requestId);
+    const { groupId } = (await made.json()) as { groupId: string };
+    // The answer lost, the same request comes after the end it asked for.
+    const again = await atTime(
+      endsAt + 1,
+      async () => await createGroup(endsAt, maker, requestId)
+    );
+    expect(again.status).toBe(200);
+    await expect(again.json()).resolves.toMatchObject({ groupId });
+  });
+
+  it("has its alarm set again by a group made again", async () => {
+    const maker = await signInAnonymously();
+    const endsAt = Date.now() + FAR_MS;
+    const requestId = crypto.randomUUID();
+    const made = await createGroup(endsAt, maker, requestId);
+    const { groupId } = (await made.json()) as { groupId: string };
+    const group = env.GROUPS.getByName(groupId);
+    // As a first try cut off after the group was written leaves it.
+    await runInDurableObject(group, async (_, state) => {
+      await state.storage.deleteAlarm();
+    });
+    await createGroup(endsAt, maker, requestId);
+    await expect(alarmOf(group)).resolves.toBe(endsAt - NOTICE_MS);
+  });
 });
 
 describe("a group's end coming", () => {
@@ -381,6 +468,109 @@ describe("a group's end coming", () => {
     const calls = apnsCalls();
     await setEnd(groupId, Date.now() + DAY_MS, maker);
     await runAlarm(env.GROUPS.getByName(groupId));
+    expect(calls).toHaveLength(0);
+  });
+});
+
+describe("a group whose end has come, its alarm still to end it", () => {
+  it("takes no one in and shows no invitation", async () => {
+    const { groupId, inviteCode, maker } = await pair();
+    const endsAt = Date.now() + FAR_MS;
+    await setEnd(groupId, endsAt, maker);
+    const stranger = await signInAnonymously();
+    const [join, invite] = await atTime(
+      endsAt,
+      async () =>
+        await Promise.all([
+          call(
+            "GroupService/JoinGroup",
+            { displayName: "あや", inviteCode },
+            stranger
+          ),
+          call("GroupService/GetInvite", { inviteCode }, stranger),
+        ])
+    );
+    expect([join.status, invite.status]).toStrictEqual([404, 404]);
+    await expect(
+      env.USERS.getByName(await userIdOf(stranger)).isMember(groupId)
+    ).resolves.toBeFalsy();
+  });
+
+  it("takes no new end, nor any other change, and ends all the same", async () => {
+    const { groupId, guest, maker } = await pair();
+    const endsAt = Date.now() + FAR_MS;
+    await setEnd(groupId, endsAt, maker);
+    const [moved, renamed] = await atTime(
+      endsAt,
+      async () =>
+        await Promise.all([
+          setEnd(groupId, endsAt + FAR_MS, guest),
+          call(
+            "GroupService/RenameGroup",
+            { groupId, mark: { emoji: "🍉" }, name: "つづき" },
+            maker
+          ),
+        ])
+    );
+    // Gone to its members already: not answered as saved.
+    expect([moved, renamed.status]).toStrictEqual([403, 403]);
+    await expect(env.GROUPS.getByName(groupId).endsAt()).resolves.toBe(endsAt);
+    await alarmAt(groupId, endsAt);
+    await expect(isThere(groupId)).resolves.toBeFalsy();
+  });
+});
+
+describe("the notification that a group ends soon", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("is owed to a member until their own DO has taken it", async () => {
+    const { groupId, guest, maker } = await pair();
+    await registerToken(maker, MAKER_TOKEN);
+    await registerToken(guest, GUEST_TOKEN);
+    const calls = apnsCalls();
+    const restore = await failTelling(groupId, await userIdOf(guest));
+    await setEnd(groupId, Date.now() + DAY_MS, maker);
+    await runAlarm(env.GROUPS.getByName(groupId));
+    // The maker's went; the guest's DO could not be reached.
+    expect(calls.map(({ token }) => token)).toStrictEqual([MAKER_TOKEN]);
+
+    await restore();
+    await expect(owedDueNow(groupId)).resolves.toBe(1);
+    await runAlarm(env.GROUPS.getByName(groupId));
+    expect(calls.map(({ token }) => token)).toStrictEqual([
+      MAKER_TOKEN,
+      GUEST_TOKEN,
+    ]);
+    // Taken: owed no more, and not sent again.
+    await expect(owedDueNow(groupId)).resolves.toBe(0);
+    await runAlarm(env.GROUPS.getByName(groupId));
+    expect(calls).toHaveLength(2);
+  });
+
+  it("is owed no more to a member who left, nor of an end since moved", async () => {
+    const { groupId, guest, maker } = await pair();
+    await registerToken(guest, GUEST_TOKEN);
+    const calls = apnsCalls();
+    const guestId = await userIdOf(guest);
+    const restore = await failTelling(groupId, guestId);
+    const near = Date.now() + DAY_MS;
+    await setEnd(groupId, near, maker);
+    await runAlarm(env.GROUPS.getByName(groupId));
+    await restore();
+
+    // Moved out past the hours: what was owed of the end before goes.
+    await setEnd(groupId, Date.now() + FAR_MS, maker);
+    await expect(owedDueNow(groupId)).resolves.toBe(0);
+
+    // Owed again of a near end, and gone with their leaving.
+    const failing = await failTelling(groupId, guestId);
+    await setEnd(groupId, near, maker);
+    await runAlarm(env.GROUPS.getByName(groupId));
+    await failing();
+    await call("GroupService/LeaveGroup", { groupId }, guest);
+    await expect(owedDueNow(groupId)).resolves.toBe(0);
     expect(calls).toHaveLength(0);
   });
 });

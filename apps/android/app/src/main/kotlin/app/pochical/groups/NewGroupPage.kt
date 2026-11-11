@@ -54,8 +54,7 @@ import kotlinx.coroutines.launch
  * person is called in it.
  * The mark follows the name until one is picked: a fitting emoji, else its first letter in a color
  * the user's other groups do not use yet (spec/sync-protocol.md, Groups). Once the group is made,
- * [onMade] gets its id, the page staying as it is, still making, until the group has reached the
- * device on the user's socket and is shown.
+ * [onMade] gets its id; the group may reach the device a moment later, on the user's socket.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -106,7 +105,7 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
       try {
         // A picked photo goes up first, for the group to take.
         if (request.mark.photoId.isNotEmpty()) calls.sendHeldPhoto(request.mark.photoId, PhotoShelf.Mine)
-        // Still making until the page gives way to the group, so 作る is not there to tap again.
+        // Still making as the page gives way to the group, so 作る is not there to tap again.
         onMade(calls.create(request))
         return@launch
       } catch (e: CancellationException) {

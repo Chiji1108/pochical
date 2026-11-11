@@ -55,7 +55,8 @@ export type CreateGroupRequest = Message<"pochical.v1.CreateGroupRequest"> & {
 
   /**
    * When the group ends, as GroupProfile.ends_at_ms; 0 for a group with
-   * no end. INVALID_ARGUMENT for a time that is not after now.
+   * no end. INVALID_ARGUMENT for a time that is not after now, unless the
+   * request_id's group is made already, or that no date can be.
    *
    * @generated from field: int64 ends_at_ms = 6;
    */
@@ -618,7 +619,9 @@ export const GroupService: GenService<{
   /**
    * Gives the group an end, changes it or takes it away
    * (spec/sync-protocol.md, A group's end), which every member sees. Members
-   * only. INVALID_ARGUMENT for a time that is not after now.
+   * only, and none are once its end has come (PERMISSION_DENIED).
+   * INVALID_ARGUMENT for a time that is not after now, or that no date
+   * can be.
    *
    * @generated from rpc pochical.v1.GroupService.SetGroupEnd
    */

@@ -180,7 +180,7 @@ fun HolidayChoice(patterns: List<Pattern>, on: Boolean, setting: HolidaySetting,
 fun DayPickerDialog(day: LocalDate, onPick: (LocalDate) -> Unit, onDismiss: () -> Unit, from: LocalDate? = null) {
   val state =
     rememberDatePickerState(
-      initialSelectedDateMillis = day.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
+      initialSelectedDateMillis = pickerMillis(day),
       yearRange = (from?.year ?: DatePickerDefaults.YearRange.first)..DatePickerDefaults.YearRange.last,
       selectableDates = remember(from) { if (from == null) DatePickerDefaults.AllDates else DaysFrom(from) },
     )
@@ -202,12 +202,19 @@ fun DayPickerDialog(day: LocalDate, onPick: (LocalDate) -> Unit, onDismiss: () -
   }
 }
 
-/** The day Material's date picker names by [utcMs], the moment it starts in UTC. */
-private fun pickerDay(utcMs: Long): LocalDate = Instant.ofEpochMilli(utcMs).atZone(ZoneOffset.UTC).toLocalDate()
+/** How Material's date picker names [day]: the moment it starts in UTC, wherever the device is. */
+internal fun pickerMillis(day: LocalDate): Long = day.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
 
-/** The days from [first] on, the only ones the picker lets be picked. */
+/** The day Material's date picker names by [utcMs], the moment it starts in UTC. */
+internal fun pickerDay(utcMs: Long): LocalDate = Instant.ofEpochMilli(utcMs).atZone(ZoneOffset.UTC).toLocalDate()
+
+/**
+ * The days from [first] on, the only ones the picker lets be picked: [first] is a day by the
+ * device's own clock (its today), held against the day the picker names, never against the moment
+ * the picker names it by, which is another day's on a device west of UTC.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
-private class DaysFrom(private val first: LocalDate) : SelectableDates {
+internal class DaysFrom(private val first: LocalDate) : SelectableDates {
   override fun isSelectableDate(utcTimeMillis: Long) = !pickerDay(utcTimeMillis).isBefore(first)
 
   override fun isSelectableYear(year: Int) = year >= first.year

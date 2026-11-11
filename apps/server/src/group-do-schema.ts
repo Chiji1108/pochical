@@ -409,3 +409,17 @@ export const membershipOutbox = sqliteTable("membership_outbox", {
   inGroup: integer("in_group", { mode: "boolean" }).notNull(),
   userId: text("user_id").primaryKey(),
 });
+
+// Who is still to be notified that the group ends soon (spec/sync-
+// protocol.md, A group's end): a row for each member, written with the
+// chat's line of it and told by the alarm until their DO takes it, as
+// membership_outbox is. A new end, or their leaving, takes it away.
+export const endNoticeOutbox = sqliteTable("end_notice_outbox", {
+  // When to tell it next.
+  dueAt: integer("due_at", { mode: "timestamp_ms" }).notNull(),
+  // The end the line told of.
+  endsAt: integer("ends_at", { mode: "timestamp_ms" }).notNull(),
+  // The tries in a row that failed, for how long the next waits.
+  failures: integer().notNull().default(0),
+  userId: text("user_id").primaryKey(),
+});

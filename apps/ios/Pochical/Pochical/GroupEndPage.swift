@@ -56,14 +56,20 @@ private struct GroupEndPage: View {
     _on = State(initialValue: current != nil)
     // A new end starts a month from today, about as far off as what a
     // group with an end is made for.
-    let calendar = Calendar.current
+    let calendar = Self.calendar
     let today = Day.today
     let monthOn = calendar.date(byAdding: .month, value: 1, to: today.date(in: calendar))
     _day = State(initialValue: max(current ?? monthOn.map { Day($0, in: calendar) } ?? today, today))
   }
 
+  /// The device's calendar as it is at each use, the time zone it is in
+  /// then, as the date picker's own: never one read while the page was
+  /// drawn, which a day picked after the time zone changed would be read
+  /// by, as the day before or after.
+  private static var calendar: Calendar { .autoupdatingCurrent }
+
   var body: some View {
-    let calendar = Calendar.current
+    let calendar = Self.calendar
     let picked = on ? day : nil
     List {
       Section {

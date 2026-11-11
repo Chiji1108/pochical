@@ -42,6 +42,7 @@ import m0039 from './0039_chat-line-content-only.sql';
 import m0040 from './0040_reaction-places.sql';
 import m0041 from './0041_reaction-places-required.sql';
 import m0042 from './0042_group-end.sql';
+import m0043 from './0043_end-notice-outbox.sql';
 
   export default {
     journal,
@@ -88,7 +89,8 @@ m0038,
 m0039,
 m0040,
 m0041,
-m0042
+m0042,
+m0043
     }
   }
   

@@ -44,8 +44,9 @@ fun PageBar(title: String, onBack: () -> Unit, scrollBehavior: TopAppBarScrollBe
 
 /**
  * The group [groupId] for one of its pages over the tabs, holding its socket while the page shows:
- * as the device holds it now, renamed meanwhile or not; null until it is read. A group the person
- * is no longer in takes its pages away with it (`RootNavigator.hold`).
+ * as the device holds it now, renamed meanwhile or not; null until it is read, or reaches the
+ * device, as one just made may not have yet. A group the person is no longer in takes its pages
+ * away with it (`RootNavigator.hold`).
  */
 @Composable
 fun pageGroup(groupId: String): GroupRow? {

@@ -109,16 +109,57 @@ class RootNavigatorTest {
   }
 
   @Test
-  fun aGroupJustMadeShowsWithItsInvitationOnceTheDeviceHoldsIt() {
+  fun aGroupJustMadeShowsWithItsInvitationAsItsCallAnswers() {
     navigator.select(RootTab.Groups)
     navigator.show(RootPage.NewGroup)
-    navigator.made = "g1"
-    navigator.hold(emptySet())
-    assertEquals(listOf(Tabs, RootPage.NewGroup), navigator.routes)
-
-    navigator.hold(setOf("g1"))
+    navigator.showMade("g1", RootPage.GroupInvite("g1"))
     assertEquals(listOf(Tabs, RootPage.GroupInvite("g1")), navigator.routes)
     assertEquals("g1", navigator.openGroup)
-    assertEquals(null, navigator.made)
+
+    // Its Membership is still on its way: the pages stay, whatever else the device holds meanwhile.
+    navigator.hold(emptySet())
+    navigator.open(RootPage.GroupSettings("g1"))
+    navigator.hold(setOf("g2"))
+    assertEquals(listOf(Tabs, RootPage.GroupInvite("g1"), RootPage.GroupSettings("g1")), navigator.routes)
+
+    // Held from now on, it goes as any group does.
+    navigator.hold(setOf("g1", "g2"))
+    assertEquals(listOf(Tabs, RootPage.GroupInvite("g1"), RootPage.GroupSettings("g1")), navigator.routes)
+    navigator.hold(setOf("g2"))
+    assertEquals(listOf(Tabs), navigator.routes)
+  }
+
+  @Test
+  fun aGroupMadeAndGoneBackFromChangesNothingAsItsMembershipComes() {
+    navigator.select(RootTab.Groups)
+    navigator.showMade("g1", RootPage.GroupInvite("g1"))
+    navigator.back()
+    navigator.select(RootTab.Settings)
+    navigator.open(RootPage.Appearance)
+
+    navigator.hold(setOf("g1"))
+    assertEquals(listOf(Tabs, RootPage.Appearance), navigator.routes)
+    assertEquals(RootTab.Settings, navigator.tab)
+  }
+
+  @Test
+  fun aGroupJustMadeThatTheUserIsOutOfBeforeTheDeviceHeldItClosesItsPages() {
+    navigator.showMade("g1", RootPage.GroupInvite("g1"))
+    navigator.left("g1")
+    assertEquals(listOf(Tabs), navigator.routes)
+
+    // And is no longer waited for: a page of it kept from elsewhere goes by the groups held.
+    navigator.open(RootPage.GroupInvite("g1"))
+    navigator.hold(emptySet())
+    assertEquals(listOf(Tabs), navigator.routes)
+  }
+
+  @Test
+  fun aGroupLeftClosesItsPagesAndNoOthers() {
+    navigator.showGroup("g1", RootPage.Chat("g1", "group"))
+    navigator.left("g2")
+    assertEquals(listOf(Tabs, RootPage.Chat("g1", "group")), navigator.routes)
+    navigator.left("g1")
+    assertEquals(listOf(Tabs), navigator.routes)
   }
 }

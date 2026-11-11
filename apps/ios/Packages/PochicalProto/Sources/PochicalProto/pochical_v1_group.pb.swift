@@ -52,7 +52,8 @@ public nonisolated struct Pochical_V1_CreateGroupRequest: Sendable {
   public var requestID: String = String()
 
   /// When the group ends, as GroupProfile.ends_at_ms; 0 for a group with
-  /// no end. INVALID_ARGUMENT for a time that is not after now.
+  /// no end. INVALID_ARGUMENT for a time that is not after now, unless the
+  /// request_id's group is made already, or that no date can be.
   public var endsAtMs: Int64 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()

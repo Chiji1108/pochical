@@ -156,8 +156,9 @@ extension DatabaseMigrator {
   }
 }
 
-/// Told of each group the user leaves or is taken out of, with its
-/// `groupID` in the user info, once the device has let go of what it held
+/// Told of each group the device held that the user leaves or is taken out
+/// of, once for each, with its `groupID` in the user info, once the device
+/// has let go of what it held
 /// of it, its photos among them, for what the app keeps of it outside the
 /// database (its chats' notifications, its pages over the tabs, the photos
 /// it drew) to go too. A group that ends is told so too: it reaches the
@@ -167,44 +168,66 @@ public let groupLeft = Notification.Name("Groups.left")
 enum Groups {
   /// A group the user is in, or how much of its chats they have not
   /// read, from their socket; other changes are left to what takes them.
-  static func take(_ change: Pochical_V1_Change, in db: Database) throws {
+  /// The group that went with it, when it says the user left one the
+  /// device held: one it never held, as every group ever left is to a
+  /// device taking everything again, goes nowhere.
+  @discardableResult
+  static func take(_ change: Pochical_V1_Change, in db: Database) throws -> String? {
     if case .unreadCount(let unread) = change.kind {
       try Chats.take(unread, in: db)
-      return
+      return nil
     }
     if case .block(let block) = change.kind {
       try Blocks.take(block, in: db)
-      return
+      return nil
     }
     if case .chatMute(let mute) = change.kind {
       try ChatNotifications.take(mute, in: db)
-      return
+      return nil
     }
     if case .chatNotifications(let settings) = change.kind {
       try ChatNotifications.take(settings, in: db)
-      return
+      return nil
     }
     if case .profile(let profile) = change.kind {
       try Profile.take(profile, in: db)
-      return
+      return nil
     }
-    guard case .membership(let membership) = change.kind else { return }
-    if membership.left { return try leave(membership.groupID, in: db) }
+    guard case .membership(let membership) = change.kind else { return nil }
+    if membership.left {
+      return try leave(membership.groupID, in: db) ? membership.groupID : nil
+    }
     let mark = GroupMarkValue(membership.mark)
     let row = GroupRow(
       id: membership.groupID, name: membership.name, emoji: mark.emoji,
       joinedAtMs: membership.joinedAtMs, icon: mark.icon, letter: mark.letter, color: mark.color,
       photoID: mark.photoID)
     try GroupRow.upsert { row }.execute(db)
+    return nil
   }
 
-  /// A group left goes, with what the device holds of it.
-  static func leave(_ groupID: String, in db: Database) throws {
+  /// A group left goes, with what the device holds of it. Whether it was
+  /// in the device's list of groups.
+  @discardableResult
+  static func leave(_ groupID: String, in db: Database) throws -> Bool {
+    let held = try GroupRow.find(groupID).fetchOne(db) != nil
     try GroupRow.find(groupID).delete().execute(db)
     try GroupSync.reset(groupID, in: db)
     try Chats.dropWaiting(of: groupID, in: db)
     try Chats.dropDrafts(of: groupID, in: db)
     try Chats.dropUnread(of: groupID, in: db)
+    return held
+  }
+
+  /// Lets go of the photos the device keeps of the groups that went, those
+  /// it held and the user left, and tells the app of each (`groupLeft`),
+  /// for what it keeps of them beside the database (their notifications,
+  /// their pages, the photos it drew) to go too.
+  static func tellLeft(_ groupIDs: [String]) {
+    for groupID in groupIDs {
+      ChatPhotos.forgetAll(in: .group(groupID))
+      NotificationCenter.default.post(name: groupLeft, object: nil, userInfo: ["groupID": groupID])
+    }
   }
 
   /// The groups the user is in as the device holds them, read before a

@@ -60,12 +60,25 @@ public enum Sync {
   /// Changes, in cursor order: each is the server's value from now on,
   /// the device's clock goes past each, so its next edit orders after
   /// them, and the cursor moves to the last.
-  public static func take(_ changes: [Pochical_V1_Change], in db: Database) throws {
+  /// The groups that went with them: those the device held that they say
+  /// the user left, among them those of `heldBeforeReset`, the list a Reset
+  /// emptied before this catch-up of it.
+  @discardableResult
+  public static func take(
+    _ changes: [Pochical_V1_Change], heldBeforeReset: Set<String> = [], in db: Database
+  ) throws -> [String] {
     var state = try SyncState.current(in: db)
     var last = HlcTime(ms: state.lastMs, counter: UInt32(state.lastCounter))
+    var went: [String] = []
     for change in changes {
       try OwnValues.take(change, in: db)
-      try Groups.take(change, in: db)
+      if let left = try Groups.take(change, in: db) {
+        went.append(left)
+      } else if case .membership(let membership) = change.kind, membership.left,
+        heldBeforeReset.contains(membership.groupID)
+      {
+        went.append(membership.groupID)
+      }
       if let hlc = change.hlc {
         last = last.receiving(HlcTime(ms: hlc.physicalMs, counter: hlc.counter))
       }
@@ -74,6 +87,7 @@ public enum Sync {
     state.lastMs = last.ms
     state.lastCounter = Int64(last.counter)
     try SyncState.upsert { state }.execute(db)
+    return went
   }
 
   /// Reset: the server's values go, the outbox stays, and the cursor goes

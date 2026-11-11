@@ -126,7 +126,9 @@ public class GroupServiceClient(
   /**
    *  Gives the group an end, changes it or takes it away
    *  (spec/sync-protocol.md, A group's end), which every member sees. Members
-   *  only. INVALID_ARGUMENT for a time that is not after now.
+   *  only, and none are once its end has come (PERMISSION_DENIED).
+   *  INVALID_ARGUMENT for a time that is not after now, or that no date
+   *  can be.
    */
   override suspend fun setGroupEnd(request: SetGroupEndRequest, headers: Headers): ResponseMessage<SetGroupEndResponse> = client.unary(
     request,

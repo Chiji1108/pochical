@@ -94,6 +94,9 @@ const adoptName = async (
   }
 };
 
+const notMember = (): ConnectError =>
+  new ConnectError("Not a member of this group", Code.PermissionDenied);
+
 /** The caller's id, when they are in the group; PERMISSION_DENIED otherwise. */
 const requireMember = async (
   context: HandlerContext,
@@ -101,21 +104,32 @@ const requireMember = async (
 ): Promise<string> => {
   const user = await requireUser(context);
   if (!(await isMemberOf(env, user.id, groupId))) {
-    throw new ConnectError("Not a member of this group", Code.PermissionDenied);
+    throw notMember();
   }
   return user.id;
 };
 
+// The last moment a date can be (ECMAScript's time value, 8.64e15 ms
+// from the epoch either way): an end past it is no moment at all.
+const LAST_MOMENT_MS = 8_640_000_000_000_000;
+
 /**
  * When a group is to end, from the wire: null for none (0);
- * INVALID_ARGUMENT for a time that is not after now.
+ * INVALID_ARGUMENT for what is no moment a date can be.
  */
-const requireEnd = (endsAtMs: bigint): number | null => {
+const endOf = (endsAtMs: bigint): number | null => {
   if (endsAtMs === 0n) {
     return null;
   }
-  const endsAt = Number(endsAtMs);
-  if (!(Number.isSafeInteger(endsAt) && endsAt > Date.now())) {
+  if (endsAtMs < 0n || endsAtMs > BigInt(LAST_MOMENT_MS)) {
+    throw new ConnectError("ends_at_ms is no moment", Code.InvalidArgument);
+  }
+  return Number(endsAtMs);
+};
+
+/** An end to set now: one still to come; INVALID_ARGUMENT otherwise. */
+const requireAhead = (endsAt: number | null): number | null => {
+  if (endsAt !== null && endsAt <= Date.now()) {
     throw new ConnectError("ends_at_ms is not after now", Code.InvalidArgument);
   }
   return endsAt;
@@ -143,7 +157,7 @@ export const registerGroupService = (router: ConnectRouter): void => {
       const user = await requireUser(context);
       const name = requireFit(request.name, fitsGroupName, "name");
       const mark = requireMark(request.mark);
-      const endsAt = requireEnd(request.endsAtMs);
+      const endsAt = endOf(request.endsAtMs);
       if (!isId(request.requestId)) {
         throw new ConnectError("Malformed request_id", Code.InvalidArgument);
       }
@@ -166,6 +180,11 @@ export const registerGroupService = (router: ConnectRouter): void => {
       const group = env.GROUPS.getByName(groupId);
       // A retry finds the group made with it already.
       const made = await group.getProfile();
+      // Only a group still to be made is held to an end still to come: a
+      // retry after its end has come answers with the group it made.
+      if (made === null) {
+        requireAhead(endsAt);
+      }
       await shareMarkPhoto(env, user.id, mark, groupId, made?.mark.photoId);
       await group.create(
         { mark, name },
@@ -186,25 +205,22 @@ export const registerGroupService = (router: ConnectRouter): void => {
     getInvite: async ({ inviteCode }, context) => {
       const user = await requireUser(context);
       const groupId = await requireGroupOfCode(env.DB, inviteCode);
-      const group = env.GROUPS.getByName(groupId);
-      const [profile, memberList, alreadyMember, endsAt] = await Promise.all([
-        group.getProfile(),
-        group.memberList(),
-        group.isMember(user.id),
-        group.endsAt(),
-      ]);
-      if (profile === null) {
+      const invitation = await env.GROUPS.getByName(groupId).invitation(
+        user.id
+      );
+      if (invitation === null) {
         throw noGroupOfCode();
       }
+      const { alreadyMember, endsAt, members, profile } = invitation;
       return create(GetInviteResponseSchema, {
         alreadyMember,
         endsAtMs: BigInt(endsAt ?? 0),
-        full: !alreadyMember && memberList.length >= GROUP_MAX_MEMBERS,
+        full: !alreadyMember && members.length >= GROUP_MAX_MEMBERS,
         groupId,
         groupMark: profile.mark,
         groupName: profile.name,
         // Names and faces only: who they are stays inside the group.
-        members: memberList.map(({ displayName, photoId }) => ({
+        members: members.map(({ displayName, photoId }) => ({
           displayName,
           photoId,
         })),
@@ -316,7 +332,12 @@ export const registerGroupService = (router: ConnectRouter): void => {
 
     setGroupEnd: async ({ groupId, endsAtMs }, context) => {
       const userId = await requireMember(context, groupId);
-      await env.GROUPS.getByName(groupId).setEnd(requireEnd(endsAtMs), userId);
+      const endsAt = requireAhead(endOf(endsAtMs));
+      // The group decides again as it takes it: out of it meanwhile, or
+      // its end come, nothing is set.
+      if (!(await env.GROUPS.getByName(groupId).setEnd(endsAt, userId))) {
+        throw notMember();
+      }
       return create(SetGroupEndResponseSchema, {});
     },
 
