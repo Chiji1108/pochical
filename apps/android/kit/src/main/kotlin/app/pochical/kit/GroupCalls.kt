@@ -109,15 +109,11 @@ class GroupCalls internal constructor(
 
   /**
    * Keeps the face picked while joining or making the group [groupId], now the person is in it
-   * (spec/sync-protocol.md, Profile), as [keepProfile] keeps the usual ones: taken at once and sent
-   * by the kit whether the screen still waits or not, as it gives way to the group. Someone who had
-   * no usual name ([asUsual]), whose name joining or making the group made the usual one, keeps the
-   * face as theirs everywhere too, which the group then shows as it shows anyone's usual ones;
-   * anyone else's face, or one not kept as usual, is the group's own. A photo held for it goes from
-   * the device once kept.
+   * (spec/sync-protocol.md, Profile). Someone who had no usual name ([asUsual]), whose name joining
+   * or making the group made the usual one, keeps the face as theirs everywhere too, which the
+   * group then shows as it shows anyone's usual ones; anyone else's face, or one not kept as usual,
+   * is the group's own.
    */
-  fun keepFace(face: JoinFace, asUsual: Boolean, groupId: String): Deferred<Unit> = keep { sendFace(face, asUsual, groupId) }
-
   private suspend fun sendFace(face: JoinFace, asUsual: Boolean, groupId: String) {
     val usual =
       asUsual &&
@@ -146,15 +142,41 @@ class GroupCalls internal constructor(
         JoinFace.None -> setGroupPhoto(groupId, usual = false)
       }
     }
-    if (face is JoinFace.Held) releasePhoto(face.photoId)
   }
 
   /**
-   * Lets go of a held photo the person no longer means to send ([releasePhoto]), in turn after what
-   * was kept before it: a screen left as its face is being kept, or as the group it is for is still
-   * being made or joined ([making], [joining]), lets go only once that has gone.
+   * How many hold each photo held for a face ([holdPhoto]): the screens that show it as the face
+   * picked, and the call into a group begun with it. One not noted here, as after the app was
+   * ended, is held once.
    */
-  fun letGoOfPhoto(photoId: String): Deferred<Unit> = keep { releasePhoto(photoId) }
+  private val holders = HashMap<String, Int>()
+
+  /**
+   * One more holds the held photo [photoId]: the call into a group begun with it as the face, for
+   * as long as it is under way, and the screen opened again while that call is, which takes the
+   * call's face as its own ([GoingIn.Call.face]).
+   */
+  fun holdPhotoAgain(photoId: String) {
+    synchronized(holders) { holders[photoId] = (holders[photoId] ?: 1) + 1 }
+  }
+
+  /**
+   * One that held the held photo [photoId] lets go of it, in turn after what was kept before it:
+   * a screen left for good or its face changed, a call into a group that has ended. The photo goes
+   * from the device once none holds it, here alone: so a screen left while its call is under way
+   * takes nothing from the call, and a call that fails takes nothing from the screen that will ask
+   * again with the same face.
+   */
+  fun letGoOfPhoto(photoId: String): Deferred<Unit> = keep { letGo(photoId) }
+
+  private suspend fun letGo(photoId: String) {
+    val left = synchronized(holders) {
+      val left = (holders[photoId] ?: 1) - 1
+      if (left > 0) holders[photoId] = left else holders.remove(photoId)
+      left
+    }
+    if (left <= 0) photos.release(photoId)
+  }
 
   private fun <T> keep(send: suspend () -> T): Deferred<T> {
     val call = Kept(send)
@@ -194,23 +216,30 @@ class GroupCalls internal constructor(
 
   /**
    * [enter] puts the person in a group, and the face picked on the way is kept once they are in it
-   * ([keepFace]), so one that fails changes nothing; a face not kept leaves them in the group all
-   * the same. One of what the kit keeps, in its turn and whole: the photo held for the face is the
-   * call's until it has ended, so a screen left meanwhile, which lets go of its photo in turn
-   * ([letGoOfPhoto]), never takes it from under the call.
+   * ([sendFace]), so one that fails changes nothing; a face not kept leaves them in the group all
+   * the same. One of what the kit keeps, in its turn and whole. A photo held for the face is held
+   * by the call too from the moment it is begun until it has ended ([holdPhotoAgain],
+   * [letGoOfPhoto]), whatever becomes of the screen that asked.
    */
-  private fun entering(face: JoinFace, asUsual: Boolean, enter: suspend () -> String): Deferred<InGroup> = keep {
-    val groupId = enter()
-    val faceKept =
+  private fun entering(face: JoinFace, asUsual: Boolean, enter: suspend () -> String): Deferred<InGroup> {
+    val held = (face as? JoinFace.Held)?.photoId?.also(::holdPhotoAgain)
+    return keep {
       try {
-        sendFace(face, asUsual, groupId)
-        true
-      } catch (e: CancellationException) {
-        throw e
-      } catch (_: Exception) {
-        false
+        val groupId = enter()
+        val faceKept =
+          try {
+            sendFace(face, asUsual, groupId)
+            true
+          } catch (e: CancellationException) {
+            throw e
+          } catch (_: Exception) {
+            false
+          }
+        InGroup(groupId, faceKept)
+      } finally {
+        held?.let { letGo(it) }
       }
-    InGroup(groupId, faceKept)
+    }
   }
 
   /** Makes the group [request] asks for, with the user in it: the new group's id. One the server would refuse is not asked for. */
@@ -481,7 +510,7 @@ class GroupCalls internal constructor(
    * the page is saved: a group's mark, or a face chosen before joining. The id outlives the activity
    * made anew and the process's death, as the page's saved state does.
    */
-  suspend fun holdPhoto(jpeg: ByteArray): String = photos.hold(jpeg)
+  suspend fun holdPhoto(jpeg: ByteArray): String = photos.hold(jpeg).also { photoId -> synchronized(holders) { holders[photoId] = 1 } }
 
   /**
    * Sends a held photo ([holdPhoto]) to [shelf] under its id, as the page it was picked on is saved:
@@ -490,8 +519,6 @@ class GroupCalls internal constructor(
    */
   suspend fun sendHeldPhoto(photoId: String, shelf: PhotoShelf) = account.asSignedIn { photos.sendHeld(photoId, shelf, it) }
 
-  /** Lets go of a held photo the person no longer means to send, as a join screen closed without joining. */
-  suspend fun releasePhoto(photoId: String) = photos.release(photoId)
 
   /** Sends [jpeg] to [shelf], the user's own photos or a group's: the id to name it by. */
   suspend fun sendPhoto(jpeg: ByteArray, shelf: PhotoShelf): String {

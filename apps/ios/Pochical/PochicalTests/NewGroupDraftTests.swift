@@ -1,3 +1,4 @@
+import Foundation
 import PochicalKit
 import Testing
 
@@ -12,6 +13,8 @@ import Testing
   var draft = NewGroupDraft()
   draft.name = "忘年会"
   draft.profile.ownName = "幹事"
+  // A photo picked for the face is the draft's own bytes, so the call's record holds it too.
+  draft.profile.face = .picked(Data([1, 2, 3]))
   let request = draft.request(freeColor: 1, usualName: "さくら")
   draft.sent = request
   _ = draft.profile.goingOn(usualName: "さくら")
@@ -26,6 +29,7 @@ import Testing
   let reopened = try? #require(making.underWay?.asked)
   #expect(reopened?.profile.name(usual: "さくら") == "幹事")
   #expect(reopened?.profile.asUsual == false)
+  #expect(reopened?.profile.face == .picked(Data([1, 2, 3])))
   #expect(reopened?.request(freeColor: 1, usualName: "さくら") == request)
 }
 

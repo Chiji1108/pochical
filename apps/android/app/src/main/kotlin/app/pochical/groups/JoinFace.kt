@@ -139,17 +139,17 @@ class JoinProfile(ownName: TextFieldValue = TextFieldValue(), face: JoinFace = J
  * none until then; before that the row shows the usual ones as it reads them and nothing is put in
  * place. A drawing that cannot be drawn or held is none put in place.
  *
- * A photo held for the face goes from the device as the screen is left for good, in turn
- * ([GroupCalls.letGoOfPhoto]): after the kit's call into the group, which keeps the face, if the
- * person went on, though the screen was left while that call was still under way; not as the
- * phone turns.
+ * A photo held for the face is let go of by the screen as it is left for good, in turn
+ * ([GroupCalls.letGoOfPhoto]), not as the phone turns; it goes from the device once the call into
+ * the group begun with it, and a screen opened again that took it up, have let go of it too.
  */
 @Composable
 fun rememberJoinProfile(begun: JoinProfile? = null): JoinProfile {
   val context = LocalContext.current
   val calls = LocalGroupCalls.current
   val leavingForGood = rememberLeavingForGood()
-  val profile = rememberSaveable(saver = JoinProfile.Saver) { begun ?: JoinProfile() }
+  // A photo held for the face of a call under way is held by the screen that takes it up too.
+  val profile = rememberSaveable(saver = JoinProfile.Saver) { begun?.also { (it.face as? JoinFace.Held)?.let { held -> calls.holdPhotoAgain(held.photoId) } } ?: JoinProfile() }
   val usual = usualProfile()
   val userSocket by LocalAccount.current.userSocket.collectAsStateWithLifecycle(SocketState.Closed)
   val asking = usual?.let { profileAsking(userSocket, it) }

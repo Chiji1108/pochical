@@ -175,6 +175,9 @@ class FakeServer : AutoCloseable {
   /** The groups `CreateGroup` was asked to make, in the order they came. */
   val createdGroups = CopyOnWriteArrayList<CreateGroupRequest>()
 
+  /** Whether `CreateGroup` fails, as a server out of reach. */
+  @Volatile var createGroupFails = false
+
   /** How long `CreateGroup` takes to answer, in milliseconds. */
   @Volatile var createGroupDelayMs = 0L
 
@@ -348,8 +351,9 @@ class FakeServer : AutoCloseable {
             }
             "/pochical.v1.GroupService/CreateGroup" -> {
               Thread.sleep(createGroupDelayMs)
-              when (userOf(request.headers["Authorization"])) {
-                null -> refused("unauthenticated")
+              when {
+                createGroupFails -> MockResponse.Builder().code(500).build()
+                userOf(request.headers["Authorization"]) == null -> refused("unauthenticated")
                 else -> {
                   val asked = CreateGroupRequest.parseFrom(request.body!!.toByteArray())
                   createdGroups += asked

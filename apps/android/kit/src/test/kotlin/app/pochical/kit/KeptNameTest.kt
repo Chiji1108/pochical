@@ -139,4 +139,52 @@ class KeptNameTest {
     withTimeout(5_000) { letGo.await() }
     assertTrue("The face went to the group before its photo was let go of", face.photoId in server.groupPhotos)
   }
+
+  /**
+   * A photo picked for the face, 作る, the page left and opened again while the call is under way,
+   * and the call fails: the photo is still there for 作る again, which keeps the face.
+   */
+  @Test
+  fun aFaceIsKeptByTheRetryOfAPageOpenedAgainThoughTheFirstPageLetGoOfItsPhoto() = runBlocking {
+    phone.account.foreground()
+    phone.account.state.first { it is AccountState.SignedIn }
+    server.createGroupDelayMs = 300
+    server.createGroupFails = true
+    val face = JoinFace.Held(calls.holdPhoto(byteArrayOf(1, 2, 3)))
+    val first = calls.making.begin(group, face, asUsual = false)
+    // The first page is left, and the page opened again takes the call's face as its own.
+    calls.making.left(first)
+    calls.letGoOfPhoto(face.photoId)
+    calls.holdPhotoAgain(first.face.let { (it as JoinFace.Held).photoId })
+    calls.making.waitOn(first)
+    assertTrue(runCatching { withTimeout(5_000) { first.answer.await() } }.isFailure)
+    calls.making.took(first)
+
+    server.createGroupFails = false
+    val again = calls.making.begin(group, face, asUsual = false)
+    assertEquals(InGroup("group-${group.id}", faceKept = true), withTimeout(5_000) { again.answer.await() })
+    assertTrue(face.photoId in server.groupPhotos)
+    // The page gives way to the group: none holds the photo, and it goes.
+    withTimeout(5_000) { calls.letGoOfPhoto(face.photoId).await() }
+    assertTrue(runCatching { calls.sendHeldPhoto(face.photoId, PhotoShelf.Mine) }.exceptionOrNull() is MarkPhotoGone)
+  }
+
+  /** 作る with a photo for the face, the page left for good, and the call fails: the photo goes, once. */
+  @Test
+  fun aPhotoHeldForACallThatFailsAfterItsPageWasLeftGoesFromTheDevice() = runBlocking {
+    phone.account.foreground()
+    phone.account.state.first { it is AccountState.SignedIn }
+    server.createGroupDelayMs = 300
+    server.createGroupFails = true
+    val face = JoinFace.Held(calls.holdPhoto(byteArrayOf(1, 2, 3)))
+    val call = calls.making.begin(group, face, asUsual = false)
+    calls.making.left(call)
+    val letGo = calls.letGoOfPhoto(face.photoId)
+
+    assertTrue(runCatching { withTimeout(5_000) { call.answer.await() } }.isFailure)
+    withTimeout(5_000) { letGo.await() }
+    assertTrue(runCatching { calls.sendHeldPhoto(face.photoId, PhotoShelf.Mine) }.exceptionOrNull() is MarkPhotoGone)
+    // Let go of again by mistake, nothing is there to take.
+    withTimeout(5_000) { calls.letGoOfPhoto(face.photoId).await() }
+  }
 }
