@@ -2,6 +2,9 @@ package app.pochical.groups
 
 import app.pochical.calendar.monthDayText
 import app.pochical.chat.noticeWords
+import app.pochical.kit.GROUP_ENDS
+import app.pochical.kit.Localized
+import app.pochical.kit.groupEndOf
 import app.pochical.kit.groupEndsAt
 import app.pochical.string
 import app.pochical.v1.ChatNotice
@@ -51,5 +54,18 @@ class GroupEndWordsTest {
         }
       }
     assertEquals("", failed.joinToString("\n"))
+  }
+
+  @Test
+  fun theNotificationsBodyIsTheChatsLine() {
+    val resources = RuntimeEnvironment.getApplication().resources
+    val zone = ZoneId.of("Asia/Tokyo")
+    val cases = vectors("group-end", "notices").filter { it.string("kind") == "endsSoon" }
+    assertEquals(2, cases.size)
+    for (case in cases) {
+      // As the server sends it: the key GROUP_ENDS, its one argument the end in ms.
+      val body = Localized(GROUP_ENDS, listOf(groupEndsAt(LocalDate.parse(case.string("day")), zone).toString()))
+      assertEquals(case.string("expected"), groupEndsWords(resources, groupEndOf(body)!!, LocalDate.parse(case.string("today")), zone))
+    }
   }
 }

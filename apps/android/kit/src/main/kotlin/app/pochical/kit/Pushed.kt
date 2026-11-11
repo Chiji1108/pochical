@@ -29,6 +29,16 @@ data class PushedAlert(
   @Serializable data class Line(val authorId: String, val seq: Long)
 }
 
+/**
+ * The key of the body of the alert that a group ends soon (spec/sync-protocol.md, A group's end):
+ * the group's own, of no line, its one argument the end in ms since the epoch, which the device
+ * words as a day by its own clock.
+ */
+const val GROUP_ENDS = "GROUP_ENDS"
+
+/** When the group ends, as a [GROUP_ENDS] body's argument says it; null for anything but one moment after the epoch. */
+fun groupEndOf(body: Localized): Long? = body.args.singleOrNull()?.toLongOrNull()?.takeIf { it > 0 }
+
 /** A chat read up to [readTo] on another of the user's devices: `data.withdraw`. */
 @Serializable data class ChatWithdrawal(val groupId: String, val threadId: String, val readTo: Long)
 

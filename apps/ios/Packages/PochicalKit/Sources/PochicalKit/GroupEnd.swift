@@ -30,10 +30,31 @@ public enum GroupEnd {
     words(endDay(ms, in: zone), today: today)
   }
 
-  /// このグループは12月31日に終了します: what the group's chat says as its end
-  /// `ms` comes, and its join screen before joining.
+  /// このグループは12月31日に終了し、チャットや写真も消えます: what the
+  /// group's chat says before its end `ms` comes, with what goes, the
+  /// notification of that line, and its join screen before joining.
   public static func coming(_ ms: Int64, in zone: TimeZone, today: Day) -> String {
-    "このグループは\(words(endsAtMs: ms, in: zone, today: today))に終了します"
+    "このグループは\(words(endsAtMs: ms, in: zone, today: today))に終了し、チャットや写真も消えます"
+  }
+
+  /// The key of the notification that a group ends soon, its one argument
+  /// the end in ms since the epoch (spec/sync-protocol.md, A group's end).
+  public static let notificationKey = "GROUP_ENDS"
+
+  /// The words of the notification `payload` that a group ends soon, as a
+  /// device in `zone` says them on `today`: the chat line's own. Nil for
+  /// any other notification, or one whose argument is no moment, which
+  /// shows as it came.
+  public static func notificationWords(
+    payload: [AnyHashable: Any], in zone: TimeZone, today: Day
+  ) -> String? {
+    guard let aps = payload["aps"] as? [String: Any],
+      let alert = aps["alert"] as? [String: Any],
+      alert["loc-key"] as? String == notificationKey,
+      let args = alert["loc-args"] as? [String], args.count == 1,
+      let ms = Int64(args[0]), ms > 0
+    else { return nil }
+    return coming(ms, in: zone, today: today)
   }
 
   /// The days of `zone`'s clock, as `Day` names them.

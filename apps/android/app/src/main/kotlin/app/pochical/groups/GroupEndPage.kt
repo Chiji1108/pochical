@@ -1,5 +1,6 @@
 package app.pochical.groups
 
+import android.content.res.Resources
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -54,6 +55,14 @@ fun groupEnd(groupId: String): GroupEnd? {
   val endsAtMs by remember(values, groupId) { values.groupEnd(groupId) }.collectAsStateWithLifecycle(null)
   return endsAtMs?.let { ms -> GroupEnd(if (ms == 0L) null else groupEndDay(ms, ZoneId.systemDefault())) }
 }
+
+/**
+ * That a group ends, and what goes with it, on a device whose day is [today] in [zone]: the chat's
+ * own line before the end, the chat list's last line, the join screen's line and the notification's
+ * body, all these words (spec/vectors/group-end.json, notices, endsSoon).
+ */
+fun groupEndsWords(resources: Resources, endsAtMs: Long, today: LocalDate, zone: ZoneId): String =
+  resources.getString(R.string.group_ends_on, groupEndDay(endsAtMs, zone).monthDayText(today))
 
 /** A group's end in a row: the day, or なし. */
 @Composable

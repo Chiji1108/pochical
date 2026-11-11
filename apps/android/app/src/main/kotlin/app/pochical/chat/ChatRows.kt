@@ -51,6 +51,7 @@ import app.pochical.calendar.fullText
 import app.pochical.calendar.monthDayText
 import app.pochical.calendar.rememberToday
 import app.pochical.design.Chat
+import app.pochical.groups.groupEndsWords
 import app.pochical.design.Radius
 import app.pochical.kit.GroupMemberRow
 import app.pochical.kit.LineContent
@@ -290,7 +291,7 @@ fun noticeWords(resources: Resources, notice: ChatNotice, by: String, subject: S
     ChatNotice.Kind.KIND_INVITE_REMADE -> resources.getString(R.string.chat_notice_invite_remade, by)
     ChatNotice.Kind.KIND_END_SET -> resources.getString(R.string.chat_notice_end_set, by, end)
     ChatNotice.Kind.KIND_END_CLEARED -> resources.getString(R.string.chat_notice_end_cleared, by)
-    ChatNotice.Kind.KIND_ENDS_SOON -> resources.getString(R.string.group_ends_on, end)
+    ChatNotice.Kind.KIND_ENDS_SOON -> groupEndsWords(resources, notice.endsAtMs, today, zone)
     else ->
       when {
         notice.name.isNotEmpty() && notice.markChanged -> resources.getString(R.string.chat_notice_renamed_and_mark, by, notice.name)

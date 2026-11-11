@@ -76,11 +76,9 @@ import app.pochical.SettingsRow
 import app.pochical.design.GROUP_MAX_MEMBERS
 import app.pochical.design.Metrics
 import app.pochical.design.TextLimits
-import app.pochical.calendar.monthDayText
 import app.pochical.calendar.rememberToday
 import app.pochical.kit.InviteDetails
 import app.pochical.kit.InviteFailure
-import app.pochical.kit.groupEndDay
 import app.pochical.kit.PhotoShelf
 import app.pochical.kit.fitsPersonName
 import app.pochical.rowColors
@@ -240,7 +238,7 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
             // The group's end, said where joining is decided, as this device's clock shows it.
             if (shown.endsAtMs != 0L) {
               Text(
-                stringResource(R.string.group_ends_on, groupEndDay(shown.endsAtMs, ZoneId.systemDefault()).monthDayText(rememberToday())),
+                groupEndsWords(LocalResources.current, shown.endsAtMs, rememberToday(), ZoneId.systemDefault()),
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
               )

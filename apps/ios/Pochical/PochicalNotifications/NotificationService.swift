@@ -8,8 +8,9 @@ import UserNotifications
 
 /// Puts a chat line's notification as a message from its writer
 /// (spec/chat.md, Notifications): their face and name, and for the group's
-/// chat the group's name and mark, as the system shows a conversation. What
-/// it cannot read yet, before the app has the group, shows as it came.
+/// chat the group's name and mark, as the system shows a conversation, and
+/// words the notification that a group ends soon. What it cannot read yet,
+/// before the app has the group, shows as it came.
 final class NotificationService: UNNotificationServiceExtension {
   /// What to show should iOS end the extension first: as it came.
   private var cut: (() -> Void)?
@@ -48,6 +49,16 @@ final class NotificationService: UNNotificationServiceExtension {
   ) async -> UNNotificationContent {
     let content = request.content
     let payload = content.userInfo
+    // That the group ends soon (spec/sync-protocol.md, A group's end): the
+    // chat line's own words, the day by this device's clock, under the
+    // group's name as it came. It is the group's own, of no line and no
+    // writer, so it stays a plain notification, not a message from someone.
+    if let words = GroupEnd.notificationWords(payload: payload, in: .current, today: .today),
+      let worded = content.mutableCopy() as? UNMutableNotificationContent
+    {
+      worded.body = words
+      return worded
+    }
     // The chat with Pochical's people stays a plain notification: only
     // they write there, so it has no writer of its own to show.
     guard let line = NotifiedLine(id: request.identifier, payload: payload),

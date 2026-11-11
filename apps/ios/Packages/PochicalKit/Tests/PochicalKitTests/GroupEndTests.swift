@@ -69,6 +69,61 @@ func theChatSaysAGroupsEnd(_ vector: GroupEndVectors.Notice) throws {
     notice.words(by: vector.by ?? "", subject: "", zone: zone, today: today) == vector.expected)
 }
 
+/// The server's notification that a group ends soon (apns.ts payloadOf),
+/// its alert's body `key` with `args`.
+private func endsPayload(key: String = "GROUP_ENDS", args: Any? = ["1798729200000"])
+  -> [AnyHashable: Any]
+{
+  var alert: [String: Any] = [
+    "title-loc-key": "CHAT_TITLE", "title-loc-args": ["忘年会"], "loc-key": key,
+  ]
+  alert["loc-args"] = args
+  return [
+    "aps": ["alert": alert, "mutable-content": 1, "thread-id": "g1/group"],
+    "groupId": "g1", "threadId": "group", "recipientId": "u1",
+  ]
+}
+
+@Test func theNotificationThatAGroupEndsSaysTheChatLinesWordsByTheDevicesClock() throws {
+  let tokyo = try #require(TimeZone(identifier: "Asia/Tokyo"))
+  let auckland = try #require(TimeZone(identifier: "Pacific/Auckland"))
+  let today = Day(year: 2026, month: 12, day: 30)
+  let line = LineNotice(kind: .endsSoon, endsAtMs: 1_798_729_200_000)
+  #expect(
+    GroupEnd.notificationWords(payload: endsPayload(), in: tokyo, today: today)
+      == "このグループは12月31日に終了し、チャットや写真も消えます")
+  #expect(
+    GroupEnd.notificationWords(payload: endsPayload(), in: tokyo, today: today)
+      == line.words(by: "", subject: "", zone: tokyo, today: today))
+  #expect(
+    GroupEnd.notificationWords(payload: endsPayload(), in: auckland, today: today)
+      == "このグループは2027年1月1日に終了し、チャットや写真も消えます")
+}
+
+@Test(arguments: [
+  endsPayload(key: "CHAT_GROUP_TEXT", args: ["さくら", "1798729200000"]),
+  endsPayload(key: "CHAT_TEXT"),
+  endsPayload(args: nil),
+  endsPayload(args: []),
+  endsPayload(args: ["あした"]),
+  endsPayload(args: ["0"]),
+  endsPayload(args: ["-5"]),
+  endsPayload(args: [1_798_729_200_000]),
+  endsPayload(args: ["1798729200000", "1798729200000"]),
+  ["groupId": "g1"],
+].map(Payload.init))
+func aNotificationOfAnythingElseOrWithNoMomentShowsAsItCame(_ payload: Payload) throws {
+  let tokyo = try #require(TimeZone(identifier: "Asia/Tokyo"))
+  let today = Day(year: 2026, month: 12, day: 30)
+  #expect(GroupEnd.notificationWords(payload: payload.value, in: tokyo, today: today) == nil)
+}
+
+/// A notification's payload, which is not Sendable, as a test's argument.
+struct Payload: @unchecked Sendable, CustomTestStringConvertible {
+  let value: [AnyHashable: Any]
+  var testDescription: String { String(describing: value["aps"] ?? value) }
+}
+
 private func change(_ cursor: UInt64, _ fill: (inout Pochical_V1_Change) -> Void)
   -> Pochical_V1_Change
 {
