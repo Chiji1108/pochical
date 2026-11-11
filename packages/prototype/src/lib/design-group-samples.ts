@@ -1,3 +1,6 @@
+import cat from "../../../../tools/store-screenshots/avatars/cat.jpg?url";
+import coffee from "../../../../tools/store-screenshots/avatars/coffee.jpg?url";
+import flower from "../../../../tools/store-screenshots/avatars/flower.jpg?url";
 import { holidayName } from "../components/design-week";
 import { guessLook, sampleLooks } from "../components/shift-mark";
 import type { Look } from "../components/shift-mark";
@@ -281,16 +284,17 @@ export const schoolFriends = (): Member[] => [
 // 職場のみんな: the group the stores' screenshots are photographed in
 // (tools/store-screenshots/seed.ts), which the site's top page shows too.
 // Three coworkers on 二交代制 who have not exchanged contacts, so they
-// speak politely and keep no picture of themselves. Each one's eight days
-// end on the same two days off, the days everyone is off.
+// speak politely, and whose photos are the seed's own, pictures of things
+// rather than of themselves. Each one's eight days end on the same two
+// days off, the days everyone is off.
 const workplaceRounds = [
-  ["tanaka", "田中", "day night after off day day off off"],
-  ["kobayashi", "小林", "night after off day day day off off"],
-  ["mori", "森", "day day off night after day off off"],
+  ["tanaka", "田中", coffee, "day night after off day day off off"],
+  ["kobayashi", "小林", cat, "night after off day day day off off"],
+  ["mori", "森", flower, "day day off night after day off off"],
 ] as const;
 
 export const workplace = (): Member[] =>
-  workplaceRounds.map(([id, name, shifts]) => {
+  workplaceRounds.map(([id, name, photo, shifts]) => {
     const round = shifts.split(" ");
     return {
       id,
@@ -298,6 +302,7 @@ export const workplace = (): Member[] =>
       patterns: presetList(["day", "night", "after", "off"]).map(
         memberPatternOf
       ),
+      photo,
       shiftOn: (date: Date) => round[(dayNumber(date) + 5) % round.length],
     };
   });
