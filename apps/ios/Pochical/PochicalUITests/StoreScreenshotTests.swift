@@ -2,7 +2,9 @@ import XCTest
 
 /// The screens the stores' screenshots are drawn from (#806), photographed
 /// in the order the app is walked rather than the stores': the sample
-/// month and 端末カレンダーに追加; 学生時代の友だち's 一覧, joined as まい,
+/// month's day of 早出 opened and リマインド's reminder of the evening
+/// before; the sample month and 端末カレンダーに追加; 学生時代の友だち's
+/// 一覧, joined as まい,
 /// and 職場のみんな's 全体チャット, joined as 佐藤; a page of a シフトの期間
 /// from the 15th; the widgets, each put on the Home Screen in turn, those
 /// that can be set to someone also set to the group's first member and to
@@ -10,8 +12,9 @@ import XCTest
 /// (`Style.sumi`), and the month with its shifts as letters
 /// (`Style.letters`); then, as they change the month's days, ポチポチ入力
 /// halfway through it, as the app starts again, and いまのシフト's widget
-/// once more with a shift on; and last, as it changes the job,
-/// 繰り返しを直す on a fixed cycle. Each is kept as the file
+/// once more with a shift on; as it changes the job, 繰り返しを直す on a
+/// fixed cycle; and last, as it leaves a group, グループの設定 of one made
+/// with an end. Each is kept as the file
 /// `packages/prototype/src/lib/store-shots.ts` names. Run by
 /// `mise run store:shots:ios`, against the local server it seeds; skipped
 /// without it.
@@ -27,6 +30,33 @@ final class StoreScreenshotTests: XCTestCase {
     }
     raw = URL(filePath: dir)
     app = XCUIApplication()
+  }
+
+  /// What the cares' shot shows of the app as it starts: the sample's day of
+  /// 早出 opened, its week over its 時間, and リマインド's reminder of the
+  /// evening before, the next notification as its page draws it.
+  @MainActor
+  func test00Cares() throws {
+    launch()
+    day(Calendar.current.component(.month, from: .now), 13, holding: "日勤、早出").tap()
+    let reset = app.buttons.matching(NSPredicate(format: "label BEGINSWITH '標準'")).firstMatch
+    XCTAssertTrue(reset.waitForExistence(timeout: 5), "the day's hours differ from 日勤's")
+    // From under the month's name, the weekdays and the day's week, to the foot of 時間.
+    let month = app.staticTexts.matching(NSPredicate(format: "label MATCHES '[0-9]+年[0-9]+月'"))
+      .firstMatch
+    try snap("08-cares-hours", from: month.frame.maxY, until: reset.frame.minY)
+    app.buttons["閉じる"].tap()
+
+    app.tabBars.buttons["設定"].tap()
+    open(page: "リマインド")
+    press("前日")
+    XCTAssertTrue(app.navigationBars["リマインドを編集"].waitForExistence(timeout: 5), "the reminder opens")
+    let heading = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH '次の通知'")).firstMatch
+    let banner = app.otherElements.matching(NSPredicate(format: "label BEGINSWITH '通知：'")).firstMatch
+    XCTAssertTrue(banner.waitForExistence(timeout: 5), "the next notification is drawn")
+    // The notification under its heading, with the room under it that it has at its sides.
+    try snap(
+      "08-cares-reminder", from: heading.frame.minY, until: banner.frame.maxY + banner.frame.minX)
   }
 
   @MainActor
@@ -221,6 +251,34 @@ final class StoreScreenshotTests: XCTestCase {
       until: rowTop(DateComponents(year: today.year, month: today.month! + 1, day: 1), after: 21))
   }
 
+  /// A group with an end, 忘年会, made in グループを作る with 終了日をつける on,
+  /// the day it offers a month from today: グループの設定's rows of it, with
+  /// what they say under them. After everything else, as it leaves a group.
+  @MainActor
+  func test12GroupEnd() throws {
+    launch()
+    app.tabBars.buttons["グループ"].tap()
+    press("グループを作る")
+    let name = app.textFields.firstMatch
+    XCTAssertTrue(name.waitForExistence(timeout: 5), "the group's name can be typed")
+    name.tap()
+    name.typeText("忘年会")
+    press("終了日")
+    XCTAssertTrue(app.navigationBars["終了日"].waitForExistence(timeout: 5), "終了日 opens")
+    app.switches["終了日をつける"].switches.firstMatch.tap()
+    app.navigationBars["終了日"].buttons["保存"].tap()
+    app.navigationBars["グループを作る"].buttons["作る"].tap()
+    XCTAssertTrue(app.navigationBars["メンバーを招待"].waitForExistence(timeout: 15), "the group is made")
+    app.navigationBars["メンバーを招待"].buttons.firstMatch.tap()
+    press("グループの設定")
+    XCTAssertTrue(app.navigationBars["グループの設定"].waitForExistence(timeout: 5), "its settings open")
+    // The section グループ, down to the one after it.
+    let rows = app.collectionViews.firstMatch
+    let after = rows.staticTexts["このグループでのあなた"]
+    XCTAssertTrue(after.waitForExistence(timeout: 5), "the settings show")
+    try snap("08-cares-group-end", from: rows.staticTexts["グループ"].frame.minY, until: after.frame.minY)
+  }
+
   /// Taps the button whose words hold `name`, a page down where the page
   /// does not show it yet.
   @MainActor private func press(_ name: String) {
@@ -296,8 +354,7 @@ final class StoreScreenshotTests: XCTestCase {
   }
 
   /// Keeps as `name` the part of the screen from `top` down to `foot`, as
-  /// wide as the screen: whole rows of it, for a tile of the details'
-  /// shot.
+  /// wide as the screen: whole rows of it, for a tile of a shot of them.
   @MainActor private func snap(_ name: String, from top: CGFloat, until foot: CGFloat) throws {
     let screen = XCUIScreen.main.screenshot().image
     let rows = CGRect(

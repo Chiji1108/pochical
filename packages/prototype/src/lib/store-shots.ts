@@ -76,7 +76,8 @@ export type WallPin = {
 // pinned where they show whole; the themes' shot sets the month in 墨 and
 // in letters side by side, the app as it starts being in the others; the
 // details' shot sets three parts of screens one over the other, each for
-// those whose roster has that way of its own.
+// those whose roster has that way of its own, and the cares' shot three
+// more, each a small thing the app looks after.
 export const STORE_SHOTS = [
   {
     headline: ["勤務表を見ながら、", "ポチポチ。"],
@@ -134,6 +135,25 @@ export const STORE_SHOTS = [
       {
         raw: "07-details-repeat.png",
         words: "決まった並びは、繰り返しで",
+      },
+    ],
+  },
+  {
+    headline: ["小さな気づかいも。"],
+    kind: "tiles",
+    name: "cares",
+    tiles: [
+      {
+        raw: "08-cares-hours.png",
+        words: "早出・残業が、アイコンでわかる",
+      },
+      {
+        raw: "08-cares-reminder.png",
+        words: "前の晩に、明日のシフトをお知らせ",
+      },
+      {
+        raw: "08-cares-group-end.png",
+        words: "グループに、終了日をつけられる",
       },
     ],
   },
