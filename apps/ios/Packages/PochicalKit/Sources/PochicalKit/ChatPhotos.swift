@@ -147,14 +147,21 @@ public enum ChatPhotos {
   /// Where a group's photo is kept on the device once seen or sent: among
   /// the App Group's caches, so the widgets show the faces too.
   static func cached(_ photoID: String, in shelf: PhotoShelf) -> URL {
-    caches("ChatPhotos/\(shelf.key)").appending(path: "\(photoID).jpg")
+    cachedFolder(of: shelf).appending(path: "\(photoID).jpg")
   }
 
   /// Where the member's own photo waits until uploaded, out of the caches
   /// the system may empty.
   static func pending(_ photoID: String, in shelf: PhotoShelf) -> URL {
+    pendingFolder(of: shelf).appending(path: "\(photoID).jpg")
+  }
+
+  private static func cachedFolder(of shelf: PhotoShelf) -> URL {
+    caches("ChatPhotos/\(shelf.key)")
+  }
+
+  private static func pendingFolder(of shelf: PhotoShelf) -> URL {
     directory(.applicationSupportDirectory, "PendingPhotos/\(shelf.key)")
-      .appending(path: "\(photoID).jpg")
   }
 
   /// Keeps the member's own photo to send: until uploaded, and to show.
@@ -182,6 +189,14 @@ public enum ChatPhotos {
     try? FileManager.default.removeItem(at: pending(photoID, in: shelf))
     NotificationCenter.default.post(
       name: forgotten, object: nil, userInfo: ["photoID": photoID, "shelf": shelf])
+  }
+
+  /// Takes every photo of `shelf` off the device, to send or to show, as
+  /// when its group is left or ends. What the app's image cache holds of
+  /// them goes as it hears the group left (`groupLeft`).
+  static func forgetAll(in shelf: PhotoShelf) {
+    try? FileManager.default.removeItem(at: cachedFolder(of: shelf))
+    try? FileManager.default.removeItem(at: pendingFolder(of: shelf))
   }
 
   /// Every photo kept on the device, to send or to show, and links'

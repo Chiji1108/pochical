@@ -191,6 +191,12 @@ internal interface SyncDao : ChatDao {
 
   @Query("DELETE FROM groupCursors WHERE groupId = :groupId") suspend fun deleteGroupCursor(groupId: String)
 
+  @Upsert suspend fun upsert(end: GroupEndRow)
+
+  @Query("DELETE FROM groupEnds WHERE groupId = :groupId") suspend fun deleteGroupEnd(groupId: String)
+
+  @Query("DELETE FROM groupEnds") suspend fun deleteGroupEnds()
+
   @Query("DELETE FROM outbox") suspend fun deleteOutbox()
 
   @Query("DELETE FROM groupMembers") suspend fun deleteAllMembers()

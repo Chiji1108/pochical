@@ -155,7 +155,17 @@ class SyncClient internal constructor(
    * The groups held before a Reset of the user's socket, with their faces then, until its catch-up
    * has come: kept over the sockets in between, as the catch-up starts again on each.
    */
-  private var heldBeforeReset: Map<String, List<String>>? = null
+  @Volatile private var heldBeforeReset: Map<String, List<String>>? = null
+
+  /**
+   * The groups the device holds as the user's socket knows: those listed, and those a Reset emptied
+   * the list of, until its catch-up has listed them again or said they are gone. The list is read
+   * first: a Reset notes what it held before the emptied list can be read.
+   */
+  suspend fun groupsHeld(): Set<String> {
+    val listed = database.read { groupIds() }
+    return listed.toSet() + heldBeforeReset?.keys.orEmpty()
+  }
 
   init {
     scope.launch { run() }
@@ -374,8 +384,12 @@ class SyncClient internal constructor(
         } else {
           // Those held before an earlier Reset whose catch-up has not come yet are still to be found.
           val before = heldBeforeReset.orEmpty()
-          val held = write { facesHeld().also { reset() } }
-          heldBeforeReset = (before.keys + held.keys).associateWith { (before[it].orEmpty() + held[it].orEmpty()).distinct() }
+          write {
+            val held = facesHeld()
+            // Noted before the emptied list can be read, so no group reads as let go of meanwhile ([groupsHeld]).
+            heldBeforeReset = (before.keys + held.keys).associateWith { (before[it].orEmpty() + held[it].orEmpty()).distinct() }
+            reset()
+          }
         }
       ServerFrame.KindCase.ACKED -> {
         val acked = frame.acked

@@ -90,4 +90,14 @@ public interface GetInviteResponseOrBuilder extends
    * @return The full.
    */
   boolean getFull();
+
+  /**
+   * <pre>
+   * When the group ends, as GroupProfile.ends_at_ms; 0 for none.
+   * </pre>
+   *
+   * <code>int64 ends_at_ms = 8 [json_name = "endsAtMs"];</code>
+   * @return The endsAtMs.
+   */
+  long getEndsAtMs();
 }

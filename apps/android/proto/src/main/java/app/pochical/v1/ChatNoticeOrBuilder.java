@@ -72,4 +72,15 @@ public interface ChatNoticeOrBuilder extends
    * @return The markChanged.
    */
   boolean getMarkChanged();
+
+  /**
+   * <pre>
+   * END_SET, ENDS_SOON: when the group ends, as GroupProfile.ends_at_ms,
+   * which each device words as a day by its own clock.
+   * </pre>
+   *
+   * <code>int64 ends_at_ms = 5 [json_name = "endsAtMs"];</code>
+   * @return The endsAtMs.
+   */
+  long getEndsAtMs();
 }

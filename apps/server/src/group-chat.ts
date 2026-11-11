@@ -303,6 +303,9 @@ const sentPhoto = (photo: KeptPhoto) => ({
 
 /** The wire's kind of each notice kept. */
 const noticeKinds = {
+  endCleared: ChatNotice_Kind.END_CLEARED,
+  endSet: ChatNotice_Kind.END_SET,
+  endsSoon: ChatNotice_Kind.ENDS_SOON,
   inviteRemade: ChatNotice_Kind.INVITE_REMADE,
   joined: ChatNotice_Kind.JOINED,
   left: ChatNotice_Kind.LEFT,
@@ -351,6 +354,7 @@ const contentWire = (
         kind: {
           case: "notice",
           value: {
+            endsAtMs: BigInt(notice.endsAt ?? 0),
             kind: noticeKinds[notice.kind],
             markChanged: notice.markChanged ?? false,
             name: notice.name ?? "",
@@ -1868,6 +1872,22 @@ export const alertOf = (
 };
 
 /**
+ * The notification that a group ends soon (spec/sync-protocol.md, A
+ * group's end): titled with the group as its chat's lines are, its body
+ * the moment it ends, which each device words as a day by its own clock.
+ * It is of no line: no one wrote it, and no read takes it back.
+ */
+export const endAlertOf = (
+  group: { id: string; name: string },
+  endsAt: number
+): Alert => ({
+  body: { args: [String(endsAt)], key: "GROUP_ENDS" },
+  groupId: group.id,
+  threadId: GROUP_THREAD,
+  title: { args: [group.name], key: "CHAT_TITLE" },
+});
+
+/**
  * Who would not hear of a line by `authorId`, having blocked them: read
  * once for all of a line's readers.
  */
@@ -1887,8 +1907,11 @@ export const blockersOf = (
 /**
  * A line from the app at 全体チャット's end (spec/chat.md, Notices), written
  * as `authorId` changes the group: who is in it, the way in, or what it
- * is. Never unread, and never notified.
+ * is; `NO_AUTHOR` for the group's own, that it ends soon. Never unread,
+ * and never notified but for that one (GroupDO.takeEnd).
  */
+export const NO_AUTHOR = "";
+
 export const writeNotice = (
   db: DrizzleSqliteDODatabase,
   authorId: string,

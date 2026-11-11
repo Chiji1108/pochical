@@ -574,4 +574,77 @@ class SyncTest {
     val hello = server.sockets[1].first().hello
     assertTrue("moved at cursor ${hello.cursor}, not after all ${dates.size} frames", hello.cursor < dates.size)
   }
+
+  /** The groups the device lists, by id. */
+  private suspend fun Device.listed() = database.values().groups().first().map { it.id }.toSet()
+
+  /** A phone in the groups g1 and g2, its socket current, and each group it is told it left, in order. */
+  private suspend fun inTwoGroups(): Pair<Device, List<String>> {
+    val phone = device()
+    val left = CopyOnWriteArrayList<String>()
+    phone.scope.launch(start = kotlinx.coroutines.CoroutineStart.UNDISPATCHED) { phone.account.left.collect { left += it } }
+    server.membership("g1")
+    server.membership("g2")
+    phone.account.foreground()
+    withTimeout(10_000) { phone.current() }
+    eventually { phone.listed() == setOf("g1", "g2") }
+    return phone to left
+  }
+
+  /** The phone's socket closed and opened again, as the app leaves the front and comes back. */
+  private suspend fun Device.reconnect() {
+    account.background()
+    withTimeout(10_000) { account.userSocket.first { it == SocketState.Closed } }
+    account.foreground()
+  }
+
+  @Test
+  fun aResetWhoseCatchUpListsTheGroupsAgainLeavesNoneOfThem() = runBlocking {
+    val (phone, left) = inTwoGroups()
+    server.restoreOlder(holdingCatchUp = true)
+    phone.reconnect()
+
+    // The Reset empties the list until its catch-up comes: the groups are held all the same.
+    eventually { phone.listed().isEmpty() }
+    assertEquals(setOf("g1", "g2"), phone.account.groupsHeld())
+    assertEquals(emptyList<String>(), left.toList())
+
+    server.releaseCatchUp()
+    withTimeout(10_000) { phone.current() }
+    assertEquals(setOf("g1", "g2"), phone.listed())
+    assertEquals(setOf("g1", "g2"), phone.account.groupsHeld())
+    assertEquals(emptyList<String>(), left.toList())
+  }
+
+  @Test
+  fun aResetWhoseCatchUpNoLongerMentionsAGroupLeavesItOnce() = runBlocking {
+    val (phone, left) = inTwoGroups()
+    server.restoreOlder(forgetting = setOf("g2"))
+    phone.reconnect()
+
+    eventually { left.toList() == listOf("g2") }
+    withTimeout(10_000) { phone.current() }
+    assertEquals(setOf("g1"), phone.listed())
+    assertEquals(setOf("g1"), phone.account.groupsHeld())
+    // Nor again on the next socket, whose catch-up has nothing more to say of it.
+    phone.reconnect()
+    withTimeout(10_000) { phone.current() }
+    assertEquals(listOf("g2"), left.toList())
+  }
+
+  @Test
+  fun aResetWhoseCatchUpSaysAGroupWasLeftLeavesItOnce() = runBlocking {
+    val (phone, left) = inTwoGroups()
+    phone.account.background()
+    withTimeout(10_000) { phone.account.userSocket.first { it == SocketState.Closed } }
+    server.membership("g2", left = true)
+    server.restoreOlder()
+    phone.account.foreground()
+
+    eventually { left.toList() == listOf("g2") }
+    withTimeout(10_000) { phone.current() }
+    assertEquals(setOf("g1"), phone.listed())
+    assertEquals(setOf("g1"), phone.account.groupsHeld())
+    assertEquals(listOf("g2"), left.toList())
+  }
 }

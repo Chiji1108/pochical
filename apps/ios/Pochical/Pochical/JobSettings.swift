@@ -341,7 +341,6 @@ struct JobChangePage: View {
 
 
   private func date(of day: Day) -> Date {
-    Calendar.current.date(from: DateComponents(year: day.year, month: day.month, day: day.day))
-      ?? .now
+    day.date(in: .current)
   }
 }

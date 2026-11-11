@@ -12,7 +12,7 @@ public inline fun groupProfile(block: app.pochical.v1.GroupProfileKt.Dsl.() -> k
   app.pochical.v1.GroupProfileKt.Dsl._create(app.pochical.v1.GroupProfile.newBuilder()).apply { block() }._build()
 /**
  * ```
- * The group's name and mark, as its members see them: one value.
+ * The group's name, mark and end, as its members see them: one value.
  * ```
  *
  * Protobuf type `pochical.v1.GroupProfile`
@@ -84,6 +84,37 @@ public object GroupProfileKt {
 
     public val GroupProfileKt.Dsl.markOrNull: app.pochical.v1.GroupMark?
       get() = _builder.markOrNull
+
+    /**
+     * ```
+     * When the group ends for everyone, in ms since the epoch: the moment
+     * its end date ends where it was set (spec/sync-protocol.md, A group's
+     * end). Each device shows the day that moment closes by its own clock.
+     * 0 for a group with no end.
+     * ```
+     *
+     * `int64 ends_at_ms = 4 [json_name = "endsAtMs"];`
+     */
+    public var endsAtMs: kotlin.Long
+      @kotlin.jvm.JvmName("getEndsAtMs")
+        get() = _builder.endsAtMs
+      @kotlin.jvm.JvmName("setEndsAtMs")
+        set(value) {
+        _builder.endsAtMs = value
+      }
+    /**
+     * ```
+     * When the group ends for everyone, in ms since the epoch: the moment
+     * its end date ends where it was set (spec/sync-protocol.md, A group's
+     * end). Each device shows the day that moment closes by its own clock.
+     * 0 for a group with no end.
+     * ```
+     *
+     * `int64 ends_at_ms = 4 [json_name = "endsAtMs"];`
+     */
+    public fun clearEndsAtMs() {
+      _builder.clearEndsAtMs()
+    }
   }
 }
 public inline fun app.pochical.v1.GroupProfile.copy(block: `app.pochical.v1`.GroupProfileKt.Dsl.() -> kotlin.Unit): app.pochical.v1.GroupProfile =

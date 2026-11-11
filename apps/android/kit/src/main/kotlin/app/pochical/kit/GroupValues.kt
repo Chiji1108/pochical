@@ -99,6 +99,7 @@ internal suspend fun SyncDao.resetGroup(groupId: String) {
   deleteGroupPatterns(groupId)
   deleteGroupOrders(groupId)
   deleteGroupCursor(groupId)
+  deleteGroupEnd(groupId)
   resetChats(groupId)
 }
 
@@ -109,6 +110,8 @@ private suspend fun SyncDao.take(change: Change, groupId: String) {
       // The list of groups shows the name and mark the group last said.
       val mark = change.groupProfile.mark.value
       updateGroup(groupId, change.groupProfile.name, mark.emoji, mark.icon, mark.letter, mark.color, mark.photoId)
+      val endsAtMs = change.groupProfile.endsAtMs
+      if (endsAtMs == 0L) deleteGroupEnd(groupId) else upsert(GroupEndRow(groupId, endsAtMs))
     }
     KindCase.MEMBER -> {
       val member = change.member

@@ -20,6 +20,7 @@ import chatMessages from "../../../spec/vectors/chat.json";
 import dayNames from "../../../spec/vectors/day-names.json";
 import entering from "../../../spec/vectors/entering.json";
 import fits from "../../../spec/vectors/fits.json";
+import groupEnd from "../../../spec/vectors/group-end.json";
 import groupVectors from "../../../spec/vectors/groups.json";
 import hlc from "../../../spec/vectors/hlc.json";
 import localEdits from "../../../spec/vectors/local-edits.json";
@@ -175,6 +176,8 @@ import type {
   WidgetPerson,
   WidgetPersonDay,
 } from "../src/lib/design-widgets";
+import { endNotice, endWords, firstEndDay } from "../src/lib/group-end";
+import type { EndNotice } from "../src/lib/group-end";
 import { clockOffset, receive, tick } from "../src/lib/hlc";
 import { noValue, shownValue, takeEvent } from "../src/lib/local-edits";
 import type { LocalEvent } from "../src/lib/local-edits";
@@ -1413,6 +1416,14 @@ describe("spec/vectors/local-edits.json", () => {
   }
 });
 
+// A notice of a group's end as the vectors name one.
+function endNoticeOf(kind: string, by: string, day: string): EndNotice {
+  if (kind === "endSet") {
+    return { by, day, kind };
+  }
+  return kind === "endCleared" ? { by, kind } : { day, kind: "endsSoon" };
+}
+
 describe("spec/vectors/reconnect.json", () => {
   for (const { name, tries, firstMs, mostMs, expected } of reconnect.waitMost) {
     test(name, () => {
@@ -1439,6 +1450,28 @@ describe("spec/vectors/thumbhash.json", () => {
           (value, index) => Math.abs(value - (expected[index] ?? 0)) <= 1
         )
       ).toBe(true);
+    });
+  }
+});
+
+// endsAt and endDay are the device's clock's, which a browser has one of:
+// the apps check them in each of the vectors' time zones.
+describe("spec/vectors/group-end.json", () => {
+  for (const { today, expected } of groupEnd.firstDay) {
+    test(`firstDay: after ${today}`, () => {
+      expect(firstEndDay(today)).toBe(expected);
+    });
+  }
+  for (const { day, today, expected } of groupEnd.words) {
+    test(`words: ${day} on ${today}`, () => {
+      expect(endWords(day, today)).toBe(expected);
+    });
+  }
+  for (const { kind, by, day, today, expected } of groupEnd.notices) {
+    test(`notices: ${expected}`, () => {
+      expect(endNotice(endNoticeOf(kind, by ?? "", day ?? ""), today)).toBe(
+        expected
+      );
     });
   }
 });

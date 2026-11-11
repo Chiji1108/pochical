@@ -64,6 +64,28 @@ class PushedTest {
   }
 
   @Test
+  fun thatAGroupEndsIsOfNoLineAndSaysItsEndAsAMoment() {
+    // As apps/server/src/group-chat.ts words it: the end in ms as a decimal string, and no line.
+    val data =
+      mapOf(
+        "alert" to
+          """{"title":{"key":"CHAT_TITLE","args":["忘年会"]},"body":{"key":"GROUP_ENDS","args":["1798729200000"]},""" +
+            """"groupId":"g1","threadId":"group","badge":0,"recipientId":"u2"}"""
+      )
+    val alert = (pushedOf(data) as Pushed.Alert).alert
+    assertNull(alert.line)
+    assertEquals(GROUP_ENDS, alert.body.key)
+    assertEquals(1798729200000, groupEndOf(alert.body))
+  }
+
+  @Test
+  fun anEndThatIsNotOneMomentIsNone() {
+    for (args in listOf(emptyList(), listOf(""), listOf("12月31日"), listOf("0"), listOf("-5"), listOf("1.5e12"), listOf("1798729200000", "1"))) {
+      assertNull("$args", groupEndOf(Localized(GROUP_ENDS, args)))
+    }
+  }
+
+  @Test
   fun aWithdrawalIsReadAsTheServerSendsIt() =
     assertEquals(
       Pushed.Withdraw(ChatWithdrawal("g1", "group", 5)),

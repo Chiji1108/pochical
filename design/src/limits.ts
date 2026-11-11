@@ -54,6 +54,20 @@ export const POLL_MIN_DAYS = 2;
 // it only caps what a leaked invitation link can let in.
 export const GROUP_MAX_MEMBERS = 100;
 
+// The fewest hours ahead a group's end may be set (spec/sync-protocol.md,
+// A group's end). The apps offer end dates from tomorrow on, whose end is
+// a day away or more on any ordinary clock; the server, which knows no
+// one's time zone, holds an end to this, a little under a day so that a
+// clock put forward that night refuses no one.
+export const GROUP_END_MIN_HOURS = 20;
+
+// How many hours before a group's end its chat says it ends soon, and
+// its members' devices are notified (spec/sync-protocol.md, A group's end):
+// a day and a half, which is midday of the day before its last day where
+// the end date was picked, as an end is that day's end. Near enough to
+// the occasion to be remembered, and never in the middle of the night.
+export const GROUP_END_NOTICE_HOURS = 36;
+
 // The most people one person keeps in 一緒に働く人. Room for a whole
 // ward or shop, so it only caps what one account stores and syncs.
 export const COWORKERS_MAX = 100;

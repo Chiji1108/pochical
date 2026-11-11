@@ -14,6 +14,7 @@ import app.pochical.kit.GroupRow
 import app.pochical.kit.ReadState
 import app.pochical.kit.Localized
 import app.pochical.kit.PushedAlert
+import java.time.ZoneId
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -39,6 +40,9 @@ class ChatNotifierTest {
       { groupId -> if (groupId == GROUP) listOf(member(ME, "ゆうき"), member(WRITER, "さくら")) else emptyList() },
       { groupId -> if (groupId == GROUP && inGroup) GroupRow(GROUP, "いとこ会", 0, GroupMarkValue(emoji = "🍙")) else null },
       conversations,
+      // 2026-12-24 12:00 in Tokyo.
+      now = { 1798081200000 },
+      zone = { ZoneId.of("Asia/Tokyo") },
     )
 
   @Before
@@ -355,6 +359,96 @@ class ChatNotifierTest {
     notifier.show(groupLine(2, "今週どう？"))
     assertEquals(listOf("$GROUP/group"), shown().map { it.tag })
   }
+
+  @Test
+  fun thatAGroupEndsIsTheGroupsOwnNotificationWordedByTheDevicesClock() = runTest {
+    notifier.show(groupEnds())
+    val shown = shown().single()
+    assertEquals(ChatNotifier.endTagOf(GROUP), shown.tag)
+    assertEquals(Channels.CHAT, shown.notification.channelId)
+    assertEquals("いとこ会", shown.notification.extras.getCharSequence(NotificationCompat.EXTRA_TITLE).toString())
+    assertEquals("このグループは12月31日に終了し、チャットや写真も消えます", shown.notification.extras.getCharSequence(NotificationCompat.EXTRA_TEXT).toString())
+    // No one's message, so no conversation of anyone's, and nothing to answer.
+    assertNull(NotificationCompat.MessagingStyle.extractMessagingStyleFromNotification(shown.notification))
+    assertNull(shown.notification.actions)
+    assertTrue(conversations.published.isEmpty())
+    // A tap opens 全体チャット, where the line is.
+    assertEquals(AppLink.Chat(GROUP, "group"), ChatNotifier.openedChat(shadowOf(shown.notification.contentIntent).savedIntent))
+  }
+
+  @Test
+  fun anEndOfAnotherYearIsSaidWithItsYear() = runTest {
+    // 2027-01-05 in Tokyo, said on 2026-12-24.
+    notifier.show(groupEnds(endsAtMs = "1799161200000"))
+    assertEquals("このグループは2027年1月5日に終了し、チャットや写真も消えます", shown().single().notification.extras.getCharSequence(NotificationCompat.EXTRA_TEXT).toString())
+  }
+
+  @Test
+  fun anEndTheDeviceCannotReadShowsNothing() = runTest {
+    for (end in listOf("", "soon", "0", "-1")) notifier.show(groupEnds(endsAtMs = end))
+    notifier.show(groupEnds().copy(body = Localized("GROUP_ENDS", emptyList())))
+    assertTrue(shown().isEmpty())
+  }
+
+  @Test
+  fun thatAGroupEndsIsNotShownToSomeoneElseNorOverItsChat() = runTest {
+    notifier.show(groupEnds(recipient = "someone"))
+    signedIn = null
+    notifier.show(groupEnds())
+    signedIn = ME
+    // The chat in front shows the line itself.
+    notifier.onScreen(GROUP, "group")
+    notifier.show(groupEnds())
+    assertTrue(shown().isEmpty())
+    notifier.offScreen(GROUP, "group")
+    notifier.show(groupEnds())
+    assertEquals(1, shown().size)
+  }
+
+  @Test
+  fun aReadTakesTheChatsLinesBackAndLeavesThatTheGroupEnds() = runTest {
+    notifier.show(groupLine(2, "今週どう？"))
+    notifier.show(groupEnds())
+    notifier.show(groupLine(3, "土曜とか"))
+    assertEquals(listOf("今週どう？", "土曜とか"), messagesOf(shown().indexOfFirst { it.tag == "$GROUP/group" }).messages.map { it.text.toString() })
+
+    notifier.withdraw(ChatWithdrawal(GROUP, "group", readTo = 2))
+    assertEquals(listOf("土曜とか"), messagesOf(shown().indexOfFirst { it.tag == "$GROUP/group" }).messages.map { it.text.toString() })
+    notifier.withdrawRead(ReadState(cleared = setOf(ChatKey(GROUP, "group"))))
+    assertEquals(listOf(ChatNotifier.endTagOf(GROUP)), shown().map { it.tag })
+  }
+
+  @Test
+  fun theSameEndTriedAgainShowsOnceAndAnEndMovedIsSaidAnew() = runTest {
+    notifier.show(groupEnds())
+    val first = shown().single().postTime
+    notifier.show(groupEnds())
+    assertEquals(first, shown().single().postTime)
+    notifier.show(groupEnds(endsAtMs = "1798815600000"))
+    assertEquals("このグループは2027年1月1日に終了し、チャットや写真も消えます", shown().single().notification.extras.getCharSequence(NotificationCompat.EXTRA_TEXT).toString())
+  }
+
+  @Test
+  fun thatAGroupEndsGoesWithTheGroupAndAsItsChatIsOpenedFromANotification() = runTest {
+    notifier.show(groupEnds())
+    notifier.show(groupLine(3, "まだ？", groupId = "g2"))
+    notifier.forgetPlace(GROUP)
+    assertEquals(listOf("g2/group"), shown().map { it.tag })
+
+    notifier.show(groupEnds())
+    notifier.opened(GROUP, "group")
+    assertEquals(listOf("g2/group"), shown().map { it.tag })
+  }
+
+  /** As the server sends that a group ends: of no line, its body's one argument the end in ms (2026-12-31 in Tokyo). */
+  private fun groupEnds(endsAtMs: String = "1798729200000", recipient: String = ME) =
+    PushedAlert(
+      title = Localized("CHAT_TITLE", listOf("いとこ会")),
+      body = Localized("GROUP_ENDS", listOf(endsAtMs)),
+      groupId = GROUP,
+      threadId = "group",
+      recipientId = recipient,
+    )
 
   private fun support(seq: Long, words: String) =
     PushedAlert(

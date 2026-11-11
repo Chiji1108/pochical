@@ -134,6 +134,33 @@ public object ChatNoticeKt {
     public fun clearMarkChanged() {
       _builder.clearMarkChanged()
     }
+
+    /**
+     * ```
+     * END_SET, ENDS_SOON: when the group ends, as GroupProfile.ends_at_ms,
+     * which each device words as a day by its own clock.
+     * ```
+     *
+     * `int64 ends_at_ms = 5 [json_name = "endsAtMs"];`
+     */
+    public var endsAtMs: kotlin.Long
+      @kotlin.jvm.JvmName("getEndsAtMs")
+        get() = _builder.endsAtMs
+      @kotlin.jvm.JvmName("setEndsAtMs")
+        set(value) {
+        _builder.endsAtMs = value
+      }
+    /**
+     * ```
+     * END_SET, ENDS_SOON: when the group ends, as GroupProfile.ends_at_ms,
+     * which each device words as a day by its own clock.
+     * ```
+     *
+     * `int64 ends_at_ms = 5 [json_name = "endsAtMs"];`
+     */
+    public fun clearEndsAtMs() {
+      _builder.clearEndsAtMs()
+    }
   }
 }
 public inline fun app.pochical.v1.ChatNotice.copy(block: `app.pochical.v1`.ChatNoticeKt.Dsl.() -> kotlin.Unit): app.pochical.v1.ChatNotice =

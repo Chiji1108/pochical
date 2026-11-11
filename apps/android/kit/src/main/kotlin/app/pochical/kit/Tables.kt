@@ -223,6 +223,15 @@ data class MemberPatternRow(val groupId: String, val userId: String, @Embedded v
 @Entity(tableName = "memberOrders", primaryKeys = ["groupId", "userId", "position"])
 data class MemberOrderRow(val groupId: String, val userId: String, @Embedded val order: RepeatOrderRow)
 
+/**
+ * When a group ends for everyone (spec/sync-protocol.md, A group's end), in ms since the epoch, as
+ * its socket last said with its name and mark: a row only for a group with an end. The user's own
+ * socket never says it, so it is kept apart from their list of groups ([GroupRow]), which that
+ * socket writes and a Reset of it empties.
+ */
+@Entity(tableName = "groupEnds")
+data class GroupEndRow(@PrimaryKey val groupId: String, val endsAtMs: Long)
+
 /** How far the device has taken a group's log. */
 @Entity(tableName = "groupCursors")
 data class GroupCursorRow(@PrimaryKey val groupId: String, val cursor: Long)

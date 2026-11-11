@@ -52,14 +52,15 @@ import org.junit.runner.RunWith
 
 /**
  * The screens the stores' screenshots are made of (#806), photographed as they are on an emulator
- * in the order the app is walked rather than the stores': the sample month as a new user's, who
+ * in the order the app is walked rather than the stores': the sample month as a new user's, its day of
+ * 早出 opened and リマインド's reminder of the evening before, who
  * joins the groups tools/store-screenshots/seed.ts made, the friends' as まい and the coworkers' as 佐藤; a page of a シフトの期間 from the 15th; the widgets, each kind by itself at
  * each size it offers, those that can be set to someone also set to the group's first member and
  * to the group; the month and the widgets in 墨, in black and white ([Style.Sumi]), and the month with its shifts as
  * letters ([Style.Letters]); then, as
  * they change the month's days, ポチポチ入力 halfway through it, as the app starts again, and
- * いまのシフト's widget once more with a shift on; and last, as it changes the job, 繰り返しを直す on a
- * fixed cycle. Each is
+ * いまのシフト's widget once more with a shift on; as it changes the job, 繰り返しを直す on a
+ * fixed cycle; and last, as it leaves a group, グループの設定 of one made with an end. Each is
  * kept under the name packages/prototype/src/lib/store-shots.ts gives it. Run by
  * `mise run store:shots:android` (tools/store-screenshots/android.sh), which sets the emulator up,
  * names the invitations (the arguments `invite`, the coworkers', and `friends`) and takes the PNGs from where Gradle pulls them
@@ -104,6 +105,10 @@ class StoreScreenshots {
     val calendar = By.descContains("、夜勤")
     device.find(calendar)
 
+    photographCares()
+    launch("sample", "firstRunDone")
+    device.find(calendar)
+
     device.tap(By.desc("この月のシフトを保存"), By.text("端末カレンダーに追加"))
     device.tap(By.text("端末カレンダーに追加"), By.text("追加先"))
     // The switch by what it is set to, so a tap made again finds none to turn back off.
@@ -138,9 +143,10 @@ class StoreScreenshots {
     pickPeriod("15日〜翌月14日")
     launch()
     device.find(calendar)
-    // The page's heading and the week its first day is in.
+    // The page's heading, with the room over it that it has at its side, and the week its first day is in.
     val first = LocalDate.now().let { if (it.dayOfMonth < 15) it.minusMonths(1) else it }.withDayOfMonth(15)
-    photograph("07-details-period", from = By.descContains("日〜"), until = dayOf(first.plusDays(7)))
+    val heading = device.find(By.descContains("日〜")).visibleBounds
+    photograph("07-details-period", top = heading.top - heading.left, foot = topOf(dayOf(first.plusDays(7))))
     pickPeriod("1日〜末日")
 
     photographWidgets("02-widgets")
@@ -165,7 +171,7 @@ class StoreScreenshots {
     device.tap(By.text("夜勤"), By.desc(Pattern.compile("${month}月${HALF + 1}日、明け.*")))
     // The week of the two days, between the weeks before and after it.
     val entered = LocalDate.now().withDayOfMonth(HALF)
-    photograph("07-details-next-day", from = dayOf(entered.minusDays(7)), until = dayOf(entered.plusDays(14)))
+    photograph("07-details-next-day", top = topOf(dayOf(entered.minusDays(7))), foot = topOf(dayOf(entered.plusDays(14))))
     enterShiftOn()
     photographWidgets("02-widgets", only = "now")
     // Out of ポチポチ入力 as the app starts again: its 完了 would ask about the days left blank.
@@ -174,7 +180,61 @@ class StoreScreenshots {
 
     startFixedCycle()
     // The month's name and its first two weeks, the cycle come round in them.
-    photograph("07-details-repeat", from = By.desc(Pattern.compile("\\d+年\\d+月")), until = dayOf(LocalDate.now().plusMonths(1).withDayOfMonth(1).plusDays(14)))
+    photograph(
+      "07-details-repeat",
+      top = topOf(By.desc(Pattern.compile("\\d+年\\d+月"))),
+      foot = topOf(dayOf(LocalDate.now().plusMonths(1).withDayOfMonth(1).plusDays(14))),
+    )
+
+    // After everything else, as it leaves a group. The calendar, next shown after 新しい仕事にする set
+    // up a repeating order, offers the reminders once: あとで.
+    launch("sample", "firstRunDone")
+    device.tap(By.text("あとで"), Until.gone(By.text("あとで")))
+    makeGroupWithEnd()
+    // The section グループ, between the page's name and the section after it.
+    photograph(
+      "08-cares-group-end",
+      top = between(By.text("グループの設定"), By.text("グループ")),
+      foot = between(By.textStartsWith("グループ名とアイコンは"), By.text("このグループでのあなた")),
+    )
+  }
+
+  /**
+   * What the cares' shot shows of the app as it starts: the sample's day of 早出 opened, its week
+   * alone, as Google Play's picture is shorter than the App Store's, which has the day's 時間 under
+   * it; and リマインド's reminder of the evening before, the next notification as its page draws it.
+   */
+  private fun photographCares() {
+    val month = LocalDate.now().monthValue
+    val early = By.desc(Pattern.compile("${month}月${EARLY}日、日勤、早出.*"))
+    val opened = By.textStartsWith("${month}月${EARLY}日(")
+    device.tap(early, opened)
+    // From under the month's name, the weekdays and the day's week, down to the day's own name.
+    photograph("08-cares-hours", top = device.find(By.desc(Pattern.compile("\\d+年\\d+月"))).visibleBounds.bottom, foot = between(early, opened))
+    device.tap(By.desc("閉じる"), By.text("ポチポチ入力"))
+
+    device.tap(By.text("設定"), By.text("リマインド"))
+    device.tap(By.text("リマインド"), By.text("リマインドを追加"))
+    device.tap(By.textStartsWith("前日"), By.text("リマインドを編集"))
+    // The notification under its heading, with the room around them that it has at its sides.
+    val banner = device.find(By.descStartsWith("明日は")).visibleBounds
+    photograph("08-cares-reminder", top = topOf(By.textStartsWith("次の通知")) - banner.left, foot = banner.bottom + banner.left)
+  }
+
+  /**
+   * Makes a group with an end, 忘年会, in グループを作る with 終了日をつける on, the day it offers a month
+   * from today, and opens グループの設定 on it.
+   */
+  private fun makeGroupWithEnd() {
+    device.tap(By.text("グループ"), By.desc("グループを作る"))
+    device.tap(By.desc("グループを作る"), By.text("作る"))
+    device.find(By.clazz("android.widget.EditText")).text = "忘年会"
+    device.tap(By.text("終了日"), By.text("終了日をつける"))
+    device.tap(switch("終了日をつける", on = false), switch("終了日をつける", on = true))
+    device.tap(By.text("保存"), Until.gone(By.text("終了日をつける")))
+    device.tap(By.text("作る"), By.text("招待リンクを送る"))
+    device.back(By.text("招待リンクを送る"))
+    device.tap(By.desc("グループの設定"), By.text("このグループでのあなた"))
   }
 
   /**
@@ -406,6 +466,9 @@ class StoreScreenshots {
     /** The drags that take シフトの期間's list from one end to the other, and more. */
     const val PERIOD_DRAGS = 12
 
+    /** The sample's day of 早出 (SampleDays). */
+    const val EARLY = 13
+
     /** The first day ポチポチ入力 has yet to enter. */
     const val HALF = 16
 
@@ -435,17 +498,22 @@ class StoreScreenshots {
   private fun scrollable(node: AccessibilityNodeInfo): AccessibilityNodeInfo? =
     if (node.isScrollable) node else (0 until node.childCount).firstNotNullOfOrNull { index -> node.getChild(index)?.let(::scrollable) }
 
+  /** Where what [selector] finds begins on the screen: a row's top, by one of its days. */
+  private fun topOf(selector: BySelector): Int = device.find(selector).visibleBounds.top
+
+  /** Midway from the foot of what [over] finds to the top of what [under] finds: where one piece of a page gives way to the next. */
+  private fun between(over: BySelector, under: BySelector): Int = (device.find(over).visibleBounds.bottom + topOf(under)) / 2
+
   /** The calendar's day [date], whatever it holds: a day of the month before or after shows in the month's weeks too. */
   private fun dayOf(date: LocalDate): BySelector = By.desc(Pattern.compile("${date.monthValue}月${date.dayOfMonth}日、.*"))
 
   /**
    * The screen as it is, kept as [name], once the app's window has drawn what it holds: the words a
    * walk waits for are on a page before the page is on the screen, so a frame is asked of the
-   * window and waited for until it is committed. With [from] and [until], only the part from the
-   * top of the one down to the top of the other, as wide as the screen: whole rows of it, up to the
-   * row [until] is in, for a tile of the details' shot.
+   * window and waited for until it is committed. With [top] and [foot], only the part between
+   * them, as wide as the screen: whole rows of it, for a tile of a shot of them.
    */
-  private fun photograph(name: String, from: BySelector? = null, until: BySelector? = null) {
+  private fun photograph(name: String, top: Int = 0, foot: Int? = null) {
     // Android 17's status bar keeps the notifications' icons through the demo's
     // `notifications -e visible false`, and one may come at any time of a run: each there is
     // snoozed, and comes back by itself.
@@ -461,9 +529,7 @@ class StoreScreenshots {
     }
     check(committed.await(WAIT, TimeUnit.MILLISECONDS)) { "No frame drawn for $name" }
     val screen = checkNotNull(instrumentation.uiAutomation.takeScreenshot()) { "Could not photograph $name" }
-    val top = from?.let { device.find(it).visibleBounds.top } ?: 0
-    val foot = until?.let { device.find(it).visibleBounds.top } ?: screen.height
-    val part = Bitmap.createBitmap(screen, 0, top, screen.width, foot - top)
+    val part = Bitmap.createBitmap(screen, 0, top, screen.width, (foot ?: screen.height) - top)
     File(out, "$name.png").outputStream().use { check(part.compress(Bitmap.CompressFormat.PNG, 100, it)) { "Could not keep $name" } }
   }
 }

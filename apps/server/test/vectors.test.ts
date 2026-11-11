@@ -20,6 +20,7 @@ import chatPhotos from "../../../spec/vectors/chat-photos.json";
 import chatText from "../../../spec/vectors/chat-text.json";
 import chat from "../../../spec/vectors/chat.json";
 import fits from "../../../spec/vectors/fits.json";
+import groupEnd from "../../../spec/vectors/group-end.json";
 import hlc from "../../../spec/vectors/hlc.json";
 import orderClears from "../../../spec/vectors/order-clears.json";
 import patterns from "../../../spec/vectors/patterns.json";
@@ -47,6 +48,7 @@ import {
   unreadCount,
 } from "../src/group-chat";
 import { chatLines, readMarks } from "../src/group-do-schema";
+import { endNoticeAt } from "../src/group-end";
 import { requireMark } from "../src/group-marks";
 import { compareClocks, isAhead } from "../src/hlc";
 import { givesWay, heldBackBy } from "../src/order-clears";
@@ -397,6 +399,15 @@ describe("spec/vectors/unread.json", () => {
           )
       );
       expect(counts.reduce((sum, count) => sum + count, 0)).toBe(expected);
+    }
+  );
+});
+
+describe("spec/vectors/group-end.json", () => {
+  it.each(groupEnd.noticeAt)(
+    "noticeAt: set at $setAt, $noticeHours hours before $endsAt",
+    ({ endsAt, setAt, noticeHours, expected }) => {
+      expect(endNoticeAt(endsAt, setAt, noticeHours)).toBe(expected);
     }
   );
 });

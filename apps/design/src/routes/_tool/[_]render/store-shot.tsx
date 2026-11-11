@@ -155,8 +155,8 @@ const styles = {
     paddingBottom: `calc(var(--u) * ${TILES.under})`,
     paddingLeft: "calc(var(--u) * 1.5)",
   }),
-  // The tiles one over the other, in the middle of the room under the
-  // headline.
+  // The tiles one over the other from under the headline, as a phone is,
+  // what room they leave shared between them.
   tiles: css({
     "& figure": { margin: 0 },
     alignItems: "center",
@@ -164,7 +164,7 @@ const styles = {
     flexDirection: "column",
     gap: `calc(var(--u) * ${TILES.gap})`,
     inset: `var(--headline) 0 calc(var(--u) * ${TILES.foot})`,
-    justifyContent: "center",
+    justifyContent: "space-between",
     position: "absolute",
   }),
   // The widgets on a Home Screen's grid, tilted, running off every edge

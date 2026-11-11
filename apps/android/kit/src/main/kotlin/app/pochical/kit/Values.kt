@@ -45,6 +45,9 @@ interface Values {
   /** The user's groups in the order they joined them. */
   @Query("SELECT * FROM groups ORDER BY joinedAtMs") fun groups(): Flow<List<GroupRow>>
 
+  /** When the group ends for everyone, in ms since the epoch, as the wire says it: 0 for one with no end. */
+  @Query("SELECT COALESCE((SELECT endsAtMs FROM groupEnds WHERE groupId = :groupId), 0)") fun groupEnd(groupId: String): Flow<Long>
+
   /** Everyone in the group in the order they joined, those who left too, for their lines' names. */
   @Query("SELECT * FROM groupMembers WHERE groupId = :groupId ORDER BY joinedAtMs")
   fun members(groupId: String): Flow<List<GroupMemberRow>>

@@ -116,7 +116,7 @@ public  final class ChatLine extends
   /**
    * <pre>
    * Who wrote it; it stays theirs after they leave. For a notice, who did
-   * what it tells.
+   * what it tells; empty for one no one did (KIND_ENDS_SOON).
    * </pre>
    *
    * <code>string author_id = 3 [json_name = "authorId"];</code>
@@ -129,7 +129,7 @@ public  final class ChatLine extends
   /**
    * <pre>
    * Who wrote it; it stays theirs after they leave. For a notice, who did
-   * what it tells.
+   * what it tells; empty for one no one did (KIND_ENDS_SOON).
    * </pre>
    *
    * <code>string author_id = 3 [json_name = "authorId"];</code>
@@ -143,7 +143,7 @@ public  final class ChatLine extends
   /**
    * <pre>
    * Who wrote it; it stays theirs after they leave. For a notice, who did
-   * what it tells.
+   * what it tells; empty for one no one did (KIND_ENDS_SOON).
    * </pre>
    *
    * <code>string author_id = 3 [json_name = "authorId"];</code>
@@ -158,7 +158,7 @@ public  final class ChatLine extends
   /**
    * <pre>
    * Who wrote it; it stays theirs after they leave. For a notice, who did
-   * what it tells.
+   * what it tells; empty for one no one did (KIND_ENDS_SOON).
    * </pre>
    *
    * <code>string author_id = 3 [json_name = "authorId"];</code>
@@ -170,7 +170,7 @@ public  final class ChatLine extends
   /**
    * <pre>
    * Who wrote it; it stays theirs after they leave. For a notice, who did
-   * what it tells.
+   * what it tells; empty for one no one did (KIND_ENDS_SOON).
    * </pre>
    *
    * <code>string author_id = 3 [json_name = "authorId"];</code>
@@ -811,7 +811,7 @@ public  final class ChatLine extends
     /**
      * <pre>
      * Who wrote it; it stays theirs after they leave. For a notice, who did
-     * what it tells.
+     * what it tells; empty for one no one did (KIND_ENDS_SOON).
      * </pre>
      *
      * <code>string author_id = 3 [json_name = "authorId"];</code>
@@ -824,7 +824,7 @@ public  final class ChatLine extends
     /**
      * <pre>
      * Who wrote it; it stays theirs after they leave. For a notice, who did
-     * what it tells.
+     * what it tells; empty for one no one did (KIND_ENDS_SOON).
      * </pre>
      *
      * <code>string author_id = 3 [json_name = "authorId"];</code>
@@ -838,7 +838,7 @@ public  final class ChatLine extends
     /**
      * <pre>
      * Who wrote it; it stays theirs after they leave. For a notice, who did
-     * what it tells.
+     * what it tells; empty for one no one did (KIND_ENDS_SOON).
      * </pre>
      *
      * <code>string author_id = 3 [json_name = "authorId"];</code>
@@ -854,7 +854,7 @@ public  final class ChatLine extends
     /**
      * <pre>
      * Who wrote it; it stays theirs after they leave. For a notice, who did
-     * what it tells.
+     * what it tells; empty for one no one did (KIND_ENDS_SOON).
      * </pre>
      *
      * <code>string author_id = 3 [json_name = "authorId"];</code>
@@ -868,7 +868,7 @@ public  final class ChatLine extends
     /**
      * <pre>
      * Who wrote it; it stays theirs after they leave. For a notice, who did
-     * what it tells.
+     * what it tells; empty for one no one did (KIND_ENDS_SOON).
      * </pre>
      *
      * <code>string author_id = 3 [json_name = "authorId"];</code>
