@@ -7,7 +7,9 @@ import {
   STORE_SHOTS,
   STORES,
   storeShotFile,
+  wallOf,
 } from "@pochical/prototype/lib/store-shots";
+import type { WallTile } from "@pochical/prototype/lib/store-shots";
 import { expect, test } from "vitest";
 
 // The stores' pictures (store/) are checked in, drawn by
@@ -59,4 +61,52 @@ test("the first three shots show the app, under a headline of a fifth at most", 
     "screen",
   ]);
   expect(HEADLINE_SHARE).toBeLessThanOrEqual(0.2);
+});
+
+// The wall of widgets mixes its looks (the app as it starts, and 墨 in
+// black and white), over the widgets both platforms photograph.
+const WIDGETS = [
+  "calendar-large.png",
+  "calendar-medium.png",
+  "next-off-group-small.png",
+  "next-off-person-small.png",
+  "next-off-small.png",
+  "now-small.png",
+  "simple-medium.png",
+  "simple-small.png",
+  "upcoming-medium.png",
+  "upcoming-person-medium.png",
+  "upcoming-person-small.png",
+  "upcoming-small.png",
+];
+
+// Whether two runs of cells, each from a cell and so many long, share one.
+const overlap = (from: number, length: number, other: number, its: number) =>
+  from < other + its && other < from + length;
+
+// Whether two tiles share an edge.
+const touch = (a: WallTile, b: WallTile): boolean => {
+  const beside =
+    (a.column + a.columns === b.column || b.column + b.columns === a.column) &&
+    overlap(a.row, a.rows, b.row, b.rows);
+  const above =
+    (a.row + a.rows === b.row || b.row + b.rows === a.row) &&
+    overlap(a.column, a.columns, b.column, b.columns);
+  return beside || above;
+};
+
+test("the wall alternates its two looks, no widget beside itself", () => {
+  const tiles = wallOf(WIDGETS, 2);
+  const first = tiles.filter((tile) => tile.look === 0).length;
+  expect(Math.abs(tiles.length - 2 * first)).toBeLessThanOrEqual(2);
+  for (const tile of tiles) {
+    const neighbors = tiles.filter((other) => touch(tile, other));
+    expect(neighbors.map((other) => other.file)).not.toContain(tile.file);
+    // Never more of its own look around a widget than of the other.
+    const own = neighbors.filter((other) => other.look === tile.look).length;
+    expect(
+      own,
+      `${tile.file} at ${tile.column}, ${tile.row}`
+    ).toBeLessThanOrEqual(neighbors.length - own);
+  }
 });

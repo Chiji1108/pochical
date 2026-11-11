@@ -106,15 +106,17 @@ export const signIn = async (
   return { token, userId };
 };
 
-/** One JPEG put among the group's photos as the user's, by its new id. */
-export const upload = async (
+type Jpeg = { bytes: Uint8Array<ArrayBuffer>; file: string };
+
+/** One JPEG put at `place`, a folder of photos the user may add to, by its new id. */
+const put = async (
   origin: string,
-  { bytes, file }: { bytes: Uint8Array<ArrayBuffer>; file: string },
-  groupId: string,
+  { bytes, file }: Jpeg,
+  place: string,
   token: string
 ): Promise<string> => {
   const id = crypto.randomUUID();
-  const response = await fetch(`${origin}/v1/groups/${groupId}/photos/${id}`, {
+  const response = await fetch(`${origin}${place}/${id}`, {
     body: bytes,
     headers: {
       Authorization: `Bearer ${token}`,
@@ -128,6 +130,22 @@ export const upload = async (
   }
   return id;
 };
+
+/** One JPEG put among the group's photos as the user's, by its new id. */
+export const upload = async (
+  origin: string,
+  jpeg: Jpeg,
+  groupId: string,
+  token: string
+): Promise<string> =>
+  await put(origin, jpeg, `/v1/groups/${groupId}/photos`, token);
+
+/** One JPEG put among the user's own photos, for their usual one, by its new id. */
+export const uploadOwn = async (
+  origin: string,
+  jpeg: Jpeg,
+  token: string
+): Promise<string> => await put(origin, jpeg, "/v1/me/photos", token);
 
 const lost = (): void => {
   fail("socket: could not connect, or the connection was lost");

@@ -2,11 +2,11 @@
 # Photographs the Android app for the stores' screenshots (#806), raw, as
 # the emulator shows it, by the names
 # packages/prototype/src/lib/store-shots.ts gives them: the screens into
-# .build/store-screenshots/android (01-entry.png, 02-calendar.png, ...;
-# StoreScreenshots in :app's androidTest walks them), and each widget by
-# itself at each size it offers into its 04-widgets/ (<kind>-<size>.png;
-# WidgetPreviewImages draws them, with no device). `mise run store:images`
-# draws Google Play's pictures from them.
+# .build/store-screenshots/android (01-entry.png, 02-calendar.png, ...),
+# and each widget by itself at each size it offers into its 04-widgets/ and
+# 04-widgets-sumi/ (<kind>-<size>.png), drawn there from the app's own days
+# and group; StoreScreenshots in :app's androidTest walks them all.
+# `mise run store:images` draws Google Play's pictures from them.
 #
 #   ANDROID_SERIAL=emulator-<port> mise run store:shots:android
 #
@@ -34,7 +34,6 @@ server_log=$work/server.log
 
 rm -rf "$out"
 mkdir -p "$out"
-STORE_WIDGETS_OUT=$out/04-widgets gradle :app:testDebugUnitTest --tests app.pochical.widgets.WidgetPreviewImages --rerun --no-configuration-cache
 
 # The emulator's own calendar for the run: it has none that takes events.
 calendar="content://com.android.calendar/calendars?caller_is_syncadapter=true&account_name=pochical-store-shots&account_type=LOCAL"
@@ -84,5 +83,5 @@ gradle :app:connectedDebugAndroidTest "-PpochicalServer=http://10.0.2.2:$port" \
   -Pandroid.testInstrumentationRunnerArguments.class=app.pochical.StoreScreenshots \
   "-Pandroid.testInstrumentationRunnerArguments.invite=$(cat "$work/invite")"
 # Where Gradle pulls what a test leaves in additionalTestOutputDir, under the device's name.
-cp "$pulled"/debugAndroidTest/connected/*/*.png "$out"
-ls "$out" "$out/04-widgets"
+cp -R "$pulled"/debugAndroidTest/connected/*/ "$out"
+ls -R "$out"

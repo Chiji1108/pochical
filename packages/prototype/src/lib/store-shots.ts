@@ -36,19 +36,23 @@ export const FEATURE_GRAPHIC = {
 export const HEADLINE_SHARE = 0.2;
 
 // What a shot is drawn from: one screen; two screens side by side; or a
-// wall of the widgets, each a PNG in the folder `raw` named
-// `<widget>-<small | medium | large>.png`.
+// wall of the widgets in the looks it mixes, each look a folder of `raw`
+// holding every widget as a PNG named
+// `<widget>-<small | medium | large>.png`, the same names in each.
 type StoreShot = { headline: readonly string[]; name: string } & (
   | { kind: "pair"; raw: readonly [string, string] }
   | { kind: "screen"; raw: string }
-  | { kind: "wall"; raw: string }
+  | { kind: "wall"; raw: readonly string[] }
 );
 
 // The shots in the stores' order, each headline a line an entry. They speak
 // to people on night and rotating shifts. The first three are screens,
-// which Google Play asks its first pictures to show the app by. The wall
-// and the last shot's second screen are in 墨 with シフトの色 at ワントーン,
-// in black and white; every other screen is as the app starts.
+// which Google Play asks its first pictures to show the app by. A raw
+// file or folder named `-sumi` is in the look the app's own settings give
+// it in black and white: テーマ 墨, シフトの色 ワントーン, シフトの見た目
+// 線, 休みの見せ方 印だけ, and 色をつける日 all off. Everything else is as
+// the app starts. The wall mixes the two, the widgets set to someone or to
+// the group among them; the last shot sets the two months side by side.
 export const STORE_SHOTS = [
   {
     headline: ["勤務表を見ながら、", "ポチポチ。"],
@@ -72,7 +76,7 @@ export const STORE_SHOTS = [
     headline: ["ホーム画面にも。"],
     kind: "wall",
     name: "widgets",
-    raw: "04-widgets",
+    raw: ["04-widgets", "04-widgets-sumi"],
   },
   {
     headline: ["「いつ休み？」が、", "ひと目で。"],
@@ -112,3 +116,114 @@ export const WIDGET_CELLS = {
 } as const;
 
 export type WidgetSize = keyof typeof WIDGET_CELLS;
+
+const isWidgetSize = (value: string | undefined): value is WidgetSize =>
+  value !== undefined && Object.hasOwn(WIDGET_CELLS, value);
+
+// The cells a widget covers, by its size, the last word of its file's name.
+const cellsOf = (file: string) => {
+  const size = file
+    .replace(/\.png$/u, "")
+    .split("-")
+    .at(-1);
+  return WIDGET_CELLS[isWidgetSize(size) ? size : "small"];
+};
+
+// The wall's grid of a Home Screen's cells: as wide as it must be to run
+// off the picture's edges once tilted, and as many rows as cover the
+// picture's height.
+export const WALL = { columns: 6, rows: 9 } as const;
+
+// A widget on the wall: its file in the look numbered `look`, and the
+// cells it covers, counted from 0.
+export type WallTile = {
+  column: number;
+  columns: number;
+  file: string;
+  look: number;
+  row: number;
+  rows: number;
+};
+
+// The wall, filled cell by cell from its first: each place takes the
+// widget and the look that there touch the least of the same widget,
+// then of the same look, then were used the least so far. So the looks
+// alternate across the wall, and no widget sits beside itself where
+// another fits.
+export const wallOf = (files: readonly string[], looks: number): WallTile[] => {
+  const tiles: WallTile[] = [];
+  // Which tile covers each cell, by its place in `tiles`.
+  const covered = new Map<string, number>();
+  const used = new Map<string, number>();
+  const usedOf = (key: string) => used.get(key) ?? 0;
+  // How much of its edge a tile there would share with the tiles `counts`.
+  const touching = (
+    { column, columns, row, rows }: Omit<WallTile, "file" | "look">,
+    counts: (tile: WallTile) => boolean
+  ) => {
+    let edge = 0;
+    const count = (atColumn: number, atRow: number) => {
+      const tile = tiles[covered.get(`${atColumn} ${atRow}`) ?? -1];
+      edge += tile !== undefined && counts(tile) ? 1 : 0;
+    };
+    for (let at = column; at < column + columns; at += 1) {
+      count(at, row - 1);
+      count(at, row + rows);
+    }
+    for (let at = row; at < row + rows; at += 1) {
+      count(column - 1, at);
+      count(column + columns, at);
+    }
+    return edge;
+  };
+  for (let row = 0; row < WALL.rows; row += 1) {
+    for (let column = 0; column < WALL.columns; column += 1) {
+      if (covered.has(`${column} ${row}`)) {
+        continue;
+      }
+      const fitting = files.flatMap((file) => {
+        const place = { ...cellsOf(file), column, row };
+        const fits =
+          row + place.rows <= WALL.rows &&
+          Array.from(
+            { length: place.columns },
+            (_, across) => column + across
+          ).every((at) => at < WALL.columns && !covered.has(`${at} ${row}`));
+        return fits
+          ? Array.from({ length: looks }, (_, look) => ({
+              ...place,
+              file,
+              look,
+            }))
+          : [];
+      });
+      const costOf = (tile: WallTile) => [
+        touching(tile, (other) => other.file === tile.file),
+        touching(tile, (other) => other.look === tile.look),
+        usedOf(tile.file),
+        usedOf(`look ${tile.look}`),
+      ];
+      const [tile] = fitting.toSorted((a, b) => {
+        const costs = costOf(b);
+        return (
+          costOf(a)
+            .map((cost, index) => cost - (costs[index] ?? 0))
+            .find((difference) => difference !== 0) ?? 0
+        );
+      });
+      // No widget is small enough for what is left here.
+      if (tile === undefined) {
+        continue;
+      }
+      for (let across = 0; across < tile.columns; across += 1) {
+        for (let down = 0; down < tile.rows; down += 1) {
+          covered.set(`${column + across} ${row + down}`, tiles.length);
+        }
+      }
+      tiles.push(tile);
+      used.set(tile.file, usedOf(tile.file) + 1);
+      used.set(`look ${tile.look}`, usedOf(`look ${tile.look}`) + 1);
+    }
+  }
+  return tiles;
+};

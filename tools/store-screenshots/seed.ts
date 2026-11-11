@@ -1,8 +1,10 @@
 // Puts on `mise run server` the group the stores' screenshots are
 // photographed in (#806): 職場のみんな, three coworkers on a two-shift
 // roster who speak politely, as people who have not exchanged contacts
-// do, with this month's and next month's shifts and a little of
-// 全体チャット, a 日にちの投票 over the days they are all off among it.
+// do, each with a usual photo (avatars/, pictures drawn for this, which
+// any square JPEG of the same name replaces), this month's and next
+// month's shifts and a little of 全体チャット, a 日にちの投票 over the
+// days they are all off among it.
 //
 //   pnpm exec tsx tools/store-screenshots/seed.ts <file to write the invite code to>
 //
@@ -14,7 +16,8 @@
 // (POCHICAL_DEV_SERVER, http://localhost:8787 by default); each run makes
 // the group and its people anew.
 
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
+import path from "node:path";
 
 import type { MessageInitShape } from "@bufbuild/protobuf";
 import { readyPatterns } from "@pochical/design/patterns";
@@ -42,6 +45,7 @@ import {
   rpc,
   signIn,
   textOf,
+  uploadOwn,
   USER_SOCKET,
 } from "../group-client";
 import type { SyncSocket } from "../group-client";
@@ -72,18 +76,25 @@ const GROUP = { mark: { emoji: "🏥" }, name: "職場のみんな" };
 
 // The members, the first making the group, each with the shifts they are
 // given in turn from the first of the month: 夜勤 brings its 明け, so a
-// round names none.
-const MEMBERS: readonly { name: string; round: readonly Shift[] }[] = [
+// round names none; and the usual photo they show, a JPEG of avatars/.
+const MEMBERS: readonly {
+  name: string;
+  photo: string;
+  round: readonly Shift[];
+}[] = [
   {
     name: "田中",
+    photo: "coffee.jpg",
     round: ["day", "day", "night", "off", "day", "night", "off", "off"],
   },
   {
     name: "小林",
+    photo: "cat.jpg",
     round: ["day", "night", "off", "off", "day", "day", "day", "off"],
   },
   {
     name: "森",
+    photo: "flower.jpg",
     round: ["night", "off", "day", "day", "off", "day", "night", "off", "off"],
   },
 ];
@@ -165,8 +176,9 @@ const rosterOf = (round: readonly Shift[]): Map<number, Shift> => {
   return roster;
 };
 
-const rostered = MEMBERS.map(({ name, round }) => ({
+const rostered = MEMBERS.map(({ name, photo, round }) => ({
   name,
+  photo,
   roster: rosterOf(round),
 }));
 // The days of the week ahead when all three are off: the poll's.
@@ -250,14 +262,23 @@ const enter = async (
   socket.close();
 };
 
-// What the group shows of its members' shifts so far, and its chat's
+/** Makes the JPEG `photo` of avatars/ a member's usual photo (spec/sync-protocol.md, Profile). */
+const showPhoto = async (token: string, photo: string): Promise<void> => {
+  const file = path.join(import.meta.dirname, "avatars", photo);
+  const bytes = new Uint8Array(await readFile(file));
+  const photoId = await uploadOwn(devServer, { bytes, file }, token);
+  await rpc(devServer, "UserService/SetProfile", { photoId }, token);
+};
+
+// What the group shows of its members' shifts and faces so far, and its chat's
 // lines as it last sent each, by seq and by the op_id that sent it.
 const shownDays = new Set<string>();
 const shownPatterns = new Set<string>();
+const shownPhotos = new Set<string>();
 const lines = new Map<bigint, ChatLine>();
 const seqOfSend = new Map<string, bigint>();
-// Every member's patterns and days have reached the group from their
-// User DOs (spec/sync-protocol.md, Group projection).
+// Every member's patterns, days and usual photo have reached the group
+// from their User DOs (spec/sync-protocol.md, Group projection).
 const projected = Promise.withResolvers<undefined>();
 const onGroupChange = ({ kind }: Change): void => {
   if (kind.case === "chatLine") {
@@ -267,8 +288,11 @@ const onGroupChange = ({ kind }: Change): void => {
     shownPatterns.add(`${kind.value.userId} ${kind.value.pattern?.id}`);
   } else if (kind.case === "memberDay") {
     shownDays.add(`${kind.value.userId} ${kind.value.day?.date}`);
+  } else if (kind.case === "member" && kind.value.photoId !== "") {
+    shownPhotos.add(kind.value.userId);
   }
   if (
+    shownPhotos.size === MEMBERS.length &&
     shownPatterns.size === MEMBERS.length * SHIFTS.length &&
     shownDays.size === MEMBERS.length * days.length
   ) {
@@ -353,8 +377,8 @@ const people: Person[] = await Promise.all(
   }))
 );
 await Promise.all(
-  [maker, ...guests].map(async ({ roster, token }) => {
-    await enter(token, roster);
+  [maker, ...guests].map(async ({ photo, roster, token }) => {
+    await Promise.all([enter(token, roster), showPhoto(token, photo)]);
   })
 );
 await inTime(projected.promise);

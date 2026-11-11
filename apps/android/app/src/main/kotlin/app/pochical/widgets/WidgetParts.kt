@@ -241,8 +241,8 @@ abstract class PochicalWidget(
       val faces by remember(photos) { flow { emit(photos?.let { widgetFaces(context, it) } ?: WidgetFaces()) } }.collectAsState(WidgetFaces())
       val drawn =
         remember(shownCalendar, shownSettings, at, read, faces) {
-          // At the moment it is drawn, whatever brought it: `at` is only when it is drawn again by itself.
-          val entry = shownCalendar.widgetEntry(ZonedDateTime.now(), shownSettings.week, { it.holidayName(country) != null }, companion)
+          // Now, not `at`, which is only when it is drawn again by itself.
+          val entry = entryNow(shownCalendar, shownSettings, country, companion)
           // Picked, but no longer there: what the widget shows changes only when the person changes it.
           val gone = choice != null && read.choice == choice && companion == null
           Drawn(entry.copy(pickAgain = choice?.groupId?.takeIf { gone }), shownSettings, faces.takeIf { it.photos == photos } ?: WidgetFaces())
@@ -250,6 +250,22 @@ abstract class PochicalWidget(
       Framed(drawn)
     }
   }
+
+  /**
+   * What this kind draws now set to [choice], nobody for none, read once with its faces come: the
+   * stores' pictures of the widgets (StoreScreenshots), where a placed widget goes on reading.
+   */
+  suspend fun drawnNow(context: Context, choice: WidgetChoice?): Drawn {
+    val sources = (context.applicationContext as PochicalApplication).widgetSources
+    val companion = choice?.let { sources.values.companion(it, LocalDate.now()).first() }
+    val faces = companion?.let { widgetFaces(context, WidgetPhotos.of(it, ownFace = chooses == Choosing.People)) } ?: WidgetFaces()
+    val settings = sources.settings.first()
+    return Drawn(entryNow(sources.calendar.first(), settings, holidayCountry(), companion), settings, faces)
+  }
+
+  /** The entry at the moment it is drawn, whatever brought it, with [companion] whom the widget is set to. */
+  private fun entryNow(calendar: OwnCalendar, settings: DeviceSettings, country: String, companion: WidgetCompanion?): WidgetEntry =
+    calendar.widgetEntry(ZonedDateTime.now(), settings.week, { it.holidayName(country) != null }, companion)
 
   /** The picker's generated preview (Android 15 on): the sample week, in the person's settings. */
   override val previewSizeMode = SizeMode.Responsive(previews)

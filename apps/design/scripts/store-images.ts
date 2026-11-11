@@ -34,10 +34,10 @@ const photographed = storeIds.filter((store) =>
 );
 
 // The screens a shot is drawn from, each there, and the widgets found for
-// a wall.
+// a wall: the same ones in each of its looks' folders.
 const screensOf = (store: StoreId, shot: (typeof STORE_SHOTS)[number]) => {
   const folder = path.join(RAW, store);
-  const files = shot.kind === "pair" ? shot.raw : [shot.raw];
+  const files = shot.kind === "screen" ? [shot.raw] : shot.raw;
   for (const file of files) {
     if (!existsSync(path.join(folder, file))) {
       throw new Error(`${shot.name} has no ${path.join(folder, file)}`);
@@ -46,11 +46,18 @@ const screensOf = (store: StoreId, shot: (typeof STORE_SHOTS)[number]) => {
   if (shot.kind !== "wall") {
     return [];
   }
-  const widgets = readdirSync(path.join(folder, shot.raw))
-    .filter((file) => file.endsWith(".png"))
-    .sort();
+  const [widgets = [], ...others] = shot.raw.map((look) =>
+    readdirSync(path.join(folder, look))
+      .filter((file) => file.endsWith(".png"))
+      .sort()
+  );
   if (widgets.length === 0) {
-    throw new Error(`${shot.name} has no widget in ${folder}/${shot.raw}`);
+    throw new Error(`${shot.name} has no widget in ${folder}/${shot.raw[0]}`);
+  }
+  if (others.some((found) => found.join(",") !== widgets.join(","))) {
+    throw new Error(
+      `${shot.name}'s looks differ in their widgets: ${shot.raw.join(", ")} in ${folder}`
+    );
   }
   return widgets;
 };

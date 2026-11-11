@@ -3,11 +3,12 @@ import XCTest
 /// The screens the stores' screenshots are drawn from (#806), photographed
 /// in the order the app is walked rather than the stores': the sample
 /// month and 端末カレンダーに追加; 職場のみんな's 一覧 and 全体チャット,
-/// joined as 佐藤; the month again in 墨 with シフトの色 at ワントーン, in
-/// black and white; the widgets so too, each put on the Home Screen in
-/// turn; and last, as it takes days out of the month and puts the テーマ
-/// and the colors back, ポチポチ入力 halfway through it. Each is kept as the
-/// file `packages/prototype/src/lib/store-shots.ts` names. Run by
+/// joined as 佐藤; the widgets, each put on the Home Screen in turn, those
+/// that can be set to someone also set to the group's first member and to
+/// the group; the month and the widgets again in 墨, in black and white
+/// (`Style.sumi`); and last, as it takes days out of the month, ポチポチ入力
+/// halfway through it, as the app starts again. Each is kept as the file
+/// `packages/prototype/src/lib/store-shots.ts` names. Run by
 /// `mise run store:shots:ios`, against the local server it seeds; skipped
 /// without it.
 final class StoreScreenshotTests: XCTestCase {
@@ -68,43 +69,29 @@ final class StoreScreenshotTests: XCTestCase {
   }
 
   @MainActor
-  func test3Sumi() throws {
+  func test3Widgets() throws {
+    try photographWidgets(into: "04-widgets")
+  }
+
+  @MainActor
+  func test4Sumi() throws {
     launch()
-    pick(theme: "墨", colors: "ワントーン")
+    pick(.sumi)
     snap("07-calendar-sumi", of: XCUIScreen.main, into: raw)
   }
 
-  /// Each widget the gallery offers for the Home Screen, put on it,
-  /// photographed by itself once it has drawn the person's days, and taken
-  /// off again, so only one is ever there to find.
   @MainActor
-  func test4Widgets() throws {
-    let home = HomeScreen()
-    let widgets = raw.appending(path: "04-widgets")
-    try FileManager.default.createDirectory(at: widgets, withIntermediateDirectories: true)
-    XCUIDevice.shared.press(.home)
-    var page = 1
-    var pages = 1
-    while page <= pages {
-      pages = home.openGallery()
-      let (name, size) = home.show(page: page)
-      guard let file = Self.widgetFiles[name], let suffix = Self.widgetSizes[size] else {
-        return XCTFail("the widget \(name) (\(size)) has no file name")
-      }
-      home.addShown()
-      snap("\(file)-\(suffix)", of: home.widgetFace, into: widgets)
-      home.removeWidget()
-      page += 1
-    }
+  func test5SumiWidgets() throws {
+    try photographWidgets(into: "04-widgets-sumi")
   }
 
-  /// ポチポチ入力 halfway through the month, in the テーマ and the colors
-  /// the app starts with: the sample month's days from the 16th taken out, as they are
-  /// before they are entered, and the 16th the day to enter.
+  /// ポチポチ入力 halfway through the month, as the app starts: the sample
+  /// month's days from the 16th taken out, as they are before they are
+  /// entered, and the 16th the day to enter.
   @MainActor
-  func test5Entry() throws {
+  func test6Entry() throws {
     launch()
-    pick(theme: "ポチカル", colors: "色分け")
+    pick(.started)
     app.buttons["ポチポチ入力"].tap()
     let month = Calendar.current.component(.month, from: .now)
     let last = Calendar.current.range(of: .day, in: .month, for: .now)!.upperBound - 1
@@ -119,6 +106,35 @@ final class StoreScreenshotTests: XCTestCase {
     XCTAssertTrue(clear.wait(for: \.isEnabled, toEqual: false, timeout: 5), "the last day is blank")
     pickDay(month, 16)
     snap("01-entry", of: XCUIScreen.main, into: raw)
+  }
+
+  /// Each widget the gallery offers for the Home Screen, put on it,
+  /// photographed by itself once it has drawn the person's days, then set
+  /// to each of whom it can be and photographed again
+  /// (`<widget>-<person | group>-<size>`), and taken off, so only one is
+  /// ever there to find: into `folder`, in the look the app is in.
+  @MainActor private func photographWidgets(into folder: String) throws {
+    let home = HomeScreen()
+    let widgets = raw.appending(path: folder)
+    try FileManager.default.createDirectory(at: widgets, withIntermediateDirectories: true)
+    XCUIDevice.shared.press(.home)
+    var page = 1
+    var pages = 1
+    while page <= pages {
+      pages = home.openGallery()
+      let (name, size) = home.show(page: page)
+      guard let file = Self.widgetFiles[name], let suffix = Self.widgetSizes[size] else {
+        return XCTFail("the widget \(name) (\(size)) has no file name")
+      }
+      home.addShown()
+      snap("\(file)-\(suffix)", of: home.widgetFace, into: widgets)
+      for (whom, choice, says) in Self.widgetChoices[name] ?? [] {
+        home.setWidget(to: choice, saying: says)
+        snap("\(file)-\(whom)-\(suffix)", of: home.widgetFace, into: widgets)
+      }
+      home.removeWidget()
+      page += 1
+    }
   }
 
   /// Taps the calendar's `day` while entering, for the tray to enter it.
@@ -136,23 +152,51 @@ final class StoreScreenshotTests: XCTestCase {
       .matching(NSPredicate(format: "label == %@", "入力する日付：\(month)月\(day)日")).firstMatch
   }
 
-  /// Picks the テーマ named `theme` and the シフトの色 named `colors` in
-  /// 設定's スタイル, and comes back to the calendar in them.
-  @MainActor private func pick(theme: String, colors: String) {
+  /// A look of the app, by the choices of 設定's スタイル that give it, in
+  /// the page's order (シフトの見た目, テーマ, シフトの色, 休みの見せ方), and
+  /// whether カレンダー's 色をつける日 are on.
+  private struct Style {
+    let choices: [String]
+    let coloredDays: Bool
+
+    /// As the app starts.
+    static let started = Style(choices: ["塗り", "ポチカル", "色分け", "強調"], coloredDays: true)
+    /// 墨 with nothing colored and nothing filled: black and white.
+    static let sumi = Style(choices: ["線", "墨", "ワントーン", "印だけ"], coloredDays: false)
+  }
+
+  /// Picks `style` in 設定, as the person would: スタイル's choices and
+  /// カレンダー's 色をつける日, and comes back to the calendar in them.
+  @MainActor private func pick(_ style: Style) {
     app.tabBars.buttons["設定"].tap()
-    let style = app.collectionViews.firstMatch.buttons
-      .matching(NSPredicate(format: "label BEGINSWITH 'スタイル'")).firstMatch
-    XCTAssertTrue(style.waitForExistence(timeout: 5), "設定 lists スタイル")
-    style.tap()
-    for choice in [theme, colors] {
+    open(page: "スタイル")
+    for choice in style.choices {
       let tile = app.buttons[choice]
       for _ in 0..<4 where !(tile.exists && tile.isHittable) { app.swipeUp() }
       tile.tap()
       XCTAssertTrue(tile.isSelected, "\(choice) is picked")
     }
     app.navigationBars["スタイル"].buttons.firstMatch.tap()
+    open(page: "カレンダー")
+    let value = style.coloredDays ? "1" : "0"
+    for day in ["土曜", "日曜", "祝日"] {
+      let toggle = app.switches.matching(NSPredicate(format: "label == %@", day)).firstMatch
+      for _ in 0..<4 where !(toggle.exists && toggle.isHittable) { app.swipeUp() }
+      if toggle.value as? String != value { toggle.switches.firstMatch.tap() }
+      XCTAssertEqual(toggle.value as? String, value, "\(day) is colored or not")
+    }
+    app.navigationBars["カレンダー"].buttons.firstMatch.tap()
     app.tabBars.buttons["カレンダー"].tap()
     XCTAssertTrue(app.buttons["ポチポチ入力"].waitForExistence(timeout: 5), "the calendar shows")
+  }
+
+  /// Opens the page 設定 lists as `name`.
+  @MainActor private func open(page name: String) {
+    let row = app.collectionViews.firstMatch.buttons
+      .matching(NSPredicate(format: "label BEGINSWITH %@", name)).firstMatch
+    XCTAssertTrue(row.waitForExistence(timeout: 5), "設定 lists \(name)")
+    row.tap()
+    XCTAssertTrue(app.navigationBars[name].waitForExistence(timeout: 5), "\(name) opens")
   }
 
   /// The widgets by the names the gallery shows (PochicalWidgets), as their
@@ -162,6 +206,17 @@ final class StoreScreenshotTests: XCTestCase {
     "いまのシフト": "now",
   ]
   private static let widgetSizes = ["小": "small", "中": "medium", "大": "large"]
+  /// Whom a widget can be set to, of the seed's group: its first member,
+  /// and for 次の休み the group itself. Each by the word its file takes,
+  /// the choice as the widget's editing lists it, under its group, and
+  /// what the widget says once it is theirs.
+  private static let widgetChoices = [
+    "次の休み": [
+      ("person", "田中, 職場のみんな", "田中さんと一緒に休める日"),
+      ("group", "みんな休み, 職場のみんな", "職場のみんなのみんな休み"),
+    ],
+    "これから": [("person", "田中, 職場のみんな", "田中さん、")],
+  ]
 
   /// The app past はじめの設定 with the sample month, its tabs shown, and
   /// its offer of reminders already answered.
@@ -252,6 +307,28 @@ final class StoreScreenshotTests: XCTestCase {
     XCTAssertTrue(widget.waitForExistence(timeout: 10), "the widget is on the Home Screen")
     XCTAssertTrue(
       widget.staticTexts.firstMatch.waitForExistence(timeout: 20), "the widget has drawn its days")
+  }
+
+  /// Sets the widget on the Home Screen to `choice`, as its editing lists
+  /// them (ウィジェットを編集), and waits for it to say `says`.
+  func setWidget(to choice: String, saying says: String) {
+    widget.press(forDuration: 1.2)
+    let edit = springboard.buttons[
+      "com.apple.springboardhome.application-shortcut-item.configure-widget"]
+    XCTAssertTrue(edit.waitForExistence(timeout: 5), "held, the widget can be edited")
+    edit.tap()
+    // The card's one question, its button saying whom it is set to so far.
+    let whom = springboard.tables.cells.buttons.firstMatch
+    XCTAssertTrue(whom.waitForExistence(timeout: 5), "the widget asks whom")
+    whom.tap()
+    let listed = springboard.buttons[choice]
+    XCTAssertTrue(listed.waitForExistence(timeout: 5), "the widget's editing lists \(choice)")
+    listed.tap()
+    // Outside the card, which closes it.
+    springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.06)).tap()
+    let said = widget.descendants(matching: .any)
+      .matching(NSPredicate(format: "label CONTAINS %@", says)).firstMatch
+    XCTAssertTrue(said.waitForExistence(timeout: 20), "the widget is \(choice)'s")
   }
 
   /// Takes the app's widget off the Home Screen.
