@@ -35,7 +35,8 @@ struct JoinScreen: View {
   /// Joined, but the photo picked could not be set: said, and the group
   /// opens anyway.
   @Environment(\.say) private var say
-  @State private var joining = false
+  /// Joined, the screen giving way to the group: busy still.
+  @State private var gone = false
   @State private var joinError: InviteError?
   @State private var showingMembers = false
 
@@ -59,6 +60,17 @@ struct JoinScreen: View {
       }
     }
     .task { await load() }
+    .waiting(on: groupCalls.joining, mine: { $0.code == invite.code }) { joined in
+      switch joined {
+      case .success(let group):
+        if !group.faceKept { say(joinFaceNotKept) }
+        gone = true
+        onJoined(group.groupID)
+      case .failure(let error):
+        ReviewPrompt.troubled = true
+        joinError = error as? InviteError ?? .failed
+      }
+    }
     .alert(
       joinError == .full ? "このグループには参加できません" : "参加できませんでした",
       isPresented: Binding($joinError),
@@ -215,27 +227,28 @@ struct JoinScreen: View {
 
   private var myName: String { profile.name(usual: usualName) }
 
+  /// Whether 参加する is under way, the app's one call (`GoingIn`), or
+  /// done: another invitation's leaves the button busy alone.
+  private var joining: Bool { groupCalls.joining.underWay != nil || gone }
+
   private func join() {
-    joining = true
+    // As the button is off for.
+    guard details?.full == false, !myName.isEmpty, fitsPersonName(myName) else { return }
     let asUsual = profile.goingOn(usualName: usualName)
     let face = profile.face
-    Task {
-      defer { joining = false }
-      do throws(InviteError) {
-        let groupID = try await groupCalls.join(code: invite.code, displayName: myName)
-        // Once in the group, so a join that fails changes nothing: someone
-        // with no usual name yet has the join make theirs the usual one,
-        // and keeps the face as theirs everywhere too, which the group
-        // then shows as it shows anyone's usual ones; anyone else's face,
-        // or one not kept as usual, is the group's own.
-        if !(await groupCalls.keep(face, asUsual: asUsual, in: groupID)) {
-          say(joinFaceNotKept)
-        }
-        onJoined(groupID)
-      } catch {
-        ReviewPrompt.troubled = true
-        joinError = error
-      }
+    let calls = groupCalls
+    let ask = JoinAsk(code: invite.code, displayName: myName)
+    // The app's from here, whether this screen still waits or not; tapped
+    // again before the screen is drawn busy, the same call.
+    groupCalls.joining.begin(ask) {
+      let groupID = try await calls.join(code: ask.code, displayName: ask.displayName)
+      // Once in the group, so a join that fails changes nothing: someone
+      // with no usual name yet has the join make theirs the usual one,
+      // and keeps the face as theirs everywhere too, which the group
+      // then shows as it shows anyone's usual ones; anyone else's face,
+      // or one not kept as usual, is the group's own.
+      let faceKept = await calls.keep(face, asUsual: asUsual, in: groupID)
+      return InGroup(groupID: groupID, faceKept: faceKept)
     }
   }
 }

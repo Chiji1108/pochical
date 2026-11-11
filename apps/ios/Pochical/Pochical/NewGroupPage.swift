@@ -30,7 +30,9 @@ struct NewGroupPage: View {
   /// was while nothing on the page has changed, so a retry after a lost
   /// answer makes no second group.
   @State private var sent: NewGroupRequest?
-  @State private var making = false
+  /// Made, the page giving way to the group: busy still, so 作る is not
+  /// there to tap again.
+  @State private var gone = false
   @State private var failed = false
   @State private var photoGone = false
 
@@ -66,12 +68,31 @@ struct NewGroupPage: View {
     .navigationBarTitleDisplayMode(.inline)
     .toolbar {
       ToolbarItem(placement: .confirmationAction) {
-        if making {
+        if busy {
           ProgressView()
         } else {
           Button("作る", role: .confirm) { make() }
             .disabled(!canMake)
         }
+      }
+    }
+    .onAppear { showUnderWay() }
+    .waiting(on: groupCalls.making) { made in
+      switch made {
+      case .success(let group):
+        if !group.faceKept { say(joinFaceNotKept) }
+        // Still busy until the group has come and the page has turned
+        // into メンバーを招待 (GroupsScreen).
+        gone = true
+        onMade(group.groupID)
+      case .failure(is MarkPhotoGone):
+        // Back to following the name, as before a photo was picked.
+        pickedMark = nil
+        sent = nil
+        photoGone = true
+      case .failure:
+        ReviewPrompt.troubled = true
+        failed = true
       }
     }
     .alert("グループを作れませんでした", isPresented: $failed) {
@@ -103,40 +124,40 @@ struct NewGroupPage: View {
   /// for a mark picked from an emoji or a photo into an icon or letters.
   private var freeColor: Int { nextGroupColor(groups.map(\.mark), slots: colors.marks.count) }
 
+  /// Whether 作る is under way, the app's one call (`GoingIn`), or done.
+  private var busy: Bool { groupCalls.making.underWay != nil || gone }
+
+  /// The group being made as the page opens, the page having been left
+  /// while it was: the page shows it under way rather than an empty form,
+  /// from which the same group could be asked for again.
+  private func showUnderWay() {
+    guard sent == nil, name.isEmpty, let begun = groupCalls.making.underWay?.asked else { return }
+    name = begun.name
+    sent = begun
+    end = groupEndDay(begun.endsAtMs)
+  }
+
   private func make() {
     let request = NewGroupRequest.asking(
       name: trimmed(name), mark: mark, displayName: myName, endsAtMs: groupEndsAt(end),
       after: sent)
+    // As the button is off for.
+    guard request.fits, !request.displayName.isEmpty else { return }
     sent = request
-    making = true
     let asUsual = profile.goingOn(usualName: usualName)
     let face = profile.face
-    Task {
-      do {
-        // A picked photo goes up first, for the group to take.
-        if !request.mark.photoID.isEmpty {
-          try await groupCalls.sendMarkPhoto(request.mark.photoID)
-        }
-        let made = try await groupCalls.create(request)
-        // Once the group is made, so one that fails changes nothing.
-        if !(await groupCalls.keep(face, asUsual: asUsual, in: made)) {
-          say(joinFaceNotKept)
-        }
-        // Still making until the group has come and the page has turned
-        // into メンバーを招待 (GroupsScreen), so 作る is not there to tap
-        // again meanwhile.
-        onMade(made)
-        return
-      } catch is MarkPhotoGone {
-        // Back to following the name, as before a photo was picked.
-        pickedMark = nil
-        sent = nil
-        photoGone = true
-      } catch {
-        ReviewPrompt.troubled = true
-        failed = true
+    let calls = groupCalls
+    // The app's from here, whether this page still waits or not; tapped
+    // again before the page is drawn busy, the same call.
+    groupCalls.making.begin(request) {
+      // A picked photo goes up first, for the group to take.
+      if !request.mark.photoID.isEmpty {
+        try await calls.sendMarkPhoto(request.mark.photoID)
       }
-      making = false
+      let made = try await calls.create(request)
+      // Once the group is made, so one that fails changes nothing.
+      let faceKept = await calls.keep(face, asUsual: asUsual, in: made)
+      return InGroup(groupID: made, faceKept: faceKept)
     }
   }
 }
