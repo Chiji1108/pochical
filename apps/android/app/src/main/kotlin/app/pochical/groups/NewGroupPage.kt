@@ -19,7 +19,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import android.widget.Toast
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
@@ -40,6 +43,7 @@ import app.pochical.kit.PhotoShelf
 import app.pochical.kit.fitsGroupMark
 import app.pochical.kit.fitsGroupName
 import app.pochical.kit.fitsPersonName
+import app.pochical.people.usualProfile
 import app.pochical.kit.guessGroupMark
 import app.pochical.kit.nextGroupColor
 import app.pochical.pageInsets
@@ -58,7 +62,18 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
   val calls = LocalGroupCalls.current
   val values = LocalValues.current
   val groups by remember(values) { values.groups() }.collectAsStateWithLifecycle(emptyList())
-  val usualName = remember(values) { values.profile() }.collectAsStateWithLifecycle(null).value?.name.orEmpty()
+  val profile = usualProfile()
+  val usualName = profile?.name.orEmpty()
+  val usualPhoto = profile?.photoId.orEmpty()
+  val context = LocalContext.current
+  val resources = LocalResources.current
+  // The face of someone with no usual name yet, asked here with the name and kept as the usual one
+  // once the group is made.
+  var face by rememberSaveable(stateSaver = JoinFaceSaver) { mutableStateOf<JoinFace>(JoinFace.Usual) }
+  StartsWithADrawing(firstAsked = profile?.let { it.name.isEmpty() && it.photoId.isEmpty() } == true, face) { face = it }
+  // Whether the name and face are asked as the usual ones: no usual name yet, or a face already
+  // picked here, which stays as the group is made and its name becomes the usual one.
+  val firstAsked = usualName.isEmpty() || face != JoinFace.Usual
   val slots = LocalThemeColors.current.marks.size
   var name by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
   var myName by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue()) }
@@ -96,8 +111,17 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
       try {
         // A picked photo goes up first, for the group to take.
         if (request.mark.photoId.isNotEmpty()) calls.sendHeldPhoto(request.mark.photoId, PhotoShelf.Mine)
+        val made = calls.create(request)
+        // Once the group is made, so one that fails changes nothing: a face asked here goes with
+        // the name the group made the usual one; a retry after a lost answer sends it again.
+        if (keepAsUsual(calls, face)) {
+          (face as? JoinFace.Held)?.let { calls.releasePhoto(it.photoId) }
+        } else {
+          ReviewPrompt.troubled = true
+          Toast.makeText(context, resources.getString(R.string.new_group_face_failed), Toast.LENGTH_LONG).show()
+        }
         // Still making as the page gives way to the group, so 作る is not there to tap again.
-        onMade(calls.create(request))
+        onMade(made)
         return@launch
       } catch (e: CancellationException) {
         throw e
@@ -122,6 +146,22 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
     contentWindowInsets = pageInsets,
   ) { padding ->
     LazyColumn(contentPadding = padding) {
+      // With no usual name yet, the name and face asked here become the usual ones, as on the join
+      // screen (あなたの名前と写真).
+      if (firstAsked) {
+        item {
+          JoinFaceEditor(
+            face,
+            { chosen ->
+              (face as? JoinFace.Held)?.takeIf { chosen != face }?.let { scope.launch { calls.releasePhoto(it.photoId) } }
+              face = chosen
+            },
+            usualPhoto,
+            myName.text.trim(),
+            Modifier.padding(vertical = 8.dp),
+          )
+        }
+      }
       item {
         LimitedTextField(
           name,
@@ -150,7 +190,7 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
           placeholder = stringResource(R.string.person_name_example),
         )
       }
-      item { Footnote(stringResource(R.string.new_group_mark_note)) }
+      item { Footnote(stringResource(R.string.new_group_mark_note) + if (firstAsked) stringResource(R.string.new_group_usual_note) else "") }
     }
   }
   if (editingMark) {

@@ -258,6 +258,8 @@
   <string name="new_group">グループを作る</string>
   <string name="new_group_make">作る</string>
   <string name="new_group_mark_note">アイコンはグループ名から自動で入ります。</string>
+  <string name="new_group_usual_note">作ると、この名前と写真がいつもの名前と写真になり、ほかのグループでも使われます。設定 › プロフィールで変えられます。</string>
+  <string name="new_group_face_failed">写真を設定できませんでした。設定 › プロフィールから変えられます</string>
   <string name="new_group_failed">グループを作れませんでした</string>
   <string name="invite">メンバーを招待</string>
   <string name="invite_qr">招待のQRコード</string>

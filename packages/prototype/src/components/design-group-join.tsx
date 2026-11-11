@@ -16,7 +16,6 @@ import { withNotice } from "../lib/design-group-data";
 import type {
   Group,
   GroupMark,
-  GroupProfile,
   GroupSummary,
   Profile,
 } from "../lib/design-group-data";
@@ -26,6 +25,7 @@ import { useLongPress } from "./design-chat-actions";
 import { PhonePopover, PopoverMenuItem } from "./design-chat-popover";
 import { GroupIcon, PhotoAvatar, hub, markFrame } from "./design-group-parts";
 import {
+  firstFace,
   GroupProfilePage,
   GroupProfileRow,
   profileIn,
@@ -388,7 +388,7 @@ export function JoinScreen({
   const invite = sampleInvite();
   const setChats = useUser((state) => state.setChats);
   const setProfile = useUser((state) => state.setProfile);
-  const [mine, setMine] = useState<GroupProfile>();
+  const [mine, setMine] = useState(() => firstFace(profile));
   const [editing, setEditing] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
   const names = invite.members.map((member) => member.name);

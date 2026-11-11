@@ -64,6 +64,10 @@ struct JoinScreen: View {
       }
     }
     .task { await load() }
+    .startsWithADrawing(
+      $face,
+      firstAsked: !$usualName.isLoading && !$usual.isLoading && usualName.isEmpty
+        && usual.photoID.isEmpty)
     .alert(
       joinError == .full ? "このグループには参加できません" : "参加できませんでした",
       isPresented: Binding($joinError),
@@ -275,19 +279,8 @@ struct JoinScreen: View {
     .navigationBarTitleDisplayMode(.inline)
   }
 
-  @ViewBuilder private func facePicture(size: CGFloat) -> some View {
-    switch face {
-    case .picked(let jpeg):
-      if let image = UIImage(data: jpeg) {
-        Image(uiImage: image).resizable().scaledToFill()
-          .frame(width: size, height: size).clipShape(Circle())
-      }
-    case .usual:
-      MemberAvatar(
-        name: myName, photoID: usual.photoID, shelf: .mine, size: size, me: true)
-    case .none:
-      MemberAvatar(name: myName, photoID: "", size: size, me: true)
-    }
+  private func facePicture(size: CGFloat) -> some View {
+    JoinFacePicture(face: face, name: myName, usualPhotoID: usual.photoID, size: size)
   }
 
   /// With no usual name yet, the name and face are asked as the usual
@@ -311,7 +304,7 @@ struct JoinScreen: View {
         // and keeps the face as theirs everywhere too, which the group
         // then shows as it shows anyone's usual ones; anyone else's face,
         // or one not kept as usual, is the group's own.
-        let keptAsUsual = asUsual ? await keepAsUsual() : false
+        let keptAsUsual = asUsual ? await groupCalls.keepAsUsual(face) : false
         if !keptAsUsual {
           await setFace(in: groupID)
         }
@@ -325,26 +318,6 @@ struct JoinScreen: View {
 }
 
 extension JoinScreen {
-  /// The face as the usual one (設定 › プロフィール), for someone who had
-  /// no usual name, whose name the join itself made their usual one; the
-  /// usual photo, if there is one, stays as it is. False when it could not
-  /// be kept.
-  fileprivate func keepAsUsual() async -> Bool {
-    do {
-      switch face {
-      case .usual: break
-      case .picked(let jpeg):
-        let photoID = try await groupCalls.sendPhoto(jpeg, to: .mine)
-        try await groupCalls.setProfile(name: nil, photoID: photoID)
-      case .none:
-        try await groupCalls.setProfile(name: nil, photoID: "")
-      }
-      return true
-    } catch {
-      return false
-    }
-  }
-
   /// The face picked here, set now the person is in the group; the usual
   /// one needs nothing. Not set, the group opens anyway and says so.
   fileprivate func setFace(in groupID: String) async {
@@ -361,13 +334,6 @@ extension JoinScreen {
       say("写真を設定できませんでした。グループの設定から変えられます")
     }
   }
-}
-
-/// The face a group shows of the person joining it.
-enum JoinFace: Equatable {
-  case usual
-  case picked(Data)
-  case none
 }
 
 private func trimmed(_ text: String) -> String {

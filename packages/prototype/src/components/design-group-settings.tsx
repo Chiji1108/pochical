@@ -24,6 +24,7 @@ import type {
   Profile,
 } from "../lib/design-group-data";
 import { useUser } from "../lib/design-user-store";
+import { drawings } from "../lib/drawings";
 import { firstCharacter } from "../lib/text-limits";
 import {
   Choice,
@@ -454,6 +455,19 @@ export function GroupProfilePage({
   );
 }
 
+// The face someone first asked for their name and photo starts with, with
+// no usual name and no usual photo yet: one of the drawings, picked at
+// random once as the screen opens. It is theirs as they go on, as if they
+// had picked it, and theirs to change or take off before that, which never
+// brings one back.
+export function firstFace(profile: Profile): GroupProfile | undefined {
+  if (profile.name !== "" || profile.photo !== undefined) {
+    return undefined;
+  }
+  const drawing = drawings[Math.floor(Math.random() * drawings.length)];
+  return drawing && { photo: drawing.src };
+}
+
 // What the name and face are asked as: this group's, or, with no usual
 // name yet, the usual ones joining keeps.
 export function profileTitle(profile: Profile): string {
@@ -733,9 +747,19 @@ export function NewGroupPage({
   freeColor: number;
   profile: Profile;
   onBack: () => void;
-  onCreate: (group: { name: string; mark: GroupMark; myName: string }) => void;
+  // `myPhoto` is the face asked here with the name, of someone with no
+  // usual name yet, whose name and face making the group keeps as the
+  // usual ones.
+  onCreate: (group: {
+    name: string;
+    mark: GroupMark;
+    myName: string;
+    myPhoto?: string;
+  }) => void;
 }) {
   const [name, setName] = useState("");
+  const [face, setFace] = useState(() => firstFace(profile));
+  const myPhoto = face?.noPhoto ? undefined : (face?.photo ?? profile.photo);
   // Starts as your usual name; change it only if this group calls you
   // something else.
   const [myName, setMyName] = useState(profile.name);
@@ -769,7 +793,12 @@ export function NewGroupPage({
             disabled={!canCreate}
             prominent
             onClick={() => {
-              onCreate({ mark, myName: myName.trim(), name: name.trim() });
+              onCreate({
+                mark,
+                myName: myName.trim(),
+                myPhoto,
+                name: name.trim(),
+              });
             }}
           >
             作る
@@ -777,6 +806,23 @@ export function NewGroupPage({
         }
         title="グループを作る"
       />
+      {profile.name === "" && (
+        <PhotoEditor
+          name={myName.trim()}
+          onRemove={
+            myPhoto === undefined
+              ? undefined
+              : () => {
+                  setFace({ noPhoto: true });
+                }
+          }
+          onUpload={(photo) => {
+            setFace({ photo });
+          }}
+          photo={myPhoto}
+          size={88}
+        />
+      )}
       <List>
         <ListRow
           label="グループ名"
@@ -815,7 +861,11 @@ export function NewGroupPage({
           }
         />
       </List>
-      <Note>アイコンはグループ名から自動で入ります。</Note>
+      <Note>
+        アイコンはグループ名から自動で入ります。
+        {profile.name === "" &&
+          "作ると、この名前と写真がいつもの名前と写真になり、ほかのグループでも使われます。設定 › プロフィールで変えられます。"}
+      </Note>
     </>
   );
 }

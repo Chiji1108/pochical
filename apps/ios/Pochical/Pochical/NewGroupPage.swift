@@ -18,6 +18,11 @@ struct NewGroupPage: View {
   @State private var myName = ""
   /// The usual name, which the field starts with (設定 › プロフィール).
   @Fetch(ProfileNameRequest()) private var usualName = ""
+  @Fetch(UsualProfileRequest()) private var usual = UsualProfile()
+  /// The face of someone with no usual name yet, asked here with the name
+  /// and kept as the usual one once the group is made.
+  @State private var face = JoinFace.usual
+  @Environment(\.say) private var say
   /// The mark picked by hand, which then stays as the name changes; none
   /// while the mark follows the name.
   @State private var pickedMark: GroupMarkValue?
@@ -36,6 +41,22 @@ struct NewGroupPage: View {
       fitsGroupName(trimmed(name)) && fitsGroupMark(mark) && !trimmed(myName).isEmpty
       && fitsPersonName(myName)
     List {
+      // With no usual name yet, the name and face asked here become the
+      // usual ones, as on the join screen (あなたの名前と写真).
+      if firstAsked {
+        Section {
+          PhotoEditor(
+            label: "写真を編集",
+            hasPhoto: face != .none && (face != .usual || !usual.photoID.isEmpty),
+            picture: {
+              JoinFacePicture(
+                face: face, name: trimmed(myName), usualPhotoID: usual.photoID, size: 88)
+            },
+            onPhoto: { jpeg in face = .picked(jpeg) },
+            onRemove: { face = .none })
+          .settingsOnPage()
+        }
+      }
       Section {
         LabeledContent("グループ名") {
           LimitedTextField(placeholder: "例：家族", text: $name, limit: TextLimits.groupName)
@@ -56,7 +77,10 @@ struct NewGroupPage: View {
             .fixedSize(horizontal: !typeSize.isAccessibilitySize, vertical: false)
         }
       } footer: {
-        Text("アイコンはグループ名から自動で入ります。")
+        Text(
+          firstAsked
+            ? "アイコンはグループ名から自動で入ります。作ると、この名前と写真がいつもの名前と写真になり、ほかのグループでも使われます。設定 › プロフィールで変えられます。"
+            : "アイコンはグループ名から自動で入ります。")
       }
       .settingsRows()
     }
@@ -66,6 +90,10 @@ struct NewGroupPage: View {
     .onChange(of: usualName, initial: true) { _, usual in
       if myName.isEmpty { myName = usual }
     }
+    .startsWithADrawing(
+      $face,
+      firstAsked: !$usualName.isLoading && !$usual.isLoading && usualName.isEmpty
+        && usual.photoID.isEmpty)
     .toolbar {
       ToolbarItem(placement: .confirmationAction) {
         if making {
@@ -100,6 +128,11 @@ struct NewGroupPage: View {
 
   /// The first color the user's groups do not use yet, for the guess and
   /// for a mark picked from an emoji or a photo into an icon or letters.
+  /// Whether the name and face are asked as the usual ones: no usual name
+  /// yet, or a face already picked here, which stays as the group is made
+  /// and its name becomes the usual one.
+  private var firstAsked: Bool { usualName.isEmpty || face != .usual }
+
   private var freeColor: Int { nextGroupColor(groups.map(\.mark), slots: colors.marks.count) }
 
   private func make() {
@@ -114,6 +147,12 @@ struct NewGroupPage: View {
           try await groupCalls.sendMarkPhoto(request.mark.photoID)
         }
         let made = try await groupCalls.create(request)
+        // Once the group is made, so one that fails changes nothing: a
+        // face asked here goes with the name the group made the usual
+        // one; a retry after a lost answer sends it again.
+        if !(await groupCalls.keepAsUsual(face)) {
+          say("写真を設定できませんでした。設定 › プロフィールから変えられます")
+        }
         // Still making until the group has come and the page has turned
         // into メンバーを招待 (GroupsScreen), so 作る is not there to tap
         // again meanwhile.

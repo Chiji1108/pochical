@@ -47,7 +47,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -57,11 +56,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.Footnote
 import app.pochical.Headline
 import app.pochical.LimitedTextField
@@ -80,46 +77,11 @@ import app.pochical.kit.InviteDetails
 import app.pochical.kit.InviteFailure
 import app.pochical.kit.PhotoShelf
 import app.pochical.kit.fitsPersonName
+import app.pochical.people.usualProfile
 import app.pochical.rowColors
 import app.pochical.segmentShapes
-import java.io.IOException
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.launch
-
-/**
- * The face a group shows of the person joining it: their usual one, one picked here (held on the
- * device under the id it is sent as, `GroupCalls.holdPhoto`), or none.
- */
-sealed interface JoinFace {
-  data object Usual : JoinFace
-
-  data class Held(val photoId: String) : JoinFace
-
-  data object None : JoinFace
-}
-
-/**
- * The choice kept across the activity made anew and the process's death, as the name typed beside
- * it is: a face removed on purpose must not come back as the usual one. A picked photo is kept by
- * its held id, its bytes in the app's cache.
- */
-val JoinFaceSaver: Saver<JoinFace, String> =
-  Saver(
-    save = {
-      when (it) {
-        JoinFace.Usual -> "usual"
-        JoinFace.None -> "none"
-        is JoinFace.Held -> "held:${it.photoId}"
-      }
-    },
-    restore = {
-      when {
-        it == "none" -> JoinFace.None
-        it.startsWith("held:") -> JoinFace.Held(it.removePrefix("held:"))
-        else -> JoinFace.Usual
-      }
-    },
-  )
 
 /**
  * 参加の画面 (/design's JoinScreen), opened by an invitation's link or its QR code: the group, its
@@ -136,7 +98,7 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
   val resources = LocalResources.current
   val context = LocalContext.current
   val scope = rememberCoroutineScope()
-  val profile by remember(values) { values.profile() }.collectAsStateWithLifecycle(null)
+  val profile = usualProfile()
   val usualName = profile?.name.orEmpty()
   val usualPhoto = profile?.photoId.orEmpty()
   var details by remember { mutableStateOf<InviteDetails?>(null) }
@@ -150,6 +112,7 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
   var showingMembers by remember { mutableStateOf(false) }
   var editingProfile by remember { mutableStateOf(false) }
   val myName = ownName.text.trim().ifEmpty { usualName }
+  StartsWithADrawing(firstAsked = profile?.let { it.name.isEmpty() && it.photoId.isEmpty() } == true, face) { face = it }
 
   LaunchedEffect(code, loads) {
     try {
@@ -384,16 +347,6 @@ private fun MembersSheet(details: InviteDetails, code: String, onDismiss: () -> 
   }
 }
 
-/** The face the group will show: the one picked here, the usual one, or the name's letter. */
-@Composable
-private fun JoinFacePicture(face: JoinFace, name: String, usualPhoto: String, size: Dp) {
-  when (face) {
-    is JoinFace.Held -> PhotoPicture(face.photoId, PhotoShelf.Mine, Modifier.size(size).clip(CircleShape))
-    JoinFace.Usual -> MemberAvatar(name, usualPhoto, PhotoShelf.Mine, size, me = true)
-    JoinFace.None -> MemberAvatar(name, "", null, size, me = true)
-  }
-}
-
 /**
  * このグループでのあなた before joining (/design's GroupProfilePage on the join screen), or あなたの名前と写真
  * for someone with no usual name yet: the face and a name of its own, kept here and sent as the
@@ -412,9 +365,6 @@ private fun JoinProfileDialog(
   myName: String,
   onClose: () -> Unit,
 ) {
-  val calls = LocalGroupCalls.current
-  var photoFailed by remember { mutableStateOf(false) }
-  if (photoFailed) FailedDialog(stringResource(R.string.mark_photo_failed)) { photoFailed = false }
   Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
     Scaffold(
       topBar = {
@@ -425,24 +375,7 @@ private fun JoinProfileDialog(
       }
     ) { padding ->
       Column(Modifier.consumeWindowInsets(padding).imePadding().verticalScroll(rememberScrollState()).padding(padding), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        val hasPhoto = face is JoinFace.Held || (face == JoinFace.Usual && usualPhoto.isNotEmpty())
-        PhotoEditor(
-          label = stringResource(R.string.photo_edit),
-          shape = PhotoCropShape.Round,
-          onPhoto = {
-            try {
-              onFace(JoinFace.Held(calls.holdPhoto(it)))
-            } catch (_: IOException) {
-              ReviewPrompt.troubled = true
-              photoFailed = true
-            }
-          },
-          modifier = Modifier.padding(top = 16.dp),
-          onUsual = if (face == JoinFace.Usual || usualPhoto.isEmpty()) null else ({ onFace(JoinFace.Usual) }),
-          onRemove = if (hasPhoto) ({ onFace(JoinFace.None) }) else null,
-        ) {
-          JoinFacePicture(face, myName, usualPhoto, 88.dp)
-        }
+        JoinFaceEditor(face, onFace, usualPhoto, myName, Modifier.padding(top = 16.dp))
         LimitedTextField(
           ownName,
           onOwnName,
@@ -459,28 +392,6 @@ private fun JoinProfileDialog(
     }
   }
 }
-
-/**
- * The face as the usual one (設定 › プロフィール), for someone who had no usual name, whose name the
- * join itself made their usual one; the usual photo, if there is one, stays as it is. Whether it was
- * kept.
- */
-private suspend fun keepAsUsual(calls: app.pochical.kit.GroupCalls, face: JoinFace): Boolean =
-  try {
-    when (face) {
-      JoinFace.Usual -> Unit
-      is JoinFace.Held -> {
-        calls.sendHeldPhoto(face.photoId, PhotoShelf.Mine)
-        calls.setProfile(name = null, photoId = face.photoId)
-      }
-      JoinFace.None -> calls.setProfile(name = null, photoId = "")
-    }
-    true
-  } catch (e: CancellationException) {
-    throw e
-  } catch (_: Exception) {
-    false
-  }
 
 /** The face picked here, set now the person is in the group; the usual one needs nothing. Whether it was. */
 private suspend fun setFace(calls: app.pochical.kit.GroupCalls, face: JoinFace, groupId: String): Boolean =

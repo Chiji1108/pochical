@@ -234,6 +234,13 @@ private struct FaceDrawingSheet: View {
 }
 
 extension FaceDrawing {
+  /// One of the drawings at random, as the photo it goes as: what someone
+  /// first asked for their name and photo starts with (`startsWithADrawing`).
+  @MainActor static func randomPhoto() async -> Data? {
+    guard let picture = all.randomElement()?.picture else { return nil }
+    return await shrunkPicture(picture)?.jpeg
+  }
+
   /// The drawing as a picture at the size a face is kept, to go the way a
   /// photo does.
   @MainActor fileprivate var picture: UIImage? {
