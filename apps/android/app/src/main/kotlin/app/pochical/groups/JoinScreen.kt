@@ -39,7 +39,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,6 +57,7 @@ import app.pochical.MarkFrame
 import app.pochical.MarkFrameSize
 import app.pochical.R
 import app.pochical.ReviewPrompt
+import app.pochical.balanced
 import app.pochical.design.GROUP_MAX_MEMBERS
 import app.pochical.design.Metrics
 import app.pochical.calendar.rememberToday
@@ -65,12 +65,10 @@ import app.pochical.kit.InviteDetails
 import app.pochical.kit.InviteFailure
 import app.pochical.kit.PhotoShelf
 import app.pochical.kit.fitsPersonName
-import kotlin.coroutines.cancellation.CancellationException
 import app.pochical.people.usualProfile
 import app.pochical.rowColors
 import app.pochical.segmentShapes
 import java.time.ZoneId
-import kotlinx.coroutines.launch
 
 /**
  * 参加の画面 (/design's JoinScreen), opened by an invitation's link or its QR code: the group, its
@@ -86,13 +84,11 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
   val values = LocalValues.current
   val resources = LocalResources.current
   val context = LocalContext.current
-  val scope = rememberCoroutineScope()
   val usualName = usualProfile()?.name.orEmpty()
   var details by remember { mutableStateOf<InviteDetails?>(null) }
   var loadError by remember { mutableStateOf<InviteFailure.Reason?>(null) }
   var loads by remember { mutableStateOf(0) }
   val profile = rememberJoinProfile()
-  var joining by remember { mutableStateOf(false) }
   var joinError by remember { mutableStateOf<InviteFailure.Reason?>(null) }
   var showingMembers by remember { mutableStateOf(false) }
   val myName = profile.name(usualName)
@@ -113,32 +109,15 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
 
   BackHandler(onBack = onClose)
 
-  fun join() {
-    joining = true
-    val asUsual = profile.goingOn(usualName)
-    val face = profile.face
-    scope.launch {
-      try {
-        val groupId = calls.join(code, myName)
-        // Once in the group, so a join that fails changes nothing; kept by the kit, whether this
-        // screen still waits or not.
-        try {
-          calls.keepFace(face, asUsual, groupId).await()
-        } catch (e: CancellationException) {
-          throw e
-        } catch (_: Exception) {
-          ReviewPrompt.troubled = true
-          // Said past this screen, which gives way to the group at once.
-          Toast.makeText(context, resources.getString(R.string.join_face_failed), Toast.LENGTH_LONG).show()
-        }
-        onGroup(groupId)
-      } catch (e: InviteFailure) {
-        ReviewPrompt.troubled = true
-        joinError = e.reason
-      }
-      joining = false
+  val joining =
+    rememberGoingIn(onIn = onGroup) { failure ->
+      ReviewPrompt.troubled = true
+      joinError = (failure as? InviteFailure)?.reason ?: InviteFailure.Reason.Failed
     }
-  }
+
+  // The kit's from here, the face once the person is in the group, whether this screen still
+  // waits or not.
+  fun join() = joining.begin(calls.joining(code, myName, profile.face, profile.goingOn(usualName)))
 
   Scaffold(
     topBar = {
@@ -165,19 +144,19 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
             if (shown.endsAtMs != 0L) {
               Text(
                 groupEndsWords(LocalResources.current, shown.endsAtMs, rememberToday(), ZoneId.systemDefault()),
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyMedium.balanced(),
                 textAlign = TextAlign.Center,
               )
             }
             Text(
               if (shown.full) stringResource(R.string.join_full_body, GROUP_MAX_MEMBERS) else stringResource(R.string.join_shares),
-              style = MaterialTheme.typography.bodySmall,
+              style = MaterialTheme.typography.bodySmall.balanced(),
               color = MaterialTheme.colorScheme.onSurfaceVariant,
               textAlign = TextAlign.Center,
             )
             val canJoin = !shown.full && myName.isNotEmpty() && fitsPersonName(myName)
-            Button(onClick = ::join, shapes = ButtonDefaults.shapes(), enabled = canJoin && !joining, modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
-              if (joining) CircularProgressIndicator(Modifier.size(20.dp)) else Text(stringResource(R.string.join))
+            Button(onClick = ::join, shapes = ButtonDefaults.shapes(), enabled = canJoin && !joining.busy, modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
+              if (joining.busy) CircularProgressIndicator(Modifier.size(20.dp)) else Text(stringResource(R.string.join))
             }
           }
         }

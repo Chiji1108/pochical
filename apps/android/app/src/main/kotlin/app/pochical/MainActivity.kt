@@ -12,9 +12,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import app.pochical.calendar.LocalOwnDays
 import app.pochical.calendar.OwnDays
 import app.pochical.groups.LocalGroupCalls
@@ -22,7 +21,6 @@ import app.pochical.groups.LocalValues
 import app.pochical.chat.LocalChats
 import app.pochical.chat.LocalPhotoFiles
 import app.pochical.chat.LocalPhotoUploads
-import app.pochical.kit.DeviceSettings
 import app.pochical.kit.PochicalKit
 import app.pochical.kit.SyncedSettings
 import app.pochical.widgets.followForWidgetPreviews
@@ -51,6 +49,7 @@ import kotlinx.coroutines.withContext
 @Inject
 class MainActivity(
   private val deviceSettings: SyncedSettings,
+  private val firstFrame: FirstFrame,
   private val ownDays: OwnDays,
   private val kit: PochicalKit,
   private val push: Push,
@@ -60,20 +59,17 @@ class MainActivity(
   private val signIns: SignIns,
   private val accountActions: AccountActions,
 ) : ComponentActivity() {
-  private var settings by mutableStateOf<DeviceSettings?>(null)
-
   init {
     // Before the activity is created, as the Auth Tab's result launcher must be.
     appleSignIn.attach(this)
   }
   private var calendarRead by mutableStateOf(false)
-  private var firstRunDone by mutableStateOf<Boolean?>(null)
   private val links = OpenedLinks()
 
   override fun onCreate(savedInstanceState: Bundle?) {
     // The splash stays until the first frame can be drawn in the person's テーマ, with their days:
     // what the device keeps alone, never the network or sync (Benchmarks' offline starts, #939).
-    installSplashScreen().setKeepOnScreenCondition { settings == null || !calendarRead || firstRunDone == null }
+    installSplashScreen().setKeepOnScreenCondition { firstFrame.settings.value == null || !calendarRead || firstFrame.firstRunDone.value == null }
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
     // Made again, the activity's navigation keeps the place the first intent opened.
@@ -87,17 +83,14 @@ class MainActivity(
       ownDays.awaitRead()
       calendarRead = true
     }
-    lifecycleScope.launch {
-      repeatOnLifecycle(Lifecycle.State.STARTED) { deviceSettings.settings.collect { settings = it } }
-    }
-    lifecycleScope.launch {
-      repeatOnLifecycle(Lifecycle.State.STARTED) { kit.firstRun.done.collect { firstRunDone = it } }
-    }
     // The widgets' previews in the picker follow the settings the screens change.
     lifecycleScope.launch { followForWidgetPreviews(this@MainActivity, deviceSettings.settings) }
     // Set while the app is in front, where the system does not limit how often (spec/shortcuts.md).
     if (savedInstanceState == null) lifecycleScope.launch(Dispatchers.Default) { publishShortcuts(applicationContext) }
     setContent {
+      // Read while the activity is started, and there at once in an activity made anew (FirstFrame).
+      val settings by firstFrame.settings.collectAsStateWithLifecycle()
+      val firstRunDone by firstFrame.firstRunDone.collectAsStateWithLifecycle()
       val device = settings ?: return@setContent
       if (!calendarRead) return@setContent
       val done = firstRunDone ?: return@setContent

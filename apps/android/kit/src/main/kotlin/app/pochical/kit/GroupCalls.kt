@@ -39,6 +39,7 @@ import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import okhttp3.HttpUrl
@@ -170,6 +171,40 @@ class GroupCalls internal constructor(
 
   private class Kept(val send: suspend () -> Unit) {
     val answer = CompletableDeferred<Unit>()
+  }
+
+  /**
+   * Makes the group [request] asks for and keeps [face] in it ([keepFace]), a photo picked for its
+   * mark sent first for the group to take: begun at once and carried by the kit, whether the page
+   * that asked still waits or not, so a window made anew under it (the screen turned) neither stops
+   * the call nor loses its answer, which the page there then awaits (#1178). It fails as [create]
+   * does, or with [MarkPhotoGone].
+   */
+  fun make(request: NewGroupRequest, face: JoinFace, asUsual: Boolean): Deferred<InGroup> = entering(face, asUsual) {
+    if (request.mark.photoId.isNotEmpty()) sendHeldPhoto(request.mark.photoId, PhotoShelf.Mine)
+    create(request)
+  }
+
+  /** Joins the group [code] opens as [displayName] ([join]) and keeps [face] in it, carried by the kit as [make] is. */
+  fun joining(code: String, displayName: String, face: JoinFace, asUsual: Boolean): Deferred<InGroup> =
+    entering(face, asUsual) { join(code, displayName) }
+
+  /**
+   * [enter] puts the person in a group, and the face picked on the way is kept once they are in it,
+   * so one that fails changes nothing; a face not kept leaves them in the group all the same.
+   */
+  private fun entering(face: JoinFace, asUsual: Boolean, enter: suspend () -> String): Deferred<InGroup> = scope.async {
+    val groupId = enter()
+    val faceKept =
+      try {
+        keepFace(face, asUsual, groupId).await()
+        true
+      } catch (e: CancellationException) {
+        throw e
+      } catch (_: Exception) {
+        false
+      }
+    InGroup(groupId, faceKept)
   }
 
   /** Makes the group [request] asks for, with the user in it: the new group's id. One the server would refuse is not asked for. */
@@ -500,6 +535,9 @@ class GroupCalls internal constructor(
       throw InviteFailure(InviteFailure.Reason.Failed, e)
     }
 }
+
+/** The group the person made or joined, and whether the face they picked on the way was kept in it. */
+data class InGroup(val groupId: String, val faceKept: Boolean)
 
 private fun <T> ResponseMessage<T>.answer(): T =
   when (this) {

@@ -15,13 +15,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import android.widget.Toast
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
@@ -38,7 +34,6 @@ import app.pochical.design.TextLimits
 import app.pochical.kit.GroupMarkValue
 import app.pochical.kit.MarkPhotoGone
 import app.pochical.kit.NewGroupRequest
-import app.pochical.kit.PhotoShelf
 import app.pochical.kit.fitsGroupMark
 import app.pochical.kit.fitsGroupName
 import app.pochical.kit.fitsPersonName
@@ -49,8 +44,6 @@ import app.pochical.kit.nextGroupColor
 import app.pochical.pageInsets
 import java.time.LocalDate
 import java.time.ZoneId
-import kotlin.coroutines.cancellation.CancellationException
-import kotlinx.coroutines.launch
 
 /**
  * グループを作る (/design's NewGroupPage): its name, its mark, its end if it has one, and how the
@@ -66,8 +59,6 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
   val values = LocalValues.current
   val groups by remember(values) { values.groups() }.collectAsStateWithLifecycle(emptyList())
   val usualName = usualProfile()?.name.orEmpty()
-  val context = LocalContext.current
-  val resources = LocalResources.current
   val profile = rememberJoinProfile()
   val myName = profile.name(usualName)
   val slots = LocalThemeColors.current.marks.size
@@ -77,14 +68,23 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
   // What 作る sent last, sent again as it was while nothing on the page has changed, so a retry
   // after a lost answer makes no second group.
   var sent by rememberSaveable(stateSaver = RequestSaver) { mutableStateOf<NewGroupRequest?>(null) }
-  var making by remember { mutableStateOf(false) }
   var failed by remember { mutableStateOf(false) }
   var photoGone by remember { mutableStateOf(false) }
   var editingMark by rememberSaveable { mutableStateOf(false) }
   // The group's end date (spec/sync-protocol.md, A group's end), none unless picked.
   var endDay by rememberSaveable { mutableStateOf<LocalDate?>(null) }
   var editingEnd by rememberSaveable { mutableStateOf(false) }
-  val scope = rememberCoroutineScope()
+  val making =
+    rememberGoingIn(onIn = onMade) { failure ->
+      if (failure is MarkPhotoGone) {
+        picked = null
+        sent = null
+        photoGone = true
+      } else {
+        ReviewPrompt.troubled = true
+        failed = true
+      }
+    }
 
   val groupName = name.text.trim()
   // The first color the user's groups do not use yet, for the guess and for a mark picked from an
@@ -102,45 +102,15 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
     val endsAtMs = endDay?.let { groupEndsAt(it, ZoneId.systemDefault()) } ?: 0
     val request = NewGroupRequest.asking(groupName, mark, myName, sent, endsAtMs)
     sent = request
-    making = true
-    val asUsual = profile.goingOn(usualName)
-    val face = profile.face
-    scope.launch {
-      try {
-        // A picked photo goes up first, for the group to take.
-        if (request.mark.photoId.isNotEmpty()) calls.sendHeldPhoto(request.mark.photoId, PhotoShelf.Mine)
-        val made = calls.create(request)
-        // Once the group is made, so one that fails changes nothing; kept by the kit, whether this
-        // page still waits or not.
-        try {
-          calls.keepFace(face, asUsual, made).await()
-        } catch (e: CancellationException) {
-          throw e
-        } catch (_: Exception) {
-          ReviewPrompt.troubled = true
-          Toast.makeText(context, resources.getString(R.string.join_face_failed), Toast.LENGTH_LONG).show()
-        }
-        // Still making as the page gives way to the group, so 作る is not there to tap again.
-        onMade(made)
-        return@launch
-      } catch (e: CancellationException) {
-        throw e
-      } catch (_: MarkPhotoGone) {
-        picked = null
-        sent = null
-        photoGone = true
-      } catch (_: Exception) {
-        ReviewPrompt.troubled = true
-        failed = true
-      }
-      making = false
-    }
+    // The kit's from here, a picked photo first and the face once the group is made, whether this
+    // page still waits or not.
+    making.begin(calls.make(request, profile.face, profile.goingOn(usualName)))
   }
 
   Scaffold(
     topBar = {
       PageBar(stringResource(R.string.new_group), onBack) {
-        ConfirmAction(stringResource(R.string.new_group_make), onClick = ::make, enabled = canMake, busy = making)
+        ConfirmAction(stringResource(R.string.new_group_make), onClick = ::make, enabled = canMake, busy = making.busy)
       }
     },
     contentWindowInsets = pageInsets,
@@ -162,7 +132,8 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit) {
           row { SettingsRow(stringResource(R.string.group_end), R.drawable.ic_event, onClick = { editingEnd = true }, value = groupEndValue(endDay)) }
         }
       }
-      item { Footnote(stringResource(R.string.new_group_mark_note)) }
+      // With an end, what passing it does is said here too, as グループの設定 says it.
+      item { Footnote(stringResource(R.string.new_group_mark_note) + if (endDay != null) stringResource(R.string.group_end_settings_note) else "") }
       item { JoinProfileSection(profile, groupName, stringResource(R.string.new_group_going)) }
     }
   }

@@ -2,6 +2,10 @@ package app.pochical.kit
 
 import java.io.File
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import okhttp3.OkHttpClient
@@ -60,5 +64,22 @@ class KeptNameTest {
       listOf(("さくら" to null), (null to photo), ("サクラ" to null)),
       server.profiles.map { (if (it.hasName()) it.name else null) to (if (it.hasPhotoId()) it.photoId else null) },
     )
+  }
+
+  /** The screen turned as グループを作る waits ends the page's coroutines, never the kit's call (#1178). */
+  @Test
+  fun aGroupBeingMadeIsMadeThoughThePageThatAskedIsGone() = runBlocking {
+    phone.account.foreground()
+    phone.account.state.first { it is AccountState.SignedIn }
+    server.createGroupDelayMs = 300
+    val request = NewGroupRequest.asking("忘年会", GroupMarkValue(emoji = "🍻"), "さくら", last = null)
+    val making = calls.make(request, JoinFace.Usual, asUsual = false)
+    // The page waits on it, and goes while the server still makes the group.
+    val page = CoroutineScope(SupervisorJob())
+    page.launch { making.await() }
+    page.cancel()
+
+    assertEquals(InGroup("group-${request.id}", faceKept = true), withTimeout(5_000) { making.await() })
+    assertEquals(listOf(request.id), server.createdGroups.map { it.requestId })
   }
 }

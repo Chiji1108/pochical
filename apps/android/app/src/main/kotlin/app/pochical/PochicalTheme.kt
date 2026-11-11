@@ -19,6 +19,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.font.FontFamily
 import app.pochical.design.MarkColor
 import app.pochical.design.PochicalTextStyles
@@ -99,6 +100,13 @@ private val Phrases: Typography =
       labelSmallEmphasized = labelSmallEmphasized.inPhrases(),
     )
   }
+
+/**
+ * The style for a short line set in the middle, as a chat's notice or the join screen's lines:
+ * broken between phrases as every style is, and its lines evened out, as /design's
+ * `text-wrap: balance`, so no last phrase stands alone on a line of its own (#1176).
+ */
+fun TextStyle.balanced(): TextStyle = copy(lineBreak = PochicalTextStyles.phrases.copy(strategy = LineBreak.Strategy.Balanced))
 
 /**
  * The colors of the テーマ in use, in light or dark as the screens are, for
