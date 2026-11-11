@@ -2,16 +2,14 @@ package app.pochical
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.retain.retain
-import androidx.compose.runtime.retain.retainRetainedValuesStoreRegistry
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.navigation3.runtime.NavEntryDecorator
 import kotlinx.coroutines.flow.Flow
 
 // What a screen reads from the device's database, held while the screen is away: a tab gone to
@@ -38,16 +36,4 @@ fun <T : Any> rememberRead(vararg keys: Any?, read: () -> Flow<T>): T? {
 /** What a read last gave. */
 private class HeldRead<T : Any> {
   var value by mutableStateOf<T?>(null)
-}
-
-/**
- * Holds what each of NavDisplay's entries reads ([rememberRead]) while it is not shown, as a page
- * covers it, until it is popped, as its saved state is.
- */
-@Composable
-fun <T : Any> rememberHeldReadsDecorator(): NavEntryDecorator<T> {
-  val stores = retainRetainedValuesStoreRegistry()
-  return remember(stores) {
-    NavEntryDecorator(onPop = stores::clearChild) { entry -> stores.LocalRetainedValuesStoreProvider(entry.contentKey) { entry.Content() } }
-  }
 }

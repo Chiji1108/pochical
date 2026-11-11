@@ -121,7 +121,7 @@ fun RootScreen(navigator: RootNavigator) {
       backStack = navigator.routes,
       onBack = navigator::back,
       sceneStrategies = listOf(rememberTabPanes(navigator.tab)),
-      entryDecorators = listOf(rememberPageStatesDecorator(navigator.routes.mapTo(HashSet(), ::contentKey)), rememberHeldReadsDecorator()),
+      entryDecorators = rememberPageDecorators(navigator.routes.mapTo(HashSet(), ::contentKey)),
       sharedTransitionScope = this,
       transitionSpec = push,
       popTransitionSpec = pop,
