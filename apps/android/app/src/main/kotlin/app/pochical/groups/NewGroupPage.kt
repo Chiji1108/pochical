@@ -32,19 +32,11 @@ import app.pochical.SettingsRow
 import app.pochical.SettingsSection
 import app.pochical.design.TextLimits
 import app.pochical.kit.GoingIn
-import app.pochical.kit.GroupMarkValue
 import app.pochical.kit.MarkPhotoGone
-import app.pochical.kit.NewGroupRequest
-import app.pochical.kit.fitsGroupMark
-import app.pochical.kit.fitsGroupName
-import app.pochical.kit.fitsPersonName
-import app.pochical.kit.groupEndDay
-import app.pochical.kit.groupEndsAt
+import app.pochical.kit.NewGroupDraft
 import app.pochical.people.usualProfile
-import app.pochical.kit.guessGroupMark
 import app.pochical.kit.nextGroupColor
 import app.pochical.pageInsets
-import java.time.LocalDate
 import java.time.ZoneId
 
 /**
@@ -56,35 +48,29 @@ import java.time.ZoneId
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit, making: GoingIn<NewGroupRequest> = LocalGroupCalls.current.making) {
+fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit, making: GoingIn<NewGroupDraft> = LocalGroupCalls.current.making) {
   val values = LocalValues.current
   val groups by remember(values) { values.groups() }.collectAsStateWithLifecycle(emptyList())
   val usualName = usualProfile()?.name.orEmpty()
   val slots = LocalThemeColors.current.marks.size
   // The group being made as the page opens, the page having been left while it was: the page
-  // starts from all the call was begun with, the group and how the person appears in it, so it
-  // shows what was asked rather than an empty form, and 作る tapped again after a failure asks for
-  // the same group under the same request.
+  // takes the draft the call was begun with, whole, and how the person appears in it, so it shows
+  // what was asked rather than an empty form, a mark picked by hand is theirs still as they change
+  // the name, and 作る tapped again after a failure asks for the same group under the same request.
   val underWay = remember { making.underWay.value }
-  val begun = underWay?.asked
-  val profile = rememberJoinProfile(underWay?.let { JoinProfile.asked(it.asked.displayName, it) })
-  var name by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue(begun?.name.orEmpty())) }
-  // The mark picked by hand, which then stays as the name changes; none while it follows the name.
-  var picked by rememberSaveable(stateSaver = MarkSaver) { mutableStateOf<GroupMarkValue?>(null) }
-  // What 作る sent last, sent again as it was while nothing on the page has changed, so a retry
-  // after a lost answer makes no second group.
-  var sent by rememberSaveable(stateSaver = RequestSaver) { mutableStateOf(begun) }
+  val profile = rememberJoinProfile(underWay?.let { call -> call.asked.sent?.let { JoinProfile.asked(it.displayName, call) } })
+  // The group as the page has it (NewGroupDraft); its name is the field's text, set as it is typed.
+  var draft by rememberSaveable(stateSaver = DraftSaver) { mutableStateOf(underWay?.asked ?: NewGroupDraft()) }
+  var name by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue(draft.name)) }
   var failed by remember { mutableStateOf(false) }
   var photoGone by remember { mutableStateOf(false) }
   var editingMark by rememberSaveable { mutableStateOf(false) }
-  // The group's end date (spec/sync-protocol.md, A group's end), none unless picked.
-  var endDay by rememberSaveable { mutableStateOf(begun?.endsAtMs?.takeIf { it != 0L }?.let { groupEndDay(it, ZoneId.systemDefault()) }) }
   var editingEnd by rememberSaveable { mutableStateOf(false) }
   val busy =
     waitingOn(making, onIn = onMade) { failure ->
       if (failure is MarkPhotoGone) {
-        picked = null
-        sent = null
+        // Back to following the name, as before a photo was picked.
+        draft = draft.copy(pickedMark = null, sent = null)
         photoGone = true
       } else {
         ReviewPrompt.troubled = true
@@ -95,27 +81,22 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit, making: GoingIn<N
   // The first color the user's groups do not use yet, for the guess and for a mark picked from an
   // emoji or a photo into an icon or letters.
   val freeColor = nextGroupColor(groups.map { it.mark }, slots)
-  // The group's name and mark and the person's name as the page holds them at the moment they are
-  // asked for, read from its state: 作る may be tapped before the page is drawn again with the
-  // last change, and sends what was typed, never the page as it was last drawn (#1185).
-  fun groupName() = name.text.trim()
-  fun mark() = picked ?: sent?.takeIf { it.name == groupName() }?.mark ?: guessGroupMark(name.text, freeColor)
+  // The draft and the person's name as the page holds them at the moment they are asked for,
+  // read from its state: 作る may be tapped before the page is drawn again with the last change,
+  // and sends what was typed, never the page as it was last drawn (#1185).
   fun myName() = profile.name(usualName)
-  // Only what the server takes (spec/vectors/fits.json), so the call is never refused for it.
-  fun canMake() = fitsGroupName(groupName()) && fitsGroupMark(mark()) && myName().let { it.isNotEmpty() && fitsPersonName(it) }
-  val groupName = groupName()
-  val mark = mark()
+  fun canMake() = draft.canMake(freeColor, myName())
+  val groupName = draft.name.trim()
+  val mark = draft.mark(freeColor)
 
   fun make() {
     // As the button is off for, should the tap come before it is drawn so.
     if (!canMake()) return
-    // The moment the day picked ends on this device: the same day asked again is the same request.
-    val endsAtMs = endDay?.let { groupEndsAt(it, ZoneId.systemDefault()) } ?: 0
-    val request = NewGroupRequest.asking(groupName(), mark(), myName(), sent, endsAtMs)
-    sent = request
+    val asked = draft.copy(sent = draft.request(freeColor, myName(), ZoneId.systemDefault()))
+    draft = asked
     // The kit's from here, a picked photo first and the face once the group is made, whether this
     // page still waits or not; tapped again before the page is drawn busy, the same call.
-    making.begin(request, profile.face, profile.goingOn(usualName))
+    making.begin(asked, profile.face, profile.goingOn(usualName))
   }
 
   Scaffold(
@@ -130,7 +111,10 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit, making: GoingIn<N
       item {
         LimitedTextField(
           name,
-          { name = it },
+          {
+            name = it
+            draft = draft.copy(name = it.text)
+          },
           TextLimits.groupName,
           stringResource(R.string.group_name),
           Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
@@ -140,17 +124,17 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit, making: GoingIn<N
       item {
         SettingsSection(modifier = Modifier.padding(bottom = 8.dp)) {
           row { SettingsRow(stringResource(R.string.group_mark), R.drawable.ic_palette, onClick = { editingMark = true }, valueContent = { GroupMarkBadge(mark) }) }
-          row { SettingsRow(stringResource(R.string.group_end), R.drawable.ic_event, onClick = { editingEnd = true }, value = groupEndValue(endDay)) }
+          row { SettingsRow(stringResource(R.string.group_end), R.drawable.ic_event, onClick = { editingEnd = true }, value = groupEndValue(draft.end)) }
         }
       }
-      item { Footnote(noteWithEnd(stringResource(R.string.new_group_mark_note), ends = endDay != null)) }
+      item { Footnote(noteWithEnd(stringResource(R.string.new_group_mark_note), ends = draft.end != null)) }
       item { JoinProfileSection(profile, groupName, stringResource(R.string.new_group_going)) }
     }
   }
   if (editingMark) {
-    GroupMarkPage(groupName, mark, freeColor, onMark = { picked = it }, onClose = { editingMark = false })
+    GroupMarkPage(groupName, mark, freeColor, onMark = { draft = draft.copy(pickedMark = it) }, onClose = { editingMark = false })
   }
-  if (editingEnd) NewGroupEndPage(endDay, onDay = { endDay = it }, onClose = { editingEnd = false })
+  if (editingEnd) NewGroupEndPage(draft.end, onDay = { draft = draft.copy(end = it) }, onClose = { editingEnd = false })
   if (failed) {
     AlertDialog(
       onDismissRequest = { failed = false },

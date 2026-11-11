@@ -199,12 +199,14 @@ class GroupCalls internal constructor(
   }
 
   /**
-   * グループを作る's way into the group a request asks for ([GoingIn]): a photo picked for its mark
-   * sent first for the group to take, the group made ([create]), then the face kept in it. It
-   * fails as [create] does, or with [MarkPhotoGone].
+   * グループを作る's way into the group its draft asks for ([GoingIn]), begun with the draft as 作る
+   * sent it ([NewGroupDraft.sent]): a photo picked for its mark sent first for the group to take,
+   * the group made ([create]), then the face kept in it. It fails as [create] does, or with
+   * [MarkPhotoGone].
    */
   val making =
-    GoingIn<NewGroupRequest> { request, face, asUsual ->
+    GoingIn<NewGroupDraft> { draft, face, asUsual ->
+      val request = checkNotNull(draft.sent) { "A group is made from the draft as it was sent" }
       entering(face, asUsual) {
         if (request.mark.photoId.isNotEmpty()) sendHeldPhoto(request.mark.photoId, PhotoShelf.Mine)
         create(request)

@@ -70,6 +70,7 @@ class KeptNameTest {
   }
 
   private val group = NewGroupRequest.asking("忘年会", GroupMarkValue(emoji = "🍻"), "さくら", last = null)
+  private val draft = NewGroupDraft("忘年会", sent = group)
 
   /** The screen turned, or the page left, as グループを作る waits: the call is the kit's (#1178). */
   @Test
@@ -77,7 +78,7 @@ class KeptNameTest {
     phone.account.foreground()
     phone.account.state.first { it is AccountState.SignedIn }
     server.createGroupDelayMs = 300
-    val making = calls.making.begin(group, JoinFace.Usual, asUsual = false)
+    val making = calls.making.begin(draft, JoinFace.Usual, asUsual = false)
     // The page waits on it, and goes while the server still makes the group.
     val page = CoroutineScope(SupervisorJob())
     page.launch { making.answer.await() }
@@ -93,8 +94,8 @@ class KeptNameTest {
     phone.account.foreground()
     phone.account.state.first { it is AccountState.SignedIn }
     server.createGroupDelayMs = 300
-    val first = calls.making.begin(group, JoinFace.Usual, asUsual = false)
-    val again = calls.making.begin(NewGroupRequest.asking("忘年会", GroupMarkValue(emoji = "🍻"), "さくら", last = null), JoinFace.Usual, asUsual = false)
+    val first = calls.making.begin(draft, JoinFace.Usual, asUsual = false)
+    val again = calls.making.begin(NewGroupDraft("忘年会", sent = NewGroupRequest.asking("忘年会", GroupMarkValue(emoji = "🍻"), "さくら", last = null)), JoinFace.Usual, asUsual = false)
 
     assertSame(first, again)
     assertSame(first, calls.making.underWay.value)
@@ -111,7 +112,7 @@ class KeptNameTest {
     phone.account.foreground()
     phone.account.state.first { it is AccountState.SignedIn }
     server.createGroupDelayMs = 300
-    val call = calls.making.begin(group, JoinFace.Usual, asUsual = false)
+    val call = calls.making.begin(draft, JoinFace.Usual, asUsual = false)
     calls.making.left(call)
     assertSame("Still under way for the page opened again", call, calls.making.underWay.value)
 
@@ -130,7 +131,7 @@ class KeptNameTest {
     phone.account.state.first { it is AccountState.SignedIn }
     server.createGroupDelayMs = 300
     val face = JoinFace.Held(calls.holdPhoto(byteArrayOf(1, 2, 3)))
-    val call = calls.making.begin(group, face, asUsual = false)
+    val call = calls.making.begin(draft, face, asUsual = false)
     // As the page's leaving does.
     calls.making.left(call)
     val letGo = calls.letGoOfPhoto(face.photoId)
@@ -151,7 +152,7 @@ class KeptNameTest {
     server.createGroupDelayMs = 300
     server.createGroupFails = true
     val face = JoinFace.Held(calls.holdPhoto(byteArrayOf(1, 2, 3)))
-    val first = calls.making.begin(group, face, asUsual = false)
+    val first = calls.making.begin(draft, face, asUsual = false)
     // The first page is left, and the page opened again takes the call's face as its own.
     calls.making.left(first)
     calls.letGoOfPhoto(face.photoId)
@@ -161,7 +162,7 @@ class KeptNameTest {
     calls.making.took(first)
 
     server.createGroupFails = false
-    val again = calls.making.begin(group, face, asUsual = false)
+    val again = calls.making.begin(draft, face, asUsual = false)
     assertEquals(InGroup("group-${group.id}", faceKept = true), withTimeout(5_000) { again.answer.await() })
     assertTrue(face.photoId in server.groupPhotos)
     // The page gives way to the group: none holds the photo, and it goes.
@@ -177,7 +178,7 @@ class KeptNameTest {
     server.createGroupDelayMs = 300
     server.createGroupFails = true
     val face = JoinFace.Held(calls.holdPhoto(byteArrayOf(1, 2, 3)))
-    val call = calls.making.begin(group, face, asUsual = false)
+    val call = calls.making.begin(draft, face, asUsual = false)
     calls.making.left(call)
     val letGo = calls.letGoOfPhoto(face.photoId)
 

@@ -23,6 +23,7 @@ import app.pochical.kit.GoingIn
 import app.pochical.kit.GroupMarkValue
 import app.pochical.kit.GroupRow
 import app.pochical.kit.InGroup
+import app.pochical.kit.NewGroupDraft
 import app.pochical.kit.NewGroupRequest
 import app.pochical.kit.PochicalKit
 import kotlinx.coroutines.CompletableDeferred
@@ -87,7 +88,7 @@ class GroupFormsTest {
   @Test
   fun aGroupMadeBeforeThePageIsDrawnAgainHasTheNameTypedAndIsAskedForOnce() {
     val asked = mutableListOf<NewGroupRequest>()
-    val making = GoingIn<NewGroupRequest> { request, _, _ -> CompletableDeferred<InGroup>().also { asked += request } }
+    val making = GoingIn<NewGroupDraft> { draft, _, _ -> CompletableDeferred<InGroup>().also { asked += draft.sent!! } }
     show { NewGroupPage(onBack = {}, onMade = {}, making = making) }
     // The person's name first, asked for as they have no usual one.
     compose.onNodeWithText("名前を入れてください").performClick()
@@ -102,8 +103,8 @@ class GroupFormsTest {
   /** The page opened again while its group is still being made shows it under way, not an empty form. */
   @Test
   fun thePageOpenedWhileAGroupIsBeingMadeShowsItUnderWay() {
-    val making = GoingIn<NewGroupRequest> { _, _, _ -> CompletableDeferred() }
-    val call = making.begin(NewGroupRequest.asking("忘年会", GroupMarkValue(emoji = "🍻"), "さくら", last = null), app.pochical.kit.JoinFace.Usual, asUsual = false)
+    val making = GoingIn<NewGroupDraft> { _, _, _ -> CompletableDeferred() }
+    val call = making.begin(NewGroupDraft("忘年会", sent = NewGroupRequest.asking("忘年会", GroupMarkValue(emoji = "🍻"), "さくら", last = null)), app.pochical.kit.JoinFace.Usual, asUsual = false)
     making.left(call)
     show { NewGroupPage(onBack = {}, onMade = {}, making = making) }
 
@@ -120,7 +121,7 @@ class GroupFormsTest {
   fun thePageOpenedAgainRetriesExactlyWhatWasAsked() {
     val asked = mutableListOf<NewGroupRequest>()
     val answers = mutableListOf<CompletableDeferred<InGroup>>()
-    val making = GoingIn<NewGroupRequest> { request, _, _ -> CompletableDeferred<InGroup>().also { asked += request; answers += it } }
+    val making = GoingIn<NewGroupDraft> { draft, _, _ -> CompletableDeferred<InGroup>().also { asked += draft.sent!!; answers += it } }
     var open by mutableStateOf(true)
     show { if (open) NewGroupPage(onBack = {}, onMade = {}, making = making) }
     compose.onNodeWithText("名前を入れてください").performClick()
@@ -141,5 +142,31 @@ class GroupFormsTest {
 
     assertEquals(2, asked.size)
     assertEquals(asked[0], asked[1])
+  }
+
+  /**
+   * 作る asked with a mark picked by hand, the page left and opened again while the group is being
+   * made, and the call failed: the mark is the person's still, so the name corrected then keeps it,
+   * where a mark the name gave would follow the name.
+   */
+  @Test
+  fun aMarkPickedByHandStaysAsTheNameIsChangedInThePageOpenedAgain() {
+    val picked = GroupMarkValue(icon = "house", color = 4)
+    val asked = mutableListOf<NewGroupRequest>()
+    val answers = mutableListOf<CompletableDeferred<InGroup>>()
+    val making = GoingIn<NewGroupDraft> { draft, _, _ -> CompletableDeferred<InGroup>().also { asked += draft.sent!!; answers += it } }
+    // As the page that was left began it.
+    val call = making.begin(NewGroupDraft("忘年会", pickedMark = picked, sent = NewGroupRequest.asking("忘年会", picked, "さくら", last = null)), app.pochical.kit.JoinFace.Usual, asUsual = false)
+    making.left(call)
+    show { NewGroupPage(onBack = {}, onMade = {}, making = making) }
+    compose.waitForIdle()
+    answers.single().completeExceptionally(IllegalStateException("offline"))
+    compose.onNodeWithText("OK").performClick()
+
+    compose.onNode(hasSetTextAction() and hasText("忘年会")).performTextReplacement("新年会")
+    compose.onNodeWithText("作る").performClick()
+    compose.waitForIdle()
+
+    assertEquals(listOf("忘年会" to picked, "新年会" to picked), asked.map { it.name to it.mark })
   }
 }
