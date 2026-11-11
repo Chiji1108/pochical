@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 
 import {
+  calloutOf,
   FEATURE_GRAPHIC,
   HEADLINE_SHARE,
   SITE_WALL,
@@ -72,6 +73,72 @@ test("a headline takes a fifth of its picture at most", () => {
 // Google Play takes eight screenshots of a phone at most, the App Store ten.
 test("the shots are no more than both stores take", () => {
   expect(STORE_SHOTS.length).toBeLessThanOrEqual(8);
+});
+
+// A callout's card: a part of a screen lifted over the phone. A phone's
+// screen on each store, and parts as the captures measure them: a row as
+// wide as the screen, one set in from its sides, and a card near the
+// screen's foot.
+const SCREENS = {
+  android: { height: 2424, width: 1080 },
+  ios: { height: 2868, width: 1320 },
+} as const;
+
+test.each(
+  (["ios", "android"] as const).flatMap((on) =>
+    [
+      { height: 0.08, left: 0, top: 0.5, width: 1 },
+      { height: 0.1, left: 0.045, top: 0.54, width: 0.91 },
+      { height: 0.2, left: 0.12, top: 0.68, width: 0.6 },
+    ].map((part) => ({ on, part }))
+  )
+)(
+  "a callout's card covers its part, inside $on's picture, under the headline",
+  ({ on, part }) => {
+    const screen = SCREENS[on];
+    const picture = STORES[on];
+    const measured = {
+      height: part.height * screen.height,
+      left: part.left * screen.width,
+      top: part.top * screen.height,
+      width: part.width * screen.width,
+    };
+    const { card, phone, scale } = calloutOf(measured, [], screen, picture);
+    expect(scale).toBeGreaterThan(1);
+    // Where the part is in the picture, the phone in its middle.
+    const left = picture.width / 2 + (measured.left - screen.width / 2) * phone;
+    const top = picture.height * HEADLINE_SHARE + measured.top * phone;
+    expect(card.left).toBeLessThanOrEqual(left);
+    expect(card.left + card.width).toBeGreaterThanOrEqual(
+      left + measured.width * phone
+    );
+    expect(card.top).toBeLessThanOrEqual(top);
+    expect(card.top + card.height).toBeGreaterThanOrEqual(
+      top + measured.height * phone
+    );
+    expect(card.left).toBeGreaterThanOrEqual(0);
+    expect(card.left + card.width).toBeLessThanOrEqual(picture.width);
+    expect(card.top).toBeGreaterThanOrEqual(picture.height * HEADLINE_SHARE);
+    expect(card.top + card.height).toBeLessThanOrEqual(picture.height);
+  }
+);
+
+test("a callout's card cuts through no piece of the screen: its edge goes on to the piece's far side", () => {
+  const screen = SCREENS.ios;
+  const row = { height: 200, left: 0, top: 1400, width: screen.width };
+  // A note close under the row, and rows of a list touching one another
+  // over it.
+  const note = { height: 90, left: 60, top: 1610, width: 900 };
+  const list = [0, 1, 2, 3].map((index) => ({
+    height: 100,
+    left: 0,
+    top: 1300 - index * 100,
+    width: screen.width,
+  }));
+  const { card, phone } = calloutOf(row, [note, ...list], screen, STORES.ios);
+  const headline = STORES.ios.height * HEADLINE_SHARE;
+  expect((card.top - headline) / phone).toBeCloseTo(1300);
+  expect((card.top + card.height - headline) / phone).toBeCloseTo(1700);
 });
 
 // The widgets both platforms photograph, in each look: every kind at each

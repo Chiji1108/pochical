@@ -37,6 +37,14 @@ export const FEATURE_GRAPHIC = {
 // fifth of a screenshot, and the App Store's pictures keep to it too.
 export const HEADLINE_SHARE = 0.2;
 
+// A shot of one screen may lift a part of it, its `callout`: the part the
+// headline is about, drawn again larger on a card of the picture's over
+// where it is in the phone, wider than the phone. It names the part as the
+// capture measured it, by an element of the screen, in the file beside
+// the screen (`<raw>.json`: `parts`, each one's left, top, width and
+// height in the screen's pixels, and `pieces`, the same of everything on
+// the screen that says something, which the card must not cut through).
+//
 // What a shot is drawn from: one screen; two screens side by side; tiles,
 // each a part of a screen under its words; or a wall of the widgets in the
 // looks it mixes, each look a folder of `raw`
@@ -45,7 +53,7 @@ export const HEADLINE_SHARE = 0.2;
 // `tiles` saying which goes where.
 type StoreShot = { headline: readonly string[]; name: string } & (
   | { kind: "pair"; raw: readonly [string, string] }
-  | { kind: "screen"; raw: string }
+  | { callout?: string; kind: "screen"; raw: string }
   | { kind: "tiles"; tiles: readonly Tile[] }
   | { kind: "wall"; raw: readonly string[]; tiles: readonly WallPlace[] }
 );
@@ -162,12 +170,14 @@ export const STORE_SHOTS = [
     ],
   },
   {
+    callout: "together",
     headline: ["家族や友人と、", "シフトを共有。"],
     kind: "screen",
     name: "group-shifts",
     raw: "03-group-shifts.png",
   },
   {
+    callout: "poll",
     headline: ["職場の人にも、", "ちょっと聞ける。"],
     kind: "screen",
     name: "chat",
@@ -180,6 +190,7 @@ export const STORE_SHOTS = [
     raw: ["05-calendar-sumi.png", "05-calendar-letters.png"],
   },
   {
+    callout: "reflect",
     headline: ["いつものカレンダーに、", "自動で反映。"],
     kind: "screen",
     name: "device-calendar",
@@ -208,7 +219,7 @@ export const STORE_SHOTS = [
     ],
   },
   {
-    headline: ["小さな気づかいも。"],
+    headline: ["小さな気づかいも、", "忘れずに。"],
     kind: "tiles",
     name: "cares",
     tiles: [
@@ -234,6 +245,72 @@ export const STORE_SHOTS = [
 ] as const satisfies readonly StoreShot[];
 
 export type StoreShotName = (typeof STORE_SHOTS)[number]["name"];
+
+// The room under a phone, in hundredths of the picture's width.
+export const STAGE_FOOT = 5;
+
+// A callout's card, lengths in hundredths of the picture's width: the room
+// it keeps around its part, the room it leaves to the picture's sides, and
+// how many times larger than the phone has it the part is drawn at most.
+export const CALLOUT = { margin: 2, most: 1.35, pad: 1.5 } as const;
+
+// A rectangle of a screen or a picture, in its pixels.
+export type Rect = { height: number; left: number; top: number; width: number };
+
+// A callout as it is drawn: how many times larger than the phone has it
+// the part is, as large as lets a row as wide as the screen keep the
+// card's margin to the picture's sides; and the card in the picture, over
+// the part in the phone, which stands in the picture's middle as tall as
+// the room under the headline. The card reaches past its part by what the
+// part grows and its own room; where its upper or lower edge would cut
+// through a piece of the screen, the edge goes on to that piece's far
+// side, so that what shows over and under the card is whole.
+export const calloutOf = (
+  measured: Rect,
+  pieces: readonly Rect[],
+  screen: { height: number; width: number },
+  picture: { height: number; width: number }
+) => {
+  const unit = picture.width / 100;
+  const headline = picture.height * HEADLINE_SHARE;
+  const phone = (picture.height - headline - STAGE_FOOT * unit) / screen.height;
+  const scale = Math.min(
+    CALLOUT.most,
+    (100 - 2 * CALLOUT.margin - 2 * CALLOUT.pad) /
+      ((screen.width * phone) / unit)
+  );
+  const reach =
+    ((scale - 1) * measured.height) / 2 + (CALLOUT.pad * unit) / phone;
+  const cutBy = (edge: number) =>
+    pieces.find((piece) => piece.top < edge && edge < piece.top + piece.height);
+  let top = measured.top - reach;
+  let foot = measured.top + measured.height + reach;
+  // Until neither edge is inside a piece: each move takes an edge to a
+  // piece's end, of which there are no more than twice the pieces.
+  for (let moves = 0; moves <= pieces.length * 2; moves += 1) {
+    const over = cutBy(top);
+    const under = cutBy(foot);
+    if (over === undefined && under === undefined) {
+      break;
+    }
+    top = over?.top ?? top;
+    foot = under === undefined ? foot : under.top + under.height;
+  }
+  const width = measured.width * phone * scale + 2 * CALLOUT.pad * unit;
+  return {
+    card: {
+      height: (foot - top) * phone,
+      left:
+        picture.width / 2 +
+        (measured.left + measured.width / 2 - screen.width / 2) * phone -
+        width / 2,
+      top: headline + top * phone,
+      width,
+    },
+    phone,
+    scale,
+  };
+};
 
 // A shot's picture in `store/screenshots/<store>`, numbered in the stores'
 // order.
