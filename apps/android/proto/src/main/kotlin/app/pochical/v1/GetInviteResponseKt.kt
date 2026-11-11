@@ -238,6 +238,31 @@ public object GetInviteResponseKt {
     public fun clearFull() {
       _builder.clearFull()
     }
+
+    /**
+     * ```
+     * When the group ends, as GroupProfile.ends_at_ms; 0 for none.
+     * ```
+     *
+     * `int64 ends_at_ms = 8 [json_name = "endsAtMs"];`
+     */
+    public var endsAtMs: kotlin.Long
+      @kotlin.jvm.JvmName("getEndsAtMs")
+        get() = _builder.endsAtMs
+      @kotlin.jvm.JvmName("setEndsAtMs")
+        set(value) {
+        _builder.endsAtMs = value
+      }
+    /**
+     * ```
+     * When the group ends, as GroupProfile.ends_at_ms; 0 for none.
+     * ```
+     *
+     * `int64 ends_at_ms = 8 [json_name = "endsAtMs"];`
+     */
+    public fun clearEndsAtMs() {
+      _builder.clearEndsAtMs()
+    }
   }
 }
 public inline fun app.pochical.v1.GetInviteResponse.copy(block: `app.pochical.v1`.GetInviteResponseKt.Dsl.() -> kotlin.Unit): app.pochical.v1.GetInviteResponse =

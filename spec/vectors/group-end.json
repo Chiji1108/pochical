@@ -1,0 +1,124 @@
+{
+  "about": "A group's end (spec/sync-protocol.md, A group's end). endsAt: the moment a picked end date ends on the device that picks it, in ms since the epoch: the first moment of the day after `day` in the device's time zone `zone`, which is not always midnight (Asia/Beirut's clocks skip it as summer time begins) nor 24 hours after the day began. endDay: the day a device in `zone` shows for a group ending at `ms`: the day the moment just before it falls on by that device's clock, so the device that picked a day shows that day, and one far to its east the day after. words: how a day is said in the group's settings and its chat's lines, 12月31日, with its year when that is not the year of `today`, the device's own day. notices: the chat's lines of a group's end as a device words them, `by` being the name the group shows for who set it and `day` what endDay gives for the line's ends_at_ms. noticeAt: when the group's chat says it ends soon, the server's alone: `noticeDays` days of 24 hours before `endsAt`, or null when the end was set (`setAt`) inside them.",
+  "endsAt": [
+    { "day": "2026-12-31", "zone": "Asia/Tokyo", "expected": 1798729200000 },
+    { "day": "2026-12-31", "zone": "UTC", "expected": 1798761600000 },
+    {
+      "day": "2026-12-31",
+      "zone": "Pacific/Auckland",
+      "expected": 1798714800000
+    },
+    {
+      "day": "2026-12-31",
+      "zone": "Pacific/Honolulu",
+      "expected": 1798797600000
+    },
+    {
+      "day": "2026-03-07",
+      "zone": "America/New_York",
+      "expected": 1772946000000
+    },
+    {
+      "day": "2026-03-08",
+      "zone": "America/New_York",
+      "expected": 1773028800000
+    },
+    {
+      "day": "2026-11-01",
+      "zone": "America/New_York",
+      "expected": 1793595600000
+    },
+    { "day": "2026-03-28", "zone": "Asia/Beirut", "expected": 1774735200000 },
+    { "day": "2028-02-28", "zone": "Asia/Tokyo", "expected": 1835362800000 }
+  ],
+  "endDay": [
+    { "ms": 1798729200000, "zone": "Asia/Tokyo", "expected": "2026-12-31" },
+    { "ms": 1798729200001, "zone": "Asia/Tokyo", "expected": "2027-01-01" },
+    { "ms": 1798729200000, "zone": "Europe/London", "expected": "2026-12-31" },
+    {
+      "ms": 1798729200000,
+      "zone": "Pacific/Honolulu",
+      "expected": "2026-12-31"
+    },
+    {
+      "ms": 1798729200000,
+      "zone": "Pacific/Auckland",
+      "expected": "2027-01-01"
+    },
+    { "ms": 1798797600000, "zone": "Asia/Tokyo", "expected": "2027-01-01" },
+    {
+      "ms": 1798797600000,
+      "zone": "Pacific/Honolulu",
+      "expected": "2026-12-31"
+    },
+    { "ms": 1774735200000, "zone": "Asia/Beirut", "expected": "2026-03-28" }
+  ],
+  "words": [
+    { "day": "2026-12-31", "today": "2026-11-11", "expected": "12月31日" },
+    { "day": "2026-11-11", "today": "2026-11-11", "expected": "11月11日" },
+    { "day": "2027-01-05", "today": "2026-12-20", "expected": "2027年1月5日" },
+    { "day": "2026-12-31", "today": "2027-01-01", "expected": "2026年12月31日" }
+  ],
+  "notices": [
+    {
+      "kind": "endSet",
+      "by": "さくら",
+      "day": "2026-12-31",
+      "today": "2026-11-11",
+      "expected": "さくらが終了日を12月31日に設定しました"
+    },
+    {
+      "kind": "endSet",
+      "by": "さくら",
+      "day": "2027-01-05",
+      "today": "2026-12-20",
+      "expected": "さくらが終了日を2027年1月5日に設定しました"
+    },
+    {
+      "kind": "endCleared",
+      "by": "ゆうき",
+      "day": null,
+      "today": "2026-11-11",
+      "expected": "ゆうきが終了日を解除しました"
+    },
+    {
+      "kind": "endsSoon",
+      "by": null,
+      "day": "2026-12-31",
+      "today": "2026-12-24",
+      "expected": "このグループは12月31日に終了します"
+    }
+  ],
+  "noticeAt": [
+    {
+      "endsAt": 1798729200000,
+      "setAt": 1794000000000,
+      "noticeDays": 7,
+      "expected": 1798124400000
+    },
+    {
+      "endsAt": 1798729200000,
+      "setAt": 1798124400000,
+      "noticeDays": 7,
+      "expected": null
+    },
+    {
+      "endsAt": 1798729200000,
+      "setAt": 1798124399999,
+      "noticeDays": 7,
+      "expected": 1798124400000
+    },
+    {
+      "endsAt": 1798729200000,
+      "setAt": 1798700000000,
+      "noticeDays": 7,
+      "expected": null
+    },
+    {
+      "endsAt": 1798729200000,
+      "setAt": 1798124400000,
+      "noticeDays": 3,
+      "expected": 1798470000000
+    }
+  ]
+}

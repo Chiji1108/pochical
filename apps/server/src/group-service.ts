@@ -16,6 +16,7 @@ import {
   RemoveMemberResponseSchema,
   RenameGroupResponseSchema,
   SetDisplayNameResponseSchema,
+  SetGroupEndResponseSchema,
   SetGroupPhotoResponseSchema,
 } from "./gen/pochical/v1/group_pb";
 import { requireMark, shareMarkPhoto } from "./group-marks";
@@ -106,6 +107,21 @@ const requireMember = async (
 };
 
 /**
+ * When a group is to end, from the wire: null for none (0);
+ * INVALID_ARGUMENT for a time that is not after now.
+ */
+const requireEnd = (endsAtMs: bigint): number | null => {
+  if (endsAtMs === 0n) {
+    return null;
+  }
+  const endsAt = Number(endsAtMs);
+  if (!(Number.isSafeInteger(endsAt) && endsAt > Date.now())) {
+    throw new ConnectError("ends_at_ms is not after now", Code.InvalidArgument);
+  }
+  return endsAt;
+};
+
+/**
  * The group's news of the caller has reached their own DO, which lists the
  * group (`listed`) or not, so their devices show it and its socket lets
  * them in as the call answers. UNAVAILABLE while not, for the app to try
@@ -127,6 +143,7 @@ export const registerGroupService = (router: ConnectRouter): void => {
       const user = await requireUser(context);
       const name = requireFit(request.name, fitsGroupName, "name");
       const mark = requireMark(request.mark);
+      const endsAt = requireEnd(request.endsAtMs);
       if (!isId(request.requestId)) {
         throw new ConnectError("Malformed request_id", Code.InvalidArgument);
       }
@@ -157,7 +174,8 @@ export const registerGroupService = (router: ConnectRouter): void => {
           userId: user.id,
           usualName: names.usualName,
           usualPhoto: names.usualPhoto,
-        }
+        },
+        endsAt
       );
       await adoptName(user.id, names);
       await requireTold(user.id, groupId, true);
@@ -169,16 +187,18 @@ export const registerGroupService = (router: ConnectRouter): void => {
       const user = await requireUser(context);
       const groupId = await requireGroupOfCode(env.DB, inviteCode);
       const group = env.GROUPS.getByName(groupId);
-      const [profile, memberList, alreadyMember] = await Promise.all([
+      const [profile, memberList, alreadyMember, endsAt] = await Promise.all([
         group.getProfile(),
         group.memberList(),
         group.isMember(user.id),
+        group.endsAt(),
       ]);
       if (profile === null) {
         throw noGroupOfCode();
       }
       return create(GetInviteResponseSchema, {
         alreadyMember,
+        endsAtMs: BigInt(endsAt ?? 0),
         full: !alreadyMember && memberList.length >= GROUP_MAX_MEMBERS,
         groupId,
         groupMark: profile.mark,
@@ -292,6 +312,12 @@ export const registerGroupService = (router: ConnectRouter): void => {
         ownName
       );
       return create(SetDisplayNameResponseSchema, {});
+    },
+
+    setGroupEnd: async ({ groupId, endsAtMs }, context) => {
+      const userId = await requireMember(context, groupId);
+      await env.GROUPS.getByName(groupId).setEnd(requireEnd(endsAtMs), userId);
+      return create(SetGroupEndResponseSchema, {});
     },
 
     setGroupPhoto: async ({ groupId, usual, photoId }, context) => {

@@ -303,6 +303,9 @@ const sentPhoto = (photo: KeptPhoto) => ({
 
 /** The wire's kind of each notice kept. */
 const noticeKinds = {
+  endCleared: ChatNotice_Kind.END_CLEARED,
+  endSet: ChatNotice_Kind.END_SET,
+  endsSoon: ChatNotice_Kind.ENDS_SOON,
   inviteRemade: ChatNotice_Kind.INVITE_REMADE,
   joined: ChatNotice_Kind.JOINED,
   left: ChatNotice_Kind.LEFT,
@@ -351,6 +354,7 @@ const contentWire = (
         kind: {
           case: "notice",
           value: {
+            endsAtMs: BigInt(notice.endsAt ?? 0),
             kind: noticeKinds[notice.kind],
             markChanged: notice.markChanged ?? false,
             name: notice.name ?? "",
@@ -1887,8 +1891,11 @@ export const blockersOf = (
 /**
  * A line from the app at 全体チャット's end (spec/chat.md, Notices), written
  * as `authorId` changes the group: who is in it, the way in, or what it
- * is. Never unread, and never notified.
+ * is; `NO_AUTHOR` for the group's own, that it ends soon. Never unread,
+ * and never notified.
  */
+export const NO_AUTHOR = "";
+
 export const writeNotice = (
   db: DrizzleSqliteDODatabase,
   authorId: string,

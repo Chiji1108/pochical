@@ -102,4 +102,15 @@ public interface CreateGroupRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getRequestIdBytes();
+
+  /**
+   * <pre>
+   * When the group ends, as GroupProfile.ends_at_ms; 0 for a group with
+   * no end. INVALID_ARGUMENT for a time that is not after now.
+   * </pre>
+   *
+   * <code>int64 ends_at_ms = 6 [json_name = "endsAtMs"];</code>
+   * @return The endsAtMs.
+   */
+  long getEndsAtMs();
 }

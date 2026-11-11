@@ -7,7 +7,7 @@ package app.pochical.v1;
 
 /**
  * <pre>
- * The group's name and mark, as its members see them: one value.
+ * The group's name, mark and end, as its members see them: one value.
  * </pre>
  *
  * Protobuf type {@code pochical.v1.GroupProfile}
@@ -136,6 +136,53 @@ public  final class GroupProfile extends
     bitField0_ = (bitField0_ & ~0x00000001);
   }
 
+  public static final int ENDS_AT_MS_FIELD_NUMBER = 4;
+  private long endsAtMs_;
+  /**
+   * <pre>
+   * When the group ends for everyone, in ms since the epoch: the moment
+   * its end date ends where it was set (spec/sync-protocol.md, A group's
+   * end). Each device shows the day that moment closes by its own clock.
+   * 0 for a group with no end.
+   * </pre>
+   *
+   * <code>int64 ends_at_ms = 4 [json_name = "endsAtMs"];</code>
+   * @return The endsAtMs.
+   */
+  @java.lang.Override
+  public long getEndsAtMs() {
+    return endsAtMs_;
+  }
+  /**
+   * <pre>
+   * When the group ends for everyone, in ms since the epoch: the moment
+   * its end date ends where it was set (spec/sync-protocol.md, A group's
+   * end). Each device shows the day that moment closes by its own clock.
+   * 0 for a group with no end.
+   * </pre>
+   *
+   * <code>int64 ends_at_ms = 4 [json_name = "endsAtMs"];</code>
+   * @param value The endsAtMs to set.
+   */
+  private void setEndsAtMs(long value) {
+    
+    endsAtMs_ = value;
+  }
+  /**
+   * <pre>
+   * When the group ends for everyone, in ms since the epoch: the moment
+   * its end date ends where it was set (spec/sync-protocol.md, A group's
+   * end). Each device shows the day that moment closes by its own clock.
+   * 0 for a group with no end.
+   * </pre>
+   *
+   * <code>int64 ends_at_ms = 4 [json_name = "endsAtMs"];</code>
+   */
+  private void clearEndsAtMs() {
+
+    endsAtMs_ = 0L;
+  }
+
   public static app.pochical.v1.GroupProfile parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -221,7 +268,7 @@ public  final class GroupProfile extends
 
   /**
    * <pre>
-   * The group's name and mark, as its members see them: one value.
+   * The group's name, mark and end, as its members see them: one value.
    * </pre>
    *
    * Protobuf type {@code pochical.v1.GroupProfile}
@@ -353,6 +400,55 @@ public  final class GroupProfile extends
       return this;
     }
 
+    /**
+     * <pre>
+     * When the group ends for everyone, in ms since the epoch: the moment
+     * its end date ends where it was set (spec/sync-protocol.md, A group's
+     * end). Each device shows the day that moment closes by its own clock.
+     * 0 for a group with no end.
+     * </pre>
+     *
+     * <code>int64 ends_at_ms = 4 [json_name = "endsAtMs"];</code>
+     * @return The endsAtMs.
+     */
+    @java.lang.Override
+    public long getEndsAtMs() {
+      return instance.getEndsAtMs();
+    }
+    /**
+     * <pre>
+     * When the group ends for everyone, in ms since the epoch: the moment
+     * its end date ends where it was set (spec/sync-protocol.md, A group's
+     * end). Each device shows the day that moment closes by its own clock.
+     * 0 for a group with no end.
+     * </pre>
+     *
+     * <code>int64 ends_at_ms = 4 [json_name = "endsAtMs"];</code>
+     * @param value The endsAtMs to set.
+     * @return This builder for chaining.
+     */
+    public Builder setEndsAtMs(long value) {
+      copyOnWrite();
+      instance.setEndsAtMs(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * When the group ends for everyone, in ms since the epoch: the moment
+     * its end date ends where it was set (spec/sync-protocol.md, A group's
+     * end). Each device shows the day that moment closes by its own clock.
+     * 0 for a group with no end.
+     * </pre>
+     *
+     * <code>int64 ends_at_ms = 4 [json_name = "endsAtMs"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearEndsAtMs() {
+      copyOnWrite();
+      instance.clearEndsAtMs();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.GroupProfile)
   }
   @java.lang.Override
@@ -372,10 +468,11 @@ public  final class GroupProfile extends
             "bitField0_",
             "name_",
             "mark_",
+            "endsAtMs_",
           };
           java.lang.String info =
-              "\u0000\u0002\u0000\u0001\u0001\u0003\u0002\u0000\u0000\u0000\u0001\u0208\u0003\u1009" +
-              "\u0000";
+              "\u0000\u0003\u0000\u0001\u0001\u0004\u0003\u0000\u0000\u0000\u0001\u0208\u0003\u1009" +
+              "\u0000\u0004\u0002";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

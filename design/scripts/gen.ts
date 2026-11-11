@@ -21,6 +21,7 @@ import { inviteRules } from "../src/invite";
 import {
   COWORKERS_MAX,
   PATTERNS_PER_PAGE,
+  GROUP_END_NOTICE_DAYS,
   GROUP_MAX_MEMBERS,
   POLL_MIN_DAYS,
   SHARED_DAYS_MAX,
@@ -174,6 +175,7 @@ function json() {
     invite: inviteRules,
     limits: {
       coworkersMax: COWORKERS_MAX,
+      groupEndNoticeDays: GROUP_END_NOTICE_DAYS,
       groupMaxMembers: GROUP_MAX_MEMBERS,
       patternsPerPage: PATTERNS_PER_PAGE,
       pollMinDays: POLL_MIN_DAYS,
@@ -578,6 +580,8 @@ const CHAT_DOC =
 const SHARED_DAYS_DOC = "The most days one chat message shares.";
 const POLL_MIN_DAYS_DOC = "The fewest days a poll puts to the vote.";
 const GROUP_MEMBERS_DOC = "The most people in one group.";
+const GROUP_END_NOTICE_DOC =
+  "How many days before a group's end its chat says it ends soon.";
 const COWORKERS_DOC = "The most people one person keeps in 一緒に働く人.";
 const PATTERNS_PAGE_DOC =
   "The shift buttons on one page of ポチポチ入力, in two rows of five.";
@@ -667,6 +671,10 @@ const outputs = {
       `/** ${GROUP_MEMBERS_DOC} */`,
       `const val GROUP_MAX_MEMBERS = ${GROUP_MAX_MEMBERS}`,
     ],
+    [
+      `/** ${GROUP_END_NOTICE_DOC} */`,
+      `const val GROUP_END_NOTICE_DAYS = ${GROUP_END_NOTICE_DAYS}`,
+    ],
     [`/** ${COWORKERS_DOC} */`, `const val COWORKERS_MAX = ${COWORKERS_MAX}`],
     [
       `/** ${PATTERNS_PAGE_DOC} */`,
@@ -684,6 +692,10 @@ const outputs = {
     [
       `/// ${GROUP_MEMBERS_DOC}`,
       `public let groupMaxMembers = ${GROUP_MAX_MEMBERS}`,
+    ],
+    [
+      `/// ${GROUP_END_NOTICE_DOC}`,
+      `public let groupEndNoticeDays = ${GROUP_END_NOTICE_DAYS}`,
     ],
     [`/// ${COWORKERS_DOC}`, `public let coworkersMax = ${COWORKERS_MAX}`],
     [

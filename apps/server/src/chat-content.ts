@@ -21,7 +21,12 @@ export type Notice = {
     | "removed"
     | "removedByPochical"
     | "inviteRemade"
-    | "profileChanged";
+    | "profileChanged"
+    | "endSet"
+    | "endCleared"
+    | "endsSoon";
+  // endSet, endsSoon: when the group ends, in ms since the epoch.
+  endsAt?: number;
   markChanged?: boolean;
   name?: string;
   subjectId?: string;

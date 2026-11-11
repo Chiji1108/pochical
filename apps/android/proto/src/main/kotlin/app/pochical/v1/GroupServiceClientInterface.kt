@@ -56,6 +56,13 @@ public interface GroupServiceClientInterface {
   public suspend fun renameGroup(request: RenameGroupRequest, headers: Headers = emptyMap()): ResponseMessage<RenameGroupResponse>
 
   /**
+   *  Gives the group an end, changes it or takes it away
+   *  (spec/sync-protocol.md, A group's end), which every member sees. Members
+   *  only. INVALID_ARGUMENT for a time that is not after now.
+   */
+  public suspend fun setGroupEnd(request: SetGroupEndRequest, headers: Headers = emptyMap()): ResponseMessage<SetGroupEndResponse>
+
+  /**
    *  How the caller appears in the group from now on. Members only.
    */
   public suspend fun setDisplayName(request: SetDisplayNameRequest, headers: Headers = emptyMap()): ResponseMessage<SetDisplayNameResponse>

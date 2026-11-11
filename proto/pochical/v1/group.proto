@@ -42,6 +42,11 @@ service GroupService {
   // only.
   rpc RenameGroup(RenameGroupRequest) returns (RenameGroupResponse);
 
+  // Gives the group an end, changes it or takes it away
+  // (spec/sync-protocol.md, A group's end), which every member sees. Members
+  // only. INVALID_ARGUMENT for a time that is not after now.
+  rpc SetGroupEnd(SetGroupEndRequest) returns (SetGroupEndResponse);
+
   // How the caller appears in the group from now on. Members only.
   rpc SetDisplayName(SetDisplayNameRequest) returns (SetDisplayNameResponse);
 
@@ -79,6 +84,9 @@ message CreateGroupRequest {
   // made the first time, unchanged, so a retry after a lost answer never
   // makes a second group. INVALID_ARGUMENT when missing or malformed.
   string request_id = 4;
+  // When the group ends, as GroupProfile.ends_at_ms; 0 for a group with
+  // no end. INVALID_ARGUMENT for a time that is not after now.
+  int64 ends_at_ms = 6;
 }
 
 message CreateGroupResponse {
@@ -118,6 +126,8 @@ message GetInviteResponse {
   bool already_member = 5;
   // The group has its most members; joining would fail.
   bool full = 6;
+  // When the group ends, as GroupProfile.ends_at_ms; 0 for none.
+  int64 ends_at_ms = 8;
 }
 
 // Someone in a group, as the join screen shows them.
@@ -151,6 +161,15 @@ message RenameGroupRequest {
 }
 
 message RenameGroupResponse {}
+
+message SetGroupEndRequest {
+  string group_id = 1;
+  // When the group ends, as GroupProfile.ends_at_ms: after now, or 0 for
+  // no end.
+  int64 ends_at_ms = 2;
+}
+
+message SetGroupEndResponse {}
 
 message SetGroupPhotoRequest {
   string group_id = 1;

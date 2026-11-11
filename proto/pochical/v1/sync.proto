@@ -315,13 +315,18 @@ message Membership {
   bool left = 5;
 }
 
-// The group's name and mark, as its members see them: one value.
+// The group's name, mark and end, as its members see them: one value.
 message GroupProfile {
   // groupName characters at most (design/src/limits.ts).
   string name = 1;
   reserved 2;
   reserved "emoji";
   GroupMark mark = 3;
+  // When the group ends for everyone, in ms since the epoch: the moment
+  // its end date ends where it was set (spec/sync-protocol.md, A group's
+  // end). Each device shows the day that moment closes by its own clock.
+  // 0 for a group with no end.
+  int64 ends_at_ms = 4;
 }
 
 // Someone in the group, as they appear in it.
@@ -537,7 +542,7 @@ message ChatLine {
   // Its place in the chat, from 1, given by the group as it takes it.
   uint64 seq = 2;
   // Who wrote it; it stays theirs after they leave. For a notice, who did
-  // what it tells.
+  // what it tells; empty for one no one did (KIND_ENDS_SOON).
   string author_id = 3;
   // When the group took it, in ms since the epoch.
   int64 sent_at_ms = 5;
@@ -640,6 +645,14 @@ message ChatNotice {
     // 〇〇がグループから外されました: Pochical's people took them out
     // (spec/admin.md, ユーザー); the line's writer is who was taken out.
     KIND_REMOVED_BY_POCHICAL = 6;
+    // 〇〇が終了日を12月31日に設定しました: ends_at_ms is the end, set for
+    // the first time or changed.
+    KIND_END_SET = 7;
+    // 〇〇が終了日を解除しました
+    KIND_END_CLEARED = 8;
+    // このグループは12月31日に終了します: the group's own line,
+    // GROUP_END_NOTICE_DAYS before ends_at_ms, with no author.
+    KIND_ENDS_SOON = 9;
   }
   Kind kind = 1;
   // REMOVED: who was taken out.
@@ -649,6 +662,9 @@ message ChatNotice {
   string name = 3;
   // PROFILE_CHANGED: the icon changed too.
   bool mark_changed = 4;
+  // END_SET, ENDS_SOON: when the group ends, as GroupProfile.ends_at_ms,
+  // which each device words as a day by its own clock.
+  int64 ends_at_ms = 5;
 }
 
 // A photo in a chat (spec/chat.md, Photos): uploaded by its sender to the

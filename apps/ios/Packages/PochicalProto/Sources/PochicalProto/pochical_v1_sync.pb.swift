@@ -1072,7 +1072,7 @@ public nonisolated struct Pochical_V1_Membership: Sendable {
   fileprivate var _mark: Pochical_V1_GroupMark? = nil
 }
 
-/// The group's name and mark, as its members see them: one value.
+/// The group's name, mark and end, as its members see them: one value.
 public nonisolated struct Pochical_V1_GroupProfile: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -1089,6 +1089,12 @@ public nonisolated struct Pochical_V1_GroupProfile: Sendable {
   public var hasMark: Bool {self._mark != nil}
   /// Clears the value of `mark`. Subsequent reads from it will return its default value.
   public mutating func clearMark() {self._mark = nil}
+
+  /// When the group ends for everyone, in ms since the epoch: the moment
+  /// its end date ends where it was set (spec/sync-protocol.md, A group's
+  /// end). Each device shows the day that moment closes by its own clock.
+  /// 0 for a group with no end.
+  public var endsAtMs: Int64 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1741,7 +1747,7 @@ public nonisolated struct Pochical_V1_ChatLine: Sendable {
   public var seq: UInt64 = 0
 
   /// Who wrote it; it stays theirs after they leave. For a notice, who did
-  /// what it tells.
+  /// what it tells; empty for one no one did (KIND_ENDS_SOON).
   public var authorID: String = String()
 
   /// When the group took it, in ms since the epoch.
@@ -2003,6 +2009,10 @@ public nonisolated struct Pochical_V1_ChatNotice: Sendable {
   /// PROFILE_CHANGED: the icon changed too.
   public var markChanged: Bool = false
 
+  /// END_SET, ENDS_SOON: when the group ends, as GroupProfile.ends_at_ms,
+  /// which each device words as a day by its own clock.
+  public var endsAtMs: Int64 = 0
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum Kind: SwiftProtobuf.Enum, Swift.CaseIterable {
@@ -2027,6 +2037,17 @@ public nonisolated struct Pochical_V1_ChatNotice: Sendable {
     /// 〇〇がグループから外されました: Pochical's people took them out
     /// (spec/admin.md, ユーザー); the line's writer is who was taken out.
     case removedByPochical // = 6
+
+    /// 〇〇が終了日を12月31日に設定しました: ends_at_ms is the end, set for
+    /// the first time or changed.
+    case endSet // = 7
+
+    /// 〇〇が終了日を解除しました
+    case endCleared // = 8
+
+    /// このグループは12月31日に終了します: the group's own line,
+    /// GROUP_END_NOTICE_DAYS before ends_at_ms, with no author.
+    case endsSoon // = 9
     case UNRECOGNIZED(Int)
 
     public init() {
@@ -2042,6 +2063,9 @@ public nonisolated struct Pochical_V1_ChatNotice: Sendable {
       case 4: self = .inviteRemade
       case 5: self = .profileChanged
       case 6: self = .removedByPochical
+      case 7: self = .endSet
+      case 8: self = .endCleared
+      case 9: self = .endsSoon
       default: self = .UNRECOGNIZED(rawValue)
       }
     }
@@ -2055,6 +2079,9 @@ public nonisolated struct Pochical_V1_ChatNotice: Sendable {
       case .inviteRemade: return 4
       case .profileChanged: return 5
       case .removedByPochical: return 6
+      case .endSet: return 7
+      case .endCleared: return 8
+      case .endsSoon: return 9
       case .UNRECOGNIZED(let i): return i
       }
     }
@@ -2068,6 +2095,9 @@ public nonisolated struct Pochical_V1_ChatNotice: Sendable {
       .inviteRemade,
       .profileChanged,
       .removedByPochical,
+      .endSet,
+      .endCleared,
+      .endsSoon,
     ]
 
   }
@@ -4246,7 +4276,7 @@ nonisolated extension Pochical_V1_Membership: SwiftProtobuf.Message, SwiftProtob
 
 nonisolated extension Pochical_V1_GroupProfile: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".GroupProfile"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{2}\u{2}mark\0\u{b}emoji\0\u{c}\u{2}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{2}\u{2}mark\0\u{3}ends_at_ms\0\u{b}emoji\0\u{c}\u{2}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -4256,6 +4286,7 @@ nonisolated extension Pochical_V1_GroupProfile: SwiftProtobuf.Message, SwiftProt
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.name) }()
       case 3: try { try decoder.decodeSingularMessageField(value: &self._mark) }()
+      case 4: try { try decoder.decodeSingularInt64Field(value: &self.endsAtMs) }()
       default: break
       }
     }
@@ -4272,12 +4303,16 @@ nonisolated extension Pochical_V1_GroupProfile: SwiftProtobuf.Message, SwiftProt
     try { if let v = self._mark {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
     } }()
+    if self.endsAtMs != 0 {
+      try visitor.visitSingularInt64Field(value: self.endsAtMs, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pochical_V1_GroupProfile, rhs: Pochical_V1_GroupProfile) -> Bool {
     if lhs.name != rhs.name {return false}
     if lhs._mark != rhs._mark {return false}
+    if lhs.endsAtMs != rhs.endsAtMs {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -5642,7 +5677,7 @@ nonisolated extension Pochical_V1_ChatHidden: SwiftProtobuf.Message, SwiftProtob
 
 nonisolated extension Pochical_V1_ChatNotice: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ChatNotice"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}kind\0\u{3}subject_id\0\u{1}name\0\u{3}mark_changed\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}kind\0\u{3}subject_id\0\u{1}name\0\u{3}mark_changed\0\u{3}ends_at_ms\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -5654,6 +5689,7 @@ nonisolated extension Pochical_V1_ChatNotice: SwiftProtobuf.Message, SwiftProtob
       case 2: try { try decoder.decodeSingularStringField(value: &self.subjectID) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self.name) }()
       case 4: try { try decoder.decodeSingularBoolField(value: &self.markChanged) }()
+      case 5: try { try decoder.decodeSingularInt64Field(value: &self.endsAtMs) }()
       default: break
       }
     }
@@ -5672,6 +5708,9 @@ nonisolated extension Pochical_V1_ChatNotice: SwiftProtobuf.Message, SwiftProtob
     if self.markChanged != false {
       try visitor.visitSingularBoolField(value: self.markChanged, fieldNumber: 4)
     }
+    if self.endsAtMs != 0 {
+      try visitor.visitSingularInt64Field(value: self.endsAtMs, fieldNumber: 5)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -5680,13 +5719,14 @@ nonisolated extension Pochical_V1_ChatNotice: SwiftProtobuf.Message, SwiftProtob
     if lhs.subjectID != rhs.subjectID {return false}
     if lhs.name != rhs.name {return false}
     if lhs.markChanged != rhs.markChanged {return false}
+    if lhs.endsAtMs != rhs.endsAtMs {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
 nonisolated extension Pochical_V1_ChatNotice.Kind: SwiftProtobuf._ProtoNameProviding {
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0KIND_UNSPECIFIED\0\u{1}KIND_JOINED\0\u{1}KIND_LEFT\0\u{1}KIND_REMOVED\0\u{1}KIND_INVITE_REMADE\0\u{1}KIND_PROFILE_CHANGED\0\u{1}KIND_REMOVED_BY_POCHICAL\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0KIND_UNSPECIFIED\0\u{1}KIND_JOINED\0\u{1}KIND_LEFT\0\u{1}KIND_REMOVED\0\u{1}KIND_INVITE_REMADE\0\u{1}KIND_PROFILE_CHANGED\0\u{1}KIND_REMOVED_BY_POCHICAL\0\u{1}KIND_END_SET\0\u{1}KIND_END_CLEARED\0\u{1}KIND_ENDS_SOON\0")
 }
 
 nonisolated extension Pochical_V1_ChatPhoto: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {

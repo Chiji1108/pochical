@@ -79,7 +79,7 @@ public object ChatLineKt {
     /**
      * ```
      * Who wrote it; it stays theirs after they leave. For a notice, who did
-     * what it tells.
+     * what it tells; empty for one no one did (KIND_ENDS_SOON).
      * ```
      *
      * `string author_id = 3 [json_name = "authorId"];`
@@ -94,7 +94,7 @@ public object ChatLineKt {
     /**
      * ```
      * Who wrote it; it stays theirs after they leave. For a notice, who did
-     * what it tells.
+     * what it tells; empty for one no one did (KIND_ENDS_SOON).
      * ```
      *
      * `string author_id = 3 [json_name = "authorId"];`

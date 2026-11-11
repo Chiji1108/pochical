@@ -3184,6 +3184,7 @@
   },
   "limits": {
     "coworkersMax": 100,
+    "groupEndNoticeDays": 7,
     "groupMaxMembers": 100,
     "patternsPerPage": 10,
     "pollMinDays": 2,
