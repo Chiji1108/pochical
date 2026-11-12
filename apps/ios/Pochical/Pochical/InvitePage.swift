@@ -77,6 +77,7 @@ struct InvitePage: View {
             UIPasteboard.general.url = link
             copied = true
             done += 1
+            AccessibilityNotification.Announcement("コピーしました").post()
           } label: {
             Label(copied ? "コピーしました" : "リンクをコピー", systemImage: copied ? "checkmark" : "doc.on.doc")
               .frame(maxWidth: .infinity, minHeight: Metrics.control)

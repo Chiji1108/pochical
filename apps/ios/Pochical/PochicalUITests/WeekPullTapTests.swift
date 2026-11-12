@@ -21,9 +21,10 @@ final class WeekPullTapTests: XCTestCase {
       app, from: (opened, "\(thisMonth)月15日"), to: (other, dayName(of: other)), "in the calendar")
   }
 
-  /// "10月16日" of a day's "10月16日、未入力".
+  /// "10月16日" of a day's "10月16日(金)、未入力", 今日 before it on today.
   private func dayName(of day: XCUIElement) -> String {
-    String(day.label.prefix { $0 != "、" })
+    let date = day.label.hasPrefix("今日、") ? day.label.dropFirst(3) : Substring(day.label)
+    return String(date.prefix { $0 != "(" })
   }
 
   func testSlowPullFoldingBackPicksNoDay() throws {
@@ -54,7 +55,7 @@ final class WeekPullTapTests: XCTestCase {
     start.press(
       forDuration: 0, thenDragTo: start.withOffset(CGVector(dx: -220, dy: 0)),
       withVelocity: 1500, thenHoldForDuration: 0)
-    let next = days.matching(NSPredicate(format: "label BEGINSWITH %@", "\(thisMonth)月22日、"))
+    let next = days.matching(NSPredicate(format: "label CONTAINS %@", "\(thisMonth)月22日("))
       .firstMatch
     let swiped = becomesSelected(next)
     snap("swipe", of: app)
@@ -66,7 +67,7 @@ final class WeekPullTapTests: XCTestCase {
   private func openADay() throws -> (opened: XCUIElement, other: XCUIElement) {
     continueAfterFailure = false
     app.launchPastFirstRun()
-    let day = days.matching(NSPredicate(format: "label BEGINSWITH %@", "\(thisMonth)月15日、"))
+    let day = days.matching(NSPredicate(format: "label CONTAINS %@", "\(thisMonth)月15日("))
       .firstMatch
     XCTAssertTrue(day.waitForExistence(timeout: 15), "the month shows")
     day.tap()
@@ -81,7 +82,7 @@ final class WeekPullTapTests: XCTestCase {
   }
 
   private var days: XCUIElementQuery {
-    app.buttons.matching(NSPredicate(format: "label MATCHES %@", "^[0-9]+月[0-9]+日、.*"))
+    app.buttons.matching(NSPredicate(format: "label MATCHES %@", "^(今日、)?[0-9]+月[0-9]+日\\(.*"))
   }
 
   private var anySelected: Bool {

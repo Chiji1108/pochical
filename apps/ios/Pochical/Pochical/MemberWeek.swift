@@ -115,7 +115,6 @@ struct GroupWeek: View, @MainActor Equatable {
               pattern, change: change,
               tiled: pattern?.countsAsOff == true && !together.contains(day))
               .marks(drawnAs: member.markLook)
-              .accessibilityLabel("\(member.name)：\(pattern?.name ?? "未入力")")
           }
         }
         .frame(maxWidth: .infinity)
@@ -136,8 +135,11 @@ struct GroupWeek: View, @MainActor Equatable {
         }
         .opacity(month.map { $0.month == day.month } ?? true ? 1 : 0.35)
         .contentShape(.rect)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(day.monthDayText)\(together.contains(day) ? "、みんな休み" : "")")
+        // One element saying the whole day, who has which shift included
+        // (spec/shift-patterns.md, Screen readers).
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(spoken(day, shown: shown, together: together.contains(day)))
+        .accessibilityInputLabels(["\(day.day)日", day.monthDayText])
         .accessibilityAddTraits(day == picked ? .isSelected : [])
         if let onPick {
           Button { onPick(day) } label: { column }
@@ -147,6 +149,20 @@ struct GroupWeek: View, @MainActor Equatable {
         }
       }
     }
+  }
+
+  private func spoken(_ day: Day, shown: [[Day: DayEntry]], together: Bool) -> String {
+    spokenGroupDay(
+      day, isToday: day == today, holiday: day.holidayName, together: together,
+      shifts: members.enumerated().map { index, member in
+        let entry = shown[index][day]
+        let pattern = entry.flatMap { member.calendar.patternsByID[$0.shift] }
+        return SpokenShift(
+          member: member.name, pattern: pattern?.name,
+          change: entry.flatMap {
+            timeChange(start: $0.start, end: $0.end, standard: pattern?.time)
+          })
+      })
   }
 
   /// Today in the accent; else Sundays, Saturdays and holidays in their
@@ -210,7 +226,9 @@ struct MemberWeek: View {
         .contentShape(.rect)
       }
       .buttonStyle(.plain)
-      .accessibilityHint("押すと月で見られます")
+      // Its days are read one at a time, each with who has which shift;
+      // 月で見る by the heading opens the month for a screen reader.
+      .accessibilityElement(children: .contain)
       next(today: today)
     }
     // Only a frame on the screen's own ground: the card's ground is lifted
