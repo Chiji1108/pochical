@@ -6,6 +6,7 @@ import {
   FEATURE_GRAPHIC,
   HEADLINE,
   HEADLINE_SHARE,
+  STAGE_FOOT,
   lineBoxOf,
   lineClearOf,
   STORE_SHOTS,
@@ -252,6 +253,25 @@ test("a callout's card cuts through no piece beside it either, and leaves alone 
   expect(over.top).toBeCloseTo(bare.top);
   expect(over.foot).toBeCloseTo(bare.foot);
   expect(over.right).toBeLessThan(button.left);
+});
+
+test("a callout's card leaves what is over its part in sight, and the phone's foot under it", () => {
+  const screen = SCREENS.android;
+  const picture = STORES.android;
+  // An answer of a chat, and close under it the lines the card lifts, too
+  // tall to grow as much as a card may.
+  const answer = { height: 300, left: 20, top: 1100, width: 1040 };
+  const lines = { height: 710, left: 20, top: 1450, width: 1040 };
+  const { card, phone, scale } = calloutOf(lines, [answer], screen, picture);
+  const over = onScreen(card, phone, screen, picture);
+  expect(over.top).toBeGreaterThan(answer.top + answer.height);
+  expect(over.top).toBeLessThan(lines.top);
+  expect(scale).toBeGreaterThan(1.2);
+  expect(scale).toBeLessThan(1.35);
+  // As far over the phone's foot as the phone is over the picture's.
+  expect(over.foot).toBeCloseTo(
+    screen.height - (STAGE_FOOT * picture.width) / 100 / phone
+  );
 });
 
 const tiles = wallOf(WALL_SHOT.tiles);

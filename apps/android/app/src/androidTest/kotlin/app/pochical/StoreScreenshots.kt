@@ -170,9 +170,8 @@ class StoreScreenshots {
     device.tap(By.text("全体チャット"), votes)
     check(!device.hasObject(By.text("ここから新着"))) { "The chat still has new lines" }
     photograph("04-chat")
-    // The poll, by its line, which says what it is. (A line of words is one piece here, its reactions with
-    // it: the line that asks for the poll taken in too, the card would cover the answer over it.)
-    measure("04-chat", "poll", Regex(".*日にちの投票.*"))
+    // The poll with the words that ask for it over it, each its whole line of the chat, as on iOS.
+    measure("04-chat", "poll", Regex(".*(ごはん会|日にちの投票).*"))
     device.back(By.text("メッセージ"))
 
     // A month that runs from the 15th, the page holding today, and the month put back.

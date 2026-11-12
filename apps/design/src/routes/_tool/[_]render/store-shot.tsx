@@ -113,8 +113,8 @@ const tilesLie = (parts: number[], tall: number) => {
 };
 
 const styles = {
-  // A callout's card, as a tile's is, lifted over the phone from its
-  // middle.
+  // A callout's card, as a tile's is, lifted over the phone, its part in
+  // its middle.
   callout: css({
     alignItems: "center",
     bg: "white",
