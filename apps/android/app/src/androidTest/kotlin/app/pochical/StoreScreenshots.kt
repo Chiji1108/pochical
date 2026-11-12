@@ -21,6 +21,8 @@ import androidx.test.uiautomator.By
 import androidx.test.uiautomator.BySelector
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
+import app.pochical.calendar.monthDayText
+import app.pochical.calendar.spokenText
 import app.pochical.kit.AccountState
 import app.pochical.kit.PhotoShelf
 import app.pochical.kit.PochicalKit
@@ -420,21 +422,38 @@ class StoreScreenshots {
     device.find(target)
   }
 
-  /** A day as the calendar and the tray say it. */
-  private fun said(day: LocalDate) = "${day.monthValue}月${day.dayOfMonth}日"
+  /** A day as the tray says it. */
+  private fun said(day: LocalDate) = day.monthDayText
 
-  /** The calendar's [day] while it holds [shift], whatever else it says: a holiday's name before it, a change of hours after. */
-  private fun holding(day: String, shift: String): BySelector = By.desc(Pattern.compile("$day、(.+、)?$shift(、.*)?"))
+  /**
+   * How the calendar's [day] begins what it says to a screen reader, by the app's own words for it
+   * (spokenText: 今日 before it on today, its weekday after it), for a pattern to hold: a holiday's
+   * name and the shift come after.
+   */
+  private fun spoken(day: LocalDate): String = Pattern.quote(day.spokenText(app.getString(R.string.today).takeIf { day == LocalDate.now() }, holiday = null))
+
+  /** What the calendar's [day] says while it holds [shift], whatever else it says: a holiday's name before it, a change of hours after. */
+  private fun holds(day: LocalDate, shift: String): Pattern = Pattern.compile("${spoken(day)}、(.+、)?$shift(、.*)?")
+
+  /** The calendar's [day] while it holds [shift]. */
+  private fun holding(day: LocalDate, shift: String): BySelector = By.desc(holds(day, shift))
 
   /** What each day of this month says on the calendar, in the days' order, read at one moment. */
   private fun monthSaid(): List<String> {
-    val day = Regex("${LocalDate.now().monthValue}月(\\d+)日、.*")
-    return said().mapNotNull { day.matchEntire(it.words) }.sortedBy { it.groupValues[1].toInt() }.map { it.value }.distinct()
+    val said = said().map { it.words }
+    val today = LocalDate.now()
+    return (1..today.lengthOfMonth()).flatMap { date ->
+      val day = Pattern.compile("${spoken(today.withDayOfMonth(date))}、.*")
+      said.filter { day.matcher(it).matches() }.distinct()
+    }
   }
 
+  /** Picks the calendar's [day] in ポチポチ入力, open, for the tray to enter it. */
+  private fun pickDay(day: LocalDate) = device.tap(dayOf(day), By.desc("入力する日付：${said(day)}"))
+
   /** Enters [shift] on [day] in ポチポチ入力, open: the day picked, and the tray's key of the shift pressed. */
-  private fun enter(day: String, shift: String) {
-    device.tap(By.desc(Pattern.compile("$day、.*")), By.desc("入力する日付：$day"))
+  private fun enter(day: LocalDate, shift: String) {
+    pickDay(day)
     device.tap(By.text(shift), holding(day, shift))
   }
 
@@ -444,18 +463,16 @@ class StoreScreenshots {
    */
   private fun enterHalfTheMonth() {
     val today = LocalDate.now()
-    val month = today.monthValue
-    fun pickDay(day: Int) = device.tap(By.desc(Pattern.compile("${month}月${day}日、.*")), By.desc("入力する日付：${month}月${day}日"))
     device.tap(By.text("ポチポチ入力"), By.text("完了"))
-    pickDay(HALF)
+    pickDay(today.withDayOfMonth(HALF))
     val last = today.lengthOfMonth()
     for (day in HALF..last) {
       // What the tray says once a key moved it on, or at the month's end.
-      val moved = if (day < last) By.descEndsWith("${day + 1}日を選択中") else By.descStartsWith("${month}月${day}日、シフトを消しました")
+      val moved = if (day < last) By.descEndsWith("${day + 1}日を選択中") else By.descStartsWith("${said(today.withDayOfMonth(day))}、シフトを消しました")
       // 消す takes a tap only on a day with a shift: the sample's days are its repeating order's, each its own.
       if (device.hasObject(By.enabled(true).hasChild(By.text("消す")))) device.tap(By.text("消す"), moved) else if (day < last) device.tap(By.text("翌日へ"), moved)
     }
-    pickDay(HALF)
+    pickDay(today.withDayOfMonth(HALF))
   }
 
   /**
@@ -466,8 +483,8 @@ class StoreScreenshots {
   private fun enterAgain(month: List<String>) {
     val today = LocalDate.now()
     for (date in HALF..today.lengthOfMonth()) {
-      val day = said(today.withDayOfMonth(date))
-      val shift = STATES.map { it.shift }.first { shift -> month.any { Pattern.matches("$day、(.+、)?$shift(、.*)?", it) } }
+      val day = today.withDayOfMonth(date)
+      val shift = STATES.map { it.shift }.first { shift -> month.any { holds(day, shift).matcher(it).matches() } }
       enter(day, shift)
     }
   }
@@ -484,7 +501,7 @@ class StoreScreenshots {
     val on = if (now.hour < 9) now.toLocalDate().minusDays(1) else now.toLocalDate()
     launch("sample", "firstRunDone")
     device.tap(By.text("ポチポチ入力"), By.text("完了"))
-    enter(said(on), if (now.hour in 9..17) "日勤" else "夜勤")
+    enter(on, if (now.hour in 9..17) "日勤" else "夜勤")
   }
 
   /** What [wait] gives once it has it, waited on as long as a step of the walk is; failing, that [what] did not come. */
@@ -526,7 +543,7 @@ class StoreScreenshots {
       launch("sample", "firstRunDone")
       device.find(calendar)
       device.tap(By.text("ポチポチ入力"), By.text("完了"))
-      enter(said(LocalDate.now()), state.shift)
+      enter(LocalDate.now(), state.shift)
       // Out of ポチポチ入力 as the app starts again: its 完了 would ask about the days left blank.
       launch("sample", "firstRunDone")
       device.find(calendar)
@@ -687,7 +704,7 @@ class StoreScreenshots {
   private fun between(over: BySelector, under: BySelector): Int = (device.find(over).visibleBounds.bottom + topOf(under)) / 2
 
   /** The calendar's day [date], whatever it holds: a day of the month before or after shows in the month's weeks too. */
-  private fun dayOf(date: LocalDate): BySelector = By.desc(Pattern.compile("${date.monthValue}月${date.dayOfMonth}日、.*"))
+  private fun dayOf(date: LocalDate): BySelector = By.desc(Pattern.compile("${spoken(date)}、.*"))
 
   /**
    * The screen as it is, kept as [name], once the app's window has drawn what it holds: the words a
