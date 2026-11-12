@@ -119,7 +119,7 @@ struct RepeatCalendar: View {
             withAnimation(Springs.standard) { month = anchor.firstOfMonth }
           }
           .buttonStyle(BarButton())
-          .accessibilityLabel("並びの1日目の月に戻る")
+          .accessibilityHint("並びの1日目の月に戻ります")
           .transition(.opacity)
         }
       }

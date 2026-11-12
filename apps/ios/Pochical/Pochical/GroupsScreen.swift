@@ -386,7 +386,8 @@ private struct GroupRail: View {
               .contentShape(.rect)
           }
           .buttonStyle(.plain)
-          .accessibilityLabel(count > 0 ? "\(group.name)、未読\(count)件" : group.name)
+          .accessibilityLabel(group.name)
+          .accessibilityValue(count > 0 ? "未読\(count)件" : "")
           .accessibilityAddTraits(isOpen ? .isSelected : [])
         }
         Capsule()

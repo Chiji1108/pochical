@@ -94,8 +94,13 @@ struct DayCell: View {
       }
     }
     .opacity(outside ? 0.35 : 1)
+    // The whole cell, not only what is drawn in it, is the day to a
+    // finger and to a screen reader's.
+    .contentShape(.rect)
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(accessibilityText)
+    // What a voice says to pick the day: the date as the cell shows it.
+    .accessibilityInputLabels(["\(day.day)日", day.monthDayText])
   }
 
   /// How the look shows this day off; none for a working day.
@@ -151,22 +156,17 @@ struct DayCell: View {
     return isHoliday && colorsHoliday ? colors.calendarHoliday : colors.textPrimary
   }
 
+  /// What a screen reader hears (spec/calendar.md, Screen readers).
   private var accessibilityText: String {
-    var parts = [day.monthDayText]
-    if isHoliday, let name = day.holidayName {
-      parts.append(name)
-    }
+    var parts = [day.spokenText(isToday: isToday, holiday: isHoliday ? day.holidayName : nil)]
     parts.append(preview ? "未入力" : pattern?.name ?? "未入力")
     if !preview, let pattern, let entry,
       let change = timeChange(start: entry.start, end: entry.end, standard: pattern.time)
     {
-      let moves = [change.early ? "早出" : nil, change.late ? "残業" : nil].compactMap(\.self)
       let hours = pattern.time.map {
         hoursText(entry.start ?? $0.start, entry.end ?? $0.end)
       }
-      parts.append(
-        [moves.isEmpty ? "時間変更" : moves.joined(separator: "・"), hours]
-          .compactMap(\.self).joined(separator: " "))
+      parts.append([change.spokenText, hours].compactMap(\.self).joined(separator: " "))
     }
     if note?.isEmpty == false {
       parts.append("メモあり")

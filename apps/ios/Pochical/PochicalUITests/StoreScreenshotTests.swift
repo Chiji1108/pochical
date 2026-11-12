@@ -78,8 +78,10 @@ final class StoreScreenshotTests: XCTestCase {
     try app.joins(invitation: raw.appending(path: "invite-friends"), named: "まい", face: "ひよこ")
     app.buttons["月で見る"].tap()
     // A day says everyone is off once all four's shifts are in the group, まい's sent from here
-    // among them: the table is whole then.
-    let together = app.buttons.matching(NSPredicate(format: "label ENDSWITH '、みんな休み'"))
+    // among them: the table is whole then. A row says its day as the calendar does, みんな休み,
+    // then who has which shift (PochicalKit's spokenGroupDay).
+    let together = app.buttons.matching(
+      NSPredicate(format: "label MATCHES %@", "\(Self.spoken("[0-9]+", "[0-9]+"))(.+、)?みんな休み、.*"))
     XCTAssertTrue(together.firstMatch.waitForExistence(timeout: 20), "一覧 shows everyone's shifts")
     snap("03-group-shifts", of: XCUIScreen.main, into: raw)
     // The days everyone is off, the first of them and those right under it.
@@ -104,10 +106,9 @@ final class StoreScreenshotTests: XCTestCase {
       .matching(NSPredicate(format: "label ENDSWITH 'に行ける人：森、小林'")).firstMatch
     chat.tap()
     XCTAssertTrue(menu.waitForExistence(timeout: 15), "the chat opens")
-    // ↓ is there while lines under the screen's foot are not yet seen.
-    let down = app.buttons.matching(
-      NSPredicate(format: "label BEGINSWITH '最新のメッセージへ' OR label BEGINSWITH 'ここから新着へ'")
-    ).firstMatch
+    // ↓ is there while lines under the screen's foot are not yet seen, how many of them its value.
+    let down = app.buttons.matching(NSPredicate(format: "label IN {'最新のメッセージへ', 'ここから新着へ'}"))
+      .firstMatch
     for _ in 0..<6 where !(votes.waitForExistence(timeout: 10) && !down.exists) {
       if down.exists { down.tap() }
       _ = down.waitForNonExistence(timeout: 3)
@@ -381,7 +382,17 @@ final class StoreScreenshotTests: XCTestCase {
   /// change of hours after.
   private static func says(_ label: String, _ month: Int, _ day: Int, holding shift: String) -> Bool {
     label.range(
-      of: "^\(month)月\(day)日、(.+、)?\(shift)(、.*)?$", options: .regularExpression) != nil
+      of: "^\(spoken("\(month)", "\(day)"))(.+、)?\(shift)(、.*)?$", options: .regularExpression) != nil
+  }
+
+  /// How a day begins what it says to a screen reader, in the calendar and
+  /// in a group's table alike, as a pattern over the `month` and `day`
+  /// given as patterns: the words are PochicalKit's `Day.spokenText`
+  /// (SpokenDay.swift, spec/vectors/spoken-days.json), which the UI tests
+  /// are not built with, 今日 before the date on today and the weekday
+  /// after it. A holiday's name and what the day holds come after.
+  private static func spoken(_ month: String, _ day: String) -> String {
+    "(今日、)?\(month)月\(day)日\\(.\\)、"
   }
 
   /// What each day of the month on the screen says, in the days' order.
@@ -390,7 +401,8 @@ final class StoreScreenshotTests: XCTestCase {
     func said(_ element: any XCUIElementSnapshot) -> [String] {
       let own =
         app.frame.contains(element.frame)
-          && element.label.range(of: "^\(month)月[0-9]+日、", options: .regularExpression) != nil
+          && element.label.range(
+            of: "^\(Self.spoken("\(month)", "[0-9]+"))", options: .regularExpression) != nil
       return (own ? [element.label] : []) + element.children.flatMap(said)
     }
     func date(_ label: String) -> Int {
@@ -456,10 +468,9 @@ final class StoreScreenshotTests: XCTestCase {
   /// after): the one on the screen, as the months beside the one shown
   /// hold its first and last days too.
   @MainActor private func day(_ month: Int, _ day: Int, holding shift: String? = nil) -> XCUIElement {
-    let said = "\(month)月\(day)日、"
+    let said = Self.spoken("\(month)", "\(day)")
     let days = app.descendants(matching: .any).matching(
-      shift.map { NSPredicate(format: "label MATCHES %@", "\(said)(.+、)?\($0)(、.*)?") }
-        ?? NSPredicate(format: "label BEGINSWITH %@", said))
+      NSPredicate(format: "label MATCHES %@", said + (shift.map { "(.+、)?\($0)(、.*)?" } ?? ".*")))
     return days.allElementsBoundByIndex.first { app.frame.contains($0.frame) } ?? days.firstMatch
   }
 
@@ -474,8 +485,7 @@ final class StoreScreenshotTests: XCTestCase {
 
   /// Where the row of the calendar's day `days` after `date` begins on the
   /// screen: midway between the foot of the days in the row over it and
-  /// its own top, as a day's element holds its date and mark, not the room
-  /// around them.
+  /// its own top, whatever room the rows leave between their days.
   @MainActor private func rowTop(_ date: DateComponents, after days: Int) -> CGFloat {
     let top = day(date, after: days).frame.minY
     let over = (1...7).map { day(date, after: days - $0).frame }
@@ -493,9 +503,11 @@ final class StoreScreenshotTests: XCTestCase {
       [frame.minX, frame.minY, frame.width, frame.height].map { Int(($0 * scale).rounded()) }
     }
     let saying: Set<XCUIElement.ElementType> = [.staticText, .button, .switch, .textField]
+    // An element that says something is one piece with all it holds: a group's row says its
+    // whole day, over the texts drawn in it.
     func said(_ element: any XCUIElementSnapshot) -> [CGRect] {
-      guard element.children.isEmpty else { return element.children.flatMap(said) }
-      return saying.contains(element.elementType) && !element.label.isEmpty ? [element.frame] : []
+      saying.contains(element.elementType) && !element.label.isEmpty
+        ? [element.frame] : element.children.flatMap(said)
     }
     let pieces = said(try app.snapshot()).filter { app.frame.contains($0) }
     let json = try JSONSerialization.data(withJSONObject: [

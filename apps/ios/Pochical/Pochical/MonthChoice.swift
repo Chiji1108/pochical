@@ -97,6 +97,7 @@ struct TodayButton: View {
     Button("今\(unit)", action: action)
       .buttonStyle(BarButton())
       .accessibilityLabel("今\(unit)に戻る")
+      .accessibilityInputLabels(["今\(unit)", "今\(unit)に戻る"])
       .transition(.opacity)
   }
 }

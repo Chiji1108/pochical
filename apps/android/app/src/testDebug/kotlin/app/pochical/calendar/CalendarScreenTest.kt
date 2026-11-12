@@ -108,7 +108,7 @@ class CalendarScreenTest {
 
   /** Taps `day`'s cell on the month shown. */
   private fun tap(day: LocalDate) {
-    compose.onAllNodes(hasContentDescription("${day.monthDayText}、", substring = true)).onFirst().performClick()
+    compose.onAllNodes(hasContentDescription("${day.monthDayText}(", substring = true)).onFirst().performClick()
     compose.waitForIdle()
   }
 
@@ -128,7 +128,7 @@ class CalendarScreenTest {
         .map { it.config[SemanticsProperties.ContentDescription].single() }
     // The sample's memos fall on the 8th and the 16th of this month.
     for (day in listOf(8, 16)) {
-      assertTrue(memos.toString(), memos.any { it.startsWith("${today.monthValue}月${day}日、") })
+      assertTrue(memos.toString(), memos.any { it.contains("${today.monthValue}月${day}日(") })
     }
   }
 
@@ -165,7 +165,7 @@ class CalendarScreenTest {
     val day = today.withDayOfMonth(8)
     tap(day)
     compose
-      .onAllNodes(hasContentDescription("${day.plusDays(1).monthDayText}、", substring = true))
+      .onAllNodes(hasContentDescription("${day.plusDays(1).monthDayText}(", substring = true))
       .onFirst()
       .performTouchInput { swipeDown(startY = centerY, endY = centerY + 1500f, durationMillis = 600) }
     compose.waitForIdle()

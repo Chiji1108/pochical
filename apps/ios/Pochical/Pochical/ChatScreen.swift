@@ -403,6 +403,14 @@ struct ChatScreen: View {
         if let words = spoken(line) { announcer.heard(words) }
       }
     }
+    // A line that could not be sent says so as it fails, wherever the
+    // lines are scrolled (spec/chat.md, VoiceOver): counted as the lines
+    // show it, so one sent again and failing again says so again.
+    .onChange(
+      of: chat.state.waiting.count { $0.failed && sendingAgain[$0.opID] != $0.madeAtMs }
+    ) { before, now in
+      if now > before { AccessibilityNotification.Announcement("送れませんでした").post() }
+    }
     .environment(\.openURL, OpenURLAction { open($0) })
     // Leaving the chat takes its open menu with it.
     .onAppear {

@@ -127,7 +127,8 @@ struct JoinScreen: View {
               }
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("\(details.members.count)人のメンバー")
+            // The line it shows, without the faces' letters before it.
+            .accessibilityLabel(memberLine(details.members))
           }
           .frame(maxWidth: .infinity)
           .padding(.top, 32)
