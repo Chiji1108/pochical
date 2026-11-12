@@ -10,10 +10,13 @@ import app.pochical.v1.ServerError
 import app.pochical.v1.ServerFrame
 import app.pochical.v1.SignInProvider
 import app.pochical.v1.DeleteAccountRequest
+import app.pochical.v1.CreateGroupRequest
 import app.pochical.v1.SetDisplayNameRequest
 import app.pochical.v1.SetProfileRequest
 import app.pochical.v1.setProfileResponse
+import app.pochical.v1.createGroupResponse
 import app.pochical.v1.setDisplayNameResponse
+import app.pochical.v1.setGroupPhotoResponse
 import app.pochical.v1.deleteAccountResponse
 import app.pochical.v1.getMeResponse
 import app.pochical.v1.peekAccountResponse
@@ -168,6 +171,15 @@ class FakeServer : AutoCloseable {
 
   /** How long a group's photo put waits before it answers, in milliseconds. */
   @Volatile var photoDelayMs = 0L
+
+  /** The groups `CreateGroup` was asked to make, in the order they came. */
+  val createdGroups = CopyOnWriteArrayList<CreateGroupRequest>()
+
+  /** Whether `CreateGroup` fails, as a server out of reach. */
+  @Volatile var createGroupFails = false
+
+  /** How long `CreateGroup` takes to answer, in milliseconds. */
+  @Volatile var createGroupDelayMs = 0L
 
   /** How long `SetDisplayName` takes to answer, in milliseconds. */
   @Volatile var displayNameDelayMs = 0L
@@ -337,6 +349,24 @@ class FakeServer : AutoCloseable {
                 }
               }
             }
+            "/pochical.v1.GroupService/CreateGroup" -> {
+              Thread.sleep(createGroupDelayMs)
+              when {
+                createGroupFails -> MockResponse.Builder().code(500).build()
+                userOf(request.headers["Authorization"]) == null -> refused("unauthenticated")
+                else -> {
+                  val asked = CreateGroupRequest.parseFrom(request.body!!.toByteArray())
+                  createdGroups += asked
+                  // One group a request id, as the server makes it once (spec/sync-protocol.md, Groups).
+                  proto(createGroupResponse { groupId = "group-${asked.requestId}" })
+                }
+              }
+            }
+            "/pochical.v1.GroupService/SetGroupPhoto" ->
+              when (userOf(request.headers["Authorization"])) {
+                null -> refused("unauthenticated")
+                else -> proto(setGroupPhotoResponse {})
+              }
             "/pochical.v1.GroupService/SetDisplayName" -> {
               Thread.sleep(displayNameDelayMs)
               when (userOf(request.headers["Authorization"])) {

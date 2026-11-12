@@ -1,6 +1,8 @@
 package app.pochical.kit
 
 import app.pochical.design.ReadyPatterns
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.UUID
 
 /**
@@ -56,4 +58,33 @@ data class NewGroupRequest(val name: String, val mark: GroupMarkValue, val displ
       if (last != null && last.name == name && last.mark == mark && last.displayName == displayName && last.endsAtMs == endsAtMs) last
       else NewGroupRequest(name, mark, displayName, newId(), endsAtMs)
   }
+}
+
+/**
+ * グループを作る's draft, whole, as iOS's: the group's [name] as typed, the mark picked by hand
+ * ([pickedMark], none while the mark follows the name), its [end] if one was picked, and what 作る
+ * [sent] last. It is what the page holds, what a call into the group is begun with
+ * ([GroupCalls.making]), and what the page opened again while that call is under way takes back,
+ * whole: so nothing of what the person left, that the mark was theirs among it, can be missing
+ * from what the page then shows or sends again.
+ */
+data class NewGroupDraft(val name: String = "", val pickedMark: GroupMarkValue? = null, val end: LocalDate? = null, val sent: NewGroupRequest? = null) {
+  /**
+   * The mark picked, which stays as the name changes, else the one the name gives in [freeColor],
+   * the first color the user's groups do not use yet. Once sent, the guess stays as sent while the
+   * name does: the group made from it takes its color, which a new guess would skip.
+   */
+  fun mark(freeColor: Int): GroupMarkValue = pickedMark ?: sent?.takeIf { it.name == name.trim() }?.mark ?: guessGroupMark(name, freeColor)
+
+  /**
+   * The request for the draft, the person called [displayName] in the group: the one sent last
+   * again while nothing it asks for has changed ([NewGroupRequest.asking]). The end is the moment
+   * the day picked ends in [zone], so the same day asked again is the same request.
+   */
+  fun request(freeColor: Int, displayName: String, zone: ZoneId): NewGroupRequest =
+    NewGroupRequest.asking(name.trim(), mark(freeColor), displayName, sent, end?.let { groupEndsAt(it, zone) } ?: 0)
+
+  /** Only what the server takes (spec/vectors/fits.json), with a name for the person, so the call is never refused for it. */
+  fun canMake(freeColor: Int, displayName: String): Boolean =
+    fitsGroupName(name.trim()) && fitsGroupMark(mark(freeColor)) && displayName.isNotEmpty() && fitsPersonName(displayName)
 }

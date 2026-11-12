@@ -109,8 +109,7 @@ fun GroupSettingsPage(
     SettingsPage(stringResource(R.string.group_settings), onBack, snackbar = snackbar) { padding ->
       LazyColumn(contentPadding = padding) {
         item {
-          // With an end, what passing it does is said here too, where the day is read.
-          val note = stringResource(R.string.group_settings_note) + if (end?.day != null) stringResource(R.string.group_end_settings_note) else ""
+          val note = noteWithEnd(stringResource(R.string.group_settings_note), ends = end?.day != null)
           SettingsSection(stringResource(R.string.group), footnote = note) {
             row {
               SettingsRow(
@@ -253,12 +252,19 @@ fun GroupSettingsPage(
  */
 @Composable
 fun GroupEditPage(groupId: String, onBack: () -> Unit) {
-  GroupPage(groupId, stringResource(R.string.group_edit), onBack) { group -> EditForm(group, onBack) }
+  val calls = LocalGroupCalls.current
+  GroupPage(groupId, stringResource(R.string.group_edit), onBack) { group ->
+    EditForm(group, onBack) { name, mark ->
+      // A newly picked photo goes up first, for the group to take.
+      if (mark.photoId.isNotEmpty() && mark.photoId != group.mark.photoId) calls.sendHeldPhoto(mark.photoId, PhotoShelf.Mine)
+      calls.rename(group.id, name, mark)
+    }
+  }
 }
 
+/** グループを編集's draft of [group], which 保存 gives whole to [save] and then goes back. */
 @Composable
-private fun EditForm(group: GroupRow, onBack: () -> Unit) {
-  val calls = LocalGroupCalls.current
+internal fun EditForm(group: GroupRow, onBack: () -> Unit, save: suspend (name: String, mark: GroupMarkValue) -> Unit) {
   val resources = LocalResources.current
   val scope = rememberCoroutineScope()
   val groupId = group.id
@@ -273,18 +279,23 @@ private fun EditForm(group: GroupRow, onBack: () -> Unit) {
   var saving by remember { mutableStateOf(false) }
   var failed by remember { mutableStateOf(false) }
   var photoGone by remember { mutableStateOf(false) }
-  val shown = mark ?: group.mark
-  val trimmed = name.text.trim()
+  // The name and mark as the page holds them at the moment they are asked for, read from its
+  // state: 保存 may be tapped before the page is drawn again with the last change, and sends
+  // what was typed, never the page as it was last drawn (#1185).
+  fun edited() = name.text.trim() to (mark ?: group.mark)
   // Only what the server takes (spec/vectors/fits.json), so the call is never refused for it.
-  val canSave = fitsGroupName(trimmed) && fitsGroupMark(shown) && (trimmed != group.name || shown != group.mark)
+  fun canSave(name: String, mark: GroupMarkValue) = fitsGroupName(name) && fitsGroupMark(mark) && (name != group.name || mark != group.mark)
+  val (trimmed, shown) = edited()
 
   fun save() {
+    val (trimmed, shown) = edited()
+    // As the button is off for, should the tap come before it is drawn so: nothing the server
+    // would refuse, and not again while one save is under way.
+    if (saving || !canSave(trimmed, shown)) return
     saving = true
     scope.launch {
       try {
-        // A newly picked photo goes up first, for the group to take.
-        if (shown.photoId.isNotEmpty() && shown.photoId != group.mark.photoId) calls.sendHeldPhoto(shown.photoId, PhotoShelf.Mine)
-        calls.rename(groupId, trimmed, shown)
+        save(trimmed, shown)
         onBack()
       } catch (e: CancellationException) {
         throw e
@@ -302,7 +313,7 @@ private fun EditForm(group: GroupRow, onBack: () -> Unit) {
   Scaffold(
     topBar = {
       PageBar(stringResource(R.string.group_edit), onBack) {
-        ConfirmAction(stringResource(R.string.save), onClick = ::save, enabled = canSave, busy = saving)
+        ConfirmAction(stringResource(R.string.save), onClick = ::save, enabled = canSave(trimmed, shown), busy = saving)
       }
     }
   ) { padding ->
