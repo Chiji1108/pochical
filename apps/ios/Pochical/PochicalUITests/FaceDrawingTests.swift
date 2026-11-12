@@ -90,8 +90,7 @@ final class FaceDrawingTests: XCTestCase {
 
   func testTheFaceMadeWithAGroupIsTheUsualPhoto() {
     continueAfterFailure = false
-    app.launchArguments += ["-firstRunDone", "YES"]
-    app.launch()
+    app.launchPastFirstRun()
     // The group made, with the faces of whoever has joined since.
     let groups = app.tabBars.buttons["グループ"]
     XCTAssertTrue(groups.waitForExistence(timeout: 20))
@@ -106,8 +105,7 @@ final class FaceDrawingTests: XCTestCase {
 
   func testSomeoneWithAUsualNameMakingAGroupIsAskedAsOnJoining() {
     continueAfterFailure = false
-    app.launchArguments += ["-firstRunDone", "YES"]
-    app.launch()
+    app.launchPastFirstRun()
     let groups = app.tabBars.buttons["グループ"]
     XCTAssertTrue(groups.waitForExistence(timeout: 20))
     groups.tap()
@@ -123,8 +121,7 @@ final class FaceDrawingTests: XCTestCase {
 
   func testSomeoneWithAUsualNameGivesANewGroupAFaceOfItsOwn() {
     continueAfterFailure = false
-    app.launchArguments += ["-firstRunDone", "YES"]
-    app.launch()
+    app.launchPastFirstRun()
     let groups = app.tabBars.buttons["グループ"]
     XCTAssertTrue(groups.waitForExistence(timeout: 20))
     groups.tap()
@@ -160,8 +157,7 @@ final class FaceDrawingTests: XCTestCase {
   /// server stopped, and start it while the test waits.
   func testAnAccountNotYetCaughtUpGetsNoDrawing() {
     continueAfterFailure = false
-    app.launchArguments += ["-firstRunDone", "YES"]
-    app.launch()
+    app.launchPastFirstRun()
     let groups = app.tabBars.buttons["グループ"]
     XCTAssertTrue(groups.waitForExistence(timeout: 20))
     groups.tap()
