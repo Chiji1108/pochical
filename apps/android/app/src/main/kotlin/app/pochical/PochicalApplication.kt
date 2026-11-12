@@ -3,6 +3,8 @@ package app.pochical
 import android.app.Application
 import android.content.Context
 import android.os.StrictMode
+import androidx.compose.foundation.ComposeFoundationFlags
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.datastore.dataStoreFile
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
@@ -178,8 +180,14 @@ class PochicalApplication : Application(), MetroApplication, PochicalKit.Holder,
     super.attachBaseContext(base)
   }
 
+  @OptIn(ExperimentalFoundationApi::class)
   override fun onCreate() {
     super.onCreate()
+    // Compose foundation 1.12 leaves a list's item animations untold of what animateScrollToItem
+    // scrolled, so the chat's lines, glided to the latest, went back and slid there again the next
+    // time the list was laid out (#1197). Foundation 1.13 tells them and has no such flag
+    // (b/493183465): this line goes with it (#1198).
+    ComposeFoundationFlags.isSkipItemPlacementAnimationFixEnabled = false
     // Listening before anything syncs, so a photo let go of is never missed (`followForgotten`).
     CoroutineScope(SupervisorJob() + Dispatchers.Default).launch(start = CoroutineStart.UNDISPATCHED) {
       followForgotten(graph.kit.photoFiles) { SingletonImageLoader.get(this@PochicalApplication) }
