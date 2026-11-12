@@ -150,12 +150,11 @@ fun GroupWeek(
           .then(if (onPick != null) Modifier.clickable(role = Role.Button) { onPick(day) } else Modifier)
           .clearAndSetSemantics {
             contentDescription =
-              buildList {
-                  add(day.spokenText(todayWord.takeIf { day == today }, day.holidayName(country)))
-                  if (isTogether) add(togetherWord)
-                  members.forEachIndexed { index, member -> add(spokenShift(member.name, shifts[index][day]?.pattern?.name, shifts[index][day]?.change, words)) }
-                }
-                .joinToString("、")
+              spokenGroupDay(
+                day.spokenText(todayWord.takeIf { day == today }, day.holidayName(country)),
+                togetherWord.takeIf { isTogether },
+                members.mapIndexed { index, member -> spokenShift(member.name, shifts[index][day]?.pattern?.name, shifts[index][day]?.change, words) },
+              )
             if (onPick != null) selected = day == picked
           },
         horizontalAlignment = Alignment.CenterHorizontally,

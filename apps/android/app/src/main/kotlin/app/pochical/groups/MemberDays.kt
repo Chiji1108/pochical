@@ -58,6 +58,13 @@ fun spokenShift(member: String, pattern: String?, change: TimeChange?, words: Sh
   return "$member：${listOfNotNull(pattern ?: words.unentered, moved).joinToString(" ")}"
 }
 
+/**
+ * A group's day read whole, as its row or column is one element: the [day] as the calendar says it
+ * (spokenText), [together]'s みんな休み when it is one, then every member's [shifts] in the table's
+ * order (spec/vectors/spoken-days.json).
+ */
+fun spokenGroupDay(day: String, together: String?, shifts: List<String>): String = (listOfNotNull(day, together) + shifts).joinToString("、")
+
 /** Everyone's shifts over some days, member by member, and the days among them everyone is off. */
 class GroupDays(val shifts: List<Map<LocalDate, MemberShift>>, val together: Together)
 

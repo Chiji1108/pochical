@@ -2,35 +2,74 @@ import Testing
 
 @testable import PochicalKit
 
-@Test func aDayIsReadWithItsWeekdayTodayAndItsHoliday() throws {
-  let holiday = try #require(Day("2026-11-03"))
-  let plain = try #require(Day("2026-11-12"))
-  #expect(plain.spokenText(isToday: false, holiday: nil) == "11月12日(木)")
-  #expect(plain.spokenText(isToday: true, holiday: nil) == "今日、11月12日(木)")
-  #expect(holiday.spokenText(isToday: false, holiday: "文化の日") == "11月3日(火)、文化の日")
-  #expect(holiday.spokenText(isToday: true, holiday: "文化の日") == "今日、11月3日(火)、文化の日")
+struct SpokenDayVectors: Decodable, Sendable {
+  struct Change: Decodable, Sendable {
+    let early: Bool
+    let late: Bool
+  }
+
+  struct Shift: Decodable, Sendable {
+    let member: String
+    let pattern: String?
+    let change: Change?
+
+    var spoken: SpokenShift {
+      SpokenShift(
+        member: member, pattern: pattern,
+        change: change.map { TimeChange(early: $0.early, late: $0.late) })
+    }
+  }
+
+  struct DayCase: VectorCase {
+    let name: String
+    let day: String
+    let today: String
+    let holiday: String?
+    let expected: String
+  }
+
+  struct ShiftCase: VectorCase {
+    let name: String
+    let member: String
+    let pattern: String?
+    let change: Change?
+    let expected: String
+  }
+
+  struct GroupDayCase: VectorCase {
+    let name: String
+    let day: String
+    let today: String
+    let holiday: String?
+    let together: Bool
+    let shifts: [Shift]
+    let expected: String
+  }
+
+  let days: [DayCase]
+  let shifts: [ShiftCase]
+  let groupDays: [GroupDayCase]
 }
 
-@Test func movedHoursAreReadAsWhatTheyAre() {
-  #expect(TimeChange(early: true, late: false).spokenText == "早出")
-  #expect(TimeChange(early: false, late: true).spokenText == "残業")
-  #expect(TimeChange(early: true, late: true).spokenText == "早出・残業")
-  #expect(TimeChange(early: false, late: false).spokenText == "時間変更")
+@Test(arguments: try vectors("spoken-days", as: SpokenDayVectors.self).days)
+func aDayIsReadWithItsWeekdayTodayAndItsHoliday(_ vector: SpokenDayVectors.DayCase) throws {
+  let day = try #require(Day(vector.day))
+  #expect(
+    day.spokenText(isToday: vector.day == vector.today, holiday: vector.holiday) == vector.expected)
 }
 
-@Test func aGroupsDayIsReadWithWhoHasWhichShift() throws {
-  let day = try #require(Day("2026-11-12"))
+@Test(arguments: try vectors("spoken-days", as: SpokenDayVectors.self).shifts)
+func aMembersDayIsReadWithItsShiftAndMovedHours(_ vector: SpokenDayVectors.ShiftCase) {
+  let shift = SpokenDayVectors.Shift(
+    member: vector.member, pattern: vector.pattern, change: vector.change)
+  #expect(shift.spoken.text == vector.expected)
+}
+
+@Test(arguments: try vectors("spoken-days", as: SpokenDayVectors.self).groupDays)
+func aGroupsDayIsReadWithWhoHasWhichShift(_ vector: SpokenDayVectors.GroupDayCase) throws {
+  let day = try #require(Day(vector.day))
   #expect(
     spokenGroupDay(
-      day, isToday: false, holiday: nil, together: false,
-      shifts: [
-        SpokenShift(member: "しんご", pattern: "日勤", change: TimeChange(early: true, late: false)),
-        SpokenShift(member: "お母さん", pattern: nil),
-      ]) == "11月12日(木)、しんご：日勤 早出、お母さん：未入力")
-  #expect(
-    spokenGroupDay(
-      day, isToday: true, holiday: nil, together: true,
-      shifts: [
-        SpokenShift(member: "しんご", pattern: "休み"), SpokenShift(member: "お母さん", pattern: "有休"),
-      ]) == "今日、11月12日(木)、みんな休み、しんご：休み、お母さん：有休")
+      day, isToday: vector.day == vector.today, holiday: vector.holiday,
+      together: vector.together, shifts: vector.shifts.map(\.spoken)) == vector.expected)
 }

@@ -161,12 +161,11 @@ fun GroupDayRow(
       .then(if (onPick != null) Modifier.clickable(role = Role.Button) { onPick(day) } else Modifier)
       .clearAndSetSemantics {
         contentDescription =
-          buildList {
-              add(day.spokenText(todayWord.takeIf { isToday }, day.holidayName(country)))
-              if (together) add(togetherWord)
-              members.forEachIndexed { index, member -> add(spokenShift(member.name, shifts[index]?.pattern?.name, shifts[index]?.change, words)) }
-            }
-            .joinToString("、")
+          spokenGroupDay(
+            day.spokenText(todayWord.takeIf { isToday }, day.holidayName(country)),
+            togetherWord.takeIf { together },
+            members.mapIndexed { index, member -> spokenShift(member.name, shifts[index]?.pattern?.name, shifts[index]?.change, words) },
+          )
         selected = picked
       },
     verticalAlignment = Alignment.CenterVertically,

@@ -6,7 +6,17 @@ import app.pochical.kit.GroupMember
 import app.pochical.kit.OwnCalendar
 import app.pochical.kit.OwnDay
 import app.pochical.kit.PatternRow
+import app.pochical.calendar.spokenText
 import app.pochical.kit.TimeChange
+import app.pochical.name
+import app.pochical.string
+import app.pochical.vectors
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import app.pochical.kit.Together
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
@@ -77,13 +87,35 @@ class GroupDaysTest {
     )
   }
 
+  private val words = ShiftWords(unentered = "未入力", early = "早出", late = "残業", moved = "時間変更")
+
+  private fun spoken(shift: JsonObject): String {
+    val change = shift["change"]?.takeUnless { it is JsonNull }?.jsonObject
+    return spokenShift(
+      shift.string("member")!!,
+      shift.string("pattern"),
+      change?.let { TimeChange(it.getValue("early").jsonPrimitive.boolean, it.getValue("late").jsonPrimitive.boolean) },
+      words,
+    )
+  }
+
   @Test
   fun aMembersDayIsReadWithItsShiftAndMovedHours() {
-    val words = ShiftWords(unentered = "未入力", early = "早出", late = "残業", moved = "時間変更")
-    assertEquals("しんご：未入力", spokenShift("しんご", pattern = null, change = null, words))
-    assertEquals("しんご：日勤", spokenShift("しんご", "日勤", change = null, words))
-    assertEquals("しんご：日勤 早出", spokenShift("しんご", "日勤", TimeChange(early = true, late = false), words))
-    assertEquals("しんご：日勤 早出・残業", spokenShift("しんご", "日勤", TimeChange(early = true, late = true), words))
-    assertEquals("しんご：日勤 時間変更", spokenShift("しんご", "日勤", TimeChange(early = false, late = false), words))
+    for (case in vectors("spoken-days", "shifts")) assertEquals(case.name(), case.string("expected"), spoken(case))
+  }
+
+  @Test
+  fun aGroupsDayIsReadWithWhoHasWhichShift() {
+    for (case in vectors("spoken-days", "groupDays")) {
+      val day = LocalDate.parse(case.string("day"))
+      val today = LocalDate.parse(case.string("today"))
+      val read =
+        spokenGroupDay(
+          day.spokenText("今日".takeIf { day == today }, case.string("holiday"), now = today),
+          "みんな休み".takeIf { case.getValue("together").jsonPrimitive.boolean },
+          case.getValue("shifts").jsonArray.map { spoken(it.jsonObject) },
+        )
+      assertEquals(case.name(), case.string("expected"), read)
+    }
   }
 }

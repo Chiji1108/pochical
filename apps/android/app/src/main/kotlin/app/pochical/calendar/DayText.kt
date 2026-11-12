@@ -59,7 +59,8 @@ val LocalDate.fullText: String
  * A day as a screen reader hears it (spec/calendar.md, Screen readers): 今日、11月3日(火)、文化の日, with
  * [todayWord] before it on today and the day's [holiday] after it.
  */
-fun LocalDate.spokenText(todayWord: String?, holiday: String?): String = listOfNotNull(todayWord, fullText, holiday).joinToString("、")
+fun LocalDate.spokenText(todayWord: String?, holiday: String?, now: LocalDate = LocalDate.now()): String =
+  listOfNotNull(todayWord, "${monthDayText(now)}(${weekdayLetter(weekday)})", holiday).joinToString("、")
 
 /** 11/1 where room is short, 2026/11/1 for a day of another year than today's. */
 val LocalDate.slashText: String

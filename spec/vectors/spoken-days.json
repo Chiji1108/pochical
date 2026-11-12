@@ -1,0 +1,107 @@
+{
+  "about": "What a screen reader is told of a day (spec/calendar.md, Screen readers; spec/shift-patterns.md, Days everyone is off). `days`: a day read on `today`, with its `holiday`'s name where it is one: 今日 first on today, the date with its weekday, then the holiday. `shifts`: one member's day in a group's table, `pattern` null for a day not entered, `change` the day's moved hours (spec/vectors/time-change.json) or null. `groupDays`: a group's day read whole: the day, みんな休み when `together`, then every member's shift in the table's order.",
+  "days": [
+    {
+      "name": "a day says its weekday",
+      "day": "2026-11-12",
+      "today": "2026-11-13",
+      "holiday": null,
+      "expected": "11月12日(木)"
+    },
+    {
+      "name": "today says so first",
+      "day": "2026-11-12",
+      "today": "2026-11-12",
+      "holiday": null,
+      "expected": "今日、11月12日(木)"
+    },
+    {
+      "name": "a holiday is named after the date",
+      "day": "2026-11-03",
+      "today": "2026-11-12",
+      "holiday": "文化の日",
+      "expected": "11月3日(火)、文化の日"
+    },
+    {
+      "name": "today on a holiday",
+      "day": "2026-11-03",
+      "today": "2026-11-03",
+      "holiday": "文化の日",
+      "expected": "今日、11月3日(火)、文化の日"
+    }
+  ],
+  "shifts": [
+    {
+      "name": "a shift by its name",
+      "member": "しんご",
+      "pattern": "日勤",
+      "change": null,
+      "expected": "しんご：日勤"
+    },
+    {
+      "name": "a day not entered",
+      "member": "しんご",
+      "pattern": null,
+      "change": null,
+      "expected": "しんご：未入力"
+    },
+    {
+      "name": "starting earlier",
+      "member": "しんご",
+      "pattern": "日勤",
+      "change": { "early": true, "late": false },
+      "expected": "しんご：日勤 早出"
+    },
+    {
+      "name": "ending later",
+      "member": "しんご",
+      "pattern": "日勤",
+      "change": { "early": false, "late": true },
+      "expected": "しんご：日勤 残業"
+    },
+    {
+      "name": "both",
+      "member": "しんご",
+      "pattern": "日勤",
+      "change": { "early": true, "late": true },
+      "expected": "しんご：日勤 早出・残業"
+    },
+    {
+      "name": "hours moved the other way",
+      "member": "しんご",
+      "pattern": "日勤",
+      "change": { "early": false, "late": false },
+      "expected": "しんご：日勤 時間変更"
+    }
+  ],
+  "groupDays": [
+    {
+      "name": "who has which shift, in the table's order",
+      "day": "2026-11-12",
+      "today": "2026-11-13",
+      "holiday": null,
+      "together": false,
+      "shifts": [
+        {
+          "member": "しんご",
+          "pattern": "日勤",
+          "change": { "early": true, "late": false }
+        },
+        { "member": "お母さん", "pattern": null, "change": null }
+      ],
+      "expected": "11月12日(木)、しんご：日勤 早出、お母さん：未入力"
+    },
+    {
+      "name": "a day everyone is off says so before the members",
+      "day": "2026-11-12",
+      "today": "2026-11-12",
+      "holiday": null,
+      "together": true,
+      "shifts": [
+        { "member": "しんご", "pattern": "休み", "change": null },
+        { "member": "お母さん", "pattern": "有休", "change": null }
+      ],
+      "expected": "今日、11月12日(木)、みんな休み、しんご：休み、お母さん：有休"
+    }
+  ]
+}
