@@ -8,9 +8,10 @@ import type { PresetShift } from "./design-patterns";
 // apps/design's /_render/store-shot, which `pnpm --dir apps/design
 // image:store` photographs into `store/screenshots/<store>`.
 
-// A phone screenshot's size in each store. The App Store's is the largest
-// it takes for an iPhone with Dynamic Island (large display), an iPhone
-// Pro Max's own screen, which it scales down for the smaller iPhones:
+// A phone screenshot's size in each store. The App Store's is the one
+// App Store Connect requires on a version's page, for an iPhone with
+// Dynamic Island (medium display, 6.3 inches), as tall for its width as
+// the Pro Max's screen the capture photographs:
 // https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications
 // Google Play's is the 9:16 it asks of the pictures it features, no side
 // more than twice the other:
@@ -19,7 +20,7 @@ import type { PresetShift } from "./design-patterns";
 // platform's small widget (Android's SMALL, WidgetParts.kt).
 export const STORES = {
   android: { height: 1920, widgetRow: 202 / 179, width: 1080 },
-  ios: { height: 2868, widgetRow: 1, width: 1320 },
+  ios: { height: 2622, widgetRow: 1, width: 1206 },
 } as const;
 
 export type StoreId = keyof typeof STORES;
@@ -266,22 +267,25 @@ type StoreShotName = (typeof STORE_SHOTS)[number]["name"];
 export const STAGE_FOOT = 5;
 
 // A callout's card, lengths in hundredths of the picture's width: the room
-// it keeps around its part, the room it leaves to the picture's sides, and
-// how many times larger than the phone has it the part is drawn at most.
+// it leaves to the picture's sides, how many times larger than the phone
+// has it the part is drawn at most, and the room it keeps around its part.
 const CALLOUT = { margin: 2, most: 1.35, pad: 1.5 } as const;
 
 // A rectangle of a screen or a picture, in its pixels.
 export type Rect = { height: number; left: number; top: number; width: number };
 
 // A callout as it is drawn: how many times larger than the phone has it
-// the part is, as large as lets a row as wide as the screen keep the
-// card's margin to the picture's sides; and the card in the picture, over
-// the part in the phone, which stands in the picture's middle as tall as
-// the room under the headline. The card reaches past its part by what the
-// part grows and its own room, and then takes in every piece of the
-// screen it would lie over a part of, on whichever side that is: what
-// shows beside the card is whole, and what it covers is covered whole.
-// The part is drawn in the card's middle.
+// the part is; and the card in the picture, over the part in the phone,
+// which stands in the picture's middle as tall as the room under the
+// headline. A screen reads from its top, so what is over the part leads
+// to it and stays in sight: the card's top is where the part's is, with
+// its own room, and the part grows down from there, and to both sides
+// alike. It is as large as lets a row as wide as the screen keep the
+// card's margin to the picture's sides, and the card leave as much of the
+// phone under it as the picture leaves under the phone. The card then
+// takes in every piece of the screen it would lie over a part of, on
+// whichever side that is: what shows beside the card is whole, and what
+// it covers is covered whole. The part is drawn in the card's middle.
 export const calloutOf = (
   measured: Rect,
   pieces: readonly Rect[],
@@ -291,13 +295,16 @@ export const calloutOf = (
   const unit = picture.width / 100;
   const headline = picture.height * HEADLINE_SHARE;
   const phone = (picture.height - headline - STAGE_FOOT * unit) / screen.height;
+  const pad = (CALLOUT.pad * unit) / phone;
+  const top = measured.top - pad;
   const scale = Math.min(
     CALLOUT.most,
     (100 - 2 * CALLOUT.margin - 2 * CALLOUT.pad) /
-      ((screen.width * phone) / unit)
+      ((screen.width * phone) / unit),
+    (screen.height - (STAGE_FOOT * unit) / phone - pad - measured.top) /
+      measured.height
   );
-  const pad = (CALLOUT.pad * unit) / phone;
-  const reach = (length: number) => ((scale - 1) * length) / 2 + pad;
+  const beside = ((scale - 1) * measured.width) / 2 + pad;
   const sides = pieces.map((piece) => ({
     foot: piece.top + piece.height,
     left: piece.left,
@@ -321,10 +328,10 @@ export const calloutOf = (
   // The card over the phone, in the screen's pixels: each turn takes one
   // more piece in whole, and none in leaves again.
   let card = {
-    foot: measured.top + measured.height + reach(measured.height),
-    left: measured.left - reach(measured.width),
-    right: measured.left + measured.width + reach(measured.width),
-    top: measured.top - reach(measured.height),
+    foot: measured.top + scale * measured.height + pad,
+    left: measured.left - beside,
+    right: measured.left + measured.width + beside,
+    top,
   };
   let cut = cutBy(card);
   while (cut !== undefined) {

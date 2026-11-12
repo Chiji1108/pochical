@@ -6,6 +6,7 @@ import {
   FEATURE_GRAPHIC,
   HEADLINE,
   HEADLINE_SHARE,
+  STAGE_FOOT,
   lineBoxOf,
   lineClearOf,
   STORE_SHOTS,
@@ -33,8 +34,9 @@ import { unsaid } from "./store-words";
 // The stores' pictures are checked in, drawn by
 // `mise run store:screenshots`. What each store asks of them, from its
 // own page, once:
-// - the App Store's screenshots of an iPhone with a 6.9-inch display,
-//   1320 by 2868, with no alpha channel:
+// - the App Store's screenshots of an iPhone with Dynamic Island (medium
+//   display, 6.3 inches), the ones App Store Connect requires on a
+//   version's page, 1206 by 2622, with no alpha channel:
 //   https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications
 // - its product page header, 3840 by 1646, with none either:
 //   https://developer.apple.com/help/app-store-connect/reference/app-information/creative-assets-specifications
@@ -44,7 +46,7 @@ import { unsaid } from "./store-words";
 //   of the picture, eight at most:
 //   https://support.google.com/googleplay/android-developer/answer/9866151
 const ASKED = {
-  appStoreScreenshot: { height: 2868, width: 1320 },
+  appStoreScreenshot: { height: 2622, width: 1206 },
   featureGraphic: { height: 500, width: 1024 },
   headlineShare: 0.2,
   productPageHeader: { height: 1646, width: 3840 },
@@ -251,6 +253,25 @@ test("a callout's card cuts through no piece beside it either, and leaves alone 
   expect(over.top).toBeCloseTo(bare.top);
   expect(over.foot).toBeCloseTo(bare.foot);
   expect(over.right).toBeLessThan(button.left);
+});
+
+test("a callout's card leaves what is over its part in sight, and the phone's foot under it", () => {
+  const screen = SCREENS.android;
+  const picture = STORES.android;
+  // An answer of a chat, and close under it the lines the card lifts, too
+  // tall to grow as much as a card may.
+  const answer = { height: 300, left: 20, top: 1100, width: 1040 };
+  const lines = { height: 710, left: 20, top: 1450, width: 1040 };
+  const { card, phone, scale } = calloutOf(lines, [answer], screen, picture);
+  const over = onScreen(card, phone, screen, picture);
+  expect(over.top).toBeGreaterThan(answer.top + answer.height);
+  expect(over.top).toBeLessThan(lines.top);
+  expect(scale).toBeGreaterThan(1.2);
+  expect(scale).toBeLessThan(1.35);
+  // As far over the phone's foot as the phone is over the picture's.
+  expect(over.foot).toBeCloseTo(
+    screen.height - (STAGE_FOOT * picture.width) / 100 / phone
+  );
 });
 
 const tiles = wallOf(WALL_SHOT.tiles);

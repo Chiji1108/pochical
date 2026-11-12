@@ -22,7 +22,7 @@ The pages the forms ask for are the site's: サポート `https://pochical.app/s
 
 | File | App Store Connect | Play Console |
 | --- | --- | --- |
-| `screenshots/ios/01-entry.png` … `08-cares.png` | iPhone 6.9インチのスクリーンショット (1320×2868) |  |
+| `screenshots/ios/01-entry.png` … `08-cares.png` | Dynamic Island搭載iPhone（中型ディスプレイ、6.3インチ）のスクリーンショット (1206×2622)、必須条件 |  |
 | `screenshots/android/01-entry.png` … `08-cares.png` |  | スマートフォンのスクリーンショット (1080×1920) |
 | `feature-graphic.png` |  | フィーチャー グラフィック (1024×500) |
 | `product-page-header.png` | プロダクトページのヘッダー (3840×1646), with the other creative assets of the version's page |  |
