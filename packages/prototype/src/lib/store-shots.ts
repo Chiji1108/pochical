@@ -8,9 +8,10 @@ import type { PresetShift } from "./design-patterns";
 // apps/design's /_render/store-shot, which `pnpm --dir apps/design
 // image:store` photographs into `store/screenshots/<store>`.
 
-// A phone screenshot's size in each store. The App Store's is the largest
-// it takes for an iPhone with Dynamic Island (large display), an iPhone
-// Pro Max's own screen, which it scales down for the smaller iPhones:
+// A phone screenshot's size in each store. The App Store's is the one
+// App Store Connect requires on a version's page, for an iPhone with
+// Dynamic Island (medium display, 6.3 inches), as tall for its width as
+// the Pro Max's screen the capture photographs:
 // https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications
 // Google Play's is the 9:16 it asks of the pictures it features, no side
 // more than twice the other:
@@ -19,7 +20,7 @@ import type { PresetShift } from "./design-patterns";
 // platform's small widget (Android's SMALL, WidgetParts.kt).
 export const STORES = {
   android: { height: 1920, widgetRow: 202 / 179, width: 1080 },
-  ios: { height: 2868, widgetRow: 1, width: 1320 },
+  ios: { height: 2622, widgetRow: 1, width: 1206 },
 } as const;
 
 export type StoreId = keyof typeof STORES;

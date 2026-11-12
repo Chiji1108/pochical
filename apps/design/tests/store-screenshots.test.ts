@@ -33,8 +33,9 @@ import { unsaid } from "./store-words";
 // The stores' pictures are checked in, drawn by
 // `mise run store:screenshots`. What each store asks of them, from its
 // own page, once:
-// - the App Store's screenshots of an iPhone with a 6.9-inch display,
-//   1320 by 2868, with no alpha channel:
+// - the App Store's screenshots of an iPhone with Dynamic Island (medium
+//   display, 6.3 inches), the ones App Store Connect requires on a
+//   version's page, 1206 by 2622, with no alpha channel:
 //   https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications
 // - its product page header, 3840 by 1646, with none either:
 //   https://developer.apple.com/help/app-store-connect/reference/app-information/creative-assets-specifications
@@ -44,7 +45,7 @@ import { unsaid } from "./store-words";
 //   of the picture, eight at most:
 //   https://support.google.com/googleplay/android-developer/answer/9866151
 const ASKED = {
-  appStoreScreenshot: { height: 2868, width: 1320 },
+  appStoreScreenshot: { height: 2622, width: 1206 },
   featureGraphic: { height: 500, width: 1024 },
   headlineShare: 0.2,
   productPageHeader: { height: 1646, width: 3840 },
