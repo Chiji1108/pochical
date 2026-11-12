@@ -208,7 +208,7 @@ description = "Run 自動で反映's UI test in a simulator, erasing it, against
 run = "tools/calendar-reflect/run.sh"
 
 [tasks."store:shots:ios"]
-description = "Photograph the screens of the App Store's screenshots in a simulator, erasing it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default) and seeds: [simulator name, pochical-store by default, made if there is none] [derived data]"
+description = "Photograph the screens of the App Store's screenshots in the simulator pochical-store, an iPhone 18 Pro Max made if there is none, erasing it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default) and seeds: [derived data]"
 run = "tools/store-screenshots/ios.sh"
 
 [tasks."store:images"]
