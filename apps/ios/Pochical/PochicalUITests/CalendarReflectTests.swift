@@ -127,7 +127,7 @@ final class CalendarReflectTests: XCTestCase {
   /// Gives `day` another shift, 日勤 or else 夜勤, in its sheet, and says which.
   @MainActor private func change(_ day: DateComponents) throws -> String {
     let cell = app.descendants(matching: .any)
-      .matching(NSPredicate(format: "label BEGINSWITH %@", "\(day.month!)月\(day.day!)日、")).firstMatch
+      .matching(NSPredicate(format: "label CONTAINS %@", "\(day.month!)月\(day.day!)日(")).firstMatch
     XCTAssertTrue(cell.waitForExistence(timeout: 10), "the day shows")
     let title = cell.label.contains("日勤") ? "夜勤" : "日勤"
     cell.tap()
@@ -143,7 +143,9 @@ final class CalendarReflectTests: XCTestCase {
     XCTAssertTrue(
       app.descendants(matching: .any)
         .matching(
-          NSPredicate(format: "label BEGINSWITH %@", "\(day.month!)月\(day.day!)日、\(title)")
+          NSPredicate(
+            format: "label CONTAINS %@ AND label CONTAINS %@", "\(day.month!)月\(day.day!)日(",
+            ")、\(title)")
         ).firstMatch.waitForExistence(timeout: 5), "the day shows \(title)")
     return title
   }

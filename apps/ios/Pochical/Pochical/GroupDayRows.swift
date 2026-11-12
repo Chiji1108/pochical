@@ -252,7 +252,6 @@ struct GroupDayRow: View, @MainActor Equatable {
         .marks(drawnAs: members[index].markLook)
         .frame(maxWidth: density.columnWidth == nil ? .infinity : nil)
         .frame(width: density.columnWidth)
-        .accessibilityLabel("\(members[index].name)：\(patterns[index]?.name ?? "未入力")")
       }
       HStack(spacing: 0) {
         if case .scrolls(let edged) = sideways {
@@ -323,11 +322,23 @@ struct GroupDayRow: View, @MainActor Equatable {
         Rectangle().fill(colors.separator).frame(height: 1)
       }
       .contentShape(.rect)
+      // One element saying the whole day, who has which shift included
+      // (spec/shift-patterns.md, Screen readers).
+      .accessibilityElement(children: .ignore)
+      .accessibilityLabel(
+        spokenGroupDay(
+          day, isToday: isToday, holiday: day.holidayName, together: together,
+          shifts: members.indices.map { index in
+            SpokenShift(
+              member: members[index].name, pattern: patterns[index]?.name,
+              change: entries[index].flatMap {
+                timeChange(start: $0.start, end: $0.end, standard: patterns[index]?.time)
+              })
+          })
+      )
+      .accessibilityInputLabels(["\(day.day)日", day.monthDayText])
     }
     .buttonStyle(.plain)
-    .accessibilityElement(children: .combine)
-    .accessibilityLabel(
-      "\(day.monthDayText)\(together ? "、みんな休み" : "")")
     .accessibilityAddTraits(picked ? .isSelected : [])
   }
 

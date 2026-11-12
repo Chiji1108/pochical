@@ -389,6 +389,7 @@ struct ShareDaysSheet: View {
               }
               .buttonStyle(.plain)
               .accessibilityLabel(day.fullText)
+              .accessibilityInputLabels([day.slashText, day.monthDayText])
               .accessibilityAddTraits(on ? .isSelected : [])
             }
           }
@@ -459,6 +460,7 @@ struct ShareDaysSheet: View {
     }
     .buttonStyle(.plain)
     .accessibilityLabel("\(day.fullText)\(together ? "、みんな休み" : "")")
+    .accessibilityInputLabels(["\(day.day)日", day.monthDayText])
     .accessibilityAddTraits(on ? .isSelected : [])
   }
 

@@ -38,7 +38,7 @@ import app.pochical.LocalDeviceSettings
 import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.calendar.holidayName
-import app.pochical.calendar.monthDayText
+import app.pochical.calendar.spokenText
 import app.pochical.calendar.weekdayColor
 import app.pochical.calendar.weekdayLetter
 import app.pochical.design.PochicalTextStyles
@@ -148,8 +148,9 @@ fun GroupDayRow(
 ) {
   val colors = LocalThemeColors.current
   val density = DayRowsDensity.of(members.size)
-  val unentered = stringResource(R.string.day_unentered)
+  val words = shiftWords()
   val togetherWord = stringResource(R.string.together_day)
+  val todayWord = stringResource(R.string.today)
   val isToday = day == today
   Column(modifier) {
   Row(
@@ -160,11 +161,11 @@ fun GroupDayRow(
       .then(if (onPick != null) Modifier.clickable(role = Role.Button) { onPick(day) } else Modifier)
       .clearAndSetSemantics {
         contentDescription =
-          buildList {
-              add(day.monthDayText + if (together) "、$togetherWord" else "")
-              members.forEachIndexed { index, member -> add("${member.name}：${shifts[index]?.pattern?.name ?: unentered}") }
-            }
-            .joinToString("、")
+          spokenGroupDay(
+            day.spokenText(todayWord.takeIf { isToday }, day.holidayName(country)),
+            togetherWord.takeIf { together },
+            members.mapIndexed { index, member -> spokenShift(member.name, shifts[index]?.pattern?.name, shifts[index]?.change, words) },
+          )
         selected = picked
       },
     verticalAlignment = Alignment.CenterVertically,

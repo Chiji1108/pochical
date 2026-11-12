@@ -358,9 +358,12 @@ private struct CalendarSettings: View {
         Picker("月と曜日", selection: $settings.device.heading.english) {
           Text("\(today.shortMonth(english: false))・\(today.weekdayName)")
             .accessibilityLabel("日本語")
+            .accessibilityInputLabels(["日本語", "\(today.shortMonth(english: false))・\(today.weekdayName)"])
             .tag(false)
           Text("\(today.shortMonth(english: true))・\(today.weekdayName(english: true))")
             .accessibilityLabel("英語")
+            .accessibilityInputLabels(
+              ["英語", "\(today.shortMonth(english: true))・\(today.weekdayName(english: true))"])
             .tag(true)
         }
         .pickerStyle(.segmented)

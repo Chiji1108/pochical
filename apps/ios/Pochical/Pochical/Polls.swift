@@ -133,6 +133,8 @@ struct PollCard: View {
         .buttonStyle(.plain)
         .disabled(waiting)
         .accessibilityLabel("\(day.fullText)に行ける")
+        // A voice says what the button shows, or the day with it.
+        .accessibilityInputLabels(["行ける", "\(day.fullText)に行ける"])
         .accessibilityAddTraits(yours ? .isSelected : [])
       }
     }
@@ -183,6 +185,7 @@ private struct Voters: View {
 
   var body: some View {
     let shown = people.count > Self.maxFaces ? Array(people.prefix(Self.maxFaces - 1)) : people
+    let count = people.count > shown.count ? "+\(people.count - shown.count)" : "\(people.count)人"
     Button {
       listing = true
     } label: {
@@ -193,7 +196,7 @@ private struct Voters: View {
             .overlay(Circle().stroke(colors.backgroundCard, lineWidth: 1.5))
         }
         if !people.isEmpty {
-          Text(people.count > shown.count ? "+\(people.count - shown.count)" : "\(people.count)人")
+          Text(count)
             .font(.caption)
             .foregroundStyle(colors.textTertiary)
             .padding(.leading, 8)
@@ -206,6 +209,10 @@ private struct Voters: View {
     .buttonStyle(.plain)
     .disabled(people.isEmpty)
     .accessibilityLabel("\(day.fullText)に行ける人：\(people.map(\.name).joined(separator: "、"))")
+    // A voice says the count as it shows, or whose day it is.
+    .accessibilityInputLabels([count, "\(people.count)人", "\(day.fullText)に行ける人"])
+    // With no one yet it shows nothing and opens nothing.
+    .accessibilityHidden(people.isEmpty)
     .popover(isPresented: $listing) {
       VStack(alignment: .leading, spacing: 8) {
         Text(day.fullText).font(.footnote.weight(.semibold))

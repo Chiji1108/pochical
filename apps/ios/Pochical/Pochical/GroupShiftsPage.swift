@@ -562,11 +562,13 @@ private struct DaySheet: View {
           MemberAvatar(
             name: member.name, photoID: member.photoID, shelf: .group(groupID), size: 28,
             userID: member.userID)
+            .accessibilityHidden(true)
           Text(member.name).lineLimit(1)
           Spacer(minLength: 8)
           if let pattern {
             ShiftMark(pattern: pattern, size: 18)
               .marks(drawnAs: member.markLook)
+              .accessibilityHidden(true)
           }
           Text(pattern?.name ?? "未入力")
             .foregroundStyle(pattern == nil ? colors.textTertiary : colors.textSecondary)
