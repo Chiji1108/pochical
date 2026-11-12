@@ -88,6 +88,14 @@ A phone keeps only so many notifications waiting (iOS 64), so the nearest ones, 
 
 The first time ポチポチ入力 is closed with shifts entered (after the blank days' sheet, when it asks), or as the calendar next shows after はじめの設定 or 新しい仕事にする set up a repeating order (which fills the days without ポチポチ入力), while the system has not been asked (on Android, while Android 13's question has never been put; before Android 13, where notifications need no asking, it is not offered) and a 前日 reminder is on, the calendar offers the reminders once, in few words: 前の晩に、明日のシフトをお知らせしますか？ and that reminder's time (21:00に通知が届きます。), with あとで and お知らせする. お知らせする brings the system's question; あとで lets it be. It is never offered again, whatever the answer, and kept on the device only. The store's review is not asked that time (spec/review.md).
 
+## Screen readers
+
+What the eye takes from a day's place in the month, VoiceOver and TalkBack are told in words, the same on both.
+
+- A day is one button, the whole cell: 今日 first on today, the date with its weekday, a holiday's name, the shift's name or 未入力, hours moved from the pattern's as 早出, 残業 or 時間変更 with the hours, and メモあり: 「今日、11月3日(火)、文化の日、日勤、早出 7:00 – 16:00、メモあり」. The weekday is said with the date, as the row of weekdays above is not read with each day.
+- To a voice (Voice Control), a day answers to what it shows and to its date: 「12日」 or 「11月12日」.
+- Entering says what each key did (ポチポチ入力, above).
+
 ## How days are written
 
 Each platform writes a day, its weekday and its month through one set of helpers, so another language changes them in one place: Swift's `DayText.swift` in PochicalKit, and on the web `design-days.ts` (`formatDay` and its kin) with `design-week.tsx`'s weekday names. In Japanese they are 11月1日(日) in full, 11月1日, 1日(日) where the month goes without saying, 11/1 where room is short, a year before them (2026年…, 2026/…) for a day of another year, and 2026年11月 or 11月 for a month; a period (The shift period) as 10/15〜11/14, 2026/10/15〜11/14 where its year shows, its last day's year too when that is another (2026/12/15〜2027/1/14), and 2026年10月15日〜11月14日 in full, never by a month's name, which would read as the month's own days. Screens never put a day's numbers together themselves.

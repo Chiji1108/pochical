@@ -36,4 +36,11 @@ class DayNamesTest {
       }
     assertEquals("", failed.joinToString("\n"))
   }
+
+  @Test
+  fun aDayIsReadWithItsWeekdayTodayAndItsHoliday() {
+    val day = LocalDate.of(LocalDate.now().year, 11, 3)
+    assertEquals(day.fullText, day.spokenText(todayWord = null, holiday = null))
+    assertEquals("今日、${day.fullText}、文化の日", day.spokenText(todayWord = "今日", holiday = "文化の日"))
+  }
 }

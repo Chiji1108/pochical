@@ -155,7 +155,7 @@ struct GroupPersonView: View {
                   .strokeBorder(colors.accentBorder, lineWidth: 1.5)
               }
             }
-            .accessibilityHint(bothOff ? "自分も休み" : "")
+            .accessibilityValue(bothOff ? "自分も休み" : "")
           }
         }
       }

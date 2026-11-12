@@ -6,6 +6,7 @@ import app.pochical.kit.GroupMember
 import app.pochical.kit.OwnCalendar
 import app.pochical.kit.OwnDay
 import app.pochical.kit.PatternRow
+import app.pochical.kit.TimeChange
 import app.pochical.kit.Together
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
@@ -74,5 +75,15 @@ class GroupDaysTest {
       Look(MarkStyle.Icon, fill = true, colored = false),
       Look(MarkStyle.Emoji, fill = false, colored = false).drawing(member("a", emptyMap())),
     )
+  }
+
+  @Test
+  fun aMembersDayIsReadWithItsShiftAndMovedHours() {
+    val words = ShiftWords(unentered = "未入力", early = "早出", late = "残業", moved = "時間変更")
+    assertEquals("しんご：未入力", spokenShift("しんご", pattern = null, change = null, words))
+    assertEquals("しんご：日勤", spokenShift("しんご", "日勤", change = null, words))
+    assertEquals("しんご：日勤 早出", spokenShift("しんご", "日勤", TimeChange(early = true, late = false), words))
+    assertEquals("しんご：日勤 早出・残業", spokenShift("しんご", "日勤", TimeChange(early = true, late = true), words))
+    assertEquals("しんご：日勤 時間変更", spokenShift("しんご", "日勤", TimeChange(early = false, late = false), words))
   }
 }

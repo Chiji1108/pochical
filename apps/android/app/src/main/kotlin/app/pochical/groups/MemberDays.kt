@@ -3,8 +3,10 @@ package app.pochical.groups
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import app.pochical.LocalDeviceSettings
+import app.pochical.R
 import app.pochical.ShiftMark
 import app.pochical.rememberRead
 import app.pochical.calendar.Pattern
@@ -36,6 +38,27 @@ fun GroupMember.shifts(from: LocalDate, through: LocalDate): Map<LocalDate, Memb
   }.toMap()
 
 /** Everyone's shifts over some days, member by member, and the days among them everyone is off. */
+/** The words a member's day is read in by a screen reader. */
+class ShiftWords(val unentered: String, val early: String, val late: String, val moved: String)
+
+@Composable
+fun shiftWords(): ShiftWords =
+  ShiftWords(
+    unentered = stringResource(R.string.day_unentered),
+    early = stringResource(R.string.day_early),
+    late = stringResource(R.string.day_late),
+    moved = stringResource(R.string.day_hours_moved),
+  )
+
+/**
+ * One member's day as a group's row or column reads it (spec/shift-patterns.md, Days everyone is off):
+ * しんご：日勤 早出, しんご：未入力.
+ */
+fun spokenShift(member: String, pattern: String?, change: TimeChange?, words: ShiftWords): String {
+  val moved = change?.let { listOfNotNull(words.early.takeIf { _ -> it.early }, words.late.takeIf { _ -> it.late }).joinToString("・").ifEmpty { words.moved } }
+  return "$member：${listOfNotNull(pattern ?: words.unentered, moved).joinToString(" ")}"
+}
+
 class GroupDays(val shifts: List<Map<LocalDate, MemberShift>>, val together: Together)
 
 /**

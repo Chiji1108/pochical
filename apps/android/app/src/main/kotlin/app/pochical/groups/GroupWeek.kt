@@ -46,8 +46,8 @@ import app.pochical.kit.Week
 import app.pochical.calendar.fullText
 import app.pochical.calendar.holidayName
 import app.pochical.calendar.holidayCountry
-import app.pochical.calendar.monthDayText
 import app.pochical.calendar.slashText
+import app.pochical.calendar.spokenText
 import app.pochical.calendar.weekdayColor
 import app.pochical.calendar.weekdayLetter
 import app.pochical.design.PochicalTextStyles
@@ -123,8 +123,9 @@ fun GroupWeek(
   val dateHeight = if (compact) 24.dp else 26.dp
   val rowHeight = if (compact) 26.dp else 30.dp
   val meId = rememberMeId()
-  val unentered = stringResource(R.string.day_unentered)
+  val words = shiftWords()
   val togetherWord = stringResource(R.string.together_day)
+  val todayWord = stringResource(R.string.today)
   val legend = stringResource(R.string.legend_open)
   Row(modifier) {
     Column(Modifier.width(facesWidth(compact)), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -150,8 +151,9 @@ fun GroupWeek(
           .clearAndSetSemantics {
             contentDescription =
               buildList {
-                  add(day.monthDayText + if (isTogether) "、$togetherWord" else "")
-                  members.forEachIndexed { index, member -> add("${member.name}：${shifts[index][day]?.pattern?.name ?: unentered}") }
+                  add(day.spokenText(todayWord.takeIf { day == today }, day.holidayName(country)))
+                  if (isTogether) add(togetherWord)
+                  members.forEachIndexed { index, member -> add(spokenShift(member.name, shifts[index][day]?.pattern?.name, shifts[index][day]?.change, words)) }
                 }
                 .joinToString("、")
             if (onPick != null) selected = day == picked

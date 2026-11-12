@@ -70,16 +70,14 @@ struct LatestButton: View {
             UnreadCount(count: unseen).offset(x: 4, y: -4).allowsHitTesting(false)
           }
         }
-        .accessibilityLabel(label(unseen: unseen))
+        .accessibilityLabel(
+          scroll.place.unreadBelow && unseen > 0 ? "ここから新着へ" : "最新のメッセージへ"
+        )
+        .accessibilityValue(unseen > 0 ? "まだ見ていない新着\(unseen)件" : "")
         .padding(12)
         .transition(.opacity)
       }
     }
-  }
-
-  private func label(unseen: Int) -> String {
-    let to = scroll.place.unreadBelow && unseen > 0 ? "ここから新着へ" : "最新のメッセージへ"
-    return unseen > 0 ? "\(to)、まだ見ていない新着\(unseen)件" : to
   }
 }
 

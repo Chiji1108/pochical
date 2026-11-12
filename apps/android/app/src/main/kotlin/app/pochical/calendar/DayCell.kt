@@ -224,8 +224,7 @@ fun DayCell(
 /** What a screen reader hears: the date, a holiday, the shift and its moved hours, and a memo. */
 @Composable
 private fun description(look: DayLook): String = buildList {
-  add(look.day.monthDayText)
-  look.holiday?.let(::add)
+  add(look.day.spokenText(stringResource(R.string.today).takeIf { look.isToday }, look.holiday))
   add(look.pattern?.name ?: stringResource(R.string.day_unentered))
   val pattern = look.pattern
   val entry = look.entry

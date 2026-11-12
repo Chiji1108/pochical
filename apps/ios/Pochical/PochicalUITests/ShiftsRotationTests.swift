@@ -167,7 +167,7 @@ final class ShiftsRotationTests: XCTestCase {
       let shifts = app.buttons["月で見る"]
       XCTAssertTrue(shifts.waitForExistence(timeout: 15), "the group's hub shows")
       shifts.tap()
-      let rows = app.buttons.matching(NSPredicate(format: "label MATCHES %@", today() + "([^0-9].*)?"))
+      let rows = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", today() + "("))
       // Until the list has stopped where it lands.
       var frame = CGRect.null
       var tries = 0
@@ -209,7 +209,7 @@ final class ShiftsRotationTests: XCTestCase {
   /// over each other; and today's bar, down the start of its row, is a
   /// row tall and starts just under the row before it.
   @MainActor private func checkDrawnInPlace(_ shot: XCUIScreenshot) {
-    let row = app.buttons.matching(NSPredicate(format: "label MATCHES %@", today() + "([^0-9].*)?"))
+    let row = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", today() + "("))
       .firstMatch
     guard row.waitForExistence(timeout: 5), let rested = Pixels(XCUIScreen.main.screenshot()),
       let pixels = Pixels(shot)
@@ -260,7 +260,7 @@ final class ShiftsRotationTests: XCTestCase {
   /// No day of 一覧, a row across the screen, among 週ごと's weeks.
   @MainActor private func checkOnlyWeeks(_ when: String) {
     let width = app.windows.firstMatch.frame.width
-    let rows = app.buttons.matching(NSPredicate(format: "label MATCHES '[0-9]{1,2}月[0-9]{1,2}日.*'"))
+    let rows = app.buttons.matching(NSPredicate(format: "label MATCHES '(今日、)?[0-9]{1,2}月[0-9]{1,2}日.*'"))
       .allElementsBoundByIndex.filter { $0.isHittable && $0.frame.width > width / 2 }
     if !rows.isEmpty { snap("days-among-weeks") }
     XCTAssertEqual(rows.map(\.label), [], "no day of 一覧 among the weeks, \(when)")
@@ -281,7 +281,7 @@ final class ShiftsRotationTests: XCTestCase {
       [.month, .day], from: calendar.date(byAdding: .day, value: 1, to: Date())!)
     let tomorrowName = "\(tomorrow.month!)月\(tomorrow.day!)日"
     let rows = { (day: String) in
-      self.app.buttons.matching(NSPredicate(format: "label MATCHES %@", day + "([^0-9].*)?")).firstMatch
+      self.app.buttons.matching(NSPredicate(format: "label CONTAINS %@", day + "(")).firstMatch
     }
     checkSheetFollows(
       app, from: (rows(today()), today()), to: (rows(tomorrowName), tomorrowName), "in 一覧")
@@ -289,7 +289,7 @@ final class ShiftsRotationTests: XCTestCase {
     switchLayout(from: "一覧", to: "1人ずつ")
     let month = calendar.component(.month, from: Date())
     let cells = { (day: String) in
-      self.app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", day + "、")).firstMatch
+      self.app.buttons.matching(NSPredicate(format: "label CONTAINS %@", day + "(")).firstMatch
     }
     let (eighth, ninth) = ("\(month)月8日", "\(month)月9日")
     XCTAssertTrue(cells(eighth).waitForExistence(timeout: 10), "1人ずつ shows the month")
@@ -350,7 +350,7 @@ final class ShiftsRotationTests: XCTestCase {
     let below = faces().first?.frame.maxY ?? 0
     var sight = app.windows.firstMatch.frame
     sight = sight.divided(atDistance: below - sight.minY, from: .minYEdge).remainder
-    let row = app.buttons.matching(NSPredicate(format: "label MATCHES %@", today() + "([^0-9].*)?"))
+    let row = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", today() + "("))
       .allElementsBoundByIndex.first(where: \.isHittable)
     let shown = row.map { $0.frame.intersection(sight).height / $0.frame.height } ?? 0
     guard abs(shown - 0.5) > 0.25 else { return }
@@ -471,7 +471,7 @@ final class ShiftsRotationTests: XCTestCase {
     let month = app.buttons.matching(NSPredicate(format: "label MATCHES '[0-9]{4}年[0-9]{1,2}月'"))
       .firstMatch
     XCTAssertTrue(month.waitForExistence(timeout: 5), "the month in sight is named")
-    return (month.label, topRow().label)
+    return (month.label, dayName(of: topRow()))
   }
 
   /// What `shown` reads once the turn has finished.
@@ -502,9 +502,16 @@ final class ShiftsRotationTests: XCTestCase {
   }
 
   /// The highest day's row in sight, under the faces.
+  /// "10月16日" of a row's "10月16日(金)、しんご：日勤", 今日 before it on
+  /// today.
+  @MainActor private func dayName(of row: XCUIElement) -> String {
+    let date = row.label.hasPrefix("今日、") ? row.label.dropFirst(3) : Substring(row.label)
+    return String(date.prefix { $0 != "(" })
+  }
+
   @MainActor private func topRow() -> XCUIElement {
     let below = faces().first?.frame.maxY ?? 0
-    let rows = app.buttons.matching(NSPredicate(format: "label MATCHES '[0-9]{1,2}月[0-9]{1,2}日.*'"))
+    let rows = app.buttons.matching(NSPredicate(format: "label MATCHES '(今日、)?[0-9]{1,2}月[0-9]{1,2}日.*'"))
       .allElementsBoundByIndex.filter { $0.isHittable && $0.frame.minY >= below }
     return rows.min { $0.frame.minY < $1.frame.minY } ?? app.buttons["no row"]
   }
