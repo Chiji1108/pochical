@@ -1,7 +1,6 @@
 import { ShiftMark } from "@pochical/prototype/components/shift-mark";
 import { presetPatterns } from "@pochical/prototype/lib/design-patterns";
 import {
-  calloutOf,
   FEATURE_GRAPHIC,
   HEADLINE,
   HEADLINE_SHARE,
@@ -55,8 +54,10 @@ export const Route = createFileRoute("/_tool/_render/store-shot")({
   component: StoreShotPage,
   head: () => pageMeta("ストアの画像", "ストアに載せる、ポチカルの画像"),
   validateSearch: (search: Record<string, unknown>) => ({
-    // A callout's part and its screen's size, in the screen's pixels:
-    // left, top, width, height, then the screen's width and height.
+    // A callout as the script worked it out (calloutOf): its part's left,
+    // top, width and height and its screen's width, in the screen's
+    // pixels, how many of the picture's pixels the card draws one of them
+    // as, and the card's left, top, width and height in the picture's.
     callout: typeof search.callout === "string" ? search.callout : "",
     // Each tile's ground, the color its part of a screen lies on, as six
     // hex digits, with commas between them.
@@ -142,7 +143,7 @@ const styles = {
     fontSize: `calc(var(--u) * ${HEADLINE.size})`,
     height: "var(--headline)",
     justifyContent: "center",
-    paddingTop: "calc(var(--u) * 4)",
+    paddingTop: `calc(var(--u) * ${HEADLINE.over})`,
     position: "relative",
     textAlign: "center",
     whiteSpace: "nowrap",
@@ -303,11 +304,7 @@ function StoreShotPage() {
         </div>
       )}
       {shot.kind === "screen" && "callout" in shot && (
-        <CalloutCard
-          measured={callout.split(",").map(Number)}
-          picture={{ height, width }}
-          raw={shot.raw}
-        />
+        <CalloutCard drawn={callout.split(",").map(Number)} raw={shot.raw} />
       )}
       {shot.kind === "tiles" && (
         <Tiles
@@ -337,35 +334,21 @@ function StoreShotPage() {
 
 // A part of a shot's screen lifted over the phone: the screen itself,
 // larger, behind a window as large as the part, in the middle of a card
-// over where the part is in the phone. `measured` is the part's left,
-// top, width and height and the screen's width and height, in the
-// screen's pixels, then the card's left, top, width and height in the
-// picture's, as the script worked them out (calloutOf).
-function CalloutCard({
-  measured,
-  picture,
-  raw,
-}: {
-  measured: number[];
-  picture: { height: number; width: number };
-  raw: string;
-}) {
+// over where the part is in the phone. `drawn` is the part's left, top,
+// width and height and the screen's width, in the screen's pixels, how
+// many of the picture's pixels the card draws one of them as, then the
+// card's left, top, width and height in the picture's, all as the script
+// worked them out (calloutOf).
+function CalloutCard({ drawn, raw }: { drawn: number[]; raw: string }) {
   const [
     left = 0,
     top = 0,
     width = 0,
     height = 0,
     across = 1,
-    down = 1,
+    by = 1,
     ...card
-  ] = measured;
-  const { phone, scale } = calloutOf(
-    { height, left, top, width },
-    [],
-    { height: down, width: across },
-    picture
-  );
-  const by = phone * scale;
+  ] = drawn;
   return (
     <div
       className={styles.callout}

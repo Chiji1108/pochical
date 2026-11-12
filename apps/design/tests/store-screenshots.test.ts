@@ -102,8 +102,8 @@ test.each([
 
 // A headline is set in rows that are never broken, every letter as wide
 // as it is tall at most: each row keeps the picture's margin at both
-// sides, and the rows, under the room over them, keep to the headline's
-// share of the shortest picture.
+// sides, and the rows, under the room kept over them, keep to the
+// headline's share of the shortest picture.
 test.each(STORE_SHOTS.map(({ headline, name }) => ({ headline, name })))(
   "$name's headline fits its room",
   ({ headline }) => {
@@ -113,9 +113,9 @@ test.each(STORE_SHOTS.map(({ headline, name }) => ({ headline, name })))(
       ).toBeLessThanOrEqual(100 - 2 * HEADLINE.margin);
     }
     for (const { height, width } of Object.values(STORES)) {
-      expect(headline.length * HEADLINE.size * TITLE.line).toBeLessThanOrEqual(
-        (100 * height * HEADLINE_SHARE) / width
-      );
+      expect(
+        HEADLINE.over + headline.length * HEADLINE.size * TITLE.line
+      ).toBeLessThanOrEqual((100 * height * HEADLINE_SHARE) / width);
     }
   }
 );

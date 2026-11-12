@@ -84,9 +84,11 @@ const rectOf = ([
 type Measured = { parts: Record<string, number[]>; pieces: number[][] };
 
 // A shot's callout as the page takes it: its part's left, top, width and
-// height in its screen's pixels, the screen's own width and height, and
-// the card's left, top, width and height in the picture's. Fails if the
-// card would leave the picture or reach into the headline.
+// height and its screen's width, in the screen's pixels, how many of the
+// picture's pixels the card draws one of them as, and the card's left,
+// top, width and height in the picture's. Fails if the card would not draw
+// the part larger than the phone has it, or would leave the picture or
+// reach into the headline.
 const calloutFor = async (
   store: StoreId,
   shot: (typeof STORE_SHOTS)[number]
@@ -104,12 +106,17 @@ const calloutFor = async (
   }
   const screen = await pngHeader(file);
   const picture = STORES[store];
-  const { card } = calloutOf(
+  const { card, phone, scale } = calloutOf(
     rectOf(part),
     measured.pieces.map(rectOf),
     screen,
     picture
   );
+  if (scale <= 1) {
+    throw new Error(
+      `${shot.name}'s callout has no room to enlarge its part on ${store}`
+    );
+  }
   if (
     card.left < 0 ||
     card.left + card.width > picture.width ||
@@ -121,7 +128,7 @@ const calloutFor = async (
   return [
     ...part,
     screen.width,
-    screen.height,
+    phone * scale,
     card.left,
     card.top,
     card.width,
