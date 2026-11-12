@@ -83,7 +83,7 @@ const WIDGET_CELL = `calc(var(--u) * ${WALL_SHAPE.cell})`;
 const TILES = {
   gap: 8,
   line: 1.3,
-  most: 28,
+  most: 12,
   pad: 4.25,
   under: 1.6,
   widest: 78,
@@ -95,7 +95,8 @@ const TILES = {
 // holds a part as tall as `parts` says in its widths; they are as wide as
 // lets them all fit there with the least gap, and share the room they
 // leave evenly as the gaps between them, up to the most a gap may be,
-// beyond which the rest is sky at the foot.
+// beyond which the rest is sky over and under them alike: they are a group
+// of their own, not a phone, in a picture as tall as the App Store's.
 const tilesLie = (parts: number[], tall: number) => {
   const gaps = Math.max(parts.length - 1, 1);
   const room =
@@ -201,14 +202,15 @@ const styles = {
     paddingLeft: "calc(var(--u) * 1.5)",
     whiteSpace: "nowrap",
   }),
-  // The tiles one over the other, each as tall as its part is, from where a
-  // phone starts under the headline (tilesLie).
+  // The tiles one over the other, each as tall as its part is, in the middle
+  // of where a phone is under the headline (tilesLie).
   tiles: css({
     "& figure": { margin: 0 },
     alignItems: "center",
     display: "flex",
     flexDirection: "column",
     inset: `var(--headline) 0 calc(var(--u) * ${STAGE_FOOT})`,
+    justifyContent: "center",
     position: "absolute",
   }),
   // The widgets on a Home Screen's grid, tilted, running off every edge
