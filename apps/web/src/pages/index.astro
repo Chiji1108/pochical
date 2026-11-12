@@ -26,14 +26,11 @@ import ShotHeadline from "../components/shot-headline.astro";
 import StoreLinks from "../components/store-links.astro";
 import Site from "../layouts/site.astro";
 import { primaryAction } from "../lib/primary-action";
-import { appStoreUrl, googlePlayUrl } from "../lib/site";
+import { appStoreUrl, stores } from "../lib/site";
 
 // Which phones the app is still on its way to, said under the store links
 // (components/store-links.astro) until each store's URL is set.
-const waiting = [
-  { phone: "iPhone", url: appStoreUrl() },
-  { phone: "Android", url: googlePlayUrl() },
-]
+const waiting = stores()
   .filter((store) => !store.url)
   .map((store) => store.phone);
 const release =

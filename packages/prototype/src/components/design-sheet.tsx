@@ -220,9 +220,11 @@ export function SheetPicture({
 // Whether the phones here are pictures of screens, as on the site's top
 // page: a sheet open at the bottom of one is drawn in place over its
 // phone, where a dialog would take the page's focus and leave the rest of
-// it out of reach, and the build draws it with the screen. A picture
-// neither closes nor takes focus, so `role` and `onExitComplete` have
-// nothing to do in one.
+// it out of reach, and the build draws it with the screen. In place is
+// over the phone only for a sheet that stands right under its phone, as
+// the calendar's do: one inside a part of a screen would lie over that
+// part. A picture neither closes nor takes focus, so `role` and
+// `onExitComplete` have nothing to do in one.
 export const SheetPicturesContext = createContext(false);
 
 // The text under a sheet's heading that says what the sheet is for, with

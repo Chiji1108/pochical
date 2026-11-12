@@ -38,3 +38,10 @@ export const appStoreUrl = (): string | undefined =>
 
 export const googlePlayUrl = (): string | undefined =>
   storeLink(import.meta.env.VITE_GOOGLE_PLAY_URL, "play.google.com");
+
+// The stores the app is on, each with the phone it is for and its page,
+// none until its URL is set.
+export const stores = () => [
+  { name: "App Store", phone: "iPhone", url: appStoreUrl() },
+  { name: "Google Play", phone: "Android", url: googlePlayUrl() },
+];

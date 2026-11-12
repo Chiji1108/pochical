@@ -1,17 +1,14 @@
 ---
 import { ArrowUpRight, Smartphone } from "lucide-react";
 
-import { appStoreUrl, googlePlayUrl } from "../lib/site";
+import { stores } from "../lib/site";
 
-// The app's store pages, each marked 公開準備中 until its URL is set.
-const stores = [
-  { name: "App Store", url: appStoreUrl() },
-  { name: "Google Play", url: googlePlayUrl() },
-];
+// The app's store pages (lib/site.ts), each marked 公開準備中 until its URL
+// is set.
 ---
 
 <div class="store-links">
-  {stores.map((store) =>
+  {stores().map((store) =>
     store.url ? (
       <a
         class="store-link"
