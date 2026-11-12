@@ -503,9 +503,11 @@ final class StoreScreenshotTests: XCTestCase {
       [frame.minX, frame.minY, frame.width, frame.height].map { Int(($0 * scale).rounded()) }
     }
     let saying: Set<XCUIElement.ElementType> = [.staticText, .button, .switch, .textField]
+    // An element that says something is one piece with all it holds: a group's row says its
+    // whole day, over the texts drawn in it.
     func said(_ element: any XCUIElementSnapshot) -> [CGRect] {
-      guard element.children.isEmpty else { return element.children.flatMap(said) }
-      return saying.contains(element.elementType) && !element.label.isEmpty ? [element.frame] : []
+      saying.contains(element.elementType) && !element.label.isEmpty
+        ? [element.frame] : element.children.flatMap(said)
     }
     let pieces = said(try app.snapshot()).filter { app.frame.contains($0) }
     let json = try JSONSerialization.data(withJSONObject: [
