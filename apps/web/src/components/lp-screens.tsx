@@ -1,11 +1,11 @@
 import { rotationTemplates } from "@pochical/design/patterns";
 import { themeSkyId } from "@pochical/design/skies";
 import { DesignApp } from "@pochical/prototype/components/design-app";
-import { HomeScreen } from "@pochical/prototype/components/design-home-screen";
 import {
   DesignProviders,
   PresetContexts,
 } from "@pochical/prototype/components/design-providers";
+import { SheetPicturesContext } from "@pochical/prototype/components/design-sheet";
 import {
   nextSkyId,
   paleSkyFromTop,
@@ -32,6 +32,10 @@ import {
   initialDesignSchedule,
 } from "@pochical/prototype/lib/design-days";
 import { calendarAlone } from "@pochical/prototype/lib/design-features";
+import {
+  oldFriendsGroup,
+  workplaceGroup,
+} from "@pochical/prototype/lib/design-group-samples";
 import { presetList } from "@pochical/prototype/lib/design-patterns";
 import { useSamplePerson } from "@pochical/prototype/lib/design-sample-person";
 import { designMonth } from "@pochical/prototype/lib/design-today";
@@ -39,7 +43,6 @@ import {
   UserStoreContext,
   useShownDays,
 } from "@pochical/prototype/lib/design-user-store";
-import type { OwnData } from "@pochical/prototype/lib/design-user-store";
 import { parseDesignVariants } from "@pochical/prototype/lib/design-variants";
 import { useReducedMotion } from "@pochical/prototype/lib/device-media";
 import { css, cva } from "@pochical/styled-system/css";
@@ -289,45 +292,98 @@ function HeroFoot({ action }: { action: PrimaryAction }) {
   );
 }
 
-// How much of a feature's phone shows, from its top.
+// How much of a feature's phone shows.
 const SCREEN_SHOWN = 600;
 
-// The phone at the hero's size, only its top shown, fading out: a
-// scaled one would throw off the lists that measure themselves.
-const screenStyle = css({
-  flexShrink: 0,
-  height: `${SCREEN_SHOWN}px`,
-  maskImage: "linear-gradient(to bottom, black 70%, transparent)",
-  overflow: "hidden",
-  pointerEvents: "none",
-  width: "min(390px, 100%)",
+// The phone at the hero's size, only part of it shown, fading out: a
+// scaled one would throw off the lists that measure themselves. Its top,
+// or its foot where the screen's point is the sheet at the bottom; or all
+// of it, where the point runs from its heading to its foot.
+const screenStyle = cva({
+  base: {
+    display: "flex",
+    flexShrink: 0,
+    pointerEvents: "none",
+    width: "min(390px, 100%)",
+  },
+  variants: {
+    shown: {
+      foot: {
+        alignItems: "flex-end",
+        height: `${SCREEN_SHOWN}px`,
+        maskImage: "linear-gradient(to top, black 70%, transparent)",
+        overflow: "hidden",
+      },
+      top: {
+        alignItems: "flex-start",
+        height: `${SCREEN_SHOWN}px`,
+        maskImage: "linear-gradient(to bottom, black 70%, transparent)",
+        overflow: "hidden",
+      },
+      whole: {},
+    },
+  },
 });
 
-// Where each feature's screen opens, a tab and its page, and what the
-// sample person holds for it beyond the demo's.
-type AppProps = ComponentProps<typeof DesignApp>;
-type FeatureOpening =
-  | (Required<Pick<AppProps, "initialTab" | "initialGroupPage">> & {
-      initialTab: "group";
-    })
-  | (Required<Pick<AppProps, "initialTab" | "initialSettingsPage">> & {
-      initialTab: "settings";
-    });
+// How each feature's screen opens, and the part of it shown: entering with
+// the hero's month and its sheet of shifts, adding the month to the phone's
+// calendar, 繰り返し on a fixed order, and the groups the stores'
+// screenshots show: friends in the shift table, people at work in the chat.
+type Feature = "entry" | "deviceCalendar" | "repeat" | "share" | "chat";
 
-type Feature = "repeat" | "share" | "chat";
+const atWork = { groups: [workplaceGroup] };
 
-// 繰り返し is for work that comes round in a fixed order, so the top page
-// shows the order はじめの設定 offers for it: 当番・非番・休み.
+// Friends, in the shift table, as the stores' picture has them.
+const withFriends = { groups: [oldFriendsGroup] };
+
+// 繰り返し is for work that comes round in a fixed order, so the page
+// shows the order はじめの設定 offers for it, as the stores' picture does:
+// 当番・非番・休み.
 const duty = rotationTemplates.find((template) => template.id === "duty");
 if (duty?.sequence === undefined) {
   throw new Error("はじめの設定 has no 当番・非番・休み order");
 }
 
+// Where a feature's screen opens: entering on a day, 端末カレンダーに追加
+// over the calendar, a page of the settings, or a page of a group.
+type AppProps = ComponentProps<typeof DesignApp>;
+type FeatureOpening =
+  | Required<Pick<AppProps, "initialDay" | "initialEditing">>
+  | Required<Pick<AppProps, "initialCalendarAdd">>
+  | (Required<Pick<AppProps, "initialSettingsPage">> & {
+      initialTab: "settings";
+    })
+  | (Required<Pick<AppProps, "initialGroupId" | "initialGroupPage">> & {
+      initialTab: "group";
+    });
+
 const featureScreens: Record<
   Feature,
-  { opening: FeatureOpening; own?: Partial<OwnData> }
+  {
+    opening: FeatureOpening;
+    own?: Parameters<typeof useSamplePerson>[0];
+    shown?: "foot" | "whole";
+  }
 > = {
-  chat: { opening: { initialGroupPage: "chat", initialTab: "group" } },
+  chat: {
+    opening: {
+      initialGroupId: workplaceGroup.id,
+      initialGroupPage: "chat",
+      initialTab: "group",
+    },
+    own: atWork,
+    shown: "whole",
+  },
+  // 自動で反映 on, as the stores' picture and the part's headline have it.
+  deviceCalendar: {
+    opening: { initialCalendarAdd: "reflecting" },
+    shown: "whole",
+  },
+  entry: {
+    opening: { initialDay: HERO_FIRST_BLANK, initialEditing: true },
+    own: { schedule: heroSchedule },
+    shown: "foot",
+  },
   repeat: {
     opening: { initialSettingsPage: "repeat-new", initialTab: "settings" },
     own: {
@@ -338,45 +394,35 @@ const featureScreens: Record<
       schedule: {},
     },
   },
-  share: { opening: { initialGroupPage: "shifts", initialTab: "group" } },
+  share: {
+    opening: {
+      initialGroupId: oldFriendsGroup.id,
+      initialGroupPage: "shifts",
+      initialTab: "group",
+    },
+    own: withFriends,
+  },
 };
 
-function ShownScreen({
-  own,
-  children,
-}: {
-  own?: Partial<OwnData>;
-  children: ReactNode;
-}) {
+export function FeatureScreen({ feature }: { feature: Feature }) {
+  const { opening, own, shown = "top" } = featureScreens[feature];
   const person = useSamplePerson(own);
   return (
     <Motion>
-      <div aria-hidden="true" className={screenStyle} inert>
+      <div aria-hidden="true" className={screenStyle({ shown })} inert>
         <DesignProviders fresh>
-          <UserStoreContext value={person}>{children}</UserStoreContext>
+          <UserStoreContext value={person}>
+            <SheetPicturesContext value>
+              <DesignApp
+                initialEditing={false}
+                {...opening}
+                variants={variants}
+              />
+            </SheetPicturesContext>
+          </UserStoreContext>
         </DesignProviders>
       </div>
     </Motion>
-  );
-}
-
-export function FeatureScreen({ feature }: { feature: Feature }) {
-  const { opening, own } = featureScreens[feature];
-  return (
-    <ShownScreen own={own}>
-      <DesignApp initialEditing={false} {...opening} variants={variants} />
-    </ShownScreen>
-  );
-}
-
-// The phone's home screen with the app's widgets on it, as /demo shows
-// it, 次の休み set to the sample person's family: the days everyone in
-// it is off (みんな休み).
-export function WidgetScreen() {
-  return (
-    <ShownScreen>
-      <HomeScreen nextOffGroup="family" />
-    </ShownScreen>
   );
 }
 
@@ -441,10 +487,10 @@ function PhoneGallery({
   );
 }
 
-// The calendar in a few looks, each set as someone might set theirs:
-// 墨 with outlined marks in its one tone, さくら with emoji, and ソーダ
-// with letters and their names under them; days off left plain in all
-// three, so nothing competes with the marks.
+// The calendar in the two looks the stores' picture sets side by side,
+// each as someone might set theirs: 墨 with outlined marks in its one
+// tone, and ソーダ with letters and their names under them; days off left
+// plain in both, so nothing competes with the marks.
 type GalleryLook = {
   id: string;
   preset: PresetId;
@@ -461,14 +507,6 @@ const galleryLooks: GalleryLook[] = [
     names: false,
     preset: "sumi",
     style: "icon",
-  },
-  {
-    fill: true,
-    id: "sakura-emoji",
-    monochrome: false,
-    names: false,
-    preset: "sakura",
-    style: "emoji",
   },
   {
     fill: true,

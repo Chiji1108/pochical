@@ -2,8 +2,8 @@ import { holidayName } from "../components/design-week";
 import { guessLook, sampleLooks } from "../components/shift-mark";
 import type { Look } from "../components/shift-mark";
 import { siteOf } from "./chat-text";
-import { dayMilliseconds } from "./design-days";
-import { groupChat, memberPatternOf } from "./design-group-data";
+import { addDays, dateKey, dayMilliseconds } from "./design-days";
+import { everyoneOff, groupChat, memberPatternOf } from "./design-group-data";
 import type {
   Chat,
   GroupSummary,
@@ -14,6 +14,9 @@ import type {
 import { presetList } from "./design-patterns";
 import type { Photo } from "./design-sample-photos";
 import { sampleRosterPhoto } from "./design-sample-photos";
+import { designToday } from "./design-today";
+import { drawings } from "./drawings";
+import { STORE_SCENE } from "./store-scene";
 import { firstCharacter } from "./text-limits";
 
 // The prototype's sample person's world: the people in their groups, with
@@ -276,6 +279,75 @@ export const schoolFriends = (): Member[] => [
     style: sampleLooks.roster,
   },
 ];
+
+// One of the faces' drawings the apps offer (design/src/drawings), as a
+// sample person's photo.
+const drawingOf = (id: (typeof drawings)[number]["id"]) =>
+  drawings.find((drawing) => drawing.id === id)?.src;
+
+// 職場のみんな: the group the stores' screenshots are photographed in,
+// which the site's top page shows too. Its name, its people with their
+// faces and what they say are the scene's (STORE_SCENE), which the seed of
+// the stores' screenshots reads too; their shifts are the sample's own,
+// on the prototype's today, where the seed arranges its people's from the
+// day it runs: three on 二交代制, each one's eight days ending on the same
+// two days off, the days everyone is off.
+const atWork = STORE_SCENE.coworkers;
+const [tanaka, kobayashi, mori] = atWork.people;
+const workplaceRounds = [
+  ["tanaka", tanaka, "day night after off day day off off"],
+  ["kobayashi", kobayashi, "night after off day day day off off"],
+  ["mori", mori, "day day off night after day off off"],
+] as const;
+
+export const workplace = (): Member[] =>
+  workplaceRounds.map(([id, { name, photo }, shifts]) => {
+    const round = shifts.split(" ");
+    return {
+      id,
+      name,
+      patterns: presetList(["day", "night", "after", "off"]).map(
+        memberPatternOf
+      ),
+      photo: drawingOf(photo),
+      shiftOn: (date: Date) => round[(dayNumber(date) + 5) % round.length],
+    };
+  });
+
+// How the sample person is in it: by her family name, her photo kept
+// private, as in her ward's.
+export const workplaceGroup: GroupSummary = {
+  id: "workplace",
+  mark: { emoji: atWork.emoji, kind: "emoji" },
+  mine: { name: "佐藤", noPhoto: true },
+  name: atWork.name,
+};
+
+// 学生時代の友だち: the other group of the scene, which the site's top
+// page shows in its shift table. The first two of the scene's three
+// friends, あや and みさき, with the scene's faces and the samples' own
+// shifts: a table of four columns runs past a phone's width.
+const fromSchool = STORE_SCENE.friends;
+
+export const oldFriendsGroup: GroupSummary = {
+  id: "old-friends",
+  mark: { emoji: fromSchool.emoji, kind: "emoji" },
+  name: fromSchool.name,
+};
+
+const oldFriends = (): Member[] => {
+  const [first, second] = fromSchool.people;
+  return [
+    { ...aya(), name: first.name, photo: drawingOf(first.photo) },
+    { ...misaki(), name: second.name, photo: drawingOf(second.photo) },
+  ];
+};
+
+// The days of the week ahead when the three are off: the ones put to the
+// vote.
+const workplaceOff = Array.from({ length: 7 }, (_, index) =>
+  addDays(designToday, index + 1)
+).filter((date) => everyoneOff(workplace(), date));
 
 // A page's picture for a sample link: an Unsplash photo from
 // picsum.photos, at the 1.91:1 that pages give for previews.
@@ -745,6 +817,65 @@ export const sampleChats: Record<string, Chat> = {
     ],
     unread: 2,
   },
+  // The scene's chat (STORE_SCENE) from the question to the vote, which
+  // is what the phone holds without scrolling: the greetings before it,
+  // the photos of what was left in the break room and their line, which
+  // the stores' picture has above, are left out.
+  "workplace:group": {
+    messages: [
+      {
+        content: {
+          kind: "words",
+          text: atWork.says.asked,
+        },
+        from: "kobayashi",
+        id: "c1",
+        time: "9:36",
+        when: "今日",
+      },
+      {
+        content: {
+          kind: "words",
+          text: atWork.says.found,
+        },
+        from: "mori",
+        id: "c2",
+        reactions: [{ by: ["tanaka"], emoji: "👍" }],
+        time: "9:37",
+        when: "今日",
+      },
+      {
+        content: {
+          kind: "words",
+          text: atWork.says.meal,
+        },
+        from: "tanaka",
+        id: "c3",
+        time: "9:38",
+        when: "今日",
+      },
+      // 森 can come on every day, 小林 on the last.
+      {
+        content: {
+          days: workplaceOff,
+          kind: "poll",
+          votes: Object.fromEntries(
+            workplaceOff.map((date, index) => [
+              dateKey(date),
+              index === workplaceOff.length - 1
+                ? ["mori", "kobayashi"]
+                : ["mori"],
+            ])
+          ),
+        },
+        from: "tanaka",
+        id: "c4",
+        time: "9:39",
+        when: "今日",
+      },
+    ],
+    unread: 0,
+  },
   "friends:misaki": {
     messages: [
       {
@@ -760,7 +891,8 @@ export const sampleChats: Record<string, Chat> = {
 };
 
 // The sample groups' other members, by group id: the four the sample
-// person is in and the cousins' group of the sample invitation. A group
+// person is in, the cousins' group of the sample invitation, and
+// 職場のみんな and 学生時代の友だち. A group
 // made on /design starts with no one else.
 export function sampleOthers(groupId: string): Member[] {
   switch (groupId) {
@@ -778,6 +910,12 @@ export function sampleOthers(groupId: string): Member[] {
     }
     case "cousins": {
       return cousins();
+    }
+    case workplaceGroup.id: {
+      return workplace();
+    }
+    case oldFriendsGroup.id: {
+      return oldFriends();
     }
     default: {
       return [];

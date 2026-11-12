@@ -647,7 +647,7 @@ function WallPicturePage({ picture }: { picture: WallPicture }) {
       data-store-shot
       style={{ "--u": `${lie.unit}px`, height, width }}
     >
-      <PictureSky height="100%" />
+      {picture.plain !== true && <PictureSky height="100%" />}
       <Wall
         lie={lie}
         mask={

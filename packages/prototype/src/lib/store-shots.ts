@@ -470,17 +470,30 @@ export const lineClearOf = (line: PictureLine) => {
 // `line` the words it carries over the wall, which clears around them
 // (lineClearOf), none without; and `safe` the part of it every device
 // shows, which is to hold the line and the widgets marked `whole`, clear
-// of the line's clearing, the whole picture without.
+// of the line's clearing, the whole picture without. A `plain` one has
+// no sky behind the wall, for a page that has its own ground.
 export type WallPicture = {
   file: string;
   height: number;
   lie?: WallLie;
   line?: PictureLine;
   name: string;
+  plain?: true;
   safe?: Rect;
   store: StoreId;
   width: number;
 };
+
+// The site's top page (apps/web) shows the wall too, on its own paper: as
+// it lies in a store's picture, at twice the size the page shows it.
+export const SITE_WALL = {
+  file: "packages/prototype/src/assets/widget-wall.png",
+  height: 1200,
+  name: "widget-wall",
+  plain: true,
+  store: "ios",
+  width: 780,
+} as const satisfies WallPicture;
 
 // The pictures drawn from the wall. The App Store's product page header
 // (iOS 27) is 21:9, and devices crop it to no less than its art safe area:
@@ -492,6 +505,7 @@ export type WallPicture = {
 // `whole` at the safe area's leading side and the site's own line beside
 // them.
 export const WALL_PICTURES = [
+  SITE_WALL,
   {
     file: "store/product-page-header.png",
     height: 1646,

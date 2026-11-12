@@ -13,7 +13,6 @@ import { clockText } from "../lib/design-reminders";
 import { useSettings } from "../lib/design-settings-store";
 import { designToday } from "../lib/design-today";
 import { useShownDays, useUser } from "../lib/design-user-store";
-import { groupCompanion } from "../lib/design-widget-companions";
 import { widgetEntry } from "../lib/design-widgets";
 import { AppIcon, useAppIconInUse, useAppIcons } from "./design-app-icon";
 import { NotificationBanner } from "./design-notifications";
@@ -204,23 +203,17 @@ function Dock({ round }: { round: boolean }) {
   );
 }
 
-// `nextOffGroup` is the group 次の休み is set to (みんな休み), by its id
-// among the person's groups; without it, the person's own days off.
-export function HomeScreen({ nextOffGroup }: { nextOffGroup?: string }) {
+export function HomeScreen() {
   const platform = useDevice((state) => state.platform);
   const hue = useDevice((state) => state.wallpaperHue);
   const scheme = useContext(DeviceSchemeContext);
   const schedule = useShownDays();
   const patterns = useUser((state) => state.patterns);
-  const groups = useUser((state) => state.groups);
   const week = useSettings((state) => state.device.week);
   // The person's own patterns, over the ready-made ones, as the calendar
   // names them.
   const book = { ...presetPatterns, ...bookOf(patterns) };
-  const group = groups.find((one) => one.id === nextOffGroup);
-  const entry = widgetEntry(schedule, week, designToday, book, {
-    companion: group && groupCompanion(group),
-  });
+  const entry = widgetEntry(schedule, week, designToday, book);
   const android = platform === "android";
   const placement = {
     appearance: scheme,

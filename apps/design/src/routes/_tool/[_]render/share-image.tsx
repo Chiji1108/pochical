@@ -113,7 +113,7 @@ function SiteShareImage({ person }: { person: UserStore }) {
           ポチッと。
         </h1>
         <p className={styles.description}>
-          家族や友だちと共有できる、シフトカレンダー。
+          夜勤や交代勤務のある人の、シフトカレンダー。
         </p>
       </div>
       <div aria-hidden="true" className={styles.phone} inert>

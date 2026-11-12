@@ -1,6 +1,6 @@
 export const site = {
   description:
-    "ポチポチ押すだけで、ひと月ぶんのシフトが埋まる。家族や友だちとも共有できるシフトカレンダー、ポチカル。",
+    "夜勤や交代勤務のある人のシフトカレンダー、ポチカル。勤務表を見ながらポチポチ押すだけで、ひと月ぶんのシフトが入ります。家族や友人とも共有できます。",
   email: "support@pochical.app",
   name: "ポチカル",
 };
@@ -14,7 +14,7 @@ export const designUrl = "https://design.pochical.app";
 // assets/share.png, taken from apps/design's /_render/share-image by pnpm
 // run image:share.
 export const SHARE_IMAGE = {
-  alt: "ポチカル シフトを、ポチッと。家族や友だちと共有できる、シフトカレンダー。",
+  alt: "ポチカル シフトを、ポチッと。夜勤や交代勤務のある人の、シフトカレンダー。",
   height: 630,
   width: 1200,
 } as const;

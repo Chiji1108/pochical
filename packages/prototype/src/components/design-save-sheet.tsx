@@ -383,6 +383,7 @@ export function SaveSheet({
   patterns,
   access = "granted",
   toCalendar = false,
+  reflecting = false,
   onImage,
 }: {
   access?: CalendarAccess;
@@ -398,6 +399,8 @@ export function SaveSheet({
   patterns: Pattern[];
   // Opened from カレンダーに追加: straight to choosing the calendar.
   toCalendar?: boolean;
+  // 自動で反映 on as it opens, where a picture shows it so.
+  reflecting?: boolean;
   // Opens the picture's preview, where it is saved or shared.
   onImage: () => void;
 }) {
@@ -416,7 +419,7 @@ export function SaveSheet({
   // 自動で反映 (spec/calendar.md, Reflecting automatically): the days
   // ahead kept in the calendar as the shifts change; the demo only shows
   // the switch, having no calendar to write to.
-  const [reflects, setReflects] = useState(false);
+  const [reflects, setReflects] = useState(reflecting);
   const refused = access === "denied" && !allowedThere;
   const putting = useSettings((state) => state.device.calendarAdd);
   const setPutting = useSettings((state) => state.setCalendarAdd);
