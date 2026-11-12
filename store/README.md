@@ -2,7 +2,7 @@
 
 What the App Store and Google Play show of ポチカル, kept here to be reviewed like code and entered into App Store Connect and Play Console by hand. Nothing uploads it.
 
-The listing speaks to people who work nights and rotating shifts, young nurses first, in the order they would use the app: entering, the calendar, the phone's own calendar, the widgets, sharing, the chat, the look.
+The listing speaks to people who work nights and rotating shifts, young nurses first. The pictures go in the order they would use the app: entering, the widgets, sharing, the chat, the look, the phone's own calendar, and what a roster may have of its own (明け after 夜勤, a month from the 15th, a fixed cycle, for those who work one: 消防, 警備, 工場); the description goes by its own headings, entering and a fixed cycle first.
 
 ## Where each file goes
 
@@ -17,6 +17,19 @@ The listing speaks to people who work nights and rotating shifts, young nurses f
 | `ja/description.txt` | 説明 (4000) | 詳しい説明 (4000) |
 
 The pages the forms ask for are the site's: サポート `https://pochical.app/support`, マーケティング `https://pochical.app`, プライバシーポリシー `https://pochical.app/privacy`, アカウントの削除 `https://pochical.app/account/delete`.
+
+## The pictures
+
+| File | App Store Connect | Play Console |
+| --- | --- | --- |
+| `screenshots/ios/01-entry.png` … `08-cares.png` | Dynamic Island搭載iPhone（中型ディスプレイ、6.3インチ）のスクリーンショット (1206×2622)、必須条件 |  |
+| `screenshots/android/01-entry.png` … `08-cares.png` |  | スマートフォンのスクリーンショット (1080×1920) |
+| `feature-graphic.png` |  | フィーチャー グラフィック (1024×500) |
+| `product-page-header.png` | プロダクトページのヘッダー (3840×1646), with the other creative assets of the version's page |  |
+
+They are drawn from the real apps, in the listing's order, and never edited by hand: `ANDROID_SERIAL=emulator-<port> mise run store:screenshots` photographs each app's screens (Android's on that running emulator, iOS's in a simulator of its own) and draws each under its headline. The shots, their headlines and the sizes are in `packages/prototype/src/lib/store-shots.ts`; after a change to a headline alone, `mise run store:images` draws them again from the screens last photographed. `apps/design/tests/store-screenshots.test.ts` holds each picture to its store's size.
+
+The App Store's product page header (iOS 27) is drawn with them, from the wall of widgets of the second screenshot (`WALL_PICTURES` in the same file): the wall across the whole picture, and the site's line, シフトを、ポチッと。, beside the three widgets the wall is built around. Devices crop the header to no less than its art safe area, the rectangle in the middle that [Apple's template](https://developer.apple.com/app-store/asset-best-practices/) draws, so the line and those widgets are inside it and the rest is the wall running off. It carries no price, address or other platform's name, as [Apple asks](https://developer.apple.com/help/app-store-connect/reference/app-information/creative-assets-specifications). The search results' picture (3:2) is not made: search shows the first three screenshots in its place.
 
 `declarations.md` holds the answers to the forms beside the listing: what data is collected, the ratings' questions, the notes for review.
 

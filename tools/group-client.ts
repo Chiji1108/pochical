@@ -106,28 +106,60 @@ export const signIn = async (
   return { token, userId };
 };
 
-/** One JPEG put among the group's photos as the user's, by its new id. */
-export const upload = async (
+// A JPEG, and its small version when it has one (spec/chat.md, Photos).
+type Jpeg = {
+  bytes: Uint8Array<ArrayBuffer>;
+  file: string;
+  small?: Uint8Array<ArrayBuffer>;
+};
+
+/**
+ * One JPEG put at `place`, a folder of photos the user may add to, by its
+ * new id: its small version first, as the apps send them.
+ */
+const put = async (
   origin: string,
-  { bytes, file }: { bytes: Uint8Array<ArrayBuffer>; file: string },
-  groupId: string,
+  { bytes, file, small }: Jpeg,
+  place: string,
   token: string
 ): Promise<string> => {
   const id = crypto.randomUUID();
-  const response = await fetch(`${origin}/v1/groups/${groupId}/photos/${id}`, {
-    body: bytes,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "image/jpeg",
-    },
-    method: "PUT",
-  });
-  if (!response.ok) {
-    const answer = await response.text();
-    fail(`upload ${file}: ${response.status} ${answer}`);
+  const send = async (body: Uint8Array<ArrayBuffer>, query: string) => {
+    const response = await fetch(`${origin}${place}/${id}${query}`, {
+      body,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "image/jpeg",
+      },
+      method: "PUT",
+    });
+    if (!response.ok) {
+      const answer = await response.text();
+      fail(`upload ${file}: ${response.status} ${answer}`);
+    }
+  };
+  if (small !== undefined) {
+    await send(small, "?size=small");
   }
+  await send(bytes, "");
   return id;
 };
+
+/** One JPEG put among the group's photos as the user's, by its new id. */
+export const upload = async (
+  origin: string,
+  jpeg: Jpeg,
+  groupId: string,
+  token: string
+): Promise<string> =>
+  await put(origin, jpeg, `/v1/groups/${groupId}/photos`, token);
+
+/** One JPEG put among the user's own photos, for their usual one, by its new id. */
+export const uploadOwn = async (
+  origin: string,
+  jpeg: Jpeg,
+  token: string
+): Promise<string> => await put(origin, jpeg, "/v1/me/photos", token);
 
 const lost = (): void => {
   fail("socket: could not connect, or the connection was lost");

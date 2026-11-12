@@ -31,16 +31,8 @@ final class ShiftsRotationTests: XCTestCase {
   @MainActor
   func test1JoinsTheGroup() throws {
     launch()
-    join("invite", named: "テスト")
-    join("small-invite", named: nil)
-  }
-
-  @MainActor private func join(_ invite: String, named name: String?) {
-    guard
-      let code = try? String(contentsOf: shared.appending(path: invite), encoding: .utf8)
-        .trimmingCharacters(in: .whitespacesAndNewlines)
-    else { return XCTFail("the invitation \(invite) is there") }
-    app.joins(code: code, named: name)
+    try app.joins(invitation: shared.appending(path: "invite"), named: "テスト")
+    try app.joins(invitation: shared.appending(path: "small-invite"), named: nil)
   }
 
   @MainActor
@@ -74,7 +66,7 @@ final class ShiftsRotationTests: XCTestCase {
     openList()
     continueAfterFailure = true
     let landscape = settled()
-    snap("opened-landscape")
+    snap("opened-landscape", of: XCUIScreen.main, into: shared)
     XCTAssertEqual(landscape.top, today(), "landscape opens on today")
     checkRows("opened in landscape")
 
@@ -91,7 +83,7 @@ final class ShiftsRotationTests: XCTestCase {
     wait(for: [shows], timeout: 5)
     buttons.allElementsBoundByIndex.first(where: \.isHittable)?.tap()
     XCTAssertEqual(settled().top, today(), "今日 goes back to today")
-    snap("today-again-landscape")
+    snap("today-again-landscape", of: XCUIScreen.main, into: shared)
     checkRows("back on today")
     XCUIDevice.shared.orientation = .portrait
   }
@@ -104,7 +96,7 @@ final class ShiftsRotationTests: XCTestCase {
     openList(in: nil)
     continueAfterFailure = true
     _ = settled()
-    snap("today-opened")
+    snap("today-opened", of: XCUIScreen.main, into: shared)
     checkToday("opened in 週ごと")
 
     switchLayout(from: "週ごと", to: "一覧")
@@ -113,18 +105,18 @@ final class ShiftsRotationTests: XCTestCase {
 
     pick(year(1))
     _ = settled()
-    snap("today-far")
+    snap("today-far", of: XCUIScreen.main, into: shared)
     checkAway("a year on")
 
     pick(year(0))
     _ = settled()
-    snap("today-month")
+    snap("today-month", of: XCUIScreen.main, into: shared)
     checkToday("back in today's month")
 
     // A new layout goes to today's day or week.
     switchLayout(from: "一覧", to: "週ごと")
     _ = settled()
-    snap("today-weeks")
+    snap("today-weeks", of: XCUIScreen.main, into: shared)
     checkToday("in 週ごと, on today's week")
 
     pick(year(1))
@@ -133,7 +125,7 @@ final class ShiftsRotationTests: XCTestCase {
 
     switchLayout(from: "週ごと", to: "一覧")
     XCTAssertEqual(settled().top, today(), "一覧 goes to today")
-    snap("today-days")
+    snap("today-days", of: XCUIScreen.main, into: shared)
     checkToday("in 一覧 again, on today")
 
     // Back from 1人ずつ, to today's week.
@@ -142,7 +134,7 @@ final class ShiftsRotationTests: XCTestCase {
     switchLayout(from: "一覧", to: "1人ずつ")
     switchLayout(from: "1人ずつ", to: "週ごと")
     _ = settled()
-    snap("today-from-person")
+    snap("today-from-person", of: XCUIScreen.main, into: shared)
     checkToday("back from 1人ずつ, on today's week")
     switchLayout(from: "週ごと", to: "一覧")
     XCTAssertEqual(settled().top, today(), "一覧 goes to today")
@@ -151,7 +143,7 @@ final class ShiftsRotationTests: XCTestCase {
     _ = settled()
     todayButton().tap()
     XCTAssertEqual(settled().top, today(), "今日 goes back to today")
-    snap("today-tapped")
+    snap("today-tapped", of: XCUIScreen.main, into: shared)
     checkToday("after 今日")
   }
 
@@ -177,7 +169,7 @@ final class ShiftsRotationTests: XCTestCase {
         RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.5))
       }
       let landed = rows.allElementsBoundByIndex.contains(where: \.isHittable) && !todayButton().exists
-      if !landed { snap("opened-\(open)") }
+      if !landed { snap("opened-\(open)", of: XCUIScreen.main, into: shared) }
       XCTAssertTrue(landed, "open \(open) lands on today's week")
     }
   }
@@ -253,7 +245,7 @@ final class ShiftsRotationTests: XCTestCase {
       checkOnlyWeeks("\(name), at once")
       _ = settled()
       checkOnlyWeeks(name)
-      snap("weeks-\(name)")
+      snap("weeks-\(name)", of: XCUIScreen.main, into: shared)
     }
   }
 
@@ -262,7 +254,7 @@ final class ShiftsRotationTests: XCTestCase {
     let width = app.windows.firstMatch.frame.width
     let rows = app.buttons.matching(NSPredicate(format: "label MATCHES '(今日、)?[0-9]{1,2}月[0-9]{1,2}日.*'"))
       .allElementsBoundByIndex.filter { $0.isHittable && $0.frame.width > width / 2 }
-    if !rows.isEmpty { snap("days-among-weeks") }
+    if !rows.isEmpty { snap("days-among-weeks", of: XCUIScreen.main, into: shared) }
     XCTAssertEqual(rows.map(\.label), [], "no day of 一覧 among the weeks, \(when)")
   }
 
@@ -298,8 +290,7 @@ final class ShiftsRotationTests: XCTestCase {
 
   @MainActor private func launch(_ arguments: [String] = []) {
     app = XCUIApplication()
-    app.launchArguments += ["-firstRunDone", "YES"] + arguments
-    app.launch()
+    app.launchPastFirstRun(arguments)
   }
 
   /// Opens 一覧, goes to the month in sight in `year` with 月を選ぶ if
@@ -319,18 +310,18 @@ final class ShiftsRotationTests: XCTestCase {
       XCTAssertEqual(settled().top, today(), "一覧 opens on today")
     }
     let portrait = settled()
-    snap("\(name)-portrait")
+    snap("\(name)-portrait", of: XCUIScreen.main, into: shared)
 
     XCUIDevice.shared.orientation = .landscapeLeft
     let landscape = settled()
-    snap("\(name)-landscape")
+    snap("\(name)-landscape", of: XCUIScreen.main, into: shared)
     XCTAssertEqual(landscape.month, portrait.month, "landscape stays on the month")
     XCTAssertEqual(landscape.top, portrait.top, "landscape stays on the day at the top")
     checkRows("in landscape")
 
     XCUIDevice.shared.orientation = .portrait
     let back = settled()
-    snap("\(name)-portrait-again")
+    snap("\(name)-portrait-again", of: XCUIScreen.main, into: shared)
     XCTAssertEqual(back.month, portrait.month, "portrait again stays on the month")
     XCTAssertEqual(back.top, portrait.top, "portrait again stays on the day at the top")
     checkRows("in portrait again")
@@ -514,15 +505,6 @@ final class ShiftsRotationTests: XCTestCase {
     let rows = app.buttons.matching(NSPredicate(format: "label MATCHES '(今日、)?[0-9]{1,2}月[0-9]{1,2}日.*'"))
       .allElementsBoundByIndex.filter { $0.isHittable && $0.frame.minY >= below }
     return rows.min { $0.frame.minY < $1.frame.minY } ?? app.buttons["no row"]
-  }
-
-  @MainActor private func snap(_ name: String) {
-    let screenshot = XCUIScreen.main.screenshot()
-    let shot = XCTAttachment(screenshot: screenshot)
-    shot.name = name
-    shot.lifetime = .keepAlways
-    add(shot)
-    try? screenshot.pngRepresentation.write(to: shared.appending(path: "\(name).png"))
   }
 }
 

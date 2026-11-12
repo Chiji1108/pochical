@@ -183,6 +183,10 @@ done
 exit $status
 """
 
+[tasks."store:shots:android"]
+description = "Photograph the Android app for the stores' screenshots on the emulator ANDROID_SERIAL names, taking the app off it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default) and seeds: the screens and the widgets, raw, into .build/store-screenshots/android"
+run = "tools/store-screenshots/android.sh"
+
 [tasks."ios:photo-touches"]
 description = "Run the chat photo line's touch UI tests in a simulator, erasing it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default): <simulator name> [derived data]"
 run = "tools/photo-line-touches/run.sh"
@@ -202,6 +206,22 @@ run = "tools/shifts-rotation/run.sh"
 [tasks."ios:calendar-reflect"]
 description = "Run 自動で反映's UI test in a simulator, erasing it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default), reading the simulator's calendars after each step: <simulator name> [derived data]"
 run = "tools/calendar-reflect/run.sh"
+
+[tasks."store:shots:ios"]
+description = "Photograph the screens of the App Store's screenshots in the simulator pochical-store, an iPhone 18 Pro Max made if there is none, erasing it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default) and seeds: [derived data]"
+run = "tools/store-screenshots/ios.sh"
+
+[tasks."store:images"]
+description = "Draw the stores' pictures in store/ from the screens photographed, and Google Play's feature graphic"
+run = "pnpm --dir apps/design image:store"
+
+[tasks."store:screenshots"]
+description = "Make the stores' screenshots from the real apps: each platform's screens photographed, Android's first, on the emulator ANDROID_SERIAL names (it fails at once when none is named), then the pictures drawn from them"
+run = [
+  { task = "store:shots:android" },
+  { task = "store:shots:ios" },
+  { task = "store:images" },
+]
 
 [tasks."server:typecheck"]
 description = "Typecheck the server"

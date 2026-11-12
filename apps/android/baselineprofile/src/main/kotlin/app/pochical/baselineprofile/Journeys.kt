@@ -2,43 +2,15 @@ package app.pochical.baselineprofile
 
 import androidx.benchmark.macro.MacrobenchmarkScope
 import androidx.test.uiautomator.By
-import androidx.test.uiautomator.BySelector
-import androidx.test.uiautomator.SearchCondition
-import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.Until
+import app.pochical.walk.PACKAGE
+import app.pochical.walk.back
+import app.pochical.walk.find
+import app.pochical.walk.tap
 import java.util.regex.Pattern
 
 // What a person does most in the app, walked through the release build by its words on the screen,
 // for the profile and the benchmarks alike: the calendar, a month scrolled, a group, its chat.
-
-const val PACKAGE = "app.pochical"
-
-const val WAIT = 10_000L
-
-/** What [selector] finds once it shows; failing, what the screen shows instead. */
-fun MacrobenchmarkScope.find(selector: BySelector): UiObject2 =
-  checkNotNull(device.wait(Until.findObject(selector), WAIT)) {
-    val shown = device.findObjects(By.pkg(PACKAGE)).mapNotNull { runCatching { it.text ?: it.contentDescription }.getOrNull() }
-    "Not on the screen: $selector; shown: $shown"
-  }
-
-/**
- * Taps [target] until [done]. A tap is waited on in full before it is made again: the app takes no
- * tap while a page slides in or out, which a person waits for and a test does not.
- */
-private fun MacrobenchmarkScope.tap(target: BySelector, done: SearchCondition<Boolean>) {
-  repeat(3) {
-    device.wait(Until.findObject(target), WAIT)?.click()
-    if (device.wait(done, WAIT)) return
-  }
-  error("Tapping $target changed nothing")
-}
-
-/** Taps [target] until [then] shows. */
-private fun MacrobenchmarkScope.tap(target: BySelector, then: BySelector) = tap(target, Until.hasObject(then))
-
-/** Goes back from the page [page] shows, until it has gone: the page under it is there all along. */
-private fun MacrobenchmarkScope.back(page: BySelector) = tap(By.desc("戻る"), Until.gone(page))
 
 private val calendarShown = By.descContains("のお休み")
 private val groupShown = By.text("全体チャット")
@@ -56,26 +28,26 @@ fun MacrobenchmarkScope.prepare() {
   startActivityAndWait()
   if (device.wait(Until.hasObject(By.text("はじめる")), 3_000)) {
     val answers = listOf("はじめる", "繰り返しはない", "二交代制", "次へ", "毎月1日から末日まで")
-    for ((answer, next) in answers.zip(answers.drop(1))) tap(By.text(answer), By.text(next))
-    tap(By.text(answers.last()), calendarShown)
+    for ((answer, next) in answers.zip(answers.drop(1))) device.tap(By.text(answer), By.text(next))
+    device.tap(By.text(answers.last()), calendarShown)
   }
   // グループ shows the person's first group, or with none yet, only how to make or join one.
-  tap(By.text("グループ"), Until.hasObject(By.text(Pattern.compile("全体チャット|グループを作る"))))
+  device.tap(By.text("グループ"), Until.hasObject(By.text(Pattern.compile("全体チャット|グループを作る"))))
   if (device.hasObject(groupShown)) return
   val field = By.clazz("android.widget.EditText")
-  tap(By.text("グループを作る"), By.text("作る"))
-  find(field).text = "Perf"
+  device.tap(By.text("グループを作る"), By.text("作る"))
+  device.find(field).text = "Perf"
   // The person's name, asked for in the row's sheet as someone new has no usual one (#1163).
-  tap(By.text("名前を入れてください"), By.desc("閉じる"))
+  device.tap(By.text("名前を入れてください"), By.desc("閉じる"))
   device.findObjects(field).first { it.text != "Perf" }.text = "Bench"
-  tap(By.desc("閉じる"), By.text("Bench"))
-  tap(By.text("作る"), By.desc("招待のQRコード"))
-  back(By.desc("招待のQRコード"))
-  find(groupShown)
+  device.tap(By.desc("閉じる"), By.text("Bench"))
+  device.tap(By.text("作る"), By.desc("招待のQRコード"))
+  device.back(By.desc("招待のQRコード"))
+  device.find(groupShown)
 }
 
 /** The calendar's tab, with this month's days. */
-fun MacrobenchmarkScope.openCalendar() = tap(By.text("カレンダー"), calendarShown)
+fun MacrobenchmarkScope.openCalendar() = device.tap(By.text("カレンダー"), calendarShown)
 
 /** The month turned forward and back, as a person looks at the next one. */
 fun MacrobenchmarkScope.scrollMonth() {
@@ -84,16 +56,16 @@ fun MacrobenchmarkScope.scrollMonth() {
     device.swipe(from, y, to, y, 40)
     device.waitForIdle()
   }
-  find(calendarShown)
+  device.find(calendarShown)
 }
 
 /** The group tab, on the person's first group. */
-fun MacrobenchmarkScope.openGroups() = tap(By.text("グループ"), groupShown)
+fun MacrobenchmarkScope.openGroups() = device.tap(By.text("グループ"), groupShown)
 
 /** The group's whole chat, opened from its page and closed again. */
 fun MacrobenchmarkScope.openChat() {
   val composer = By.text("メッセージ")
-  tap(groupShown, composer)
-  back(composer)
-  find(groupShown)
+  device.tap(groupShown, composer)
+  device.back(composer)
+  device.find(groupShown)
 }

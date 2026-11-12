@@ -13,6 +13,9 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.BySelector
 import androidx.test.uiautomator.UiDevice
+import app.pochical.walk.PACKAGE
+import app.pochical.walk.WAIT
+import app.pochical.walk.find
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -66,7 +69,7 @@ class Benchmarks {
       },
     ) {
       startActivityAndWait()
-      shows?.let { find(it) }
+      shows?.let { device.find(it) }
     }
 
   private fun journeys(compilation: CompilationMode) =

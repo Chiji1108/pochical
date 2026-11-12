@@ -23,7 +23,7 @@ baselineProfile {
 
 dependencies {
   implementation(libs.androidx.test.junit)
-  implementation(libs.uiautomator)
+  implementation(project(":walk"))
   implementation(libs.benchmark.macro.junit4)
 }
 

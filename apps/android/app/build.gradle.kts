@@ -139,6 +139,7 @@ dependencies {
 
   androidTestImplementation(libs.androidx.test.runner)
   androidTestImplementation(libs.androidx.test.junit)
+  androidTestImplementation(project(":walk"))
 }
 
 aboutLibraries {

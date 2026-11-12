@@ -12,27 +12,25 @@ final class PhotoLineTouchTests: XCTestCase {
   /// tell each other a step is done.
   private var shared: URL!
 
-  override func setUpWithError() throws {
+  @MainActor
+  override func setUp() async throws {
     continueAfterFailure = false
     guard let dir = ProcessInfo.processInfo.environment["PHOTO_TOUCH_DIR"] else {
       throw XCTSkip("run by mise run ios:photo-touches")
     }
     shared = URL(filePath: dir)
     app = XCUIApplication()
-    app.launchArguments += ["-firstRunDone", "YES"]
-    app.launch()
+    app.launchPastFirstRun()
   }
 
   @MainActor
   func test1HoldingOthersPhotoOpensItsMenu() throws {
-    let code = try String(contentsOf: shared.appending(path: "invite"), encoding: .utf8)
-      .trimmingCharacters(in: .whitespacesAndNewlines)
-    app.joins(code: code, named: "テスト")
+    try app.joins(invitation: shared.appending(path: "invite"), named: "テスト")
     openChat()
 
     newestPhoto().press(forDuration: 1)
     let opened = menu.waitForExistence(timeout: 5)
-    snap("1-held-others-photo")
+    snap("1-held-others-photo", of: app)
     XCTAssertTrue(opened, "holding a photo opens its line's menu")
   }
 
@@ -51,7 +49,7 @@ final class PhotoLineTouchTests: XCTestCase {
 
     newestPhoto().press(forDuration: 1)
     let opened = menu.waitForExistence(timeout: 5)
-    snap("2-held-own-photo-just-sent")
+    snap("2-held-own-photo-just-sent", of: app)
     XCTAssertTrue(opened, "holding one's photo just sent opens its line's menu")
   }
 
@@ -61,10 +59,10 @@ final class PhotoLineTouchTests: XCTestCase {
     sendPhoto()
     let stop = app.buttons["送信をやめる"]
     XCTAssertTrue(stop.waitForExistence(timeout: 10), "× shows on the photo going up")
-    snap("3-going-up")
+    snap("3-going-up", of: app)
     stop.tap()
     let stopped = app.buttons["送れませんでした"].waitForExistence(timeout: 5)
-    snap("3-stopped-by-x")
+    snap("3-stopped-by-x", of: app)
     XCTAssertTrue(stopped, "× stopped it, leaving its line not sent")
     XCTAssertFalse(menu.exists, "the tap on × opened no menu")
   }
@@ -76,7 +74,7 @@ final class PhotoLineTouchTests: XCTestCase {
     XCTAssertTrue(retry.waitForExistence(timeout: 15), "↻ shows on the photo not fetched")
     retry.press(forDuration: 1)
     let opened = menu.waitForExistence(timeout: 5)
-    snap("4-held-photo-not-fetched")
+    snap("4-held-photo-not-fetched", of: app)
     XCTAssertTrue(opened, "holding a photo not fetched opens its line's menu")
     app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.15)).tap()
     let closed = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: menu)
@@ -87,7 +85,7 @@ final class PhotoLineTouchTests: XCTestCase {
     retry.tap()
     let fetched = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: retry)
     wait(for: [fetched], timeout: 10)
-    snap("4-fetched-by-retry")
+    snap("4-fetched-by-retry", of: app)
     XCTAssertFalse(menu.exists, "the tap on ↻ opened no menu")
     XCTAssertFalse(app.buttons["閉じる"].exists, "the tap on ↻ did not open the photo")
   }
@@ -127,13 +125,6 @@ final class PhotoLineTouchTests: XCTestCase {
   }
 
   /// The screen now, kept with the results.
-  @MainActor private func snap(_ name: String) {
-    let shot = XCTAttachment(screenshot: app.screenshot())
-    shot.name = name
-    shot.lifetime = .keepAlways
-    add(shot)
-  }
-
   private func signal(_ step: String) throws {
     try Data().write(to: shared.appending(path: step))
   }
