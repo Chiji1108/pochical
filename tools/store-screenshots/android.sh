@@ -71,6 +71,20 @@ without_calendar
 adb shell "content insert --uri '$calendar' --bind account_name:s:pochical-store-shots --bind account_type:s:LOCAL \
   --bind ownerAccount:s:pochical-store-shots --bind name:s:仕事 --bind calendar_displayName:s:仕事 \
   --bind calendar_color:i:-12409355 --bind calendar_access_level:i:700 --bind visible:i:1 --bind sync_events:i:1"
+# The demo is entered once the emulator's Wi-Fi is the network it uses: in
+# the seconds after a boot it is still on its mobile network, and a demo
+# entered then shows a second Wi-Fi icon to its end, when the real one comes.
+on_wifi() {
+  adb shell dumpsys connectivity | awk '
+    /^Active default network:/ { id = $NF }
+    /NetworkAgentInfo\{network\{/ && index($0, "network{" id "}") && /ni\{WIFI CONNECTED/ { found = 1 }
+    END { exit !found }'
+}
+for _ in $(seq 60); do
+  on_wifi && break
+  sleep 1
+done
+on_wifi || { echo "the emulator is not on its Wi-Fi a minute on: the status bar would not be the pictures'" >&2; exit 1; }
 adb shell settings put global sysui_demo_allowed 1
 demo enter
 demo battery -e level 100 -e plugged false
