@@ -55,6 +55,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.After
 import org.junit.Assume.assumeTrue
 import org.junit.Test
@@ -132,7 +133,6 @@ class StoreScreenshots {
     device.tap(By.text("端末カレンダーに追加"), By.text("追加先"))
     turnOn("自動で反映")
     photograph("06-device-calendar")
-    device.find(switch("自動で反映", on = true))
     measure("06-device-calendar", "reflect", Regex("自動で反映.*"))
     device.back(By.text("追加先"))
 
@@ -365,25 +365,25 @@ class StoreScreenshots {
   }
 
   /**
-   * Turns テーマ's pages, a few テーマ each, to the one holding [theme]: back to the first, then on, a
-   * page a drag across the テーマ, over the pages' dots.
+   * Turns テーマ's pages, a few テーマ each, to the one holding [theme]: back to the first, then on to
+   * the last, a page a drag across the テーマ, over the pages' dots, which say the page once it is
+   * the one shown, its テーマ on it by then.
    */
   private fun showTheme(theme: String) {
     val dots = By.descStartsWith("テーマのページ")
     reveal(dots)
-    if (device.hasObject(By.text(theme))) return
     val shown = device.find(dots)
-    val turns = shown.contentDescription.substringAfterLast("/").trim().toInt() - 1
+    val (page, pages) = shown.contentDescription.substringAfter("テーマのページ").split("/").map { it.trim().toInt() }
     val at = shown.visibleBounds.top - device.displayHeight / 20
     val (start, end) = device.displayWidth / 5 to device.displayWidth * 4 / 5
-    // A page's テーマ are on it a moment after the drag that brought it.
-    val there = Until.hasObject(By.text(theme))
-    repeat(turns) { device.swipe(start, at, end, at, 20) }
-    if (device.wait(there, WAIT / 5)) return
-    repeat(turns) {
-      device.swipe(end, at, start, at, 20)
-      if (device.wait(there, WAIT / 5)) return
+    var on = page
+    for (next in (page - 1 downTo 1) + (2..pages)) {
+      if (device.hasObject(By.text(theme))) return
+      if (next < on) device.swipe(start, at, end, at, 20) else device.swipe(end, at, start, at, 20)
+      device.find(By.desc("テーマのページ $next / $pages"))
+      on = next
     }
+    check(device.hasObject(By.text(theme))) { "None of テーマ's $pages pages has $theme" }
   }
 
   /**
@@ -487,11 +487,16 @@ class StoreScreenshots {
     enter(said(on), if (now.hour in 9..17) "日勤" else "夜勤")
   }
 
+  /** What [wait] gives once it has it, waited on as long as a step of the walk is; failing, that [what] did not come. */
+  private suspend fun <T : Any> awaited(what: String, wait: suspend () -> T): T = checkNotNull(withTimeoutOrNull(WAIT) { wait() }) { "$what did not come" }
+
   /** The seed's group named [name], once the app holds its people with the photos they show. */
   private suspend fun seededGroup(name: String): ChoiceGroup =
-    (app as PochicalApplication).widgetSources.values.choiceGroups()
-      .mapNotNull { groups -> groups.firstOrNull { it.group.name == name && it.members.isNotEmpty() && it.members.all { member -> member.photoId.isNotEmpty() } } }
-      .first()
+    awaited("$name with its people's photos") {
+      (app as PochicalApplication).widgetSources.values.choiceGroups()
+        .mapNotNull { groups -> groups.firstOrNull { it.group.name == name && it.members.isNotEmpty() && it.members.all { member -> member.photoId.isNotEmpty() } } }
+        .first()
+    }
 
   /**
    * Waits for the photos of the people of the group named [name] to have come to the app's image loader, which the
@@ -628,9 +633,9 @@ class StoreScreenshots {
    * one the server no longer knows. It is let go of as the person would, by ログアウト or はじめから使う.
    */
   private suspend fun becomeNewUser() {
-    val before = account.state.first { it is AccountState.SignedIn || it == AccountState.SessionEnded }
+    val before = awaited("The session the install starts with") { account.state.first { it is AccountState.SignedIn || it == AccountState.SessionEnded } }
     if (before is AccountState.SignedIn) account.signOut() else account.startAfresh()
-    account.state.first { it is AccountState.SignedIn && it.userId != before.userId }
+    awaited("A new user") { account.state.first { it is AccountState.SignedIn && it.userId != before.userId } }
   }
 
   /** Where what [selector] finds begins on the screen: a row's top, by one of its days. */

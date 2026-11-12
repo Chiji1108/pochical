@@ -29,7 +29,7 @@ Not collected: location, contacts, health, financial, browsing or search history
 ## App Store: the rest
 
 - **Export compliance**: `ITSAppUsesNonExemptEncryption` is `NO` in the build settings; the app uses only the system's HTTPS.
-- **Age rating**: answer the questionnaire as an app with user-generated content and messaging between users, moderated by reports and blocks; no gambling, no violence, no web browsing (links open in the system's browser), no ads.
+- **Age rating**: answer the questionnaire as an app with user-generated content and messaging between users, moderated by reports and blocks; no gambling, no violence, no web browsing (a link in a chat opens in the system's Safari view over the app, which has no address to type in), no ads.
 - **App Review Information** (#796): untick サインインが必要. Notes:
 
   ```

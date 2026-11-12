@@ -40,9 +40,10 @@ export const FEATURE_GRAPHIC = {
 export const HEADLINE_SHARE = 0.2;
 
 // How large a headline's letters are, in hundredths of the picture's
-// width, and the room a line of it keeps to each of the picture's sides:
-// a line is one row, never broken.
-export const HEADLINE = { margin: 2, size: 8.6 } as const;
+// width, the room a line of it keeps to each of the picture's sides, and
+// the room its share of the picture keeps over its lines: a line is one
+// row, never broken.
+export const HEADLINE = { margin: 2, over: 4, size: 8.6 } as const;
 
 // How a picture's title is set (apps/design's site-picture.tsx): how tall
 // a line is in its letters' size, and how far apart the letters are, in
@@ -274,8 +275,9 @@ const CALLOUT = { margin: 2, most: 1.35, pad: 1.5 } as const;
 // A rectangle of a screen or a picture, in its pixels.
 export type Rect = { height: number; left: number; top: number; width: number };
 
-// A callout as it is drawn: how many times larger than the phone has it
-// the part is; and the card in the picture, over the part in the phone,
+// A callout as it is drawn: how many of the picture's pixels a pixel of
+// the screen is in the phone, and how many times larger than the phone has
+// it the part is; and the card in the picture, over the part in the phone,
 // which stands in the picture's middle as tall as the room under the
 // headline. A screen reads from its top, so what is over the part leads
 // to it and stays in sight: the card's top is where the part's is, with

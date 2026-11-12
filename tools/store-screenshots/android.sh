@@ -31,6 +31,7 @@ gradle() { (cd "$root/apps/android" && ./gradlew "$@"); }
 work=$(mktemp -d)
 server_log=$work/server.log
 . "$root/tools/store-screenshots/when.sh"
+. "$root/tools/store-screenshots/seed.sh"
 . "$root/tools/ios-ui/lib.sh"
 
 rm -rf "$out"
@@ -41,22 +42,24 @@ calendar="content://com.android.calendar/calendars?caller_is_syncadapter=true&ac
 without_calendar() { adb shell "content delete --uri '$calendar' --where \"account_name='pochical-store-shots'\""; }
 demo() { adb shell am broadcast -a com.android.systemui.demo -e command "$@" >/dev/null; }
 scales="window_animation_scale transition_animation_scale animator_duration_scale"
+# The global settings the run changes: the animations' scales, and that
+# SystemUI takes the demo's commands.
+settings="$scales sysui_demo_allowed"
 
 night=$(adb shell cmd uimode night | sed 's/.*: //')
-for scale in $scales; do declare "was_$scale=$(adb shell settings get global "$scale")"; done
-seed=""
+for setting in $settings; do declare "was_$setting=$(adb shell settings get global "$setting")"; done
 # Every step whatever became of the one before, and the run fails if one did.
 restore() {
   local status=$? left=""
   set +e
-  [ -z "$seed" ] || kill "$seed" 2>/dev/null
+  stop_seed
   stop_server || left="$left the server,"
   demo exit || left="$left the status bar,"
   adb shell cmd uimode night "$night" >/dev/null || left="$left night mode,"
-  for scale in $scales; do
-    local was=was_$scale
-    if [ "${!was}" = null ]; then adb shell settings delete global "$scale" >/dev/null; else adb shell settings put global "$scale" "${!was}"; fi ||
-      left="$left $scale,"
+  for setting in $settings; do
+    local was=was_$setting
+    if [ "${!was}" = null ]; then adb shell settings delete global "$setting" >/dev/null; else adb shell settings put global "$setting" "${!was}"; fi ||
+      left="$left $setting,"
   done
   without_calendar || left="$left the calendar,"
   [ -z "$left" ] || { echo "not put back:${left%,}" >&2; status=1; }
@@ -96,23 +99,15 @@ demo network -e mobile hide
 demo clock -e hhmm 0941
 
 start_server
-# The seed makes the groups, writes their invitations, and writes the
-# coworkers' chat once the walk has joined it.
-pnpm --dir "$root" exec tsx "$root/tools/store-screenshots/seed.ts" "$work/invite" "$work/invite-friends" &
-seed=$!
-until [ -s "$work/invite" ]; do
-  kill -0 "$seed" 2>/dev/null || { echo "the seed made no groups" >&2; exit 1; }
-  sleep 1
-done
+start_seed "$work/invite" "$work/invite-friends"
 pulled=$root/apps/android/app/build/outputs/connected_android_test_additional_output
 rm -rf "$pulled"
 gradle :app:connectedDebugAndroidTest "-PpochicalServer=http://10.0.2.2:$port" \
   -Pandroid.testInstrumentationRunnerArguments.class=app.pochical.StoreScreenshots \
   "-Pandroid.testInstrumentationRunnerArguments.invite=$(cat "$work/invite")" \
   "-Pandroid.testInstrumentationRunnerArguments.friends=$(cat "$work/invite-friends")"
-# The seed ends once the chat is written and the group has taken its reaction and votes.
-wait "$seed" || { echo "the seed failed" >&2; exit 1; }
-seed=""
+# The walk passed: the seed has had the join it waits for.
+end_seed
 # Where Gradle pulls what a test leaves in additionalTestOutputDir, under the device's name.
 cp -R "$pulled"/debugAndroidTest/connected/*/ "$out"
 ls -R "$out"
