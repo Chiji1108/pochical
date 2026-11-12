@@ -37,7 +37,6 @@ fun GroupMember.shifts(from: LocalDate, through: LocalDate): Map<LocalDate, Memb
     day to MemberShift(pattern, timeChange(shown.start, shown.end, pattern.time), shown.start, shown.end)
   }.toMap()
 
-/** Everyone's shifts over some days, member by member, and the days among them everyone is off. */
 /** The words a member's day is read in by a screen reader. */
 class ShiftWords(val unentered: String, val early: String, val late: String, val moved: String)
 
@@ -59,6 +58,7 @@ fun spokenShift(member: String, pattern: String?, change: TimeChange?, words: Sh
   return "$member：${listOfNotNull(pattern ?: words.unentered, moved).joinToString(" ")}"
 }
 
+/** Everyone's shifts over some days, member by member, and the days among them everyone is off. */
 class GroupDays(val shifts: List<Map<LocalDate, MemberShift>>, val together: Together)
 
 /**
