@@ -630,6 +630,7 @@ private struct LookEditor: View {
             sample.icon = icon
             return ShiftMark(pattern: sample, size: 28)
               .environment(\.look, sampleLook(.icon))
+              .accessibilityLabel(MarkIconNames.names[icon] ?? icon)
           } pick: { icon in
             draft.icon = icon
             picked.insert(.icon)
