@@ -87,10 +87,11 @@ const sky = {
     },
     variants: {
       place: {
-        // At the page's top, under the header too: nothing above it is
-        // positioned, so it sits on the page's own ground. It rises from
-        // the paper at the very top, where Safari's bar keeps the paper's
-        // color, and fades back into it before the phone below.
+        // At the top of what holds it: the story's stage where the page
+        // moves, which stays on screen, so the sky stays behind the story;
+        // the page itself where it stands still, under the header too. It
+        // rises from the paper at the very top, where Safari's bar keeps
+        // the paper's color, and fades back into it lower down.
         top: {
           height: "min(860px, 100svh)",
           inset: "0 0 auto",
@@ -193,25 +194,18 @@ function PhoneScreen({
 // with its scroll (lib/story.ts), each stands at `still`.
 //
 // A step that changes what the person holds (their days, a chat's lines)
-// is written to their store by `write`, in the same turn the place's
-// move is heard in, so the screen is drawn once for the step, not once
-// for the step and again for the store.
-function useStoryStep(
+// is written to their store, in the same turn the place's move is heard
+// in, so the screen is drawn once for the step; a phone whose steps are
+// all in the store is not drawn again for them itself.
+function useStoryWrite(
   stepAt: (place: number) => number,
-  { drawn, still }: { drawn: number; still: number },
-  write?: (step: number) => void
+  still: number,
+  write: (step: number) => void
 ) {
-  const read = useCallback(
-    () => (moves() ? stepAt(placeNow()) : still),
-    [stepAt, still]
-  );
   useEffect(() => {
-    if (!write) {
-      return;
-    }
     let written: number | undefined;
     const sync = () => {
-      const step = read();
+      const step = moves() ? stepAt(placeNow()) : still;
       if (step !== written) {
         written = step;
         write(step);
@@ -219,8 +213,19 @@ function useStoryStep(
     };
     sync();
     return onPlace(sync);
-  }, [read, write]);
-  return useSyncExternalStore(onPlace, read, () => drawn);
+  }, [stepAt, still, write]);
+}
+
+// The step a phone is at, for what it is handed rather than holds.
+function useStoryStep(
+  stepAt: (place: number) => number,
+  { drawn, still }: { drawn: number; still: number }
+) {
+  return useSyncExternalStore(
+    onPlace,
+    () => (moves() ? stepAt(placeNow()) : still),
+    () => drawn
+  );
 }
 
 // The sample month as ポチポチ入力's keys enter it: each press, the day it
@@ -299,7 +304,8 @@ export function EntryPhone() {
     },
     [person]
   );
-  const step = useStoryStep(entryAt, entryPlaces, write);
+  useStoryWrite(entryAt, entryStill, write);
+  const step = useStoryStep(entryAt, entryPlaces);
   return <PhoneScreen entering={entryOf(step).entering} person={person} />;
 }
 
@@ -365,8 +371,6 @@ const chatStages: Chat[] = [
 const chatAt = (place: number) => stepOf(SCENES.chat, chatStages.length, place);
 const chatEnd = chatStages.length - 1;
 
-const chatPlaces = { drawn: chatEnd, still: chatEnd };
-
 export function ChatPhone() {
   const person = useSamplePerson(atWork);
   const write = useCallback(
@@ -377,6 +381,6 @@ export function ChatPhone() {
     },
     [person]
   );
-  useStoryStep(chatAt, chatPlaces, write);
+  useStoryWrite(chatAt, chatEnd, write);
   return <PhoneScreen {...workChatPage} person={person} />;
 }

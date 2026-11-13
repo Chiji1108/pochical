@@ -154,6 +154,7 @@ const story = {
         opacity: 1,
         transitionDelay: "0.12s",
         translate: "0 0",
+        visibility: "visible",
       },
       _wide: {
         alignSelf: "center",
@@ -166,10 +167,15 @@ const story = {
       gridArea: "1 / 1",
       opacity: 0,
       paddingBottom: "14px",
-      transitionDuration: "0.25s",
-      transitionProperty: "opacity, translate",
+      // Gone once it has faded, not only clear: the parts' words lie in
+      // one place, and what is not shown must neither take a press meant
+      // for the words that are nor be reached by the keyboard.
+      transitionDelay: "0s, 0s, 0.25s",
+      transitionDuration: "0.25s, 0.25s, 0s",
+      transitionProperty: "opacity, translate, visibility",
       transitionTimingFunction: "ease-out",
       translate: "0 12px",
+      visibility: "hidden",
     },
     display: "flex",
     flexDirection: "column",
@@ -288,6 +294,14 @@ const story = {
       "--fit": "var(--fit-free)",
       "--fit-free": "min(1, tan(atan2(var(--phone-room), 844px)))",
       "--phone-room": "calc(100svh - var(--copy-room) - 12px)",
+      // On any other screen, at the largest size that fits whose width is
+      // a whole even number of the page's pixels: the frame's sides are
+      // then on whole pixels, the phone in the middle of its place.
+      "@media not (resolution: 3dppx)": {
+        "@supports (width: round(down, 1px, 1px))": {
+          "--fit": "round(down, var(--fit-free), 1 / 195)",
+        },
+      },
       "@media (resolution: 3dppx)": {
         "@supports (width: round(down, 1px, 1px))": {
           "--fit":
@@ -295,10 +309,6 @@ const story = {
         },
       },
       _wide: {
-        // Beside a wide page's words the phone is its own size, its
-        // words as large as they are set: in a window too short for it,
-        // it runs off the stage's foot.
-        "--fit": "1",
         "--phone-room": "min(844px, 100svh - 64px)",
         alignItems: "center",
         columnGap: "96px",
@@ -325,18 +335,6 @@ const story = {
     fontWeight: 700,
     letterSpacing: "0.01em",
     lineHeight: 1.4,
-  }),
-  // A part's screen. Moving, every part's stands in the same place.
-  visual: css({
-    _moving: {
-      _wide: { gridArea: "1 / 2" },
-      display: "block",
-      gridArea: "2 / 1",
-      height: "var(--phone-room)",
-      width: "100%",
-      ...onStory,
-    },
-    display: "contents",
   }),
   // The real widgets on their wall, photographed for the stores, fading
   // into the paper at every edge.
@@ -374,9 +372,11 @@ const story = {
         position: "absolute",
         width: "auto",
       },
+      animationName: "storyWall",
       display: "block",
       gridArea: "2 / 1",
       height: "var(--phone-room)",
+      pointerEvents: "none",
       width: "100%",
       ...onStory,
     },
@@ -399,23 +399,46 @@ const story = {
   }),
 };
 
-// How each piece moves (panda.config.ts, storyKeyframes).
-const moving = {
-  // A phone not come to yet waits under the screen, then is there.
+// A part's screen where the page moves: every part's stands in the same
+// place, a picture to look at that takes no press, least of all while it
+// waits unseen over the words of another part.
+const screenMoving = {
+  _wide: { gridArea: "1 / 2" },
+  display: "block",
+  gridArea: "2 / 1",
+  height: "var(--phone-room)",
+  pointerEvents: "none",
+  width: "100%",
+  ...onStory,
+} as const;
+
+// A part's screen with how it moves (panda.config.ts, storyKeyframes),
+// each a class of its own, so what one sets is set once.
+const screens = {
+  // A phone not come to yet waits under the screen, then comes in over
+  // the one before.
   arrives: css({
     _moving: {
+      ...screenMoving,
       animationName: "storyWait, storyTake",
       animationTimingFunction: "step-end, linear",
     },
+    display: "contents",
   }),
+  // Or rises into place.
   rises: css({
     _moving: {
+      ...screenMoving,
       animationName: "storyWait, storyPhone",
       animationTimingFunction: "step-end, linear",
     },
+    display: "contents",
   }),
-  shrink: css({ _moving: { animationName: "storyShrink" } }),
-  wall: css({ _moving: { animationName: "storyWall" } }),
+  // The hero's and entering's phone, going small into the wall.
+  shrinks: css({
+    _moving: { ...screenMoving, animationName: "storyShrink" },
+    display: "contents",
+  }),
 };
 
 // A stretch of the story for a piece's two animations: waiting until
@@ -686,7 +709,7 @@ const closing = {
             {/* The hero's phone too: there from the start, until the
                widgets take its place. */}
             <div
-              class={cx(story.visual, moving.shrink)}
+              class={screens.shrinks}
               style={rangeOf({
                 from: BEATS.widgets.from,
                 to: BEATS.widgets.from + TURN * 0.6,
@@ -716,7 +739,7 @@ const closing = {
               </p>
             </div>
             <div
-              class={cx(story.wallPlace, moving.wall)}
+              class={story.wallPlace}
               style={rangeOf({
                 from: BEATS.widgets.from,
                 to: BEATS.friends.from + TURN / 2,
@@ -754,7 +777,7 @@ const closing = {
             </div>
             {/* Near once the widgets are on, a part ahead of its own. */}
             <div
-              class={cx(story.visual, moving.rises)}
+              class={screens.rises}
               style={waitingUntil(BEATS.widgets.from + TURN, {
                 from: BEATS.friends.from - TURN / 2,
                 to: BEATS.chat.from + TURN / 2,
@@ -778,7 +801,7 @@ const closing = {
               </p>
             </div>
             <div
-              class={cx(story.visual, moving.arrives)}
+              class={screens.arrives}
               style={waitingUntil(BEATS.widgets.from + TURN * 2, {
                 from: BEATS.chat.from - TURN / 2,
                 to: BEATS.chat.from + TURN / 2,

@@ -90,6 +90,8 @@ type MonthListRow =
   | { kind: "heading"; key: string; month: Date; together: Together }
   | { kind: "days"; key: string; month: Date; days: Date[] };
 
+const idsOf = (members: Member[]) => members.map(({ id }) => id).join(" ");
+
 // Every month of the span under its heading. A week belongs to the month
 // it ends in, so a month's heading comes before the week of its 1st.
 function monthListRows(
@@ -157,11 +159,17 @@ export function ScrollingShifts({
   // Where the rows start: the list's first element.
   const listRef = useRef<HTMLElement>(null);
   // Worked out again when who is in the group changes, as each month's
-  // days off together do.
+  // days off together do: the group hands a new list of the same members
+  // each time it is drawn, so the one kept is the one their ids last
+  // changed with.
   const { weekStart } = weekTools;
+  const [members, setMembers] = useState(group.members);
+  if (idsOf(members) !== idsOf(group.members)) {
+    setMembers(group.members);
+  }
   const rows = useMemo(
-    () => monthListRows(layout, group.members, weekStart),
-    [layout, group.members, weekStart]
+    () => monthListRows(layout, members, weekStart),
+    [layout, members, weekStart]
   );
   const [scrollElement, setScrollElement] = useState<HTMLElement | null>(null);
   // Where the list starts in the scroll, and how much is pinned over it.

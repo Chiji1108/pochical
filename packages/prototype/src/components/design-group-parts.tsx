@@ -1,7 +1,7 @@
 import { markIconGlyphs } from "@pochical/design/mark-icons";
 import { css, cva } from "@pochical/styled-system/css";
 import { Camera, ImageIcon, RotateCcw, Smile, Trash } from "lucide-react";
-import { useContext, useId, useState } from "react";
+import { useContext, useEffect, useId, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 import { changeOn, patternOn } from "../lib/design-group-data";
@@ -475,6 +475,26 @@ export function PhotoAvatar({
   // The picture that failed to load, if this one did.
   const [failed, setFailed] = useState<string>();
   const shown = photo === failed ? undefined : photo;
+  // One that failed before this code was in, on a page drawn by the
+  // build, says so when asked to decode: its size does not, a drawing
+  // without one of its own being 0 wide in some browsers though it is
+  // there.
+  const image = useRef<HTMLImageElement>(null);
+  useEffect(() => {
+    const loaded = image.current;
+    if (!loaded?.complete || shown === undefined) {
+      return;
+    }
+    let asked = true;
+    loaded.decode().catch(() => {
+      if (asked) {
+        setFailed(shown);
+      }
+    });
+    return () => {
+      asked = false;
+    };
+  }, [shown]);
   return (
     <span
       aria-hidden="true"
@@ -495,13 +515,7 @@ export function PhotoAvatar({
           onError={() => {
             setFailed(shown);
           }}
-          // One that failed before this code was in, on a page drawn by
-          // the build.
-          ref={(image) => {
-            if (image?.complete && image.naturalWidth === 0) {
-              setFailed(shown);
-            }
-          }}
+          ref={image}
           src={shown}
           width={size}
         />
