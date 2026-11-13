@@ -556,6 +556,20 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     super.viewDidLayoutSubviews()
     let safeWidth = view.safeAreaLayoutGuide.layoutFrame.width
     if width.value != safeWidth { width.value = safeWidth }
+    // The composer's height is asked of it in the first layout, where it
+    // stands: it tells its own (preferredContentSizeDidChange) only some
+    // frames after, and the lines, drawn meanwhile with no room to be put
+    // in, showed from their oldest through the start of the push (#1201).
+    // Laid out again with it, they are put where the chat opens before
+    // anything is drawn.
+    if composerHeight.constant == 0, safeWidth > 0 {
+      let height = composer.sizeThatFits(in: CGSize(width: safeWidth, height: .infinity)).height
+      if height > 0 {
+        composerHeight.constant = height
+        view.layoutIfNeeded()
+        return
+      }
+    }
     fitRoom()
     place()
     layoutMenu()
@@ -619,8 +633,7 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
   private var userScrolling: Bool { lines.isDragging || lines.isDecelerating }
 
   /// Lines are laid out, in a room to show them in: its foot known, the
-  /// composer having told its height (preferredContentSizeDidChange), which
-  /// it does only after the lines are first laid out. Put where the chat
+  /// composer's height taken (viewDidLayoutSubviews). Put where the chat
   /// opens before then, the lines would keep their foot as the composer
   /// takes its room (fitRoom), and ここから新着, put at the top, would go
   /// up out of sight by the composer's height.
