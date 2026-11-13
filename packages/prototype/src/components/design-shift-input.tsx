@@ -254,6 +254,7 @@ export function PatternKeys({
   onPage,
   progress,
   onPick,
+  pressed,
   disabled = false,
 }: {
   patternKeys: Shift[];
@@ -261,6 +262,9 @@ export function PatternKeys({
   onPage: (page: number) => void;
   progress: MotionValue<number>;
   onPick: (shift: Shift) => void;
+  // A key drawn as held down, where a page tells entering rather than a
+  // finger doing it (DesignCalendar's `entering`).
+  pressed?: Shift;
   // Keys that type nothing now, as an order's at its full length.
   disabled?: boolean;
 }) {
@@ -272,6 +276,7 @@ export function PatternKeys({
     keys.map((key) => (
       <button
         className={shiftInput.pattern({ rows: keys.length > 4 || paged })}
+        data-active={key === pressed ? "" : undefined}
         key={key}
         onClick={() => {
           onPick(key);
@@ -340,9 +345,12 @@ export function ShiftInputControls({
   canSkip,
   onEnter,
   onSkip,
+  pressed,
 }: {
   datePicker: ReactNode;
   patternKeys: Shift[];
+  // The key drawn as held down, as PatternKeys takes it.
+  pressed?: Shift;
   selectedShift: Shift | undefined;
   canSkip: boolean;
   onEnter: (shift: Shift | undefined) => void;
@@ -362,6 +370,7 @@ export function ShiftInputControls({
         onPick={onEnter}
         page={page}
         patternKeys={patternKeys}
+        pressed={pressed}
         progress={progress}
       />
       <div className={shiftInput.actions}>

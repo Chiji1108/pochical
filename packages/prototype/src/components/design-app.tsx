@@ -14,6 +14,7 @@ import { useShownDays, useUser } from "../lib/design-user-store";
 import type { DesignVariants } from "../lib/design-variants";
 import { useWorkChanges } from "../lib/design-work-changes";
 import { DesignCalendar } from "./design-calendar";
+import type { Entering } from "./design-calendar";
 import { DesignGroup } from "./design-group";
 import type { GroupStart } from "./design-group";
 import { JoinScreen } from "./design-group-join";
@@ -29,6 +30,8 @@ import { SettingsLists } from "./design-ui";
 // One person's phone. Their data comes from the nearest UserStoreContext,
 // so two phones under one store show the same person.
 export function DesignApp({
+  entering,
+  groupOthers,
   initialEditing,
   initialDay = 1,
   initialMonth = 8,
@@ -43,6 +46,11 @@ export function DesignApp({
   fullScreen = false,
   features = everyFeature,
 }: {
+  // What the site's /next sets by how far it is scrolled: entering as the
+  // page tells it, and how many of a group's other members have joined so
+  // far, everyone without.
+  entering?: Entering;
+  groupOthers?: number;
   initialEditing: boolean;
   // The day entering starts on, as the top page opens on its first blank.
   initialDay?: number;
@@ -116,6 +124,7 @@ export function DesignApp({
                   <DesignGroup
                     initialGroupId={openGroup}
                     initialPage={initialGroupPage}
+                    others={groupOthers}
                     photoFetch={variants.photoFetch}
                     photoSend={variants.photoSend}
                     scanResult={variants.scanResult}
@@ -145,6 +154,7 @@ export function DesignApp({
                 <DesignCalendar
                   calendarAccess={variants.calendarAccess}
                   covered={joining}
+                  entering={entering}
                   initialCalendarAdd={initialCalendarAdd}
                   initialDay={initialDay}
                   initialDetail={initialDetail}

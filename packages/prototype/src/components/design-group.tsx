@@ -88,6 +88,7 @@ export function DesignGroup({
   onTab,
   initialGroupId = "family",
   initialPage = "hub",
+  others,
   scanResult = "invite",
   photoSend = "ok",
   photoFetch = "ok",
@@ -101,6 +102,9 @@ export function DesignGroup({
   // page shows them; message is the group chat at its latest line, as a
   // notification of it opens it.
   initialPage?: GroupStart;
+  // How many of a group's other members are in it so far, in the samples'
+  // order, where a page shows them joining one by one; everyone without.
+  others?: number;
   // What the QR page finds, as 比べる案 sets it.
   scanResult?: ScanResult;
   // Whether a photo's upload goes through, as 比べる案 sets it.
@@ -141,7 +145,10 @@ export function DesignGroup({
     const shown = found ? profileIn(found, profile) : profile;
     return meFrom(schedule, patterns, shown.photo, shown.name);
   };
-  const membersOf = (id: string): Member[] => [meIn(id), ...sampleOthers(id)];
+  const membersOf = (id: string): Member[] => [
+    meIn(id),
+    ...sampleOthers(id).slice(0, others),
+  ];
   const chatOf = (id: string, chatId: string): Chat =>
     chats[chatKey(id, chatId)] ?? { messages: [], unread: 0 };
   const addNotice = (id: string, notice: string) => {

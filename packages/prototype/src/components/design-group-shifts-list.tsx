@@ -4,6 +4,7 @@ import {
   useEffect,
   useEffectEvent,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -38,7 +39,7 @@ import {
   TodayCorner,
   useTurn,
 } from "./design-rolling";
-import { useWeek, weekLength } from "./design-week";
+import { useWeek, weekDatesFrom, weekLength } from "./design-week";
 
 // The shift table's months as one list that scrolls on, by day or by
 // week, drawing only the rows in sight, with the month in sight named
@@ -95,7 +96,7 @@ type MonthListRow =
 function monthListRows(
   layout: Layout,
   members: Member[],
-  weekDates: (date: Date) => Date[]
+  weekStart: number
 ): MonthListRow[] {
   const rows: MonthListRow[] = [];
   for (let offset = -monthSpan; offset <= monthSpan; offset += 1) {
@@ -112,12 +113,13 @@ function monthListRows(
       }
       continue;
     }
-    let week = weekDates(month);
+    let week = weekDatesFrom(month, weekStart);
     while (sameMonth(week[weekLength - 1], month)) {
       rows.push({ days: week, key: dateKey(week[0]), kind: "days", month });
       const end = week[weekLength - 1];
-      week = weekDates(
-        new Date(end.getFullYear(), end.getMonth(), end.getDate() + 1)
+      week = weekDatesFrom(
+        new Date(end.getFullYear(), end.getMonth(), end.getDate() + 1),
+        weekStart
       );
     }
   }
@@ -155,8 +157,12 @@ export function ScrollingShifts({
   const barRef = useRef<HTMLDivElement>(null);
   // Where the rows start: the list's first element.
   const listRef = useRef<HTMLElement>(null);
-  const [rows] = useState(() =>
-    monthListRows(layout, group.members, weekTools.weekDates)
+  // Worked out again when who is in the group changes, as each month's
+  // days off together do.
+  const { weekStart } = weekTools;
+  const rows = useMemo(
+    () => monthListRows(layout, group.members, weekStart),
+    [layout, group.members, weekStart]
   );
   const [scrollElement, setScrollElement] = useState<HTMLElement | null>(null);
   // Where the list starts in the scroll, and how much is pinned over it.

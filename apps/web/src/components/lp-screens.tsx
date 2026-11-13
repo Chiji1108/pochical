@@ -43,6 +43,7 @@ import {
   UserStoreContext,
   useShownDays,
 } from "@pochical/prototype/lib/design-user-store";
+import type { UserStore } from "@pochical/prototype/lib/design-user-store";
 import { parseDesignVariants } from "@pochical/prototype/lib/design-variants";
 import { useReducedMotion } from "@pochical/prototype/lib/device-media";
 import { css, cva } from "@pochical/styled-system/css";
@@ -59,7 +60,8 @@ import type { PrimaryAction } from "../lib/primary-action";
 // phone and the features' screens, each an island of pages/index.astro.
 // The build draws them into the page, which shows that drawing until
 // their code arrives; the page's words never wait for it. Movement
-// follows the device's 視差効果を減らす setting.
+// follows the device's 視差効果を減らす setting. /next's phones
+// (next-screens.tsx) are made of the same pieces.
 function Motion({ children }: { children: ReactNode }) {
   return <MotionConfig reducedMotion="user">{children}</MotionConfig>;
 }
@@ -169,7 +171,7 @@ export function Sky({
 
 // The hero's month is entered up to the 19th: its first weeks show the
 // look, and its last two are left to fill in, from the 20th.
-const HERO_FIRST_BLANK = 20;
+export const HERO_FIRST_BLANK = 20;
 const heroSchedule = Object.fromEntries(
   Object.entries(initialDesignSchedule()).filter(
     ([key]) => Number(key.slice(-2)) < HERO_FIRST_BLANK
@@ -357,7 +359,7 @@ type FeatureOpening =
       initialTab: "group";
     });
 
-const featureScreens: Record<
+export const featureScreens: Record<
   Feature,
   {
     opening: FeatureOpening;
@@ -404,26 +406,35 @@ const featureScreens: Record<
   },
 };
 
-export function FeatureScreen({ feature }: { feature: Feature }) {
-  const { opening, own, shown = "top" } = featureScreens[feature];
-  const person = useSamplePerson(own);
+// A screen of someone's app in its phone, to look at and not to touch:
+// how it opens, and whatever else the page showing it sets.
+export function PhoneScreen({
+  person,
+  shown,
+  ...app
+}: {
+  person: UserStore;
+  shown: "foot" | "top" | "whole";
+} & Partial<AppProps>) {
   return (
     <Motion>
       <div aria-hidden="true" className={screenStyle({ shown })} inert>
         <DesignProviders fresh>
           <UserStoreContext value={person}>
             <SheetPicturesContext value>
-              <DesignApp
-                initialEditing={false}
-                {...opening}
-                variants={variants}
-              />
+              <DesignApp initialEditing={false} {...app} variants={variants} />
             </SheetPicturesContext>
           </UserStoreContext>
         </DesignProviders>
       </div>
     </Motion>
   );
+}
+
+export function FeatureScreen({ feature }: { feature: Feature }) {
+  const { opening, own, shown = "top" } = featureScreens[feature];
+  const person = useSamplePerson(own);
+  return <PhoneScreen person={person} shown={shown} {...opening} />;
 }
 
 // A few real screens drawn small, side by side, each stepping down and in

@@ -1,0 +1,582 @@
+---
+import siteIcon from "@pochical/prototype/assets/icon.png?url";
+import widgetWall from "@pochical/prototype/assets/widget-wall.png";
+import { site } from "@pochical/prototype/lib/brand";
+import { SITE_WALL } from "@pochical/prototype/lib/store-shots";
+import { css, cx } from "@pochical/styled-system/css";
+import { Picture } from "astro:assets";
+import { BellRing, CalendarSync, Palette, Repeat } from "lucide-react";
+
+import { Sky } from "../components/lp-screens";
+import {
+  ChatPhone,
+  EntryPhone,
+  FriendsPhone,
+} from "../components/next-screens";
+import ShotHeadline from "../components/shot-headline.astro";
+import StoreLinks from "../components/store-links.astro";
+import Site from "../layouts/site.astro";
+import { BEATS, rangeOf, SCENES } from "../lib/story";
+
+// A richer top page to set beside the present one (#806), kept out of
+// search and linked from nowhere: the stores' storyline told by one phone
+// that stays on screen while the page scrolls under it, its screen
+// changing with the scroll (lib/story.ts). Each part's words are the
+// headline of its picture in the stores, as on the top page.
+//
+// Where the browser has no scroll-driven animations, or less motion is
+// asked for, nothing here moves: the parts stand one under the other,
+// each with its screen as a still scene. Everything that moves is under
+// _moving, so the page's plain styles are that still page.
+
+// The site's muted gray, a step darker, as the top page has it over its
+// sky.
+const ON_SKY_TEXT = "#5c6159";
+
+// A piece that runs on the story's timeline, over the stretch of it its
+// `--from` and `--to` name (rangeOf): where the page is scrolled to is how
+// far along it is, forward and back.
+const onStory = {
+  animationFillMode: "both",
+  animationRange: "contain var(--from) contain var(--to)",
+  animationTimeline: "--story",
+  animationTimingFunction: "linear",
+} as const;
+
+const story = {
+  // The chat's phone goes up through its room as the lines arrive, down
+  // to its foot, where the newest are; the fade goes to its top with it.
+  followed: css({
+    _moving: { animationName: "storyFade", ...onStory },
+  }),
+  following: css({
+    _moving: { animationName: "storyFollow", ...onStory },
+    display: "flex",
+    justifyContent: "center",
+    width: "100%",
+  }),
+  // A part of the story: its words, then its screen. Still, one under the
+  // other; moving, the stage lays the two out, every part's in the same
+  // two places.
+  beat: css({
+    _moving: { display: "contents" },
+    alignItems: "center",
+    display: "flex",
+    flexDirection: "column",
+    gap: "36px",
+  }),
+  beats: css({
+    _moving: { display: "contents" },
+    _wide: { gap: "140px", padding: "24px 48px 140px" },
+    display: "flex",
+    flexDirection: "column",
+    gap: "96px",
+    padding: "40px 16px 96px",
+  }),
+  body: css({
+    "@media (max-width: 959px)": { _moving: { display: "none" } },
+    color: ON_SKY_TEXT,
+    fontSize: "14px",
+    letterSpacing: "0.035em",
+    lineHeight: 2.1,
+  }),
+  // A part's words. Moving, each part's take the same place in turn: over
+  // the phone on a narrow screen, beside it on a wide one.
+  copy: css({
+    _moving: {
+      _wide: {
+        alignSelf: "center",
+        gap: "18px",
+        paddingBottom: 0,
+        textAlign: "left",
+      },
+      alignSelf: "end",
+      gridArea: "1 / 1",
+      paddingBottom: "14px",
+      ...onStory,
+    },
+    display: "flex",
+    flexDirection: "column",
+    gap: "6px",
+    maxWidth: "460px",
+    textAlign: "center",
+  }),
+  // What the hero says under its line, on a screen with room for it.
+  heroMore: css({
+    "& .store-links": { _wide: { _moving: { justifyContent: "flex-start" } } },
+    "@media (max-width: 959px)": { _moving: { display: "none" } },
+    display: "flex",
+    flexDirection: "column",
+    gap: "24px",
+    marginTop: "12px",
+  }),
+  heroTitle: css({
+    _moving: { fontSize: "clamp(32px, 5.2vw, 60px)", lineHeight: 1.3 },
+    fontSize: "clamp(38px, 5.2vw, 60px)",
+    fontWeight: 700,
+    letterSpacing: "0.01em",
+    lineHeight: 1.4,
+  }),
+  label: css({
+    color: "var(--green)",
+    fontSize: "11px",
+    fontWeight: 650,
+    letterSpacing: "0.17em",
+  }),
+  // A phone at its own size: its lists measure themselves, which a
+  // scaled one would throw off. Moving, as much of it as the stage has
+  // room for, from its top, fading out where it is cut: the fade is at
+  // both ends of a mask one fade taller than the phone's room, laid so
+  // that the top one is off it.
+  cropped: css({
+    _moving: {
+      height: "var(--phone-room)",
+      maskImage:
+        "linear-gradient(to bottom, transparent, black var(--fade), black calc(100% - var(--fade)), transparent)",
+      maskPosition: "0 calc(-1 * var(--fade))",
+      maskRepeat: "no-repeat",
+      maskSize: "100% calc(100% + var(--fade))",
+      overflow: "hidden",
+    },
+    display: "flex",
+    flexShrink: 0,
+    justifyContent: "center",
+    width: "min(390px, 100%)",
+  }),
+  // The phone whole, its keys at its foot among what it shows: moving, at
+  // the size the stage has room for, scaled as a picture.
+  fitted: css({
+    _moving: {
+      height: "844px",
+      scale: "var(--fit)",
+      transformOrigin: "50% 0",
+      width: "390px",
+    },
+    display: "flex",
+    flexShrink: 0,
+    justifyContent: "center",
+    width: "min(390px, 100%)",
+  }),
+  // The tall section the story is scrolled through. Its own place in the
+  // window is the timeline everything on its stage runs on.
+  root: css({
+    _moving: { height: "720svh", viewTimelineName: "--story" },
+    position: "relative",
+  }),
+  // The sky behind the stage, turning toward evening as the story goes.
+  sky: css({
+    _moving: {
+      animationName: "storySky",
+      inset: 0,
+      pointerEvents: "none",
+      position: "absolute",
+      zIndex: -1,
+      ...onStory,
+      animationRange: "contain 0% contain 100%",
+    },
+    display: "contents",
+  }),
+  // The stage, which stays on screen while the story is scrolled: the
+  // words in one place and the phone in another, sized to the window. A
+  // length over a length has no unit only in newer browsers, so the
+  // phone's scale is the tangent of the angle whose sides they are.
+  stage: css({
+    _moving: {
+      "--copy-room": "136px",
+      // How much of a cut phone's foot fades: none of one shown whole.
+      "--fade": "clamp(0px, (844px - var(--phone-room)) * 1000, 96px)",
+      "--fit": "min(1, tan(atan2(var(--phone-room), 844px)))",
+      "--phone-room": "calc(100svh - var(--copy-room) - 20px)",
+      _wide: {
+        "--phone-room": "min(844px, 100svh - 64px)",
+        alignItems: "center",
+        columnGap: "96px",
+        gridTemplateColumns: "minmax(0, 460px) 390px",
+        gridTemplateRows: "100svh",
+        justifyContent: "center",
+        padding: "0 48px",
+      },
+      display: "grid",
+      gridTemplateColumns: "minmax(0, 1fr)",
+      gridTemplateRows: "var(--copy-room) var(--phone-room)",
+      height: "100svh",
+      justifyItems: "center",
+      // Across only: a phone waiting under the screen must still count
+      // as there for the browser to see it coming.
+      overflowX: "clip",
+      padding: "0 16px",
+      position: "sticky",
+      top: 0,
+    },
+  }),
+  title: css({
+    fontSize: "clamp(26px, 3vw, 34px)",
+    fontWeight: 700,
+    letterSpacing: "0.01em",
+    lineHeight: 1.4,
+  }),
+  // A part's screen. Moving, every part's stands in the same place.
+  visual: css({
+    _moving: {
+      _wide: { gridArea: "1 / 2" },
+      display: "flex",
+      gridArea: "2 / 1",
+      height: "var(--phone-room)",
+      justifyContent: "center",
+      width: "100%",
+      ...onStory,
+    },
+    display: "contents",
+  }),
+  // The real widgets on their wall, as the top page shows them, fading
+  // into the paper at every edge.
+  wall: css({
+    _moving: { height: "100%", objectFit: "cover" },
+    display: "block",
+    height: "auto",
+    maskImage:
+      "linear-gradient(to bottom, transparent, black 14%, black 86%, transparent)",
+    width: "100%",
+  }),
+  wallFrame: css({
+    _moving: { height: "min(600px, 100%)", width: "auto" },
+    aspectRatio: `${SITE_WALL.width} / ${SITE_WALL.height}`,
+    flexShrink: 0,
+    maskImage:
+      "linear-gradient(to right, transparent, black 10%, black 90%, transparent)",
+    width: "min(390px, 100%)",
+  }),
+};
+
+// How each piece moves (panda.config.ts, storyKeyframes).
+const moving = {
+  // A phone not come to yet waits under the screen, then is there.
+  arrives: css({
+    _moving: {
+      animationName: "storyWait, storyTake",
+      animationTimingFunction: "step-end, linear",
+    },
+  }),
+  leave: css({ _moving: { animationName: "storyLeave" } }),
+  rises: css({
+    _moving: {
+      animationName: "storyWait, storyPhone",
+      animationTimingFunction: "step-end, linear",
+    },
+  }),
+  shrink: css({ _moving: { animationName: "storyShrink" } }),
+  stay: css({ _moving: { animationName: "storyArrive" } }),
+  wall: css({ _moving: { animationName: "storyWall" } }),
+  words: css({ _moving: { animationName: "storyWords" } }),
+};
+
+// A stretch of the story for a piece's two animations: waiting until
+// `near`, then moving over `stretch`.
+const waitingUntil = (near: number, stretch: { from: number; to: number }) => ({
+  animationRange: `contain 0% contain ${(near * 100).toFixed(1)}%, contain ${(stretch.from * 100).toFixed(1)}% contain ${(stretch.to * 100).toFixed(1)}%`,
+});
+
+// How long a piece takes to give way to the next, in the story's place.
+const TURN = 0.05;
+
+// While the chat's phone goes up to its foot: as its third line and the
+// vote arrive.
+const FOLLOW = {
+  from: SCENES.chat.from + (SCENES.chat.to - SCENES.chat.from) * 0.25,
+  to: SCENES.chat.from + (SCENES.chat.to - SCENES.chat.from) * 0.55,
+};
+
+// The wall's width on the page: half its picture's, drawn for dense
+// screens.
+const WALL_SHOWN = SITE_WALL.width / 2;
+
+// The rest of what the stores say, after the story: a line each.
+const rest = [
+  {
+    Icon: Palette,
+    body: "テーマは12種類。印は、アイコン・絵文字・文字から選べます。",
+    shot: "themes",
+  },
+  {
+    Icon: CalendarSync,
+    body: "変えたシフトが、端末のカレンダーの予定にも入ります。",
+    shot: "device-calendar",
+  },
+  {
+    Icon: Repeat,
+    body: "決まった並びは繰り返しで。15日始まりの勤務表や、早出・残業にも。",
+    shot: "details",
+  },
+  {
+    Icon: BellRing,
+    body: "夜勤の次の日は明けに。前の晩には、明日のシフトが届きます。",
+    shot: "cares",
+  },
+] as const;
+
+// A card rising into place as it comes onto the screen.
+const reveal = {
+  _moving: {
+    animationFillMode: "both",
+    animationName: "storyArrive",
+    animationRange: "entry 0% entry 90%",
+    animationTimeline: "view()",
+    animationTimingFunction: "linear",
+  },
+} as const;
+
+const more = {
+  body: css({ color: "var(--muted)", fontSize: "13px", lineHeight: 1.9 }),
+  icon: css({
+    alignItems: "center",
+    bg: "var(--soft-green)",
+    borderRadius: "full",
+    color: "var(--green)",
+    display: "flex",
+    flexShrink: 0,
+    height: "40px",
+    justifyContent: "center",
+    width: "40px",
+  }),
+  item: css({
+    ...reveal,
+    alignItems: "flex-start",
+    display: "flex",
+    gap: "16px",
+  }),
+  list: css({
+    _wide: {
+      gap: "48px 56px",
+      gridTemplateColumns: "repeat(2, 1fr)",
+      padding: "80px 48px 40px",
+    },
+    display: "grid",
+    gap: "32px",
+    listStyle: "none",
+    margin: "0 auto",
+    maxWidth: "880px",
+    padding: "64px 16px 24px",
+  }),
+  title: css({
+    fontSize: "18px",
+    fontWeight: 700,
+    letterSpacing: "0.02em",
+    lineHeight: 1.6,
+    marginBottom: "4px",
+  }),
+};
+
+const closing = {
+  content: css({
+    ...reveal,
+    alignItems: "center",
+    display: "flex",
+    flexDirection: "column",
+    gap: "24px",
+  }),
+  icon: css({ borderRadius: "14px" }),
+  root: css({
+    _wide: { padding: "120px 48px 160px" },
+    display: "flex",
+    justifyContent: "center",
+    padding: "96px 16px 120px",
+    textAlign: "center",
+  }),
+  title: css({
+    fontSize: "clamp(26px, 3vw, 34px)",
+    fontWeight: 700,
+    letterSpacing: "0.01em",
+    lineHeight: 1.5,
+  }),
+};
+---
+
+<Site
+  description={site.description}
+  path="/next"
+  privatePage
+  title="シフトを、ポチッと。"
+>
+  <main id="main">
+    <div class={story.root} data-story>
+      <div class={story.stage}>
+        <div class={story.sky}>
+          <Sky client:idle place="top" />
+        </div>
+        <div class={story.beats}>
+          <section class={story.beat}>
+            <div
+              class={cx(story.copy, moving.leave)}
+              style={rangeOf(BEATS.hero)}
+            >
+              <p class={story.label}>シフトカレンダー</p>
+              <h1 class={story.heroTitle}>
+                シフトを、
+                <br />
+                ポチッと。
+              </h1>
+              <div class={story.heroMore}>
+                <p class={story.body}>
+                  夜勤や交代勤務のシフトも、
+                  <br />
+                  ポチポチ押していくだけ。
+                  <br />
+                  ひと月ぶんが、すぐ入ります。
+                </p>
+                <StoreLinks />
+              </div>
+            </div>
+          </section>
+          <section class={story.beat}>
+            <div
+              class={cx(story.copy, moving.words)}
+              style={rangeOf(BEATS.entry)}
+            >
+              <p class={story.label}>ENTRY</p>
+              <ShotHeadline class={story.title} shot="entry" />
+              <p class={story.body}>
+                シフトのボタンを押すと、その日に入って次の日へ。
+                <br />
+                夜勤を入れると、次の日の明けも一緒に入ります。
+              </p>
+            </div>
+            {/* The hero's phone too: there from the start, until the
+               widgets take its place. */}
+            <div
+              class={cx(story.visual, moving.shrink)}
+              style={rangeOf({
+                from: BEATS.widgets.from,
+                to: BEATS.widgets.from + TURN,
+              })}
+            >
+              <div class={story.fitted}>
+                <EntryPhone client:idle />
+              </div>
+            </div>
+          </section>
+          <section class={story.beat}>
+            <div
+              class={cx(story.copy, moving.words)}
+              style={rangeOf(BEATS.widgets)}
+            >
+              <p class={story.label}>WIDGET</p>
+              <ShotHeadline class={story.title} shot="widgets" />
+              <p class={story.body}>
+                次の休みも、今日のシフトも、アプリを開かずに。
+                <br />
+                ひと月のカレンダーも、ホーム画面に置けます。
+              </p>
+            </div>
+            <div
+              class={cx(story.visual, moving.wall)}
+              style={rangeOf({
+                from: BEATS.widgets.from,
+                to: BEATS.friends.from + TURN / 2,
+              })}
+            >
+              <div class={story.wallFrame}>
+                <Picture
+                  alt="ポチカルのウィジェット。次の休みまでの日数、今日のシフト、いまのシフトの残り時間が並ぶ。"
+                  class={story.wall}
+                  formats={["avif", "webp"]}
+                  sizes={`min(${WALL_SHOWN}px, 100vw - 32px)`}
+                  src={widgetWall}
+                  widths={[WALL_SHOWN, SITE_WALL.width]}
+                />
+              </div>
+            </div>
+          </section>
+          <section class={story.beat}>
+            <div
+              class={cx(story.copy, moving.words)}
+              style={rangeOf(BEATS.friends)}
+            >
+              <p class={story.label}>SHARE</p>
+              <ShotHeadline class={story.title} shot="group-shifts" />
+              <p class={story.body}>
+                みんなのシフトが、ひとつの表に並びます。
+                <br />
+                みんなが休みの日も、すぐ見つかります。
+              </p>
+            </div>
+            {/* Near once the widgets are on, a part ahead of its own. */}
+            <div
+              class={cx(story.visual, moving.rises)}
+              style={waitingUntil(BEATS.widgets.from + TURN, {
+                from: BEATS.friends.from - TURN / 2,
+                to: BEATS.chat.from + TURN / 2,
+              })}
+            >
+              <div class={story.cropped}>
+                <FriendsPhone client:visible />
+              </div>
+            </div>
+          </section>
+          <section class={story.beat}>
+            <div
+              class={cx(story.copy, moving.stay)}
+              style={rangeOf({
+                from: BEATS.chat.from,
+                to: BEATS.chat.from + TURN,
+              })}
+            >
+              <p class={story.label}>CHAT</p>
+              <ShotHeadline class={story.title} shot="chat" />
+              <p class={story.body}>
+                連絡先を交換していない人にも、グループのチャットで。
+                <br />
+                休みが合う日も、行ける日を押すだけで決まります。
+              </p>
+            </div>
+            <div
+              class={cx(story.visual, moving.arrives)}
+              style={waitingUntil(BEATS.widgets.from + TURN * 2, {
+                from: BEATS.chat.from - TURN / 2,
+                to: BEATS.chat.from + TURN / 2,
+              })}
+            >
+              <div
+                class={cx(story.cropped, story.followed)}
+                style={rangeOf(FOLLOW)}
+              >
+                <div class={story.following} style={rangeOf(FOLLOW)}>
+                  <ChatPhone client:visible />
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+    <ul aria-label="ほかにも" class={more.list}>
+      {rest.map(({ Icon, body, shot }) => (
+        <li class={more.item}>
+          <span class={more.icon}>
+            <Icon aria-hidden="true" size={20} />
+          </span>
+          <div>
+            <ShotHeadline class={more.title} shot={shot} />
+            <p class={more.body}>{body}</p>
+          </div>
+        </li>
+      ))}
+    </ul>
+    <section aria-labelledby="closing-title" class={closing.root}>
+      <div class={closing.content}>
+        <img
+          alt=""
+          class={closing.icon}
+          height="64"
+          src={siteIcon}
+          width="64"
+        />
+        <h2 class={closing.title} id="closing-title">
+          今月のシフトから、
+          <br />
+          ポチッと。
+        </h2>
+        <StoreLinks />
+      </div>
+    </section>
+  </main>
+</Site>
