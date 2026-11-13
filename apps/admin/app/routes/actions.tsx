@@ -19,6 +19,8 @@ import type { Route } from "./+types/actions";
 // when, what, and to whom (spec/admin.md, 記録).
 export const loader = async () => await env.SERVER.actions();
 
+// `reset` is no longer done (the page that erased everything before
+// release is gone, #801); the rows noted of it are kept and still named.
 const ACTION_NAMES: Record<string, string> = {
   answer: "返信",
   cleanBucket: "棚卸しの削除",

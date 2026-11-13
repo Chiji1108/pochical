@@ -10,5 +10,4 @@ export default [
   route("users/:userId", "routes/user.tsx"),
   route("actions", "routes/actions.tsx"),
   route("bucket", "routes/bucket.tsx"),
-  route("reset", "routes/reset.tsx"),
 ] satisfies RouteConfig;
