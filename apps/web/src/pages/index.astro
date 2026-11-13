@@ -292,7 +292,11 @@ const story = {
       // picture of it is drawn on the screen's own pixels however often
       // it is drawn again.
       "--fit": "var(--fit-free)",
-      "--fit-free": "min(1, tan(atan2(var(--phone-room), 844px)))",
+      // The most of the phone the stage has room for: by its height, and
+      // by its width between the stage's sides, a tall narrow window
+      // having less of that than of height.
+      "--fit-free":
+        "min(1, tan(atan2(var(--phone-room), 844px)), tan(atan2(100vw - 32px, 390px)))",
       "--phone-room": "calc(100svh - var(--copy-room) - 12px)",
       // On any other screen, at the largest size that fits whose width is
       // a whole even number of the page's pixels: the frame's sides are
