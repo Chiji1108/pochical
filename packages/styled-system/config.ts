@@ -66,6 +66,24 @@ export const config = defineConfig({
       // Where the top page sets its words and phones side by side, as
       // _wide: a condition, so its styles are typed like Panda's own.
       wide: "@media (min-width: 960px)",
+      // Where a page may move with its scroll, as _moving: a browser with
+      // scroll-driven animations, asked for no less motion. Everywhere
+      // else such a page stands still (the site's top page).
+      moving: {
+        "@supports (animation-timeline: view())": {
+          "@media (prefers-reduced-motion: no-preference)": "@slot",
+        },
+      },
+      // In a phone whose screen such a page changes itself, a step at a
+      // time (marked `data-told`), as _told: what a step brings comes in
+      // over a moment there (the prototype's design-told.ts).
+      told: {
+        "@supports (animation-timeline: view())": {
+          "@media (prefers-reduced-motion: no-preference)": {
+            "[data-told] &": "@slot",
+          },
+        },
+      },
     },
   },
   // The catalog's pages (marked .design-page), and the phone wherever it is

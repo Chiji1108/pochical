@@ -62,10 +62,17 @@ import { useWeek, weekdayNames } from "./design-week";
 import { FoldingGrid, useWeekFold } from "./design-week-fold";
 import { OffFaintContext, useOffLooks } from "./shift-mark";
 
+// Entering as a page tells it rather than as a person does it: the day
+// being entered and the key going down on it, both set from outside, as
+// the site's top page sets them by how far it is scrolled. The days
+// themselves are the person's, as ever.
+export type Entering = { date: Date; pressed?: Shift };
+
 // The calendar tab: the month, or a week folded out of it with a day's
 // details, its summary, and entering the shifts day by day. It stays put
 // while another tab is shown, as a tab keeps its place.
 export function DesignCalendar({
+  entering,
   initialEditing,
   initialDay,
   initialDetail,
@@ -80,6 +87,8 @@ export function DesignCalendar({
 }: {
   // How 端末カレンダーに追加 goes, as the demo picks.
   calendarAccess?: CalendarAccess;
+  // Entering told from outside; without it, the person's own.
+  entering?: Entering;
   initialEditing: boolean;
   initialDay: number;
   initialDetail?: Date;
@@ -201,6 +210,7 @@ export function DesignCalendar({
     start: startEntering,
     stop: stopEntering,
   } = useShiftEntry({
+    entering,
     initialDay,
     initialEditing,
     month,
@@ -553,6 +563,7 @@ export function DesignCalendar({
               onEnter={enterShift}
               onSkip={skip}
               patternKeys={patternKeys}
+              pressed={entering?.pressed}
               selectedShift={selectedShift}
             />
           </div>
@@ -631,6 +642,7 @@ export function DesignCalendar({
 // always one of the page's own, and what a screen reader hears as each day
 // is entered.
 function useShiftEntry({
+  entering,
   initialEditing,
   initialDay,
   month,
@@ -639,6 +651,7 @@ function useShiftEntry({
   onChange,
   turnTo,
 }: {
+  entering?: Entering;
   initialEditing: boolean;
   initialDay: number;
   month: Date;
@@ -652,10 +665,13 @@ function useShiftEntry({
 }) {
   const book = usePatterns();
   const pages = usePages();
-  const [editing, setEditing] = useState(initialEditing);
-  const [selectedDate, setSelectedDate] = useState(
+  const [ownEditing, setEditing] = useState(initialEditing);
+  const [ownDate, setSelectedDate] = useState(
     () => new Date(month.getFullYear(), month.getMonth(), initialDay)
   );
+  // Told from outside, entering is on, at the day it names.
+  const editing = entering !== undefined || ownEditing;
+  const selectedDate = entering?.date ?? ownDate;
   const [announcement, setAnnouncement] = useState("");
   const selectedShift = schedule[dateKey(selectedDate)]?.shift;
   function moveToNextDay(result: string, days = 1) {

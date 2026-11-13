@@ -4,6 +4,7 @@ import {
   useEffect,
   useEffectEvent,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -38,7 +39,7 @@ import {
   TodayCorner,
   useTurn,
 } from "./design-rolling";
-import { useWeek, weekLength } from "./design-week";
+import { useWeek, weekDatesFrom, weekLength } from "./design-week";
 
 // The shift table's months as one list that scrolls on, by day or by
 // week, drawing only the rows in sight, with the month in sight named
@@ -49,16 +50,15 @@ function pixels(length: string) {
   return Number(length.replace("px", "")) || 0;
 }
 
-// Where the rows pinned at the top of the scroll end, once pinned.
-function pinnedBottom(root: HTMLElement) {
-  const { top } = root.getBoundingClientRect();
+// How far under the scroll's top the rows pinned there end, once pinned.
+function pinnedUnder(root: HTMLElement) {
   const padding = pixels(getComputedStyle(root).paddingTop);
-  let bottom = top;
+  let under = 0;
   for (const pinned of root.querySelectorAll<HTMLElement>("[data-pinned]")) {
     const offset = pixels(getComputedStyle(pinned).top);
-    bottom = Math.max(bottom, top + padding + offset + pinned.offsetHeight);
+    under = Math.max(under, padding + offset + pinned.offsetHeight);
   }
-  return bottom;
+  return under;
 }
 
 // How many months either side of today the list of months holds, as the
@@ -90,12 +90,14 @@ type MonthListRow =
   | { kind: "heading"; key: string; month: Date; together: Together }
   | { kind: "days"; key: string; month: Date; days: Date[] };
 
+const idsOf = (members: Member[]) => members.map(({ id }) => id).join(" ");
+
 // Every month of the span under its heading. A week belongs to the month
 // it ends in, so a month's heading comes before the week of its 1st.
 function monthListRows(
   layout: Layout,
   members: Member[],
-  weekDates: (date: Date) => Date[]
+  weekStart: number
 ): MonthListRow[] {
   const rows: MonthListRow[] = [];
   for (let offset = -monthSpan; offset <= monthSpan; offset += 1) {
@@ -112,12 +114,13 @@ function monthListRows(
       }
       continue;
     }
-    let week = weekDates(month);
+    let week = weekDatesFrom(month, weekStart);
     while (sameMonth(week[weekLength - 1], month)) {
       rows.push({ days: week, key: dateKey(week[0]), kind: "days", month });
       const end = week[weekLength - 1];
-      week = weekDates(
-        new Date(end.getFullYear(), end.getMonth(), end.getDate() + 1)
+      week = weekDatesFrom(
+        new Date(end.getFullYear(), end.getMonth(), end.getDate() + 1),
+        weekStart
       );
     }
   }
@@ -155,8 +158,18 @@ export function ScrollingShifts({
   const barRef = useRef<HTMLDivElement>(null);
   // Where the rows start: the list's first element.
   const listRef = useRef<HTMLElement>(null);
-  const [rows] = useState(() =>
-    monthListRows(layout, group.members, weekTools.weekDates)
+  // Worked out again when who is in the group changes, as each month's
+  // days off together do: the group hands a new list of the same members
+  // each time it is drawn, so the one kept is the one their ids last
+  // changed with.
+  const { weekStart } = weekTools;
+  const [members, setMembers] = useState(group.members);
+  if (idsOf(members) !== idsOf(group.members)) {
+    setMembers(group.members);
+  }
+  const rows = useMemo(
+    () => monthListRows(layout, members, weekStart),
+    [layout, members, weekStart]
   );
   const [scrollElement, setScrollElement] = useState<HTMLElement | null>(null);
   // Where the list starts in the scroll, and how much is pinned over it.
@@ -219,12 +232,17 @@ export function ScrollingShifts({
     }
     const place = () => {
       body.style.setProperty("--pinned-top", `${bar.offsetHeight - 8}px`);
-      const { top } = scrollElement.getBoundingClientRect();
-      const margin =
-        (listRef.current?.getBoundingClientRect().top ?? top) -
-        top +
-        scrollElement.scrollTop;
-      const pinned = pinnedBottom(scrollElement) - top;
+      // Where things are on the page is in the page's pixels, and the
+      // scroll in the phone's own: a phone drawn smaller than it is laid
+      // out, as a page may zoom it, has fewer of the first to each of the
+      // second.
+      const { height, top } = scrollElement.getBoundingClientRect();
+      const drawn = height / scrollElement.offsetHeight || 1;
+      const margin = Math.round(
+        ((listRef.current?.getBoundingClientRect().top ?? top) - top) / drawn +
+          scrollElement.scrollTop
+      );
+      const pinned = pinnedUnder(scrollElement);
       setOffsets((previous) =>
         previous.margin === margin && previous.pinned === pinned
           ? previous

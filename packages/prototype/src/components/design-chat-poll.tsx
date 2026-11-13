@@ -10,6 +10,7 @@ import { PeopleList, PhonePopover } from "./design-chat-popover";
 import { ChoiceList, ChoiceRow } from "./design-choices";
 import { Avatar, smallWeekday, toneColor } from "./design-group-parts";
 import { DecideHeading, Sheet } from "./design-sheet";
+import { told } from "./design-told";
 import { useWeek } from "./design-week";
 
 // Days put to the vote in a group chat (spec/chat.md, Polls): the card
@@ -63,26 +64,34 @@ const pollCard = {
       passed: { true: { opacity: 0.45 } },
     },
   }),
+  // 60px wide, so the faces start in one line down the rows; in a card
+  // too narrow for a row's faces, their count and the button, as narrow
+  // as its own words, rather than the count running under the button.
   date: css({
     display: "flex",
+    flex: "0 1 60px",
     flexDirection: "column",
-    flexShrink: 0,
     fontSize: "13px",
     fontWeight: 600,
-    width: "60px",
+    minWidth: "min-content",
+    whiteSpace: "nowrap",
   }),
   together: css({ color: "accent.default", fontSize: "10px", fontWeight: 600 }),
   // The faces are a button, for the list of everyone who can come.
   faces: css({
     // The faces ringed apart; the count beside them is words, not ringed.
-    "& > span": { boxShadow: "0 0 0 1.5px token(colors.background.card)" },
+    "& > span > span": {
+      boxShadow: "0 0 0 1.5px token(colors.background.card)",
+    },
+    "& > span": { display: "flex" },
     "& > * + *": { marginInlineStart: "-4px" },
     alignItems: "center",
     bg: "transparent",
     border: 0,
     display: "flex",
-    flex: 1,
-    minWidth: 0,
+    // As wide as its faces and their count at least, so a narrow card
+    // takes the room from the date beside them.
+    flex: "1 0 auto",
     padding: 0,
   }),
   votersTitle: css({
@@ -162,7 +171,9 @@ function Voters({ day, people }: { day: Date; people: Member[] }) {
           type="button"
         >
           {faces.map((person) => (
-            <Avatar key={person.id} member={person} size={22} />
+            <span className={told.pop} key={person.id}>
+              <Avatar member={person} size={22} />
+            </span>
           ))}
           <small className={pollCard.count}>
             {people.length > faces.length

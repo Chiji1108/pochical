@@ -28,9 +28,12 @@ export const STORE_SCENE = {
       meal: "今度のごはん会、みんなの休みが合う日で決めませんか？",
     },
   },
-  // Friends from school, each at a workplace of their own.
+  // Friends from school, each at a workplace of their own, and how the
+  // person photographed is among them: by her first name, a drawing for
+  // her face.
   friends: {
     emoji: "🎓",
+    me: { name: "まい", photo: "chick" },
     name: "学生時代の友だち",
     people: [
       { name: "あや", photo: "rabbit" },
@@ -42,6 +45,7 @@ export const STORE_SCENE = {
   string,
   {
     emoji: string;
+    me?: Person;
     name: string;
     people: readonly Person[];
     says?: Record<string, string>;

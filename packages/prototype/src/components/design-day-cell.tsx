@@ -15,6 +15,7 @@ import { isDayOff, presetPatterns, usePatterns } from "../lib/design-patterns";
 import type { Pattern, Shift } from "../lib/design-patterns";
 import { designToday } from "../lib/design-today";
 import { dayName } from "../lib/text-limits";
+import { told } from "./design-told";
 import { holidayName, useWeek } from "./design-week";
 import {
   CellNamesContext,
@@ -170,6 +171,7 @@ function CellShift({
       <span
         className={cx(
           dayParts.mark,
+          told.pop,
           !withName && dayParts.markAlone,
           faint && dayParts.markFaint
         )}

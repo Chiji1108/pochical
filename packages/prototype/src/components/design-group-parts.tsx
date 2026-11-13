@@ -1,7 +1,7 @@
 import { markIconGlyphs } from "@pochical/design/mark-icons";
 import { css, cva } from "@pochical/styled-system/css";
 import { Camera, ImageIcon, RotateCcw, Smile, Trash } from "lucide-react";
-import { useContext, useId, useState } from "react";
+import { useContext, useEffect, useId, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 import { changeOn, patternOn } from "../lib/design-group-data";
@@ -458,7 +458,9 @@ export function Avatar({ member, size }: { member: Member; size?: number }) {
   );
 }
 
-// A round picture, or the first letter of the name without one.
+// A round picture, or the first letter of the name without one, or with
+// one that does not load: a picture is drawn only once it is known to be
+// there, so no page shows a broken one.
 export function PhotoAvatar({
   name,
   photo,
@@ -470,20 +472,53 @@ export function PhotoAvatar({
   me?: boolean;
   size?: number;
 }) {
+  // The picture that failed to load, if this one did.
+  const [failed, setFailed] = useState<string>();
+  const shown = photo === failed ? undefined : photo;
+  // One that failed before this code was in, on a page drawn by the
+  // build, says so when asked to decode: its size does not, a drawing
+  // without one of its own being 0 wide in some browsers though it is
+  // there.
+  const image = useRef<HTMLImageElement>(null);
+  useEffect(() => {
+    const loaded = image.current;
+    if (!loaded?.complete || shown === undefined) {
+      return;
+    }
+    let asked = true;
+    loaded.decode().catch(() => {
+      if (asked) {
+        setFailed(shown);
+      }
+    });
+    return () => {
+      asked = false;
+    };
+  }, [shown]);
   return (
     <span
       aria-hidden="true"
       className={avatar({ me })}
       // Marks a letter drawn for someone else, for places that ink it.
-      data-letter={photo || me ? undefined : ""}
+      data-letter={shown || me ? undefined : ""}
       style={{
         fontSize: Math.max(minLetterSize, Math.round(size * 0.45)),
         height: size,
         width: size,
       }}
     >
-      {photo ? (
-        <img alt="" height={size} loading="lazy" src={photo} width={size} />
+      {shown ? (
+        <img
+          alt=""
+          height={size}
+          loading="lazy"
+          onError={() => {
+            setFailed(shown);
+          }}
+          ref={image}
+          src={shown}
+          width={size}
+        />
       ) : (
         firstCharacter(name)
       )}

@@ -332,6 +332,12 @@ const fromSchool = STORE_SCENE.friends;
 export const oldFriendsGroup: GroupSummary = {
   id: "old-friends",
   mark: { emoji: fromSchool.emoji, kind: "emoji" },
+  // As the stores' picture has her there: the scene's name and drawing,
+  // which need no other site to be reached, as a sample photo does.
+  mine: {
+    name: fromSchool.me.name,
+    photo: drawingOf(fromSchool.me.photo),
+  },
   name: fromSchool.name,
 };
 

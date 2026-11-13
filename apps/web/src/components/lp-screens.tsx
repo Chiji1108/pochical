@@ -1,65 +1,56 @@
-import { rotationTemplates } from "@pochical/design/patterns";
 import { themeSkyId } from "@pochical/design/skies";
 import { DesignApp } from "@pochical/prototype/components/design-app";
-import {
-  DesignProviders,
-  PresetContexts,
-} from "@pochical/prototype/components/design-providers";
-import { SheetPicturesContext } from "@pochical/prototype/components/design-sheet";
+import type { Entering } from "@pochical/prototype/components/design-calendar";
+import { DesignProviders } from "@pochical/prototype/components/design-providers";
 import {
   nextSkyId,
   paleSkyFromTop,
   paleSkyLights,
   SkyLight,
 } from "@pochical/prototype/components/design-surprise";
-import { ColorSchemeContext } from "@pochical/prototype/components/design-theme";
-import type { PresetId } from "@pochical/prototype/components/design-theme";
-import {
-  CellNamesContext,
-  IconWeightContext,
-  MonochromeContext,
-  noOffLooks,
-  OffLooksContext,
-  ShiftMarkStyleContext,
-} from "@pochical/prototype/components/shift-mark";
-import type {
-  OffLooks,
-  ShiftMarkStyle,
-} from "@pochical/prototype/components/shift-mark";
 import {
   dateKey,
+  daysMovedOn,
   daysOfMonth,
   initialDesignSchedule,
+  withShiftEntered,
 } from "@pochical/prototype/lib/design-days";
-import { calendarAlone } from "@pochical/prototype/lib/design-features";
+import type { Schedule } from "@pochical/prototype/lib/design-days";
+import { chatKey, groupChat } from "@pochical/prototype/lib/design-group-data";
+import type { Chat } from "@pochical/prototype/lib/design-group-data";
 import {
   oldFriendsGroup,
+  sampleChats,
+  sampleOthers,
   workplaceGroup,
 } from "@pochical/prototype/lib/design-group-samples";
-import { presetList } from "@pochical/prototype/lib/design-patterns";
+import { presetPatterns } from "@pochical/prototype/lib/design-patterns";
 import { useSamplePerson } from "@pochical/prototype/lib/design-sample-person";
 import { designMonth } from "@pochical/prototype/lib/design-today";
-import {
-  UserStoreContext,
-  useShownDays,
-} from "@pochical/prototype/lib/design-user-store";
+import { UserStoreContext } from "@pochical/prototype/lib/design-user-store";
+import type { UserStore } from "@pochical/prototype/lib/design-user-store";
 import { parseDesignVariants } from "@pochical/prototype/lib/design-variants";
-import { useReducedMotion } from "@pochical/prototype/lib/device-media";
 import { css, cva } from "@pochical/styled-system/css";
-import { ArrowUpRight, Smartphone } from "lucide-react";
-import { AnimatePresence, MotionConfig, motion } from "motion/react";
-import { useState, useSyncExternalStore } from "react";
+import { AnimatePresence, MotionConfig } from "motion/react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import type { ComponentProps, ReactNode } from "react";
 
-import { pressesOf, subscribe } from "../lib/presses";
+import { pressesOf, subscribe as onPress } from "../lib/presses";
 import type { SkyPlace } from "../lib/presses";
-import type { PrimaryAction } from "../lib/primary-action";
+import {
+  BEATS,
+  moves,
+  placeNow,
+  SCENES,
+  stepOf,
+  subscribe as onPlace,
+} from "../lib/story";
 
-// The top page's pieces drawn by the app's own code: its sky, the hero's
-// phone and the features' screens, each an island of pages/index.astro.
-// The build draws them into the page, which shows that drawing until
-// their code arrives; the page's words never wait for it. Movement
-// follows the device's 視差効果を減らす setting.
+// The top page's pieces drawn by the app's own code: its sky, and the
+// phones of its story (pages/index.astro), each an island. The build draws
+// them into the page, which shows that drawing until their code arrives;
+// the page's words never wait for it. Movement follows the device's
+// 視差効果を減らす setting.
 function Motion({ children }: { children: ReactNode }) {
   return <MotionConfig reducedMotion="user">{children}</MotionConfig>;
 }
@@ -96,10 +87,11 @@ const sky = {
     },
     variants: {
       place: {
-        // At the page's top, under the header too: nothing above it is
-        // positioned, so it sits on the page's own ground. It rises from
-        // the paper at the very top, where Safari's bar keeps the paper's
-        // color, and fades back into it before the phone below.
+        // At the top of what holds it: the story's stage where the page
+        // moves, which stays on screen, so the sky stays behind the story;
+        // the page itself where it stands still, under the header too. It
+        // rises from the paper at the very top, where Safari's bar keeps
+        // the paper's color, and fades back into it lower down.
         top: {
           height: "min(860px, 100svh)",
           inset: "0 0 auto",
@@ -132,7 +124,7 @@ export function Sky({
   bare?: boolean;
 }) {
   const presses = useSyncExternalStore(
-    subscribe,
+    onPress,
     () => pressesOf(place),
     () => 0
   );
@@ -167,258 +159,27 @@ export function Sky({
   );
 }
 
-// The hero's month is entered up to the 19th: its first weeks show the
-// look, and its last two are left to fill in, from the 20th.
-const HERO_FIRST_BLANK = 20;
-const heroSchedule = Object.fromEntries(
-  Object.entries(initialDesignSchedule()).filter(
-    ([key]) => Number(key.slice(-2)) < HERO_FIRST_BLANK
-  )
-);
-
-// The app itself, the same one apps/try runs, to tap right on the page:
-// its calendar alone, so picking and entering shifts is all there is to
-// do, and nothing asks the way a phone's system would. Under it, how to
-// use it, and once the month is filled, the page's one action.
-export function HeroPhone({ action }: { action: PrimaryAction }) {
-  const person = useSamplePerson({ schedule: heroSchedule });
-  return (
-    <Motion>
-      <DesignProviders fresh>
-        <UserStoreContext value={person}>
-          <div className={hero.phone}>
-            <DesignApp
-              features={calendarAlone}
-              initialDay={HERO_FIRST_BLANK}
-              initialEditing
-              variants={variants}
-            />
-          </div>
-          <HeroFoot action={action} />
-        </UserStoreContext>
-      </DesignProviders>
-    </Motion>
-  );
-}
-
-// The phone with its foot under it. Wide, the hero is a grid
-// (pages/index.astro): the phone on the right, and the foot on the left
-// under the words.
-const hero = {
-  action: css({
-    _hover: { bg: "var(--green)" },
-    alignItems: "center",
-    bg: "var(--ink)",
-    borderRadius: "12px",
-    color: "white",
-    display: "inline-flex",
-    fontSize: "15px",
-    fontWeight: 700,
-    gap: "10px",
-    letterSpacing: "0.04em",
-    padding: "14px 22px",
-  }),
-  done: css({
-    _wide: { alignItems: "flex-start" },
-    alignItems: "center",
-    display: "flex",
-    flexDirection: "column",
-    gap: "14px",
-  }),
-  hint: css({ color: "var(--muted)", fontSize: "12px", lineHeight: 1.9 }),
-  lead: css({
-    fontSize: "14px",
-    fontWeight: 650,
-    letterSpacing: "0.035em",
-  }),
-  phone: css({ _wide: { gridColumn: 2, gridRow: "1 / span 2" } }),
-  root: css({
-    _wide: { gridColumn: 1, gridRow: 2, textAlign: "left" },
-    textAlign: "center",
-  }),
-};
-
-// The month the hero opens on, filled when none of its days is blank:
-// each entered, or the blanks before the last one entered filled by the
-// sheet at 完了. Once filled it stays so, a day cleared after that taking
-// nothing back.
-function HeroFoot({ action }: { action: PrimaryAction }) {
-  const schedule = useShownDays(designMonth);
-  const filled = daysOfMonth(designMonth).every(
-    (date) => schedule[dateKey(date)] !== undefined
-  );
-  const [done, setDone] = useState(false);
-  if (filled && !done) {
-    setDone(true);
-  }
-  const still = useReducedMotion();
-  return (
-    <div aria-live="polite" className={hero.root}>
-      <AnimatePresence initial={false} mode="wait">
-        {done ? (
-          <motion.div
-            animate={{ opacity: 1, y: 0 }}
-            className={hero.done}
-            initial={{ opacity: 0, y: still ? 0 : 8 }}
-            key="done"
-            transition={{ duration: 0.3, ease: "easeOut" }}
-          >
-            <p className={hero.lead}>ひと月ぶん、埋まりました。</p>
-            <a
-              className={hero.action}
-              href={action.href}
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              <Smartphone aria-hidden="true" size={20} />
-              {action.label}
-              <ArrowUpRight aria-hidden="true" size={16} />
-            </a>
-          </motion.div>
-        ) : (
-          <motion.p
-            className={hero.hint}
-            exit={{ opacity: 0 }}
-            key="hint"
-            transition={{ duration: 0.2 }}
-          >
-            そのまま触れます。シフトをポチッと押してみてください。
-            <br />
-            左右にスワイプすると、月が変わります。
-          </motion.p>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-// How much of a feature's phone shows.
-const SCREEN_SHOWN = 600;
-
-// The phone at the hero's size, only part of it shown, fading out: a
-// scaled one would throw off the lists that measure themselves. Its top,
-// or its foot where the screen's point is the sheet at the bottom; or all
-// of it, where the point runs from its heading to its foot.
-const screenStyle = cva({
-  base: {
-    display: "flex",
-    flexShrink: 0,
-    pointerEvents: "none",
-    width: "min(390px, 100%)",
-  },
-  variants: {
-    shown: {
-      foot: {
-        alignItems: "flex-end",
-        height: `${SCREEN_SHOWN}px`,
-        maskImage: "linear-gradient(to top, black 70%, transparent)",
-        overflow: "hidden",
-      },
-      top: {
-        alignItems: "flex-start",
-        height: `${SCREEN_SHOWN}px`,
-        maskImage: "linear-gradient(to bottom, black 70%, transparent)",
-        overflow: "hidden",
-      },
-      whole: {},
-    },
-  },
+// A screen of someone's app in its phone, to look at and not to touch:
+// how it opens, and whatever else the story sets. Its screen is changed
+// by the page a step at a time (`data-told`), so what a step brings comes
+// in over a moment (the prototype's design-told.ts).
+const screen = css({
+  display: "flex",
+  flexShrink: 0,
+  pointerEvents: "none",
+  width: "min(390px, 100%)",
 });
 
-// How each feature's screen opens, and the part of it shown: entering with
-// the hero's month and its sheet of shifts, adding the month to the phone's
-// calendar, 繰り返し on a fixed order, and the groups the stores'
-// screenshots show: friends in the shift table, people at work in the chat.
-type Feature = "entry" | "deviceCalendar" | "repeat" | "share" | "chat";
-
-const atWork = { groups: [workplaceGroup] };
-
-// Friends, in the shift table, as the stores' picture has them.
-const withFriends = { groups: [oldFriendsGroup] };
-
-// 繰り返し is for work that comes round in a fixed order, so the page
-// shows the order はじめの設定 offers for it, as the stores' picture does:
-// 当番・非番・休み.
-const duty = rotationTemplates.find((template) => template.id === "duty");
-if (duty?.sequence === undefined) {
-  throw new Error("はじめの設定 has no 当番・非番・休み order");
-}
-
-// Where a feature's screen opens: entering on a day, 端末カレンダーに追加
-// over the calendar, a page of the settings, or a page of a group.
-type AppProps = ComponentProps<typeof DesignApp>;
-type FeatureOpening =
-  | Required<Pick<AppProps, "initialDay" | "initialEditing">>
-  | Required<Pick<AppProps, "initialCalendarAdd">>
-  | (Required<Pick<AppProps, "initialSettingsPage">> & {
-      initialTab: "settings";
-    })
-  | (Required<Pick<AppProps, "initialGroupId" | "initialGroupPage">> & {
-      initialTab: "group";
-    });
-
-const featureScreens: Record<
-  Feature,
-  {
-    opening: FeatureOpening;
-    own?: Parameters<typeof useSamplePerson>[0];
-    shown?: "foot" | "whole";
-  }
-> = {
-  chat: {
-    opening: {
-      initialGroupId: workplaceGroup.id,
-      initialGroupPage: "chat",
-      initialTab: "group",
-    },
-    own: atWork,
-    shown: "whole",
-  },
-  // 自動で反映 on, as the stores' picture and the part's headline have it.
-  deviceCalendar: {
-    opening: { initialCalendarAdd: "reflecting" },
-    shown: "whole",
-  },
-  entry: {
-    opening: { initialDay: HERO_FIRST_BLANK, initialEditing: true },
-    own: { schedule: heroSchedule },
-    shown: "foot",
-  },
-  repeat: {
-    opening: { initialSettingsPage: "repeat-new", initialTab: "settings" },
-    own: {
-      patterns: presetList(duty.patternKeys),
-      // From 4/1, as /demo's order, so it is the one in use on the
-      // prototype's today (9/24).
-      rules: [{ sequence: duty.sequence, start: new Date(2026, 3, 1) }],
-      schedule: {},
-    },
-  },
-  share: {
-    opening: {
-      initialGroupId: oldFriendsGroup.id,
-      initialGroupPage: "shifts",
-      initialTab: "group",
-    },
-    own: withFriends,
-  },
-};
-
-export function FeatureScreen({ feature }: { feature: Feature }) {
-  const { opening, own, shown = "top" } = featureScreens[feature];
-  const person = useSamplePerson(own);
+function PhoneScreen({
+  person,
+  ...app
+}: { person: UserStore } & Partial<ComponentProps<typeof DesignApp>>) {
   return (
     <Motion>
-      <div aria-hidden="true" className={screenStyle({ shown })} inert>
+      <div aria-hidden="true" className={screen} data-told="" inert>
         <DesignProviders fresh>
           <UserStoreContext value={person}>
-            <SheetPicturesContext value>
-              <DesignApp
-                initialEditing={false}
-                {...opening}
-                variants={variants}
-              />
-            </SheetPicturesContext>
+            <DesignApp initialEditing={false} {...app} variants={variants} />
           </UserStoreContext>
         </DesignProviders>
       </div>
@@ -426,145 +187,200 @@ export function FeatureScreen({ feature }: { feature: Feature }) {
   );
 }
 
-// A few real screens drawn small, side by side, each stepping down and in
-// front of the one before. Only screens that do not measure themselves
-// scale well, like the calendar.
-const gallery = {
-  inner: css({
-    left: 0,
-    position: "absolute",
-    top: 0,
-    transform: "scale(var(--gallery-scale))",
-    transformOrigin: "top left",
-    width: "390px",
-  }),
-  phone: css({
-    borderRadius: "calc(53px * var(--gallery-scale))",
-    height: "calc(844px * var(--gallery-scale))",
-    left: "calc(var(--index) * var(--gallery-step))",
-    overflow: "hidden",
-    position: "absolute",
-    top: "calc(var(--index) * var(--gallery-drop))",
-    width: "calc(390px * var(--gallery-scale))",
-  }),
-  root: css({
-    "--gallery-drop": "36px",
-    "--gallery-scale": "0.44",
-    // `--gallery-last` is the last phone's index.
-    "--gallery-step":
-      "calc((min(100vw - 32px, 520px) - 390px * var(--gallery-scale)) / var(--gallery-last))",
-    _wide: { "--gallery-drop": "48px", "--gallery-scale": "0.6" },
-    flexShrink: 0,
-    height:
-      "calc(844px * var(--gallery-scale) + var(--gallery-last) * var(--gallery-drop))",
-    pointerEvents: "none",
-    position: "relative",
-    width:
-      "calc(390px * var(--gallery-scale) + var(--gallery-last) * var(--gallery-step))",
-  }),
-};
+// The story's phones: the app's own screens, each showing as much of its
+// part of the story as the page is scrolled through it. What a phone
+// shows is worked out from the place alone, so scrolling back takes it
+// back. The build draws each as `drawn`; where the page does not move
+// with its scroll (lib/story.ts), each stands at `still`.
+//
+// A step that changes what the person holds (their days, a chat's lines)
+// is written to their store, in the same turn the place's move is heard
+// in, so the screen is drawn once for the step; a phone whose steps are
+// all in the store is not drawn again for them itself.
+function useStoryWrite(
+  stepAt: (place: number) => number,
+  still: number,
+  write: (step: number) => void
+) {
+  useEffect(() => {
+    let written: number | undefined;
+    const sync = () => {
+      const step = moves() ? stepAt(placeNow()) : still;
+      if (step !== written) {
+        written = step;
+        write(step);
+      }
+    };
+    sync();
+    return onPlace(sync);
+  }, [stepAt, still, write]);
+}
 
-function PhoneGallery({
-  phones,
-}: {
-  phones: { key: string; screen: ReactNode }[];
-}) {
-  return (
-    <div
-      aria-hidden="true"
-      className={gallery.root}
-      inert
-      style={{ "--gallery-last": phones.length - 1 }}
-    >
-      <DesignProviders fresh>
-        {phones.map(({ key, screen }, index) => (
-          <div className={gallery.phone} key={key} style={{ "--index": index }}>
-            <div className={gallery.inner}>{screen}</div>
-          </div>
-        ))}
-      </DesignProviders>
-    </div>
+// The step a phone is at, for what it is handed rather than holds.
+function useStoryStep(
+  stepAt: (place: number) => number,
+  { drawn, still }: { drawn: number; still: number }
+) {
+  return useSyncExternalStore(
+    onPlace,
+    () => (moves() ? stepAt(placeNow()) : still),
+    () => drawn
   );
 }
 
-// The calendar in the two looks the stores' picture sets side by side,
-// each as someone might set theirs: 墨 with outlined marks in its one
-// tone, and ソーダ with letters and their names under them; days off left
-// plain in both, so nothing competes with the marks.
-type GalleryLook = {
-  id: string;
-  preset: PresetId;
-  style: ShiftMarkStyle;
-  fill: boolean;
-  monochrome: boolean;
-  names: boolean;
-};
-const galleryLooks: GalleryLook[] = [
-  {
-    fill: false,
-    id: "sumi",
-    monochrome: true,
-    names: false,
-    preset: "sumi",
-    style: "icon",
-  },
-  {
-    fill: true,
-    id: "letters",
-    monochrome: false,
-    names: true,
-    preset: "soda",
-    style: "badge",
-  },
+// The sample month as ポチポチ入力's keys enter it: each press, the day it
+// is made on, and the days as they were before it. 夜勤 fills the day after
+// too, so the next press is a day further on.
+const monthDays = daysOfMonth(designMonth);
+const blank: Schedule = {};
+function keyPressesOf(sample: Schedule) {
+  const made: { date: Date; shift: string; before: Schedule }[] = [];
+  let days = blank;
+  for (let day = 0; day < monthDays.length;) {
+    const date = monthDays[day];
+    const shift = sample[dateKey(date)]?.shift;
+    if (shift === undefined) {
+      day += 1;
+    } else {
+      made.push({ before: days, date, shift });
+      days = withShiftEntered(days, date, shift, presetPatterns);
+      day += daysMovedOn(shift, presetPatterns);
+    }
+  }
+  return { filled: days, presses: made };
+}
+const { filled, presses } = keyPressesOf(initialDesignSchedule());
+
+// The story opens on the month entered through its second week, so
+// entering starts a row: the presses from there on are the ones it shows,
+// and the days before the first of them the least the month ever holds.
+const thirdWeek = 2 * 7 - monthDays[0].getDay() + 1;
+const shown = presses.filter(({ date }) => date.getDate() >= thirdWeek);
+const half = shown[0]?.before ?? filled;
+
+// Entering's steps: the month before entering starts (BEFORE), then two
+// for each press, the key going down and the day filled with the next
+// day picked, and the month full at the end.
+const BEFORE = -1;
+const entrySteps = shown.length * 2 + 1;
+const entryAt = (place: number) =>
+  place < BEATS.entry.from ? BEFORE : stepOf(SCENES.entry, entrySteps, place);
+// Standing still, the month is entered up to the 19th, the keys under it
+// for the 20th.
+const STILL_FROM = 20;
+const entryStill =
+  shown.findIndex(({ date }) => date.getDate() >= STILL_FROM) * 2;
+
+function entryOf(step: number): { days: Schedule; entering?: Entering } {
+  if (step === BEFORE) {
+    return { days: half };
+  }
+  const press = shown[Math.floor(step / 2)];
+  if (press === undefined) {
+    return {
+      days: filled,
+      entering: { date: monthDays.at(-1) ?? designMonth },
+    };
+  }
+  return {
+    days: press.before,
+    entering: {
+      date: press.date,
+      pressed: step % 2 === 1 ? press.shift : undefined,
+    },
+  };
+}
+
+// The hero's phone and entering's: the month half entered, which the keys
+// go on filling a day at a time as the page is scrolled. The build draws
+// it half entered too.
+const entryPlaces = { drawn: BEFORE, still: entryStill };
+
+export function EntryPhone() {
+  const person = useSamplePerson({ schedule: half });
+  const write = useCallback(
+    (step: number) => {
+      person.getState().setSchedule(entryOf(step).days);
+    },
+    [person]
+  );
+  useStoryWrite(entryAt, entryStill, write);
+  const step = useStoryStep(entryAt, entryPlaces);
+  return <PhoneScreen entering={entryOf(step).entering} person={person} />;
+}
+
+// The friends' shift table, as the stores' picture has it: the person's
+// own column first, then a friend's with each step.
+const withFriends = { groups: [oldFriendsGroup] };
+const friendsTable = {
+  initialGroupId: oldFriendsGroup.id,
+  initialGroupPage: "shifts",
+  initialTab: "group",
+} as const;
+const friends = sampleOthers(oldFriendsGroup.id).length;
+const friendsAt = (place: number) => stepOf(SCENES.friends, friends + 1, place);
+
+export function FriendsPhone() {
+  const joined = useStoryStep(friendsAt, { drawn: friends, still: friends });
+  const person = useSamplePerson(withFriends);
+  return <PhoneScreen {...friendsTable} groupOthers={joined} person={person} />;
+}
+
+// The coworkers' chat, as the stores' picture has it, a step at a time: each
+// line arriving, the last of them the days put to the vote, then each
+// person's votes on it.
+const atWork = { groups: [workplaceGroup] };
+const workChatPage = {
+  initialGroupId: workplaceGroup.id,
+  initialGroupPage: "chat",
+  initialTab: "group",
+} as const;
+const workChat = chatKey(workplaceGroup.id, groupChat);
+const { messages } = sampleChats[workChat];
+const voters = [
+  ...new Set(
+    messages.flatMap(({ content }) =>
+      content.kind === "poll" ? Object.values(content.votes).flat() : []
+    )
+  ),
 ];
-
-const plainDaysOff: OffLooks = { off: "mark", offs: noOffLooks };
-
-function LookContexts({
-  look,
-  children,
-}: {
-  look: GalleryLook;
-  children: ReactNode;
-}) {
-  const themed = (
-    <PresetContexts id={look.preset}>
-      <IconWeightContext value={look.fill ? "duotone" : "regular"}>
-        <ShiftMarkStyleContext value={look.style}>
-          <CellNamesContext
-            value={{
-              names: { badge: look.names, emoji: look.names, icon: look.names },
-            }}
-          >
-            <OffLooksContext value={plainDaysOff}>
-              <MonochromeContext value={{ monochrome: look.monochrome }}>
-                {children}
-              </MonochromeContext>
-            </OffLooksContext>
-          </CellNamesContext>
-        </ShiftMarkStyleContext>
-      </IconWeightContext>
-    </PresetContexts>
-  );
-  return <ColorSchemeContext value="light">{themed}</ColorSchemeContext>;
-}
-
-export function ThemeGallery() {
-  const person = useSamplePerson();
-  return (
-    <Motion>
-      <UserStoreContext value={person}>
-        <PhoneGallery
-          phones={galleryLooks.map((look) => ({
-            key: look.id,
-            screen: (
-              <LookContexts look={look}>
-                <DesignApp initialEditing={false} variants={variants} />
-              </LookContexts>
+const votedBy = (count: number): Chat["messages"] =>
+  messages.map((message) =>
+    message.content.kind === "poll"
+      ? {
+          ...message,
+          content: {
+            ...message.content,
+            votes: Object.fromEntries(
+              Object.entries(message.content.votes).map(([day, people]) => [
+                day,
+                people.filter((id) => voters.indexOf(id) < count),
+              ])
             ),
-          }))}
-        />
-      </UserStoreContext>
-    </Motion>
+          },
+        }
+      : message
   );
+const chatStages: Chat[] = [
+  ...messages.map((_, index) => ({
+    messages: votedBy(0).slice(0, index + 1),
+    unread: 0,
+  })),
+  ...voters.map((_, index) => ({ messages: votedBy(index + 1), unread: 0 })),
+];
+const chatAt = (place: number) => stepOf(SCENES.chat, chatStages.length, place);
+const chatEnd = chatStages.length - 1;
+
+export function ChatPhone() {
+  const person = useSamplePerson(atWork);
+  const write = useCallback(
+    (stage: number) => {
+      person
+        .getState()
+        .setChats((chats) => ({ ...chats, [workChat]: chatStages[stage] }));
+    },
+    [person]
+  );
+  useStoryWrite(chatAt, chatEnd, write);
+  return <PhoneScreen {...workChatPage} person={person} />;
 }

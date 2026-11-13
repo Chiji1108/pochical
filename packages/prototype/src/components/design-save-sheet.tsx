@@ -196,7 +196,8 @@ function eventCount(days: CalendarDay[], shown: ReadonlySet<string>) {
 const save = {
   // 画像で保存 over 端末カレンダーに追加.
   actions: css({ display: "flex", flexDirection: "column", gap: "12px" }),
-  add: css({ marginTop: "20px" }),
+  // As far under the last group as the groups are apart.
+  add: css({ marginTop: "24px" }),
   // The picked calendar's check; the others keep its room, so the rows
   // line up.
   check: cva({
@@ -214,6 +215,8 @@ const save = {
   }),
   // The calendar, the days to put in and the rest, a list each.
   groups: css({ display: "flex", flexDirection: "column", gap: "24px" }),
+  // A group and its note.
+  section: css({ display: "flex", flexDirection: "column", gap: "8px" }),
   picker: css({ display: "flex", flexDirection: "column", gap: "24px" }),
   // The dot before the picked calendar's name, in the row's value.
   valueDot: css({
@@ -545,24 +548,29 @@ export function SaveSheet({
                 detail={leftOut(listed, shown)}
               />
             </List>
-            <ExtraSwitches days={days} shown={shown} />
+            {/* Each group with the note under it that is about it, close
+                under, as a section's footer on iOS; the next group starts
+                a group's gap further down. */}
+            <div className={save.section}>
+              <ExtraSwitches days={days} shown={shown} />
+              <Note>前に入れた{monthLabel}の予定は、入れ直します。</Note>
+            </div>
+            <div className={save.section}>
+              <List>
+                <SwitchRow
+                  checked={reflects}
+                  detail={`シフトを変えると、${dayRules.reflectedMonthsAhead}か月先の分まで入れ直します`}
+                  label="自動で反映"
+                  onChange={setReflects}
+                />
+              </List>
+              {reflects && (
+                <Note>
+                  アプリを開いたときに反映します。カレンダーアプリで変えた予定は、ポチカルのシフトに戻ります。
+                </Note>
+              )}
+            </div>
           </div>
-          <Note>前に入れた{monthLabel}の予定は、入れ直します。</Note>
-          <div className={save.groups}>
-            <List>
-              <SwitchRow
-                checked={reflects}
-                detail={`シフトを変えると、${dayRules.reflectedMonthsAhead}か月先の分まで入れ直します`}
-                label="自動で反映"
-                onChange={setReflects}
-              />
-            </List>
-          </div>
-          {reflects && (
-            <Note>
-              アプリを開いたときに反映します。カレンダーアプリで変えた予定は、ポチカルのシフトに戻ります。
-            </Note>
-          )}
           <Button
             variant="primary"
             className={save.add}

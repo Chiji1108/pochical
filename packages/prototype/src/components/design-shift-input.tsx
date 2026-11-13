@@ -74,6 +74,12 @@ export const shiftInput = {
       // Dimmed as the system dims a disabled button, taking no presses.
       _disabled: { opacity: 0.5, pointerEvents: "none" },
       _hover: { bg: "accent.container", borderColor: "accent.border" },
+      // Held down by a page that tells entering (design-told.ts), a key
+      // sinks and comes back over a moment, as under a finger it need not.
+      _told: {
+        transitionDuration: "0.16s",
+        transitionProperty: "background-color, transform",
+      },
       alignItems: "center",
       bg: "background.card",
       border: "1px solid token(colors.border.default)",
@@ -254,6 +260,7 @@ export function PatternKeys({
   onPage,
   progress,
   onPick,
+  pressed,
   disabled = false,
 }: {
   patternKeys: Shift[];
@@ -261,6 +268,9 @@ export function PatternKeys({
   onPage: (page: number) => void;
   progress: MotionValue<number>;
   onPick: (shift: Shift) => void;
+  // A key drawn as held down, where a page tells entering rather than a
+  // finger doing it (DesignCalendar's `entering`).
+  pressed?: Shift;
   // Keys that type nothing now, as an order's at its full length.
   disabled?: boolean;
 }) {
@@ -272,6 +282,7 @@ export function PatternKeys({
     keys.map((key) => (
       <button
         className={shiftInput.pattern({ rows: keys.length > 4 || paged })}
+        data-active={key === pressed ? "" : undefined}
         key={key}
         onClick={() => {
           onPick(key);
@@ -340,9 +351,12 @@ export function ShiftInputControls({
   canSkip,
   onEnter,
   onSkip,
+  pressed,
 }: {
   datePicker: ReactNode;
   patternKeys: Shift[];
+  // The key drawn as held down, as PatternKeys takes it.
+  pressed?: Shift;
   selectedShift: Shift | undefined;
   canSkip: boolean;
   onEnter: (shift: Shift | undefined) => void;
@@ -362,6 +376,7 @@ export function ShiftInputControls({
         onPick={onEnter}
         page={page}
         patternKeys={patternKeys}
+        pressed={pressed}
         progress={progress}
       />
       <div className={shiftInput.actions}>
