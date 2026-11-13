@@ -48,7 +48,7 @@ fun AccountRoot() {
   var said by rememberSaveable { mutableIntStateOf(account.deleted.value) }
   when (val now = state) {
     is AccountState.Erasing -> ErasingScreen(now, retry = account::eraseAgain)
-    AccountState.SessionEnded -> SessionEndedScreen(tryAgain = account::tryAgain, startAfresh = account::startAfresh)
+    is AccountState.SessionEnded -> SessionEndedScreen(now.unreadable, tryAgain = account::tryAgain, startAfresh = account::startAfresh)
     else ->
       key(deleted) {
         FirstRunOrTabs()

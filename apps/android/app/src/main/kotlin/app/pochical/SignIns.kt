@@ -72,7 +72,7 @@ class SignIns(
     // The device letting go of the user, or its session ended, what was asked of them goes too.
     scope.launch {
       account.state.collect {
-        if (it is AccountState.Erasing || it == AccountState.SessionEnded) {
+        if (it is AccountState.Erasing || it is AccountState.SessionEnded) {
           choosing = null
           done = null
         }
@@ -140,7 +140,7 @@ class SignIns(
         } catch (e: NotSignedIn) {
           // Said in place of the app, as the server no longer knows the session; otherwise the
           // device has none to sign in with, as when it could not reach the server.
-          if (account.state.value == AccountState.SessionEnded) null else SignInProblem.Failed
+          if (account.state.value is AccountState.SessionEnded) null else SignInProblem.Failed
         } catch (e: LinkRefused) {
           // Linked already, as on another device: the page shows the account the server names.
           if (e.status == 417) null else SignInProblem.Failed

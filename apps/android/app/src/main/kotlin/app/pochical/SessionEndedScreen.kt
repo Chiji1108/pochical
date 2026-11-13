@@ -41,9 +41,13 @@ import kotlinx.coroutines.launch
  * asks the server about the session again, the app coming back only if it knows it, and はじめから使う,
  * asked first, erases what the device holds and starts as a new install does, where signing in with
  * Apple or Google again brings back an account's data.
+ *
+ * Also while what the device keeps as its session is not one the app reads ([unreadable],
+ * spec/sync-protocol.md, Signing in), in its own words: there is nothing to ask the server about, so
+ * only はじめから使う, which no one who never signed in with Apple or Google comes back from.
  */
 @Composable
-fun SessionEndedScreen(tryAgain: suspend () -> Unit, startAfresh: () -> Unit) {
+fun SessionEndedScreen(unreadable: Boolean, tryAgain: suspend () -> Unit, startAfresh: () -> Unit) {
   var confirming by rememberSaveable { mutableStateOf(false) }
   var trying by remember { mutableStateOf(false) }
   val scope = rememberCoroutineScope()
@@ -54,13 +58,13 @@ fun SessionEndedScreen(tryAgain: suspend () -> Unit, startAfresh: () -> Unit) {
   ) {
     Spacer(Modifier.weight(1f))
     Text(
-      stringResource(R.string.session_ended),
+      stringResource(if (unreadable) R.string.session_unreadable else R.string.session_ended),
       style = MaterialTheme.typography.titleLarge,
       color = MaterialTheme.colorScheme.onSurface,
       textAlign = TextAlign.Center,
     )
     Text(
-      stringResource(R.string.session_ended_body),
+      stringResource(if (unreadable) R.string.session_unreadable_body else R.string.session_ended_body),
       style = MaterialTheme.typography.bodyMedium,
       color = MaterialTheme.colorScheme.onSurfaceVariant,
       textAlign = TextAlign.Center,
@@ -69,23 +73,25 @@ fun SessionEndedScreen(tryAgain: suspend () -> Unit, startAfresh: () -> Unit) {
     Button(onClick = { confirming = true }, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
       Text(stringResource(R.string.session_ended_start_afresh))
     }
-    TextButton(
-      onClick = {
-        trying = true
-        scope.launch {
-          try {
-            tryAgain()
-          } finally {
-            trying = false
+    if (!unreadable) {
+      TextButton(
+        onClick = {
+          trying = true
+          scope.launch {
+            try {
+              tryAgain()
+            } finally {
+              trying = false
+            }
           }
+        },
+        enabled = !trying,
+      ) {
+        // The label keeps its size under the spinner, so nothing moves.
+        Box(contentAlignment = Alignment.Center) {
+          Text(stringResource(R.string.session_ended_try_again), Modifier.alpha(if (trying) 0f else 1f))
+          if (trying) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
         }
-      },
-      enabled = !trying,
-    ) {
-      // The label keeps its size under the spinner, so nothing moves.
-      Box(contentAlignment = Alignment.Center) {
-        Text(stringResource(R.string.session_ended_try_again), Modifier.alpha(if (trying) 0f else 1f))
-        if (trying) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
       }
     }
   }
@@ -93,7 +99,7 @@ fun SessionEndedScreen(tryAgain: suspend () -> Unit, startAfresh: () -> Unit) {
     AlertDialog(
       onDismissRequest = { confirming = false },
       title = { Text(stringResource(R.string.start_afresh_title)) },
-      text = { Text(stringResource(R.string.start_afresh_body)) },
+      text = { Text(stringResource(if (unreadable) R.string.start_afresh_unreadable_body else R.string.start_afresh_body)) },
       dismissButton = { TextButton(onClick = { confirming = false }) { Text(stringResource(R.string.cancel)) } },
       confirmButton = {
         TextButton(

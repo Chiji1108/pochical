@@ -107,6 +107,13 @@ public struct KeychainError: Error {
   public let status: OSStatus
 }
 
+/// What the Keychain keeps as the device's session is there, and is not
+/// one the app reads: waiting does not change it, so the person is asked
+/// (AccountSession, `ended`).
+struct UnreadableSession: Error {
+  let underlying: any Error
+}
+
 /// The sessions the device keeps: its own, and that of a user a switch
 /// left behind, until that user is deleted (spec/sync-protocol.md,
 /// Switching to an account in use).
@@ -122,14 +129,19 @@ struct SessionKeychain: Sendable {
     self.leftBehind = leftBehind
   }
 
-  /// Nil when nothing is kept. What is kept and cannot be read throws, as
-  /// a Keychain it cannot reach does (before the first unlock): the device
-  /// forgets nothing and stays signing in, as an anonymous user's token is
-  /// their only key, so `StoredSession` goes on reading every shape it was
-  /// ever kept in (spec/sync-protocol.md, Signing in).
+  /// Nil when nothing is kept. What is kept and is no session the app
+  /// reads throws `UnreadableSession`, apart from a Keychain it cannot
+  /// reach yet (before the first unlock), which throws its own error:
+  /// either way nothing is forgotten or signed in over, as an anonymous
+  /// user's token is their only key, so `StoredSession` goes on reading
+  /// every shape it was ever kept in (spec/sync-protocol.md, Signing in).
   func kept() throws -> StoredSession? {
     guard let data = try own.data() else { return nil }
-    return try JSONDecoder().decode(StoredSession.self, from: data)
+    do {
+      return try JSONDecoder().decode(StoredSession.self, from: data)
+    } catch {
+      throw UnreadableSession(underlying: error)
+    }
   }
 
   /// Keeps `session` from now on, in place of any other.

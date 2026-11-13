@@ -170,6 +170,9 @@
   <string name="start_afresh_title">はじめから使いますか？</string>
   <string name="start_afresh_body">この端末のデータが消えます。アカウントが残っていれば、Apple または Google でもう一度ログインすると同じデータを使えます。</string>
   <string name="start_afresh_confirm">データを消してはじめる</string>
+  <string name="session_unreadable">ログイン情報を読み込めません</string>
+  <string name="session_unreadable_body">この端末に保存したログイン情報を読み込めないため、同期できません。この端末のデータは、はじめから使うまで消しません。</string>
+  <string name="start_afresh_unreadable_body">この端末のデータが消えます。Apple または Google でログインしていた場合は、もう一度ログインすると同じデータを使えます。ログインしていなかった場合、データは元に戻せません。</string>
   <string name="erasing_body">この端末のデータを消しています。</string>
   <string name="erasing_failed">この端末のデータを消しています。まだ消せていないため、しばらくすると自動でもう一度試します。</string>
   <string name="retry">再試行</string>

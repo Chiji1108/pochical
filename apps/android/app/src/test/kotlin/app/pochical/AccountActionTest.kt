@@ -200,7 +200,7 @@ class AccountActionTest {
     idle()
     assertEquals(Unit, signOut.failure)
 
-    account.value = AccountState.SessionEnded
+    account.value = AccountState.SessionEnded()
     idle()
 
     assertNull(signOut.failure)

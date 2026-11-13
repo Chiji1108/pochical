@@ -313,7 +313,7 @@ class AccountChangeTest {
 
     assertThrows(NotSignedIn::class.java) { runBlocking { phone.account.keepDevice(choose.inUse) } }
 
-    assertEquals(AccountState.SessionEnded, phone.account.state.value)
+    assertEquals(AccountState.SessionEnded(), phone.account.state.value)
     assertEquals("night", phone.pattern("2026-11-02"))
   }
 
@@ -400,7 +400,7 @@ class AccountChangeTest {
     val failure = assertThrows(DeletionFailure::class.java) { runBlocking { phone.account.deleteAccount { null } } }
 
     assertEquals(DeletionFailure.Reason.SessionEnded, failure.reason)
-    withTimeout(10_000) { phone.account.state.first { it == AccountState.SessionEnded } }
+    withTimeout(10_000) { phone.account.state.first { it == AccountState.SessionEnded() } }
   }
 
   @Test
@@ -433,7 +433,7 @@ class AccountChangeTest {
     network.changed()
 
     assertEquals(DeletionFailure.Reason.SessionEnded, (deleting.await().exceptionOrNull() as DeletionFailure).reason)
-    assertEquals(AccountState.SessionEnded, phone.account.state.value)
+    assertEquals(AccountState.SessionEnded(), phone.account.state.value)
     assertEquals(true, phone.sessions.read()?.ended)
   }
 

@@ -35,10 +35,17 @@ data class StoredSession(
 private data class Kept(val session: StoredSession? = null, val leftBehind: List<String> = emptyList())
 
 /**
- * What the store keeps cannot be read now: the store out of reach, as without Google Play services,
- * or holding what this app does not read. Nothing in it is lost.
+ * What the store keeps cannot be read: the store out of reach now, as without Google Play services,
+ * or [KeptUnreadable]. Nothing in it is lost.
  */
-class StoreUnreachable(cause: Throwable) : Exception(cause)
+open class StoreUnreachable(cause: Throwable) : Exception(cause)
+
+/**
+ * What the store keeps is there, and is not what this app reads: out of reach as any
+ * [StoreUnreachable], so nothing is forgotten or written over, but waiting does not change it, so the
+ * person is asked ([AccountState.SessionEnded]).
+ */
+class KeptUnreadable(cause: Throwable) : StoreUnreachable(cause)
 
 /** Bytes kept for the app outside it, under one key. */
 interface KeptBytes {
@@ -50,10 +57,10 @@ interface KeptBytes {
 }
 
 /**
- * Where the device keeps its session. What is kept and cannot be read is out of reach, as the store
- * itself can be ([StoreUnreachable]): nothing is forgotten or written over and the device stays
- * signing in, as an anonymous user's token is their only key. So [Kept] goes on reading every shape
- * it was ever kept in (spec/sync-protocol.md, Signing in).
+ * Where the device keeps its session. What is kept and is not what the app reads is out of reach
+ * ([KeptUnreadable]), apart from a store that cannot be reached now ([StoreUnreachable]): either way
+ * nothing is forgotten or written over, as an anonymous user's token is their only key. So [Kept]
+ * goes on reading every shape it was ever kept in (spec/sync-protocol.md, Signing in).
  */
 class SessionStore(private val kept: KeptBytes) {
   private val json = Json { ignoreUnknownKeys = false }
@@ -77,8 +84,20 @@ class SessionStore(private val kept: KeptBytes) {
   /** The user of the session [token] left behind is deleted: it is kept no more; [StoreUnreachable]. */
   suspend fun deleted(token: String) = change { it.copy(leftBehind = it.leftBehind - token) }
 
-  /** Keeps no session from now on, as after the account is deleted, the ones left behind kept; [StoreUnreachable]. */
-  suspend fun forgetSession() = change { it.copy(session = null) }
+  /**
+   * Keeps no session from now on, as after the account is deleted, the ones left behind kept;
+   * [StoreUnreachable]. What the app does not read is forgotten whole, unread, the sessions left
+   * behind in it too, which nothing can tell from the rest.
+   */
+  suspend fun forgetSession() {
+    val now =
+      try {
+        keptNow()
+      } catch (_: KeptUnreadable) {
+        Kept()
+      }
+    keep(now.copy(session = null))
+  }
 
   private suspend fun keptNow(): Kept {
     val bytes = kept.read() ?: return Kept()
@@ -86,13 +105,13 @@ class SessionStore(private val kept: KeptBytes) {
       json.decodeFromString(Kept.serializer(), bytes.decodeToString())
     } catch (e: IllegalArgumentException) {
       // What kotlinx.serialization throws of bytes that are not a [Kept], a SerializationException among them.
-      throw StoreUnreachable(e)
+      throw KeptUnreadable(e)
     }
   }
 
-  private suspend fun change(change: (Kept) -> Kept) {
-    kept.write(json.encodeToString(Kept.serializer(), change(keptNow())).encodeToByteArray())
-  }
+  private suspend fun change(change: (Kept) -> Kept) = keep(change(keptNow()))
+
+  private suspend fun keep(now: Kept) = kept.write(json.encodeToString(Kept.serializer(), now).encodeToByteArray())
 }
 
 /**

@@ -228,17 +228,28 @@ private final class FakeAccountServer: AccountServer {
 }
 
 /// An anonymous user's token is their only key, so what the app cannot
-/// read is never taken for no session and signed in over.
-@MainActor @Test func aKeptSessionItCannotReadIsKeptNotSignedInOver() async throws {
+/// read is never taken for no session and signed in over: the person is
+/// asked, and starting afresh forgets it unread.
+@MainActor @Test func aKeptSessionItCannotReadIsKeptUntilThePersonStartsAfresh() async throws {
   let own = MemoryStore(Data("raw-token".utf8))
-  let made = try await Made(keychain: SessionKeychain(own: own, leftBehind: MemoryStore()))
-  #expect(made.session.phase == .starting)
+  let made = try await Made(
+    keychain: SessionKeychain(own: own, leftBehind: MemoryStore()), owner: "old")
+  #expect(made.session.phase == .ended)
+  #expect(made.session.ended == .unreadable)
 
   made.session.cameToFront()
-  #expect(await eventually { own.reads.withLock { $0 } == 2 })
-  #expect(made.session.phase == .starting)
+  await made.session.tryAgain()
+  #expect(made.session.ended == .unreadable)
   #expect(made.server.made.withLock { $0 } == 0)
   #expect(try own.data() == Data("raw-token".utf8))
+  #expect(made.coworkers == 1)
+
+  made.session.startAfresh()
+  #expect(await eventually { made.session.phase == .signedIn })
+  #expect(made.session.ended == nil)
+  #expect(try made.keychain.kept() == StoredSession(token: "anon-token-1", userID: "anon-1"))
+  #expect(await eventually { made.owner == "anon-1" })
+  #expect(made.coworkers == 0)
 }
 
 @MainActor @Test func aKeychainItCannotReachIsWaitedForNotSignedInAnew() async throws {
@@ -250,6 +261,9 @@ private final class FakeAccountServer: AccountServer {
 
   made.session.cameToFront()
   #expect(await eventually { own.reads.withLock { $0 } == 2 })
+  // Never ended: nothing offers to erase what only waits.
+  #expect(made.session.phase == .starting)
+  #expect(made.session.ended == nil)
   own.refusesToRead.withLock { $0 = false }
   made.session.cameToFront()
   #expect(await eventually { made.session.userID == "A" })
