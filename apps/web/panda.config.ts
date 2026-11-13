@@ -22,27 +22,31 @@ const storyKeyframes = {
     from: { opacity: 0, transform: "translateY(16px)" },
     to: { opacity: 1, transform: "none" },
   },
-  // The phone going small into the wall of widgets behind it.
+  // The phone going small into the wall of widgets behind it, and gone
+  // once it is: a piece whose turn is over is not drawn at all, so nothing
+  // of it is left on screen.
   storyShrink: {
     from: { opacity: 1, transform: "none" },
-    to: { opacity: 0, transform: "scale(0.55)" },
+    to: { opacity: 0, transform: "scale(0.55)", visibility: "hidden" },
   },
   // The wall, coming up close from behind the phone, lying still, and
   // drawing back as the next phone rises.
   storyWall: {
     "0%": { opacity: 0, transform: "scale(1.25)" },
-    "100%": { opacity: 0, transform: "scale(0.92)" },
+    "100%": { opacity: 0, transform: "scale(0.92)", visibility: "hidden" },
     "35%": { opacity: 1, transform: "scale(1)" },
     "75%": { opacity: 1, transform: "scale(0.98)" },
   },
-  // A phone rising into place, and later giving way to the next where it
-  // stands.
+  // A phone rising into place. It stays as it is while the next comes in
+  // over it, frame on frame, and is gone once that one is all there, so
+  // the frame never fades between two screens.
   storyPhone: {
     "0%": { opacity: 0, transform: "translateY(64px)" },
-    "100%": { opacity: 0, transform: "none" },
-    "14%, 86%": { opacity: 1, transform: "none" },
+    "100%": { opacity: 1, transform: "none", visibility: "hidden" },
+    "14%": { opacity: 1, transform: "none" },
+    "99.99%": { opacity: 1, transform: "none", visibility: "visible" },
   },
-  // A phone taking the place of the one before, where it stands.
+  // A phone coming in over the one before, where it stands.
   storyTake: { from: { opacity: 0 }, to: { opacity: 1 } },
   // A phone not yet come to: far under the screen until its part of the
   // story is near, so its island (client:visible) takes its code then and
@@ -50,16 +54,6 @@ const storyKeyframes = {
   storyWait: {
     from: { translate: "0 200vh" },
     to: { translate: "0 0" },
-  },
-  // A phone taller than its room going up through it to its foot, and
-  // the fade where it is cut going from its foot to its top (next.astro,
-  // cropped).
-  storyFollow: {
-    to: { transform: "translateY(min(0px, var(--phone-room) - 844px))" },
-  },
-  storyFade: {
-    from: { maskPosition: "0 calc(-1 * var(--fade))" },
-    to: { maskPosition: "0 0" },
   },
   // The sky turning from morning toward evening across the story.
   storySky: {

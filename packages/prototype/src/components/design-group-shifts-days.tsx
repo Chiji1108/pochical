@@ -1,4 +1,4 @@
-import { css, cva } from "@pochical/styled-system/css";
+import { css, cva, cx } from "@pochical/styled-system/css";
 import type { ReactNode, Ref } from "react";
 
 import { dateKey, formatDay, movesText } from "../lib/design-days";
@@ -8,6 +8,7 @@ import { designToday } from "../lib/design-today";
 import { todayMark } from "./design-day-cell";
 import { Avatar, MemberMark, toneColor } from "./design-group-parts";
 import { offTile, pickedFrame } from "./design-group-shifts-parts";
+import { told } from "./design-told";
 import { srOnly } from "./design-ui";
 import { useWeek } from "./design-week";
 
@@ -334,7 +335,10 @@ export function DayRowsTable({
               >
                 <button
                   aria-label={`${member.name}のシフトパターン`}
-                  className={dayRows.member({ centered: !withNames })}
+                  className={cx(
+                    dayRows.member({ centered: !withNames }),
+                    told.slide
+                  )}
                   onClick={() => {
                     onMember(member);
                   }}
@@ -406,7 +410,7 @@ export function DayRow({
             <button
               aria-label={`${formatDay(date)} ${member.name}：${item?.name ?? "未入力"}${changeOn(member, date) ? `、${movesText(changeOn(member, date))}` : ""}。押すとその日のみんなの予定`}
               aria-pressed={picked}
-              className={dayRows.cellButton}
+              className={cx(dayRows.cellButton, told.slide)}
               onClick={() => {
                 onPick(date);
               }}

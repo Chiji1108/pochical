@@ -411,14 +411,23 @@ export const featureScreens: Record<
 export function PhoneScreen({
   person,
   shown,
+  told = false,
   ...app
 }: {
   person: UserStore;
   shown: "foot" | "top" | "whole";
+  // Its screen is changed by the page, a step at a time, and what a step
+  // brings comes in over a moment (the prototype's design-told.ts).
+  told?: boolean;
 } & Partial<AppProps>) {
   return (
     <Motion>
-      <div aria-hidden="true" className={screenStyle({ shown })} inert>
+      <div
+        aria-hidden="true"
+        className={screenStyle({ shown })}
+        data-told={told ? "" : undefined}
+        inert
+      >
         <DesignProviders fresh>
           <UserStoreContext value={person}>
             <SheetPicturesContext value>

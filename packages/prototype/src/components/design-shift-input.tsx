@@ -74,6 +74,12 @@ export const shiftInput = {
       // Dimmed as the system dims a disabled button, taking no presses.
       _disabled: { opacity: 0.5, pointerEvents: "none" },
       _hover: { bg: "accent.container", borderColor: "accent.border" },
+      // Held down by a page that tells entering (design-told.ts), a key
+      // sinks and comes back over a moment, as under a finger it need not.
+      _told: {
+        transitionDuration: "0.16s",
+        transitionProperty: "background-color, transform",
+      },
       alignItems: "center",
       bg: "background.card",
       border: "1px solid token(colors.border.default)",

@@ -458,7 +458,9 @@ export function Avatar({ member, size }: { member: Member; size?: number }) {
   );
 }
 
-// A round picture, or the first letter of the name without one.
+// A round picture, or the first letter of the name without one, or with
+// one that does not load: a picture is drawn only once it is known to be
+// there, so no page shows a broken one.
 export function PhotoAvatar({
   name,
   photo,
@@ -470,20 +472,39 @@ export function PhotoAvatar({
   me?: boolean;
   size?: number;
 }) {
+  // The picture that failed to load, if this one did.
+  const [failed, setFailed] = useState<string>();
+  const shown = photo === failed ? undefined : photo;
   return (
     <span
       aria-hidden="true"
       className={avatar({ me })}
       // Marks a letter drawn for someone else, for places that ink it.
-      data-letter={photo || me ? undefined : ""}
+      data-letter={shown || me ? undefined : ""}
       style={{
         fontSize: Math.max(minLetterSize, Math.round(size * 0.45)),
         height: size,
         width: size,
       }}
     >
-      {photo ? (
-        <img alt="" height={size} loading="lazy" src={photo} width={size} />
+      {shown ? (
+        <img
+          alt=""
+          height={size}
+          loading="lazy"
+          onError={() => {
+            setFailed(shown);
+          }}
+          // One that failed before this code was in, on a page drawn by
+          // the build.
+          ref={(image) => {
+            if (image?.complete && image.naturalWidth === 0) {
+              setFailed(shown);
+            }
+          }}
+          src={shown}
+          width={size}
+        />
       ) : (
         firstCharacter(name)
       )}

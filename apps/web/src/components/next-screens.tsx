@@ -111,7 +111,7 @@ export function EntryPhone() {
   useEffect(() => {
     person.getState().setSchedule(days);
   }, [person, days]);
-  return <PhoneScreen entering={entering} person={person} shown="whole" />;
+  return <PhoneScreen entering={entering} person={person} shown="whole" told />;
 }
 
 // The friends' shift table, as the top page shows it: the person's own
@@ -128,6 +128,7 @@ export function FriendsPhone() {
       groupOthers={joined}
       person={person}
       shown="whole"
+      told
     />
   );
 }
@@ -184,6 +185,27 @@ export function ChatPhone() {
       {...featureScreens.chat.opening}
       person={person}
       shown="whole"
+      told
     />
   );
+}
+
+// The screens of the rest of what the stores say, after the story, each a
+// still picture of the app's own screen that no code comes for: adding the
+// month to the phone's calendar with 自動で反映 on and 繰り返し on a fixed
+// order, as the top page shows them, and リマインド, which says when the
+// evening before's notification comes.
+const restScreens = {
+  cares: {
+    opening: { initialSettingsPage: "reminders", initialTab: "settings" },
+    own: undefined,
+  },
+  details: featureScreens.repeat,
+  "device-calendar": featureScreens.deviceCalendar,
+} as const;
+
+export function RestScreen({ shot }: { shot: keyof typeof restScreens }) {
+  const { opening, own } = restScreens[shot];
+  const person = useSamplePerson(own);
+  return <PhoneScreen {...opening} person={person} shown="whole" />;
 }

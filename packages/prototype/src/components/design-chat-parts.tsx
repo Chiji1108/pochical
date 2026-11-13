@@ -7,6 +7,7 @@ import { chatRow, chatStyle } from "./design-chat-style";
 import type { ListedLine } from "./design-chat-summary";
 import { badge } from "./design-group-parts";
 import { listRow } from "./design-list";
+import { told } from "./design-told";
 import { srOnly } from "./design-ui";
 
 // What every chat draws alike, the group chats and the support chat: a
@@ -175,7 +176,7 @@ export function LineFrame({
 }) {
   return (
     <ChatItem {...item}>
-      <span className={chatStyle.message({ mine })}>
+      <span className={cx(chatStyle.message({ mine }), told.rise)}>
         {!mine && <span className={chatStyle.avatar}>{avatar}</span>}
         <span className={chatStyle.body({ mine })}>
           {!mine && name !== undefined && (
