@@ -13,7 +13,7 @@ catalog:
   "@types/node": 24.19.2
   playwright-core: ^1.64.1
   tsx: ^4.23.15
-  vitest: ~5.0.5
+  vitest: ~5.1.0
 
 # Each of these installs its binary from a platform's optional dependency, and
 # lefthook's hooks come from the root's prepare, so none runs its own script.
