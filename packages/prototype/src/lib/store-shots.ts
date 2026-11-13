@@ -25,15 +25,6 @@ export const STORES = {
 
 export type StoreId = keyof typeof STORES;
 
-// Google Play's feature graphic, which needs no screen: the sky, the app's
-// icon and its name over the site's line, in `store/feature-graphic.png`.
-export const FEATURE_GRAPHIC = {
-  height: 500,
-  line: "シフトを、ポチッと。",
-  name: "feature-graphic",
-  width: 1024,
-} as const;
-
 // How much of a picture's height its headline may take, with the room
 // around it: Google Play asks that a tagline take no more than about a
 // fifth of a screenshot, and the App Store's pictures keep to it too.
@@ -504,6 +495,14 @@ export const SITE_WALL = {
 // width would have it, laid four times side by side, the widgets marked
 // `whole` at the safe area's leading side and the site's own line beside
 // them.
+// Google Play's feature graphic is 1024 by 500, shown as narrow as a phone
+// and cut or covered at its edges and foot in some places, so Google asks
+// for what matters toward its middle, in no small letters:
+// https://support.google.com/googleplay/android-developer/answer/9866151
+// It is the header's picture at its own size, of Android's widgets: the
+// wall at half the size a store's picture of that width would have it,
+// laid twice side by side, so that a widget's shapes still read, and
+// `safe` the picture less 8 hundredths of each side.
 export const WALL_PICTURES = [
   SITE_WALL,
   {
@@ -519,6 +518,20 @@ export const WALL_PICTURES = [
     safe: { height: 653, left: 1101, top: 497, width: 1638 },
     store: "ios",
     width: 3840,
+  },
+  {
+    file: "store/feature-graphic.png",
+    height: 500,
+    lie: { across: 2, middle: [735, 224], unit: 5 },
+    line: {
+      middle: [735, 250],
+      size: 64,
+      words: ["シフトを、", "ポチッと。"],
+    },
+    name: "feature-graphic",
+    safe: { height: 420, left: 82, top: 40, width: 860 },
+    store: "android",
+    width: 1024,
   },
 ] as const satisfies readonly WallPicture[];
 
