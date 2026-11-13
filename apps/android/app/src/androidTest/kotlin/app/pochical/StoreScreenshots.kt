@@ -650,7 +650,7 @@ class StoreScreenshots {
    * one the server no longer knows. It is let go of as the person would, by ログアウト or はじめから使う.
    */
   private suspend fun becomeNewUser() {
-    val before = awaited("The session the install starts with") { account.state.first { it is AccountState.SignedIn || it == AccountState.SessionEnded } }
+    val before = awaited("The session the install starts with") { account.state.first { it is AccountState.SignedIn || it is AccountState.SessionEnded } }
     if (before is AccountState.SignedIn) account.signOut() else account.startAfresh()
     awaited("A new user") { account.state.first { it is AccountState.SignedIn && it.userId != before.userId } }
   }

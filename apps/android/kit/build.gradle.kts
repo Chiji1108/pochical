@@ -66,9 +66,10 @@ androidComponents {
   }
 }
 
-// The schema each database version had, written as Room builds it: CI
-// fails when building changes one already there, which a shape changed
-// without its version raised does (AppDatabase).
+// The schema each database version had, written as Room builds it, which
+// its auto-migrations are written from: CI fails when building changes
+// one already there, which a shape changed without its version raised
+// does (AppDatabase).
 room3 {
   schemaDirectory("$projectDir/schemas")
 }

@@ -55,7 +55,7 @@ class AccountActions(
     // SignIns' answers do: it was of an account no longer here.
     scope.launch {
       account.collect {
-        if (it is AccountState.Erasing || it == AccountState.SessionEnded) {
+        if (it is AccountState.Erasing || it is AccountState.SessionEnded) {
           this@AccountActions.signOut.failureRead()
           deletion.failureRead()
         }

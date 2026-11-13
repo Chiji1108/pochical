@@ -84,9 +84,12 @@ sealed interface AccountState {
   /**
    * The server does not know the session (ログアウトされています): nothing syncs, nothing is
    * cleared, until the person chooses, [SyncAccount.tryAgain] or [SyncAccount.startAfresh]
-   * (spec/sync-protocol.md, Reconnecting).
+   * (spec/sync-protocol.md, Reconnecting). Or, [unreadable], what the device keeps as its session is
+   * not one the app reads (ログイン情報を読み込めません): there is nothing to try again with, and
+   * nothing is forgotten until the person chooses [SyncAccount.startAfresh] (spec/sync-protocol.md,
+   * Signing in).
    */
-  data object SessionEnded : AccountState
+  data class SessionEnded(val unreadable: Boolean = false) : AccountState
 }
 
 /** The account the device is signed in as, or is while it changes; null while anonymous or not signed in. */
@@ -251,7 +254,7 @@ class SyncAccount internal constructor(
           combine(database.sync().lastWaiting(), chatsToSend, stoppedGroups) { own, chats, stopped -> own == null && (chats - stopped).isEmpty() }
             .filter { it }
             .map { true },
-          state.filter { it == AccountState.SessionEnded }.map { false },
+          state.filter { it is AccountState.SessionEnded }.map { false },
         )
         .first()
     } finally {
@@ -403,7 +406,7 @@ class SyncAccount internal constructor(
    * app is never shown for a session that ends again at once.
    */
   suspend fun tryAgain() {
-    if (state.value != AccountState.SessionEnded) return
+    if (state.value != AccountState.SessionEnded()) return
     val kept =
       try {
         sessions.read()
@@ -470,7 +473,7 @@ class SyncAccount internal constructor(
   private fun whyNotSignedIn(): DeletionFailure.Reason =
     when (state.value) {
       AccountState.SigningIn -> DeletionFailure.Reason.NotSignedIn
-      AccountState.SessionEnded -> DeletionFailure.Reason.SessionEnded
+      is AccountState.SessionEnded -> DeletionFailure.Reason.SessionEnded
       else -> DeletionFailure.Reason.AccountChanged
     }
 
@@ -668,7 +671,7 @@ class SyncAccount internal constructor(
       }
       is Command.TryAgain -> {
         try {
-          if (state.value != AccountState.SessionEnded) return
+          if (state.value != AccountState.SessionEnded()) return
           try {
             // Only the session the server knew: one let go of or replaced meanwhile stays as it is.
             val kept = sessions.read()?.takeIf { it.token == command.token } ?: return
@@ -684,7 +687,12 @@ class SyncAccount internal constructor(
         }
       }
       Command.StartAfresh -> {
-        if (state.value != AccountState.SessionEnded) return
+        val ended = state.value as? AccountState.SessionEnded ?: return
+        if (ended.unreadable) {
+          // Whose it was is in the database alone; forgetting the session reads nothing of it.
+          beginErasing(database.owner().orEmpty(), AccountState.Erasing.Why.SignedOut)
+          return
+        }
         val kept =
           try {
             sessions.read()
@@ -830,7 +838,7 @@ class SyncAccount internal constructor(
       // Not kept as ended, a relaunch tries the session again and hears the same.
       Log.i(TAG, "The ended session could not be noted: $e")
     }
-    mutableState.value = AccountState.SessionEnded
+    mutableState.value = AccountState.SessionEnded()
   }
 
   /** The stretch over: what it handed out is not current from here, and its sockets close. */
@@ -945,7 +953,8 @@ class SyncAccount internal constructor(
         deleteLeftBehind(stretch)
       }
       is SignInOutcome.Erasing -> beginErasing(outcome.userId, outcome.why)
-      SignInOutcome.KeptEnded -> mutableState.value = AccountState.SessionEnded
+      SignInOutcome.KeptEnded -> mutableState.value = AccountState.SessionEnded()
+      SignInOutcome.KeptUnreadable -> mutableState.value = AccountState.SessionEnded(unreadable = true)
       // Tried again in the foreground.
       SignInOutcome.Failed -> Unit
     }
@@ -970,6 +979,9 @@ class SyncAccount internal constructor(
     val kept =
       try {
         sessions.read()
+      } catch (e: KeptUnreadable) {
+        Log.e(TAG, "The kept session is not one the app reads, kept until the person chooses", e)
+        return SignInOutcome.KeptUnreadable
       } catch (e: StoreUnreachable) {
         Log.i(TAG, "The kept session cannot be reached, tried again in the foreground: $e")
         return SignInOutcome.Failed
@@ -1086,6 +1098,9 @@ class SyncAccount internal constructor(
 
     /** The session kept was ended, the server not knowing it: it stays so until the person chooses. */
     data object KeptEnded : SignInOutcome
+
+    /** What is kept is not a session the app reads: it stays, unread, until the person starts afresh. */
+    data object KeptUnreadable : SignInOutcome
 
     /**
      * Not signed in, as when the session's store could not be reached, or anything else failed: tried

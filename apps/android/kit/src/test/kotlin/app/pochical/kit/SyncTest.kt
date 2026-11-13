@@ -252,14 +252,14 @@ class SyncTest {
     phone.account.background()
     withTimeout(10_000) { phone.account.userSocket.first { it == SocketState.Closed } }
     phone.account.foreground()
-    withTimeout(10_000) { phone.account.state.first { it == AccountState.SessionEnded } }
+    withTimeout(10_000) { phone.account.state.first { it == AccountState.SessionEnded() } }
 
     assertEquals(true, phone.sessions.read()?.ended)
     assertEquals("残す", phone.note("2026-10-04"))
     // Nothing tries again, a relaunch included: no new anonymous user.
     val again = SyncAccount(phone.database, phone.sessions, server.url, lazyOf(OkHttpClient()), phone.scope, linePhotos = phone.linePhotos)
     again.foreground()
-    withTimeout(10_000) { again.state.first { it == AccountState.SessionEnded } }
+    withTimeout(10_000) { again.state.first { it == AccountState.SessionEnded() } }
     assertEquals("token-1", phone.sessions.read()?.token)
   }
 
@@ -429,7 +429,7 @@ class SyncTest {
     assertThrows(NotSignedIn::class.java) {
       runBlocking { phone.account.signIn(ProviderToken(LinkedAccount.Provider.Google, "t", "n", null)) }
     }
-    withTimeout(10_000) { phone.account.state.first { it == AccountState.SessionEnded } }
+    withTimeout(10_000) { phone.account.state.first { it == AccountState.SessionEnded() } }
     assertEquals(true, phone.sessions.read()?.ended)
   }
 

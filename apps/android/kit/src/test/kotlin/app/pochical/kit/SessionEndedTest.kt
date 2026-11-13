@@ -44,7 +44,7 @@ class SessionEndedTest {
     phone.account.background()
     withTimeout(10_000) { phone.account.userSocket.first { it == SocketState.Closed } }
     phone.account.foreground()
-    withTimeout(10_000) { phone.account.state.first { it == AccountState.SessionEnded } }
+    withTimeout(10_000) { phone.account.state.first { it == AccountState.SessionEnded() } }
     return phone
   }
 
@@ -60,7 +60,7 @@ class SessionEndedTest {
     watching.cancel()
 
     assertEquals("the server asked first", asked + 1, server.refusedGetMes.get())
-    assertEquals("the app never shown", listOf(AccountState.SessionEnded), states.distinct())
+    assertEquals("the app never shown", listOf(AccountState.SessionEnded()), states.distinct())
     assertEquals("no socket tried", refused, server.refusedSockets.get())
     assertEquals(StoredSession("token-1", "user-1", ended = true), phone.sessions.read())
     assertEquals("残す", phone.note("2026-10-04"))
@@ -138,6 +138,61 @@ class SessionEndedTest {
     withTimeout(10_000) { again.state.first { it is AccountState.SignedIn } }
     assertEquals(AccountState.SignedIn("user-2", linked = null), again.state.value)
     assertEquals(0, again.deleted.value)
+  }
+
+  /** A device that noted a day and sent it, started again over what it kept. */
+  private suspend fun startedAgain(keeping: (Device) -> Unit): Pair<Device, SyncAccount> {
+    val phone = Device(server).also { devices += it }
+    phone.account.foreground()
+    withTimeout(10_000) { phone.current() }
+    phone.edits.setDay("2026-10-04", DayField.DAY_FIELD_NOTE, "残す")
+    withTimeout(10_000) { phone.outboxEmptied() }
+    phone.scope.coroutineContext[Job]!!.cancelChildren()
+    keeping(phone)
+    val again = SyncAccount(phone.database, phone.sessions, server.url, lazyOf(OkHttpClient()), phone.scope, linePhotos = phone.linePhotos)
+    again.foreground()
+    return phone to again
+  }
+
+  @Test
+  fun aKeptSessionTheAppCannotReadIsKeptUntilThePersonStartsAfresh() = runBlocking<Unit> {
+    val (phone, again) = startedAgain { it.kept.bytes = "not what the app reads".encodeToByteArray() }
+    val unreadable = AccountState.SessionEnded(unreadable = true)
+    withTimeout(10_000) { again.state.first { it == unreadable } }
+
+    again.tryAgain()
+
+    assertEquals(unreadable, again.state.value)
+    assertEquals("nothing written over", "not what the app reads", phone.kept.bytes?.decodeToString())
+    assertEquals("残す", phone.note("2026-10-04"))
+    assertEquals("no new anonymous user", 1, server.signIns.get())
+
+    again.startAfresh()
+
+    withTimeout(10_000) { again.state.first { it is AccountState.SignedIn } }
+    assertEquals(AccountState.SignedIn("user-2", linked = null), again.state.value)
+    assertNull(phone.note("2026-10-04"))
+    assertEquals(StoredSession("token-2", "user-2"), phone.sessions.read())
+    assertEquals("not said as a deletion", 0, again.deleted.value)
+  }
+
+  @Test
+  fun aStoreOutOfReachIsWaitedForAndNeverOffersToStartAfresh() = runBlocking<Unit> {
+    val (phone, again) = startedAgain { it.kept.reachable = false }
+    val reads = phone.kept.reads.get()
+    eventually { phone.kept.reads.get() > reads }
+
+    again.startAfresh()
+    // Commands are taken in order: the socket closing for this one says the one before was taken.
+    again.background()
+    withTimeout(10_000) { again.userSocket.first { it == SocketState.Closed } }
+
+    assertEquals(AccountState.SigningIn, again.state.value)
+    assertEquals("残す", phone.note("2026-10-04"))
+    phone.kept.reachable = true
+    again.foreground()
+    withTimeout(10_000) { again.state.first { it == AccountState.SignedIn("user-1", linked = null) } }
+    assertEquals(1, server.signIns.get())
   }
 
   @Test

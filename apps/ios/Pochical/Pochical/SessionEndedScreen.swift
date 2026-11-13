@@ -1,4 +1,5 @@
 import PochicalDesign
+import PochicalKit
 import SwiftUI
 
 /// In place of the app while the server does not know the session
@@ -9,8 +10,15 @@ import SwiftUI
 /// back only if it knows it, and はじめから使う, asked first,
 /// erases what the device holds and starts as a new install does, where
 /// signing in with Apple or Google again brings back an account's data.
+///
+/// Also while what the device keeps as its session is not one the app
+/// reads (`ended` `.unreadable`, spec/sync-protocol.md, Signing in), in
+/// its own words: there is nothing to ask the server about, so only
+/// はじめから使う, which no one who never signed in with Apple or Google
+/// comes back from.
 struct SessionEndedScreen: View {
   @Environment(\.themeColors) private var colors
+  let ended: AccountSession.Ended
   let tryAgain: () async -> Void
   let startAfresh: () -> Void
   @State private var confirming = false
@@ -19,11 +27,13 @@ struct SessionEndedScreen: View {
   var body: some View {
     VStack(spacing: 16) {
       Spacer()
-      Text("ログアウトされています")
+      Text(ended == .unreadable ? "ログイン情報を読み込めません" : "ログアウトされています")
         .font(.title3.bold())
         .foregroundStyle(colors.textPrimary)
       Text(
-        "ほかの端末でログアウトしたか、アカウントが削除されたため、同期できません。この端末のデータは、はじめから使うまで消しません。"
+        ended == .unreadable
+          ? "この端末に保存したログイン情報を読み込めないため、同期できません。この端末のデータは、はじめから使うまで消しません。"
+          : "ほかの端末でログアウトしたか、アカウントが削除されたため、同期できません。この端末のデータは、はじめから使うまで消しません。"
       )
       .font(.subheadline)
       .foregroundStyle(colors.textTertiary)
@@ -37,22 +47,24 @@ struct SessionEndedScreen: View {
       .buttonBorderShape(.capsule)
       .tint(colors.accentFill)
       .foregroundStyle(colors.accentOnFill)
-      Button {
-        trying = true
-        Task {
-          await tryAgain()
-          trying = false
-        }
-      } label: {
-        // The label keeps its size under the spinner, so nothing moves.
-        Text("もう一度つなぐ")
-          .opacity(trying ? 0 : 1)
-          .overlay {
-            if trying { ProgressView() }
+      if ended == .unknown {
+        Button {
+          trying = true
+          Task {
+            await tryAgain()
+            trying = false
           }
+        } label: {
+          // The label keeps its size under the spinner, so nothing moves.
+          Text("もう一度つなぐ")
+            .opacity(trying ? 0 : 1)
+            .overlay {
+              if trying { ProgressView() }
+            }
+        }
+        .font(.subheadline)
+        .disabled(trying)
       }
-      .font(.subheadline)
-      .disabled(trying)
     }
     .multilineTextAlignment(.center)
     .padding(.horizontal, 20)
@@ -63,7 +75,11 @@ struct SessionEndedScreen: View {
       Button("キャンセル", role: .cancel) {}
       Button("データを消してはじめる", role: .destructive, action: startAfresh)
     } message: {
-      Text("この端末のデータが消えます。アカウントが残っていれば、Apple または Google でもう一度ログインすると同じデータを使えます。")
+      Text(
+        ended == .unreadable
+          ? "この端末のデータが消えます。Apple または Google でログインしていた場合は、もう一度ログインすると同じデータを使えます。ログインしていなかった場合、データは元に戻せません。"
+          : "この端末のデータが消えます。アカウントが残っていれば、Apple または Google でもう一度ログインすると同じデータを使えます。"
+      )
     }
   }
 }

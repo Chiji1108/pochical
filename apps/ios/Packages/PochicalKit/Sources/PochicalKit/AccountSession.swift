@@ -41,8 +41,18 @@ import SQLiteData
     /// signed out or deleted on another device or by request, or the
     /// server misconfigured. Nothing syncs and nothing is cleared until the
     /// person tries again (`tryAgain`) or starts afresh (`startAfresh`)
-    /// (spec/sync-protocol.md, Reconnecting).
+    /// (spec/sync-protocol.md, Reconnecting). Or the session the device
+    /// keeps is not one the app reads (`ended`, `.unreadable`), where there
+    /// is nothing to try again with (spec/sync-protocol.md, Signing in).
     case ended
+  }
+
+  /// Why the session is ended, for the app to say.
+  public enum Ended: Equatable, Sendable {
+    /// The server does not know it.
+    case unknown
+    /// What the device keeps is not a session the app reads.
+    case unreadable
   }
 
   /// Why the device's data is being erased, and whether a try failed.
@@ -68,6 +78,9 @@ import SQLiteData
     case erasing
     /// The session the server did not know, kept to try again with.
     case ended(StoredSession)
+    /// The session kept is not one the app reads: nothing is forgotten or
+    /// signed in over until the person starts afresh.
+    case unreadable
   }
 
   private var state = State.starting
@@ -78,7 +91,16 @@ import SQLiteData
     case .signedIn: .signedIn
     case .changing, .switching: .changing
     case .erasing: .erasing
-    case .ended: .ended
+    case .ended, .unreadable: .ended
+    }
+  }
+
+  /// Why, while the session is ended.
+  public var ended: Ended? {
+    switch state {
+    case .ended: .unknown
+    case .unreadable: .unreadable
+    case .starting, .signedIn, .changing, .switching, .erasing: nil
     }
   }
 
@@ -177,7 +199,7 @@ import SQLiteData
       }
     case .changing:
       Task { await connect() }
-    case .switching, .erasing, .ended:
+    case .switching, .erasing, .ended, .unreadable:
       break
     }
   }
@@ -328,7 +350,7 @@ import SQLiteData
   /// account it was asked for.
   private var whyNotSignedIn: DeletionFailure {
     switch state {
-    case .starting: .notSignedIn
+    case .starting, .unreadable: .notSignedIn
     case .ended: .sessionEnded
     case .signedIn, .changing, .switching, .erasing: .accountChanged
     }
@@ -481,7 +503,7 @@ import SQLiteData
   private var live: Credentials? {
     switch state {
     case .signedIn(let credentials), .changing(let credentials, _): credentials
-    case .starting, .switching, .erasing, .ended: nil
+    case .starting, .switching, .erasing, .ended, .unreadable: nil
     }
   }
 
@@ -500,17 +522,24 @@ import SQLiteData
   }
 
   /// As a launch goes on: as the session the Keychain holds; with none, or
-  /// a Keychain it cannot read (as before the first unlock), starting,
-  /// read again and signed in as the app comes to the front (`established`).
+  /// a Keychain it cannot reach (as before the first unlock), starting,
+  /// read again and signed in as the app comes to the front (`established`);
+  /// with one it does not read, ended until the person starts afresh.
   private func goOnAsKept() {
-    if let kept = try? keychain.kept() {
-      resume(kept)
-    } else {
-      state = .starting
-      current.signingIn()
-      if inFront {
-        signInAnew()
+    do {
+      if let kept = try keychain.kept() {
+        return resume(kept)
       }
+    } catch is UnreadableSession {
+      state = .unreadable
+      return
+    } catch {
+      Logger.account.notice("The Keychain cannot be reached yet: \(error)")
+    }
+    state = .starting
+    current.signingIn()
+    if inFront {
+      signInAnew()
     }
   }
 
@@ -536,7 +565,7 @@ import SQLiteData
       endUnknown(credentials)
     case .changing(let credentials, _) where credentials.generation == generation:
       state = .changing(credentials, heardUnknown: true)
-    case .starting, .signedIn, .changing, .switching, .erasing, .ended:
+    case .starting, .signedIn, .changing, .switching, .erasing, .ended, .unreadable:
       break
     }
   }
@@ -589,13 +618,14 @@ import SQLiteData
 
   /// はじめから使う: the person's own choice to let the session go, and
   /// what the device holds with it, erasing as after signing out, then
-  /// signing in afresh as a new install does.
+  /// signing in afresh as a new install does. One the app does not read
+  /// goes the same way: forgetting it reads nothing.
   public func startAfresh() {
     Task {
       // Once the places' sockets of its stretch have closed, if the person
       // has not chosen meanwhile.
       await ending?.value
-      guard case .ended = state else { return }
+      guard ended != nil else { return }
       beginErasing(.signedOut)
     }
   }
@@ -672,6 +702,10 @@ import SQLiteData
         let session = try await established()
         guard case .starting = state else { return }
         resume(session)
+      } catch is UnreadableSession {
+        // A Keychain reached since the launch, holding what the app does not read.
+        guard case .starting = state else { return }
+        state = .unreadable
       } catch {
         Logger.account.error("Signing in failed: \(error)")
       }

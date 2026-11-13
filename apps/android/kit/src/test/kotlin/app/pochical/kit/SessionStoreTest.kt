@@ -3,6 +3,7 @@ package app.pochical.kit
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Test
@@ -53,14 +54,20 @@ class SessionStoreTest {
   }
 
   @Test
-  fun aSessionTheAppCannotReadIsNoSession() = runBlocking {
-    kept.bytes = "not json".encodeToByteArray()
-    assertNull(store.read())
-    kept.bytes = """{"shape":"older"}""".encodeToByteArray()
-    assertNull(store.read())
+  fun aSessionTheAppCannotReadIsKeptAndNeverWrittenOver() = runBlocking {
+    for (unreadable in listOf("not json", """{"shape":"another"}""")) {
+      kept.bytes = unreadable.encodeToByteArray()
+      assertThrows(KeptUnreadable::class.java) { runBlocking { store.read() } }
+      assertThrows(KeptUnreadable::class.java) { runBlocking { store.write(StoredSession("new", "user")) } }
+      assertEquals(unreadable, kept.bytes?.decodeToString())
+    }
+  }
 
-    store.write(StoredSession("new", "user"))
-    assertEquals(StoredSession("new", "user"), store.read())
+  @Test
+  fun aSessionTheAppCannotReadIsForgottenUnread() = runBlocking {
+    kept.bytes = "not json".encodeToByteArray()
+    store.forgetSession()
+    assertEquals(listOf(null, emptyList<String>()), listOf(store.read(), store.leftBehind()))
   }
 
   @Test
@@ -81,8 +88,10 @@ class SessionStoreTest {
     store.write(StoredSession("token", "user"))
     val before = kept.bytes
     kept.reachable = false
-    assertThrows(StoreUnreachable::class.java) { runBlocking { store.read() } }
-    assertThrows(StoreUnreachable::class.java) { runBlocking { store.write(StoredSession("other", "user")) } }
+    for (ask in listOf<suspend () -> Any?>({ store.read() }, { store.write(StoredSession("other", "user")) }, { store.forgetSession() })) {
+      val thrown = assertThrows(StoreUnreachable::class.java) { runBlocking { ask() } }
+      assertFalse(thrown is KeptUnreadable)
+    }
     assertArrayEquals(before, kept.bytes)
   }
 }

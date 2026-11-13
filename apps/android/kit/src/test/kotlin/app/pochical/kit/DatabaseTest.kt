@@ -1,5 +1,6 @@
 package app.pochical.kit
 
+import android.database.sqlite.SQLiteDatabase
 import app.pochical.design.SyncLimits
 import app.pochical.v1.Change
 import app.pochical.v1.ClientFrame
@@ -16,10 +17,12 @@ import app.pochical.v1.patternValue
 import app.pochical.v1.repeatOrder
 import app.pochical.v1.repeatOrders
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -236,6 +239,30 @@ class SyncSchemaTest {
         assertEquals(0L, cursorOf("g"))
         assertEquals("day", day("2026-10-01")?.pattern)
       }
+      close()
+    }
+  }
+}
+
+@RunWith(RobolectricTestRunner::class)
+class StoredDatabaseTest {
+  @Test
+  fun aDatabaseWithNoMigrationToTheAppsVersionIsRefusedAndKept() = runTest {
+    val context = RuntimeEnvironment.getApplication()
+    AppDatabase.open(context).run {
+      write { take(listOf(serverDay("2026-10-01", "day", ms = 1, cursor = 12))) }
+      close()
+    }
+    // As a newer app left it: Room has no migration down, as it has none from before the baseline.
+    val file = context.getDatabasePath("pochical.db").path
+    SQLiteDatabase.openDatabase(file, null, SQLiteDatabase.OPEN_READWRITE).use { it.version = AppDatabase.VERSION + 1 }
+    AppDatabase.open(context).run {
+      assertThrows(IllegalStateException::class.java) { runBlocking { owner() } }
+      close()
+    }
+    SQLiteDatabase.openDatabase(file, null, SQLiteDatabase.OPEN_READWRITE).use { it.version = AppDatabase.VERSION }
+    AppDatabase.open(context).run {
+      read { assertEquals("day", day("2026-10-01")?.pattern) }
       close()
     }
   }

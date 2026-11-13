@@ -38,11 +38,6 @@ public func appDatabase() throws -> any DatabaseWriter {
   }
   return try coordinated(writing: true, at: sharedDatabaseURL()) { url in
     let database = try defaultDatabase(path: url.path(), configuration: configuration)
-    // The migrator erases the tables; the photos waiting in their outbox
-    // go with them, as every erase of the device's data takes them.
-    if try database.read(migrator.hasSchemaChanges) {
-      ChatPhotos.eraseAll()
-    }
     try setUp(database)
     return database
   }
@@ -70,7 +65,7 @@ struct MissingAppGroup: Error {}
 
 /// Runs `body` on the database's file while no other process writes it:
 /// the app opens and sets the database up writing, and a widget reads
-/// it, so a widget never reads one half set up or half erased.
+/// it, so a widget never reads one half set up.
 func coordinated<T>(
   writing: Bool, at url: URL, _ body: (URL) throws -> T
 ) throws -> T {
@@ -96,17 +91,17 @@ func coordinated<T>(
   return try result!.get()
 }
 
-/// Nothing is released yet, so what the device stores changes shape with
-/// no migration: the database is erased and syncs again from the server,
-/// and a kept session it cannot read is no session (`SessionKeychain`).
-/// Turned off at release, migration steps following from then on.
-let erasesOnShapeChange = true
+/// The last step of the baseline: the tables as the first release made
+/// them.
+let baselineEnd = "Keep the chats' drafts"
 
-/// The tables, one step a group of them, each changed where it is created
-/// until release (`erasesOnShapeChange`).
+/// The tables, each step run once on a device and never again, so a
+/// stored database is migrated and never erased. The steps down to
+/// `baselineEnd` are the baseline, and no step's body changes once it is
+/// on main: a table changes shape in a new step, registered after the
+/// last one here (AGENTS.md, How to build).
 var migrator: DatabaseMigrator {
   var migrator = DatabaseMigrator()
-  migrator.eraseDatabaseOnSchemaChange = erasesOnShapeChange
   migrator.registerOwnValues()
   migrator.registerGroups()
   migrator.registerGroupValues()
@@ -116,5 +111,6 @@ var migrator: DatabaseMigrator {
   migrator.registerProfile()
   migrator.registerPreferences()
   migrator.registerChatDrafts()
+  // A new step goes here.
   return migrator
 }

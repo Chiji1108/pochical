@@ -61,8 +61,8 @@ struct AppRoot: View {
     Group {
       if let erasing = session.erasing {
         ErasingScreen(erasing: erasing) { session.eraseAgain() }
-      } else if session.phase == .ended {
-        SessionEndedScreen(tryAgain: session.tryAgain) {
+      } else if let ended = session.ended {
+        SessionEndedScreen(ended: ended, tryAgain: session.tryAgain) {
           // As after ログアウト: the device starts as a new one does.
           FirstRun.again()
           session.startAfresh()
