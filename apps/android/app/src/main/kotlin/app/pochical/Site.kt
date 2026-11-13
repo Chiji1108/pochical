@@ -2,6 +2,7 @@ package app.pochical
 
 import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.Intent
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.net.toUri
 
@@ -11,8 +12,24 @@ object Site {
 
   fun page(path: String): String = "$ROOT/$path"
 
-  /** Google Play's listing, where a review is written, which there is none of before release (spec/review.md). */
-  val writeReview: String? = null
+  /** Google Play's listing, where a review is written (spec/review.md). */
+  const val WRITE_REVIEW = "https://play.google.com/store/apps/details?id=app.pochical"
+}
+
+/** Google Play's own app, which a link to a listing names so that no browser takes it. */
+private const val PLAY_STORE = "com.android.vending"
+
+/**
+ * Pochical's listing in the Play Store app, where its review is written, opened as Google has an
+ * app link to a listing (developer.android.com/distribute/marketing-tools/linking-to-google-play);
+ * on a device with no Play Store, the listing's page as any other.
+ */
+fun openListing(context: Context) {
+  try {
+    context.startActivity(Intent(Intent.ACTION_VIEW, Site.WRITE_REVIEW.toUri()).setPackage(PLAY_STORE))
+  } catch (_: ActivityNotFoundException) {
+    openLink(context, Site.WRITE_REVIEW)
+  }
 }
 
 /**
