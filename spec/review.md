@@ -22,7 +22,7 @@ The apps ask right after the person finished putting something on their days, on
 - closing a day after changing its shift or hours (a day off taken, a swap);
 - saving a day's memo.
 
-The first time ポチポチ input closes with shifts entered, the reminders are offered instead (spec/calendar.md, Reminders), and the review waits for another time. Never on opening the app, while looking through months, from a widget, in a group or its chat, or in the middle of anything else. Someone who only looks and never changes a day is never asked; the settings' review row is there for them. That row, under 設定's ポチカルについて with ヘルプ, 利用規約, プライバシーポリシー and ライセンス (spec/calendar.md, ライセンス), opens the store's page for writing a review (App Store's `?action=write-review`, Google Play's listing) whenever it is pressed; before Pochical is in the store, it says it will.
+The first time ポチポチ input closes with shifts entered, the reminders are offered instead (spec/calendar.md, Reminders), and the review waits for another time. Never on opening the app, while looking through months, from a widget, in a group or its chat, or in the middle of anything else. Someone who only looks and never changes a day is never asked; the settings' review row is there for them. That row, under 設定's ポチカルについて with ヘルプ, 利用規約, プライバシーポリシー and ライセンス (spec/calendar.md, ライセンス), opens the store's page for writing a review whenever it is pressed: on Android Google Play's listing, in the Play Store app (in the browser sheet on a device without it); on iOS the App Store's `?action=write-review`, and until Pochical is in the App Store the row says it will (#938).
 
 ## What is kept
 
