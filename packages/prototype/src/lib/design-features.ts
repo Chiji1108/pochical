@@ -10,7 +10,6 @@ export type AppFeature = (typeof appFeatures)[number];
 export type AppFeatures = ReadonlySet<AppFeature>;
 
 export const everyFeature: AppFeatures = new Set(appFeatures);
-export const calendarAlone: AppFeatures = new Set();
 
 export const AppFeaturesContext = createContext<AppFeatures>(everyFeature);
 

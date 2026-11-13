@@ -68,7 +68,7 @@ export const config = defineConfig({
       wide: "@media (min-width: 960px)",
       // Where a page may move with its scroll, as _moving: a browser with
       // scroll-driven animations, asked for no less motion. Everywhere
-      // else such a page stands still (the site's /next).
+      // else such a page stands still (the site's top page).
       moving: {
         "@supports (animation-timeline: view())": {
           "@media (prefers-reduced-motion: no-preference)": "@slot",

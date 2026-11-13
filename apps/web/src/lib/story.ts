@@ -1,9 +1,9 @@
-// The story /next tells as it is scrolled (pages/next.astro): one tall
+// The story the top page tells as it is scrolled (pages/index.astro): one tall
 // section whose stage stays on screen, and where the page is in it, 0 at
 // its start to 1 at its end, saying what the stage shows. The page's CSS
 // moves what only fades and slides, on the section's own scroll timeline;
 // the phones that show more of the app with each step (components/
-// next-screens.tsx) read the place from here. Kept free of React, as
+// lp-screens.tsx) read the place from here. Kept free of React, as
 // lib/presses.ts is.
 
 // The story's parts, in the stores' order, each the stretch of the place

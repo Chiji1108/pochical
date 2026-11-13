@@ -670,7 +670,7 @@ function WallPicturePage({ picture }: { picture: WallPicture }) {
   );
 }
 
-// A card of the site's /next (CARD_PICTURES): its screens on its ground,
+// A card of the site's top page (CARD_PICTURES): its screens on its ground,
 // each where the picture says, a framed one with a shot's screen's corners
 // and shadow at its own size.
 function CardPicturePage({

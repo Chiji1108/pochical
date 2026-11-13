@@ -3,7 +3,7 @@ import { useLayoutEffect, useRef } from "react";
 import type { RefObject } from "react";
 
 // What a step brings in where a page tells a screen's changes itself, a
-// step at a time, rather than a person making them (the site's /next,
+// step at a time, rather than a person making them (the site's top page,
 // which marks its phones `data-told`; `_told` is that, on a page that
 // moves). A step's change is whole at once, so each new thing comes in
 // over a moment of its own, started by its being there: a step skipped

@@ -46,7 +46,7 @@ export function DesignApp({
   fullScreen = false,
   features = everyFeature,
 }: {
-  // What the site's /next sets by how far it is scrolled: entering as the
+  // What the site's top page sets by how far it is scrolled: entering as the
   // page tells it, and how many of a group's other members have joined so
   // far, everyone without.
   entering?: Entering;

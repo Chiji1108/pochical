@@ -64,7 +64,7 @@ import { OffFaintContext, useOffLooks } from "./shift-mark";
 
 // Entering as a page tells it rather than as a person does it: the day
 // being entered and the key going down on it, both set from outside, as
-// the site's /next sets them by how far it is scrolled. The days
+// the site's top page sets them by how far it is scrolled. The days
 // themselves are the person's, as ever.
 export type Entering = { date: Date; pressed?: Shift };
 

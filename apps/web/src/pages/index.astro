@@ -1,32 +1,47 @@
 ---
+import cardCares from "@pochical/prototype/assets/card-cares.png";
+import cardDetails from "@pochical/prototype/assets/card-details.png";
+import cardDeviceCalendar from "@pochical/prototype/assets/card-device-calendar.png";
+import cardThemes from "@pochical/prototype/assets/card-themes.png";
 import siteIcon from "@pochical/prototype/assets/icon.png?url";
+import widgetWallWide from "@pochical/prototype/assets/widget-wall-wide.png";
 import widgetWall from "@pochical/prototype/assets/widget-wall.png";
 import { site } from "@pochical/prototype/lib/brand";
-import { defaultDayBeforeTime } from "@pochical/prototype/lib/design-reminders";
-import { SITE_WALL } from "@pochical/prototype/lib/store-shots";
-import { css } from "@pochical/styled-system/css";
-import { Picture } from "astro:assets";
 import {
-  BellRing,
-  CalendarOff,
-  ImageDown,
-  MegaphoneOff,
-  Shapes,
-  UserRound,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+  CARD_PICTURES,
+  SITE_WALL,
+  SITE_WALL_WIDE,
+} from "@pochical/prototype/lib/store-shots";
+import { css, cx } from "@pochical/styled-system/css";
+import { Picture } from "astro:assets";
 
 import {
-  FeatureScreen,
-  HeroPhone,
+  ChatPhone,
+  EntryPhone,
+  FriendsPhone,
   Sky,
-  ThemeGallery,
 } from "../components/lp-screens";
 import ShotHeadline from "../components/shot-headline.astro";
 import StoreLinks from "../components/store-links.astro";
 import Site from "../layouts/site.astro";
 import { primaryAction } from "../lib/primary-action";
 import { appStoreUrl, stores } from "../lib/site";
+import { BEATS, rangeOf } from "../lib/story";
+
+// The top page: the stores' storyline (#806) told by one phone that stays
+// on screen while the page scrolls under it, its screen changing with the
+// scroll (lib/story.ts). Each part's words are the headline of its picture
+// in the stores (@pochical/prototype's lib/store-shots.ts), so the page
+// says what the stores say.
+//
+// Where the browser has no scroll-driven animations, or less motion is
+// asked for, nothing here moves: the parts stand one under the other,
+// each with its screen as a still scene. Everything that moves is under
+// _moving, so the page's plain styles are that still page.
+
+// The site's muted gray, a step darker: over the sky it keeps above 5:1,
+// where the site's own falls short of 4.5:1.
+const ON_SKY_TEXT = "#5c6159";
 
 // Which phones the app is still on its way to, said under the store links
 // (components/store-links.astro) until each store's URL is set.
@@ -36,83 +51,10 @@ const waiting = stores()
 const release =
   waiting.length > 0 && `${waiting.join("・")} 向けに、ただいま準備中。`;
 
-// The page's words are its own HTML; what the app's own code draws, its
-// skies and its phones, are islands (components/lp-screens.tsx), drawn by
-// the build and taken over once their code is in: the hero's when the
-// browser is idle, the rest as a scroll brings them about a screen away.
-const NEAR = { rootMargin: "100% 0px" };
-
-// The site's muted gray, a step darker: over the sky it keeps above 5:1,
-// where the site's own falls short of 4.5:1.
-const ON_SKY_TEXT = "#5c6159";
-
-const hero = {
-  copy: css({
-    _wide: {
-      gridColumn: 1,
-      gridRow: 1,
-      paddingTop: "120px",
-      textAlign: "left",
-    },
-    display: "flex",
-    flexDirection: "column",
-    gap: "24px",
-    maxWidth: "460px",
-    textAlign: "center",
-  }),
-  demo: css({
-    _wide: { display: "contents" },
-    display: "flex",
-    flexDirection: "column",
-    gap: "18px",
-    width: "min(390px, 100%)",
-  }),
-  description: css({
-    color: ON_SKY_TEXT,
-    fontSize: "15px",
-    letterSpacing: "0.035em",
-    lineHeight: 2.1,
-  }),
-  eyebrow: css({
-    color: "var(--green)",
-    fontSize: "11px",
-    fontWeight: 650,
-    letterSpacing: "0.17em",
-  }),
-  release: css({ color: ON_SKY_TEXT, fontSize: "11px" }),
-  // Wide, the words on the left and the phone on the right, and what is
-  // under the phone on a narrow screen (HeroPhone's foot) under the words
-  // instead, where it is seen beside the phone without scrolling.
-  root: css({
-    _wide: {
-      alignItems: "start",
-      columnGap: "96px",
-      display: "grid",
-      gridTemplateColumns: "minmax(0, 460px) 390px",
-      gridTemplateRows: "auto 1fr",
-      justifyContent: "center",
-      padding: "24px 48px 96px",
-      rowGap: "40px",
-    },
-    alignItems: "center",
-    display: "flex",
-    flexDirection: "column",
-    gap: "48px",
-    padding: "40px 16px 72px",
-  }),
-  store: css({
-    "& .store-links": { _wide: { justifyContent: "flex-start" } },
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-  }),
-  title: css({
-    fontSize: "clamp(38px, 5.2vw, 60px)",
-    fontWeight: 700,
-    letterSpacing: "0.01em",
-    lineHeight: 1.4,
-  }),
-};
+// Until the App Store has the app, the way to try it: the prototype kept
+// on one's own phone (lib/primary-action.ts).
+const action = primaryAction(appStoreUrl());
+const tries = appStoreUrl() === undefined;
 
 // ポチッと。 is a button, though it keeps the heading's look: pressed, it
 // sinks a little and springs back, and drifts the sky behind it. Nothing
@@ -138,25 +80,139 @@ const pressed = css({
   userSelect: "none",
 });
 
-// The wall's width on the page: half its picture's, drawn for dense
-// screens.
-const WALL_SHOWN = SITE_WALL.width / 2;
+// A piece that runs on the story's timeline, over the stretch of it its
+// `--from` and `--to` name (rangeOf): where the page is scrolled to is how
+// far along it is, forward and back.
+const onStory = {
+  animationFillMode: "both",
+  animationRange: "contain var(--from) contain var(--to)",
+  animationTimeline: "--story",
+  animationTimingFunction: "linear",
+} as const;
 
-const feature = {
+// A part's screen is clear, whatever its own move was last drawn as,
+// unless the page is in its part or in the one before or after
+// (`data-near`, set with `data-now`): set on what is inside the piece
+// that moves, so nothing of a part is on screen two parts on. One box's
+// opacity, so marking the parts costs the page no more than that.
+const farOff = {
+  "[data-beat]:not([data-near]) &": { opacity: 0 },
+} as const;
+
+const story = {
+  // A part of the story: its words, then its screen. Still, one under the
+  // other; moving, the stage lays the two out, every part's in the same
+  // two places.
+  beat: css({
+    _moving: { display: "contents" },
+    alignItems: "center",
+    display: "flex",
+    flexDirection: "column",
+    gap: "36px",
+  }),
+  beats: css({
+    _moving: { display: "contents" },
+    _wide: { gap: "140px", padding: "24px 48px 140px" },
+    display: "flex",
+    flexDirection: "column",
+    gap: "96px",
+    padding: "40px 16px 96px",
+  }),
   body: css({
-    color: "var(--muted)",
+    "@media (max-width: 959px)": { _moving: { display: "none" } },
+    color: ON_SKY_TEXT,
     fontSize: "14px",
     letterSpacing: "0.035em",
     lineHeight: 2.1,
   }),
-  // A feature's words: beside its screen, from the left when wide.
+  heroBody: css({
+    color: ON_SKY_TEXT,
+    fontSize: "14px",
+    letterSpacing: "0.035em",
+    lineHeight: 2.1,
+  }),
+  // A part's words. Moving, each part's take the same place in turn: over
+  // the phone on a narrow screen, beside it on a wide one. The words of
+  // the part the page is in are the ones shown (`data-now`, set from the
+  // place by the script under the page), each coming in over a moment as
+  // the one before goes: what is read is then never a frame a browser
+  // drew for another place and has not drawn again, as Safari on a Mac
+  // left a part's words half gone over the next's after a fast scroll
+  // (its scroll-driven animations drawn off the main thread: WebKit bugs
+  // 304189 and 302870 are the nearest reported; #1208).
   copy: css({
-    _wide: { textAlign: "left" },
+    _moving: {
+      "[data-now] > &": {
+        opacity: 1,
+        transitionDelay: "0.12s",
+        translate: "0 0",
+      },
+      _wide: {
+        alignSelf: "center",
+        gap: "18px",
+        justifySelf: "stretch",
+        paddingBottom: 0,
+        textAlign: "left",
+      },
+      alignSelf: "end",
+      gridArea: "1 / 1",
+      opacity: 0,
+      paddingBottom: "14px",
+      transitionDuration: "0.25s",
+      transitionProperty: "opacity, translate",
+      transitionTimingFunction: "ease-out",
+      translate: "0 12px",
+    },
     display: "flex",
     flexDirection: "column",
-    gap: "18px",
-    maxWidth: "400px",
+    gap: "6px",
+    maxWidth: "460px",
     textAlign: "center",
+    width: "100%",
+  }),
+  // The hero's words on a narrow screen, where they are more than the
+  // words' room: from the stage's top down over where the phone will
+  // stand, the phone under them until the story starts (heroPhone).
+  heroCopy: css({
+    "@media (max-width: 959px)": {
+      _moving: { alignSelf: "start!", paddingBlock: "8px 0!" },
+    },
+  }),
+  // What the hero says under its line: what the app is, and where to get
+  // it. One sentence on a narrow screen, the page's lines on a wide one.
+  heroMore: css({
+    "& .store-links": { _wide: { _moving: { justifyContent: "flex-start" } } },
+    "@media (max-width: 959px)": {
+      _moving: {
+        "& br:first-of-type": { display: "none" },
+        "& p": { fontSize: "13px", lineHeight: 1.7 },
+        // The links say 公開準備中 themselves; the line under them is
+        // for a screen with room.
+        "& p + p, & div > p": { display: "none" },
+        gap: "12px",
+        marginTop: "4px",
+      },
+    },
+    display: "flex",
+    flexDirection: "column",
+    gap: "24px",
+    marginTop: "12px",
+  }),
+  // The hero's phone on a narrow screen: under the hero's words while
+  // they are read, and up into its place as the story starts.
+  heroPhone: css({
+    "@media (max-width: 959px)": {
+      _moving: { animationName: "storySettle", ...onStory },
+    },
+  }),
+  release: css({ color: ON_SKY_TEXT, fontSize: "11px" }),
+  store: css({ display: "flex", flexDirection: "column", gap: "8px" }),
+  heroTitle: css({
+    _moving: { fontSize: "clamp(32px, 5.2vw, 60px)", lineHeight: 1.3 },
+    fontSize: "clamp(38px, 5.2vw, 60px)",
+    fontWeight: 700,
+    letterSpacing: "0.01em",
+    lineHeight: 1.4,
   }),
   label: css({
     color: "var(--green)",
@@ -164,42 +220,133 @@ const feature = {
     fontWeight: 650,
     letterSpacing: "0.17em",
   }),
-  list: css({
-    _wide: { gap: "140px", padding: "80px 48px 140px" },
-    display: "flex",
-    flexDirection: "column",
-    gap: "96px",
-    listStyle: "none",
-    margin: "0 auto",
-    maxWidth: "1080px",
-    padding: "40px 16px 96px",
-  }),
-  // Each row its copy, then its screen, as they stack on a phone. Wide,
-  // the screens take turns from the left: the hero's phone is on the
-  // right, so the first feature's comes in on the other side.
-  row: css({
-    _wide: {
-      "&:nth-child(odd)": { flexDirection: "row-reverse" },
-      flexDirection: "row",
-      gap: "120px",
-      justifyContent: "center",
+  // The phone. Moving, every part's is the same phone in the same place,
+  // at the size the stage has room for: laid out at its own size, as its
+  // words are set, and drawn smaller as a picture is, from its corner in
+  // its place. Not zoomed: a browser that holds text to a least size
+  // (Safari's, 9px) draws a zoomed phone's small words larger than the
+  // room the phone leaves them.
+  phone: css({
+    _moving: {
+      height: "844px",
+      scale: "var(--fit)",
+      transformOrigin: "0 0",
+      width: "390px",
     },
-    alignItems: "center",
     display: "flex",
-    flexDirection: "column",
-    gap: "36px",
+    flexShrink: 0,
+    justifyContent: "center",
+    width: "min(390px, 100%)",
+  }),
+  // Where the phone stands, as large as it is drawn: in the middle, and
+  // on a whole pixel from the stage's side, a half one being drawn
+  // between two of the screen's own.
+  place: css({
+    _moving: {
+      ...farOff,
+      "@supports (width: round(down, 1px, 1px))": {
+        marginLeft: "round(down, (100% - 390px * var(--fit)) / 2, 1px)",
+        marginRight: 0,
+      },
+      display: "block",
+      height: "calc(844px * var(--fit))",
+      marginInline: "auto",
+      width: "calc(390px * var(--fit))",
+    },
+    display: "contents",
+  }),
+  // The tall section the story is scrolled through. Its own place in the
+  // window is the timeline everything on its stage runs on.
+  root: css({
+    _moving: { height: "720svh", viewTimelineName: "--story" },
+    position: "relative",
+  }),
+  // The sky behind the stage, turning toward evening as the story goes.
+  sky: css({
+    _moving: {
+      animationName: "storySky",
+      inset: 0,
+      pointerEvents: "none",
+      position: "absolute",
+      zIndex: -1,
+      ...onStory,
+      animationRange: "contain 0% contain 100%",
+    },
+    display: "contents",
+  }),
+  // The stage, which stays on screen while the story is scrolled: the
+  // words in one place and the phone in another, both of a size the
+  // window alone gives, so nothing that changes with the scroll moves
+  // either. A length over a length has no unit only in newer browsers, so
+  // the phone's zoom is the tangent of the angle whose sides they are.
+  stage: css({
+    _moving: {
+      "--copy-room": "128px",
+      // How far under its place the hero's phone waits on a narrow screen:
+      // what the hero's words take beyond the words' room.
+      "--hero-drop": "128px",
+      // A screen of three pixels to the page's one, a phone's, draws the
+      // phone at two thirds where the room allows that much, so each of
+      // the phone's own pixels is two of the screen's, whole, and the
+      // picture of it is drawn on the screen's own pixels however often
+      // it is drawn again.
+      "--fit": "var(--fit-free)",
+      "--fit-free": "min(1, tan(atan2(var(--phone-room), 844px)))",
+      "--phone-room": "calc(100svh - var(--copy-room) - 12px)",
+      "@media (resolution: 3dppx)": {
+        "@supports (width: round(down, 1px, 1px))": {
+          "--fit":
+            "min(var(--fit-free), max(2 / 3, round(down, var(--fit-free), 1 / 3)))",
+        },
+      },
+      _wide: {
+        // Beside a wide page's words the phone is its own size, its
+        // words as large as they are set: in a window too short for it,
+        // it runs off the stage's foot.
+        "--fit": "1",
+        "--phone-room": "min(844px, 100svh - 64px)",
+        alignItems: "center",
+        columnGap: "96px",
+        gridTemplateColumns: "minmax(0, 460px) 390px",
+        gridTemplateRows: "100svh",
+        justifyContent: "center",
+        padding: "0 48px",
+      },
+      display: "grid",
+      gridTemplateColumns: "minmax(0, 1fr)",
+      gridTemplateRows: "var(--copy-room) var(--phone-room)",
+      height: "100svh",
+      justifyItems: "center",
+      // Across only: a phone waiting under the screen must still count
+      // as there for the browser to see it coming.
+      overflowX: "clip",
+      padding: "0 16px",
+      position: "sticky",
+      top: 0,
+    },
   }),
   title: css({
     fontSize: "clamp(26px, 3vw, 34px)",
     fontWeight: 700,
     letterSpacing: "0.01em",
-    lineHeight: 1.5,
+    lineHeight: 1.4,
   }),
-  // The real widgets on a wall (SITE_WALL, drawn by mise run store:images),
-  // at a phone's width beside the others, fading into the paper at every
-  // edge: the picture above and below, and its frame at the sides, a mask
-  // each, so no browser has two to put together.
+  // A part's screen. Moving, every part's stands in the same place.
+  visual: css({
+    _moving: {
+      _wide: { gridArea: "1 / 2" },
+      display: "block",
+      gridArea: "2 / 1",
+      height: "var(--phone-room)",
+      width: "100%",
+      ...onStory,
+    },
+    display: "contents",
+  }),
+  // The real widgets on their wall, photographed for the stores, fading
+  // into the paper at every edge.
   wall: css({
+    _moving: { height: "100%", objectFit: "cover" },
     display: "block",
     height: "auto",
     maskImage:
@@ -207,99 +354,197 @@ const feature = {
     width: "100%",
   }),
   wallFrame: css({
+    _moving: {
+      ...farOff,
+      _wide: { display: "none" },
+      height: "min(600px, 100%)",
+      marginInline: "auto",
+      width: "auto",
+    },
+    aspectRatio: `${SITE_WALL.width} / ${SITE_WALL.height}`,
     flexShrink: 0,
     maskImage:
       "linear-gradient(to right, transparent, black 10%, black 90%, transparent)",
     width: "min(390px, 100%)",
   }),
+  // The wall's place. On a narrow screen, the phone's; beside the words
+  // of a wide one, a wall and no picture of one: from the stage's top to
+  // its foot and off its right edge, fading only toward the words.
+  wallPlace: css({
+    _moving: {
+      _wide: {
+        gridArea: "auto",
+        height: "auto",
+        inset: "0 0 0 46%",
+        position: "absolute",
+        width: "auto",
+      },
+      display: "block",
+      gridArea: "2 / 1",
+      height: "var(--phone-room)",
+      width: "100%",
+      ...onStory,
+    },
+    display: "contents",
+  }),
+  // The wall drawn for a wide page (SITE_WALL_WIDE), there alone.
+  wallWide: css({
+    _moving: {
+      ...farOff,
+      _wide: {
+        display: "block",
+        height: "100%",
+        maskImage: "linear-gradient(to right, transparent, black 26%)",
+        objectFit: "cover",
+        objectPosition: "left center",
+        width: "100%",
+      },
+    },
+    display: "none",
+  }),
 };
 
-// Smaller things the app does, after the features' rows: a line each, no
-// screen.
-const extras: { Icon: LucideIcon; title: string; body: string }[] = [
+// How each piece moves (panda.config.ts, storyKeyframes).
+const moving = {
+  // A phone not come to yet waits under the screen, then is there.
+  arrives: css({
+    _moving: {
+      animationName: "storyWait, storyTake",
+      animationTimingFunction: "step-end, linear",
+    },
+  }),
+  rises: css({
+    _moving: {
+      animationName: "storyWait, storyPhone",
+      animationTimingFunction: "step-end, linear",
+    },
+  }),
+  shrink: css({ _moving: { animationName: "storyShrink" } }),
+  wall: css({ _moving: { animationName: "storyWall" } }),
+};
+
+// A stretch of the story for a piece's two animations: waiting until
+// `near`, then moving over `stretch`.
+const waitingUntil = (near: number, stretch: { from: number; to: number }) => ({
+  animationRange: `contain 0% contain ${(near * 100).toFixed(1)}%, contain ${(stretch.from * 100).toFixed(1)}% contain ${(stretch.to * 100).toFixed(1)}%`,
+});
+
+// How long a piece takes to give way to the next, in the story's place.
+const TURN = 0.05;
+
+// What the wall shows, said of whichever of its two pictures is drawn:
+// the other is not on the page at that width.
+const WALL_ALT =
+  "ポチカルのウィジェット。次の休みまでの日数、今日のシフト、いまのシフトの残り時間が並ぶ。";
+
+// The wall's width on the page: half its picture's, drawn for dense
+// screens.
+const WALL_SHOWN = SITE_WALL.width / 2;
+
+// The rest of what the stores say, after the story: a card each, a
+// picture of the real app's screens over the headline of its picture in
+// the stores. The pictures are drawn from the stores' own captures by
+// `mise run store:images` (CARD_PICTURES), at twice the size a card shows
+// them: a screen photographed draws the same in every browser, where a
+// small live one's words are drawn larger than their room by a browser
+// that holds text to a least size (Safari's, 9px, once `zoom` takes it
+// under).
+const [CARD] = CARD_PICTURES;
+const rest = [
   {
-    Icon: BellRing,
-    body: `前の日の${defaultDayBeforeTime}に、明日のシフトが届きます。`,
-    title: "前の晩にお知らせ",
+    alt: "ひと月のカレンダーを、線だけの落ち着いた見た目と、文字の印に色をつけた見た目で並べた2つの画面。",
+    lines: ["テーマは12種類。", "印は、アイコン・絵文字・文字から。"],
+    picture: cardThemes,
+    shot: "themes",
   },
   {
-    Icon: Shapes,
-    body: "日勤、夜勤、明け、早番、遅番など、名前・時間・印を自由に作れます。",
-    title: "シフトは自由に作れる",
+    alt: "端末カレンダーに追加の画面。「自動で反映」がオンで、シフトを変えると3か月先の分まで入れ直すと書かれている。",
+    lines: ["変えたシフトが、", "いつもの予定の隣にも入ります。"],
+    picture: cardDeviceCalendar,
+    shot: "device-calendar",
   },
   {
-    Icon: ImageDown,
-    body: "ひと月を1枚の画像に。そのまま家族に送れます。",
-    title: "月まるごと画像で保存",
+    alt: "繰り返しの画面。当番・非番・休みが3日ごとに並んだ2週間のカレンダー。",
+    lines: [
+      "決まった並びは、繰り返しで先の月まで。",
+      "15日始まりや、早出・残業にも。",
+    ],
+    picture: cardDetails,
+    shot: "details",
   },
   {
-    Icon: CalendarOff,
-    body: "忘年会のような集まりのグループは、決めた日にみんな一緒に終わります。",
-    title: "グループに、終了日をつけられる",
+    alt: "次の通知の見本。前の日の21時に届く「明日は日勤（早出）8:00–18:00」。",
+    lines: [
+      "前の晩に、明日のシフトをお知らせ。",
+      "夜勤の次の日は、明けも一緒に。",
+    ],
+    picture: cardCares,
+    shot: "cares",
   },
-  {
-    Icon: UserRound,
-    body: "機種変更のときは、AppleまたはGoogleのアカウントで引き継げます。",
-    title: "アカウント登録なしで始められる",
+] as const;
+
+// A card rising into place as it comes onto the screen.
+const reveal = {
+  _moving: {
+    animationFillMode: "both",
+    animationName: "storyArrive",
+    animationRange: "entry 0% entry 90%",
+    animationTimeline: "view()",
+    animationTimingFunction: "linear",
   },
-  {
-    Icon: MegaphoneOff,
-    body: "ソースコードは公開しています。",
-    title: "広告はありません",
-  },
-];
+} as const;
 
 const more = {
-  body: css({ color: "var(--muted)", fontSize: "13px", lineHeight: 1.9 }),
-  icon: css({
-    alignItems: "center",
-    bg: "var(--soft-green)",
-    borderRadius: "full",
-    color: "var(--green)",
-    display: "flex",
-    flexShrink: 0,
-    height: "40px",
-    justifyContent: "center",
-    width: "40px",
-  }),
-  item: css({ alignItems: "flex-start", display: "flex", gap: "16px" }),
-  itemTitle: css({
-    fontSize: "15px",
-    fontWeight: 700,
-    letterSpacing: "0.02em",
-    lineHeight: 1.6,
-  }),
-  list: css({
-    _wide: { gap: "40px 56px", gridTemplateColumns: "repeat(2, 1fr)" },
-    display: "grid",
-    gap: "28px",
-    listStyle: "none",
-    margin: 0,
-    padding: 0,
-  }),
-  root: css({
-    _wide: { padding: "0 48px 40px" },
+  body: css({ color: "var(--muted)", fontSize: "13px", lineHeight: 1.7 }),
+  card: css({
+    ...reveal,
+    bg: "#fffefa",
+    border: "1px solid #e3e6de",
+    borderRadius: "20px",
     display: "flex",
     flexDirection: "column",
-    gap: "40px",
+    overflow: "hidden",
+  }),
+  // The cards one under the other on a phone, two by two beside it, under
+  // the story at the gap its parts keep between them.
+  list: css({
+    _wide: {
+      gap: "32px",
+      gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+      padding: "140px 48px 40px",
+    },
+    display: "grid",
+    gap: "20px",
+    listStyle: "none",
     margin: "0 auto",
     maxWidth: "880px",
-    padding: "0 16px 24px",
+    padding: "96px 16px 24px",
+  }),
+  // A card's picture, as wide as the card.
+  picture: css({
+    aspectRatio: `${CARD.width} / ${CARD.height}`,
+    borderBottom: "1px solid #e3e6de",
+    display: "block",
+    height: "auto",
+    width: "100%",
   }),
   title: css({
-    fontSize: "clamp(22px, 2.4vw, 26px)",
+    fontSize: "18px",
     fontWeight: 700,
-    letterSpacing: "0.01em",
-    textAlign: "center",
+    letterSpacing: "0.02em",
+    lineHeight: 1.5,
+  }),
+  words: css({
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+    padding: "20px 20px 22px",
   }),
 };
 
-// The page's end: the store links again for those who read this far, on
-// the plain paper. Its ポチッと。 presses like the hero's, and as in the
-// app, where おたのしみ has no sky until the first tap, its first press
-// brings one up behind it.
 const closing = {
   content: css({
+    ...reveal,
     alignItems: "center",
     display: "flex",
     flexDirection: "column",
@@ -307,6 +552,8 @@ const closing = {
   }),
   icon: css({ borderRadius: "14px" }),
   release: css({ color: ON_SKY_TEXT, fontSize: "11px" }),
+  // Under the page's own ground a sky comes up at the first press, as in
+  // the app, where おたのしみ has no sky until the first tap.
   root: css({
     _wide: { padding: "120px 48px 160px" },
     display: "flex",
@@ -327,157 +574,183 @@ const closing = {
 
 <Site description={site.description} path="/" title="シフトを、ポチッと。">
   <main id="main">
-    <section class={hero.root}>
-      <div class={hero.copy}>
-        <Sky client:idle place="top" />
-        <p class={hero.eyebrow}>シフトカレンダー</p>
-        <h1 class={hero.title}>
-          シフトを、
-          <br />
-          <button class={pressed} data-press="top" type="button">
-            ポチッと。
-          </button>
-        </h1>
-        <p class={hero.description}>
-          夜勤や交代勤務のシフトも、
-          <br />
-          ポチポチ押していくだけ。
-          <br />
-          ひと月ぶんが、すぐ入ります。
-        </p>
-        <div class={hero.store}>
-          <StoreLinks />
-          {release && <p class={hero.release}>{release}</p>}
+    <div class={story.root} data-story>
+      <div class={story.stage}>
+        <div class={story.sky}>
+          <Sky client:idle place="top" />
         </div>
-      </div>
-      <div class={hero.demo}>
-        <HeroPhone action={primaryAction(appStoreUrl())} client:idle />
-      </div>
-    </section>
-    {/* What the app does, in the stores' order (store/README.md), each
-       headline its store screenshot's (@pochical/prototype's
-       lib/store-shots.ts). Beside each, its own screen, not touchable, so
-       the page never drifts from the app; the widgets are the real ones,
-       photographed for the stores. The seventh's three points stand
-       beside 繰り返し's screen; the eighth's are said in the first row
-       and in ほかにも. */}
-    <ol aria-label="ポチカルでできること" class={feature.list}>
-      <li class={feature.row}>
-        <div class={feature.copy}>
-          <p class={feature.label}>ENTRY</p>
-          <ShotHeadline class={feature.title} shot="entry" />
-          <p class={feature.body}>
-            シフトのボタンを押すと、その日に入って次の日へ。
-            <br />
-            夜勤を入れると、次の日の明けも一緒に入ります。
-          </p>
-        </div>
-        <FeatureScreen client:visible={NEAR} feature="entry" />
-      </li>
-      <li class={feature.row}>
-        <div class={feature.copy}>
-          <p class={feature.label}>WIDGET</p>
-          <ShotHeadline class={feature.title} shot="widgets" />
-          <p class={feature.body}>
-            次の休みも、今日のシフトも、アプリを開かずに。
-            <br />
-            ひと月のカレンダーも、ホーム画面に置けます。
-          </p>
-        </div>
-        <div class={feature.wallFrame}>
-          <Picture
-            alt="ポチカルのウィジェット。次の休みまでの日数、今日のシフト、いまのシフトの残り時間が並ぶ。"
-            class={feature.wall}
-            formats={["avif", "webp"]}
-            sizes={`min(${WALL_SHOWN}px, 100vw - 32px)`}
-            src={widgetWall}
-            widths={[WALL_SHOWN, SITE_WALL.width]}
-          />
-        </div>
-      </li>
-      <li class={feature.row}>
-        <div class={feature.copy}>
-          <p class={feature.label}>SHARE</p>
-          <ShotHeadline class={feature.title} shot="group-shifts" />
-          <p class={feature.body}>
-            みんなのシフトが、ひとつの表に並びます。
-            <br />
-            みんなが休みの日も、すぐ見つかります。
-          </p>
-        </div>
-        <FeatureScreen client:visible={NEAR} feature="share" />
-      </li>
-      <li class={feature.row}>
-        <div class={feature.copy}>
-          <p class={feature.label}>CHAT</p>
-          <ShotHeadline class={feature.title} shot="chat" />
-          <p class={feature.body}>
-            連絡先を交換していない人にも、グループのチャットで。
-            <br />
-            休みが合う日も、行ける日を押すだけで決まります。
-          </p>
-        </div>
-        <FeatureScreen client:visible={NEAR} feature="chat" />
-      </li>
-      <li class={feature.row}>
-        <div class={feature.copy}>
-          <p class={feature.label}>STYLE</p>
-          <ShotHeadline class={feature.title} shot="themes" />
-          <p class={feature.body}>
-            テーマは12種類。色を抑えた落ち着いたテーマも。
-            <br />
-            印は、アイコン・絵文字・文字から選べます。
-          </p>
-        </div>
-        <ThemeGallery client:visible={NEAR} />
-      </li>
-      <li class={feature.row}>
-        <div class={feature.copy}>
-          <p class={feature.label}>YOUR CALENDAR</p>
-          <ShotHeadline class={feature.title} shot="device-calendar" />
-          <p class={feature.body}>
-            シフトを、端末のカレンダーに入れられます。
-            <br />
-            Googleカレンダーの人も、ふだんの予定と並べて。
-            <br />
-            自動で反映にすると、変えたシフトが予定にも入ります。
-          </p>
-        </div>
-        <FeatureScreen client:visible={NEAR} feature="deviceCalendar" />
-      </li>
-      <li class={feature.row}>
-        <div class={feature.copy}>
-          <p class={feature.label}>DETAILS</p>
-          <ShotHeadline class={feature.title} shot="details" />
-          <p class={feature.body}>
-            決まった並びのシフトは、繰り返しで先の月まで。
-            <br />
-            15日始まりなど、月の途中から始まる勤務表にも。
-            <br />
-            早出や残業は、その日だけ変えられて、印でわかります。
-          </p>
-        </div>
-        <FeatureScreen client:visible={NEAR} feature="repeat" />
-      </li>
-    </ol>
-    <section aria-labelledby="more-title" class={more.root}>
-      <h2 class={more.title} id="more-title">
-        ほかにも
-      </h2>
-      <ul class={more.list}>
-        {extras.map(({ Icon, title, body }) => (
-          <li class={more.item}>
-            <span class={more.icon}>
-              <Icon aria-hidden="true" size={20} />
-            </span>
-            <div>
-              <h3 class={more.itemTitle}>{title}</h3>
-              <p class={more.body}>{body}</p>
+        <div class={story.beats}>
+          <section class={story.beat} data-beat="hero" data-near="" data-now="">
+            <div class={cx(story.copy, story.heroCopy)}>
+              <p class={story.label}>シフトカレンダー</p>
+              <h1 class={story.heroTitle}>
+                シフトを、
+                <br />
+                <button class={pressed} data-press="top" type="button">
+                  ポチッと。
+                </button>
+              </h1>
+              <div class={story.heroMore}>
+                <p class={story.heroBody}>
+                  夜勤や交代勤務のシフトも、
+                  <br />
+                  ポチポチ押していくだけ。
+                  <br />
+                  ひと月ぶんが、すぐ入ります。
+                </p>
+                <div class={story.store}>
+                  <StoreLinks />
+                  {release && <p class={story.release}>{release}</p>}
+                </div>
+              </div>
             </div>
-          </li>
-        ))}
-      </ul>
-    </section>
+          </section>
+          <section class={story.beat} data-beat="entry" data-near="">
+            <div class={story.copy}>
+              <p class={story.label}>ENTRY</p>
+              <ShotHeadline class={story.title} shot="entry" />
+              <p class={story.body}>
+                シフトのボタンを押すと、その日に入って次の日へ。
+                <br />
+                夜勤を入れると、次の日の明けも一緒に入ります。
+              </p>
+            </div>
+            {/* The hero's phone too: there from the start, until the
+               widgets take its place. */}
+            <div
+              class={cx(story.visual, moving.shrink)}
+              style={rangeOf({
+                from: BEATS.widgets.from,
+                to: BEATS.widgets.from + TURN * 0.6,
+              })}
+            >
+              <div
+                class={cx(story.place, story.heroPhone)}
+                style={rangeOf({
+                  from: BEATS.hero.to - 0.01,
+                  to: BEATS.hero.to + 0.03,
+                })}
+              >
+                <div class={story.phone}>
+                  <EntryPhone client:idle />
+                </div>
+              </div>
+            </div>
+          </section>
+          <section class={story.beat} data-beat="widgets">
+            <div class={story.copy}>
+              <p class={story.label}>WIDGET</p>
+              <ShotHeadline class={story.title} shot="widgets" />
+              <p class={story.body}>
+                次の休みも、今日のシフトも、アプリを開かずに。
+                <br />
+                ひと月のカレンダーも、ホーム画面に置けます。
+              </p>
+            </div>
+            <div
+              class={cx(story.wallPlace, moving.wall)}
+              style={rangeOf({
+                from: BEATS.widgets.from,
+                to: BEATS.friends.from + TURN / 2,
+              })}
+            >
+              <div class={story.wallFrame}>
+                <Picture
+                  alt={WALL_ALT}
+                  class={story.wall}
+                  formats={["avif", "webp"]}
+                  sizes={`min(${WALL_SHOWN}px, 100vw - 32px)`}
+                  src={widgetWall}
+                  widths={[WALL_SHOWN, SITE_WALL.width]}
+                />
+              </div>
+              <Picture
+                alt={WALL_ALT}
+                class={story.wallWide}
+                formats={["avif", "webp"]}
+                sizes="54vw"
+                src={widgetWallWide}
+                widths={[SITE_WALL_WIDE.width / 2, SITE_WALL_WIDE.width]}
+              />
+            </div>
+          </section>
+          <section class={story.beat} data-beat="friends">
+            <div class={story.copy}>
+              <p class={story.label}>SHARE</p>
+              <ShotHeadline class={story.title} shot="group-shifts" />
+              <p class={story.body}>
+                みんなのシフトが、ひとつの表に並びます。
+                <br />
+                みんなが休みの日も、すぐ見つかります。
+              </p>
+            </div>
+            {/* Near once the widgets are on, a part ahead of its own. */}
+            <div
+              class={cx(story.visual, moving.rises)}
+              style={waitingUntil(BEATS.widgets.from + TURN, {
+                from: BEATS.friends.from - TURN / 2,
+                to: BEATS.chat.from + TURN / 2,
+              })}
+            >
+              <div class={story.place}>
+                <div class={story.phone}>
+                  <FriendsPhone client:visible />
+                </div>
+              </div>
+            </div>
+          </section>
+          <section class={story.beat} data-beat="chat">
+            <div class={story.copy}>
+              <p class={story.label}>CHAT</p>
+              <ShotHeadline class={story.title} shot="chat" />
+              <p class={story.body}>
+                連絡先を交換していない人にも、グループのチャットで。
+                <br />
+                休みが合う日も、行ける日を押すだけで決まります。
+              </p>
+            </div>
+            <div
+              class={cx(story.visual, moving.arrives)}
+              style={waitingUntil(BEATS.widgets.from + TURN * 2, {
+                from: BEATS.chat.from - TURN / 2,
+                to: BEATS.chat.from + TURN / 2,
+              })}
+            >
+              <div class={story.place}>
+                <div class={story.phone}>
+                  <ChatPhone client:visible />
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+    <ul aria-label="ほかにも" class={more.list}>
+      {rest.map(({ alt, lines, picture, shot }) => (
+        <li class={more.card}>
+          <Picture
+            alt={alt}
+            class={more.picture}
+            formats={["avif", "webp"]}
+            sizes="(min-width: 960px) 376px, calc(100vw - 34px)"
+            src={picture}
+            widths={[CARD.width / 2, CARD.width]}
+          />
+          <div class={more.words}>
+            <ShotHeadline class={more.title} shot={shot} />
+            <p class={more.body}>
+              {lines.map((line, index) => (
+                <>
+                  {index > 0 && <br />}
+                  {line}
+                </>
+              ))}
+            </p>
+          </div>
+        </li>
+      ))}
+    </ul>
     <section aria-labelledby="closing-title" class={closing.root}>
       <Sky bare client:visible place="sides" />
       <div class={closing.content}>
@@ -497,6 +770,16 @@ const closing = {
         </h2>
         <StoreLinks />
         {release && <p class={closing.release}>{release}</p>}
+        {tries && (
+          <a
+            class="text-link"
+            href={action.href}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            {action.label}
+          </a>
+        )}
       </div>
     </section>
   </main>
@@ -504,6 +787,7 @@ const closing = {
 
 <script>
   import { press } from "../lib/presses";
+  import { beatAt, moves, placeNow, subscribe } from "../lib/story";
 
   for (const button of document.querySelectorAll<HTMLButtonElement>(
     "button[data-press]"
@@ -515,4 +799,28 @@ const closing = {
       });
     }
   }
+
+  // Marks the part the page is in (`data-now`) and it with the parts
+  // beside it (`data-near`), whenever the place moves into another: what
+  // the stage's words and screens are shown by. The page is drawn with
+  // the first part marked, so it reads before this runs.
+  const beats = [...document.querySelectorAll<HTMLElement>("[data-beat]")];
+  let shown = 0;
+  const mark = () => {
+    const name = moves() ? beatAt(placeNow()) : undefined;
+    const now = Math.max(
+      0,
+      beats.findIndex((beat) => beat.dataset.beat === name)
+    );
+    if (now === shown) {
+      return;
+    }
+    shown = now;
+    for (const [index, beat] of beats.entries()) {
+      beat.toggleAttribute("data-now", index === now);
+      beat.toggleAttribute("data-near", Math.abs(index - now) <= 1);
+    }
+  };
+  subscribe(mark);
+  mark();
 </script>

@@ -1,6 +1,6 @@
 import { appConfig } from "@pochical/styled-system/config";
 
-// How /next's pieces move as its story is scrolled (pages/next.astro):
+// How the top page's pieces move as its story is scrolled (pages/index.astro):
 // each runs on the story's own timeline over the part of it the piece
 // names, so where the page is scrolled to says how far along each is, and
 // none runs by the clock. Only opacity and transforms, which a browser
@@ -42,6 +42,12 @@ const storyKeyframes = {
   // not when the page opens. It steps into place while still unseen.
   storyWait: {
     from: { translate: "0 200vh" },
+    to: { translate: "0 0" },
+  },
+  // The hero's phone on a narrow screen, from under the hero's words up
+  // into its place.
+  storySettle: {
+    from: { translate: "0 var(--hero-drop)" },
     to: { translate: "0 0" },
   },
   // The sky turning from morning toward evening across the story.

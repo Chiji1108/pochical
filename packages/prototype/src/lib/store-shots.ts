@@ -486,7 +486,7 @@ export const SITE_WALL = {
   width: 780,
 } as const satisfies WallPicture;
 
-// The site's /next shows the wall beside its words on a wide page, from
+// The site's top page lays the wall beside its words on a wide screen, from
 // the stage's top to its foot and off its right edge: a wall of its own
 // for that, at twice the size the page shows it, its widgets as large on
 // the page as a store's picture has them on a phone.
@@ -607,7 +607,7 @@ export const wallCornersOf = (
   });
 };
 
-// A card of the site's /next, after its story: a picture of the real
+// A card of the site's top page, after its story: a picture of the real
 // app's screens from the same captures the stores' shots are drawn from,
 // at twice the size the page shows it, under the name
 // /_render/store-shot knows it by. Each screen is a raw capture, laid as
