@@ -50,11 +50,6 @@ const storyKeyframes = {
     from: { translate: "0 var(--hero-drop)" },
     to: { translate: "0 0" },
   },
-  // The sky turning from morning toward evening across the story.
-  storySky: {
-    from: { filter: "hue-rotate(0deg)" },
-    to: { filter: "hue-rotate(-70deg)" },
-  },
 };
 
 // Panda CSS for this app, from @pochical/styled-system's config, its .astro

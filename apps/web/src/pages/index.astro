@@ -261,19 +261,6 @@ const story = {
     _moving: { height: "720svh", viewTimelineName: "--story" },
     position: "relative",
   }),
-  // The sky behind the stage, turning toward evening as the story goes.
-  sky: css({
-    _moving: {
-      animationName: "storySky",
-      inset: 0,
-      pointerEvents: "none",
-      position: "absolute",
-      zIndex: -1,
-      ...onStory,
-      animationRange: "contain 0% contain 100%",
-    },
-    display: "contents",
-  }),
   // The stage, which stays on screen while the story is scrolled: the
   // words in one place and the phone in another, both of a size the
   // window alone gives, so nothing that changes with the scroll moves
@@ -576,9 +563,7 @@ const closing = {
   <main id="main">
     <div class={story.root} data-story>
       <div class={story.stage}>
-        <div class={story.sky}>
-          <Sky client:idle place="top" />
-        </div>
+        <Sky client:idle place="top" />
         <div class={story.beats}>
           <section class={story.beat} data-beat="hero" data-near="" data-now="">
             <div class={cx(story.copy, story.heroCopy)}>
