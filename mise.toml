@@ -212,7 +212,7 @@ description = "Photograph the screens of the App Store's screenshots in the simu
 run = "tools/store-screenshots/ios.sh"
 
 [tasks."store:images"]
-description = "Draw the stores' pictures in store/ from the screens photographed, and Google Play's feature graphic"
+description = "Draw the stores' pictures in store/ from the screens photographed"
 run = "pnpm --dir apps/design image:store"
 
 [tasks."store:screenshots"]

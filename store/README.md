@@ -31,6 +31,8 @@ They are drawn from the real apps, in the listing's order, and never edited by h
 
 The App Store's product page header (iOS 27) is drawn with them, from the wall of widgets of the second screenshot (`WALL_PICTURES` in the same file): the wall across the whole picture, and the site's line, シフトを、ポチッと。, beside the three widgets the wall is built around. Devices crop the header to no less than its art safe area, the rectangle in the middle that [Apple's template](https://developer.apple.com/app-store/asset-best-practices/) draws, so the line and those widgets are inside it and the rest is the wall running off. It carries no price, address or other platform's name, as [Apple asks](https://developer.apple.com/help/app-store-connect/reference/app-information/creative-assets-specifications). The search results' picture (3:2) is not made: search shows the first three screenshots in its place.
 
+Google Play's feature graphic is the same picture at its own size, of Android's widgets: the wall across 1024×500, larger and fewer so that a widget's shapes read on a phone, the line in two rows and the three widgets beside it. Play cuts or covers the graphic's edges and foot in some places, so both are in its middle, clear of 8 hundredths of each side, and it carries no app icon, badge, price or rank, as [Google asks](https://support.google.com/googleplay/android-developer/answer/9866151).
+
 `declarations.md` holds the answers to the forms beside the listing: what data is collected, the ratings' questions, the notes for review.
 
 ## What the words keep to

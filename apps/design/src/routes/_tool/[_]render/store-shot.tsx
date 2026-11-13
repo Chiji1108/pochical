@@ -1,7 +1,6 @@
 import { ShiftMark } from "@pochical/prototype/components/shift-mark";
 import { presetPatterns } from "@pochical/prototype/lib/design-patterns";
 import {
-  FEATURE_GRAPHIC,
   HEADLINE,
   HEADLINE_SHARE,
   lineClearOf,
@@ -28,7 +27,6 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { pageMeta } from "../../../lib/page-meta";
 import {
-  PictureBrand,
   PictureSky,
   pictureTitle,
   pictureTitleStyle,
@@ -39,8 +37,8 @@ import {
 // rounded corners and no phone around it, on the site's sky under its
 // headline, at the size its store asks for
 // (@pochical/prototype's lib/store-shots.ts). `?store=ios&shot=entry`
-// names the picture, `shot=feature-graphic` Google Play's feature graphic,
-// and a picture drawn from the wall of widgets (WALL_PICTURES) goes by its
+// names the picture, and a picture drawn from the wall of widgets
+// (WALL_PICTURES), Google Play's feature graphic among them, goes by its
 // own name.
 // The screens are not in the app: the script answers /_render/store-raw/
 // with the files the platform's UI test photographed.
@@ -127,15 +125,6 @@ const styles = {
     position: "absolute",
     zIndex: 2,
   }),
-  feature: css({
-    alignItems: "center",
-    display: "flex",
-    flexDirection: "column",
-    gap: "28px",
-    justifyContent: "center",
-    position: "relative",
-  }),
-  featureTitle: css({ fontSize: "84px", position: "relative" }),
   headline: css({
     alignItems: "center",
     boxSizing: "border-box",
@@ -251,9 +240,6 @@ const styles = {
 
 function StoreShotPage() {
   const { callout, grounds, parts, shot: name, store } = Route.useSearch();
-  if (name === FEATURE_GRAPHIC.name) {
-    return <FeatureGraphic />;
-  }
   const wall = WALL_PICTURES.find((one) => one.name === name);
   if (wall !== undefined) {
     return <WallPicturePage picture={wall} />;
@@ -674,27 +660,6 @@ function WallPicturePage({ picture }: { picture: WallPicture }) {
           ))}
         </h1>
       )}
-    </div>
-  );
-}
-
-function FeatureGraphic() {
-  return (
-    <div
-      className={cx(styles.root, styles.feature)}
-      data-store-shot
-      style={{ height: FEATURE_GRAPHIC.height, width: FEATURE_GRAPHIC.width }}
-    >
-      <PictureSky height="100%" />
-      <div className={styles.featureTitle}>
-        <PictureBrand size={88} />
-      </div>
-      <h1
-        className={cx(pictureTitle, styles.featureTitle)}
-        style={pictureTitleStyle}
-      >
-        {FEATURE_GRAPHIC.line}
-      </h1>
     </div>
   );
 }

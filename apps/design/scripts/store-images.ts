@@ -7,14 +7,13 @@ import { fileURLToPath } from "node:url";
 // (`mise run store:shots:ios`, `mise run store:shots:android`): each shot of @pochical/prototype's
 // lib/store-shots.ts from /_render/store-shot into
 // store/screenshots/<store>, each picture drawn from the wall of widgets
-// (WALL_PICTURES) into its own file, and Google Play's feature graphic
-// into store/feature-graphic.png, on a dev server of its own. A store
+// (WALL_PICTURES), Google Play's feature graphic among them, into its own
+// file, on a dev server of its own. A store
 // whose screens are not there is left as it is, and so are the pictures
 // drawn from its widgets. Run again after changing the
 // page or the shots: pnpm run image:store
 import {
   calloutOf,
-  FEATURE_GRAPHIC,
   HEADLINE_SHARE,
   PIECES_TALL,
   STORE_SHOTS,
@@ -223,10 +222,5 @@ await photographDevServer(
         );
       }
     }
-    await photograph(
-      { shot: FEATURE_GRAPHIC.name },
-      FEATURE_GRAPHIC,
-      path.join(OUTPUT, `${FEATURE_GRAPHIC.name}.png`)
-    );
   }
 );

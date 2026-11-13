@@ -3,7 +3,6 @@ import path from "node:path";
 
 import {
   calloutOf,
-  FEATURE_GRAPHIC,
   HEADLINE,
   HEADLINE_SHARE,
   STAGE_FOOT,
@@ -63,7 +62,9 @@ test("the pictures are of the sizes the stores ask for", () => {
   expect(width).toBeGreaterThanOrEqual(ASKED.side.least);
   expect(height).toBeLessThanOrEqual(ASKED.side.most);
   expect(height / width).toBeCloseTo(16 / 9);
-  expect(FEATURE_GRAPHIC).toMatchObject(ASKED.featureGraphic);
+  expect(pictures.find(({ name }) => name === "feature-graphic")).toMatchObject(
+    ASKED.featureGraphic
+  );
   expect(
     pictures.find(({ name }) => name === "product-page-header")
   ).toMatchObject(ASKED.productPageHeader);
@@ -84,7 +85,6 @@ test.each([
     file,
     size: { height, width },
   })),
-  { file: `store/${FEATURE_GRAPHIC.name}.png`, size: FEATURE_GRAPHIC },
 ])(
   "$file is drawn at its size, with no alpha channel",
   async ({ file, size }) => {
@@ -121,8 +121,7 @@ test.each(STORE_SHOTS.map(({ headline, name }) => ({ headline, name })))(
 );
 
 // Every word a picture is drawn with: the headlines, the tiles' words and
-// their pieces', the lines of the pictures drawn from the wall, and the
-// feature graphic's.
+// their pieces', and the lines of the pictures drawn from the wall.
 const words = [
   ...STORE_SHOTS.flatMap((shot) => [
     ...shot.headline,
@@ -143,7 +142,6 @@ const words = [
       : []),
   ]),
   ...pictures.flatMap(({ line }) => line?.words ?? []),
-  FEATURE_GRAPHIC.line,
 ];
 
 test.each(unsaid)("no picture says %s", (word) => {
