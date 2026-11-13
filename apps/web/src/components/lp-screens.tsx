@@ -569,26 +569,6 @@ function LookContexts({
   return <ColorSchemeContext value="light">{themed}</ColorSchemeContext>;
 }
 
-// One of the two looks in a phone by itself, for a page that sets them
-// out its own way (/next's card).
-export function LookPhone({ look: id }: { look: "letters" | "sumi" }) {
-  const person = useSamplePerson();
-  const look = galleryLooks.find((one) => one.id === id) ?? galleryLooks[0];
-  return (
-    <Motion>
-      <div aria-hidden="true" className={screenStyle({ shown: "whole" })} inert>
-        <DesignProviders fresh>
-          <UserStoreContext value={person}>
-            <LookContexts look={look}>
-              <DesignApp initialEditing={false} variants={variants} />
-            </LookContexts>
-          </UserStoreContext>
-        </DesignProviders>
-      </div>
-    </Motion>
-  );
-}
-
 export function ThemeGallery() {
   const person = useSamplePerson();
   return (

@@ -606,3 +606,98 @@ export const wallCornersOf = (
     ];
   });
 };
+
+// A card of the site's /next, after its story: a picture of the real
+// app's screens from the same captures the stores' shots are drawn from,
+// at twice the size the page shows it, under the name
+// /_render/store-shot knows it by. Each screen is a raw capture, laid as
+// wide as `width` with its left and top at the picture's `left` and `top`
+// (off the picture where only a part of it is to show), `framed` with a
+// phone's corners as a shot's screens are. The ground is `ground`, six hex
+// digits, or the color of the first screen's first pixel, a part cut from
+// a screen lying on its own.
+export type CardPicture = {
+  file: string;
+  ground?: string;
+  height: number;
+  name: string;
+  screens: readonly {
+    framed: boolean;
+    left: number;
+    raw: string;
+    top: number;
+    width: number;
+  }[];
+  store: StoreId;
+  width: number;
+};
+
+const CARD = { height: 472, store: "ios", width: 748 } as const;
+const cardFile = (name: string) =>
+  `packages/prototype/src/assets/${name}.png` as const;
+
+// The four cards, each under the headline of the shot it is a part of:
+// the two looks of the month side by side from their tops; 自動で反映 with
+// its note and the button under it, from under the line over them (the
+// capture's part `reflect` starts 1538 pixels down its screen); two weeks
+// of 繰り返し; and the evening before's reminder.
+export const CARD_PICTURES = [
+  {
+    ...CARD,
+    file: cardFile("card-themes"),
+    ground: "f1f4ec",
+    name: "card-themes",
+    screens: [
+      {
+        framed: true,
+        left: 72,
+        raw: "05-calendar-sumi.png",
+        top: 36,
+        width: 290,
+      },
+      {
+        framed: true,
+        left: 386,
+        raw: "05-calendar-letters.png",
+        top: 36,
+        width: 290,
+      },
+    ],
+  },
+  {
+    ...CARD,
+    file: cardFile("card-device-calendar"),
+    name: "card-device-calendar",
+    screens: [
+      {
+        framed: false,
+        left: 0,
+        raw: "06-device-calendar.png",
+        top: -833,
+        width: 748,
+      },
+    ],
+  },
+  {
+    ...CARD,
+    file: cardFile("card-details"),
+    name: "card-details",
+    screens: [
+      { framed: false, left: 0, raw: "tile-repeat.png", top: 62, width: 748 },
+    ],
+  },
+  {
+    ...CARD,
+    file: cardFile("card-cares"),
+    name: "card-cares",
+    screens: [
+      {
+        framed: false,
+        left: 0,
+        raw: "tile-reminder.png",
+        top: 122,
+        width: 748,
+      },
+    ],
+  },
+] as const satisfies readonly CardPicture[];

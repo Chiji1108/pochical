@@ -1,18 +1,25 @@
 ---
+import cardCares from "@pochical/prototype/assets/card-cares.png";
+import cardDetails from "@pochical/prototype/assets/card-details.png";
+import cardDeviceCalendar from "@pochical/prototype/assets/card-device-calendar.png";
+import cardThemes from "@pochical/prototype/assets/card-themes.png";
 import siteIcon from "@pochical/prototype/assets/icon.png?url";
 import widgetWallWide from "@pochical/prototype/assets/widget-wall-wide.png";
 import widgetWall from "@pochical/prototype/assets/widget-wall.png";
 import { site } from "@pochical/prototype/lib/brand";
-import { SITE_WALL, SITE_WALL_WIDE } from "@pochical/prototype/lib/store-shots";
-import { css, cva, cx } from "@pochical/styled-system/css";
+import {
+  CARD_PICTURES,
+  SITE_WALL,
+  SITE_WALL_WIDE,
+} from "@pochical/prototype/lib/store-shots";
+import { css, cx } from "@pochical/styled-system/css";
 import { Picture } from "astro:assets";
 
-import { LookPhone, Sky } from "../components/lp-screens";
+import { Sky } from "../components/lp-screens";
 import {
   ChatPhone,
   EntryPhone,
   FriendsPhone,
-  RestScreen,
 } from "../components/next-screens";
 import ShotHeadline from "../components/shot-headline.astro";
 import StoreLinks from "../components/store-links.astro";
@@ -140,11 +147,18 @@ const story = {
     letterSpacing: "0.17em",
   }),
   // The phone. Moving, every part's is the same phone in the same place,
-  // at the size the stage has room for: zoomed, which lays it out at the
-  // size it is drawn, so its frame sits on the page as any box does and
-  // nothing of it is redrawn at another place when its screen changes.
+  // at the size the stage has room for: laid out at its own size, as its
+  // words are set, and drawn smaller as a picture is, from its corner in
+  // its place. Not zoomed: a browser that holds text to a least size
+  // (Safari's, 9px) draws a zoomed phone's small words larger than the
+  // room the phone leaves them.
   phone: css({
-    _moving: { height: "844px", width: "390px", zoom: "var(--fit)" },
+    _moving: {
+      height: "844px",
+      scale: "var(--fit)",
+      transformOrigin: "0 0",
+      width: "390px",
+    },
     display: "flex",
     flexShrink: 0,
     justifyContent: "center",
@@ -196,9 +210,9 @@ const story = {
       "--copy-room": "128px",
       // A screen of three pixels to the page's one, a phone's, draws the
       // phone at two thirds where the room allows that much, so each of
-      // the phone's own pixels is two of the screen's, whole: at any other
-      // size its pieces fall between the screen's pixels, and each is
-      // drawn a pixel off when it is drawn again.
+      // the phone's own pixels is two of the screen's, whole, and the
+      // picture of it is drawn on the screen's own pixels however often
+      // it is drawn again.
       "--fit": "var(--fit-free)",
       "--fit-free": "min(1, tan(atan2(var(--phone-room), 844px)))",
       "--phone-room": "calc(100svh - var(--copy-room) - 12px)",
@@ -209,6 +223,10 @@ const story = {
         },
       },
       _wide: {
+        // Beside a wide page's words the phone is its own size, its
+        // words as large as they are set: in a window too short for it,
+        // it runs off the stage's foot.
+        "--fit": "1",
         "--phone-room": "min(844px, 100svh - 64px)",
         alignItems: "center",
         columnGap: "96px",
@@ -341,52 +359,45 @@ const TURN = 0.05;
 // screens.
 const WALL_SHOWN = SITE_WALL.width / 2;
 
-// The rest of what the stores say, after the story: a card each, the
-// app's own screen over the headline of its picture in the stores, as the
-// parts of the story are. A card's picture is a window on a phone drawn
-// still by the build, as wide as the phone's screen inside its frame and
-// 236 of the phone's pixels tall whatever the card's width, so it shows
-// the same rows on every page: whether the phone's top or its foot is at
-// the window's (`end`), and how far in from there the window starts, in
-// the phone's own pixels (`in`), set where no row or word is cut; and
-// how much of the phone's sides is off the window's (`cut`), its frame at
-// least.
-// `small` draws whole phones side by side instead, frames and all.
+// The rest of what the stores say, after the story: a card each, a
+// picture of the real app's screens over the headline of its picture in
+// the stores. The pictures are drawn from the stores' own captures by
+// `mise run store:images` (CARD_PICTURES), at twice the size a card shows
+// them: a screen photographed draws the same in every browser, where a
+// small live one's words are drawn larger than their room by a browser
+// that holds text to a least size (Safari's, 9px, once `zoom` takes it
+// under).
+const [CARD] = CARD_PICTURES;
 const rest = [
   {
+    alt: "ひと月のカレンダーを、線だけの落ち着いた見た目と、文字の印に色をつけた見た目で並べた2つの画面。",
     lines: ["テーマは12種類。", "印は、アイコン・絵文字・文字から。"],
-    // The two looks, the same size on one line, each from its top with
-    // the same room over it.
-    screens: ["sumi", "letters"],
+    picture: cardThemes,
     shot: "themes",
-    window: { cut: "0px", end: "top", in: "-40px", small: true },
   },
   {
+    alt: "端末カレンダーに追加の画面。「自動で反映」がオンで、シフトを変えると3か月先の分まで入れ直すと書かれている。",
     lines: ["変えたシフトが、", "いつもの予定の隣にも入ります。"],
-    screens: ["device-calendar"],
+    picture: cardDeviceCalendar,
     shot: "device-calendar",
-    // From over 自動で反映's group to under the button, inside the
-    // sheet's own sides and foot, so none of what it dims shows.
-    window: { cut: "16px", end: "foot", in: "24px", small: false },
   },
   {
+    alt: "繰り返しの画面。当番・非番・休みが3日ごとに並んだ2週間のカレンダー。",
     lines: [
       "決まった並びは、繰り返しで先の月まで。",
       "15日始まりや、早出・残業にも。",
     ],
-    screens: ["details"],
+    picture: cardDetails,
     shot: "details",
-    window: { cut: "8px", end: "top", in: "110px", small: false },
   },
   {
+    alt: "次の通知の見本。前の日の21時に届く「明日は日勤（早出）8:00–18:00」。",
     lines: [
       "前の晩に、明日のシフトをお知らせ。",
       "夜勤の次の日は、明けも一緒に。",
     ],
-    screens: ["cares"],
+    picture: cardCares,
     shot: "cares",
-    // From under 通知's card.
-    window: { cut: "8px", end: "top", in: "298px", small: false },
   },
 ] as const;
 
@@ -427,71 +438,13 @@ const more = {
     maxWidth: "880px",
     padding: "96px 16px 24px",
   }),
-  // The window: the phone's top at its top, or its foot at its foot.
-  picture: cva({
-    base: {
-      aspectRatio: "374 / 236",
-      borderBottom: "1px solid #e3e6de",
-      containerType: "inline-size",
-      display: "flex",
-      gap: "12px",
-      justifyContent: "center",
-      overflow: "hidden",
-      pointerEvents: "none",
-    },
-    variants: {
-      end: {
-        foot: { alignItems: "flex-end" },
-        top: { alignItems: "flex-start" },
-      },
-      // Whole phones stand on a ground of the card's; a screen fills the
-      // window, on its own white.
-      small: { false: { bg: "white" }, true: { bg: "#f1f4ec" } },
-    },
-  }),
-  // A phone in the window, zoomed so that what is left of it between its
-  // cut sides is the window's width (the tangent of the angle whose sides
-  // they are, a length over a length having no unit only in newer
-  // browsers); or a small one whole, two fifths of a phone that fills the
-  // window.
-  screen: cva({
-    base: { flexShrink: 0, overflow: "hidden" },
-    compoundVariants: [
-      // A screen shown from its top goes on under the window's foot, so
-      // it fades out there, over the last of what the window shows,
-      // rather than end in a row cut through.
-      {
-        css: {
-          "--foot": "calc(var(--in) + (390px - 2 * var(--cut)) * 236 / 374)",
-          maskImage:
-            "linear-gradient(to bottom, black calc(var(--foot) - 36px), transparent calc(var(--foot) - 2px))",
-        },
-        end: "top",
-        small: false,
-      },
-    ],
-    variants: {
-      end: {
-        // Round at its foot, where the phone's own corners would show
-        // dark inside the window's.
-        foot: {
-          borderRadius: "0 0 48px 48px",
-          marginBottom: "calc(-1 * var(--in))",
-        },
-        top: { marginTop: "calc(-1 * var(--in))" },
-      },
-      small: {
-        false: {
-          "& > *": { marginLeft: "calc(-1 * var(--cut))", width: "390px" },
-          width: "calc(390px - 2 * var(--cut))",
-          zoom: "tan(atan2(100cqw, 390px - 2 * var(--cut)))",
-        },
-        true: {
-          width: "390px",
-          zoom: "calc(0.4 * tan(atan2(100cqw, 374px)))",
-        },
-      },
-    },
+  // A card's picture, as wide as the card.
+  picture: css({
+    aspectRatio: `${CARD.width} / ${CARD.height}`,
+    borderBottom: "1px solid #e3e6de",
+    display: "block",
+    height: "auto",
+    width: "100%",
   }),
   title: css({
     fontSize: "18px",
@@ -681,25 +634,16 @@ const closing = {
       </div>
     </div>
     <ul aria-label="ほかにも" class={more.list}>
-      {rest.map(({ lines, screens, shot, window }) => (
+      {rest.map(({ alt, lines, picture, shot }) => (
         <li class={more.card}>
-          <div
-            aria-hidden="true"
-            class={more.picture({ end: window.end, small: window.small })}
-          >
-            {screens.map((screen) => (
-              <div
-                class={more.screen({ end: window.end, small: window.small })}
-                style={{ "--cut": window.cut, "--in": window.in }}
-              >
-                {screen === "sumi" || screen === "letters" ? (
-                  <LookPhone look={screen} />
-                ) : (
-                  <RestScreen shot={screen} />
-                )}
-              </div>
-            ))}
-          </div>
+          <Picture
+            alt={alt}
+            class={more.picture}
+            formats={["avif", "webp"]}
+            sizes="(min-width: 960px) 376px, calc(100vw - 34px)"
+            src={picture}
+            widths={[CARD.width / 2, CARD.width]}
+          />
           <div class={more.words}>
             <ShotHeadline class={more.title} shot={shot} />
             <p class={more.body}>

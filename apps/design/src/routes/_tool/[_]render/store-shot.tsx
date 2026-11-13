@@ -9,6 +9,7 @@ import {
   STORE_SHOTS,
   STORES,
   WALL,
+  CARD_PICTURES,
   WALL_PICTURES,
   WALL_SHAPE,
   WALL_SHOT,
@@ -16,6 +17,7 @@ import {
   wallOf,
 } from "@pochical/prototype/lib/store-shots";
 import type {
+  CardPicture,
   Piece,
   StoreId,
   Tile,
@@ -243,6 +245,10 @@ function StoreShotPage() {
   const wall = WALL_PICTURES.find((one) => one.name === name);
   if (wall !== undefined) {
     return <WallPicturePage picture={wall} />;
+  }
+  const card = CARD_PICTURES.find((one) => one.name === name);
+  if (card !== undefined) {
+    return <CardPicturePage ground={grounds} picture={card} />;
   }
   const shot = STORE_SHOTS.find((one) => one.name === name);
   if (shot === undefined) {
@@ -660,6 +666,43 @@ function WallPicturePage({ picture }: { picture: WallPicture }) {
           ))}
         </h1>
       )}
+    </div>
+  );
+}
+
+// A card of the site's /next (CARD_PICTURES): its screens on its ground,
+// each where the picture says, a framed one with a shot's screen's corners
+// and shadow at its own size.
+function CardPicturePage({
+  ground,
+  picture,
+}: {
+  ground: string;
+  picture: CardPicture;
+}) {
+  const { height, screens, width } = picture;
+  return (
+    <div
+      className={styles.root}
+      data-store-shot
+      style={{ background: `#${ground}`, height, width }}
+    >
+      {screens.map((screen) => (
+        <img
+          alt=""
+          className={screen.framed ? styles.screen : undefined}
+          key={screen.raw}
+          src={RAW + screen.raw}
+          style={{
+            // A shot's screen is 57 units wide.
+            "--u": `${screen.width / 57}px`,
+            left: screen.left,
+            position: "absolute",
+            top: screen.top,
+            width: screen.width,
+          }}
+        />
+      ))}
     </div>
   );
 }

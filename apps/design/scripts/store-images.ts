@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 import {
   calloutOf,
   HEADLINE_SHARE,
+  CARD_PICTURES,
   PIECES_TALL,
   STORE_SHOTS,
   STORES,
@@ -207,6 +208,30 @@ await photographDevServer(
           STORES[store],
           path.join(OUTPUT, "screenshots", store, storeShotFile(shot.name)),
           path.join(RAW, store)
+        );
+      }
+    }
+    for (const picture of CARD_PICTURES) {
+      if (photographed.includes(picture.store)) {
+        const raws = picture.screens.map(({ raw }) =>
+          path.join(RAW, picture.store, raw)
+        );
+        for (const file of raws) {
+          if (!existsSync(file)) {
+            throw new Error(`${picture.name} has no ${file}`);
+          }
+        }
+        const ground =
+          "ground" in picture
+            ? picture.ground
+            : // oxlint-disable-next-line no-await-in-loop -- one page at a time
+              await pngFirstPixel(raws[0]);
+        // oxlint-disable-next-line no-await-in-loop -- one page at a time
+        await photograph(
+          { grounds: ground, shot: picture.name },
+          picture,
+          path.join(ROOT, picture.file),
+          path.join(RAW, picture.store)
         );
       }
     }
