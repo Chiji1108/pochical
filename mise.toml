@@ -164,13 +164,13 @@ hash() { grep -o '"identityHash": *"[^"]*"' | head -1; }
 base="${BASE:-$(git merge-base HEAD origin/main)}"
 for file in $(git ls-tree -r --name-only "$base" -- apps/android/kit/schemas); do
   if [ "$(git show "$base:$file" | hash)" != "$(git show "HEAD:$file" 2>/dev/null | hash)" ]; then
-    echo "$file: the database's shape changed under a version $base has already. Raise AppDatabase.VERSION and leave this file as it was (AGENTS.md)."
+    echo "$file: the database's shape changed under a version $base has already. Raise AppDatabase.VERSION, with its migration, and leave this file as it was (AGENTS.md)."
     status=1
   fi
 done
 for file in $(git diff --name-only -- apps/android/kit/schemas); do
   if [ "$(git show "HEAD:$file" | hash)" != "$(hash < "$file")" ]; then
-    echo "$file: the database's shape changed under the same version. Raise AppDatabase.VERSION, which erases the database until release, and commit kit/schemas (AGENTS.md)."
+    echo "$file: the database's shape changed under the same version. Raise AppDatabase.VERSION, with its migration, and commit kit/schemas (AGENTS.md)."
   else
     echo "$file: Room wrote the same shape anew; commit it."
   fi

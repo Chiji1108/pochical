@@ -227,17 +227,18 @@ private final class FakeAccountServer: AccountServer {
   #expect(made.owner == "anon-1")
 }
 
-@MainActor @Test func aKeptSessionItCannotReadIsNoSession() async throws {
-  let made = try await Made(kept: Data("raw-token".utf8), owner: "old")
+/// An anonymous user's token is their only key, so what the app cannot
+/// read is never taken for no session and signed in over.
+@MainActor @Test func aKeptSessionItCannotReadIsKeptNotSignedInOver() async throws {
+  let own = MemoryStore(Data("raw-token".utf8))
+  let made = try await Made(keychain: SessionKeychain(own: own, leftBehind: MemoryStore()))
   #expect(made.session.phase == .starting)
 
   made.session.cameToFront()
-  #expect(await eventually { made.session.phase == .signedIn })
-  #expect(made.session.userID == "anon-1")
-  #expect(try made.keychain.kept() == StoredSession(token: "anon-token-1", userID: "anon-1"))
-  // No session can send what the user before left, so it goes.
-  #expect(await eventually { made.owner == "anon-1" })
-  #expect(made.coworkers == 0)
+  #expect(await eventually { own.reads.withLock { $0 } == 2 })
+  #expect(made.session.phase == .starting)
+  #expect(made.server.made.withLock { $0 } == 0)
+  #expect(try own.data() == Data("raw-token".utf8))
 }
 
 @MainActor @Test func aKeychainItCannotReachIsWaitedForNotSignedInAnew() async throws {

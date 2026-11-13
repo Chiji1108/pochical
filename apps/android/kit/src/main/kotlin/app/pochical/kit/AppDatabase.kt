@@ -13,11 +13,14 @@ import androidx.sqlite.execSQL
  * The device's database: what it holds of the user's own values and of their groups, and its outbox
  * (spec/sync-protocol.md).
  *
- * Nothing is released yet, so what the device stores changes shape with no migration: a new
- * [VERSION] erases the database, which syncs again from the server (AGENTS.md). Room refuses to open
- * a database whose shape changed under the same version, and CI fails a build that rewrites the
- * schema `kit/schemas` holds for a version, so a shape change cannot ship without its version raised.
- * At release, destructive migration is turned off and migrations follow from then on.
+ * A stored database is migrated, never erased: what it holds that the server does not yet (the
+ * outbox) is the person's. A table changes shape under a new [VERSION] with its migration, an
+ * `AutoMigration(from, to)` in `autoMigrations` below where Room can write it from the schemas
+ * `kit/schemas` holds, else a `Migration` added in [open] (AGENTS.md, How to build). The first
+ * release's is version 11, the baseline, so no migration starts below it. Room refuses to open a
+ * database whose shape changed under the same version, or whose version has no migration to
+ * [VERSION], a newer app's among them, rather than erase it, and CI fails a build that rewrites the
+ * schema `kit/schemas` holds for a version (`mise run android:db:check`).
  */
 @Database(
   version = AppDatabase.VERSION,
@@ -76,7 +79,6 @@ abstract class AppDatabase : RoomDatabase() {
     fun open(context: Context, inMemory: Boolean = false): AppDatabase =
       (if (inMemory) Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
         else Room.databaseBuilder(context, AppDatabase::class.java, "pochical.db"))
-        .fallbackToDestructiveMigration(dropAllTables = true)
         .addCallback(TakeAllAgainIfOlder)
         .build()
   }

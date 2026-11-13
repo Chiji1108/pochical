@@ -53,14 +53,13 @@ class SessionStoreTest {
   }
 
   @Test
-  fun aSessionTheAppCannotReadIsNoSession() = runBlocking {
-    kept.bytes = "not json".encodeToByteArray()
-    assertNull(store.read())
-    kept.bytes = """{"shape":"older"}""".encodeToByteArray()
-    assertNull(store.read())
-
-    store.write(StoredSession("new", "user"))
-    assertEquals(StoredSession("new", "user"), store.read())
+  fun aSessionTheAppCannotReadIsKeptAndNeverWrittenOver() = runBlocking {
+    for (unreadable in listOf("not json", """{"shape":"another"}""")) {
+      kept.bytes = unreadable.encodeToByteArray()
+      assertThrows(StoreUnreachable::class.java) { runBlocking { store.read() } }
+      assertThrows(StoreUnreachable::class.java) { runBlocking { store.write(StoredSession("new", "user")) } }
+      assertEquals(unreadable, kept.bytes?.decodeToString())
+    }
   }
 
   @Test

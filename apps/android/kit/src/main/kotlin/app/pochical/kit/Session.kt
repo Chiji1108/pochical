@@ -8,7 +8,6 @@ import com.google.android.gms.auth.blockstore.StoreBytesData
 import com.google.android.gms.common.api.ApiException
 import kotlinx.coroutines.tasks.await
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 
 /**
@@ -35,7 +34,10 @@ data class StoredSession(
 @Serializable
 private data class Kept(val session: StoredSession? = null, val leftBehind: List<String> = emptyList())
 
-/** The store cannot be reached now, as without Google Play services: nothing in it is lost. */
+/**
+ * What the store keeps cannot be read now: the store out of reach, as without Google Play services,
+ * or holding what this app does not read. Nothing in it is lost.
+ */
 class StoreUnreachable(cause: Throwable) : Exception(cause)
 
 /** Bytes kept for the app outside it, under one key. */
@@ -48,14 +50,15 @@ interface KeptBytes {
 }
 
 /**
- * Where the device keeps its session. Until release, a kept session the app cannot read (its shape
- * changed) is no session: the app signs in anew and keeps the new one in its place (AGENTS.md). A
- * store it cannot reach is not unreadable: [read] says so, and nothing is forgotten.
+ * Where the device keeps its session. What is kept and cannot be read is out of reach, as the store
+ * itself can be ([StoreUnreachable]): nothing is forgotten or written over and the device stays
+ * signing in, as an anonymous user's token is their only key. So [Kept] goes on reading every shape
+ * it was ever kept in (spec/sync-protocol.md, Signing in).
  */
 class SessionStore(private val kept: KeptBytes) {
   private val json = Json { ignoreUnknownKeys = false }
 
-  /** The kept session, or null when there is none the app can read; [StoreUnreachable]. */
+  /** The kept session, or null when there is none; [StoreUnreachable]. */
   suspend fun read(): StoredSession? = keptNow().session
 
   /** Keeps [session] in place of any before it; [StoreUnreachable]. */
@@ -81,10 +84,9 @@ class SessionStore(private val kept: KeptBytes) {
     val bytes = kept.read() ?: return Kept()
     return try {
       json.decodeFromString(Kept.serializer(), bytes.decodeToString())
-    } catch (_: SerializationException) {
-      Kept()
-    } catch (_: IllegalArgumentException) {
-      Kept()
+    } catch (e: IllegalArgumentException) {
+      // What kotlinx.serialization throws of bytes that are not a [Kept], a SerializationException among them.
+      throw StoreUnreachable(e)
     }
   }
 

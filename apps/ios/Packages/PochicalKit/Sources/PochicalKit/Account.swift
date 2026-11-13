@@ -122,20 +122,14 @@ struct SessionKeychain: Sendable {
     self.leftBehind = leftBehind
   }
 
-  /// Nil when nothing is kept, or, until release (`erasesOnShapeChange`),
-  /// when what is kept is not a session this app can read: the device
-  /// signs in anew and keeping that session replaces it
-  /// (spec/sync-protocol.md, Signing in). A Keychain it cannot reach, as
-  /// before the first unlock, throws.
+  /// Nil when nothing is kept. What is kept and cannot be read throws, as
+  /// a Keychain it cannot reach does (before the first unlock): the device
+  /// forgets nothing and stays signing in, as an anonymous user's token is
+  /// their only key, so `StoredSession` goes on reading every shape it was
+  /// ever kept in (spec/sync-protocol.md, Signing in).
   func kept() throws -> StoredSession? {
     guard let data = try own.data() else { return nil }
-    do {
-      return try JSONDecoder().decode(StoredSession.self, from: data)
-    } catch {
-      guard erasesOnShapeChange else { throw error }
-      Logger.account.notice("The kept session is unreadable, so the device signs in anew: \(error)")
-      return nil
-    }
+    return try JSONDecoder().decode(StoredSession.self, from: data)
   }
 
   /// Keeps `session` from now on, in place of any other.
