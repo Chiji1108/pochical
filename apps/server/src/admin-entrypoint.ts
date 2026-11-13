@@ -17,8 +17,6 @@ import { ChatEditSchema } from "./gen/pochical/v1/sync_pb";
 import { GROUP_THREAD } from "./group-chat";
 import { errorFields } from "./log";
 import { photoKey } from "./photos";
-import { previewReset, resetEverything } from "./reset";
-import type { ResetPreview } from "./reset";
 import { getAuth } from "./session";
 import { supportPlace } from "./support-lines";
 import type { SupportLine } from "./support-lines";
@@ -353,29 +351,6 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
       });
       throw error;
     }
-  }
-
-  /** What 全消去 would erase now: it only reads. */
-  async resetPreview(): Promise<ResetPreview> {
-    return await previewReset(this.env);
-  }
-
-  /**
-   * Every account, group, report and photo erased (全消去), before
-   * release only. It cannot be undone; run again, it erases what a run
-   * cut short left, and after one that finished, nothing.
-   */
-  async reset(by: string): Promise<void> {
-    // Noted whether it finished or stopped part way, saying which; 全消去
-    // leaves the notes of what was done, this one among them.
-    const noted = { action: "reset", by, target: "" };
-    try {
-      await resetEverything(this.env);
-    } catch (error) {
-      await noteDone(this.env, { ...noted, detail: "途中で止まった" });
-      throw error;
-    }
-    await noteDone(this.env, { ...noted, detail: "" });
   }
 
   /** What members reported, the latest first. */

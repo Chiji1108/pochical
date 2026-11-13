@@ -160,7 +160,8 @@ export const pushTokens = sqliteTable(
 export const adminActions = sqliteTable(
   "admin_actions",
   {
-    // answer, report, cleanBucket or reset.
+    // What AdminEntrypoint notes (answer, report, cleanBucket, ...), and
+    // reset in rows from before release, which nothing writes now (#801).
     action: text().notNull(),
     at: integer({ mode: "timestamp_ms" }).notNull(),
     by: text().notNull(),

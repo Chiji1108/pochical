@@ -1,14 +1,7 @@
 import icon from "@pochical/prototype/assets/icon-192.png?url";
 import { css } from "@pochical/styled-system/css";
 import { env } from "cloudflare:workers";
-import {
-  Archive,
-  Flag,
-  MessagesSquare,
-  ScrollText,
-  TriangleAlert,
-  Users,
-} from "lucide-react";
+import { Archive, Flag, MessagesSquare, ScrollText, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import {
@@ -81,7 +74,6 @@ const PLACES: { group: string; places: Place[] }[] = [
     places: [
       { Icon: ScrollText, label: "記録", to: "/actions" },
       { Icon: Archive, label: "棚卸し", to: "/bucket" },
-      { Icon: TriangleAlert, label: "全消去", to: "/reset" },
     ],
   },
 ];

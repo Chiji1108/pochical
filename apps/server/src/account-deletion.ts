@@ -32,10 +32,9 @@ const appleAccountOf = async (
 };
 
 /**
- * A group gone whole, as its last member's account goes (or everything,
- * at a reset): its Group DO first, which deletes its photos before its
- * notes of them, then its invitation, which finds it again should this be
- * cut off part way. Once the DO is erased, no one joins it: it is no
+ * A group gone whole, as its last member's account goes: its Group DO
+ * first, which deletes its photos before its notes of them, then its
+ * invitation, which finds it again should this be cut off part way. Once the DO is erased, no one joins it: it is no
  * group to join (`addMember`).
  */
 export const eraseGroup = async (env: Env, groupId: string): Promise<void> => {
