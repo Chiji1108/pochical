@@ -4,11 +4,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -27,7 +24,6 @@ import app.pochical.people.CoworkersRow
 import app.pochical.people.UsualProfileRow
 import app.pochical.reminders.RemindersRow
 import app.pochical.repeat.RepeatRow
-import kotlinx.coroutines.launch
 
 /**
  * 設定: what the person sets, sorted as /design's settings are, each row's page pushed over the
@@ -37,12 +33,11 @@ import kotlinx.coroutines.launch
 @Composable
 fun SettingsScreen(open: (RootPage) -> Unit) {
   val device = LocalDeviceSettings.current.device
-  val snackbar = remember { SnackbarHostState() }
   // The chat with Pochical's people, read over the list so its row comes back drawn as it was.
   val me = rememberMeId()
   val support = me?.let { rememberChatList(Chat.supportPlace, it) }
   val notifications = rememberChatNotifications()
-  SettingsPage(stringResource(R.string.tab_settings), onBack = null, large = true, snackbar = snackbar) { padding ->
+  SettingsPage(stringResource(R.string.tab_settings), onBack = null, large = true) { padding ->
     LazyColumn(contentPadding = padding) {
       // The patterns first: every way of working has them, and the repeating order is made of them.
       item {
@@ -75,42 +70,32 @@ fun SettingsScreen(open: (RootPage) -> Unit) {
       }
       // The chat with the people who make Pochical, apart from the rows of settings.
       if (me != null && support != null) item { SupportRow(me, support, notifications, open) }
-      item { About(open, snackbar) }
+      item { About(open) }
     }
   }
 }
 
 /**
  * Pochical itself, at the foot (/design's AboutSection), its version under it: rows that leave the
- * app end in ↗, opening the site's pages in Custom Tabs, and ライセンス, the app's own page, last. The store's own review prompt comes by
+ * app end in ↗, opening the site's pages in Custom Tabs and Google Play's listing in the Play Store, and ライセンス, the app's own page, last. The store's own review prompt comes by
  * itself only now and then (spec/review.md); the review row is there whenever someone wants to
  * write one.
  */
 @Composable
-private fun About(open: (RootPage) -> Unit, snackbar: SnackbarHostState) {
+private fun About(open: (RootPage) -> Unit) {
   val context = LocalContext.current
-  val scope = rememberCoroutineScope()
-  val afterRelease = stringResource(R.string.settings_review_after_release)
   val opensBrowser = stringResource(R.string.settings_opens_browser)
   SettingsSection(stringResource(R.string.settings_about)) {
     row {
       SettingsRow(stringResource(R.string.settings_help), R.drawable.ic_help, onClick = { openLink(context, Site.page("support")) }, end = RowEnd.Outside, onClickLabel = opensBrowser)
     }
     row {
-      // Before release it says so, once however often it is pressed.
-      val review = Site.writeReview
       SettingsRow(
         stringResource(R.string.settings_write_review),
         R.drawable.ic_rate_review,
-        onClick = {
-          if (review != null) {
-            openLink(context, review)
-          } else if (snackbar.currentSnackbarData == null) {
-            scope.launch { snackbar.showSnackbar(afterRelease) }
-          }
-        },
+        onClick = { openListing(context) },
         end = RowEnd.Outside,
-        onClickLabel = if (review != null) opensBrowser else null,
+        onClickLabel = stringResource(R.string.settings_opens_play),
       )
     }
     row {
