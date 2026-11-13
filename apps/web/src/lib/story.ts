@@ -8,15 +8,24 @@
 
 // The story's parts, in the stores' order, each the stretch of the place
 // it is told in.
+// Entering starts from a month already entered through its second week
+// and enters the rest, 15 presses of the month's 25, so it has that share
+// of the 0.3 a whole month took, a press as long a scroll as it was; what
+// that leaves is the later parts'.
 export const BEATS = {
-  chat: { from: 0.74, to: 1 },
-  entry: { from: 0.08, to: 0.38 },
-  friends: { from: 0.52, to: 0.74 },
+  chat: { from: 0.7, to: 1 },
+  entry: { from: 0.08, to: 0.28 },
+  friends: { from: 0.44, to: 0.7 },
   hero: { from: 0, to: 0.08 },
-  widgets: { from: 0.38, to: 0.52 },
+  widgets: { from: 0.28, to: 0.44 },
 } as const;
 
 type Stretch = { from: number; to: number };
+
+// The parts in the order they are told, and the one a place is in.
+const ORDER = ["hero", "entry", "widgets", "friends", "chat"] as const;
+export const beatAt = (place: number) =>
+  ORDER.findLast((name) => place >= BEATS[name].from) ?? ORDER[0];
 
 // The stretch a phone's steps are spread over, inside its part: after its
 // words are in, and done with room to look at the last step.

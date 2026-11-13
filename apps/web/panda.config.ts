@@ -6,18 +6,7 @@ import { appConfig } from "@pochical/styled-system/config";
 // none runs by the clock. Only opacity and transforms, which a browser
 // moves without laying the page out again.
 const storyKeyframes = {
-  // Words or a screen that are there from the start, leaving upward.
-  storyLeave: {
-    "0%, 55%": { opacity: 1, transform: "none" },
-    "100%": { opacity: 0, transform: "translateY(-16px)" },
-  },
-  // A part's words: in from below, read, out upward.
-  storyWords: {
-    "0%": { opacity: 0, transform: "translateY(16px)" },
-    "100%": { opacity: 0, transform: "translateY(-16px)" },
-    "12%, 88%": { opacity: 1, transform: "none" },
-  },
-  // The last part's words, which stay.
+  // A card of the page's end, rising into place as it comes onto the screen.
   storyArrive: {
     from: { opacity: 0, transform: "translateY(16px)" },
     to: { opacity: 1, transform: "none" },

@@ -218,7 +218,9 @@ const listRowRoot = cva({
       false: {},
       true: { gap: "16px", minHeight: "56px", textStyle: "callout" },
     },
-    twoLine: { false: {}, true: { minHeight: "68px" } },
+    // Room over and under the words, which a subtitle that runs to a
+    // second line would otherwise fill to the row's edges.
+    twoLine: { false: {}, true: { minHeight: "68px", paddingBlock: "12px" } },
   },
 });
 

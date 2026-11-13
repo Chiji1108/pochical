@@ -1,12 +1,13 @@
 ---
 import siteIcon from "@pochical/prototype/assets/icon.png?url";
+import widgetWallWide from "@pochical/prototype/assets/widget-wall-wide.png";
 import widgetWall from "@pochical/prototype/assets/widget-wall.png";
 import { site } from "@pochical/prototype/lib/brand";
-import { SITE_WALL } from "@pochical/prototype/lib/store-shots";
+import { SITE_WALL, SITE_WALL_WIDE } from "@pochical/prototype/lib/store-shots";
 import { css, cva, cx } from "@pochical/styled-system/css";
 import { Picture } from "astro:assets";
 
-import { Sky, ThemeGallery } from "../components/lp-screens";
+import { LookPhone, Sky } from "../components/lp-screens";
 import {
   ChatPhone,
   EntryPhone,
@@ -43,6 +44,15 @@ const onStory = {
   animationTimingFunction: "linear",
 } as const;
 
+// A part's screen is clear, whatever its own move was last drawn as,
+// unless the page is in its part or in the one before or after
+// (`data-near`, set with `data-now`): set on what is inside the piece
+// that moves, so nothing of a part is on screen two parts on. One box's
+// opacity, so marking the parts costs the page no more than that.
+const farOff = {
+  "[data-beat]:not([data-near]) &": { opacity: 0 },
+} as const;
+
 const story = {
   // A part of the story: its words, then its screen. Still, one under the
   // other; moving, the stage lays the two out, every part's in the same
@@ -70,19 +80,36 @@ const story = {
     lineHeight: 2.1,
   }),
   // A part's words. Moving, each part's take the same place in turn: over
-  // the phone on a narrow screen, beside it on a wide one.
+  // the phone on a narrow screen, beside it on a wide one. The words of
+  // the part the page is in are the ones shown (`data-now`, set from the
+  // place by the script under the page), each coming in over a moment as
+  // the one before goes: what is read is then never a frame a browser
+  // drew for another place and has not drawn again, as Safari on a Mac
+  // left a part's words half gone over the next's after a fast scroll
+  // (its scroll-driven animations drawn off the main thread: WebKit bugs
+  // 304189 and 302870 are the nearest reported; #1208).
   copy: css({
     _moving: {
+      "[data-now] > &": {
+        opacity: 1,
+        transitionDelay: "0.12s",
+        translate: "0 0",
+      },
       _wide: {
         alignSelf: "center",
         gap: "18px",
+        justifySelf: "stretch",
         paddingBottom: 0,
         textAlign: "left",
       },
       alignSelf: "end",
       gridArea: "1 / 1",
+      opacity: 0,
       paddingBottom: "14px",
-      ...onStory,
+      transitionDuration: "0.25s",
+      transitionProperty: "opacity, translate",
+      transitionTimingFunction: "ease-out",
+      translate: "0 12px",
     },
     display: "flex",
     flexDirection: "column",
@@ -123,6 +150,23 @@ const story = {
     justifyContent: "center",
     width: "min(390px, 100%)",
   }),
+  // Where the phone stands, as large as it is drawn: in the middle, and
+  // on a whole pixel from the stage's side, a half one being drawn
+  // between two of the screen's own.
+  place: css({
+    _moving: {
+      ...farOff,
+      "@supports (width: round(down, 1px, 1px))": {
+        marginLeft: "round(down, (100% - 390px * var(--fit)) / 2, 1px)",
+        marginRight: 0,
+      },
+      display: "block",
+      height: "calc(844px * var(--fit))",
+      marginInline: "auto",
+      width: "calc(390px * var(--fit))",
+    },
+    display: "contents",
+  }),
   // The tall section the story is scrolled through. Its own place in the
   // window is the timeline everything on its stage runs on.
   root: css({
@@ -149,9 +193,21 @@ const story = {
   // the phone's zoom is the tangent of the angle whose sides they are.
   stage: css({
     _moving: {
-      "--copy-room": "136px",
-      "--fit": "min(1, tan(atan2(var(--phone-room), 844px)))",
-      "--phone-room": "calc(100svh - var(--copy-room) - 20px)",
+      "--copy-room": "128px",
+      // A screen of three pixels to the page's one, a phone's, draws the
+      // phone at two thirds where the room allows that much, so each of
+      // the phone's own pixels is two of the screen's, whole: at any other
+      // size its pieces fall between the screen's pixels, and each is
+      // drawn a pixel off when it is drawn again.
+      "--fit": "var(--fit-free)",
+      "--fit-free": "min(1, tan(atan2(var(--phone-room), 844px)))",
+      "--phone-room": "calc(100svh - var(--copy-room) - 12px)",
+      "@media (resolution: 3dppx)": {
+        "@supports (width: round(down, 1px, 1px))": {
+          "--fit":
+            "min(var(--fit-free), max(2 / 3, round(down, var(--fit-free), 1 / 3)))",
+        },
+      },
       _wide: {
         "--phone-room": "min(844px, 100svh - 64px)",
         alignItems: "center",
@@ -184,10 +240,9 @@ const story = {
   visual: css({
     _moving: {
       _wide: { gridArea: "1 / 2" },
-      display: "flex",
+      display: "block",
       gridArea: "2 / 1",
       height: "var(--phone-room)",
-      justifyContent: "center",
       width: "100%",
       ...onStory,
     },
@@ -204,12 +259,53 @@ const story = {
     width: "100%",
   }),
   wallFrame: css({
-    _moving: { height: "min(600px, 100%)", width: "auto" },
+    _moving: {
+      ...farOff,
+      _wide: { display: "none" },
+      height: "min(600px, 100%)",
+      marginInline: "auto",
+      width: "auto",
+    },
     aspectRatio: `${SITE_WALL.width} / ${SITE_WALL.height}`,
     flexShrink: 0,
     maskImage:
       "linear-gradient(to right, transparent, black 10%, black 90%, transparent)",
     width: "min(390px, 100%)",
+  }),
+  // The wall's place. On a narrow screen, the phone's; beside the words
+  // of a wide one, a wall and no picture of one: from the stage's top to
+  // its foot and off its right edge, fading only toward the words.
+  wallPlace: css({
+    _moving: {
+      _wide: {
+        gridArea: "auto",
+        height: "auto",
+        inset: "0 0 0 46%",
+        position: "absolute",
+        width: "auto",
+      },
+      display: "block",
+      gridArea: "2 / 1",
+      height: "var(--phone-room)",
+      width: "100%",
+      ...onStory,
+    },
+    display: "contents",
+  }),
+  // The wall drawn for a wide page (SITE_WALL_WIDE), there alone.
+  wallWide: css({
+    _moving: {
+      ...farOff,
+      _wide: {
+        display: "block",
+        height: "100%",
+        maskImage: "linear-gradient(to right, transparent, black 26%)",
+        objectFit: "cover",
+        objectPosition: "left center",
+        width: "100%",
+      },
+    },
+    display: "none",
   }),
 };
 
@@ -222,7 +318,6 @@ const moving = {
       animationTimingFunction: "step-end, linear",
     },
   }),
-  leave: css({ _moving: { animationName: "storyLeave" } }),
   rises: css({
     _moving: {
       animationName: "storyWait, storyPhone",
@@ -230,9 +325,7 @@ const moving = {
     },
   }),
   shrink: css({ _moving: { animationName: "storyShrink" } }),
-  stay: css({ _moving: { animationName: "storyArrive" } }),
   wall: css({ _moving: { animationName: "storyWall" } }),
-  words: css({ _moving: { animationName: "storyWords" } }),
 };
 
 // A stretch of the story for a piece's two animations: waiting until
@@ -251,35 +344,49 @@ const WALL_SHOWN = SITE_WALL.width / 2;
 // The rest of what the stores say, after the story: a card each, the
 // app's own screen over the headline of its picture in the stores, as the
 // parts of the story are. A card's picture is a window on a phone drawn
-// still by the build: how large the phone is in it (`zoom`), whether its
-// top or its foot is the part to see, how far in from there (`in`), and
-// how wide it is laid out, a phone its own width.
+// still by the build, as wide as the phone's screen inside its frame and
+// 236 of the phone's pixels tall whatever the card's width, so it shows
+// the same rows on every page: whether the phone's top or its foot is at
+// the window's (`end`), and how far in from there the window starts, in
+// the phone's own pixels (`in`), set where no row or word is cut; and
+// how much of the phone's sides is off the window's (`cut`), its frame at
+// least.
+// `small` draws whole phones side by side instead, frames and all.
 const rest = [
   {
     lines: ["テーマは12種類。", "印は、アイコン・絵文字・文字から。"],
+    // The two looks, the same size on one line, each from its top with
+    // the same room over it.
+    screens: ["sumi", "letters"],
     shot: "themes",
-    window: { end: "top", in: "36px", width: "auto", zoom: 1 },
+    window: { cut: "0px", end: "top", in: "-40px", small: true },
   },
   {
     lines: ["変えたシフトが、", "いつもの予定の隣にも入ります。"],
+    screens: ["device-calendar"],
     shot: "device-calendar",
-    window: { end: "foot", in: "44px", width: "390px", zoom: 0.85 },
+    // From over 自動で反映's group to under the button, inside the
+    // sheet's own sides and foot, so none of what it dims shows.
+    window: { cut: "16px", end: "foot", in: "24px", small: false },
   },
   {
     lines: [
       "決まった並びは、繰り返しで先の月まで。",
       "15日始まりや、早出・残業にも。",
     ],
+    screens: ["details"],
     shot: "details",
-    window: { end: "top", in: "60px", width: "390px", zoom: 0.85 },
+    window: { cut: "8px", end: "top", in: "110px", small: false },
   },
   {
     lines: [
       "前の晩に、明日のシフトをお知らせ。",
       "夜勤の次の日は、明けも一緒に。",
     ],
+    screens: ["cares"],
     shot: "cares",
-    window: { end: "top", in: "236px", width: "390px", zoom: 0.85 },
+    // From under 通知's card.
+    window: { cut: "8px", end: "top", in: "298px", small: false },
   },
 ] as const;
 
@@ -305,10 +412,6 @@ const more = {
     flexDirection: "column",
     overflow: "hidden",
   }),
-  // The two looks' phones are drawn larger beside a wide page's words
-  // (lp-screens.tsx), so a card there shows them smaller, at the size a
-  // narrow page has them.
-  gallery: css({ _wide: { zoom: 0.72 } }),
   // The cards one under the other on a phone, two by two beside it, under
   // the story at the gap its parts keep between them.
   list: css({
@@ -327,10 +430,11 @@ const more = {
   // The window: the phone's top at its top, or its foot at its foot.
   picture: cva({
     base: {
-      bg: "#f1f4ec",
+      aspectRatio: "374 / 236",
       borderBottom: "1px solid #e3e6de",
+      containerType: "inline-size",
       display: "flex",
-      height: "224px",
+      gap: "12px",
       justifyContent: "center",
       overflow: "hidden",
       pointerEvents: "none",
@@ -340,20 +444,52 @@ const more = {
         foot: { alignItems: "flex-end" },
         top: { alignItems: "flex-start" },
       },
+      // Whole phones stand on a ground of the card's; a screen fills the
+      // window, on its own white.
+      small: { false: { bg: "white" }, true: { bg: "#f1f4ec" } },
     },
   }),
+  // A phone in the window, zoomed so that what is left of it between its
+  // cut sides is the window's width (the tangent of the angle whose sides
+  // they are, a length over a length having no unit only in newer
+  // browsers); or a small one whole, two fifths of a phone that fills the
+  // window.
   screen: cva({
-    base: {
-      display: "flex",
-      flexShrink: 0,
-      justifyContent: "center",
-      width: "var(--width)",
-      zoom: "var(--zoom)",
-    },
+    base: { flexShrink: 0, overflow: "hidden" },
+    compoundVariants: [
+      // A screen shown from its top goes on under the window's foot, so
+      // it fades out there, over the last of what the window shows,
+      // rather than end in a row cut through.
+      {
+        css: {
+          "--foot": "calc(var(--in) + (390px - 2 * var(--cut)) * 236 / 374)",
+          maskImage:
+            "linear-gradient(to bottom, black calc(var(--foot) - 36px), transparent calc(var(--foot) - 2px))",
+        },
+        end: "top",
+        small: false,
+      },
+    ],
     variants: {
       end: {
-        foot: { marginBottom: "calc(-1 * var(--in))" },
+        // Round at its foot, where the phone's own corners would show
+        // dark inside the window's.
+        foot: {
+          borderRadius: "0 0 48px 48px",
+          marginBottom: "calc(-1 * var(--in))",
+        },
         top: { marginTop: "calc(-1 * var(--in))" },
+      },
+      small: {
+        false: {
+          "& > *": { marginLeft: "calc(-1 * var(--cut))", width: "390px" },
+          width: "calc(390px - 2 * var(--cut))",
+          zoom: "tan(atan2(100cqw, 390px - 2 * var(--cut)))",
+        },
+        true: {
+          width: "390px",
+          zoom: "calc(0.4 * tan(atan2(100cqw, 374px)))",
+        },
       },
     },
   }),
@@ -409,11 +545,8 @@ const closing = {
           <Sky client:idle place="top" />
         </div>
         <div class={story.beats}>
-          <section class={story.beat}>
-            <div
-              class={cx(story.copy, moving.leave)}
-              style={rangeOf(BEATS.hero)}
-            >
+          <section class={story.beat} data-beat="hero" data-near="" data-now="">
+            <div class={story.copy}>
               <p class={story.label}>シフトカレンダー</p>
               <h1 class={story.heroTitle}>
                 シフトを、
@@ -432,11 +565,8 @@ const closing = {
               </div>
             </div>
           </section>
-          <section class={story.beat}>
-            <div
-              class={cx(story.copy, moving.words)}
-              style={rangeOf(BEATS.entry)}
-            >
+          <section class={story.beat} data-beat="entry" data-near="">
+            <div class={story.copy}>
               <p class={story.label}>ENTRY</p>
               <ShotHeadline class={story.title} shot="entry" />
               <p class={story.body}>
@@ -451,19 +581,18 @@ const closing = {
               class={cx(story.visual, moving.shrink)}
               style={rangeOf({
                 from: BEATS.widgets.from,
-                to: BEATS.widgets.from + TURN,
+                to: BEATS.widgets.from + TURN * 0.6,
               })}
             >
-              <div class={story.phone}>
-                <EntryPhone client:idle />
+              <div class={story.place}>
+                <div class={story.phone}>
+                  <EntryPhone client:idle />
+                </div>
               </div>
             </div>
           </section>
-          <section class={story.beat}>
-            <div
-              class={cx(story.copy, moving.words)}
-              style={rangeOf(BEATS.widgets)}
-            >
+          <section class={story.beat} data-beat="widgets">
+            <div class={story.copy}>
               <p class={story.label}>WIDGET</p>
               <ShotHeadline class={story.title} shot="widgets" />
               <p class={story.body}>
@@ -473,7 +602,7 @@ const closing = {
               </p>
             </div>
             <div
-              class={cx(story.visual, moving.wall)}
+              class={cx(story.wallPlace, moving.wall)}
               style={rangeOf({
                 from: BEATS.widgets.from,
                 to: BEATS.friends.from + TURN / 2,
@@ -489,13 +618,18 @@ const closing = {
                   widths={[WALL_SHOWN, SITE_WALL.width]}
                 />
               </div>
+              <Picture
+                alt=""
+                class={story.wallWide}
+                formats={["avif", "webp"]}
+                sizes="54vw"
+                src={widgetWallWide}
+                widths={[SITE_WALL_WIDE.width / 2, SITE_WALL_WIDE.width]}
+              />
             </div>
           </section>
-          <section class={story.beat}>
-            <div
-              class={cx(story.copy, moving.words)}
-              style={rangeOf(BEATS.friends)}
-            >
+          <section class={story.beat} data-beat="friends">
+            <div class={story.copy}>
               <p class={story.label}>SHARE</p>
               <ShotHeadline class={story.title} shot="group-shifts" />
               <p class={story.body}>
@@ -512,19 +646,15 @@ const closing = {
                 to: BEATS.chat.from + TURN / 2,
               })}
             >
-              <div class={story.phone}>
-                <FriendsPhone client:visible />
+              <div class={story.place}>
+                <div class={story.phone}>
+                  <FriendsPhone client:visible />
+                </div>
               </div>
             </div>
           </section>
-          <section class={story.beat}>
-            <div
-              class={cx(story.copy, moving.stay)}
-              style={rangeOf({
-                from: BEATS.chat.from,
-                to: BEATS.chat.from + TURN,
-              })}
-            >
+          <section class={story.beat} data-beat="chat">
+            <div class={story.copy}>
               <p class={story.label}>CHAT</p>
               <ShotHeadline class={story.title} shot="chat" />
               <p class={story.body}>
@@ -540,8 +670,10 @@ const closing = {
                 to: BEATS.chat.from + TURN / 2,
               })}
             >
-              <div class={story.phone}>
-                <ChatPhone client:visible />
+              <div class={story.place}>
+                <div class={story.phone}>
+                  <ChatPhone client:visible />
+                </div>
               </div>
             </div>
           </section>
@@ -549,25 +681,24 @@ const closing = {
       </div>
     </div>
     <ul aria-label="ほかにも" class={more.list}>
-      {rest.map(({ lines, shot, window }) => (
+      {rest.map(({ lines, screens, shot, window }) => (
         <li class={more.card}>
-          <div aria-hidden="true" class={more.picture({ end: window.end })}>
-            <div
-              class={more.screen({ end: window.end })}
-              style={{
-                "--in": window.in,
-                "--width": window.width,
-                "--zoom": window.zoom,
-              }}
-            >
-              {shot === "themes" ? (
-                <div class={more.gallery}>
-                  <ThemeGallery />
-                </div>
-              ) : (
-                <RestScreen shot={shot} />
-              )}
-            </div>
+          <div
+            aria-hidden="true"
+            class={more.picture({ end: window.end, small: window.small })}
+          >
+            {screens.map((screen) => (
+              <div
+                class={more.screen({ end: window.end, small: window.small })}
+                style={{ "--cut": window.cut, "--in": window.in }}
+              >
+                {screen === "sumi" || screen === "letters" ? (
+                  <LookPhone look={screen} />
+                ) : (
+                  <RestScreen shot={screen} />
+                )}
+              </div>
+            ))}
           </div>
           <div class={more.words}>
             <ShotHeadline class={more.title} shot={shot} />
@@ -602,3 +733,31 @@ const closing = {
     </section>
   </main>
 </Site>
+
+<script>
+  import { beatAt, moves, placeNow, subscribe } from "../lib/story";
+
+  // Marks the part the page is in (`data-now`) and it with the parts
+  // beside it (`data-near`), whenever the place moves into another: what
+  // the stage's words and screens are shown by. The page is drawn with
+  // the first part marked, so it reads before this runs.
+  const beats = [...document.querySelectorAll<HTMLElement>("[data-beat]")];
+  let shown = 0;
+  const mark = () => {
+    const name = moves() ? beatAt(placeNow()) : undefined;
+    const now = Math.max(
+      0,
+      beats.findIndex((beat) => beat.dataset.beat === name)
+    );
+    if (now === shown) {
+      return;
+    }
+    shown = now;
+    for (const [index, beat] of beats.entries()) {
+      beat.toggleAttribute("data-now", index === now);
+      beat.toggleAttribute("data-near", Math.abs(index - now) <= 1);
+    }
+  };
+  subscribe(mark);
+  mark();
+</script>

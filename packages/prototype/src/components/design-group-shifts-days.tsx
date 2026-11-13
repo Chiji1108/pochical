@@ -1,4 +1,5 @@
 import { css, cva, cx } from "@pochical/styled-system/css";
+import { useRef } from "react";
 import type { ReactNode, Ref } from "react";
 
 import { dateKey, formatDay, movesText } from "../lib/design-days";
@@ -8,7 +9,7 @@ import { designToday } from "../lib/design-today";
 import { todayMark } from "./design-day-cell";
 import { Avatar, MemberMark, toneColor } from "./design-group-parts";
 import { offTile, pickedFrame } from "./design-group-shifts-parts";
-import { told } from "./design-told";
+import { told, useColumnsGiveWay } from "./design-told";
 import { srOnly } from "./design-ui";
 import { useWeek } from "./design-week";
 
@@ -131,6 +132,14 @@ export const dayRows = {
         true: {
           "&::before": {
             ...offTile,
+            // Where a page tells the group's joining (design-told.ts),
+            // the band comes in once the columns have given way.
+            _told: {
+              "@starting-style": { opacity: 0 },
+              transitionDelay: "0.2s",
+              transitionDuration: "0.2s",
+              transitionProperty: "opacity",
+            },
             borderRadius: "token(radii.sm) 0 0 token(radii.sm)",
             inset: "3px 0 3px 3px",
           },
@@ -301,6 +310,8 @@ export function DayRowsTable({
   const page = density !== "scroll";
   const scrolls = density === "scroll";
   const columnWidth = withNames ? rowsMemberWidth : rowsMarkWidth;
+  const tableRef = useRef<HTMLTableElement>(null);
+  useColumnsGiveWay(tableRef, group.members.map(({ id }) => id).join(" "));
   return (
     <div
       className={dayRows.scroll({ page })}
@@ -308,6 +319,7 @@ export function DayRowsTable({
     >
       <table
         className={dayRows.table}
+        ref={tableRef}
         style={{
           "--date-width": `${dateWidth}px`,
           minWidth: dateWidth + group.members.length * columnWidth,

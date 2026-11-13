@@ -486,6 +486,20 @@ export const SITE_WALL = {
   width: 780,
 } as const satisfies WallPicture;
 
+// The site's /next shows the wall beside its words on a wide page, from
+// the stage's top to its foot and off its right edge: a wall of its own
+// for that, at twice the size the page shows it, its widgets as large on
+// the page as a store's picture has them on a phone.
+export const SITE_WALL_WIDE = {
+  file: "packages/prototype/src/assets/widget-wall-wide.png",
+  height: 1800,
+  lie: { across: 1, middle: [800, 900], unit: 11 },
+  name: "widget-wall-wide",
+  plain: true,
+  store: "ios",
+  width: 1600,
+} as const satisfies WallPicture;
+
 // The pictures drawn from the wall. The App Store's product page header
 // (iOS 27) is 21:9, and devices crop it to no less than its art safe area:
 // the rectangle inside the line Apple's template draws, which is 4 pixels
@@ -505,6 +519,7 @@ export const SITE_WALL = {
 // `safe` the picture less 8 hundredths of each side.
 export const WALL_PICTURES = [
   SITE_WALL,
+  SITE_WALL_WIDE,
   {
     file: "store/product-page-header.png",
     height: 1646,

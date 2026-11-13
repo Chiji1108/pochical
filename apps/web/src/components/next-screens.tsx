@@ -70,23 +70,30 @@ function pressesOf(sample: Schedule) {
 }
 const { filled, presses } = pressesOf(initialDesignSchedule());
 
+// The story opens on the month entered through its second week, so
+// entering starts a row: the presses from there on are the ones it shows,
+// and the days before the first of them the least the month ever holds.
+const thirdWeek = 2 * 7 - monthDays[0].getDay() + 1;
+const shown = presses.filter(({ date }) => date.getDate() >= thirdWeek);
+const half = shown[0]?.before ?? filled;
+
 // Entering's steps: the month before entering starts (BEFORE), then two
 // for each press, the key going down and the day filled with the next
 // day picked, and the month full at the end.
 const BEFORE = -1;
-const entrySteps = presses.length * 2 + 1;
+const entrySteps = shown.length * 2 + 1;
 const entryAt = (place: number) =>
   place < BEATS.entry.from ? BEFORE : stepOf(SCENES.entry, entrySteps, place);
 // Standing still, the month is entered up to the day the top page's hero
 // starts on, the keys under it.
 const entryStill =
-  presses.findIndex(({ date }) => date.getDate() >= HERO_FIRST_BLANK) * 2;
+  shown.findIndex(({ date }) => date.getDate() >= HERO_FIRST_BLANK) * 2;
 
 function entryOf(step: number): { days: Schedule; entering?: Entering } {
   if (step === BEFORE) {
-    return { days: blank };
+    return { days: half };
   }
-  const press = presses[Math.floor(step / 2)];
+  const press = shown[Math.floor(step / 2)];
   if (press === undefined) {
     return {
       days: filled,
@@ -102,12 +109,13 @@ function entryOf(step: number): { days: Schedule; entering?: Entering } {
   };
 }
 
-// The hero's phone and entering's: an empty month, which the keys fill a
-// day at a time as the page is scrolled.
+// The hero's phone and entering's: the month half entered, which the keys
+// go on filling a day at a time as the page is scrolled. The build draws
+// it half entered too.
 export function EntryPhone() {
   const step = useStoryStep(entryAt, { drawn: BEFORE, still: entryStill });
   const { days, entering } = entryOf(step);
-  const person = useSamplePerson({ schedule: {} });
+  const person = useSamplePerson({ schedule: half });
   useEffect(() => {
     person.getState().setSchedule(days);
   }, [person, days]);
