@@ -33,8 +33,9 @@ import ShotHeadline from "../components/shot-headline.astro";
 import StoreLinks from "../components/store-links.astro";
 import Site from "../layouts/site.astro";
 import { primaryAction } from "../lib/primary-action";
-import { appStoreUrl, stores } from "../lib/site";
+import { appStoreUrl, siteOrigin, stores } from "../lib/site";
 import { BEATS, rangeOf } from "../lib/story";
+import { structuredData } from "../lib/structured-data";
 
 // The top page: the stores' storyline (#806) told by one phone that stays
 // on screen while the page scrolls under it, its screen changing with the
@@ -61,6 +62,8 @@ const release =
 
 // Until the App Store has the app, the way to try it: the prototype kept
 // on one's own phone (lib/primary-action.ts).
+const origin = siteOrigin();
+
 const action = primaryAction(appStoreUrl());
 const tries = appStoreUrl() === undefined;
 
@@ -670,6 +673,17 @@ const closing = {
 ---
 
 <Site description={site.description} path="/" title="シフトを、ポチッと。">
+  {origin && (
+    <script
+      is:inline
+      set:html={structuredData(
+        origin,
+        stores().map((store) => store.url)
+      )}
+      slot="head"
+      type="application/ld+json"
+    />
+  )}
   <main id="main">
     <div class={story.root} data-story>
       <div class={story.stage}>
