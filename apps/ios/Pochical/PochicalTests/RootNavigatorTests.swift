@@ -65,15 +65,15 @@ import Testing
     controller.view.layoutIfNeeded()
     navigator.show([photos("a"), photos("b")], over: .groups)
     // A back, as UIKit tells the navigation's delegate once it is done.
-    controller.main.popViewController(animated: false)
+    controller.narrow.popViewController(animated: false)
     controller.navigationController(
-      controller.main, didShow: controller.main.topViewController!, animated: false)
+      controller.narrow, didShow: controller.narrow.topViewController!, animated: false)
     #expect(navigator.pages == [photos("a")])
 
     controller.traitOverrides.horizontalSizeClass = .regular
     controller.view.layoutIfNeeded()
     #expect(controller.hostedPages == [photos("a")])
-    #expect(controller.main.viewControllers.count == 1)
+    #expect(controller.side.viewControllers.count == 1)
     #expect(navigator.pages == [photos("a")])
   }
 }
