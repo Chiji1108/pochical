@@ -11,7 +11,7 @@ import {
 import { ArrowUpRight } from "lucide-react";
 
 import Link from "../components/link.astro";
-import { siteOrigin } from "../lib/site";
+import { appStoreId, siteOrigin } from "../lib/site";
 import type { PageImage } from "../lib/site";
 
 import "../styles.css";
@@ -30,6 +30,7 @@ type Props = Meta | { title?: never };
 
 const meta = Astro.props.title === undefined ? undefined : Astro.props;
 const origin = siteOrigin();
+const appId = appStoreId();
 const image = meta?.image ?? { alt: SHARE_IMAGE.alt, path: shareImage };
 const fullTitle = `${meta?.title} | ポチカル`;
 ---
@@ -72,6 +73,8 @@ const fullTitle = `${meta?.title} | ポチカル`;
         )}
       </>
     )}
+    {/* Safari on an iPhone offers the app over the page, or to open it. */}
+    {appId && <meta content={`app-id=${appId}`} name="apple-itunes-app" />}
     <link href={siteIcon} rel="icon" type="image/png" />
     {/* Any page added to an iPhone's home screen. */}
     <link href={homeScreenIcon} rel="apple-touch-icon" />
