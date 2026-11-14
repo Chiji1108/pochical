@@ -35,12 +35,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.Footnote
 import app.pochical.LimitedTextField
 import app.pochical.LocalAccount
+import app.pochical.PageDialog
 import app.pochical.R
 import app.pochical.ReviewPrompt
 import app.pochical.SectionHeader
@@ -249,7 +248,7 @@ private fun JoinProfileDialog(
   name: String,
   onClose: () -> Unit,
 ) {
-  Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+  PageDialog(onDismissRequest = onClose) {
     Scaffold(
       topBar = {
         TopAppBar(

@@ -18,10 +18,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.ConfirmAction
+import app.pochical.PageDialog
 import app.pochical.R
 import app.pochical.ReviewPrompt
 import app.pochical.RowEnd
@@ -115,12 +114,12 @@ private fun EndForm(groupId: String, current: LocalDate?, onBack: () -> Unit) {
 }
 
 /**
- * 終了日 over グループを作る, in a full-screen dialog as its アイコン is: the same page, whose 保存 keeps
+ * 終了日 over グループを作る, in a PageDialog as its アイコン is: the same page, whose 保存 keeps
  * the day for 作る to send with the rest.
  */
 @Composable
 fun NewGroupEndPage(day: LocalDate?, onDay: (LocalDate?) -> Unit, onClose: () -> Unit) {
-  Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+  PageDialog(onDismissRequest = onClose) {
     GroupEndForm(day, onClose, saving = false, Modifier.fillMaxSize()) {
       onDay(it)
       onClose()
