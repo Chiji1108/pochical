@@ -164,6 +164,11 @@ extension EnvironmentValues {
   /// under the status bar, or on an iPad under the tab bar at the top
   /// (ScreenHost).
   @Entry var barTop: CGFloat = 0
+  /// Where a tab's screen's bar's band ends: its safe area's top.
+  @Entry var barBottom: CGFloat = 0
+  /// The bar's buttons stand down the screen's side, as on iPhone Duo's
+  /// outer display, rather than in its band (ScreenHost).
+  @Entry var barButtonsBeside = false
 }
 
 /// The tabs, each with its screen and the pages `navigator` has over it, or
@@ -520,19 +525,37 @@ private final class ScreenHost: UIHostingController<AnyView> {
     guard let bar = navigationController?.navigationBar else { return }
     let top = bar.convert(bar.bounds, to: view).minY
     if band.top != top { band.top = top }
+    let bottom = view.safeAreaInsets.top
+    if band.bottom != bottom { band.bottom = bottom }
+    let beside = barsBeside
+    if band.beside != beside { band.beside = beside }
+  }
+
+  /// The system stands the bar's buttons down the screen's side, as on
+  /// iPhone Duo's outer display (HIG, Designing for iPhone Duo: Vertical
+  /// controls), its band over the screen holding the title alone.
+  private var barsBeside: Bool {
+    guard #available(iOS 27.1, *) else { return false }
+    return traitCollection.verticalBarEdge != .unspecified
   }
 }
 
-/// Where a tab's bar's top is, as its host last laid it out.
+/// Where a tab's bar's band is, as its host last laid it out, and whether
+/// its buttons stand beside the screen rather than in it.
 @MainActor @Observable private final class BarBand {
   var top: CGFloat = 0
+  var bottom: CGFloat = 0
+  var beside = false
 }
 
 private struct BarBandTop: ViewModifier {
   let band: BarBand
 
   func body(content: Content) -> some View {
-    content.environment(\.barTop, band.top)
+    content
+      .environment(\.barTop, band.top)
+      .environment(\.barBottom, band.bottom)
+      .environment(\.barButtonsBeside, band.beside)
   }
 }
 

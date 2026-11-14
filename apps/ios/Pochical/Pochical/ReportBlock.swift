@@ -237,25 +237,23 @@ struct MemberProfileSheet: View {
         ToolbarItem(placement: .cancellationAction) {
           Button("閉じる", systemImage: "xmark", role: .close) { dismiss() }
         }
-        ToolbarItem(placement: .primaryAction) {
-          Menu("\(name)のメニュー", systemImage: "ellipsis") {
-            if blocked {
-              Button("ブロックを解除", systemImage: "person.crop.circle.badge.checkmark") {
-                onUnblock()
-                dismiss()
-              }
-            } else {
-              Button("ブロック", systemImage: "nosign") {
-                onBlock()
-                dismiss()
-              }
-            }
-            Divider()
-            Button("通報", systemImage: "flag", role: .destructive) {
-              onReport()
-              dismiss()
-            }
+      }
+      .barOverflow("\(name)のメニュー") {
+        if blocked {
+          Button("ブロックを解除", systemImage: "person.crop.circle.badge.checkmark") {
+            onUnblock()
+            dismiss()
           }
+        } else {
+          Button("ブロック", systemImage: "nosign") {
+            onBlock()
+            dismiss()
+          }
+        }
+        Divider()
+        Button("通報", systemImage: "flag", role: .destructive) {
+          onReport()
+          dismiss()
         }
       }
     }

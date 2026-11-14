@@ -297,26 +297,24 @@ struct ChatScreen: View {
         .accessibilityAddTraits(.isHeader)
         .accessibilityHint(titleHint)
       }
-      ToolbarItem(placement: .primaryAction) {
-        Menu("チャットのメニュー", systemImage: "ellipsis") {
-          if otherID == nil, let group = place.group {
-            Button("みんなのシフト", systemImage: "calendar") {
-              navigator?.open(.group(.shifts(group, day: nil)))
-            }
-          }
-          Button("写真", systemImage: "photo.on.rectangle") {
-            navigator?.open(
-              .photos(PhotosOfChat(placeID: place.id, threadID: threadID, names: names)))
-          }
-          Divider()
-          let muted = isMuted
-          Button(
-            muted ? "通知をオンにする" : "通知をオフにする",
-            systemImage: muted ? "bell" : "bell.slash"
-          ) {
-            setMuted(!muted)
-          }
+    }
+    .barOverflow("チャットのメニュー") {
+      if otherID == nil, let group = place.group {
+        Button("みんなのシフト", systemImage: "calendar") {
+          navigator?.open(.group(.shifts(group, day: nil)))
         }
+      }
+      Button("写真", systemImage: "photo.on.rectangle") {
+        navigator?.open(
+          .photos(PhotosOfChat(placeID: place.id, threadID: threadID, names: names)))
+      }
+      Divider()
+      let muted = isMuted
+      Button(
+        muted ? "通知をオンにする" : "通知をオフにする",
+        systemImage: muted ? "bell" : "bell.slash"
+      ) {
+        setMuted(!muted)
       }
     }
     .task {

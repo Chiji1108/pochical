@@ -108,7 +108,7 @@ private struct GroupEndPage: View {
         if saving {
           ProgressView()
         } else {
-          Button("保存", role: .confirm) { keep(picked) }
+          Button("保存", systemImage: "checkmark", role: .confirm) { keep(picked) }
             .disabled(picked == current)
         }
       }

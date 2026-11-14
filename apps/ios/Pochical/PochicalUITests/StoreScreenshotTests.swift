@@ -102,7 +102,7 @@ final class StoreScreenshotTests: XCTestCase {
     launch()
     try app.joins(invitation: raw.appending(path: "invite"), named: "佐藤", over: "まい")
     let chat = app.buttons.matching(NSPredicate(format: "label BEGINSWITH '全体チャット'")).firstMatch
-    let menu = app.navigationBars.firstMatch.buttons["チャットのメニュー"]
+    let menu = app.textViews["メッセージ"]
     let votes = app.descendants(matching: .any)
       .matching(NSPredicate(format: "label ENDSWITH 'に行ける人：森、小林'")).firstMatch
     chat.tap()

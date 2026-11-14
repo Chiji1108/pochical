@@ -32,6 +32,12 @@ extension XCUIApplication {
     ).firstMatch
   }
 
+  /// The bar's back button: in the bar over the page, or on iPhone Duo's
+  /// outer display in the bar down its side, which is no navigation bar.
+  @MainActor var backButton: XCUIElement {
+    buttons["BackButton"]
+  }
+
   /// Joins the group whose invitation code the test's script kept in
   /// `invitation`, as `name` if given (else as the user already is), its
   /// hub shown. The name is typed in the row that says one is needed, or
@@ -67,7 +73,7 @@ extension XCUIApplication {
       XCTAssertTrue(field.waitForExistence(timeout: 5), "the name can be typed")
       field.tap()
       field.typeText(name)
-      navigationBars.buttons.firstMatch.tap()
+      backButton.tap()
     }
     let join = buttons["参加する"]
     XCTAssertTrue(join.waitForExistence(timeout: 15), "the join screen opens")

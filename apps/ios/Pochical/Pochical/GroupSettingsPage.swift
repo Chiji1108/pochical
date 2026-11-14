@@ -266,7 +266,7 @@ private struct GroupEditPage: View {
         if saving {
           ProgressView()
         } else {
-          Button("保存", role: .confirm) { save(name: trimmedName) }
+          Button("保存", systemImage: "checkmark", role: .confirm) { save(name: trimmedName) }
             .disabled(!canSave)
         }
       }

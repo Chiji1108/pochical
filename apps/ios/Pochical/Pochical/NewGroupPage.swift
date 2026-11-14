@@ -61,7 +61,7 @@ struct NewGroupPage: View {
         if busy {
           ProgressView()
         } else {
-          Button("作る", role: .confirm) { make() }
+          Button("作る", systemImage: "checkmark", role: .confirm) { make() }
             .disabled(!draft.canMake(freeColor: freeColor, usualName: usualName))
         }
       }

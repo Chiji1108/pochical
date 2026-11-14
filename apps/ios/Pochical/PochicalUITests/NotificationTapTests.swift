@@ -80,7 +80,7 @@ final class NotificationTapTests: XCTestCase {
   @MainActor private func opensTheChat(_ name: String) {
     let bar = app.navigationBars.firstMatch
     XCTAssertTrue(
-      bar.buttons["チャットのメニュー"].waitForExistence(timeout: 15), "the chat opens")
+      app.textViews["メッセージ"].waitForExistence(timeout: 15), "the chat opens")
     XCTAssertTrue(app.cells.firstMatch.waitForExistence(timeout: 10), "with its lines")
     XCTAssertEqual(app.navigationBars.count, 1, "the chat has one bar")
     XCTAssertFalse(app.tabBars.firstMatch.isHittable, "the chat is over the tabs")
