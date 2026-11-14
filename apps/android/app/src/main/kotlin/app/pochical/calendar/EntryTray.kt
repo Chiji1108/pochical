@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -71,6 +70,8 @@ import kotlinx.coroutines.launch
  * ポチポチ入力's tray (spec/calendar.md, ポチポチ入力): the day being entered, a key for each
  * pattern in the person's order, and 消す and 翌日へ. It is entered like a keyboard, so every key
  * ticks alike (spec/haptics.md). [said] is what the last key did, for a screen reader to hear.
+ * [keyPages] is the page of keys shown, kept by the calendar so it stays as the tray moves between
+ * the screen's foot and the day's pane.
  */
 @Composable
 fun EntryTray(
@@ -83,11 +84,11 @@ fun EntryTray(
   said: String?,
   onEnter: (String?) -> Unit,
   onSkip: () -> Unit,
+  keyPages: PagerState,
   modifier: Modifier = Modifier,
 ) {
   val haptics = LocalHapticFeedback.current
   val tick = { haptics.performHapticFeedback(HapticFeedbackType.VirtualKey) }
-  val keyPages = rememberPagerState { pageCount(patterns.size) }
   Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
     TrayDateLabel(day, week, country, said)
     PatternKeys(patterns, keyPages) {

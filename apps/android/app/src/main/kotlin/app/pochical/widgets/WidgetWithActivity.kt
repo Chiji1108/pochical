@@ -13,21 +13,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
@@ -41,6 +36,7 @@ import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.lifecycle.lifecycleScope
 import app.pochical.PochicalTheme
 import app.pochical.R
+import app.pochical.SettingsPage
 import app.pochical.groups.LocalGroupCalls
 import app.pochical.groups.MemberAvatar
 import app.pochical.kit.PhotoShelf
@@ -107,16 +103,7 @@ class WidgetWithActivity(private val settings: SyncedSettings, private val kit: 
   private fun WidgetWithPage(offs: Boolean, kept: WidgetChoice?, onBack: () -> Unit, onPick: (WidgetChoice?) -> Unit) {
     val values = kit.database.values()
     val groups by remember(values) { values.choiceGroups() }.collectAsState(emptyList())
-    Scaffold(
-      topBar = {
-        TopAppBar(
-          title = { Text(stringResource(if (offs) R.string.widget_with_off else R.string.widget_with_upcoming)) },
-          navigationIcon = {
-            IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_back), contentDescription = stringResource(R.string.back)) }
-          },
-        )
-      },
-    ) { padding ->
+    SettingsPage(stringResource(if (offs) R.string.widget_with_off else R.string.widget_with_upcoming), onBack, collapsing = false) { padding ->
       LazyColumn(Modifier.selectableGroup(), contentPadding = padding) {
         item { Choice(stringResource(R.string.widget_with_nobody), kept == null) { onPick(null) } }
         for (group in groups) {
