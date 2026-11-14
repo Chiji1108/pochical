@@ -90,7 +90,7 @@ final class WideCalendarTests: XCTestCase {
     XCTAssertTrue(app.buttons["完了"].waitForExistence(timeout: 5), "entering, 完了 is in the heading")
     XCTAssertTrue(app.buttons["消す"].exists, "the tray is in the pane")
     XCTAssertTrue(day(on: 1).isHittable, "the month stays beside it")
-    XCTAssertTrue(app.buttons["グループ"].exists, "the tabs stay")
+    XCTAssertTrue(app.tab("グループ").exists, "the tabs stay")
     snap("entering", of: XCUIScreen.main)
   }
 

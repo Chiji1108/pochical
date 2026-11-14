@@ -42,6 +42,9 @@ struct DayDetail<Foot: View>: View {
   /// The memo was being written in the detail this one took the place of:
   /// it takes the focus as its row is laid out.
   @State private var movedWriting = false
+  /// On screen: a detail kept while its calendar is not shown says
+  /// nothing, as the memo it follows changes in the one that is.
+  @State private var shown = false
   /// The memo's row, scrolled to.
   private static var memoRow: String { "memo" }
   @FocusState private var writingNote: Bool
@@ -93,9 +96,11 @@ struct DayDetail<Foot: View>: View {
         }
     }
     .onAppear {
-      // Moved, it goes on with the memo, its caret and the list open as
-      // they were.
-      if handover.moving, handover.day == day {
+      shown = true
+      // Moved, or shown again, it goes on with the memo, its caret and the
+      // list open as they were; it says nothing until it has, as the focus
+      // comes after.
+      if handover.day == day {
         draft = handover.memo
         lists = handover.lists
         // The field puts its caret at its start as it takes the focus:
@@ -104,9 +109,8 @@ struct DayDetail<Foot: View>: View {
         movedWriting = handover.writing
       } else {
         draft = note ?? ""
+        tellHandover()
       }
-      handover.moving = false
-      tellHandover()
     }
     .onChange(of: draft) { tellHandover() }
     .onChange(of: caret) { tellHandover() }
@@ -131,7 +135,10 @@ struct DayDetail<Foot: View>: View {
     }
     // Moved, it is kept as its screen closes, and again once the field is
     // left in the detail that took its place.
-    .onDisappear { keepNote() }
+    .onDisappear {
+      shown = false
+      keepNote()
+    }
     .onChange(of: scenePhase) { _, phase in
       if phase != .active {
         keepNote()
@@ -363,13 +370,16 @@ struct DayDetail<Foot: View>: View {
   }
 
   /// Says what it is in the middle of, for the detail that takes its place
-  /// as it moves; nothing once it is moving, as it is left then.
+  /// as it moves; nothing from the sheet or the pane the width has left,
+  /// as it is going.
   private func tellHandover() {
-    guard !handover.moving else { return }
+    guard shown, handover.inPane == !closes else { return }
     handover.day = day
     handover.memo = draft
-    handover.caret = caret
-    handover.writing = writingNote
+    // A memo taken from the detail before, its focus yet to come, is being
+    // written all the same.
+    handover.caret = movedCaret ?? caret
+    handover.writing = writingNote || movedWriting
     handover.lists = lists
   }
 
@@ -442,10 +452,10 @@ enum DayList: Hashable {
   var caret: TextSelection?
   var writing = false
   var lists: [DayList] = []
-  /// Set as the width changes with a day open, until the detail coming
-  /// takes what the one going was in the middle of; the one going says
-  /// nothing more as it goes.
-  var moving = false
+  /// Whether the detail shown is the wide screen's pane rather than the
+  /// phone's sheet: set by the root as the width changes, before either
+  /// goes, so only the one coming is heard from.
+  var inPane: Bool?
   /// The phone's sheet is going as the screen widens: the system takes the
   /// focus away as it ends, so the memo moved to the pane takes it after.
   var sheetGoing = false

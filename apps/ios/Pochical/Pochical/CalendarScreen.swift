@@ -10,6 +10,9 @@ import UIKit
 /// a シフトの期間, a page a period, named by the month it starts in
 /// (spec/calendar.md, The shift period).
 struct CalendarScreen: View {
+  /// Where the calendar is, which both of the root's calendars show: a
+  /// phone's under the tab bar and a wide screen's beside the sidebar.
+  let place: CalendarPlace
   @Environment(\.themeColors) private var colors
   @Environment(Settings.self) private var settings
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -22,9 +25,15 @@ struct CalendarScreen: View {
   @State private var today = Day.today
   /// The month naming the page shown; none for the page holding today,
   /// which the calendar opens on.
-  @State private var shownMonth: Day?
+  private var shownMonth: Day? {
+    get { place.shownMonth }
+    nonmutating set { place.shownMonth = newValue }
+  }
   /// The day ポチポチ入力 enters next, while entering.
-  @State private var entering: Day?
+  private var entering: Day? {
+    get { place.entering }
+    nonmutating set { place.entering = newValue }
+  }
   @State private var gaps: [Day] = []
   /// The first day of the page the gaps are on.
   @State private var gapsPageFirst = Day.today
@@ -40,23 +49,35 @@ struct CalendarScreen: View {
   @State private var addingToCalendar: Day?
   /// Something was put on the days since entering or a day was opened,
   /// so closing them is a moment to ask for a review (spec/review.md).
-  @State private var changed = false
+  private var changed: Bool {
+    get { place.changed }
+    nonmutating set { place.changed = newValue }
+  }
   @Environment(\.requestReview) private var requestReview
   /// The reminders offered, once, after shifts were first entered: the
   /// time they come at.
   @State private var offeringReminders: String?
   /// The day opened from the month: on a phone its week alone left above
   /// its detail, on a wide screen shown in the pane beside the month.
-  @State private var opened: Day?
+  private var opened: Day? {
+    get { place.opened }
+    nonmutating set { place.opened = newValue }
+  }
   /// What the day's detail is in the middle of, for it to go on with as
   /// it moves between the sheet and the pane.
-  @State private var handover = DayDetailHandover()
+  private var handover: DayDetailHandover { place.handover }
   /// The day last entered, open in the pane on a wide screen once
   /// entering has ended and its blank days were asked about.
-  @State private var lastEntered: Day?
+  private var lastEntered: Day? {
+    get { place.lastEntered }
+    nonmutating set { place.lastEntered = newValue }
+  }
   /// The tray's page of keys, kept as the tray moves between the phone's
   /// foot and the wide screen's pane.
-  @State private var trayPage = 0
+  private var trayPage: Int {
+    get { place.trayPage }
+    nonmutating set { place.trayPage = newValue }
+  }
   /// The day's sheet is going: the month unfolds as it goes, not once it
   /// has gone, and folds again if a swipe is taken back.
   @State private var leaving = false
@@ -83,6 +104,10 @@ struct CalendarScreen: View {
   /// The screen's room and what stands around the month, measured, so a
   /// short screen fits its six weeks (`cellHeight`).
   @State private var room = Room()
+  /// This calendar is the one on screen: the root keeps a phone's and a
+  /// wide screen's, one on screen at a time, and only that one has the
+  /// day's sheet up.
+  @State private var onScreen = false
   /// The fold dividing the screen, while a folding iPhone is half folded.
   @State private var hinge: Hinge?
   private struct Room {
@@ -211,8 +236,10 @@ struct CalendarScreen: View {
       }
     }
     .onChange(of: opened) { _, day in
-      // Whatever closed or changed the day, its sheet's going is over.
+      // Whatever closed or changed the day, its sheet's going is over, and
+      // the next day's detail starts afresh.
       leaving = false
+      handover.day = nil
       guard let day else {
         // A swipe left unsettled as the week closed goes with it.
         swipedWeek = nil
@@ -236,7 +263,7 @@ struct CalendarScreen: View {
     // A day's detail rises as the system's sheet over the folded week, to
     // just under it with the week still to tap, and goes down as it is
     // swiped away, the month unfolding behind it.
-    .daySheet(folded, first: underWeek) {
+    .daySheet(onScreen ? folded : nil, first: underWeek) {
       withAnimation(folding) { opened = nil }
     } onDismiss: {
       handover.sheetGoing = false
@@ -269,16 +296,9 @@ struct CalendarScreen: View {
     .ignoresSafeArea(.keyboard)
     // Widened or narrowed with a day open, its detail moves to the pane or
     // the sheet as it is (spec/calendar.md, On a wide screen).
-    .onChange(of: wide) { _, now in
-      // The sheet going as the screen widens leaves the day open, and a
-      // day opened since is framed again as it narrows.
-      leaving = false
-      if opened != nil {
-        handover.moving = true
-        // Widened, the sheet the day was in goes.
-        handover.sheetGoing = now
-      }
-    }
+    .onChange(of: wide) { show() }
+    .onAppear { show() }
+    .onDisappear { onScreen = false }
     .sheet(item: $breakingDown, id: \.self) { month in
       let page = period.page(month)
       let summary = calendar.summary(of: page)
@@ -413,6 +433,15 @@ struct CalendarScreen: View {
       .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
         if entering == nil { room.bottom = height }
       }
+  }
+
+  /// This calendar comes on screen, or its width changes (the root says
+  /// so to `place` as it swaps its calendars).
+  private func show() {
+    onScreen = true
+    // A sheet that went as the screen widened leaves the day open, and a
+    // day open is framed again as it narrows.
+    leaving = false
   }
 
   /// The month naming the page holding today.
@@ -674,7 +703,7 @@ struct CalendarScreen: View {
       day: day, week: settings.device.week, patterns: calendar.patterns.inUse,
       canClear: shown[day] != nil,
       canSkip: day != last,
-      page: $trayPage,
+      page: Bindable(place).trayPage,
       onEnter: { shift in
         // A shift not kept leaves the day to enter again.
         guard keep({ db, now in try OwnValues.enter(shift, on: day, now: now, in: db) }) else {
@@ -945,6 +974,43 @@ struct CalendarScreen: View {
     let month = shownMonth ?? thisMonth
     return Self.monthsAround + monthsAfterThis(month)
       + weekOf(today).days(since: weekOf(day)) / 7
+  }
+}
+
+/// Where the calendar is: the page shown, the day open, entering, and
+/// what the day's detail is in the middle of. The root keeps a calendar
+/// for a phone and one for a wide screen, as a width changed swaps them
+/// (RootController), so where the calendar is lives here, for the one
+/// that comes on screen to go on from it (spec/calendar.md, On a wide
+/// screen).
+@MainActor @Observable final class CalendarPlace {
+  /// The month naming the page shown; none for the page holding today,
+  /// which the calendar opens on.
+  var shownMonth: Day?
+  /// The day ポチポチ入力 enters next, while entering.
+  var entering: Day?
+  /// The day opened from the month: on a phone its week alone left above
+  /// its detail, on a wide screen shown in the pane beside the month.
+  var opened: Day?
+  /// The day last entered, open in the pane on a wide screen once
+  /// entering has ended and its blank days were asked about.
+  var lastEntered: Day?
+  /// The tray's page of keys.
+  var trayPage = 0
+  /// Something was put on the days since entering or a day was opened,
+  /// so closing them is a moment to ask for a review (spec/review.md).
+  var changed = false
+  /// What the day's detail is in the middle of, for it to go on with as
+  /// it moves between the sheet and the pane.
+  let handover = DayDetailHandover()
+  /// The root swaps its calendars for the one `wide` or not, as the width
+  /// changes, before either goes: the detail of a day open goes on in the
+  /// one coming, and what the one going says as it goes is not taken.
+  func show(wide: Bool) {
+    guard handover.inPane != wide else { return }
+    // Widened with a day open, the sheet it was in goes.
+    handover.sheetGoing = wide && handover.inPane != nil && opened != nil
+    handover.inPane = wide
   }
 }
 
