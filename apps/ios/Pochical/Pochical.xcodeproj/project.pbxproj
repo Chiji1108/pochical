@@ -1034,7 +1034,7 @@
 			repositoryURL = "https://github.com/kean/Nuke";
 			requirement = {
 				kind = exactVersion;
-				version = 13.2.0;
+				version = 13.2.3;
 			};
 		};
 		C6C3CC0130740000000C5B81 /* XCRemoteSwiftPackageReference "swift-navigation" */ = {
