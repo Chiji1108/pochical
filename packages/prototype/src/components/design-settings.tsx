@@ -538,7 +538,7 @@ function openOutside(url: string) {
 // Each store's page for writing a review, as the apps' Site has them.
 const writeReview = {
   android: "https://play.google.com/store/apps/details?id=app.pochical",
-  ios: "https://apps.apple.com/app/id6821849894?action=write-review",
+  ios: "https://apps.apple.com/jp/app/id6821849894?action=write-review",
 } as const;
 
 // Pochical itself, at the foot of the settings, under the chat with the

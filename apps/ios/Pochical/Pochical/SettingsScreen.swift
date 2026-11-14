@@ -443,6 +443,7 @@ enum Site {
     root.appending(path: path)
   }
 
-  /// The App Store's page for writing a review (spec/review.md).
-  static let writeReview = URL(string: "https://apps.apple.com/app/id6821849894?action=write-review")!
+  /// The App Store's page for writing a review (spec/review.md), in Japan's
+  /// store, the only one Pochical is in.
+  static let writeReview = URL(string: "https://apps.apple.com/jp/app/id6821849894?action=write-review")!
 }
