@@ -104,16 +104,13 @@ struct CalendarScreen: View {
   /// The screen's room and what stands around the month, measured, so a
   /// short screen fits its six weeks (`cellHeight`).
   @State private var room = Room()
-  /// This calendar is the one on screen: the root keeps a phone's and a
-  /// wide screen's, one on screen at a time, and only that one has the
-  /// day's sheet up.
+  /// The calendar is on screen: its sheet is up only then, not while
+  /// the root moves it between navigations or another tab is shown.
   @State private var onScreen = false
   /// The fold dividing the screen, while a folding iPhone is half folded.
   @State private var hinge: Hinge?
   private struct Room {
     var total: CGFloat = 0
-    /// The width `total` was measured at.
-    var width: CGFloat = 0
     var heading: CGFloat = 0
     var weekdays: CGFloat = 0
     var bottom: CGFloat = 0
@@ -178,13 +175,10 @@ struct CalendarScreen: View {
     .padding(.trailing, wide ? hinge?.width ?? 0 : 0)
     .environment(\.dayCellHeight, cellHeight)
     // Measured at rest, as the tabs give way on a phone; the month on a
-    // wide screen is as tall whatever the pane shows. A screen another
-    // width, turned or folded, is measured as it comes, a day open or not.
-    .onGeometryChange(for: CGSize.self) { $0.size } action: { size in
-      if wide || entering == nil && opened == nil || size.width != room.width {
-        room.total = size.height
-        room.width = size.width
-      }
+    // wide screen is as tall whatever the pane shows. Widened or
+    // narrowed, it is measured anew as it comes, a day open or not.
+    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
+      if wide || entering == nil && opened == nil || room.total == 0 { room.total = height }
     }
     .onGeometryChange(for: CGFloat.self) { proxy in
       proxy.frame(in: .global).maxY
@@ -201,10 +195,25 @@ struct CalendarScreen: View {
       }
       .ignoresSafeArea()
     }
+    // On a wide screen the detail stands beside the month in the system's
+    // inspector, always there while the calendar is shown. The inspector
+    // would be a sheet on a phone, but one that closes as the width
+    // narrows and lacks the sheet's height under the week, so a phone
+    // keeps the sheet below and has no inspector at all; what the detail
+    // is in the middle of goes across with `handover`.
+    .modifier(Pane(shown: wide && onScreen, width: hinge?.paneWidth) { pane(calendar) })
+    // iPhone Duo half folded: the fold the system reserves for dividing
+    // the screen, which the month and the pane keep to either side of.
+    .onGeometryChange(for: Hinge?.self) { proxy in
+      Hinge(dividing: proxy)
+    } action: { hinge = $0 }
+    // The month has nothing to type in: it stays where it is as the
+    // keyboard comes up for the memo in the pane beside it, whose rows
+    // scroll the memo above it.
+    .ignoresSafeArea(.keyboard)
     // The tabs give way to entering and to a day's week, as /design's do;
     // on a wide screen both are in the pane, and the tabs stay.
-    .toolbarVisibility(
-      wide || entering == nil && shownOpen == nil ? .visible : .hidden, for: .tabBar)
+    .tabBarHidden(!wide && (entering != nil || shownOpen != nil))
     // A page turned to while entering starts on its first blank day; a
     // day picked on a page around it turns to that page.
     .onChange(of: shownMonth) { _, month in
@@ -268,7 +277,7 @@ struct CalendarScreen: View {
     } onDismiss: {
       handover.sheetGoing = false
     } content: { day in
-      detail(calendar, of: day)
+      detail(calendar, of: day, inPane: false)
         // Closed by its × or in code, the day has closed already.
         .onSheetLeaving { going in
           if opened != nil { withAnimation(folding) { leaving = going } }
@@ -276,27 +285,12 @@ struct CalendarScreen: View {
         .presentationDragIndicator(.visible)
         .presentationBackground(colors.backgroundBase)
     }
-    // On a wide screen the detail stands beside the month in the system's
-    // inspector, always there. The inspector would be a sheet on a phone,
-    // but one that closes as the width narrows and lacks the sheet's
-    // height under the week, so a phone keeps the sheet above; what the
-    // detail is in the middle of goes across with `handover`.
-    .inspector(isPresented: .constant(wide)) {
-      pane(calendar)
-        .modifier(PaneWidth(width: hinge?.paneWidth))
-    }
-    // iPhone Duo half folded: the fold the system reserves for dividing
-    // the screen, which the month and the pane keep to either side of.
-    .onGeometryChange(for: Hinge?.self) { proxy in
-      Hinge(dividing: proxy)
-    } action: { hinge = $0 }
-    // The month has nothing to type in: it stays where it is as the
-    // keyboard comes up for the memo in the pane beside it, whose rows
-    // scroll the memo above it.
-    .ignoresSafeArea(.keyboard)
     // Widened or narrowed with a day open, its detail moves to the pane or
     // the sheet as it is (spec/calendar.md, On a wide screen).
-    .onChange(of: wide) { show() }
+    .onChange(of: wide) {
+      room.total = 0
+      show()
+    }
     .onAppear { show() }
     .onDisappear { onScreen = false }
     .sheet(item: $breakingDown, id: \.self) { month in
@@ -497,13 +491,17 @@ struct CalendarScreen: View {
       .padding(.bottom, 8)
       .background(colors.backgroundBase)
     } else {
-      detail(calendar, of: opened ?? today)
+      detail(calendar, of: opened ?? today, inPane: true)
     }
   }
 
   /// `day`'s detail, in the sheet or the pane, where on a wide screen
   /// 今月のお休み and ポチポチ入力 stand at its foot.
-  private func detail(_ calendar: OwnCalendar, of day: Day) -> some View {
+  ///
+  /// Which of the two it is in is said by where it is put, never by the
+  /// width now: the one going is drawn again at the new width before it
+  /// goes, and must not take itself for the one coming.
+  private func detail(_ calendar: OwnCalendar, of day: Day, inPane: Bool) -> some View {
     let entry = calendar.shown(from: day, through: day)[day]
     // One day gives way to the next however it is opened, by a tap,
     // ‹ ›, 今週 or a swipe.
@@ -532,9 +530,9 @@ struct CalendarScreen: View {
           }
         },
         onStep: { step in go(to: day.adding(days: step)) },
-        closes: !wide, handover: handover
+        closes: !inPane, handover: handover
       ) {
-        if wide {
+        if inPane {
           enterButton(calendar)
             .padding(.horizontal, Self.screenEdge)
             .padding(.vertical, 8)
@@ -978,10 +976,10 @@ struct CalendarScreen: View {
 }
 
 /// Where the calendar is: the page shown, the day open, entering, and
-/// what the day's detail is in the middle of. The root keeps a calendar
-/// for a phone and one for a wide screen, as a width changed swaps them
-/// (RootController), so where the calendar is lives here, for the one
-/// that comes on screen to go on from it (spec/calendar.md, On a wide
+/// what the day's detail is in the middle of, kept by the root, which
+/// moves the calendar's screen between navigations as the width changes
+/// (RootController) and tells it here first, so the day's detail goes on
+/// from the sheet to the pane or back (spec/calendar.md, On a wide
 /// screen).
 @MainActor @Observable final class CalendarPlace {
   /// The month naming the page shown; none for the page holding today,
@@ -1003,9 +1001,9 @@ struct CalendarScreen: View {
   /// What the day's detail is in the middle of, for it to go on with as
   /// it moves between the sheet and the pane.
   let handover = DayDetailHandover()
-  /// The root swaps its calendars for the one `wide` or not, as the width
-  /// changes, before either goes: the detail of a day open goes on in the
-  /// one coming, and what the one going says as it goes is not taken.
+  /// The width changes, said by the root before the calendar moves: the
+  /// detail of a day open goes on in the sheet or the pane it comes to,
+  /// and what the one going says as it goes is not taken.
   func show(wide: Bool) {
     guard handover.inPane != wide else { return }
     // Widened with a day open, the sheet it was in goes.
@@ -1045,14 +1043,25 @@ nonisolated struct Hinge: Equatable, Sendable {
   var paneWidth: CGFloat { total - end }
 }
 
-/// The pane at the system's own width, or as wide as the side a fold
-/// leaves it.
-private struct PaneWidth: ViewModifier {
+/// The day's pane beside the month, the system's inspector at its own
+/// width or as wide as the side a fold leaves it. Not there at all on a
+/// phone, nor while the calendar is not shown: an inspector kept presented
+/// in a width that has no room for it, as the calendar kept under another
+/// tab has as the screen turns, lays the month out against it without end.
+private struct Pane<Detail: View>: ViewModifier {
+  let shown: Bool
   let width: CGFloat?
+  @ViewBuilder let detail: () -> Detail
 
   func body(content: Content) -> some View {
-    if let width {
-      content.inspectorColumnWidth(width)
+    if shown {
+      content.inspector(isPresented: .constant(true)) {
+        if let width {
+          detail().inspectorColumnWidth(width)
+        } else {
+          detail()
+        }
+      }
     } else {
       content
     }

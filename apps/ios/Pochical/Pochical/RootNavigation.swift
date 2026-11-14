@@ -2,27 +2,29 @@ import PochicalKit
 import SwiftUI
 import UIKit
 
-// The app's one navigation, as LINE's and Telegram's: every page is pushed
-// over the tabs rather than inside one, so the tab bar goes away with the
-// screen under it as the page comes, and comes back as it goes, a back
-// swipe included (spec/chat.md, The chat's page). A UINavigationController
-// whose root hosts the tabs, which keep no stacks of their own: its one bar
-// is the tabs' bar too, holding the tab's title and buttons, and is never
-// hidden or shown as a page comes or goes, which would take the edge
-// effect off the page coming for as long as it comes (POC-157). A chat
-// outside the TabView keeps its view's keyboard layout guide too, which a
-// view inside it loses for good once the app has been in the background
-// (POC-117). SwiftUI's NavigationStack over a TabView, as of the iOS 27.1
-// SDK, still takes the edge effect off a page pushed from the calendar, its
-// bar shown with the push.
+// The app's navigation, as LINE's and Telegram's on a phone: every page is
+// pushed over the tab it was opened from, the tab bar going away with the
+// tab's screen as the page comes and coming back as it goes, a back swipe
+// included (spec/chat.md, The chat's page). The tabs are the system's tab
+// bar controller's, each a UIKit navigation whose root is the tab's screen,
+// its bar holding the tab's title and buttons. No bar is hidden or shown
+// as a page comes or goes, which would take the edge effect off the page
+// coming for as long as it comes (POC-157): the calendar's, which its month
+// heads, is hidden only while the calendar shows alone, and is there at
+// once as a page is put over it. A chat in a UIKit navigation keeps its
+// view's keyboard layout guide, which a view inside SwiftUI's TabView loses
+// for good once the app has been in the background (POC-117). SwiftUI's
+// NavigationStack, as of the iOS 27.1 SDK, still takes the edge effect off
+// a page pushed from the calendar, its bar shown with the push.
 //
 // On a wide screen, a regular width (an iPad, a large iPhone on its side,
-// a folding one opened up), the tabs are the system's tab bar controller's,
-// in its sidebar as iPadOS's own apps have their sections (RootController),
-// and the pages of グループ and 設定 open beside the tab's screen, on a
-// navigation of their own, as Mail and Settings do on an iPad: the first
-// at its root, the rest pushed over it. Narrowed again, the pages go back
-// over the tabs as they were.
+// a folding one opened up), the same tab bar controller has its tabs in its
+// sidebar, as iPadOS's own apps have their sections, and the pages of
+// グループ and 設定 open beside the tab's screen, on a navigation of their
+// own, as Mail and Settings do on an iPad: the first at its root, the rest
+// pushed over it. One tab bar controller at every width, and in it each
+// tab's screen, the same one, moved between navigations as the pages are,
+// so it keeps where it was as the width changes (#1237).
 
 /// A page over the tabs.
 enum RootPage: Hashable {
@@ -98,9 +100,8 @@ struct PhotosOfChat: Hashable {
   }
 
   /// Goes to `tab`, as a tap on it does, without the pages: none while the
-  /// tab bar shows over the tabs, and those of the tab left beside them on
-  /// a wide screen. The TabView sets it back as it follows a tab gone to
-  /// from here, which changes nothing.
+  /// tab bar shows on a narrow screen, and those of the tab left beside it
+  /// on a wide one.
   func select(_ tab: RootTab) {
     guard tab != self.tab else { return }
     self.tab = tab
@@ -158,22 +159,22 @@ struct PhotosOfChat: Hashable {
 extension EnvironmentValues {
   /// The navigation over the tabs, for a page to open another over them.
   @Entry var rootNavigator: RootNavigator?
-  /// How far down the screen the bar's top is, for a tab to head itself in
-  /// the bar's band (GroupsScreen).
+  /// How far down a tab's screen its bar's top is, for the tab to head
+  /// itself in the bar's band (GroupsScreen): where UIKit puts the bar,
+  /// under the status bar, or on an iPad under the tab bar at the top
+  /// (ScreenHost).
   @Entry var barTop: CGFloat = 0
 }
 
-/// The tabs, under the pages `navigator` has over them, or on a wide screen
-/// in the system's sidebar, with the pages beside the tab. Each page, tab
-/// and screen is hosted by UIKit, which gives them an environment of their
-/// own: `hosted` puts the app's in it again.
+/// The tabs, each with its screen and the pages `navigator` has over it, or
+/// on a wide screen beside it. Each page and screen is hosted by UIKit,
+/// which gives them an environment of their own: `hosted` puts the app's in
+/// it again.
 struct RootNavigation: UIViewControllerRepresentable {
   let navigator: RootNavigator
-  /// The tabs on a narrow screen, the tab bar under them.
-  let tabs: AnyView
-  /// Each tab's screen on a wide screen, with its title and buttons.
+  /// Each tab's screen, with its title and buttons.
   let screen: (RootTab) -> AnyView
-  /// The count on each tab, as the narrow screen's tab bar has it.
+  /// The count on each tab.
   let badges: [RootTab: Int]
   let page: (RootPage) -> AnyView
   /// What stands beside グループ or 設定 on a wide screen while no page is
@@ -181,21 +182,19 @@ struct RootNavigation: UIViewControllerRepresentable {
   let nothingOpen: (RootTab) -> AnyView
 
   func makeUIViewController(context: Context) -> RootController {
-    RootController(
-      navigator: navigator, tabs: tabs, screen: screen, page: page, nothingOpen: nothingOpen)
+    RootController(navigator: navigator, screen: screen, page: page, nothingOpen: nothingOpen)
   }
 
   func updateUIViewController(_ controller: RootController, context: Context) {
-    controller.update(
-      tabs: tabs, screen: screen, badges: badges, page: page, nothingOpen: nothingOpen)
+    controller.update(screen: screen, badges: badges, page: page, nothingOpen: nothingOpen)
   }
 }
 
-/// The tabs and the pages `navigator` has over them. On a narrow screen (a
-/// compact width) the tabs, the tab bar under them, at the root of one
-/// navigation, and the pages pushed over them. On a wide one (a regular
-/// width: an iPad, a large iPhone on its side, a folding one opened up) the
-/// system's tab bar controller, its tabs in the sidebar as iPadOS's own
+/// The system's tab bar controller, each tab a navigation with its screen
+/// at the root. On a narrow screen (a compact width) its tab bar is under
+/// the tabs, and the pages are pushed over the tab, the tab bar going with
+/// it. On a wide one (a regular width: an iPad, a large iPhone on its side,
+/// a folding one opened up) its tabs are in the sidebar as iPadOS's own
 /// apps have their sections, or in the tab bar at the top as the person
 /// turns it: グループ and 設定 each a split of their screen, as wide as a
 /// phone's, and the pages beside it, as Mail and Settings have their lists
@@ -203,61 +202,55 @@ struct RootNavigation: UIViewControllerRepresentable {
 /// what opens over it pushed over it. The controller only says which
 /// navigation holds what, keeps no list of its own, and tells the navigator
 /// of a page gone back from.
-final class RootController: UIViewController, UINavigationControllerDelegate,
+final class RootController: UITabBarController, UINavigationControllerDelegate,
   UITabBarControllerDelegate
 {
   private let navigator: RootNavigator
-  private let tabs: UIHostingController<AnyView>
-  /// On a narrow screen: the tabs at its root, the pages over them.
-  let narrow = UINavigationController()
-  /// On a wide screen: the tabs, each with its screen and pages.
-  let wide = UITabBarController()
-  private let wideTabs: [RootTab: WideTab]
+  private let stacks: [RootTab: TabStack]
   private var page: (RootPage) -> AnyView
+  private var badges: [RootTab: Int] = [:]
+  /// Whether the tabs are laid out for a wide screen: none before they are
+  /// laid out at all.
+  private var laidOutWide: Bool?
   /// The pages are being moved or put in place: what the navigations show
   /// meanwhile is not where the person has gone.
   private var arranging = false
 
   init(
-    navigator: RootNavigator, tabs: AnyView, screen: (RootTab) -> AnyView,
+    navigator: RootNavigator, screen: (RootTab) -> AnyView,
     page: @escaping (RootPage) -> AnyView, nothingOpen: (RootTab) -> AnyView
   ) {
     self.navigator = navigator
-    self.tabs = UIHostingController(rootView: tabs)
     self.page = page
-    wideTabs = Dictionary(
+    stacks = Dictionary(
       uniqueKeysWithValues: RootTab.allCases.map { tab in
-        (tab, WideTab(tab: tab, screen: screen(tab), nothingOpen: nothingOpen(tab)))
+        (tab, TabStack(tab: tab, screen: screen(tab), nothingOpen: nothingOpen(tab)))
       })
     super.init(nibName: nil, bundle: nil)
-    for navigation in [narrow] + wideTabs.values.flatMap(\.navigations) {
+    for navigation in stacks.values.flatMap(\.navigations) {
       navigation.delegate = self
       // A tab's root may be titled large, as iOS's Settings is, the title
-      // going into the bar as its list scrolls up under it (arrange); the
-      // pages are titled in the bar (PageHost), beside the tabs too, as
-      // Settings' are on an iPad.
+      // going into the bar as its list scrolls up under it; the pages are
+      // titled in the bar (PageHost), beside the tabs too, as Settings'
+      // are on an iPad.
       navigation.navigationBar.prefersLargeTitles = true
     }
     // The sidebar, or the tab bar at the top, as iPadOS chooses for the
-    // window and the person turns it (spec/chat.md). The tab's screen
-    // stands beside the sidebar rather than under it: the calendar's
-    // months beside the one shown, and グループ's rail, are not drawn to
-    // be seen through it.
-    wide.mode = .tabSidebar
-    wide.sidebar.preferredLayout = .tile
-    wide.delegate = self
-    wide.tabs = RootTab.allCases.compactMap { tab in
-      guard let content = wideTabs[tab]?.content else { return nil }
-      let item = UITab(
-        title: tab.title, image: UIImage(systemName: tab.systemImage), identifier: tab.rawValue
-      ) { _ in content }
-      // Always in the tab bar, as on a phone: there is nothing to edit.
-      item.preferredPlacement = .fixed
-      return item
-    }
+    // window and the person turns it (spec/chat.md); a phone's tab bar on
+    // a narrow screen. The tab's screen stands beside the sidebar rather
+    // than under it: the calendar's months beside the one shown, and
+    // グループ's rail, are not drawn to be seen through it.
+    mode = .tabSidebar
+    sidebar.preferredLayout = .tile
+    delegate = self
     navigator.controller = self
+    // A screen widened or narrowed, as an iPad's window is or a phone
+    // unfolds, moves the pages beside the tab or over it.
     registerForTraitChanges([UITraitHorizontalSizeClass.self]) { (self: Self, _) in
-      self.layOut()
+      // Before the calendar's day moves between its sheet and its pane,
+      // so what its detail is in the middle of goes with it.
+      self.navigator.calendar.show(wide: self.isWide)
+      self.arrange(animated: false)
     }
   }
 
@@ -265,28 +258,8 @@ final class RootController: UIViewController, UINavigationControllerDelegate,
 
   override func viewDidLoad() {
     super.viewDidLoad()
-    layOut()
-  }
-
-  /// A screen widened or narrowed, as an iPad's window is or a phone
-  /// unfolds, moves the pages beside the tab or over the tabs.
-  private func layOut() {
-    // Before either calendar goes, so the day open moves from one to the
-    // other as it was.
+    // Before the calendar's day moves between its sheet and its pane.
     navigator.calendar.show(wide: isWide)
-    let shown = isWide ? wide : narrow
-    if shown.parent !== self {
-      for child in children {
-        child.willMove(toParent: nil)
-        child.view.removeFromSuperview()
-        child.removeFromParent()
-      }
-      addChild(shown)
-      shown.view.frame = view.bounds
-      shown.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-      view.addSubview(shown.view)
-      shown.didMove(toParent: self)
-    }
     arrange(animated: false)
   }
 
@@ -294,41 +267,56 @@ final class RootController: UIViewController, UINavigationControllerDelegate,
     traitCollection.horizontalSizeClass == .regular
   }
 
-  /// The hosts of the pages, over the tabs or beside them.
+  /// The hosts of the pages, over the tab or beside it.
   private var hosts: [PageHost] {
-    ([narrow] + RootTab.allCases.flatMap { wideTabs[$0]?.navigations ?? [] })
+    RootTab.allCases.flatMap { stacks[$0]?.navigations ?? [] }
       .flatMap(\.viewControllers).compactMap { $0 as? PageHost }
   }
 
-  /// The pages hosted, over the tabs or beside them.
+  /// The pages hosted, over the tab or beside it.
   var hostedPages: [RootPage] { hosts.map(\.page) }
+
+  /// `tab`'s screen, the same at every width.
+  func screen(of tab: RootTab) -> UIViewController? {
+    stacks[tab]?.screen
+  }
 
   /// What stands beside `tab` on a wide screen.
   func side(of tab: RootTab) -> UINavigationController? {
-    wideTabs[tab]?.side?.navigation
+    stacks[tab]?.side?.navigation
   }
 
   func update(
-    tabs: AnyView, screen: (RootTab) -> AnyView, badges: [RootTab: Int],
+    screen: (RootTab) -> AnyView, badges: [RootTab: Int],
     page: @escaping (RootPage) -> AnyView, nothingOpen: (RootTab) -> AnyView
   ) {
     self.page = page
-    self.tabs.rootView = tabs
+    self.badges = badges
     for tab in RootTab.allCases {
-      wideTabs[tab]?.screen.rootView = screen(tab)
-      wideTabs[tab]?.side?.nothing.rootView = nothingOpen(tab)
-      let count = badges[tab] ?? 0
-      wide.tab(forIdentifier: tab.rawValue)?.badgeValue = count > 0 ? "\(count)" : nil
+      stacks[tab]?.screen.show(screen(tab))
+      stacks[tab]?.side?.nothing.rootView = nothingOpen(tab)
+      badge(self.tab(forIdentifier: tab.rawValue))
     }
     for host in hosts { host.rootView = page(host.page) }
   }
 
+  /// The count on `item`'s tab, if any.
+  private func badge(_ item: UITab?) {
+    guard let item, let tab = RootTab(rawValue: item.identifier) else { return }
+    let count = badges[tab] ?? 0
+    item.badgeValue = count > 0 ? "\(count)" : nil
+  }
+
   /// Lays the navigator's pages over its tab or beside it, as the width
   /// and the tab have it, keeping those already there in the same place,
-  /// so a page under the one opened stays as it was. The calendar, which
-  /// its month heads, has no bar: hidden only while it shows alone, so
-  /// never as a page comes or goes.
+  /// so a page under the one opened stays as it was, and each tab's screen
+  /// in the navigation the width has it in. The calendar, which its month
+  /// heads, has no bar: hidden only while it shows alone, so never as a
+  /// page comes or goes.
   func arrange(animated: Bool) {
+    // Laid out once the width is known, as the controller comes into its
+    // window: the change to it arranges them.
+    guard traitCollection.horizontalSizeClass != .unspecified else { return }
     let tab = navigator.tab
     let pages = navigator.pages
     arranging = true
@@ -338,57 +326,66 @@ final class RootController: UIViewController, UINavigationControllerDelegate,
     while kept < min(open.count, pages.count), open[kept].page == pages[kept] { kept += 1 }
     let shown = Array(open[..<kept]) + pages[kept...].map { PageHost(page: $0, view: page($0)) }
     let isWide = isWide
-    var stacks: [(UINavigationController, [UIViewController])] = [
-      (narrow, isWide ? [tabs] : [tabs] + shown)
-    ]
+    // Over the tab's screen, the tab bar goes with it, as on a phone, the
+    // calendar's at every width; beside it, the tabs stay.
+    let beside = isWide && stacks[tab]?.side != nil
+    for host in shown { host.hidesBottomBarWhenPushed = !beside }
+    var lists: [(UINavigationController, [UIViewController])] = []
     for each in RootTab.allCases {
-      guard let wideTab = wideTabs[each] else { continue }
-      let here = isWide && each == tab
-      let screen: [UIViewController] = [wideTab.screen]
-      stacks.append((wideTab.column, here && wideTab.side == nil ? screen + shown : screen))
-      if let side = wideTab.side {
-        stacks.append((side.navigation, here && !shown.isEmpty ? shown : [side.nothing]))
+      guard let stack = stacks[each] else { continue }
+      let here = each == tab
+      let home = stack.navigation(wide: isWide)
+      let besideIt = isWide && stack.side != nil
+      for navigation in stack.navigations {
+        if navigation === home {
+          lists.append((navigation, [stack.screen] + (here && !besideIt ? shown : [])))
+        } else if let side = stack.side, navigation === side.navigation {
+          lists.append((navigation, besideIt && here && !shown.isEmpty ? shown : [side.nothing]))
+        } else {
+          lists.append((navigation, []))
+        }
       }
     }
     // What moves from one navigation to another comes all at once, the one
     // it leaves letting go of it first: only pages coming over the same
     // root come with a push.
-    let moved = stacks.contains { navigation, stack in
-      stack.contains { controller in
+    let moved = lists.contains { navigation, list in
+      list.contains { controller in
         controller.navigationController.map { $0 !== navigation } ?? false
       }
     }
     if moved {
-      for (navigation, stack) in stacks {
+      for (navigation, list) in lists {
         navigation.setViewControllers(
-          navigation.viewControllers.filter(stack.contains), animated: false)
+          navigation.viewControllers.filter(list.contains), animated: false)
       }
     }
-    for (navigation, stack) in stacks where navigation.viewControllers != stack {
+    for (navigation, list) in lists where navigation.viewControllers != list {
       let push = animated && !moved && viewIfLoaded?.window != nil
-        && navigation.viewControllers.first === stack.first
-      navigation.setViewControllers(stack, animated: push)
+        && navigation.viewControllers.first === list.first
+      navigation.setViewControllers(list, animated: push)
     }
-    narrow.setNavigationBarHidden(
-      tab == .calendar && narrow.viewControllers.count == 1, animated: false)
-    if let calendar = wideTabs[.calendar]?.column {
+    if let calendar = stacks[.calendar]?.column {
       calendar.setNavigationBarHidden(calendar.viewControllers.count == 1, animated: false)
     }
-    if wide.selectedTab?.identifier != tab.rawValue {
-      wide.selectedTab = wide.tab(forIdentifier: tab.rawValue)
+    if laidOutWide != isWide {
+      laidOutWide = isWide
+      tabs = RootTab.allCases.compactMap { stacks[$0]?.tab(wide: isWide) }
+      tabs.forEach(badge)
     }
-    // 設定 titled large, as iOS's Settings is, while its list is at its top
-    // (TabScrollViewForBar); グループ heads itself in the bar's band, and
-    // the calendar has none.
-    tabs.navigationItem.largeTitleDisplayMode = tab == .settings ? .always : .never
+    if selectedTab?.identifier != tab.rawValue {
+      selectedTab = self.tab(forIdentifier: tab.rawValue)
+    }
+    stacks[tab]?.screen.placeTabBar()
   }
 
-  /// A tab picked in the sidebar, or in the tab bar at the top.
+  /// A tab picked in the tab bar, or in the sidebar.
   func tabBarController(
     _ tabBarController: UITabBarController, didSelectTab selectedTab: UITab,
     previousTab: UITab?
   ) {
-    guard let tab = RootTab(rawValue: selectedTab.identifier) else { return }
+    // Not the tabs put in again for another width, which take the one shown.
+    guard !arranging, let tab = RootTab(rawValue: selectedTab.identifier) else { return }
     navigator.select(tab)
   }
 
@@ -402,32 +399,46 @@ final class RootController: UIViewController, UINavigationControllerDelegate,
   }
 }
 
-/// A tab on a wide screen: its screen at the root of a navigation of its
-/// own, and for グループ and 設定 the pages beside it in another, the two
-/// the system's split.
-private struct WideTab {
-  let screen: UIHostingController<AnyView>
+/// A tab: its screen, the same at every width, and the navigations it may
+/// be in. On a narrow screen the tab is the screen's navigation itself: the
+/// tab bar goes with the screen as a page is pushed over it only for a
+/// navigation that is the tab, not one inside a split. On a wide one
+/// グループ and 設定 are the system's split of the screen's column and the
+/// pages beside it, the screen moving into the column as a page moves; the
+/// calendar is its navigation at every width.
+private struct TabStack {
+  let screen: ScreenHost
+  /// The screen's navigation on a narrow screen, and the calendar's always.
   let column: UINavigationController
+  /// The screen's navigation in the split on a wide screen.
+  let wideColumn: UINavigationController?
   /// The pages beside the screen, and what stands there while none is open.
   let side: (navigation: UINavigationController, nothing: UIHostingController<AnyView>)?
-  /// What the tab bar controller shows for the tab.
-  let content: UIViewController
+  /// The tab, as the tab bar controller shows it on a narrow screen and on
+  /// a wide one: one for the calendar, a controller being only one tab's.
+  let narrowTab: UITab
+  let wideTab: UITab
 
   @MainActor init(tab: RootTab, screen: AnyView, nothingOpen: AnyView) {
-    self.screen = UIHostingController(rootView: screen)
+    self.screen = ScreenHost()
+    self.screen.show(screen)
     // 設定 titled large, as iOS's Settings is, while its list is at its
     // top; グループ heads itself in the bar's band, and the calendar has
     // none.
     self.screen.navigationItem.largeTitleDisplayMode = tab == .settings ? .always : .never
-    column = UINavigationController(rootViewController: self.screen)
+    column = UINavigationController()
+    narrowTab = Self.item(tab, showing: column)
     guard tab != .calendar else {
+      wideColumn = nil
       side = nil
-      content = column
+      wideTab = narrowTab
       return
     }
+    let wideColumn = UINavigationController()
     let side = (
       navigation: UINavigationController(), nothing: UIHostingController(rootView: nothingOpen)
     )
+    self.wideColumn = wideColumn
     self.side = side
     // The screen, as wide as a phone's, beside the pages, neither hidden
     // by a button or a swipe: which shows is the tab's to say.
@@ -436,14 +447,124 @@ private struct WideTab {
     split.preferredDisplayMode = .oneBesideSecondary
     split.displayModeButtonVisibility = .never
     split.presentsWithGesture = false
-    split.setViewController(column, for: .primary)
+    split.setViewController(wideColumn, for: .primary)
     split.setViewController(side.navigation, for: .secondary)
-    content = split
+    wideTab = Self.item(tab, showing: split)
   }
 
-  /// The navigations the tab's pages may be in.
+  @MainActor private static func item(_ tab: RootTab, showing content: UIViewController) -> UITab {
+    let item = UITab(
+      title: tab.title, image: UIImage(systemName: tab.systemImage), identifier: tab.rawValue
+    ) { _ in content }
+    // Always in the tab bar, as on a phone: there is nothing to edit.
+    item.preferredPlacement = .fixed
+    return item
+  }
+
+  /// The navigation whose root the screen is at the width.
+  func navigation(wide: Bool) -> UINavigationController {
+    wide ? wideColumn ?? column : column
+  }
+
+  /// The tab, as the tab bar controller shows it at the width.
+  func tab(wide: Bool) -> UITab {
+    wide ? wideTab : narrowTab
+  }
+
+  /// The navigations the tab's screen and pages may be in.
   var navigations: [UINavigationController] {
-    [column] + (side.map { [$0.navigation] } ?? [])
+    [column] + [wideColumn, side?.navigation].compactMap(\.self)
+  }
+}
+
+/// A tab's screen, told where its bar's top is (barTop): UIKit lays the
+/// bar out for the window, under the status bar, or on an iPad with the
+/// tab bar at the top under that tab bar, the bar's buttons in the row
+/// below it. It hides the tab bar as the screen asks (tabBarHidden).
+private final class ScreenHost: UIHostingController<AnyView> {
+  private let band = BarBand()
+  /// The screen asks for the tab bar's place.
+  private var wantsTabBarHidden = false
+
+  init() {
+    super.init(rootView: AnyView(EmptyView()))
+    registerForTraitChanges([UITraitHorizontalSizeClass.self]) { (self: Self, _) in
+      self.placeTabBar()
+    }
+  }
+
+  @available(*, unavailable) required init?(coder: NSCoder) { fatalError() }
+
+  func show(_ screen: AnyView) {
+    let hide = HideTabBarAction { [weak self] hidden in
+      self?.wantsTabBarHidden = hidden
+      self?.placeTabBar()
+    }
+    rootView = AnyView(
+      screen.modifier(BarBandTop(band: band)).environment(\.hideTabBar, hide))
+  }
+
+  /// Hides the tab bar while the screen shows and asks, on a narrow
+  /// screen: a wide one keeps the calendar's tray and day in a pane of
+  /// their own, clear of the tabs (spec/calendar.md, On a wide screen).
+  func placeTabBar() {
+    guard let tabs = tabBarController, tabs.selectedViewController === navigationController
+    else { return }
+    let hidden = wantsTabBarHidden && traitCollection.horizontalSizeClass == .compact
+    guard tabs.isTabBarHidden != hidden else { return }
+    tabs.setTabBarHidden(hidden, animated: view.window != nil)
+  }
+
+  override func viewDidLayoutSubviews() {
+    super.viewDidLayoutSubviews()
+    guard let bar = navigationController?.navigationBar else { return }
+    let top = bar.convert(bar.bounds, to: view).minY
+    if band.top != top { band.top = top }
+  }
+}
+
+/// Where a tab's bar's top is, as its host last laid it out.
+@MainActor @Observable private final class BarBand {
+  var top: CGFloat = 0
+}
+
+private struct BarBandTop: ViewModifier {
+  let band: BarBand
+
+  func body(content: Content) -> some View {
+    content.environment(\.barTop, band.top)
+  }
+}
+
+/// Hides the tab bar of the tab a screen is, or shows it again.
+struct HideTabBarAction {
+  let hide: @MainActor (Bool) -> Void
+
+  @MainActor func callAsFunction(_ hidden: Bool) {
+    hide(hidden)
+  }
+}
+
+extension EnvironmentValues {
+  @Entry var hideTabBar = HideTabBarAction { _ in }
+}
+
+extension View {
+  /// Gives the tab bar's place to what the tab's screen shows there while
+  /// `hidden`, as the calendar's tray and day do (spec/calendar.md): the
+  /// tab bar is the system's tab bar controller's, which SwiftUI's
+  /// `toolbarVisibility(_:for: .tabBar)` reaches only in its own TabView.
+  func tabBarHidden(_ hidden: Bool) -> some View {
+    modifier(TabBarHiding(hidden: hidden))
+  }
+}
+
+private struct TabBarHiding: ViewModifier {
+  @Environment(\.hideTabBar) private var hideTabBar
+  let hidden: Bool
+
+  func body(content: Content) -> some View {
+    content.onChange(of: hidden, initial: true) { _, hidden in hideTabBar(hidden) }
   }
 }
 
@@ -460,61 +581,6 @@ private final class PageHost: UIHostingController<AnyView> {
   }
 
   @available(*, unavailable) required init?(coder: NSCoder) { fatalError() }
-}
-
-extension View {
-  /// A tab's root, whose scroll view the one bar follows while it shows.
-  func tabRoot() -> some View {
-    background(TabScrollViewForBar())
-  }
-}
-
-/// The scroll view of the tab shown, given to the screen under the
-/// navigation (the tabs) for its bar to follow, as the tab appears: the
-/// TabView keeps each tab under a tab bar controller of its own, below the
-/// tabs' host, which UIKit's search for the bar's scroll view does not
-/// reach. A chat's lines say theirs the same way (ChatController).
-private struct TabScrollViewForBar: UIViewControllerRepresentable {
-  func makeUIViewController(context: Context) -> Controller { Controller() }
-  func updateUIViewController(_ controller: Controller, context: Context) {}
-
-  final class Controller: UIViewController {
-    /// The tab's own controller, right under the tab bar controller under
-    /// the navigation: none on a wide screen, where the tab's screen is
-    /// the root of a navigation of its own, which finds its list itself.
-    private var shownTab: UIViewController? {
-      var tab = parent
-      while let next = tab?.parent, !(next is UITabBarController) {
-        if next is UINavigationController { return nil }
-        tab = next
-      }
-      return tab
-    }
-
-    /// The tabs' titles are one navigation item, so the bar keeps the
-    /// height it had for the tab before, and would take a list at its top
-    /// as scrolled by the difference. A list at its top, or not there yet,
-    /// has the bar take the tab's title first, as for a page pushed with
-    /// its list at its top, and is laid out under it; one scrolled is
-    /// followed at once, its title staying in the bar.
-    override func viewWillAppear(_ animated: Bool) {
-      super.viewWillAppear(animated)
-      guard let page = shownTab?.parent?.pageInNavigation else { return }
-      let list = shownTab?.contentScrollView(for: .top)
-      if let list, list.contentOffset.y > -list.adjustedContentInset.top {
-        page.setContentScrollView(list, for: .top)
-      } else {
-        page.setContentScrollView(nil, for: .top)
-        page.navigationController?.navigationBar.sizeToFit()
-      }
-    }
-
-    override func viewDidAppear(_ animated: Bool) {
-      super.viewDidAppear(animated)
-      shownTab?.parent?.pageInNavigation?.setContentScrollView(
-        shownTab?.contentScrollView(for: .top), for: .top)
-    }
-  }
 }
 
 extension UIViewController {

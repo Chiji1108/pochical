@@ -39,7 +39,8 @@ extension EnvironmentValues {
 /// The グループ tab (/design's DesignGroup): with no group yet, what groups
 /// are for and a way to start one; else the groups down the side, as
 /// /design's rail, and the one open beside them. Its pages open over the
-/// tabs (RootNavigation), and its buttons are in the bar (GroupHubButtons).
+/// tab, or beside it on a wide screen (RootNavigation), and its buttons are
+/// in the bar (GroupHubButtons).
 struct GroupsScreen: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.rootNavigator) private var navigator
@@ -68,7 +69,6 @@ struct GroupsScreen: View {
             navigator?.open(.group(.chat(open, thread: thread, with: other)))
           }
           .padding(.horizontal, 16)
-          .tabRoot()
         }
         // The group's heading in the bar's band, beside its buttons, not
         // an item of the bar: an item there would turn into the next
@@ -89,13 +89,17 @@ struct GroupsScreen: View {
           // under the status bar alone.
           .padding(.top, barTop)
           .ignoresSafeArea(.container, edges: .top)
-          .tabRoot()
       }
     }
     // The app's ground, as the calendar's, which dark mode lifts off black.
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(colors.backgroundBase)
     .environment(\.photoShelf, openGroup(openID, among: groups).map { .group($0.id) })
+    .toolbar {
+      if let open = openGroup(openID, among: groups), let navigator {
+        GroupHubButtons(group: open, navigator: navigator)
+      }
+    }
   }
 
   private func newGroup() {
@@ -112,8 +116,7 @@ struct GroupsScreen: View {
   }
 }
 
-/// The open group's buttons in the bar over the グループ tab: a tab's own
-/// content does not reach the bar through the TabView (RootView).
+/// The open group's buttons in the bar over the グループ tab.
 struct GroupHubButtons: ToolbarContent {
   let group: GroupRow
   let navigator: RootNavigator
