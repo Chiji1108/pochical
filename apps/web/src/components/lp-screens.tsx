@@ -26,7 +26,7 @@ import {
 } from "@pochical/prototype/lib/design-group-samples";
 import { presetPatterns } from "@pochical/prototype/lib/design-patterns";
 import { useSamplePerson } from "@pochical/prototype/lib/design-sample-person";
-import { designMonth } from "@pochical/prototype/lib/design-today";
+import { designMonth, designToday } from "@pochical/prototype/lib/design-today";
 import { UserStoreContext } from "@pochical/prototype/lib/design-user-store";
 import type { UserStore } from "@pochical/prototype/lib/design-user-store";
 import { parseDesignVariants } from "@pochical/prototype/lib/design-variants";
@@ -251,11 +251,12 @@ function keyPressesOf(sample: Schedule) {
 }
 const { filled, presses } = keyPressesOf(initialDesignSchedule());
 
-// The story opens on the month entered through its second week, so
-// entering starts a row: the presses from there on are the ones it shows,
-// and the days before the first of them the least the month ever holds.
-const thirdWeek = 2 * 7 - monthDays[0].getDay() + 1;
-const shown = presses.filter(({ date }) => date.getDate() >= thirdWeek);
+// The story opens on the month entered up to today, a week of it left:
+// the presses from today on are the ones entering shows, and the days
+// before the first of them the least the month ever holds.
+const shown = presses.filter(
+  ({ date }) => date.getDate() >= designToday.getDate()
+);
 const half = shown[0]?.before ?? filled;
 
 // Entering's steps: the month before entering starts (BEFORE), then two
@@ -265,9 +266,9 @@ const BEFORE = -1;
 const entrySteps = shown.length * 2 + 1;
 const entryAt = (place: number) =>
   place < BEATS.entry.from ? BEFORE : stepOf(SCENES.entry, entrySteps, place);
-// Standing still, the month is entered up to the 19th, the keys under it
-// for the 20th.
-const STILL_FROM = 20;
+// Standing still, the month is entered up to the 26th, the keys under it
+// for the 27th, where its last row starts.
+const STILL_FROM = 27;
 const entryStill =
   shown.findIndex(({ date }) => date.getDate() >= STILL_FROM) * 2;
 
