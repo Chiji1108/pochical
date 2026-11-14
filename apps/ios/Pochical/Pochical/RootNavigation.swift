@@ -17,9 +17,9 @@ import UIKit
 // bar shown with the push.
 //
 // On a wide screen, a regular width (a large iPhone on its side, a folding
-// one opened up, an iPad), the tabs but the calendar keep the system
-// split's column at the leading side, and the pages open beside them, on a
-// navigation of their own, as Messages and Settings do on an iPad: the
+// one opened up), the tabs but the calendar keep the system split's column
+// at the leading side, and the pages open beside them, on a navigation of
+// their own, as Messages and Settings do on an iPad: the
 // first at its root, the rest pushed over it. Narrowed again, the pages go
 // back over the tabs as they were.
 
@@ -182,10 +182,9 @@ struct RootNavigation: UIViewControllerRepresentable {
 /// beside them on a wide one (the tabs its primary column, the pages its
 /// secondary), and the calendar alone in the secondary, the whole width,
 /// what opens over it pushed over it there. The split sizes its columns to
-/// the screen, the fold of a folding iPhone half open and an iPad's window
-/// controls included; the controller only says which navigation holds what,
-/// keeps no list of its own, and tells the navigator of a page gone back
-/// from.
+/// the screen, the fold of a folding iPhone half open included; the
+/// controller only says which navigation holds what, keeps no list of its
+/// own, and tells the navigator of a page gone back from.
 final class RootController: UISplitViewController, UISplitViewControllerDelegate,
   UINavigationControllerDelegate
 {
