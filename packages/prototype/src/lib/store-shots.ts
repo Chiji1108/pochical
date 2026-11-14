@@ -158,7 +158,8 @@ export const WALL_SHOT = {
 // at most, the App Store ten. A raw file or folder named `-sumi` is in the
 // look the app's own settings give it in black and white: テーマ 墨,
 // シフトの色 ワントーン, シフトの見た目 線, 休みの見せ方 印だけ, and
-// 色をつける日 all off; one named `-letters` has the shifts as letters,
+// 色をつける日 all off, the month's own picture with 月と曜日 in English;
+// one named `-letters` has the shifts as letters,
 // シフトの見た目 文字, in the テーマ the app starts in. Everything else is
 // as the app starts. The wall is placed by hand and mixes the two, medium and large
 // widgets carrying it and small ones its accents, those set to someone

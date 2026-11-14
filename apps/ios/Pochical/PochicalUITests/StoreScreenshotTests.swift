@@ -5,7 +5,8 @@ import XCTest
 /// month's リマインド, its reminder of the evening before; the sample month
 /// and 端末カレンダーに追加; 学生時代の友だち's 一覧, joined as まい, and
 /// 職場のみんな's 全体チャット, joined as 佐藤; a page of a シフトの期間 from
-/// the 15th; the month in 墨, in black and white (`Style.sumi`), and with
+/// the 15th; the month in 墨, in black and white (`Style.sumi`) with
+/// 月と曜日 in English, and with
 /// its shifts as letters (`Style.letters`); ポチポチ入力 halfway through the
 /// month, the days it takes out entered again after; then, every picture
 /// of the month taken, what changes its days: the widgets, each put on the
@@ -150,7 +151,7 @@ final class StoreScreenshotTests: XCTestCase {
   @MainActor
   func test05Sumi() throws {
     launch()
-    pick(.sumi)
+    pick(.sumi, english: true)
     snap("05-calendar-sumi", of: XCUIScreen.main, into: raw)
   }
 
@@ -589,8 +590,9 @@ final class StoreScreenshotTests: XCTestCase {
   }
 
   /// Picks `style` in 設定, as the person would: スタイル's choices and
-  /// カレンダー's 色をつける日, and comes back to the calendar in them.
-  @MainActor private func pick(_ style: Style) {
+  /// カレンダー's 月と曜日, in `english` or not, and 色をつける日, and comes
+  /// back to the calendar in them.
+  @MainActor private func pick(_ style: Style, english: Bool = false) {
     app.tabBars.buttons["設定"].tap()
     open(page: "スタイル")
     for choice in [style.shape, style.theme, style.colors, style.off] {
@@ -609,6 +611,11 @@ final class StoreScreenshotTests: XCTestCase {
     }
     app.navigationBars["スタイル"].buttons.firstMatch.tap()
     open(page: "カレンダー")
+    // 月と曜日, the page's first choice of two: 日本語, then 英語.
+    let names = app.segmentedControls.firstMatch.buttons.element(boundBy: english ? 1 : 0)
+    XCTAssertTrue(names.waitForExistence(timeout: 5), "カレンダー has 月と曜日")
+    if !names.isSelected { names.tap() }
+    XCTAssertTrue(names.isSelected, "月と曜日 is picked")
     let value = style.coloredDays ? "1" : "0"
     for day in ["土曜", "日曜", "祝日"] {
       let toggle = app.switches.matching(NSPredicate(format: "label == %@", day)).firstMatch
