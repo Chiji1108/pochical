@@ -69,31 +69,31 @@ struct DayDetail<Foot: View>: View {
             if movedWriting { rows.scrollTo(Self.memoRow) }
           }
       }
-        // The rows scroll under it behind the bar's edge effect; it gives
-        // way to the keyboard, leaving the memo the room.
-        .safeAreaBar(edge: .bottom, spacing: 0) {
-          if !writingNote { foot() }
+      // The rows scroll under it behind the bar's edge effect; it gives
+      // way to the keyboard, leaving the memo the room.
+      .safeAreaBar(edge: .bottom, spacing: 0) {
+        if !writingNote { foot() }
+      }
+      .navigationDestination(for: DayList.self) { list in
+        switch list {
+        case .shift: shiftChoices
+        case .people: peopleChecklist
         }
-        .navigationDestination(for: DayList.self) { list in
-          switch list {
-          case .shift: shiftChoices
-          case .people: peopleChecklist
+      }
+      .navigationTitle(day.fullText)
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        if closes {
+          ToolbarItem(placement: .cancellationAction) {
+            Button("閉じる", systemImage: "xmark", role: .close) { dismiss() }
           }
         }
-        .navigationTitle(day.fullText)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-          if closes {
-            ToolbarItem(placement: .cancellationAction) {
-              Button("閉じる", systemImage: "xmark", role: .close) { dismiss() }
-            }
-          }
-          // The day before and after, a week's end no stop.
-          ToolbarItemGroup(placement: .primaryAction) {
-            Button("前の日", systemImage: "chevron.left") { onStep(-1) }
-            Button("次の日", systemImage: "chevron.right") { onStep(1) }
-          }
+        // The day before and after, a week's end no stop.
+        ToolbarItemGroup(placement: .primaryAction) {
+          Button("前の日", systemImage: "chevron.left") { onStep(-1) }
+          Button("次の日", systemImage: "chevron.right") { onStep(1) }
         }
+      }
     }
     .onAppear {
       shown = true
@@ -101,7 +101,9 @@ struct DayDetail<Foot: View>: View {
       // list open as they were; it says nothing until it has, as the focus
       // comes after.
       if handover.day == day {
-        draft = handover.memo
+        // A memo not being written was kept as it was left: the day's own,
+        // which may have changed since, is shown.
+        draft = handover.writing ? handover.memo : note ?? ""
         lists = handover.lists
         // The field puts its caret at its start as it takes the focus:
         // the caret moved goes back once it has.
