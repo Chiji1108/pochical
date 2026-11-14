@@ -162,7 +162,10 @@ struct SortButton: View {
 
   var body: some View {
     let sorting = editMode.isEditing
-    Button(sorting ? "完了" : "並び替え", role: sorting ? .confirm : nil) {
+    Button(
+      sorting ? "完了" : "並び替え", systemImage: sorting ? "checkmark" : "arrow.up.arrow.down",
+      role: sorting ? .confirm : nil
+    ) {
       withAnimation { editMode = sorting ? .inactive : .active }
     }
   }

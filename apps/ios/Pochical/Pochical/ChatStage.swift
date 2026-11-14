@@ -391,10 +391,7 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     view.backgroundColor = .clear
 
     layout.settings.interItemSpacing = CGFloat(Chat.lineGap)
-    // 16 points to the screen's edges, less the room a bubble's tail
-    // reaches into, which each cell keeps inside it (LineCellContent).
-    let side = 16 - BubbleShape.tailReach
-    layout.settings.additionalInsets = UIEdgeInsets(top: 12, left: side, bottom: 12, right: side)
+    layout.settings.additionalInsets = linesInsets
     layout.keepContentOffsetAtBottomOnBatchUpdates = true
     layout.keepContentAtBottomOfVisibleArea = true
     layout.processOnlyVisibleItemsOnAnimatedBatchUpdates = false
@@ -542,6 +539,30 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
       self.composerHeight.constant = height
       self.view.layoutIfNeeded()
     }
+  }
+
+  /// Around the lines: 16 points from the safe area's sides, less the
+  /// room a bubble's tail reaches into, which each cell keeps inside it
+  /// (LineCellContent). The safe area's, as the composer and the pins keep
+  /// to it: on iPhone Duo the bars stand down the screen's side (HIG,
+  /// Designing for iPhone Duo: Vertical controls), and a phone on its side
+  /// has the Dynamic Island beside the lines (#1224). Kept here rather than
+  /// as the lines' content insets, which the lines' own vertical insets
+  /// are (fitRoom): ChatLayout lays its items out from its insets and
+  /// measures them at the width they leave.
+  private var linesInsets: UIEdgeInsets {
+    let side = 16 - BubbleShape.tailReach
+    return UIEdgeInsets(
+      top: 12, left: view.safeAreaInsets.left + side, bottom: 12,
+      right: view.safeAreaInsets.right + side)
+  }
+
+  /// The safe area's sides moved, as the bars come to the screen's side
+  /// or the phone turns: the lines are measured again at the width left.
+  override func viewSafeAreaInsetsDidChange() {
+    super.viewSafeAreaInsetsDidChange()
+    let insets = linesInsets
+    if layout.settings.additionalInsets != insets { layout.settings.additionalInsets = insets }
   }
 
   /// The lines are the screen's scroll view for its header, as a list's

@@ -53,7 +53,7 @@ final class WideScreenTests: XCTestCase {
     snap("groups", of: XCUIScreen.main)
     app.buttons.matching(NSPredicate(format: "label BEGINSWITH '全体チャット'")).firstMatch.tap()
     XCTAssertTrue(
-      app.buttons["チャットのメニュー"].waitForExistence(timeout: 15), "the chat opens")
+      app.textViews["メッセージ"].waitForExistence(timeout: 15), "the chat opens")
     XCTAssertTrue(hub.isHittable, "the group's column stays beside the chat")
     snap("chat beside", of: XCUIScreen.main)
     XCUIDevice.shared.press(.home)
