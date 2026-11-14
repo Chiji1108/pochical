@@ -12,14 +12,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,9 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalResources
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
@@ -65,7 +60,6 @@ import app.pochical.kit.fitsPersonName
 import app.pochical.kit.directThread
 import app.pochical.kit.nextGroupColor
 import app.pochical.notifications.GroupChatNotifications
-import app.pochical.pageInsets
 import app.pochical.rememberKeptField
 import app.pochical.sectionRows
 import kotlin.coroutines.cancellation.CancellationException
@@ -310,12 +304,11 @@ internal fun EditForm(group: GroupRow, onBack: () -> Unit, save: suspend (name: 
     }
   }
 
-  Scaffold(
-    topBar = {
-      PageBar(stringResource(R.string.group_edit), onBack) {
-        ConfirmAction(stringResource(R.string.save), onClick = ::save, enabled = canSave(trimmed, shown), busy = saving)
-      }
-    }
+  SettingsPage(
+    stringResource(R.string.group_edit),
+    onBack,
+    collapsing = false,
+    actions = { ConfirmAction(stringResource(R.string.save), onClick = ::save, enabled = canSave(trimmed, shown), busy = saving) },
   ) { padding ->
     Column(Modifier.padding(padding)) {
       LimitedTextField(
@@ -359,12 +352,7 @@ fun GroupProfilePage(groupId: String, onBack: () -> Unit) {
   GroupPage(groupId, stringResource(R.string.group_me), onBack) { group ->
     val meId = rememberMeId()
     val me = members(groupId).firstOrNull { it.userId == meId }
-    val bar = TopAppBarDefaults.pinnedScrollBehavior()
-    Scaffold(
-      Modifier.nestedScroll(bar.nestedScrollConnection),
-      topBar = { PageBar(stringResource(R.string.group_me), onBack, bar) },
-      contentWindowInsets = pageInsets,
-    ) { padding ->
+    SettingsPage(stringResource(R.string.group_me), onBack, collapsing = false) { padding ->
       if (me == null) {
         CircularProgressIndicator(Modifier.padding(padding).padding(24.dp))
       } else {

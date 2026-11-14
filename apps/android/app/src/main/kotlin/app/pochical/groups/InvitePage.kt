@@ -28,12 +28,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -47,7 +44,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
@@ -60,6 +56,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.pochical.SettingsPage
 import app.pochical.R
 import app.pochical.chat.GroupedMenu
 import app.pochical.chat.LineMenuItem
@@ -128,12 +125,7 @@ fun InvitePage(groupId: String, onBack: () -> Unit) {
     scope.launch { snackbar.showSnackbar(resources.getString(words)) }
   }
 
-  val bar = TopAppBarDefaults.pinnedScrollBehavior()
-  Scaffold(
-    Modifier.nestedScroll(bar.nestedScrollConnection),
-    topBar = { PageBar(stringResource(R.string.invite), onBack, bar) },
-    snackbarHost = { SnackbarHost(snackbar) },
-  ) { padding ->
+  SettingsPage(stringResource(R.string.invite), onBack, collapsing = false, snackbar = snackbar) { padding ->
     Column(
       Modifier.verticalScroll(rememberScrollState()).padding(padding).padding(16.dp),
       verticalArrangement = Arrangement.spacedBy(12.dp),

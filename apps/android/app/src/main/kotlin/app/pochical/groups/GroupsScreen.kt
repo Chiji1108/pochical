@@ -43,7 +43,6 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -78,6 +77,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.pochical.PageScaffold
 import app.pochical.Headline
 import app.pochical.LocalAccount
 import app.pochical.LocalNotifyingUnread
@@ -381,8 +381,8 @@ private fun GroupHub(group: GroupRow, actions: GroupsActions) {
   val chats = me?.let { rememberChatList(group.id, it) }
   val notifications = rememberChatNotifications()
   val bar = TopAppBarDefaults.pinnedScrollBehavior()
-  Scaffold(
-    Modifier.nestedScroll(bar.nestedScrollConnection),
+  PageScaffold(
+    modifier = Modifier.nestedScroll(bar.nestedScrollConnection),
     topBar = {
       TopAppBar(
         scrollBehavior = bar,
@@ -403,7 +403,7 @@ private fun GroupHub(group: GroupRow, actions: GroupsActions) {
     }
   ) { padding ->
     // Nothing under the bar until read, the list then laid out whole, so a scroll it kept starts where it was.
-    if (members == null || (me != null && chats == null)) return@Scaffold
+    if (members == null || (me != null && chats == null)) return@PageScaffold
     LazyColumn(contentPadding = padding) {
       item {
         Row(verticalAlignment = Alignment.CenterVertically) {

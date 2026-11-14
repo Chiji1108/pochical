@@ -65,7 +65,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -109,6 +108,7 @@ import app.pochical.kit.directThread
 import app.pochical.kit.inviteCode
 import app.pochical.kit.folds
 import app.pochical.kit.placeRules
+import app.pochical.PageScaffold
 import app.pochical.R
 import app.pochical.design.Chat
 import app.pochical.design.SyncSocket
@@ -872,8 +872,10 @@ private fun ChatScaffold(
   val status = rememberSocketWords(socket)
   val muted = rememberChatNotifications()?.isMuted(groupId, threadId)
   val setMuted = rememberChatMuting(groupId, threadId, say)
-  Scaffold(
-    modifier,
+  // The lines fill the width, as Messages' do on a tablet.
+  PageScaffold(
+    modifier = modifier,
+    fillsWidth = true,
     topBar = {
       TopAppBar(
         title = {

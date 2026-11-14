@@ -8,7 +8,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ListItem
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -22,6 +21,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.pochical.SettingsPage
 import app.pochical.ConfirmAction
 import app.pochical.Footnote
 import app.pochical.LimitedTextField
@@ -36,7 +36,6 @@ import app.pochical.kit.MarkPhotoGone
 import app.pochical.kit.NewGroupDraft
 import app.pochical.people.usualProfile
 import app.pochical.kit.nextGroupColor
-import app.pochical.pageInsets
 import java.time.ZoneId
 
 /**
@@ -99,13 +98,11 @@ fun NewGroupPage(onBack: () -> Unit, onMade: (String) -> Unit, making: GoingIn<N
     making.begin(asked, profile.face, profile.goingOn(usualName))
   }
 
-  Scaffold(
-    topBar = {
-      PageBar(stringResource(R.string.new_group), onBack) {
-        ConfirmAction(stringResource(R.string.new_group_make), onClick = ::make, enabled = canMake(), busy = busy)
-      }
-    },
-    contentWindowInsets = pageInsets,
+  SettingsPage(
+    stringResource(R.string.new_group),
+    onBack,
+    collapsing = false,
+    actions = { ConfirmAction(stringResource(R.string.new_group_make), onClick = ::make, enabled = canMake(), busy = busy) },
   ) { padding ->
     LazyColumn(contentPadding = padding) {
       item {

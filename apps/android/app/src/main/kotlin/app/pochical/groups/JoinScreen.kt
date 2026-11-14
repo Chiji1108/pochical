@@ -26,14 +26,11 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -51,6 +48,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import app.pochical.SettingsPage
 import app.pochical.Headline
 import app.pochical.ListSheet
 import app.pochical.MarkFrame
@@ -128,14 +126,7 @@ fun JoinScreen(code: String, onClose: () -> Unit, onGroup: (String) -> Unit) {
     calls.joining.begin(JoinAsk(code, name), profile.face, profile.goingOn(usualName))
   }
 
-  Scaffold(
-    topBar = {
-      TopAppBar(
-        title = {},
-        navigationIcon = { IconButton(onClick = onClose) { Icon(painterResource(R.drawable.ic_close), stringResource(R.string.close)) } },
-      )
-    }
-  ) { padding ->
+  SettingsPage("", onClose, closes = true) { padding ->
     val shown = details
     when {
       shown != null ->

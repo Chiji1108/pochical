@@ -21,13 +21,10 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -397,8 +394,9 @@ private fun StepPage(
   content: @Composable ColumnScope.() -> Unit,
 ) {
   val colors = LocalThemeColors.current
-  Scaffold(
-    topBar = { TopAppBar(title = {}, navigationIcon = { BackButton(onBack) }) },
+  SettingsPage(
+    "",
+    onBack,
     bottomBar = {
       if (foot != null || footnote != null) {
         Column(Modifier.fillMaxWidth().safeDrawingPadding().padding(horizontal = 20.dp).padding(bottom = 12.dp)) {
@@ -426,13 +424,6 @@ private fun StepPage(
       }
       Column(verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
     }
-  }
-}
-
-@Composable
-private fun BackButton(onBack: () -> Unit) {
-  IconButton(onClick = onBack) {
-    Icon(painterResource(R.drawable.ic_back), contentDescription = stringResource(R.string.back))
   }
 }
 
