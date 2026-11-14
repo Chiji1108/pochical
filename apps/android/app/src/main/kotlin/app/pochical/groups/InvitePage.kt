@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import app.pochical.R
 import app.pochical.chat.GroupedMenu
 import app.pochical.chat.LineMenuItem
+import app.pochical.contextClick
 import app.pochical.design.Metrics
 import app.pochical.design.Radius
 import app.pochical.kit.inviteLink
@@ -155,6 +156,7 @@ fun InvitePage(groupId: String, onBack: () -> Unit) {
                 contentDescription = null,
                 Modifier.size(200.dp)
                   .semantics { contentDescription = resources.getString(R.string.invite_qr) }
+                  .contextClick { qrMenu = true }
                   .pointerInput(Unit) {
                     detectTapGestures(onLongPress = {
                       haptics.performHapticFeedback(HapticFeedbackType.LongPress)
