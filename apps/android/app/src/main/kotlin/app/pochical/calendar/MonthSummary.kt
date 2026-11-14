@@ -2,6 +2,7 @@ package app.pochical.calendar
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -118,12 +119,17 @@ fun MonthSummary(
       .padding(horizontal = 16.dp, vertical = 12.dp),
     verticalAlignment = Alignment.CenterVertically,
   ) {
-    BlendingText(name(month), name(coming), share, rolls = false, label, Modifier.alignByBaseline())
-    Text(stringResource(R.string.summary_days_off), Modifier.alignByBaseline(), style = label)
+    // The label and the count are each centred in the row, as on iOS; only the words of one share a
+    // baseline, so the label does not hang from the larger number's.
+    Row {
+      BlendingText(name(month), name(coming), share, rolls = false, label, Modifier.alignByBaseline())
+      Text(stringResource(R.string.summary_days_off), Modifier.alignByBaseline(), style = label)
+    }
     Spacer(Modifier.weight(1f))
-    BlendingText(daysOff(month).toString(), daysOff(coming).toString(), share, rolls = false, count, Modifier.alignByBaseline())
-    Spacer(Modifier.width(2.dp))
-    Text(stringResource(R.string.summary_days), Modifier.alignByBaseline(), style = label.copy(color = colors.accentDefault))
+    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+      BlendingText(daysOff(month).toString(), daysOff(coming).toString(), share, rolls = false, count, Modifier.alignByBaseline())
+      Text(stringResource(R.string.summary_days), Modifier.alignByBaseline(), style = label.copy(color = colors.accentDefault))
+    }
     Spacer(Modifier.width(12.dp))
     Icon(painterResource(R.drawable.ic_chevron_right), null, Modifier.size(16.dp), tint = colors.textQuaternary)
   }
