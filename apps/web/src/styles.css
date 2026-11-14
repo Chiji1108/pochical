@@ -88,15 +88,13 @@
     line-height: 1.4;
     letter-spacing: -0.03em;
   }
-  a.store-link {
-    color: white;
-    background: var(--ink);
+  .store-badge {
+    display: block;
+    border-radius: 8px;
   }
-  a.store-link small {
-    color: #ddd;
-  }
-  a.store-link:hover {
-    background: var(--green);
+  .store-badge img {
+    display: block;
+    width: auto;
   }
   .text-link {
     display: inline-flex;
@@ -150,6 +148,12 @@
     display: flex;
     gap: 7px;
     align-items: center;
+  }
+  .footer-marks {
+    margin-top: 14px;
+    font-size: 10px;
+    line-height: 1.7;
+    color: #747c6e;
   }
   .document-page {
     max-width: 768px;

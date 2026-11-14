@@ -1,27 +1,43 @@
 ---
-import { ArrowUpRight, Smartphone } from "lucide-react";
+import { Smartphone } from "lucide-react";
 
+import appStore from "../assets/stores/app-store-ja.svg?url";
+import googlePlay from "../assets/stores/google-play-ja.png?url";
 import { stores } from "../lib/site";
 
-// The app's store pages (lib/site.ts), each marked 公開準備中 until its URL
-// is set.
+// The app's store pages (lib/site.ts), each the store's own badge, as Apple
+// and Google give it in Japanese and unchanged, at one height; a store
+// whose URL is not set is marked 公開準備中.
+const HEIGHT = 44;
+const badges = {
+  "App Store": {
+    alt: "App Storeからダウンロード",
+    src: appStore,
+    width: Math.round((HEIGHT * 108.85157) / 40),
+  },
+  "Google Play": {
+    alt: "Google Play で手に入れよう",
+    src: googlePlay,
+    width: Math.round((HEIGHT * 646) / 192),
+  },
+} as const;
 ---
 
 <div class="store-links">
   {stores().map((store) =>
     store.url ? (
       <a
-        class="store-link"
+        class="store-badge"
         href={store.url}
         rel="noopener noreferrer"
         target="_blank"
       >
-        <Smartphone aria-hidden="true" size={22} />
-        <span>
-          <small>ダウンロード</small>
-          <strong>{store.name}</strong>
-        </span>
-        <ArrowUpRight aria-hidden="true" size={16} />
+        <img
+          alt={badges[store.name].alt}
+          height={HEIGHT}
+          src={badges[store.name].src}
+          width={badges[store.name].width}
+        />
       </a>
     ) : (
       <div class="store-link coming-soon">

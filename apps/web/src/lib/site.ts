@@ -36,12 +36,23 @@ const storeLink = (
 export const appStoreUrl = (): string | undefined =>
   storeLink(import.meta.env.VITE_APP_STORE_URL, "apps.apple.com");
 
+// The app's id in the App Store, as its page's address ends, which the
+// banner Safari shows for the app on an iPhone names.
+const APP_STORE_ID = /\/id(?<id>\d+)$/u;
+export const appStoreId = (): string | undefined => {
+  const url = appStoreUrl();
+  if (url === undefined) {
+    return;
+  }
+  return APP_STORE_ID.exec(new URL(url).pathname)?.groups?.id;
+};
+
 export const googlePlayUrl = (): string | undefined =>
   storeLink(import.meta.env.VITE_GOOGLE_PLAY_URL, "play.google.com");
 
 // The stores the app is on, each with the phone it is for and its page,
 // none until its URL is set.
 export const stores = () => [
-  { name: "App Store", phone: "iPhone", url: appStoreUrl() },
-  { name: "Google Play", phone: "Android", url: googlePlayUrl() },
+  { name: "App Store", phone: "iPhone", url: appStoreUrl() } as const,
+  { name: "Google Play", phone: "Android", url: googlePlayUrl() } as const,
 ];
