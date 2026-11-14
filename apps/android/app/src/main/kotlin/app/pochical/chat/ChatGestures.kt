@@ -18,11 +18,13 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
+import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
+import app.pochical.contextClick
 import app.pochical.design.Chat
 import kotlin.math.abs
 import kotlinx.coroutines.launch
@@ -31,7 +33,8 @@ import kotlinx.coroutines.withTimeoutOrNull
 // What a finger does on a chat's line (spec/chat.md, Opening a message's menu; Replies): a long press
 // opens its reactions and menu, the finger then sliding onto an item and lifting there to pick it;
 // a drag mostly across, toward the middle, answers it. A drag up or down is the list's scroll, and
-// a tap is the line's own (its quote, later its links).
+// a tap is the line's own (its quote, later its links). A right click opens the menu as the long
+// press does (contextClick).
 
 /** How a line answers a drag across: others' lines are dragged to the right, one's own to the left. */
 enum class ReplySwipe(val sign: Float) {
@@ -87,10 +90,12 @@ fun Modifier.lineGestures(
   val currentReduced by rememberUpdatedState(reducedMotion)
   val window = remember { { local: Offset -> coordinates()?.localToWindow(local) ?: local } }
   val spatial = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
-  return pointerInput(Unit) {
+  return contextClick { local -> current.onLongPress(window(local)) }.pointerInput(Unit) {
     val slop = viewConfiguration.touchSlop
     awaitEachGesture {
       val down = awaitFirstDown(requireUnconsumed = false)
+      // A right click, which contextClick has taken.
+      if (currentEvent.buttons.isSecondaryPressed) return@awaitEachGesture
       val start = window(down.position)
       // Until the long press: a tap, a scroll, or a drag across to answer.
       var across: PointerInputChange? = null

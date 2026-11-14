@@ -1,6 +1,7 @@
 package app.pochical.chat
 
 import android.net.Uri
+import android.view.KeyEvent as AndroidKeyEvent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -49,6 +50,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
@@ -337,6 +345,61 @@ fun Composer(
           scope.launch { dropPicked(context, listOf(photo)) }
         }
       }
+      // Sent by the button, or by a keyboard's Enter (spec/chat.md, A keyboard and a mouse).
+      val send: () -> Unit = {
+        // Gone from the composer as it is sent, so a second tap sends nothing and the chat left
+        // meanwhile keeps no draft of words sent.
+        val going = state.writing
+        // A line sent, not one changed, is when an answer is first wanted: the system's question
+        // then, if never answered, as iOS asks (spec/chat.md, Notifications).
+        if (going.editing == null) asking.askOnce()
+        state.writing = Writing()
+        scope.launch {
+          // What has gone; on a failure the rest comes back, to send again.
+          var left = going
+          try {
+            // Kept though the chat is left meanwhile: what was written is no longer in the
+            // composer to be kept as its draft.
+            withContext(NonCancellable) {
+              val seq = going.editing
+              val words = going.sent
+              // The days first, then the photos, then the words, each a line of its own; the first of them
+              // answers what the composer answers.
+              val sharing = going.days?.takeIf { seq == null }
+              if (sharing != null) {
+                chats.sendDays(groupId, threadId, sharing, poll = false, left.replyTo)
+                left = left.copy(days = null, replyTo = null)
+              }
+              if (seq == null && going.photos.isNotEmpty()) {
+                val shrunk = shrunkPhotos(context, going.photos)
+                // One the system let go of from the cache meanwhile is left out, as one the phone cannot read.
+                if (shrunk.size < going.photos.size) onSay(resources.getString(R.string.chat_photo_unreadable))
+                if (shrunk.isNotEmpty()) {
+                  chats.sendPhotos(groupId, threadId, going.photos.mapNotNull { shrunk[it] }, left.replyTo)
+                  dropPicked(context, going.photos)
+                }
+                left = left.copy(photos = emptyList(), replyTo = left.replyTo.takeIf { shrunk.isEmpty() })
+              }
+              if (words.isNotBlank()) {
+                // The page as it came for the words' first link, or none taken off with ×.
+                val sentLink = previewLink(words)
+                val removed = sentLink != null && sentLink == going.previewRemoved
+                val sentPage = sentLink?.takeIf { !removed }?.let(pages::page)
+                if (seq != null) chats.change(groupId, threadId, seq, words, sentPage)
+                else chats.send(groupId, threadId, words, left.replyTo, sentPage, withoutPreview = removed)
+              }
+            }
+          } catch (e: CancellationException) {
+            throw e
+          } catch (_: Exception) {
+            // Not kept: what was written comes back, to send again.
+            if (state.writing.text.isEmpty() && state.writing.photos.isEmpty() && state.writing.days == null) state.writing = left
+            onNotKept()
+            return@launch
+          }
+          if (going.editing == null) onSent()
+        }
+      }
       Row(Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.Bottom) {
         // Hidden while a line is changed, which takes words alone.
         if (editing == null) {
@@ -350,7 +413,15 @@ fun Composer(
         OutlinedTextField(
           state = state.words,
           modifier =
-            Modifier.weight(1f).focusRequester(state.focus).contentReceiver { content ->
+            Modifier.weight(1f)
+              .focusRequester(state.focus)
+              .onPreviewKeyEvent { event ->
+                if (!event.sends()) return@onPreviewKeyEvent false
+                // Held down, it sends once.
+                if (event.type == KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount == 0 && sendable) send()
+                true
+              }
+              .contentReceiver { content ->
               // Images pasted, by the edit menu or the keyboard, go above it as picked photos do, an
               // image copied with words as the image; while a line is changed, nothing (spec/chat.md, Photos).
               val clip = content.clipEntry.clipData
@@ -370,60 +441,7 @@ fun Composer(
           shape = RoundedCornerShape(Radius.xxl),
         )
         FilledIconButton(
-          onClick = {
-            // Gone from the composer as it is sent, so a second tap sends nothing and the chat left
-            // meanwhile keeps no draft of words sent.
-            val going = state.writing
-            // A line sent, not one changed, is when an answer is first wanted: the system's question
-            // then, if never answered, as iOS asks (spec/chat.md, Notifications).
-            if (going.editing == null) asking.askOnce()
-            state.writing = Writing()
-            scope.launch {
-              // What has gone; on a failure the rest comes back, to send again.
-              var left = going
-              try {
-                // Kept though the chat is left meanwhile: what was written is no longer in the
-                // composer to be kept as its draft.
-                withContext(NonCancellable) {
-                  val seq = going.editing
-                  val words = going.sent
-                  // The days first, then the photos, then the words, each a line of its own; the first of them
-                  // answers what the composer answers.
-                  val sharing = going.days?.takeIf { seq == null }
-                  if (sharing != null) {
-                    chats.sendDays(groupId, threadId, sharing, poll = false, left.replyTo)
-                    left = left.copy(days = null, replyTo = null)
-                  }
-                  if (seq == null && going.photos.isNotEmpty()) {
-                    val shrunk = shrunkPhotos(context, going.photos)
-                    // One the system let go of from the cache meanwhile is left out, as one the phone cannot read.
-                    if (shrunk.size < going.photos.size) onSay(resources.getString(R.string.chat_photo_unreadable))
-                    if (shrunk.isNotEmpty()) {
-                      chats.sendPhotos(groupId, threadId, going.photos.mapNotNull { shrunk[it] }, left.replyTo)
-                      dropPicked(context, going.photos)
-                    }
-                    left = left.copy(photos = emptyList(), replyTo = left.replyTo.takeIf { shrunk.isEmpty() })
-                  }
-                  if (words.isNotBlank()) {
-                    // The page as it came for the words' first link, or none taken off with ×.
-                    val sentLink = previewLink(words)
-                    val removed = sentLink != null && sentLink == going.previewRemoved
-                    val sentPage = sentLink?.takeIf { !removed }?.let(pages::page)
-                    if (seq != null) chats.change(groupId, threadId, seq, words, sentPage)
-                    else chats.send(groupId, threadId, words, left.replyTo, sentPage, withoutPreview = removed)
-                  }
-                }
-              } catch (e: CancellationException) {
-                throw e
-              } catch (_: Exception) {
-                // Not kept: what was written comes back, to send again.
-                if (state.writing.text.isEmpty() && state.writing.photos.isEmpty() && state.writing.days == null) state.writing = left
-                onNotKept()
-                return@launch
-              }
-              if (going.editing == null) onSent()
-            }
-          },
+          onClick = send,
           enabled = sendable,
           modifier = Modifier.padding(start = 8.dp, bottom = 4.dp),
           // Material 3 Expressive's press: its round squares off under the finger.
@@ -522,3 +540,13 @@ private data class Bar(val title: String, val words: String?, @param:StringRes v
 
 /** The most lines the field grows to before its words scroll. */
 private const val COMPOSER_LINES = 6
+
+/**
+ * A keyboard's Enter sends what is written, as Google Messages' does, and Shift+Enter starts a line,
+ * as Enter does in any other field (spec/chat.md, A keyboard and a mouse). A keyboard's key alone:
+ * the screen keyboard's ↵ starts a line as ever, what it sends marked as its own
+ * (FLAG_SOFT_KEYBOARD), as Compose's fields tell them apart; and an input method converting what is
+ * typed takes the Enter that settles it before the field sees one.
+ */
+internal fun KeyEvent.sends(): Boolean =
+  (key == Key.Enter || key == Key.NumPadEnter) && !isShiftPressed && nativeKeyEvent.flags and AndroidKeyEvent.FLAG_SOFT_KEYBOARD == 0
