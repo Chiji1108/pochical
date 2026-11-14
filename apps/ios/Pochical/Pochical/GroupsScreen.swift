@@ -48,6 +48,8 @@ struct GroupsScreen: View {
   @Environment(\.barBottom) private var barBottom
   @Environment(\.barButtonsBeside) private var barButtonsBeside
   @FetchAll(GroupRow.order(by: \.joinedAtMs)) private var groups
+  /// How tall the group's heading is, as last laid out.
+  @State private var headingHeight = Metrics.touch
   /// The group open beside the rail, the first until one is picked.
   @Binding var openID: String?
   /// Each group's unread lines that count.
@@ -72,9 +74,10 @@ struct GroupsScreen: View {
           }
           .padding(.horizontal, 16)
           // Under the heading where the bar's band is too short to hold
-          // it, as on iPhone Duo's outer display, whose bar keeps its
-          // buttons down the screen's side.
-          .padding(.top, max(0, barTop + Metrics.touch - barBottom))
+          // it: on iPhone Duo's outer display, whose bar keeps its buttons
+          // down the screen's side, a phone's short bar on its side, or
+          // a heading grown with the text size.
+          .padding(.top, max(0, barTop + headingHeight - barBottom))
         }
         // The group's heading in the bar's band, beside its buttons, not
         // an item of the bar: an item there would turn into the next
@@ -83,6 +86,7 @@ struct GroupsScreen: View {
           GroupHeading(group: open)
             // Level with the bar's buttons, at its top.
             .frame(maxWidth: .infinity, minHeight: Metrics.touch, alignment: .leading)
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { headingHeight = $0 }
             .padding(.leading, GroupRail.width + 16)
             // Clear of the bar's buttons, unless they stand down the
             // screen's side, out of the band.

@@ -102,11 +102,11 @@ final class StoreScreenshotTests: XCTestCase {
     launch()
     try app.joins(invitation: raw.appending(path: "invite"), named: "佐藤", over: "まい")
     let chat = app.buttons.matching(NSPredicate(format: "label BEGINSWITH '全体チャット'")).firstMatch
-    let menu = app.textViews["メッセージ"]
+    let composer = app.textViews["メッセージ"]
     let votes = app.descendants(matching: .any)
       .matching(NSPredicate(format: "label ENDSWITH 'に行ける人：森、小林'")).firstMatch
     chat.tap()
-    XCTAssertTrue(menu.waitForExistence(timeout: 15), "the chat opens")
+    XCTAssertTrue(composer.waitForExistence(timeout: 15), "the chat opens")
     // ↓ is there while lines under the screen's foot are not yet seen, how many of them its value.
     let down = app.buttons.matching(NSPredicate(format: "label IN {'最新のメッセージへ', 'ここから新着へ'}"))
       .firstMatch
@@ -117,7 +117,7 @@ final class StoreScreenshotTests: XCTestCase {
     XCTAssertTrue(votes.isHittable && !down.exists, "the chat is read to the poll's votes")
     app.navigationBars.firstMatch.buttons.firstMatch.tap()
     chat.tap()
-    XCTAssertTrue(menu.waitForExistence(timeout: 15), "the chat opens again")
+    XCTAssertTrue(composer.waitForExistence(timeout: 15), "the chat opens again")
     XCTAssertTrue(votes.waitForExistence(timeout: 10) && votes.isHittable, "on its latest line")
     XCTAssertFalse(app.staticTexts["ここから新着"].exists, "with nothing new")
     snap("04-chat", of: XCUIScreen.main, into: raw)

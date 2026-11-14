@@ -23,7 +23,7 @@ derived=${2:-$root/.build/DerivedData}
 shared=$(mktemp -d)
 server_log=$shared/server.log
 . "$root/tools/ios-ui/lib.sh"
-trap 'stop_tests; stop_server' EXIT
+trap stop_server EXIT
 
 prepare
 new_group "$shared/invite"

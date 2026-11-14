@@ -496,6 +496,14 @@ private final class ScreenHost: UIHostingController<AnyView> {
     registerForTraitChanges([UITraitHorizontalSizeClass.self]) { (self: Self, _) in
       self.placeTabBar()
     }
+    // The bar's buttons moved to the screen's side or back, said to the
+    // screen as it is laid out again (barsBeside).
+    if #available(iOS 27.1, *) {
+      registerForTraitChanges(UITraitCollection.systemTraitsAffectingVerticalBarEdge) {
+        (self: Self, _) in
+        self.view.setNeedsLayout()
+      }
+    }
   }
 
   @available(*, unavailable) required init?(coder: NSCoder) { fatalError() }
