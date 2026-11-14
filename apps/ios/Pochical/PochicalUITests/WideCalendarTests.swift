@@ -80,6 +80,19 @@ final class WideCalendarTests: XCTestCase {
     snap("list-sheet", of: XCUIScreen.main)
   }
 
+  /// The pane's day tapped again while シフト's list is open shows the
+  /// day in the list's place.
+  func testTheDayTappedAgainTakesTheListsPlace() throws {
+    try launchWide()
+    day(on: 13).tap()
+    XCTAssertTrue(title(of: "\(thisMonth)月13日").waitForExistence(timeout: 5), "the day is in the pane")
+    app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'シフト'")).firstMatch.tap()
+    XCTAssertTrue(app.navigationBars["シフト"].waitForExistence(timeout: 5), "シフト's list is pushed in the pane")
+    day(on: 13).tap()
+    XCTAssertTrue(title(of: "\(thisMonth)月13日").waitForExistence(timeout: 5), "the day takes the list's place")
+    XCTAssertFalse(app.navigationBars["シフト"].exists, "the list is gone")
+  }
+
   /// ポチポチ入力 at the pane's foot puts the tray in the pane, the month
   /// beside it as it was, and the tabs staying.
   func testEnteringIsInThePane() throws {

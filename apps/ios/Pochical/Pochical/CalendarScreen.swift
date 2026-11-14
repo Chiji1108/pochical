@@ -107,6 +107,8 @@ struct CalendarScreen: View {
   /// The calendar is on screen: its sheet is up only then, not while
   /// the root moves it between navigations or another tab is shown.
   @State private var onScreen = false
+  /// Each time the pane's day is tapped again, for it to show afresh.
+  @State private var paneShowing = 0
   /// The fold dividing the screen, while a folding iPhone is half folded.
   @State private var hinge: Hinge?
   private struct Room {
@@ -538,7 +540,7 @@ struct CalendarScreen: View {
             .padding(.vertical, 8)
         }
       }
-      .id(day)
+      .id(PaneShowing(day: day, time: paneShowing))
     }
     .animation(folding, value: day)
   }
@@ -672,6 +674,12 @@ struct CalendarScreen: View {
     if entering != nil {
       entering = day
     } else {
+      // The day the pane shows, tapped again, shows afresh, a list open
+      // over it gone (spec/calendar.md, On a wide screen).
+      if wide, day == opened ?? today {
+        handover.day = nil
+        paneShowing += 1
+      }
       withAnimation(folding) { opened = day }
     }
   }
@@ -1010,6 +1018,12 @@ struct CalendarScreen: View {
     handover.sheetGoing = wide && handover.inPane != nil && opened != nil
     handover.inPane = wide
   }
+}
+
+/// A day shown in the pane, the time it was shown.
+private struct PaneShowing: Hashable {
+  let day: Day
+  let time: Int
 }
 
 /// A fold dividing the calendar side by side, as iPhone Duo's does half
