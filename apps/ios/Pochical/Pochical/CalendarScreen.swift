@@ -14,6 +14,10 @@ struct CalendarScreen: View {
   @Environment(Settings.self) private var settings
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.write) private var write
+  /// Regular on a wide screen, where the month never folds and the day's
+  /// detail stands in a pane beside it (spec/calendar.md, On a wide
+  /// screen).
+  @Environment(\.horizontalSizeClass) private var sizeClass
   @Fetch(OwnCalendarRequest()) private var calendar = OwnCalendar.empty
   @State private var today = Day.today
   /// The month naming the page shown; none for the page holding today,
@@ -41,8 +45,22 @@ struct CalendarScreen: View {
   /// The reminders offered, once, after shifts were first entered: the
   /// time they come at.
   @State private var offeringReminders: String?
-  /// The day opened from the month, its week alone left above its detail.
+  /// The day opened from the month: on a phone its week alone left above
+  /// its detail, on a wide screen shown in the pane beside the month.
   @State private var opened: Day?
+  /// What the day's detail is in the middle of, for it to go on with as
+  /// it moves between the sheet and the pane.
+  @State private var handover = DayDetailHandover()
+  /// The day last entered, open in the pane on a wide screen once
+  /// entering has ended and its blank days were asked about.
+  @State private var lastEntered: Day?
+  /// `wide` as it last changed, for the sheet: UIKit takes the sheet away
+  /// as the screen widens, and tells it through the sheet drawn before,
+  /// whose `wide` is still a phone's; this is read as it is now.
+  @State private var widened = false
+  /// The tray's page of keys, kept as the tray moves between the phone's
+  /// foot and the wide screen's pane.
+  @State private var trayPage = 0
   /// The day's sheet is going: the month unfolds as it goes, not once it
   /// has gone, and folds again if a swipe is taken back.
   @State private var leaving = false
@@ -69,6 +87,8 @@ struct CalendarScreen: View {
   /// The screen's room and what stands around the month, measured, so a
   /// short screen fits its six weeks (`cellHeight`).
   @State private var room = Room()
+  /// The fold dividing the screen, while a folding iPhone is half folded.
+  @State private var hinge: Hinge?
   private struct Room {
     var total: CGFloat = 0
     var heading: CGFloat = 0
@@ -85,6 +105,8 @@ struct CalendarScreen: View {
   }
   /// Kept free over the bottom however short the screen.
   private static let leastSpare: CGFloat = 8
+  /// Between the tab bar's glass and what stands over it, as /design's.
+  private static let clearOfTabBar: CGFloat = 24
   /// The day's sheet as it opens: up to just under the folded week, which
   /// stays in sight to tap, measured so it fits each screen.
   private var underWeek: PresentationDetent {
@@ -111,71 +133,31 @@ struct CalendarScreen: View {
       WeekdayRow(week: settings.device.week)
         .padding(.horizontal, Self.screenEdge)
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { room.weekdays = $0 }
-      // The pages run to the screen's edges, so a month slides out of
-      // sight rather than being cut off inside them.
-      ScrollView(.horizontal) {
-        LazyHStack(spacing: 0) {
-          ForEach(pages, id: \.self) { page in
-            Group {
-              switch page {
-              case .month(let month):
-                MonthPage(
-                  page: period.page(month), byPeriod: period.byPeriod, weekStart: weekStart,
-                  days: pageDays(calendar), openedWeek: opened, fold: fold)
-              case .week(let week):
-                WeekPage(week: week, days: pageDays(calendar))
-              }
-            }
-            .padding(.horizontal, Self.screenEdge)
-            .containerRelativeFrame(.horizontal)
+      if wide {
+        // The month with 今月のお休み under it, the rest in the pane; a
+        // side too short for six weeks at their shortest, a large iPhone
+        // on its side, scrolls them under the heading.
+        ScrollView(.vertical) {
+          VStack(spacing: 0) {
+            pager(calendar)
+            if entering == nil { under(calendar) }
           }
         }
-        .scrollTargetLayout()
-      }
-      .scrollTargetBehavior(.paging)
-      .scrollPosition(id: shownPage)
-      .scrollIndicators(.hidden)
-      // A week swiped to opens once the swipe settles, so the pages are
-      // not changed under the finger.
-      .onScrollPhaseChange { _, phase in
-        if phase == .idle { openSwipedWeek() }
-      }
-      .onScrollGeometryChange(for: CGFloat.self) { geometry in
-        geometry.contentOffset.x / max(geometry.containerSize.width, 1)
-      } action: { _, pages in
-        position.pages = pages
-      }
-      .frame(height: cellHeight + (MonthPage.height(cell: cellHeight) - cellHeight) * (1 - fold))
-      // Where the folded week ends, however folded the pages are now.
-      .onGeometryChange(for: CGFloat.self) { proxy in
-        proxy.frame(in: .global).minY
-      } action: { weekEnd = $0 + cellHeight }
-      // While a day is open, a pull down unfolds the month, following the
-      // finger (spec/calendar.md, A day's detail).
-      .gesture(
-        PullDown(
-          isEnabled: opened != nil,
-          onChange: { down in pull = pullShare(down) },
-          onEnd: pullEnded))
-      if shownOpen != nil {
-        // The day's detail is a sheet over the week (below).
-        Spacer(minLength: 0)
+        .scrollBounceBehavior(.basedOnSize)
       } else {
+        pager(calendar)
         Spacer(minLength: 0)
-        bottom(calendar)
-          .padding(.horizontal, Self.screenEdge)
-          // Clear of the tab bar's glass, as /design's; while entering the
-          // tabs give way, and the tray sits low for the thumb.
-          .padding(.bottom, entering == nil ? 24 : 8)
-          // Measured at rest, so the days keep their size while entering.
-          .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
-            if entering == nil { room.bottom = height }
-          }
+        // The day's detail is a sheet over the folded week (below).
+        if shownFolded == nil { under(calendar) }
       }
     }
+    // Off the fold, which the pane begins past.
+    .padding(.trailing, wide ? hinge?.width ?? 0 : 0)
     .environment(\.dayCellHeight, cellHeight)
+    // Measured at rest, as the tabs give way on a phone; the month on a
+    // wide screen is as tall whatever the pane shows.
     .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
-      if entering == nil, opened == nil { room.total = height }
+      if wide || entering == nil && opened == nil { room.total = height }
     }
     .onGeometryChange(for: CGFloat.self) { proxy in
       proxy.frame(in: .global).maxY
@@ -192,8 +174,10 @@ struct CalendarScreen: View {
       }
       .ignoresSafeArea()
     }
-    // The tabs give way to entering and to a day's week, as /design's do.
-    .toolbarVisibility(entering == nil && shownOpen == nil ? .visible : .hidden, for: .tabBar)
+    // The tabs give way to entering and to a day's week, as /design's do;
+    // on a wide screen both are in the pane, and the tabs stay.
+    .toolbarVisibility(
+      wide || entering == nil && shownOpen == nil ? .visible : .hidden, for: .tabBar)
     // A page turned to while entering starts on its first blank day; a
     // day picked on a page around it turns to that page.
     .onChange(of: shownMonth) { _, month in
@@ -217,14 +201,14 @@ struct CalendarScreen: View {
       guard let day else { return }
       OpenedDay.shared.day = nil
       entering = nil
-      if opened != nil {
+      if folded != nil {
         go(to: day)
       } else {
         shownMonth = monthShowing(day)
         withAnimation(folding) { opened = day }
       }
     }
-    .onChange(of: opened) { _, day in
+    .onChange(of: opened) { before, day in
       // Whatever closed or changed the day, its sheet's going is over.
       leaving = false
       guard let day else {
@@ -235,6 +219,8 @@ struct CalendarScreen: View {
         return
       }
       shownMonth = monthShowing(day)
+      // On a wide screen a day closes as another takes the pane.
+      if wide, before != nil { askForReviewIfDue() }
     }
     .onChange(of: entering) { _, day in
       if day == nil { askForReviewIfDue(afterEntering: true) }
@@ -247,47 +233,48 @@ struct CalendarScreen: View {
     // A day's detail rises as the system's sheet over the folded week, to
     // just under it with the week still to tap, and goes down as it is
     // swiped away, the month unfolding behind it.
-    .daySheet(opened, first: underWeek) {
-      withAnimation(folding) { opened = nil }
+    .daySheet(folded, first: underWeek) {
+      // Gone as the screen widens, the day stays open in the pane.
+      if !widened { withAnimation(folding) { opened = nil } }
+    } onDismiss: {
+      handover.sheetGoing = false
     } content: { day in
-      let entry = calendar.shown(from: day, through: day)[day]
-      // One day gives way to the next however it is opened, by a tap,
-      // ‹ ›, 今週 or a swipe.
-      ZStack {
-        DayDetail(
-          day: day, entry: entry, note: calendar.note(on: day), patterns: calendar.patterns,
-          coworkers: calendar.coworkers,
-          onChange: { entry in
-            keep { db, now in try OwnValues.set(day, to: entry, now: now, in: db) }
-          },
-          onNoteChange: { note in
-            keep { db, now in try OwnValues.setNote(day, to: note, now: now, in: db) }
-          },
-          // Someone added from a day is on that day too, while it takes
-          // one more, counting those still listed as the day's list does.
-          onAddCoworker: { name in
-            keep { db, now in
-              let id = try OwnValues.addCoworker(named: name, now: now, in: db)
-              let listed = (entry?.people ?? []).filter { id in
-                calendar.coworkers.contains { $0.id == id }
-              }
-              if var entry, fitsDayPeople(listed + [id]) {
-                entry.people = listed + [id]
-                try OwnValues.set(day, to: entry, now: now, in: db)
-              }
-            }
-          },
-          onStep: { step in go(to: day.adding(days: step)) }
-        )
-        .id(day)
+      detail(calendar, of: day)
+        // Closed by its × or in code, the day has closed already; gone as
+        // the screen widens, it stays open in the pane.
+        .onSheetLeaving { going in
+          if opened != nil, !widened { withAnimation(folding) { leaving = going } }
+        }
+        .presentationDragIndicator(.visible)
+        .presentationBackground(colors.backgroundBase)
+    }
+    // On a wide screen the detail stands beside the month in the system's
+    // inspector, always there. The inspector would be a sheet on a phone,
+    // but one that closes as the width narrows and lacks the sheet's
+    // height under the week, so a phone keeps the sheet above; what the
+    // detail is in the middle of goes across with `handover`.
+    .inspector(isPresented: .constant(wide)) {
+      pane(calendar)
+        .modifier(PaneWidth(width: hinge?.paneWidth))
+    }
+    // iPhone Duo half folded: the fold the system reserves for dividing
+    // the screen, which the month and the pane keep to either side of.
+    .onGeometryChange(for: Hinge?.self) { proxy in
+      Hinge(dividing: proxy)
+    } action: { hinge = $0 }
+    // The month has nothing to type in: it stays where it is as the
+    // keyboard comes up for the memo in the pane beside it, whose rows
+    // scroll the memo above it.
+    .ignoresSafeArea(.keyboard)
+    // Widened or narrowed with a day open, its detail moves to the pane or
+    // the sheet as it is (spec/calendar.md, On a wide screen).
+    .onChange(of: wide, initial: true) { before, now in
+      widened = now
+      if before != now, opened != nil {
+        handover.moving = true
+        // Widened, the sheet the day was in goes.
+        handover.sheetGoing = now
       }
-      .animation(folding, value: day)
-      // Closed by its × or in code, the day has closed already.
-      .onSheetLeaving { going in
-        if opened != nil { withAnimation(folding) { leaving = going } }
-      }
-      .presentationDragIndicator(.visible)
-      .presentationBackground(colors.backgroundBase)
     }
     .sheet(item: $breakingDown, id: \.self) { month in
       let page = period.page(month)
@@ -311,6 +298,7 @@ struct CalendarScreen: View {
       if gaps.isEmpty {
         gapFill = nil
         askForReviewIfDue(afterEntering: true)
+        openLastEntered()
       }
     }
     .sheet(isPresented: Binding(get: { !gaps.isEmpty }, set: { if !$0 { gaps = [] } })) {
@@ -350,6 +338,80 @@ struct CalendarScreen: View {
     .handles(selectDay, by: select)
   }
 
+  /// The pages, turned by swiping: the months, or with a day opened on a
+  /// phone its month folded into the week between the weeks around it.
+  private func pager(_ calendar: OwnCalendar) -> some View {
+    // The pages run to the screen's edges, so a month slides out of
+    // sight rather than being cut off inside them.
+    ScrollView(.horizontal) {
+      LazyHStack(spacing: 0) {
+        ForEach(pages, id: \.self) { page in
+          Group {
+            switch page {
+            case .month(let month):
+              MonthPage(
+                page: period.page(month), byPeriod: period.byPeriod, weekStart: weekStart,
+                days: pageDays(calendar), openedWeek: folded, fold: fold)
+            case .week(let week):
+              WeekPage(week: week, days: pageDays(calendar))
+            }
+          }
+          .padding(.horizontal, Self.screenEdge)
+          .containerRelativeFrame(.horizontal)
+        }
+      }
+      .scrollTargetLayout()
+    }
+    // A page a swipe, each page brought to the scroll view's own frame.
+    // The scroll view reaches into the safe area beside it, a phone's
+    // side on its side or the pane's column, and takes it as content
+    // insets: paging by its bounds would land between pages there, so
+    // the pages are aligned as views, and what lies in that area is
+    // clipped, the month beside never peeking in (#1223).
+    .scrollTargetBehavior(.viewAligned(limitBehavior: .alwaysByOne))
+    .scrollPosition(id: shownPage)
+    .scrollIndicators(.hidden)
+    .clipped()
+    // A week swiped to opens once the swipe settles, so the pages are
+    // not changed under the finger.
+    .onScrollPhaseChange { _, phase in
+      if phase == .idle { openSwipedWeek() }
+    }
+    .onScrollGeometryChange(for: CGFloat.self) { geometry in
+      // From the content's start, inside the insets of the safe area.
+      (geometry.contentOffset.x + geometry.contentInsets.leading)
+        / max(geometry.containerSize.width, 1)
+    } action: { _, pages in
+      position.pages = pages
+    }
+    .frame(height: cellHeight + (MonthPage.height(cell: cellHeight) - cellHeight) * (1 - fold))
+    // Where the folded week ends, however folded the pages are now.
+    .onGeometryChange(for: CGFloat.self) { proxy in
+      proxy.frame(in: .global).minY
+    } action: { weekEnd = $0 + cellHeight }
+    // While a day is open, a pull down unfolds the month, following the
+    // finger (spec/calendar.md, A day's detail).
+    .gesture(
+      PullDown(
+        isEnabled: folded != nil,
+        onChange: { down in pull = pullShare(down) },
+        onEnd: pullEnded))
+  }
+
+  /// Under the month: 今月のお休み with ポチポチ入力, or its tray while
+  /// entering, on a phone; 今月のお休み alone on a wide screen.
+  private func under(_ calendar: OwnCalendar) -> some View {
+    bottom(calendar)
+      .padding(.horizontal, Self.screenEdge)
+      // Clear of the tab bar's glass, as /design's; while entering the
+      // tabs give way, and the tray sits low for the thumb.
+      .padding(.bottom, entering == nil ? Self.clearOfTabBar : 8)
+      // Measured at rest, so the days keep their size while entering.
+      .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
+        if entering == nil { room.bottom = height }
+      }
+  }
+
   /// The month naming the page holding today.
   private var thisMonth: Day {
     period.month(holding: today)
@@ -376,10 +438,79 @@ struct CalendarScreen: View {
     leaving ? nil : opened
   }
 
+  /// A wide screen: a regular width, the month beside the day's pane.
+  private var wide: Bool { sizeClass == .regular }
+
+  /// The day whose week the month folds into: the day open, on a phone.
+  private var folded: Day? { wide ? nil : opened }
+
+  /// The day folded into as the screen shows it, `shownOpen`'s.
+  private var shownFolded: Day? { wide ? nil : shownOpen }
+
   /// How far the month is folded into the opened week, 0 to 1: moved by
   /// opening and closing the week, or by a finger pulling it open.
   private var fold: CGFloat {
-    shownOpen == nil ? 0 : 1 - pull
+    shownFolded == nil ? 0 : 1 - pull
+  }
+
+  /// The pane beside the month on a wide screen: the day open, today's
+  /// while none is, or the tray in its place while entering.
+  @ViewBuilder private func pane(_ calendar: OwnCalendar) -> some View {
+    if let day = entering {
+      VStack {
+        Spacer(minLength: 0)
+        tray(calendar, entering: day)
+      }
+      .padding(.horizontal, Self.screenEdge)
+      .padding(.bottom, 8)
+      .background(colors.backgroundBase)
+    } else {
+      detail(calendar, of: opened ?? today)
+    }
+  }
+
+  /// `day`'s detail, in the sheet or the pane, where on a wide screen
+  /// 今月のお休み and ポチポチ入力 stand at its foot.
+  private func detail(_ calendar: OwnCalendar, of day: Day) -> some View {
+    let entry = calendar.shown(from: day, through: day)[day]
+    // One day gives way to the next however it is opened, by a tap,
+    // ‹ ›, 今週 or a swipe.
+    return ZStack {
+      DayDetail(
+        day: day, entry: entry, note: calendar.note(on: day), patterns: calendar.patterns,
+        coworkers: calendar.coworkers,
+        onChange: { entry in
+          keep { db, now in try OwnValues.set(day, to: entry, now: now, in: db) }
+        },
+        onNoteChange: { note in
+          keep { db, now in try OwnValues.setNote(day, to: note, now: now, in: db) }
+        },
+        // Someone added from a day is on that day too, while it takes
+        // one more, counting those still listed as the day's list does.
+        onAddCoworker: { name in
+          keep { db, now in
+            let id = try OwnValues.addCoworker(named: name, now: now, in: db)
+            let listed = (entry?.people ?? []).filter { id in
+              calendar.coworkers.contains { $0.id == id }
+            }
+            if var entry, fitsDayPeople(listed + [id]) {
+              entry.people = listed + [id]
+              try OwnValues.set(day, to: entry, now: now, in: db)
+            }
+          }
+        },
+        onStep: { step in go(to: day.adding(days: step)) },
+        closes: !wide, handover: handover
+      ) {
+        if wide {
+          enterButton(calendar)
+            .padding(.horizontal, Self.screenEdge)
+            .padding(.vertical, 8)
+        }
+      }
+      .id(day)
+    }
+    .animation(folding, value: day)
   }
 
   /// How far a pull unfolds the month: the month's foot comes down with
@@ -404,10 +535,10 @@ struct CalendarScreen: View {
     }
   }
 
-  /// The pages: the months, or with a day opened its month, folded into
-  /// the week, between the weeks before and after it.
+  /// The pages: the months, or with a day opened on a phone its month,
+  /// folded into the week, between the weeks before and after it.
   private var pages: [CalendarPage] {
-    guard let day = opened else {
+    guard let day = folded else {
       return (-Self.monthsAround...Self.monthsAround).map { .month(thisMonth.addingMonths($0)) }
     }
     // The month keeps its place among the pages, so the scroll view stays
@@ -441,7 +572,7 @@ struct CalendarScreen: View {
   /// Opens the same weekday in the week swiped to, which becomes the month's
   /// folded week in place of the page beside it, drawn the same.
   private func openSwipedWeek() {
-    guard let week = swipedWeek, let day = opened else { return }
+    guard let week = swipedWeek, let day = folded else { return }
     let next = landing ?? day.adding(days: week.days(since: weekOf(day)))
     landing = nil
     // All at once, so the pages never stand on the month left behind.
@@ -452,8 +583,16 @@ struct CalendarScreen: View {
 
   /// Opens a day from the one open: in its week the frame moves to it, as
   /// a tap does; in another the pages slide to that week first, as a swipe
-  /// does, and with reduced motion it just opens.
+  /// does, and with reduced motion it just opens. On a wide screen, off
+  /// the page shown, the pages turn to the page holding it.
   private func go(to day: Day) {
+    if wide {
+      withAnimation(folding) {
+        shownMonth = monthShowing(day)
+        opened = day
+      }
+      return
+    }
     guard let open = opened, weekOf(day) != weekOf(open), folding != nil else {
       withAnimation(folding) { opened = day }
       return
@@ -474,7 +613,7 @@ struct CalendarScreen: View {
   /// in a day's week, where they are what is being looked at (休みの見せ方
   /// 空白).
   private var offShown: OffShown {
-    entering != nil || shownOpen != nil ? .faint : .hidden
+    entering != nil || shownFolded != nil ? .faint : .hidden
   }
 
   /// While the gap sheet asks, its days drawn faint as the pattern picked
@@ -507,71 +646,98 @@ struct CalendarScreen: View {
     }
   }
 
-  /// ポチポチ入力 to start entering, or its tray while entering.
+  /// Under the month: 今月のお休み and ポチポチ入力, or its tray while
+  /// entering; on a wide screen 今月のお休み alone, the rest in the pane.
   @ViewBuilder private func bottom(_ calendar: OwnCalendar) -> some View {
     if let day = entering {
-      let shown = calendar.shown(from: day, through: day)
-      // Entering stays on the page of the day entered, to its last day.
-      let last = Period(holding: day, start: period.start).last
-      EntryTray(
-        day: day, week: settings.device.week, patterns: calendar.patterns.inUse,
-        canClear: shown[day] != nil,
-        canSkip: day != last,
-        onEnter: { shift in
-          // A shift not kept leaves the day to enter again.
-          guard keep({ db, now in try OwnValues.enter(shift, on: day, now: now, in: db) }) else {
-            return
-          }
-          let next = selectedAfterEntering(
-            shift, on: day, through: last, patterns: calendar.patternsByID)
-          entering = next
-          let pattern = shift.flatMap { calendar.patternsByID[$0] }
-          let following = pattern?.nextDay.flatMap { calendar.patternsByID[$0] }
-          announce(
-            pattern.map { pattern in
-              following.map { "\(pattern.name)を入力しました。翌日は\($0.name)です" }
-                ?? "\(pattern.name)を入力しました"
-            } ?? "シフトを消しました", on: day, next: next)
-        },
-        onSkip: {
-          let next = selectedAfterEntering(nil, on: day, through: last, patterns: [:])
-          entering = next
-          announce("変更せずに進みました", on: day, next: next)
-        }
-      )
+      tray(calendar, entering: day)
+    } else if wide {
+      summary(calendar)
     } else {
       // One piece, so what is padded below it is padded once.
-      // The months a swipe can bring in, counted as the screen is drawn,
-      // that is as the days or the month change; the rolling row only
-      // reads them while a finger moves the pages (POC-33).
-      let around = shownMonth ?? thisMonth
-      let counted = Dictionary(
-        uniqueKeysWithValues: (-2...2).map { around.addingMonths($0) }.map {
-          ($0, daysOff(in: $0, calendar))
-        })
       VStack(spacing: 12) {
-        MonthSummary(
-          position: position, monthAt: monthOfPage, byPeriod: period.byPeriod,
-          daysOff: { month in counted[month] ?? daysOff(in: month, calendar) }
-        ) { month in
-          breakingDown = month
-        }
-        Button {
-          let page = period.page(shownMonth ?? thisMonth)
-          let first = firstBlankDay(in: page, days: pageDays(page, calendar))
-          // With the tabs giving way, so the tray and the tab bar move as one.
-          withAnimation(entryChange) { entering = first }
-        } label: {
-          Label("ポチポチ入力", systemImage: "pencil")
-            .font(.headline)
-            .frame(maxWidth: .infinity, minHeight: Metrics.control)
-        }
-        .buttonStyle(.borderedProminent)
-        .buttonBorderShape(.capsule)
-        .tint(colors.accentFill)
-        .foregroundStyle(colors.accentOnFill)
+        summary(calendar)
+        enterButton(calendar)
       }
     }
+  }
+
+  /// ポチポチ入力's tray, entering `day`.
+  private func tray(_ calendar: OwnCalendar, entering day: Day) -> some View {
+    let shown = calendar.shown(from: day, through: day)
+    // Entering stays on the page of the day entered, to its last day.
+    let last = Period(holding: day, start: period.start).last
+    return EntryTray(
+      day: day, week: settings.device.week, patterns: calendar.patterns.inUse,
+      canClear: shown[day] != nil,
+      canSkip: day != last,
+      page: $trayPage,
+      onEnter: { shift in
+        // A shift not kept leaves the day to enter again.
+        guard keep({ db, now in try OwnValues.enter(shift, on: day, now: now, in: db) }) else {
+          return
+        }
+        lastEntered = day
+        let next = selectedAfterEntering(
+          shift, on: day, through: last, patterns: calendar.patternsByID)
+        entering = next
+        let pattern = shift.flatMap { calendar.patternsByID[$0] }
+        let following = pattern?.nextDay.flatMap { calendar.patternsByID[$0] }
+        announce(
+          pattern.map { pattern in
+            following.map { "\(pattern.name)を入力しました。翌日は\($0.name)です" }
+              ?? "\(pattern.name)を入力しました"
+          } ?? "シフトを消しました", on: day, next: next)
+      },
+      onSkip: {
+        let next = selectedAfterEntering(nil, on: day, through: last, patterns: [:])
+        entering = next
+        announce("変更せずに進みました", on: day, next: next)
+      }
+    )
+  }
+
+  /// 今月のお休み, opening 今月の内訳.
+  private func summary(_ calendar: OwnCalendar) -> some View {
+    // The months a swipe can bring in, counted as the screen is drawn,
+    // that is as the days or the month change; the rolling row only
+    // reads them while a finger moves the pages (POC-33).
+    let around = shownMonth ?? thisMonth
+    let counted = Dictionary(
+      uniqueKeysWithValues: (-2...2).map { around.addingMonths($0) }.map {
+        ($0, daysOff(in: $0, calendar))
+      })
+    return MonthSummary(
+      position: position, monthAt: monthOfPage, byPeriod: period.byPeriod,
+      daysOff: { month in counted[month] ?? daysOff(in: month, calendar) }
+    ) { month in
+      breakingDown = month
+    }
+  }
+
+  /// ポチポチ入力, starting on the page's first blank day whatever day is
+  /// open.
+  private func enterButton(_ calendar: OwnCalendar) -> some View {
+    Button {
+      let page = period.page(shownMonth ?? thisMonth)
+      let first = firstBlankDay(in: page, days: pageDays(page, calendar))
+      trayPage = 0
+      lastEntered = nil
+      // With the tabs giving way, so the tray and the tab bar move as one;
+      // on a wide screen the tray takes the place of the day open.
+      withAnimation(entryChange) {
+        opened = nil
+        entering = first
+      }
+    } label: {
+      Label("ポチポチ入力", systemImage: "pencil")
+        .font(.headline)
+        .frame(maxWidth: .infinity, minHeight: Metrics.control)
+    }
+    .buttonStyle(.borderedProminent)
+    .buttonBorderShape(.capsule)
+    .tint(colors.accentFill)
+    .foregroundStyle(colors.accentOnFill)
   }
 
   /// 完了: entering ends, and blank days before the page's last entered
@@ -585,11 +751,21 @@ struct CalendarScreen: View {
     withAnimation(entryChange) { entering = nil }
     // With no pattern that counts as off there is nothing to offer.
     guard holidayShift(of: calendar.patterns.inUse) != nil else {
+      openLastEntered()
       return
     }
     let page = Period(holding: day, start: period.start)
     gapsPageFirst = page.first
     gaps = gapDays(in: page, days: pageDays(page, calendar))
+    if gaps.isEmpty { openLastEntered() }
+  }
+
+  /// On a wide screen, once entering has ended and its blank days were
+  /// asked about, the last day entered opens in the pane, for what was
+  /// put on it to be seen there.
+  private func openLastEntered() {
+    if wide, let day = lastEntered { opened = day }
+    lastEntered = nil
   }
 
   /// What 完了 asks about the month's blank days, while there are some
@@ -609,7 +785,7 @@ struct CalendarScreen: View {
   /// question have all closed after something was put on the days, if the
   /// person has used Pochical long enough (spec/review.md).
   private func askForReviewIfDue(afterEntering: Bool = false) {
-    guard changed, entering == nil, opened == nil, gaps.isEmpty else { return }
+    guard changed, entering == nil, wide || opened == nil, gaps.isEmpty else { return }
     changed = false
     // The first time shifts are entered, the reminders are offered
     // instead, once; the review waits for another time.
@@ -629,8 +805,10 @@ struct CalendarScreen: View {
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
     guard write({ try edit($0, now) }) else { return false }
     changed = true
-    // A memo kept as its day closes comes after the day has gone.
-    askForReviewIfDue()
+    // A memo kept as its day closes comes after the day has gone; the
+    // pane beside the month never closes, and its edits wait for another
+    // day to take it.
+    if !wide { askForReviewIfDue() }
     return true
   }
 
@@ -662,7 +840,7 @@ struct CalendarScreen: View {
   /// month, 完了 while entering, and in a day's week 今週 away from this
   /// week (spec/calendar.md).
   @ViewBuilder private var actions: some View {
-    if shownOpen != nil {
+    if shownFolded != nil {
       // The detail's sheet closes the day, with its own ×.
       TodayFade(position: position, todayPage: todayPage) {
         TodayButton(unit: "週") { go(to: today) }
@@ -678,7 +856,11 @@ struct CalendarScreen: View {
         TodayFade(position: position, todayPage: todayPage) {
           // A period's page is no month: its way back is to today's.
           TodayButton(unit: period.byPeriod ? "日" : "月") {
-            withAnimation(Springs.standard) { shownMonth = thisMonth }
+            withAnimation(Springs.standard) {
+              shownMonth = thisMonth
+              // The pane would otherwise show a day off the page.
+              if wide { opened = today }
+            }
           }
         }
         // The month kept as a picture or put in the device's calendar
@@ -705,7 +887,7 @@ struct CalendarScreen: View {
     HStack(alignment: .bottom) {
       // Only the month on its own opens 月を選ぶ; entering and a day's week
       // keep to the days around (/design's calendar heading).
-      if entering == nil, shownOpen == nil, settings.device.heading.surprise {
+      if entering == nil, shownFolded == nil, settings.device.heading.surprise {
         // おたのしみ: the name drifts the sky to another.
         Button {
           settings.device.heading.sky = SurpriseSky.next(
@@ -715,7 +897,7 @@ struct CalendarScreen: View {
         }
         .buttonStyle(.plain)
         .accessibilityHint("空の色を変えます")
-      } else if entering == nil, shownOpen == nil {
+      } else if entering == nil, shownFolded == nil {
         MonthTitleButton(
           month: shownMonth ?? thisMonth, first: thisMonth.addingMonths(-Self.monthsAround),
           last: thisMonth.addingMonths(Self.monthsAround), chevron: false
@@ -746,7 +928,7 @@ struct CalendarScreen: View {
   /// the opened one, the month that week opens in.
   private func monthOfPage(_ index: Int) -> Day {
     let place = index - Self.monthsAround
-    guard let day = opened else {
+    guard let day = folded else {
       return thisMonth.addingMonths(place)
     }
     let month = shownMonth ?? thisMonth
@@ -756,10 +938,55 @@ struct CalendarScreen: View {
 
   /// The page of this month, or with a day opened, of this week.
   private var todayPage: Int {
-    guard let day = opened else { return Self.monthsAround }
+    guard let day = folded else { return Self.monthsAround }
     let month = shownMonth ?? thisMonth
     return Self.monthsAround + monthsAfterThis(month)
       + weekOf(today).days(since: weekOf(day)) / 7
+  }
+}
+
+/// A fold dividing the calendar side by side, as iPhone Duo's does half
+/// folded: the region the system reserves for the screen to divide at
+/// (HIG, Reserved regions), the month to its leading side and the pane
+/// to its trailing one, so it never runs through the month's seven
+/// columns (spec/calendar.md, On a wide screen).
+nonisolated struct Hinge: Equatable, Sendable {
+  /// Where it begins and ends across the calendar, its margins included.
+  let start: CGFloat
+  let end: CGFloat
+  /// The calendar's width.
+  let total: CGFloat
+
+  /// The fold dividing what `proxy` measures from top to bottom, if one
+  /// does now.
+  init?(dividing proxy: GeometryProxy) {
+    guard #available(iOS 27.1, *),
+      let region = proxy.reservedRegions(kind: .division).first(where: {
+        $0.isActive && $0.frame.minX > 0 && $0.frame.maxX < proxy.size.width
+          && $0.frame.height >= proxy.size.height
+      })
+    else { return nil }
+    start = region.frame.minX
+    end = region.frame.maxX
+    total = proxy.size.width
+  }
+
+  var width: CGFloat { end - start }
+  /// The pane's width: the side past the fold.
+  var paneWidth: CGFloat { total - end }
+}
+
+/// The pane at the system's own width, or as wide as the side a fold
+/// leaves it.
+private struct PaneWidth: ViewModifier {
+  let width: CGFloat?
+
+  func body(content: Content) -> some View {
+    if let width {
+      content.inspectorColumnWidth(width)
+    } else {
+      content
+    }
   }
 }
 

@@ -3,8 +3,10 @@ import PochicalKit
 import SwiftUI
 
 /// A day opened from the month: its shift, its own hours, the people on
-/// it and a memo (spec/calendar.md, A day's detail).
-struct DayDetail: View {
+/// it and a memo (spec/calendar.md, A day's detail): in the day's sheet on
+/// a phone, or in the pane beside the month on a wide screen, which has no
+/// × and holds ポチポチ入力 at its foot (spec/calendar.md, On a wide screen).
+struct DayDetail<Foot: View>: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.scenePhase) private var scenePhase
   @Environment(\.dismiss) private var dismiss
@@ -20,11 +22,31 @@ struct DayDetail: View {
   let onAddCoworker: (String) -> Bool
   /// Opens the day before (-1) or after (1).
   let onStep: (Int) -> Void
+  /// Whether its bar holds ×: a sheet's does; the pane beside the month,
+  /// always there, has none.
+  var closes = true
+  /// Where it says what it is in the middle of, and takes it from as it
+  /// comes in place of the detail of the same day moved.
+  let handover: DayDetailHandover
+  /// What stands at its foot, under the rows, while the keyboard is not
+  /// up.
+  @ViewBuilder var foot: () -> Foot
   /// The memo as it is written, kept when the field is left, the detail
   /// closes or the app goes to the background (spec/calendar.md, Text
   /// fields).
   @State private var draft = ""
+  @State private var caret: TextSelection?
+  /// The caret of the detail this one took the place of, put back once
+  /// the memo has the focus.
+  @State private var movedCaret: TextSelection?
+  /// The memo was being written in the detail this one took the place of:
+  /// it takes the focus as its row is laid out.
+  @State private var movedWriting = false
+  /// The memo's row, scrolled to.
+  private static var memoRow: String { "memo" }
   @FocusState private var writingNote: Bool
+  /// The lists pushed over the day.
+  @State private var lists: [DayList] = []
   @State private var clearing = false
   @State private var addingCoworker = false
   @State private var newCoworker = ""
@@ -35,13 +57,33 @@ struct DayDetail: View {
   /// and ‹ › to the day before and after; シフト and 一緒に働く人 push
   /// their lists within it.
   var body: some View {
-    NavigationStack {
-      form
+    NavigationStack(path: $lists) {
+      ScrollViewReader { rows in
+        form
+          // A memo moved here while written is scrolled to, for its row
+          // to be laid out and take the focus.
+          .onChange(of: movedWriting, initial: true) {
+            if movedWriting { rows.scrollTo(Self.memoRow) }
+          }
+      }
+        // The rows scroll under it behind the bar's edge effect; it gives
+        // way to the keyboard, leaving the memo the room.
+        .safeAreaBar(edge: .bottom, spacing: 0) {
+          if !writingNote { foot() }
+        }
+        .navigationDestination(for: DayList.self) { list in
+          switch list {
+          case .shift: shiftChoices
+          case .people: peopleChecklist
+          }
+        }
         .navigationTitle(day.fullText)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-          ToolbarItem(placement: .cancellationAction) {
-            Button("閉じる", systemImage: "xmark", role: .close) { dismiss() }
+          if closes {
+            ToolbarItem(placement: .cancellationAction) {
+              Button("閉じる", systemImage: "xmark", role: .close) { dismiss() }
+            }
           }
           // The day before and after, a week's end no stop.
           ToolbarItemGroup(placement: .primaryAction) {
@@ -50,7 +92,34 @@ struct DayDetail: View {
           }
         }
     }
-    .onAppear { draft = note ?? "" }
+    .onAppear {
+      // Moved, it goes on with the memo, its caret and the list open as
+      // they were.
+      if handover.moving, handover.day == day {
+        draft = handover.memo
+        lists = handover.lists
+        // The field puts its caret at its start as it takes the focus:
+        // the caret moved goes back once it has.
+        movedCaret = handover.writing ? handover.caret : nil
+        movedWriting = handover.writing
+      } else {
+        draft = note ?? ""
+      }
+      handover.moving = false
+      tellHandover()
+    }
+    .onChange(of: draft) { tellHandover() }
+    .onChange(of: caret) { tellHandover() }
+    .onChange(of: writingNote) { _, writing in
+      if writing, let moved = movedCaret {
+        caret = moved
+        movedCaret = nil
+      }
+      tellHandover()
+    }
+    .onChange(of: lists) { tellHandover() }
+    // Moved, it is kept as its screen closes, and again once the field is
+    // left in the detail that took its place.
     .onDisappear { keepNote() }
     .onChange(of: scenePhase) { _, phase in
       if phase != .active {
@@ -83,6 +152,10 @@ struct DayDetail: View {
       .listRowBackground(colors.fillQuaternary)
       Section {
         memoField
+          .id(Self.memoRow)
+          .onAppear { takeMovedFocus() }
+          // The sheet going takes the focus with it as it ends.
+          .onChange(of: handover.sheetGoing) { takeMovedFocus() }
       }
       .listRowBackground(colors.fillQuaternary)
       if let entry {
@@ -121,14 +194,7 @@ struct DayDetail: View {
   /// runs long past a few, and the list shows each one's hours too.
   /// Picking another keeps the day's memo and people, as entering does.
   private var shiftRow: some View {
-    NavigationLink {
-      // Patterns no longer used are not offered, though a day may show one.
-      ShiftChoices(patterns: patterns.inUse, picked: entry?.shift) { shift in
-        if shift != entry?.shift {
-          onChange(DayEntry(shift: shift, note: entry?.note, people: entry?.people))
-        }
-      }
-    } label: {
+    NavigationLink(value: DayList.shift) {
       LabeledContent("シフト") {
         if let pattern {
           Label {
@@ -143,6 +209,16 @@ struct DayDetail: View {
     }
     // The line under it from where its words start, not the mark's.
     .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
+  }
+
+  /// シフト's list, pushed from its row.
+  private var shiftChoices: some View {
+    // Patterns no longer used are not offered, though a day may show one.
+    ShiftChoices(patterns: patterns.inUse, picked: entry?.shift) { shift in
+      if shift != entry?.shift {
+        onChange(DayEntry(shift: shift, note: entry?.note, people: entry?.people))
+      }
+    }
   }
 
   /// The day's own hours, a change from the pattern's said in words: 早出
@@ -191,7 +267,17 @@ struct DayDetail: View {
   /// to check them in, as the Clock app's 繰り返し picks days (Android
   /// keeps /design's filter chips; spec/calendar.md, A day's detail).
   private func peopleRows(_ entry: DayEntry) -> some View {
-    NavigationLink {
+    NavigationLink(value: DayList.people) {
+      LabeledContent("一緒に働く人") {
+        Text(names(entry.people ?? []))
+          .lineLimit(1)
+      }
+    }
+  }
+
+  /// The coworkers to check in on the day, pushed from its row.
+  @ViewBuilder private var peopleChecklist: some View {
+    if let entry {
       PeopleChecklist(
         // Only those still listed, as `toggle` writes them.
         coworkers: coworkers,
@@ -218,11 +304,6 @@ struct DayDetail: View {
       }
       .alert(coworkersFull, isPresented: $coworkersAreFull) {
         Button("OK", role: .cancel) {}
-      }
-    } label: {
-      LabeledContent("一緒に働く人") {
-        Text(names(entry.people ?? []))
-          .lineLimit(1)
       }
     }
   }
@@ -258,6 +339,25 @@ struct DayDetail: View {
     ].compactMap(\.self)
   }
 
+  /// The memo moved here while written takes the focus, once its row is
+  /// laid out and no sheet it moved from is still going.
+  private func takeMovedFocus() {
+    guard movedWriting, !handover.sheetGoing else { return }
+    movedWriting = false
+    writingNote = true
+  }
+
+  /// Says what it is in the middle of, for the detail that takes its place
+  /// as it moves; nothing once it is moving, as it is left then.
+  private func tellHandover() {
+    guard !handover.moving else { return }
+    handover.day = day
+    handover.memo = draft
+    handover.caret = caret
+    handover.writing = writingNote
+    handover.lists = lists
+  }
+
   /// "" clears the memo; an entry without one keeps the day's.
   private func keepNote() {
     if draft != (note ?? "") {
@@ -270,7 +370,7 @@ struct DayDetail: View {
   private var memoField: some View {
     // Beside the first line, one line or many.
     HStack(alignment: .firstTextBaseline) {
-      TextField("メモ", text: $draft, axis: .vertical)
+      TextField("メモ", text: $draft, selection: $caret, axis: .vertical)
         .focused($writingNote)
         .onChange(of: draft) { _, text in
           if text.count > TextLimits.dayNote {
@@ -309,6 +409,31 @@ struct DayDetail: View {
     let parts = Calendar.current.dateComponents([.hour, .minute], from: date)
     return String(format: "%02d:%02d", parts.hour ?? 0, parts.minute ?? 0)
   }
+}
+
+/// A list a day's detail pushes over the day.
+enum DayList: Hashable {
+  case shift, people
+}
+
+/// What a day's detail is in the middle of, said by the detail shown, for
+/// the one that takes its place when the width changes, the detail moving
+/// between a phone's sheet and a wide screen's pane (spec/calendar.md, On
+/// a wide screen): the memo being written with its caret, and the list
+/// open.
+@MainActor @Observable final class DayDetailHandover {
+  var day: Day?
+  var memo = ""
+  var caret: TextSelection?
+  var writing = false
+  var lists: [DayList] = []
+  /// Set as the width changes with a day open, until the detail coming
+  /// takes what the one going was in the middle of; the one going says
+  /// nothing more as it goes.
+  var moving = false
+  /// The phone's sheet is going as the screen widens: the system takes the
+  /// focus away as it ends, so the memo moved to the pane takes it after.
+  var sheetGoing = false
 }
 
 /// 一緒に働く人 to check in on a day: a check by each one on it and 人を追加
