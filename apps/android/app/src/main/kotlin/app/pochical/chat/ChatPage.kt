@@ -5,6 +5,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.compose.LifecycleEventEffect
+import app.pochical.PageScaffold
 import app.pochical.notifications.ShowingChat
 import app.pochical.notifications.LocalNotificationAsking
 import app.pochical.calendar.fullText
@@ -65,7 +66,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -872,8 +872,10 @@ private fun ChatScaffold(
   val status = rememberSocketWords(socket)
   val muted = rememberChatNotifications()?.isMuted(groupId, threadId)
   val setMuted = rememberChatMuting(groupId, threadId, say)
-  Scaffold(
-    modifier,
+  // The lines fill the width, as Messages' do on a tablet.
+  PageScaffold(
+    modifier = modifier,
+    fillsWidth = true,
     topBar = {
       TopAppBar(
         title = {

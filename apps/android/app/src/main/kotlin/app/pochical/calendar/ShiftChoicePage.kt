@@ -15,18 +15,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -37,6 +33,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.SectionRow
+import app.pochical.SettingsPage
 import app.pochical.ShiftMark
 import app.pochical.design.PATTERNS_PER_PAGE
 import app.pochical.kit.hoursText
@@ -60,21 +57,7 @@ fun ShiftChoicePage(day: LocalDate, onBack: () -> Unit) {
   val patterns = calendar.patterns.filterNot { it.archived }
   var query by rememberSaveable { mutableStateOf("") }
   val shown = patterns.filter { query.isBlank() || it.name.contains(query.trim(), ignoreCase = true) }
-  val bar = TopAppBarDefaults.pinnedScrollBehavior()
-  Scaffold(
-    Modifier.nestedScroll(bar.nestedScrollConnection),
-    topBar = {
-      TopAppBar(
-        scrollBehavior = bar,
-        title = { Text(stringResource(R.string.day_shift)) },
-        navigationIcon = {
-          IconButton(onClick = onBack) {
-            Icon(painterResource(R.drawable.ic_back), contentDescription = stringResource(R.string.back))
-          }
-        },
-      )
-    },
-  ) { padding ->
+  SettingsPage(stringResource(R.string.day_shift), onBack, collapsing = false) { padding ->
     LazyColumn(Modifier.selectableGroup(), contentPadding = padding) {
       if (patterns.size > PATTERNS_PER_PAGE) {
         item {
