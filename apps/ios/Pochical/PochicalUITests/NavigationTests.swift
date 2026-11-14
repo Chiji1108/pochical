@@ -1,8 +1,8 @@
 import XCTest
 
-/// The app's one navigation (POC-157): 設定's pages are pushed over the
-/// tabs, in the one bar the tabs' title is in, the tab bar going with the
-/// tabs, and come back to 設定 as it was.
+/// The app's navigation (POC-157): 設定's pages are pushed over it, in the
+/// bar its title is in, the tab bar going with it, and come back to 設定 as
+/// it was, at every width (#1237).
 @MainActor
 final class NavigationTests: XCTestCase {
   private let app = XCUIApplication()
@@ -68,15 +68,18 @@ final class NavigationTests: XCTestCase {
     let list = app.collectionViews.firstMatch
     list.swipeUp()
     XCTAssertTrue(settles(bar) { $0 < large - 30 }, "the title goes into the bar as the list scrolls")
-    let scrolled = bar.frame.height
     snap("scrolled", of: app)
     app.tab("グループ").tap()
     tab.tap()
-    XCTAssertTrue(settles(bar) { $0 == scrolled }, "the title stays in the bar while the list is scrolled")
-    for _ in 0..<5 where bar.frame.height != large {
+    XCTAssertTrue(
+      settles(bar) { $0 < large - 30 }, "the title stays in the bar while the list is scrolled")
+    // Down until the list is at its top, each swipe let come to rest.
+    var top = false
+    for _ in 0..<5 where !top {
       list.swipeDown()
+      top = settles(bar) { $0 == large }
     }
-    XCTAssertTrue(settles(bar) { $0 == large }, "the title comes out again at the list's top")
+    XCTAssertTrue(top, "the title comes out again at the list's top")
   }
 
   /// On a wide screen (a large iPhone on its side), 設定's pages open
@@ -100,6 +103,55 @@ final class NavigationTests: XCTestCase {
       "a compact width, its pages over the tabs")
     XCTAssertTrue(tab.isHittable, "シフトパターン is beside the tabs")
     snap("beside", of: app)
+  }
+
+  /// 設定's list stays where it was scrolled to as the screen widens and
+  /// narrows again (#1237): on a large iPhone turned on its side, its
+  /// width regular, the same list stands in its column.
+  func testSettingsKeepsItsPlaceAsTheScreenTurns() throws {
+    continueAfterFailure = false
+    app.launchPastFirstRun()
+    let tab = app.tab("設定")
+    XCTAssertTrue(tab.waitForExistence(timeout: 15), "the tabs show")
+    tab.tap()
+    let first = app.collectionViews.firstMatch.buttons
+      .matching(NSPredicate(format: "label BEGINSWITH %@", "シフトパターン")).firstMatch
+    XCTAssertTrue(first.waitForExistence(timeout: 5), "設定's list shows")
+    let last = reveal("ライセンス")
+    XCTAssertTrue(last.isHittable && !first.isHittable, "the list is scrolled to its end")
+    for orientation in [UIDeviceOrientation.landscapeLeft, .portrait] {
+      XCUIDevice.shared.orientation = orientation
+      let window = app.windows.firstMatch
+      let turned = XCTNSPredicateExpectation(
+        predicate: NSPredicate { _, _ in
+          (window.frame.width > window.frame.height) == orientation.isLandscape
+        }, object: nil)
+      XCTAssertEqual(XCTWaiter().wait(for: [turned], timeout: 5), .completed, "the app turns")
+      if orientation.isLandscape {
+        // 設定's side, which only a regular width has.
+        try XCTSkipUnless(
+          app.staticTexts["項目を選んでください"].waitForExistence(timeout: 5),
+          "a compact width on its side, the same screen in the same navigation")
+      }
+      snap("turned \(orientation.rawValue)", of: app)
+      XCTAssertFalse(first.isHittable, "the list stays scrolled")
+    }
+  }
+
+  /// The tab bar gives way to ポチポチ入力's tray, as the calendar asks
+  /// of the tab bar controller it is in (spec/calendar.md).
+  func testTheTabBarGivesWayToTheTray() throws {
+    continueAfterFailure = false
+    app.launchPastFirstRun(["-sample"])
+    let tab = app.tab("設定")
+    XCTAssertTrue(tab.waitForExistence(timeout: 15), "the tabs show")
+    let start = app.buttons["ポチポチ入力"]
+    XCTAssertTrue(start.waitForExistence(timeout: 5), "ポチポチ入力 shows")
+    start.tap()
+    let gone = XCTNSPredicateExpectation(
+      predicate: NSPredicate(format: "hittable == false"), object: tab)
+    XCTAssertEqual(XCTWaiter().wait(for: [gone], timeout: 5), .completed, "the tab bar gives way")
+    snap("tray", of: app)
   }
 
   /// Whether `bar`'s height comes to what `holds` asks within a few

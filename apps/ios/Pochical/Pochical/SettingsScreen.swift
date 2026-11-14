@@ -5,8 +5,8 @@ import SwiftUI
 
 /// 設定: what the person sets, sorted as /design's settings are. 表示
 /// holds スタイル and the calendar's frame for now; the rest comes as it is
-/// built. Titled in the bar (RootView), each row's page pushed over the
-/// tabs.
+/// built. Titled in the bar, each row's page pushed over the tab, or on a
+/// wide screen beside it (RootNavigation).
 struct SettingsScreen: View {
   @Environment(Settings.self) private var settings
   @Environment(\.themeColors) private var colors
@@ -132,6 +132,7 @@ struct SettingsScreen: View {
       about
     }
     .settingsList()
+    .navigationTitle(RootTab.settings.title)
     .onAppear { appIcon = .current }
   }
 
