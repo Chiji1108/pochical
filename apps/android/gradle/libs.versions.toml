@@ -4,7 +4,7 @@
 jvm = "21"
 compileSdk = "37"
 minSdk = "29"
-agp = "9.5.0"
+agp = "9.5.1"
 kotlin = "2.4.21"
 # protobuf's Java and Kotlin runtimes for the protoc v36.2 plugins in
 # proto/buf.gen.yaml, and connect-kotlin for its v0.9.0 plugin: they move
@@ -14,22 +14,22 @@ connect = "0.9.0"
 compose-bom = "2026.09.00"
 # Material 3 ahead of the BOM's 1.4.0: 1.5 is the release with Material 3 Expressive's components
 # (segmented list items, flexible app bars, button groups) and its motion scheme.
-material3 = "1.5.0-beta02"
+material3 = "1.5.0-rc01"
 activity-compose = "1.13.0"
-navigation3 = "1.2.0"
+navigation3 = "1.2.1"
 # Material's adaptive panes for Navigation 3: グループ's and 設定's pages beside the tabs on a wide window.
 material3-adaptive = "1.3.0"
 metro = "1.4.5"
-kotlinx-serialization = "1.12.0"
+kotlinx-serialization = "1.13.0"
 junit = "4.13.2"
 datastore = "1.3.0"
 splashscreen = "1.2.0"
-robolectric = "4.17"
+robolectric = "4.18"
 lifecycle = "2.11.0"
 coroutines = "1.11.0"
 # Room 3 generates its code with KSP2, whose versions no longer follow Kotlin's.
 room = "3.0.3"
-ksp = "2.3.13"
+ksp = "2.3.14"
 okhttp = "5.5.1"
 work = "2.12.0"
 blockstore = "16.4.0"
@@ -59,13 +59,13 @@ telephoto = "0.19.0"
 coil = "3.6.3"
 # Firebase Cloud Messaging, through which the server's notifications reach the
 # app, and the plugin that reads the Firebase project from google-services.json.
-firebase-bom = "35.1.0"
-google-services = "4.5.0"
+firebase-bom = "35.2.0"
+google-services = "4.6.0"
 # Baseline Profiles: the plugin that generates them (:baselineprofile) and puts them in the app,
 # Macrobenchmark and UI Automator for the journeys and the benchmarks beside them, and the
 # ProfileInstaller that hands the profile to ART where Play has not.
 benchmark = "1.5.0"
-uiautomator = "2.4.0"
+uiautomator = "2.4.1"
 profileinstaller = "1.4.1"
 # AboutLibraries, the libraries the build resolves and their licenses for ライセンス (Apache 2.0).
 aboutlibraries = "15.3.0"

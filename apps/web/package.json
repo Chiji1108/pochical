@@ -17,8 +17,8 @@
     "fix": "pnpm --dir ../.. fix"
   },
   "dependencies": {
-    "@astrojs/cloudflare": "14.4.3",
-    "@astrojs/react": "7.1.2",
+    "@astrojs/cloudflare": "14.4.7",
+    "@astrojs/react": "7.1.7",
     "@astrojs/sitemap": "3.7.4",
     "@bufbuild/protobuf": "2.16.0",
     "@connectrpc/connect": "2.2.0",
@@ -27,7 +27,7 @@
     "@pochical/jsx": "workspace:*",
     "@pochical/prototype": "workspace:*",
     "@pochical/styled-system": "workspace:*",
-    "astro": "7.4.4",
+    "astro": "7.4.10",
     "lucide-react": "^1.61.0",
     "motion": "^14.4.0",
     "react": "19.3.1",
