@@ -11,6 +11,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -151,7 +152,20 @@ class LineMenuState {
     shown.targetState = true
   }
 
+  /**
+   * Whether the focus goes back to the line as the menu goes: closed without a pick, or by a
+   * reaction; not after an item, which may have put it elsewhere (返信 and 編集 on the composer), nor
+   * after +, whose picker takes it.
+   */
+  internal var focusReturns = true
+    private set
+
   fun close() {
+    focusReturns = true
+    shut()
+  }
+
+  private fun shut() {
     shown.targetState = false
     lit = null
   }
@@ -184,7 +198,8 @@ class LineMenuState {
 
   /** + in the bar: the system's emoji picker, as the menu closes. */
   fun more(bar: ReactionBar) {
-    close()
+    focusReturns = false
+    shut()
     bar.onMore()
   }
 
@@ -196,7 +211,8 @@ class LineMenuState {
 
   /** A pick acts as the menu closes, as the system's context menu does. */
   fun pick(item: LineMenuItem) {
-    close()
+    focusReturns = false
+    shut()
     item.run()
   }
 }
@@ -240,13 +256,17 @@ fun LineMenu(state: LineMenuState, reducedMotion: Boolean) {
   LaunchedEffect(line, state.visible.targetState, reducedMotion) {
     if (reducedMotion) lift.snapTo(1f) else lift.animateTo(if (state.visible.targetState) LIFTED_SCALE else 1f, spatial)
   }
-  Box(Modifier.fillMaxSize().onGloballyPositioned { origin = it.positionInWindow() }) {
+  // A keyboard's focus stays among the reactions and the items while it is open, as in the system's
+  // menus, which are windows of their own: never out to the chat under the scrim. Closing, it lets
+  // the focus go where a pick puts it (返信 and 編集 on the composer).
+  Box(Modifier.fillMaxSize().onGloballyPositioned { origin = it.positionInWindow() }.focusProperties { onExit = { if (state.visible.targetState) cancelFocusChange() } }.focusGroup()) {
     AnimatedVisibility(state.visible, enter = fadeIn(), exit = fadeOut()) {
       Box(
         Modifier.fillMaxSize()
           .background(MaterialTheme.colorScheme.scrim.copy(alpha = SCRIM))
           // Not a screen reader's: it closes the menu by a back, as the chat under it is out of its reach.
           .clearAndSetSemantics {}
+          .focusProperties { canFocus = false }
           .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { state.close() }
       )
     }

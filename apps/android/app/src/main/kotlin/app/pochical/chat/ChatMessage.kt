@@ -313,9 +313,9 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
   val menuLabel = stringResource(if (photoSeq != null) R.string.chat_photo_open else R.string.chat_menu)
   val activate = { if (photoSeq != null) handlers.openPhoto(photoSeq, 0) else openMenu(null) }
   // Gone to, a screen reader reads on from it (spec/chat.md, Screen readers): the focus put on the
-  // line once, which a screen reader's follows. Lines are focusable only with a screen reader on:
-  // focusable, not a bare focus target, so the line's node says it is focused and Compose tells
-  // TalkBack (TYPE_VIEW_FOCUSED), which it hears of no other way.
+  // line once, which a screen reader's follows: focusable, not a bare focus target, so the line's
+  // node says it is focused and Compose tells TalkBack (TYPE_VIEW_FOCUSED), which it hears of no
+  // other way.
   val focus = remember { FocusRequester() }
   val readHere = handlers.readFrom?.takeIf { look.seq != null && it.seq == look.seq }
   LaunchedEffect(readHere) {
@@ -325,38 +325,32 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
     }
   }
   // With a keyboard a line is gone to by Tab and the arrows too, drawn with Material's focus layer,
-  // and Enter activates it; its menu closed, the focus comes back to it (spec/chat.md, A keyboard and
-  // a mouse).
+  // and Enter activates it; its menu closed, the focus comes back to it unless what was picked took
+  // it (spec/chat.md, A keyboard and a mouse). Focusable whatever the input, so the Tab that turns a
+  // touch screen to keys reaches the lines too; a touch never focuses one.
   val keyboard = LocalInputModeManager.current.inputMode == InputMode.Keyboard
   val interactions = remember { MutableInteractionSource() }
   var keyed by remember { mutableStateOf(false) }
-  val focusable = handlers.reading || keyboard
   LaunchedEffect(lifted) {
     if (!lifted && keyed) {
       keyed = false
-      if (focusable) focus.requestFocus()
+      if (menu.focusReturns) focus.requestFocus()
     }
   }
   Box(
     modifier
-      .then(
-        if (focusable) {
-          Modifier.focusRequester(focus)
-            .onKeyEvent { event ->
-              if (event.key !in ACTIVATING_KEYS) return@onKeyEvent false
-              if (event.type == KeyEventType.KeyUp) {
-                keyed = photoSeq == null
-                activate()
-              }
-              true
-            }
-            .focusable(interactionSource = interactions)
-            // Drawn for a keyboard's focus; a screen reader draws its own.
-            .then(if (keyboard) Modifier.indication(interactions, ripple()) else Modifier)
-        } else {
-          Modifier
+      .focusRequester(focus)
+      .onKeyEvent { event ->
+        if (event.key !in ACTIVATING_KEYS) return@onKeyEvent false
+        if (event.type == KeyEventType.KeyUp) {
+          keyed = photoSeq == null
+          activate()
         }
-      )
+        true
+      }
+      .focusable(interactionSource = interactions)
+      // Drawn for a keyboard's focus; a screen reader draws its own.
+      .then(if (keyboard) Modifier.indication(interactions, ripple()) else Modifier)
       .zIndex(if (handlers.spray?.seq == look.seq && look.seq != null) 1f else 0f)
       .fillMaxWidth()
       .padding(top = (if (look.startsRun) Chat.runGap else Chat.lineGap).dp)
