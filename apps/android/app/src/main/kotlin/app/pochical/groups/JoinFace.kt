@@ -29,7 +29,6 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.pochical.SettingsPage
 import app.pochical.Footnote
 import app.pochical.LimitedTextField
 import app.pochical.LocalAccount
@@ -38,6 +37,7 @@ import app.pochical.R
 import app.pochical.ReviewPrompt
 import app.pochical.SectionHeader
 import app.pochical.SectionRow
+import app.pochical.SettingsPage
 import app.pochical.SettingsRow
 import app.pochical.OnLeftForGood
 import app.pochical.design.FaceDrawing

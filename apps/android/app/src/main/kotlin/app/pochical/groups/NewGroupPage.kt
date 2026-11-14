@@ -21,13 +21,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.pochical.SettingsPage
 import app.pochical.ConfirmAction
 import app.pochical.Footnote
 import app.pochical.LimitedTextField
 import app.pochical.LocalThemeColors
 import app.pochical.R
 import app.pochical.ReviewPrompt
+import app.pochical.SettingsPage
 import app.pochical.SettingsRow
 import app.pochical.SettingsSection
 import app.pochical.design.TextLimits

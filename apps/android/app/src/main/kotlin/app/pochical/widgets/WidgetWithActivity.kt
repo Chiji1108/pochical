@@ -34,9 +34,9 @@ import androidx.glance.appwidget.state.getAppWidgetState
 import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.lifecycle.lifecycleScope
-import app.pochical.SettingsPage
 import app.pochical.PochicalTheme
 import app.pochical.R
+import app.pochical.SettingsPage
 import app.pochical.groups.LocalGroupCalls
 import app.pochical.groups.MemberAvatar
 import app.pochical.kit.PhotoShelf

@@ -56,8 +56,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import app.pochical.SettingsPage
 import app.pochical.R
+import app.pochical.SettingsPage
 import app.pochical.chat.GroupedMenu
 import app.pochical.chat.LineMenuItem
 import app.pochical.contextClick

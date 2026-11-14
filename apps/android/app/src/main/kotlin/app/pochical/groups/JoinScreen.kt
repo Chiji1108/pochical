@@ -48,13 +48,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import app.pochical.SettingsPage
 import app.pochical.Headline
 import app.pochical.ListSheet
 import app.pochical.MarkFrame
 import app.pochical.MarkFrameSize
 import app.pochical.R
 import app.pochical.ReviewPrompt
+import app.pochical.SettingsPage
 import app.pochical.balanced
 import app.pochical.design.GROUP_MAX_MEMBERS
 import app.pochical.design.Metrics

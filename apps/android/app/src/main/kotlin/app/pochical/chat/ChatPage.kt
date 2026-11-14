@@ -5,6 +5,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.compose.LifecycleEventEffect
+import app.pochical.PageScaffold
 import app.pochical.notifications.ShowingChat
 import app.pochical.notifications.LocalNotificationAsking
 import app.pochical.calendar.fullText
@@ -108,7 +109,6 @@ import app.pochical.kit.directThread
 import app.pochical.kit.inviteCode
 import app.pochical.kit.folds
 import app.pochical.kit.placeRules
-import app.pochical.PageScaffold
 import app.pochical.R
 import app.pochical.design.Chat
 import app.pochical.design.SyncSocket

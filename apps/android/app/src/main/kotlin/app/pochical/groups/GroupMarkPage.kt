@@ -22,7 +22,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import app.pochical.SettingsPage
 import app.pochical.ChoiceButtons
 import app.pochical.EmojiPickerSheet
 import app.pochical.Footnote
@@ -35,6 +34,7 @@ import app.pochical.MarkLetterField
 import app.pochical.PageDialog
 import app.pochical.R
 import app.pochical.SectionHeader
+import app.pochical.SettingsPage
 import app.pochical.design.MarkIconNames
 import app.pochical.design.ReadyPatterns
 import app.pochical.design.TextLimits

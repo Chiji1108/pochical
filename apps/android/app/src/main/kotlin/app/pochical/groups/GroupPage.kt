@@ -22,8 +22,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.pochical.SettingsPage
 import app.pochical.R
+import app.pochical.SettingsPage
 import app.pochical.kit.GroupMemberRow
 import app.pochical.kit.GroupRow
 

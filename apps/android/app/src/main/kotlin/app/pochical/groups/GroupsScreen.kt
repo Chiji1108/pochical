@@ -77,11 +77,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.pochical.PageScaffold
 import app.pochical.Headline
 import app.pochical.LocalAccount
 import app.pochical.LocalNotifyingUnread
 import app.pochical.LocalThemeColors
+import app.pochical.PageScaffold
 import app.pochical.R
 import app.pochical.RootPage
 import app.pochical.SectionHeader

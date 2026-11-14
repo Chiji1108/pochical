@@ -16,12 +16,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.pochical.SettingsPage
 import app.pochical.ConfirmAction
 import app.pochical.PageDialog
 import app.pochical.R
 import app.pochical.ReviewPrompt
 import app.pochical.RowEnd
+import app.pochical.SettingsPage
 import app.pochical.SettingsRow
 import app.pochical.SettingsSection
 import app.pochical.SettingsSwitchRow
