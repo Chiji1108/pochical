@@ -276,7 +276,7 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
           ReactionBar(chosen, onReact = { emoji -> handlers.react(seq, emoji, emoji !in chosen) }, onMore = { handlers.moreReactions(seq) })
         }
       val items = if (url != null) handlers.linkItems(url) else handlers.items(look)
-      menu.open(MenuLine(look.key, look.mine, look.waiting != null, items, bar) { LineBody(look, handlers, live = false, onQuote = {}) }, at.unclipped(), drag.give.value)
+      menu.open(MenuLine(look.key, look.mine, look.waiting != null, items, bar) { LineBody(look, handlers, live = false, onQuote = {}) }, at.unclipped(), drag.give.value, takesFocus = pressed == null)
     }
   }
   val gestures =
@@ -330,16 +330,17 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
   val keyboard = LocalInputModeManager.current.inputMode == InputMode.Keyboard
   val interactions = remember { MutableInteractionSource() }
   var keyed by remember { mutableStateOf(false) }
+  val focusable = handlers.reading || keyboard
   LaunchedEffect(lifted) {
     if (!lifted && keyed) {
       keyed = false
-      focus.requestFocus()
+      if (focusable) focus.requestFocus()
     }
   }
   Box(
     modifier
       .then(
-        if (handlers.reading || keyboard) {
+        if (focusable) {
           Modifier.focusRequester(focus)
             .onKeyEvent { event ->
               if (event.key !in ACTIVATING_KEYS) return@onKeyEvent false
@@ -350,7 +351,8 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
               true
             }
             .focusable(interactionSource = interactions)
-            .indication(interactions, ripple())
+            // Drawn for a keyboard's focus; a screen reader draws its own.
+            .then(if (keyboard) Modifier.indication(interactions, ripple()) else Modifier)
         } else {
           Modifier
         }

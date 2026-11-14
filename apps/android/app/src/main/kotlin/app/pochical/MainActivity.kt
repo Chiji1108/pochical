@@ -138,8 +138,15 @@ class MainActivity(
    * nothing behind it, it leaves the app where it is rather than closing it. Compose's own dialogs and
    * menus close by it themselves, before it gets here.
    */
+  override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+    if (keyCode != KeyEvent.KEYCODE_ESCAPE || !onBackPressedDispatcher.hasEnabledCallbacks()) return super.onKeyDown(keyCode, event)
+    // Tracked as the back key is, so an Esc let go elsewhere, or cancelled, goes back from nothing.
+    event.startTracking()
+    return true
+  }
+
   override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
-    if (keyCode != KeyEvent.KEYCODE_ESCAPE || !onBackPressedDispatcher.hasEnabledCallbacks()) return super.onKeyUp(keyCode, event)
+    if (keyCode != KeyEvent.KEYCODE_ESCAPE || !event.isTracking || event.isCanceled) return super.onKeyUp(keyCode, event)
     onBackPressedDispatcher.onBackPressed()
     return true
   }

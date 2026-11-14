@@ -417,7 +417,8 @@ fun Composer(
               .focusRequester(state.focus)
               .onPreviewKeyEvent { event ->
                 if (!event.sends()) return@onPreviewKeyEvent false
-                if (event.type == KeyEventType.KeyDown && sendable) send()
+                // Held down, it sends once.
+                if (event.type == KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount == 0 && sendable) send()
                 true
               }
               .contentReceiver { content ->
