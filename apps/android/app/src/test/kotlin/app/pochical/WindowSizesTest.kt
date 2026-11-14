@@ -35,10 +35,13 @@ class WindowSizesTest {
   private fun window(qualifiers: String) = RuntimeEnvironment.setQualifiers(qualifiers)
 
   /** グループ with a chat open, as RootScreen lays it out: the tabs, and the page over or beside them. */
-  private fun groupsWithAPage() {
-    val navigator = RootNavigator(NavBackStack(RootPage.Chat("g", "t")), mutableStateOf(RootTab.Groups))
+  private fun groupsWithAPage() = tabWithAPage(RootTab.Groups, RootPage.Chat("g", "t"))
+
+  /** [tab] with [page] open, as RootScreen lays it out. */
+  private fun tabWithAPage(tab: RootTab, page: RootPage) {
+    val navigator = RootNavigator(NavBackStack(page), mutableStateOf(tab))
     compose.setContent {
-      NavDisplay(backStack = navigator.routes, onBack = navigator::back, sceneStrategies = listOf(rememberTabPanes(navigator.tab))) { route ->
+      NavDisplay(backStack = navigator.routes, onBack = navigator::back, sceneStrategies = listOf(rememberTabPanes(navigator.tab, navigator.routes.last()))) { route ->
         NavEntry(route, route.toString(), paneOf(route) { navigator.tab }) {
           Text(if (route == Tabs) "tabs" else "page", Modifier.fillMaxSize())
         }
@@ -72,6 +75,26 @@ class WindowSizesTest {
     assertEquals(456.dp.value, tabs.across, 1f)
     assertTrue(page.left >= tabs.right)
     assertEquals(tabs.top, page.top)
+  }
+
+  @Test
+  fun aTabletOnItsSideOpensTheShiftListInTheCalendarsPane() {
+    window("w1280dp-h800dp")
+    tabWithAPage(RootTab.Calendar, RootPage.ShiftChoice("2026-11-20"))
+    val tabs = compose.onNodeWithText("tabs").assertIsDisplayed().getUnclippedBoundsInRoot()
+    val page = compose.onNodeWithText("page").assertIsDisplayed().getUnclippedBoundsInRoot()
+    // The list as wide as the calendar's own pane, the tabs taking the rest (spec/calendar.md, On a wide screen).
+    assertEquals(SUPPORTING_PANE_WIDTH.value, page.across, 1f)
+    assertTrue(tabs.across > 456f)
+    assertTrue(page.left >= tabs.right)
+  }
+
+  @Test
+  fun aTabletUprightPushesTheShiftListOverTheCalendar() {
+    window("w800dp-h1280dp")
+    tabWithAPage(RootTab.Calendar, RootPage.ShiftChoice("2026-11-20"))
+    compose.onNodeWithText("page").assertIsDisplayed()
+    compose.onNodeWithText("tabs").assertDoesNotExist()
   }
 
   private fun pageDialog() =
