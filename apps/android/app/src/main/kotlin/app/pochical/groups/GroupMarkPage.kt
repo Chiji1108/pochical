@@ -28,8 +28,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import app.pochical.ChoiceButtons
 import app.pochical.EmojiPickerSheet
 import app.pochical.Footnote
@@ -39,6 +37,7 @@ import app.pochical.MarkColorGrid
 import app.pochical.MarkFrame
 import app.pochical.MarkFrameSize
 import app.pochical.MarkLetterField
+import app.pochical.PageDialog
 import app.pochical.R
 import app.pochical.SectionHeader
 import app.pochical.design.MarkIconNames
@@ -92,7 +91,7 @@ fun GroupMarkPage(
   val firstLetter = initialLetter(name)
   // The icon's or letters' color, else the one they start in.
   val color = mark.paletteColor ?: freeColor
-  Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+  PageDialog(onDismissRequest = onClose) {
     val bar = TopAppBarDefaults.pinnedScrollBehavior()
     Scaffold(
       Modifier.fillMaxSize().nestedScroll(bar.nestedScrollConnection),
