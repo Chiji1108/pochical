@@ -120,7 +120,7 @@ fun RootScreen(navigator: RootNavigator) {
     NavDisplay(
       backStack = navigator.routes,
       onBack = navigator::back,
-      sceneStrategies = listOf(rememberTabPanes(navigator.tab)),
+      sceneStrategies = listOf(rememberTabPanes(navigator.tab, navigator.routes.last())),
       entryDecorators = rememberPageDecorators(navigator.routes.mapTo(HashSet(), ::contentKey)),
       sharedTransitionScope = this,
       transitionSpec = push,
@@ -260,6 +260,7 @@ private fun TabScreen(navigator: RootNavigator, navigation: PageNavigation, hide
       CalendarScreen(
         open = navigation::show,
         hidesTabBar = hidesTabBar,
+        closePane = navigator::closePages,
         opening = navigator.openingDay,
         onOpening = { navigator.openingDay = null },
       )

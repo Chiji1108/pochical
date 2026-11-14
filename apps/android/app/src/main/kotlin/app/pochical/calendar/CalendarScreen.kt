@@ -12,6 +12,17 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedContent
+import app.pochical.paneDirective
+import app.pochical.SUPPORTING_PANE_WIDTH
+import androidx.compose.material3.adaptive.navigation3.LocalSupportingPaneSceneScope
+import androidx.compose.material3.adaptive.layout.ThreePaneScaffoldValue
+import androidx.compose.material3.adaptive.layout.SupportingPaneScaffold
+import androidx.compose.material3.adaptive.layout.PaneAdaptedValue
+import androidx.compose.material3.adaptive.layout.AnimatedPane
+import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.foundation.pager.PagerState
+import androidx.compose.animation.core.rememberTransition
+import androidx.compose.animation.core.SeekableTransitionState
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutLinearInEasing
@@ -23,6 +34,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -36,6 +49,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.exclude
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -155,15 +170,20 @@ private const val FADE_THROUGH_IN = 210
 /**
  * カレンダー: the person's month, a page a month, turned by swiping, a
  * day opened from it under its week, and ポチポチ入力 under the month
- * (spec/calendar.md, The month, A day's detail and ポチポチ入力).
+ * (spec/calendar.md, The month, A day's detail and ポチポチ入力). On a wide window the month never
+ * folds: the day stands in a pane beside it, today's while none is open, with ポチポチ入力 at its
+ * foot (On a wide screen); the state is one, so the window widened or narrowed keeps where it was.
  * `hidesTabBar` says when a day or the tray takes the tab bar's place.
+ * `closePane` takes away シフト's list standing in the pane's place, as a day tapped does.
  * `opening` is a day a link asks to open, as a tap on it does (spec/widgets.md,
  * Opening the app), taken with `onOpening`.
  */
+@OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
 fun CalendarScreen(
   open: (RootPage) -> Unit,
   hidesTabBar: (Boolean) -> Unit,
+  closePane: () -> Unit,
   opening: LocalDate? = null,
   onOpening: () -> Unit = {},
 ) {
@@ -176,6 +196,11 @@ fun CalendarScreen(
   val country = remember { holidayCountry() }
   val reduceMotion = rememberReducedMotion()
   val resources = LocalResources.current
+  // Two panes side by side, the window's own split (spec/calendar.md, On a wide screen).
+  val directive = paneDirective()
+  val wide = directive.maxHorizontalPartitions > 1
+  // シフト's list stands in the pane's place, a page beside the tabs (TabPanes).
+  val listBeside = LocalSupportingPaneSceneScope.current != null
   // The pages count from the month the screen opened on, so they stay put
   // when today moves into another month.
   val openedMonth = rememberSaveable { YearMonth.from(today).toString() }
@@ -201,16 +226,26 @@ fun CalendarScreen(
   val folded = foldedKey?.let(YearMonth::parse) ?: range.monthAt(pager.currentPage)
   // 一緒に働く人 stays unfolded as another day opens, for noting people day after day.
   var peopleOpen by rememberSaveable { mutableStateOf(false) }
-  // How far the month is folded into the opened day's week, 0 to 1.
+  // How far the month is folded into the opened day's week, 0 to 1; on a wide window, where it
+  // never folds, as it would be on a phone, for the window narrowed.
   val fold = remember { Animatable(if (opened != null) 1f else 0f) }
   // How much of the fold a finger pulling the week down has taken back, until it lets go.
   var pulled by remember { mutableFloatStateOf(0f) }
   val folding = (fold.value - pulled).coerceIn(0f, 1f)
   var closing by remember { mutableStateOf(false) }
+  // The day the pane shows on a wide window, and what is under its bar on the way to another.
+  val paneDay = opened ?: today
+  val paneHolds = remember { SeekableTransitionState(paneDay) }
+  val paneTransition = rememberTransition(paneHolds, label = "pane")
+  LaunchedEffect(paneDay) { if (reduceMotion) paneHolds.snapTo(paneDay) else paneHolds.animateTo(paneDay) }
   // The day ポチポチ入力 enters next, while entering, and what its last key did, for a screen reader.
   var enteringKey by rememberSaveable { mutableStateOf<String?>(null) }
   val entering = enteringKey?.let(LocalDate::parse)
   var said by remember { mutableStateOf<String?>(null) }
+  // The day a key last entered, opened in the pane once entering has ended on a wide window.
+  var lastEnteredKey by rememberSaveable { mutableStateOf<String?>(null) }
+  // The tray's page of keys, kept as the tray moves between the screen's foot and the pane.
+  val keyPages = rememberPagerState { pageCount(calendar.patterns.count { !it.archived }) }
   // The blank days 完了 asks about, and the pattern picked to fill them.
   var gapKeys by rememberSaveable { mutableStateOf("") }
   // The first day of the page they are on, as the question dates a month's 1st past it.
@@ -248,18 +283,12 @@ fun CalendarScreen(
     // Offered instead of the review, which waits for another time (spec/review.md).
     reviewSeen = dayEdits
   }
-  // ポチポチ入力 and 完了's question about the blank days have closed.
-  fun closedEntering() {
-    finishing = false
-    if (!entered) return
-    entered = false
-    offerReminders()
-  }
   // Something put on the days, once entering, a day and 完了's question have all closed: the store's
   // review prompt, if the person has used Pochical long enough (spec/review.md). A memo kept as its
-  // day closes comes after the day has gone.
+  // day closes comes after the day has gone. On a wide window the pane is always there, so a day
+  // in it is no day open.
   val activity = LocalActivity.current
-  val done = opened == null && entering == null && !finishing && gaps.isEmpty() && offeringReminders == null
+  val done = (wide || opened == null) && entering == null && !finishing && gaps.isEmpty() && offeringReminders == null
   LaunchedEffect(done, dayEdits) {
     // The count starts from 0 in each process, so one kept from an ended process is taken as seen.
     if (dayEdits < reviewSeen) reviewSeen = dayEdits
@@ -274,18 +303,53 @@ fun CalendarScreen(
     settings.change { it.copy(reminderOfferWaiting = false) }
     offerReminders()
   }
-  LaunchedEffect(showsDay || entering != null) { hidesBar(showsDay || entering != null) }
+  // The tab bar gives way on a phone; beside the pane the rail stays.
+  val hides = !wide && (showsDay || entering != null)
+  LaunchedEffect(hides) { hidesBar(hides) }
 
   fun monthShowing(day: LocalDate, month: YearMonth): YearMonth =
     if (period.page(month).weeks(week.start).any { day in it }) month else period.monthHolding(day)
 
   // Only a day the pages show opens, so no week is asked for past them.
   val reachable = range.days(week.start)
-  fun openDay(day: LocalDate, from: YearMonth = folded) {
+  fun openDay(day: LocalDate, from: YearMonth = if (wide) range.monthAt(pager.currentPage) else folded) {
     if (day !in reachable) return
+    // A day tapped while シフト's list stands in the pane's place opens in the pane instead.
+    if (listBeside) closePane()
     foldedKey = monthShowing(day, from).toString()
     openedKey = day.toString()
-    scope.launch { if (reduceMotion) fold.snapTo(1f) else fold.animateTo(1f, Springs.standard()) }
+    scope.launch { if (reduceMotion || wide) fold.snapTo(1f) else fold.animateTo(1f, Springs.standard()) }
+  }
+
+  // ‹ and ›: the day before or after the one shown; on a wide window, past the page's weeks, the
+  // pages turn to the page holding it, as a swipe turns them.
+  fun step(by: Int) {
+    val day = paneDay.plusDays(by.toLong())
+    if (wide) {
+      val shown = range.monthAt(pager.currentPage)
+      if (day in reachable && monthShowing(day, shown) != shown) turnTo(period.monthHolding(day))
+    }
+    openDay(day)
+  }
+
+  // On a wide window the month a day's week would fold out of follows the page shown, so the window
+  // narrowed folds the page it showed; on a phone the pages wait on the month folded, so the window
+  // widened shows that page (spec/calendar.md, On a wide screen: Widened or narrowed).
+  LaunchedEffect(wide, opened, pager.settledPage) {
+    val day = opened ?: return@LaunchedEffect
+    if (wide) foldedKey = monthShowing(day, range.monthAt(pager.settledPage)).toString()
+  }
+  LaunchedEffect(wide, foldedKey) { if (!wide && foldedKey != null) pager.requestScrollToPage(range.pageOf(folded)) }
+
+  // ポチポチ入力 and 完了's question about the blank days have closed: on a wide window the last day
+  // entered opens in the pane.
+  fun closedEntering() {
+    finishing = false
+    lastEnteredKey?.let { if (wide) openDay(LocalDate.parse(it), from = period.monthHolding(LocalDate.parse(it))) }
+    lastEnteredKey = null
+    if (!entered) return
+    entered = false
+    offerReminders()
   }
 
   /** Entering starts on the page's first blank day, its first when none is blank. */
@@ -389,7 +453,7 @@ fun CalendarScreen(
   }
 
   // A back, predictive or not, unfolds the month, following the finger as it goes.
-  PredictiveBackHandler(enabled = opened != null && !closing) { progress ->
+  PredictiveBackHandler(enabled = !wide && opened != null && !closing) { progress ->
     try {
       progress.collect { fold.snapTo(1f - it.progress) }
       // In the screen's scope: unfolding disables this handler, which would cancel what it runs.
@@ -401,211 +465,321 @@ fun CalendarScreen(
     }
   }
 
-  // What stands under the days: ポチポチ入力, or its tray while entering.
-  val foot = updateTransition(entering != null, "entering")
-  val sky = rememberSurpriseSky(reduceMotion)
-  Column(
-    Modifier.fillMaxSize()
-      .drawBehind(sky)
-      .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
-  ) {
+  // On a wide window a back closes the day open, the pane going back to today's, which shows under
+  // the open day's as the finger moves; while シフト's list is beside, a back takes the list.
+  PredictiveBackHandler(enabled = wide && opened != null && entering == null && !listBeside) { progress ->
+    val from = opened
+    try {
+      progress.collect { if (from != today) paneHolds.seekTo(it.progress, targetState = today) }
+      // Nothing waits after the day is closed, as closing it disables this handler.
+      fold.snapTo(0f)
+      openedKey = null
+      foldedKey = null
+    } catch (e: CancellationException) {
+      withContext(NonCancellable) { paneHolds.animateTo(paneHolds.currentState) }
+      throw e
+    }
+  }
+
+  @Composable
+  fun heading() =
     Heading(
-      pages = if (opened != null) range.pageOf(folded).toFloat() else pager.currentPage + pager.currentPageOffsetFraction,
+      pages = if (opened != null && !wide) range.pageOf(folded).toFloat() else pager.currentPage + pager.currentPageOffsetFraction,
       range = range,
       todayPage = range.pageOf(period.monthHolding(today)),
       byPeriod = period.byPeriod,
       reduceMotion = reduceMotion,
-      dayOpen = opened != null,
+      // On a wide window the month never folds, so its heading stays the month's.
+      dayOpen = opened != null && !wide,
       entering = entering != null,
       thisWeekAway = opened != null && opened.weekStartingOn(week.start) != today.weekStartingOn(week.start),
       onPick = { turnTo(it) },
-      onThisMonth = { turnTo(period.monthHolding(today)) },
+      onThisMonth = {
+        val month = period.monthHolding(today)
+        turnTo(month)
+        // The pane would otherwise show a day off the page.
+        if (wide && opened != null) openDay(today, from = month)
+      },
       onThisWeek = { openDay(today) },
       onDone = ::finish,
       // The page the heading names, though the pages are still on their way to it.
       onPicture = { open(RootPage.MonthPicture(range.monthAt(pager.currentPage).toString())) },
       onDeviceCalendar = { open(RootPage.DeviceCalendar(range.monthAt(pager.currentPage).toString())) },
     )
-    WeekdayRow(week, Modifier.padding(horizontal = SCREEN_EDGE).padding(bottom = 12.dp))
-    BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
-      // The days take their size from the room left at rest, so neither the foot nor the tab bar moves
-      // them on the way, and ease to a room that differs once all is still.
-      val footMoving = foot.isRunning || foot.currentState != foot.targetState
-      val room = remember { mutableStateOf(maxHeight) }.apply { if (!footMoving) value = maxHeight }.value
-      val cell by animateDpAsState(monthCellHeight(room - DAY_GAP), Springs.standard(), label = "cell")
-      val monthHeight = monthGridHeight(cell)
-      Column {
-        val select by rememberUpdatedState(::selectDay)
-        // While 完了 asks, the blank days show faint as the pattern picked would fill them.
-        val preview = if (gapFill != null) gaps.associateWith { gapFill } else emptyMap()
-        val pageDays =
-          remember(calendar, week, period, today, country, cell, opened, entering, preview) {
-            PageDays(
-              calendar,
-              week,
-              period,
-              today,
-              country,
-              cell,
-              selected = entering ?: opened,
-              isEntering = entering != null,
-              preview = preview,
-              onSelect = { select(it) },
-            )
-          }
-        // Pulling the week down unfolds the month, following the finger: let
-        // go past a third of the way, or flicked down, it unfolds, else it
-        // folds back. A pull never presses the day it starts on.
-        val unfoldPx = with(LocalDensity.current) { (monthHeight - cell).toPx() }
-        val flickPx = with(LocalDensity.current) { UNFOLD_FLICK.toPx() }
-        val pull = rememberDraggableState { down -> pulled = (pulled + down / unfoldPx).coerceIn(0f, fold.value) }
-        Box(
-          Modifier.fillMaxWidth()
-            // As tall as the days past the room the foot leaves them on its way, and within it at rest.
-            .wrapContentHeight(Alignment.Top, unbounded = footMoving)
-            .height(cell + (monthHeight - cell) * (1 - folding))
-            .clipToBounds()
-            .draggable(
-              pull,
-              Orientation.Vertical,
-              enabled = opened != null && !closing,
-              onDragStopped = { speed ->
-                // In the screen's scope: unfolding disables this drag, which
-                // would cancel what it runs.
-                scope.launch {
-                  fold.snapTo((fold.value - pulled).coerceIn(0f, 1f))
-                  pulled = 0f
-                  val unfolds = if (abs(speed) > flickPx) speed > 0 else fold.value < 1 - UNFOLD_SHARE
-                  if (unfolds) unfold() else fold.animateTo(1f, Springs.standard())
-                }
-              },
-            )
-        ) {
-          when {
-            opened == null && folding == 0f ->
-              // The pages run to the screen's edges, so a month slides out
-              // of sight rather than being cut off inside them.
-              HorizontalPager(
-                pager,
-                Modifier.fillMaxWidth(),
-                beyondViewportPageCount = 1,
-                verticalAlignment = Alignment.Top,
-                flingBehavior = PagerDefaults.flingBehavior(pager, snapAnimationSpec = Springs.standard()),
-              ) { page ->
-                MonthPage(range.monthAt(page), pageDays, Modifier.padding(horizontal = SCREEN_EDGE))
-              }
-            opened != null && folding == 1f && !closing ->
-              // Its pages counted anew from the range's first week when the range changes.
-              key(range) {
-                WeekPager(opened, range, week.start, pageDays) { day ->
-                  foldedKey = monthShowing(day, folded).toString()
-                  openedKey = day.toString()
-                }
-              }
-            else ->
-              MonthPage(folded, pageDays, Modifier.padding(horizontal = SCREEN_EDGE), foldedInto = opened, fold = folding)
-          }
-        }
-        if (opened != null && !closing) {
-          DayDetail(
-            day = opened,
-            calendar = calendar,
-            days = days,
-            peopleOpen = peopleOpen,
-            onPeopleOpenChange = { peopleOpen = it },
-            onStep = { step -> openDay(opened.plusDays(step.toLong())) },
-            canStep = { step -> opened.plusDays(step.toLong()) in reachable },
-            onClose = { scope.launch { unfold() } },
-            onPickShift = { open(RootPage.ShiftChoice(opened.toString())) },
-            reduceMotion = reduceMotion,
-            modifier = Modifier.weight(1f).padding(top = 8.dp).graphicsLayer { alpha = folding },
-          )
-        }
-      }
+
+  // Read as a day is tapped, so the pages, laid out within the panes, tap with what the screen says
+  // now: a lambda, as references to one local function are equal however their closures differ, so
+  // the state would keep the first.
+  val select by rememberUpdatedState<(LocalDate) -> Unit> { selectDay(it) }
+
+  @Composable
+  fun pageDays(cell: Dp): PageDays {
+    // While 完了 asks, the blank days show faint as the pattern picked would fill them.
+    val preview = if (gapFill != null) gaps.associateWith { gapFill } else emptyMap()
+    return remember(calendar, week, period, today, country, cell, opened, entering, preview) {
+      PageDays(
+        calendar,
+        week,
+        period,
+        today,
+        country,
+        cell,
+        selected = entering ?: opened,
+        isEntering = entering != null,
+        preview = preview,
+        onSelect = { select(it) },
+      )
     }
-    if (opened == null) {
-      // ポチポチ入力 and its tray trade places in a fade through, the one gone before the other shows. Both
-      // stand on the foot's lower edge, which goes with the tab bar, so that alone moves them; the
-      // height follows on Material's standard spatial spring, the one the scaffold gives the bar. The
-      // tray fading out keeps its last day.
-      val trayDay = remember { mutableStateOf<LocalDate?>(null) }.apply { if (entering != null) value = entering }.value
-      foot.AnimatedContent(
-        Modifier.padding(horizontal = SCREEN_EDGE).padding(top = 12.dp, bottom = 12.dp),
-        transitionSpec = {
-          fadeIn(tween(FADE_THROUGH_IN, delayMillis = FADE_THROUGH_OUT, easing = LinearOutSlowInEasing)) togetherWith
-            fadeOut(tween(FADE_THROUGH_OUT, easing = FastOutLinearInEasing)) using
-            SizeTransform(clip = false) { _, _ -> MotionScheme.standard().defaultSpatialSpec() }
-        },
-        contentAlignment = Alignment.BottomCenter,
-      ) { on ->
-        val day = trayDay
-        if (!on || day == null) {
-          Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            MonthSummary(
-              pages = { pager.currentPage + pager.currentPageOffsetFraction },
-              monthAt = range::monthAt,
-              thisMonth = YearMonth.from(today),
-              byPeriod = period.byPeriod,
-              reduceMotion = reduceMotion,
-              daysOff = { month -> offCounts[month] ?: calendar.daysOffCount(period.page(month)) },
-              // The row fading out as entering starts opens nothing.
-              onOpen = { if (enteringKey == null) breakingDown = it.toString() },
-            )
-            Button(
-              shapes = ButtonDefaults.shapes(),
-              onClick = {
-                // The page the pages settle on, as a swipe while entering starts there too.
-                val month = range.monthAt(pager.settledPage)
-                said = null
-                enteringKey = firstBlank(month).toString()
-              },
-              modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control),
-            ) {
-              Icon(painterResource(R.drawable.ic_edit), null, Modifier.size(20.dp))
-              Spacer(Modifier.width(8.dp))
-              Text(stringResource(R.string.entering), style = PochicalTextStyles.headline)
+  }
+
+  @Composable
+  fun summary(modifier: Modifier = Modifier) =
+    MonthSummary(
+      pages = { pager.currentPage + pager.currentPageOffsetFraction },
+      monthAt = range::monthAt,
+      thisMonth = YearMonth.from(today),
+      byPeriod = period.byPeriod,
+      reduceMotion = reduceMotion,
+      daysOff = { month -> offCounts[month] ?: calendar.daysOffCount(period.page(month)) },
+      // The row fading out as entering starts opens nothing.
+      onOpen = { if (enteringKey == null) breakingDown = it.toString() },
+      modifier = modifier,
+    )
+
+  @Composable
+  fun enterButton(modifier: Modifier = Modifier) =
+    Button(
+      shapes = ButtonDefaults.shapes(),
+      onClick = {
+        // The page the pages settle on, as a swipe while entering starts there too.
+        val month = range.monthAt(pager.settledPage)
+        said = null
+        lastEnteredKey = null
+        enteringKey = firstBlank(month).toString()
+        scope.launch { keyPages.scrollToPage(0) }
+      },
+      modifier = modifier.fillMaxWidth().heightIn(min = Metrics.control),
+    ) {
+      Icon(painterResource(R.drawable.ic_edit), null, Modifier.size(20.dp))
+      Spacer(Modifier.width(8.dp))
+      Text(stringResource(R.string.entering), style = PochicalTextStyles.headline)
+    }
+
+  @Composable
+  fun tray(day: LocalDate, modifier: Modifier = Modifier) {
+    // Entering stays on the page of the day entered, to its last day.
+    val last = period.pageHolding(day).last
+    EntryTray(
+      day = day,
+      week = week,
+      country = country,
+      patterns = calendar.patterns.filterNot { it.archived },
+      canClear = calendar.shown(day, day).containsKey(day),
+      canSkip = day != last,
+      said = said,
+      onEnter = { shift ->
+        // A key of the tray fading out after 完了 enters nothing.
+        if (enteringKey != day.toString()) return@EntryTray
+        days.enter(day, shift)
+        lastEnteredKey = day.toString()
+        if (shift != null) entered = true
+        val next = selectedAfterEntering(shift, day, last, calendar::nextDay)
+        enteringKey = next.toString()
+        val pattern = shift?.let { id -> calendar.patterns.find { it.id == id } }
+        val following = shift?.let(calendar::nextDay)?.let { id -> calendar.patterns.find { it.id == id } }
+        say(
+          when {
+            pattern == null -> resources.getString(R.string.entering_cleared)
+            following != null -> resources.getString(R.string.entering_entered_next, pattern.name, following.name)
+            else -> resources.getString(R.string.entering_entered, pattern.name)
+          },
+          day,
+          next,
+        )
+      },
+      onSkip = {
+        if (enteringKey != day.toString()) return@EntryTray
+        val next = minOf(day.plusDays(1), last)
+        enteringKey = next.toString()
+        say(resources.getString(R.string.entering_skipped), day, next)
+      },
+      keyPages = keyPages,
+      modifier = modifier,
+    )
+  }
+
+  // What stands under the days, or at the pane's foot: ポチポチ入力, or its tray while entering. The
+  // tray fading out keeps its last day.
+  val foot = updateTransition(entering != null, "entering")
+  val trayDay = remember { mutableStateOf<LocalDate?>(null) }.apply { if (entering != null) value = entering }.value
+  val sky = rememberSurpriseSky(reduceMotion)
+  Column(
+    Modifier.fillMaxSize()
+      .drawBehind(sky)
+      .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
+  ) {
+    if (wide) {
+      // Material's supporting pane: the month in the main pane, the day in a pane of Material's
+      // fixed width at the trailing side, or at a separating hinge one each side of it; the pane's
+      // place goes to the month while シフト's list stands in it.
+      SupportingPaneScaffold(
+        directive = directive,
+        value =
+          ThreePaneScaffoldValue(
+            primary = PaneAdaptedValue.Expanded,
+            secondary = if (listBeside) PaneAdaptedValue.Hidden else PaneAdaptedValue.Expanded,
+            tertiary = PaneAdaptedValue.Hidden,
+          ),
+        mainPane = {
+          AnimatedPane {
+            // Clear of the navigation bar but not of the keyboard: the memo is written in the pane,
+            // and the month stays as it is.
+            Column(Modifier.windowInsetsPadding(WindowInsets.safeDrawing.exclude(WindowInsets.ime).only(WindowInsetsSides.Bottom))) {
+              heading()
+              WeekdayRow(week, Modifier.padding(horizontal = SCREEN_EDGE).padding(bottom = 12.dp))
+              BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
+                val cell by animateDpAsState(monthCellHeight(maxHeight - DAY_GAP), Springs.standard(), label = "cell")
+                // A window too short for six weeks at their shortest, a phone on its side, scrolls them.
+                Box(Modifier.verticalScroll(rememberScrollState())) { MonthPager(pager, range, pageDays(cell)) }
+              }
+              // 今月のお休み stays under the month, which never folds, while not entering.
+              if (entering == null) summary(Modifier.padding(horizontal = SCREEN_EDGE).padding(vertical = 12.dp))
             }
           }
-        } else {
-          // Entering stays on the page of the day entered, to its last day.
-          val last = period.pageHolding(day).last
-          EntryTray(
-            day = day,
-            week = week,
-            country = country,
-            patterns = calendar.patterns.filterNot { it.archived },
-            canClear = calendar.shown(day, day).containsKey(day),
-            canSkip = day != last,
-            said = said,
-            onEnter = { shift ->
-              // A key of the tray fading out after 完了 enters nothing.
-              if (enteringKey != day.toString()) return@EntryTray
-              days.enter(day, shift)
-              if (shift != null) entered = true
-              val next = selectedAfterEntering(shift, day, last, calendar::nextDay)
-              enteringKey = next.toString()
-              val pattern = shift?.let { id -> calendar.patterns.find { it.id == id } }
-              val following = shift?.let(calendar::nextDay)?.let { id -> calendar.patterns.find { it.id == id } }
-              say(
-                when {
-                  pattern == null -> resources.getString(R.string.entering_cleared)
-                  following != null -> resources.getString(R.string.entering_entered_next, pattern.name, following.name)
-                  else -> resources.getString(R.string.entering_entered, pattern.name)
+        },
+        supportingPane = {
+          AnimatedPane(Modifier.preferredWidth(SUPPORTING_PANE_WIDTH)) {
+            // The day's detail, today's while none is open, ポチポチ入力 at its foot; entering, the
+            // tray in their place, trading places in the fade through the phone's foot has.
+            foot.AnimatedContent(
+              Modifier.fillMaxSize().padding(top = 8.dp).windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)),
+              transitionSpec = { fadeIn(tween(FADE_THROUGH_IN, delayMillis = FADE_THROUGH_OUT, easing = LinearOutSlowInEasing)) togetherWith fadeOut(tween(FADE_THROUGH_OUT, easing = FastOutLinearInEasing)) },
+              contentAlignment = Alignment.BottomCenter,
+            ) { on ->
+              val day = trayDay
+              if (on && day != null) {
+                Box(Modifier.fillMaxSize().padding(SCREEN_EDGE), contentAlignment = Alignment.BottomCenter) { tray(day) }
+              } else {
+                Column(Modifier.fillMaxSize()) {
+                  DayDetail(
+                    day = paneDay,
+                    holds = paneTransition,
+                    calendar = calendar,
+                    days = days,
+                    peopleOpen = peopleOpen,
+                    onPeopleOpenChange = { peopleOpen = it },
+                    onStep = { step(it) },
+                    canStep = { paneDay.plusDays(it.toLong()) in reachable },
+                    // Always there: no ×.
+                    onClose = null,
+                    onPickShift = { open(RootPage.ShiftChoice(paneDay.toString())) },
+                    reduceMotion = reduceMotion,
+                    modifier = Modifier.weight(1f),
+                  )
+                  enterButton(Modifier.padding(SCREEN_EDGE))
+                }
+              }
+            }
+          }
+        },
+      )
+    } else {
+      heading()
+      WeekdayRow(week, Modifier.padding(horizontal = SCREEN_EDGE).padding(bottom = 12.dp))
+      BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
+        // The days take their size from the room left at rest, so neither the foot nor the tab bar moves
+        // them on the way, and ease to a room that differs once all is still.
+        val footMoving = foot.isRunning || foot.currentState != foot.targetState
+        val room = remember { mutableStateOf(maxHeight) }.apply { if (!footMoving) value = maxHeight }.value
+        val cell by animateDpAsState(monthCellHeight(room - DAY_GAP), Springs.standard(), label = "cell")
+        val monthHeight = monthGridHeight(cell)
+        Column {
+          val pageDays = pageDays(cell)
+          // Pulling the week down unfolds the month, following the finger: let
+          // go past a third of the way, or flicked down, it unfolds, else it
+          // folds back. A pull never presses the day it starts on.
+          val unfoldPx = with(LocalDensity.current) { (monthHeight - cell).toPx() }
+          val flickPx = with(LocalDensity.current) { UNFOLD_FLICK.toPx() }
+          val pull = rememberDraggableState { down -> pulled = (pulled + down / unfoldPx).coerceIn(0f, fold.value) }
+          Box(
+            Modifier.fillMaxWidth()
+              // As tall as the days past the room the foot leaves them on its way, and within it at rest.
+              .wrapContentHeight(Alignment.Top, unbounded = footMoving)
+              .height(cell + (monthHeight - cell) * (1 - folding))
+              .clipToBounds()
+              .draggable(
+                pull,
+                Orientation.Vertical,
+                enabled = opened != null && !closing,
+                onDragStopped = { speed ->
+                  // In the screen's scope: unfolding disables this drag, which
+                  // would cancel what it runs.
+                  scope.launch {
+                    fold.snapTo((fold.value - pulled).coerceIn(0f, 1f))
+                    pulled = 0f
+                    val unfolds = if (abs(speed) > flickPx) speed > 0 else fold.value < 1 - UNFOLD_SHARE
+                    if (unfolds) unfold() else fold.animateTo(1f, Springs.standard())
+                  }
                 },
-                day,
-                next,
               )
-            },
-            onSkip = {
-              if (enteringKey != day.toString()) return@EntryTray
-              val next = minOf(day.plusDays(1), last)
-              enteringKey = next.toString()
-              say(resources.getString(R.string.entering_skipped), day, next)
-            },
+          ) {
+            when {
+              opened == null && folding == 0f -> MonthPager(pager, range, pageDays)
+              opened != null && folding == 1f && !closing ->
+                // Its pages counted anew from the range's first week when the range changes.
+                key(range) {
+                  WeekPager(opened, range, week.start, pageDays) { day ->
+                    foldedKey = monthShowing(day, folded).toString()
+                    openedKey = day.toString()
+                  }
+                }
+              else ->
+                MonthPage(folded, pageDays, Modifier.padding(horizontal = SCREEN_EDGE), foldedInto = opened, fold = folding)
+            }
+          }
+          if (opened != null && !closing) {
+            DayDetail(
+              day = opened,
+              holds = updateTransition(opened, "day"),
+              calendar = calendar,
+              days = days,
+              peopleOpen = peopleOpen,
+              onPeopleOpenChange = { peopleOpen = it },
+              onStep = { step(it) },
+              canStep = { step -> opened.plusDays(step.toLong()) in reachable },
+              onClose = { scope.launch { unfold() } },
+              onPickShift = { open(RootPage.ShiftChoice(opened.toString())) },
+              reduceMotion = reduceMotion,
+              modifier = Modifier.weight(1f).padding(top = 8.dp).graphicsLayer { alpha = folding },
+            )
+          }
+        }
+      }
+      if (opened == null) {
+        // ポチポチ入力 and its tray trade places in a fade through, the one gone before the other shows. Both
+        // stand on the foot's lower edge, which goes with the tab bar, so that alone moves them; the
+        // height follows on Material's standard spatial spring, the one the scaffold gives the bar.
+        foot.AnimatedContent(
+          Modifier.padding(horizontal = SCREEN_EDGE).padding(top = 12.dp, bottom = 12.dp),
+          transitionSpec = {
+            fadeIn(tween(FADE_THROUGH_IN, delayMillis = FADE_THROUGH_OUT, easing = LinearOutSlowInEasing)) togetherWith
+              fadeOut(tween(FADE_THROUGH_OUT, easing = FastOutLinearInEasing)) using
+              SizeTransform(clip = false) { _, _ -> MotionScheme.standard().defaultSpatialSpec() }
+          },
+          contentAlignment = Alignment.BottomCenter,
+        ) { on ->
+          val day = trayDay
+          if (!on || day == null) {
+            // Clear of the navigation bar beside a rail, a tablet upright's; the tab bar takes it on a phone.
+            Column(Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+              summary()
+              enterButton()
+            }
+          } else {
             // Read from the window, as the tab bar's scaffold takes the inset away the moment the bar
             // starts back, which would drop the tray by it.
-            modifier = Modifier.padding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom).asPaddingValues()),
-          )
+            tray(day, Modifier.padding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom).asPaddingValues()))
+          }
         }
       }
     }
@@ -632,6 +806,20 @@ fun CalendarScreen(
     )
   }
   offeringReminders?.let { time -> ReminderOfferDialog(time, onAccept = asking::ask, onDismiss = { offeringReminders = null }) }
+}
+
+/** The months, a page each, running to the screen's or the pane's edges, so a month slides out of sight rather than being cut off inside them. */
+@Composable
+private fun MonthPager(pager: PagerState, range: CalendarRange, days: PageDays) {
+  HorizontalPager(
+    pager,
+    Modifier.fillMaxWidth(),
+    beyondViewportPageCount = 1,
+    verticalAlignment = Alignment.Top,
+    flingBehavior = PagerDefaults.flingBehavior(pager, snapAnimationSpec = Springs.standard()),
+  ) { page ->
+    MonthPage(range.monthAt(page), days, Modifier.padding(horizontal = SCREEN_EDGE))
+  }
 }
 
 /**

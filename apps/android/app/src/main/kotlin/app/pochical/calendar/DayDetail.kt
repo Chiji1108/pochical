@@ -1,6 +1,7 @@
 package app.pochical.calendar
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Transition
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -37,6 +38,7 @@ import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -47,6 +49,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -78,13 +82,16 @@ import app.pochical.limited
 import java.time.LocalDate
 
 /**
- * A day opened from the month, under its week: its shift, its own hours,
- * the people on it and a memo (spec/calendar.md, A day's detail). Its bar
- * holds the date, ‹ › to the day before and after, and × to close.
+ * A day opened from the month, under its week or in the pane beside the month: its shift, its own
+ * hours, the people on it and a memo (spec/calendar.md, A day's detail). Its bar holds the date, ‹ ›
+ * to the day before and after, and × to close, which the pane, always there, has none of ([onClose]
+ * null). What is under the bar follows [holds] to the day it is going to, as another opens or a
+ * predictive back takes it.
  */
 @Composable
 fun DayDetail(
   day: LocalDate,
+  holds: Transition<LocalDate>,
   calendar: OwnCalendar,
   days: OwnDays,
   peopleOpen: Boolean,
@@ -92,7 +99,7 @@ fun DayDetail(
   onStep: (Int) -> Unit,
   /** Whether the day before (-1) or after (1) is one the calendar reaches. */
   canStep: (Int) -> Boolean,
-  onClose: () -> Unit,
+  onClose: (() -> Unit)?,
   onPickShift: () -> Unit,
   reduceMotion: Boolean,
   modifier: Modifier = Modifier,
@@ -111,14 +118,12 @@ fun DayDetail(
       IconButton(onClick = { onStep(1) }, enabled = canStep(1)) {
         Icon(painterResource(R.drawable.ic_chevron_right), stringResource(R.string.day_after))
       }
-      IconButton(onClick = onClose) { Icon(painterResource(R.drawable.ic_close), stringResource(R.string.close)) }
+      if (onClose != null) IconButton(onClick = onClose) { Icon(painterResource(R.drawable.ic_close), stringResource(R.string.close)) }
     }
     // Another day's crossfades in under the bar, as iOS's, the bar and its ‹ › staying put; with
     // reduced motion it just changes.
-    AnimatedContent(
-      day,
+    holds.AnimatedContent(
       transitionSpec = { if (reduceMotion) EnterTransition.None togetherWith ExitTransition.None else fadeIn() togetherWith fadeOut() },
-      label = "day",
     ) { shown ->
       DayHolds(shown, calendar, days, peopleOpen, onPeopleOpenChange, onPickShift)
     }
@@ -380,7 +385,15 @@ private fun NameDialog(onAdd: (String) -> Unit, onDismiss: () -> Unit) {
  */
 @Composable
 private fun MemoField(day: LocalDate, note: String?, days: OwnDays, modifier: Modifier = Modifier) {
-  var draft by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue(note.orEmpty())) }
+  // Kept by the day rather than by where the field stands, so a memo being written moves with its
+  // words, caret and focus as the window is widened or narrowed and the day moves between the pane
+  // and the screen (spec/calendar.md, On a wide screen).
+  var draft by rememberSaveable(stateSaver = TextFieldValue.Saver, key = "memo $day") { mutableStateOf(TextFieldValue(note.orEmpty())) }
+  var writing by rememberSaveable(key = "memo writing $day") { mutableStateOf(false) }
+  val focus = remember { FocusRequester() }
+  // As it was kept, before the field, attached unfocused, says otherwise.
+  val wasWriting = remember { writing }
+  LaunchedEffect(Unit) { if (wasWriting) focus.requestFocus() }
   val keep by rememberUpdatedState {
     val memo = limitText(draft.text, TextLimits.dayNote)
     if (memo != note.orEmpty()) days.setNote(day, memo)
@@ -390,7 +403,10 @@ private fun MemoField(day: LocalDate, note: String?, days: OwnDays, modifier: Mo
   OutlinedTextField(
     draft,
     { draft = it.limited(TextLimits.dayNote) },
-    modifier.fillMaxWidth().onFocusChanged { if (!it.isFocused) keep() },
+    modifier.fillMaxWidth().focusRequester(focus).onFocusChanged {
+      writing = it.isFocused
+      if (!it.isFocused) keep()
+    },
     label = { Text(stringResource(R.string.day_memo)) },
     trailingIcon =
       if (draft.text.isNotEmpty()) {
