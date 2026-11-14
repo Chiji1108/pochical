@@ -18,6 +18,7 @@ import {
   CalendarOff,
   ImageDown,
   MegaphoneOff,
+  NotebookPen,
   Shapes,
   UserRound,
 } from "lucide-react";
@@ -567,13 +568,19 @@ const more = {
   }),
 };
 
-// Smaller things the app does, after the cards: a line each, no screen.
+// Smaller things the app does, after the cards: a line each, no screen,
+// an even number of them, so none stands alone where they go two by two.
 // The evening before's reminder is a card of its own above.
 const extras: { Icon: LucideIcon; title: string; body: string }[] = [
   {
     Icon: Shapes,
     body: "日勤、夜勤、明け、早番、遅番など、名前・時間・印を自由に作れます。",
     title: "シフトは自由に作れる",
+  },
+  {
+    Icon: NotebookPen,
+    body: "持ち物や約束をひとこと。メモのある日は、日付に線がつきます。",
+    title: "日ごとにメモを残せる",
   },
   {
     Icon: ImageDown,
