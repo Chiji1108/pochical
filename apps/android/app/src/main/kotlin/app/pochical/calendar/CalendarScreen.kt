@@ -226,6 +226,8 @@ fun CalendarScreen(
   val folded = foldedKey?.let(YearMonth::parse) ?: range.monthAt(pager.currentPage)
   // 一緒に働く人 stays unfolded as another day opens, for noting people day after day.
   var peopleOpen by rememberSaveable { mutableStateOf(false) }
+  // The memo being written, above the layouts, so it moves with the day between the pane and the screen.
+  val memoWriting = rememberMemoWriting().apply { layout = wide }
   // How far the month is folded into the opened day's week, 0 to 1; on a wide window, where it
   // never folds, as it would be on a phone, for the window narrowed.
   val fold = remember { Animatable(if (opened != null) 1f else 0f) }
@@ -674,6 +676,7 @@ fun CalendarScreen(
                     holds = paneTransition,
                     calendar = calendar,
                     days = days,
+                    writing = memoWriting,
                     peopleOpen = peopleOpen,
                     onPeopleOpenChange = { peopleOpen = it },
                     onStep = { step(it) },
@@ -751,6 +754,7 @@ fun CalendarScreen(
               holds = updateTransition(opened, "day"),
               calendar = calendar,
               days = days,
+              writing = memoWriting,
               peopleOpen = peopleOpen,
               onPeopleOpenChange = { peopleOpen = it },
               onStep = { step(it) },

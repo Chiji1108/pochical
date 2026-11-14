@@ -2,6 +2,15 @@ package app.pochical.calendar
 
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.platform.WindowInfo
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasContentDescription
@@ -119,6 +128,46 @@ class WideCalendarTest {
     compose.onNodeWithText(day.fullText).assertDoesNotExist()
     back()
     compose.onNodeWithText("完了").assertDoesNotExist()
+  }
+
+  @Test
+  fun aMemoBeingWrittenStaysBeingWrittenAsTheWindowNarrowsAndWidens() {
+    val settings = DeviceSettings()
+    val wide = IntSize(2560, 1600)
+    var window by mutableStateOf(wide)
+    compose.setContent {
+      // The window resized as it runs, the activity not made again.
+      val real = LocalWindowInfo.current
+      val resized =
+        object : WindowInfo by real {
+          override val containerSize: IntSize
+            get() = window
+        }
+      CompositionLocalProvider(
+        LocalWindowInfo provides resized,
+        LocalDeviceSettings provides DeviceSettingsState(settings) {},
+        LocalOwnDays provides days,
+        LocalNotificationAsking provides asking,
+      ) {
+        PochicalTheme(settings) { CalendarScreen(open = { opened += it }, hidesTabBar = { tabBarHidden = it }, closePane = {}) }
+      }
+    }
+    val density = compose.activity.resources.displayMetrics.density
+    val day = today.withDayOfMonth(if (today.dayOfMonth == 8) 9 else 8)
+    tap(day)
+    compose.onNode(hasSetTextAction()).performClick()
+    compose.onNode(hasSetTextAction()).performTextReplacement("書きかけ")
+    compose.onNode(hasSetTextAction()).assertIsFocused()
+    // Narrowed to a phone's width: the day folds into its week, the memo still being written.
+    window = IntSize((411 * density).toInt(), (891 * density).toInt())
+    compose.waitForIdle()
+    compose.onNodeWithContentDescription("閉じる").assertIsDisplayed()
+    compose.onNode(hasSetTextAction()).assertIsFocused().assertTextContains("書きかけ")
+    // And widened again, back into the pane.
+    window = wide
+    compose.waitForIdle()
+    compose.onNodeWithContentDescription("閉じる").assertDoesNotExist()
+    compose.onNode(hasSetTextAction()).assertIsFocused().assertTextContains("書きかけ")
   }
 
   @Test

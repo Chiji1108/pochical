@@ -37,6 +37,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.text.TextRange
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -94,6 +98,8 @@ fun DayDetail(
   holds: Transition<LocalDate>,
   calendar: OwnCalendar,
   days: OwnDays,
+  /** The memo being written, kept by the calendar above its layouts. */
+  writing: MemoWriting,
   peopleOpen: Boolean,
   onPeopleOpenChange: (Boolean) -> Unit,
   onStep: (Int) -> Unit,
@@ -125,7 +131,7 @@ fun DayDetail(
     holds.AnimatedContent(
       transitionSpec = { if (reduceMotion) EnterTransition.None togetherWith ExitTransition.None else fadeIn() togetherWith fadeOut() },
     ) { shown ->
-      DayHolds(shown, calendar, days, peopleOpen, onPeopleOpenChange, onPickShift)
+      DayHolds(shown, calendar, writing, days, peopleOpen, onPeopleOpenChange, onPickShift)
     }
   }
 }
@@ -135,6 +141,7 @@ fun DayDetail(
 private fun DayHolds(
   day: LocalDate,
   calendar: OwnCalendar,
+  writing: MemoWriting,
   days: OwnDays,
   peopleOpen: Boolean,
   onPeopleOpenChange: (Boolean) -> Unit,
@@ -177,7 +184,7 @@ private fun DayHolds(
     }
     if (people) PeopleChips(entry, calendar.coworkers, peopleOpen, days) { days.set(day, it) }
     // A field of its own for each day, so the one left keeps its own memo as it goes.
-    key(day) { MemoField(day, calendar.note(day), days, Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp)) }
+    key(day) { MemoField(day, calendar.note(day), days, writing, Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp)) }
     if (entry != null) {
       ClearButton(entry, calendar.coworkers) { days.set(day, null) }
     }
@@ -384,16 +391,19 @@ private fun NameDialog(onAdd: (String) -> Unit, onDismiss: () -> Unit) {
  * each letter (spec/calendar.md, Text fields).
  */
 @Composable
-private fun MemoField(day: LocalDate, note: String?, days: OwnDays, modifier: Modifier = Modifier) {
-  // Kept by the day rather than by where the field stands, so a memo being written moves with its
-  // words, caret and focus as the window is widened or narrowed and the day moves between the pane
-  // and the screen (spec/calendar.md, On a wide screen).
-  var draft by rememberSaveable(stateSaver = TextFieldValue.Saver, key = "memo $day") { mutableStateOf(TextFieldValue(note.orEmpty())) }
-  var writing by rememberSaveable(key = "memo writing $day") { mutableStateOf(false) }
+private fun MemoField(day: LocalDate, note: String?, days: OwnDays, writing: MemoWriting, modifier: Modifier = Modifier) {
+  // The memo being written comes from the calendar, which keeps it above its layouts, so it moves
+  // with its words, caret and focus as the window is widened or narrowed and the day moves between
+  // the pane and the screen, whether the activity is made again or not (spec/calendar.md, On a wide
+  // screen).
+  val carried = remember { writing.draft?.takeIf { it.day == day } }
+  var draft by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(carried?.value ?: TextFieldValue(note.orEmpty())) }
   val focus = remember { FocusRequester() }
-  // As it was kept, before the field, attached unfocused, says otherwise.
-  val wasWriting = remember { writing }
-  LaunchedEffect(Unit) { if (wasWriting) focus.requestFocus() }
+  LaunchedEffect(Unit) { if (carried != null) focus.requestFocus() }
+  fun write(value: TextFieldValue) {
+    draft = value
+    if (writing.draft?.day == day) writing.draft = MemoDraft(day, value)
+  }
   val keep by rememberUpdatedState {
     val memo = limitText(draft.text, TextLimits.dayNote)
     if (memo != note.orEmpty()) days.setNote(day, memo)
@@ -402,10 +412,14 @@ private fun MemoField(day: LocalDate, note: String?, days: OwnDays, modifier: Mo
   LifecycleEventEffect(Lifecycle.Event.ON_STOP) { keep() }
   OutlinedTextField(
     draft,
-    { draft = it.limited(TextLimits.dayNote) },
+    { write(it.limited(TextLimits.dayNote)) },
     modifier.fillMaxWidth().focusRequester(focus).onFocusChanged {
-      writing = it.isFocused
-      if (!it.isFocused) keep()
+      if (it.isFocused) {
+        writing.focused(MemoDraft(day, draft))
+      } else {
+        writing.left(day)
+        keep()
+      }
     },
     label = { Text(stringResource(R.string.day_memo)) },
     trailingIcon =
@@ -413,7 +427,7 @@ private fun MemoField(day: LocalDate, note: String?, days: OwnDays, modifier: Mo
         {
           IconButton(
             onClick = {
-              draft = TextFieldValue()
+              write(TextFieldValue())
               days.setNote(day, "")
             }
           ) {
@@ -426,6 +440,55 @@ private fun MemoField(day: LocalDate, note: String?, days: OwnDays, modifier: Mo
     maxLines = 5,
   )
 }
+
+/** A day's memo while it is being written: its words with their caret. */
+data class MemoDraft(val day: LocalDate, val value: TextFieldValue)
+
+/**
+ * The memo being written, kept by the calendar above its layouts rather than by the field, so the
+ * field the day's detail has in the other layout takes it on, focused, as the window is widened or
+ * narrowed; and kept with the screen's state, so it lasts the activity being made again too.
+ */
+@Stable
+class MemoWriting(draft: MemoDraft? = null) {
+  var draft by mutableStateOf(draft)
+
+  /**
+   * The layout the calendar is composing, set as it composes: a field that loses focus as its layout
+   * gives way to the other has not been left, as the field it moves to takes the memo on.
+   */
+  var layout: Any? = null
+  private var focusedIn: Any? = null
+
+  /** The field writing [draft] has focus, in the layout composed now. */
+  fun focused(draft: MemoDraft) {
+    this.draft = draft
+    focusedIn = layout
+  }
+
+  /** [day]'s field lost focus: it was left, unless its layout gave way to the other. */
+  fun left(day: LocalDate) {
+    if (draft?.day == day && focusedIn == layout) draft = null
+  }
+
+  companion object {
+    val Saver: Saver<MemoWriting, Any> =
+      listSaver(
+        save = { writing -> writing.draft?.let { listOf(it.day.toString(), it.value.text, it.value.selection.start, it.value.selection.end) }.orEmpty() },
+        restore = { saved ->
+          MemoWriting(
+            saved.takeIf { it.size == 4 }?.let {
+              MemoDraft(LocalDate.parse(it[0] as String), TextFieldValue(it[1] as String, TextRange(it[2] as Int, it[3] as Int)))
+            }
+          )
+        },
+      )
+  }
+}
+
+/** The calendar's memo being written, kept with its state. */
+@Composable
+fun rememberMemoWriting(): MemoWriting = rememberSaveable(saver = MemoWriting.Saver) { MemoWriting() }
 
 /**
  * この日のシフトを消す: clears the shift with its own hours and people, the
