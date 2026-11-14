@@ -288,12 +288,15 @@ fun CalendarScreen(
   // day closes comes after the day has gone. On a wide window the pane is always there, so a day
   // in it is no day open.
   val activity = LocalActivity.current
+  // A day in it is left when the pane goes to another, so the edits made there are asked about then,
+  // not one chip or hour at a time.
   val done = (wide || opened == null) && entering == null && !finishing && gaps.isEmpty() && offeringReminders == null
-  LaunchedEffect(done, dayEdits) {
+  val edits by rememberUpdatedState(dayEdits)
+  LaunchedEffect(done, if (wide) paneDay else edits) {
     // The count starts from 0 in each process, so one kept from an ended process is taken as seen.
-    if (dayEdits < reviewSeen) reviewSeen = dayEdits
-    if (!done || dayEdits == reviewSeen || activity == null) return@LaunchedEffect
-    reviewSeen = dayEdits
+    if (edits < reviewSeen) reviewSeen = edits
+    if (!done || edits == reviewSeen || activity == null) return@LaunchedEffect
+    reviewSeen = edits
     ReviewPrompt.askIfDue(activity)
   }
   // A repeating order set up fills the days without ポチポチ入力: offered as the calendar shows.
@@ -555,6 +558,11 @@ fun CalendarScreen(
         val month = range.monthAt(pager.settledPage)
         said = null
         lastEnteredKey = null
+        // Entering closes the day the pane showed, as a phone's is closed before its foot shows, so
+        // a day open and entering are never both kept, whatever width the window goes to next.
+        openedKey = null
+        foldedKey = null
+        scope.launch { fold.snapTo(0f) }
         enteringKey = firstBlank(month).toString()
         scope.launch { keyPages.scrollToPage(0) }
       },

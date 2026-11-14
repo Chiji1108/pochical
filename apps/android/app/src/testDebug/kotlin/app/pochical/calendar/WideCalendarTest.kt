@@ -5,6 +5,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -89,6 +90,35 @@ class WideCalendarTest {
     back()
     compose.onNodeWithText(today.fullText).assertIsDisplayed()
     compose.onNodeWithText(day.fullText).assertDoesNotExist()
+  }
+
+  @Test
+  fun enteringClosesTheDayOpenSoTheTrayStaysOnceNarrowed() {
+    val settings = DeviceSettings()
+    val restoration = StateRestorationTester(compose)
+    restoration.setContent {
+      CompositionLocalProvider(
+        LocalDeviceSettings provides DeviceSettingsState(settings) {},
+        LocalOwnDays provides days,
+        LocalNotificationAsking provides asking,
+      ) {
+        PochicalTheme(settings) { CalendarScreen(open = { opened += it }, hidesTabBar = { tabBarHidden = it }, closePane = {}) }
+      }
+    }
+    val day = today.withDayOfMonth(if (today.dayOfMonth == 8) 9 else 8)
+    tap(day)
+    compose.onNodeWithText("ポチポチ入力").performClick()
+    compose.waitForIdle()
+    compose.onNodeWithText(day.fullText).assertDoesNotExist()
+    // Made again, as a window narrowed is: entering is all that is kept, so a phone's layout shows
+    // its tray rather than a day's detail, and a back ends entering.
+    restoration.emulateSavedInstanceStateRestore()
+    compose.waitForIdle()
+    compose.onNodeWithText("完了").assertIsDisplayed()
+    compose.onNodeWithText("翌日へ").assertIsDisplayed()
+    compose.onNodeWithText(day.fullText).assertDoesNotExist()
+    back()
+    compose.onNodeWithText("完了").assertDoesNotExist()
   }
 
   @Test

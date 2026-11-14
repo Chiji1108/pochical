@@ -19,7 +19,7 @@ Days are local calendar days. How the shifts are entered does not matter: a pers
 The apps ask right after the person finished putting something on their days, once the sheet or tray has closed:
 
 - closing ポチポチ input after entering or changing at least one day;
-- closing a day after changing its shift or hours (a day off taken, a swap); on a wide screen, where the day's pane is always there and never closes (spec/calendar.md, On a wide screen), right after the change;
+- closing a day after changing its shift or hours (a day off taken, a swap); on a wide screen, where the day's pane is always there and never closes (spec/calendar.md, On a wide screen), once the pane goes to another day, as leaving it is what closing is there;
 - saving a day's memo.
 
 The first time ポチポチ input closes with shifts entered, the reminders are offered instead (spec/calendar.md, Reminders), and the review waits for another time. Never on opening the app, while looking through months, from a widget, in a group or its chat, or in the middle of anything else. Someone who only looks and never changes a day is never asked; the settings' review row is there for them. That row, under 設定's ポチカルについて with ヘルプ, 利用規約, プライバシーポリシー and ライセンス (spec/calendar.md, ライセンス), opens the store's page for writing a review whenever it is pressed: on Android Google Play's listing, in the Play Store app (in the browser sheet on a device without it); on iOS the App Store's `?action=write-review`, in the App Store app.
