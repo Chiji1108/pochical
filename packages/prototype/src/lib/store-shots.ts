@@ -17,10 +17,14 @@ import type { PresetShift } from "./design-patterns";
 // more than twice the other:
 // https://support.google.com/googleplay/android-developer/answer/9866151
 // `widgetRow` is how tall a Home Screen's cell is in its widths, by the
-// platform's small widget (Android's SMALL, WidgetParts.kt).
+// platform's small widget (Android's SMALL, WidgetParts.kt). `corner` is
+// how round a screen's corners are drawn, in hundredths of the picture's
+// width: an iPhone's own, which its status bar keeps clear of, and for
+// Android a card's, as the emulator's screen is square and its clock
+// stands near the corner.
 export const STORES = {
-  android: { height: 1920, widgetRow: 202 / 179, width: 1080 },
-  ios: { height: 2622, widgetRow: 1, width: 1206 },
+  android: { corner: 4.25, height: 1920, widgetRow: 202 / 179, width: 1080 },
+  ios: { corner: 9, height: 2622, widgetRow: 1, width: 1206 },
 } as const;
 
 export type StoreId = keyof typeof STORES;

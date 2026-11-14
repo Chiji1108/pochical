@@ -160,9 +160,10 @@ const styles = {
     overflow: "hidden",
     position: "relative",
   }),
-  // A screen as the phone shows it: its corners rounded, nothing around it.
+  // A screen as the phone shows it: its corners rounded as its store's
+  // are (--corner), nothing around it.
   screen: css({
-    borderRadius: "calc(var(--u) * 9)",
+    borderRadius: "calc(var(--u) * var(--corner))",
     boxShadow:
       "0 calc(var(--u) * 2) calc(var(--u) * 7) rgba(60, 70, 60, 0.2), 0 0 0 1px rgba(60, 70, 60, 0.08)",
     display: "block",
@@ -254,12 +255,13 @@ function StoreShotPage() {
   if (shot === undefined) {
     return <p>No shot is named {name}.</p>;
   }
-  const { height, widgetRow, width } = STORES[store];
+  const { corner, height, widgetRow, width } = STORES[store];
   return (
     <div
       className={styles.root}
       data-store-shot
       style={{
+        "--corner": corner,
         "--headline": `${height * HEADLINE_SHARE}px`,
         "--u": `${width / 100}px`,
         height,
@@ -685,7 +687,12 @@ function CardPicturePage({
     <div
       className={styles.root}
       data-store-shot
-      style={{ background: `#${ground}`, height, width }}
+      style={{
+        "--corner": STORES[picture.store].corner,
+        background: `#${ground}`,
+        height,
+        width,
+      }}
     >
       {screens.map((screen) => (
         <img
