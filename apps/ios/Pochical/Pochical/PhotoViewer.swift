@@ -276,6 +276,8 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
     transitionStyle: .scroll, navigationOrientation: .horizontal,
     options: [.interPageSpacing: 16])
   private let counter = UILabel()
+  /// 共有, where the share sheet comes from as a popover on an iPad.
+  private weak var shareButton: UIButton?
   /// The count's glass, as the buttons', readable over a light photo.
   private let counterGlass = UIVisualEffectView(effect: UIGlassEffect())
   private var chrome: [UIView] = []
@@ -364,6 +366,7 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
       let share = Self.button("共有", systemImage: "square.and.arrow.up") { [weak self] in
         self?.share()
       }
+      shareButton = share
       let save = Self.button("保存", systemImage: "square.and.arrow.down") { [weak self] in
         self?.save()
       }
@@ -628,6 +631,7 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
         return
       }
       let sheet = UIActivityViewController(activityItems: [image], applicationActivities: nil)
+      sheet.popoverPresentationController?.sourceItem = shareButton
       present(sheet, animated: true)
     }
   }

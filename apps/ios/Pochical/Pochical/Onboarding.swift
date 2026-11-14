@@ -137,42 +137,47 @@ struct Onboarding: View {
       } onLogin: {
         path.append(.login)
       }
+      // Each step within the readable width, as on a phone.
+      .readableWidth()
       .toolbarVisibility(.hidden, for: .navigationBar)
       .alert("アカウントを削除しました", isPresented: $deleted) {
         Button("OK", role: .cancel) {}
       }
       .navigationDestination(for: OnboardingStep.self) { step in
-        switch step {
-        case .login:
-          LoginStep {
-            // An account with nothing in it yet: on with the questions.
-            path = [.kind]
-          }
-        case .kind:
-          KindStep { path.append($0) }
-        case .roster:
-          TemplateStep(title: "近い働き方を選んでください", templates: ReadyPatterns.rosterTemplates) {
-            path.append(.patterns($0))
-          }
-        case .rotation:
-          TemplateStep(title: "近い働き方を選んでください", templates: ReadyPatterns.rotationTemplates) {
-            path.append(.patterns($0))
-          }
-        case .patterns(let template):
-          PatternsStep(template: template) { choose(template, patterns: $0) }
-        case .order(let template, let patterns):
-          OrderStep(template: template, patternIDs: patterns)
-        case .period(let patterns):
-          PeriodStep {
-            start(roster: patterns, period: ShiftPeriod())
-          } onMidMonth: {
-            path.append(.periodDay(patterns))
-          }
-        case .periodDay(let patterns):
-          PeriodDayStep(action: "はじめる") { start in
-            self.start(roster: patterns, period: ShiftPeriod(start: start))
+        Group {
+          switch step {
+          case .login:
+            LoginStep {
+              // An account with nothing in it yet: on with the questions.
+              path = [.kind]
+            }
+          case .kind:
+            KindStep { path.append($0) }
+          case .roster:
+            TemplateStep(title: "近い働き方を選んでください", templates: ReadyPatterns.rosterTemplates) {
+              path.append(.patterns($0))
+            }
+          case .rotation:
+            TemplateStep(title: "近い働き方を選んでください", templates: ReadyPatterns.rotationTemplates) {
+              path.append(.patterns($0))
+            }
+          case .patterns(let template):
+            PatternsStep(template: template) { choose(template, patterns: $0) }
+          case .order(let template, let patterns):
+            OrderStep(template: template, patternIDs: patterns)
+          case .period(let patterns):
+            PeriodStep {
+              start(roster: patterns, period: ShiftPeriod())
+            } onMidMonth: {
+              path.append(.periodDay(patterns))
+            }
+          case .periodDay(let patterns):
+            PeriodDayStep(action: "はじめる") { start in
+              self.start(roster: patterns, period: ShiftPeriod(start: start))
+            }
           }
         }
+        .readableWidth()
       }
     }
   }

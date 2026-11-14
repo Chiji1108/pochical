@@ -177,6 +177,7 @@ private struct QRCamera: UIViewRepresentable {
       let input = try? AVCaptureDeviceInput(device: camera), session.canAddInput(input)
     else { return view }
     session.addInput(input)
+    context.coordinator.keepLevel(view.previewLayer, of: camera)
     let output = AVCaptureMetadataOutput()
     guard session.canAddOutput(output) else { return view }
     session.addOutput(output)
@@ -204,9 +205,15 @@ private struct QRCamera: UIViewRepresentable {
     var onRead: (String) -> Void
     /// The last message read, so one code held in view is reported once.
     private var last: String?
+    /// The picture kept level as the device turns.
+    private var level: LevelPreview?
 
     init(onRead: @escaping (String) -> Void) {
       self.onRead = onRead
+    }
+
+    @MainActor func keepLevel(_ preview: AVCaptureVideoPreviewLayer, of camera: AVCaptureDevice) {
+      level = LevelPreview(preview, of: camera)
     }
 
     func metadataOutput(
@@ -218,6 +225,26 @@ private struct QRCamera: UIViewRepresentable {
       else { return }
       last = message
       onRead(message)
+    }
+  }
+
+  /// Keeps a camera's picture level with the horizon however the device
+  /// is held, an iPad on its side included, as the system's rotation
+  /// coordinator says.
+  @MainActor final class LevelPreview {
+    private weak var preview: AVCaptureVideoPreviewLayer?
+    private let rotation: AVCaptureDevice.RotationCoordinator
+    private var turning: NSKeyValueObservation?
+
+    init(_ preview: AVCaptureVideoPreviewLayer, of camera: AVCaptureDevice) {
+      self.preview = preview
+      rotation = AVCaptureDevice.RotationCoordinator(device: camera, previewLayer: preview)
+      preview.connection?.videoRotationAngle = rotation.videoRotationAngleForHorizonLevelPreview
+      turning = rotation.observe(\.videoRotationAngleForHorizonLevelPreview, options: .new) {
+        [weak self] _, change in
+        guard let angle = change.newValue else { return }
+        Task { @MainActor in self?.preview?.connection?.videoRotationAngle = angle }
+      }
     }
   }
 
