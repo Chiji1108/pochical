@@ -239,12 +239,19 @@ private struct QRCamera: UIViewRepresentable {
     init(_ preview: AVCaptureVideoPreviewLayer, of camera: AVCaptureDevice) {
       self.preview = preview
       rotation = AVCaptureDevice.RotationCoordinator(device: camera, previewLayer: preview)
-      preview.connection?.videoRotationAngle = rotation.videoRotationAngleForHorizonLevelPreview
-      turning = rotation.observe(\.videoRotationAngleForHorizonLevelPreview, options: .new) {
-        [weak self] _, change in
-        guard let angle = change.newValue else { return }
-        Task { @MainActor in self?.preview?.connection?.videoRotationAngle = angle }
+      level()
+      turning = rotation.observe(\.videoRotationAngleForHorizonLevelPreview) { [weak self] _, _ in
+        Task { @MainActor in self?.level() }
       }
+    }
+
+    /// The picture turned as the coordinator says now, where the
+    /// connection can take that turn.
+    private func level() {
+      let angle = rotation.videoRotationAngleForHorizonLevelPreview
+      guard let connection = preview?.connection, connection.isVideoRotationAngleSupported(angle)
+      else { return }
+      connection.videoRotationAngle = angle
     }
   }
 

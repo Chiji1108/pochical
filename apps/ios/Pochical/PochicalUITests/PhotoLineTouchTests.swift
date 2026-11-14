@@ -109,7 +109,7 @@ final class PhotoLineTouchTests: XCTestCase {
 
   /// The group's chat, from the グループ tab.
   @MainActor private func openChat() {
-    let tab = app.tabBars.buttons["グループ"]
+    let tab = app.tab("グループ")
     if tab.waitForExistence(timeout: 10) { tab.tap() }
     let chat = app.buttons.matching(NSPredicate(format: "label BEGINSWITH '全体チャット'"))
       .firstMatch

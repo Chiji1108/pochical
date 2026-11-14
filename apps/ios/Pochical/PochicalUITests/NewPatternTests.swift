@@ -9,7 +9,7 @@ final class NewPatternTests: XCTestCase {
   func testANewPatternKeepsTheColorItWasShownIn() throws {
     continueAfterFailure = false
     app.launchPastFirstRun()
-    let settings = app.tabBars.buttons["設定"]
+    let settings = app.tab("設定")
     XCTAssertTrue(settings.waitForExistence(timeout: 20))
     settings.tap()
 

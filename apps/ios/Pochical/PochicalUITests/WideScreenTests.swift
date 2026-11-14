@@ -38,9 +38,9 @@ final class WideScreenTests: XCTestCase {
   }
 
   /// A group's chat opens beside its column, and keeps its keyboard's
-  /// room once the app has been in the background (POC-117). Run against
-  /// a local server whose group's invitation the script leaves in
-  /// WIDE_SCREEN_DIR; skipped without it.
+  /// room once the app has been in the background (RootNavigation). Run
+  /// against a local server whose group's invitation the script leaves
+  /// in WIDE_SCREEN_DIR; skipped without it.
   func testGroupsChatOpensBeside() throws {
     continueAfterFailure = false
     guard let dir = ProcessInfo.processInfo.environment["WIDE_SCREEN_DIR"] else {
@@ -68,6 +68,12 @@ final class WideScreenTests: XCTestCase {
         field.frame.maxY, keyboard.frame.minY, "the composer stays over the keyboard")
     }
     snap("typing", of: XCUIScreen.main)
+    // Upright, the tab bar at the top over the column and the chat.
+    XCUIDevice.shared.orientation = .portrait
+    let window = app.windows.firstMatch
+    XCTAssertTrue(settled { window.frame.width < window.frame.height }, "the app turns upright")
+    XCTAssertTrue(hub.isHittable, "the group's column stays beside the chat upright")
+    snap("chat beside portrait", of: XCUIScreen.main)
   }
 
   /// The row named `name` of the list it is in.

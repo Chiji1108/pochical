@@ -44,7 +44,7 @@ final class FaceDrawingTests: XCTestCase {
     continueAfterFailure = false
     app.launch()
     app.startsAsNewUser()
-    app.tabBars.buttons["グループ"].tap()
+    app.tab("グループ").tap()
     let new = app.buttons["グループを作る"].firstMatch
     XCTAssertTrue(new.waitForExistence(timeout: 5))
     new.tap()
@@ -92,7 +92,7 @@ final class FaceDrawingTests: XCTestCase {
     continueAfterFailure = false
     app.launchPastFirstRun()
     // The group made, with the faces of whoever has joined since.
-    let groups = app.tabBars.buttons["グループ"]
+    let groups = app.tab("グループ")
     XCTAssertTrue(groups.waitForExistence(timeout: 20))
     groups.tap()
     XCTAssertTrue(app.buttons["月で見る"].waitForExistence(timeout: 15), "the group's hub shows")
@@ -106,7 +106,7 @@ final class FaceDrawingTests: XCTestCase {
   func testSomeoneWithAUsualNameMakingAGroupIsAskedAsOnJoining() {
     continueAfterFailure = false
     app.launchPastFirstRun()
-    let groups = app.tabBars.buttons["グループ"]
+    let groups = app.tab("グループ")
     XCTAssertTrue(groups.waitForExistence(timeout: 20))
     groups.tap()
     let new = app.buttons["グループを作る"].firstMatch
@@ -122,7 +122,7 @@ final class FaceDrawingTests: XCTestCase {
   func testSomeoneWithAUsualNameGivesANewGroupAFaceOfItsOwn() {
     continueAfterFailure = false
     app.launchPastFirstRun()
-    let groups = app.tabBars.buttons["グループ"]
+    let groups = app.tab("グループ")
     XCTAssertTrue(groups.waitForExistence(timeout: 20))
     groups.tap()
     let new = app.buttons["グループを作る"].firstMatch
@@ -158,7 +158,7 @@ final class FaceDrawingTests: XCTestCase {
   func testAnAccountNotYetCaughtUpGetsNoDrawing() {
     continueAfterFailure = false
     app.launchPastFirstRun()
-    let groups = app.tabBars.buttons["グループ"]
+    let groups = app.tab("グループ")
     XCTAssertTrue(groups.waitForExistence(timeout: 20))
     groups.tap()
     let new = app.buttons["グループを作る"].firstMatch
@@ -234,7 +234,7 @@ final class FaceDrawingTests: XCTestCase {
 
   /// 設定 › プロフィール, and the face heading it.
   private func openProfile() -> XCUIElement {
-    let settings = app.tabBars.buttons["設定"]
+    let settings = app.tab("設定")
     XCTAssertTrue(settings.waitForExistence(timeout: 20))
     settings.tap()
     let profile = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'プロフィール'"))
