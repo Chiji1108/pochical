@@ -71,7 +71,7 @@ class CalendarScreenTest {
         LocalOwnDays provides days,
         LocalNotificationAsking provides asking,
       ) {
-        PochicalTheme(settings) { CalendarScreen(open = { opened += it }, hidesTabBar = { tabBarHidden = it }) }
+        PochicalTheme(settings) { CalendarScreen(open = { opened += it }, hidesTabBar = { tabBarHidden = it }, closePane = {}) }
       }
     }
   }
@@ -90,7 +90,7 @@ class CalendarScreenTest {
         LocalNotificationAsking provides asking,
       ) {
         PochicalTheme(settings) {
-          CalendarScreen(open = { opened += it }, hidesTabBar = { tabBarHidden = it }, opening = opening, onOpening = { opening = null })
+          CalendarScreen(open = { opened += it }, hidesTabBar = { tabBarHidden = it }, closePane = {}, opening = opening, onOpening = { opening = null })
         }
       }
     }

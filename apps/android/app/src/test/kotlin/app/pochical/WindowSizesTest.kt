@@ -40,10 +40,14 @@ class WindowSizesTest {
   private fun window(qualifiers: String) = RuntimeEnvironment.setQualifiers(qualifiers)
 
   /** グループ with a chat open, as RootScreen lays it out: the tabs, and the page over or beside them. */
-  private fun groupsWithAPage(page: @Composable () -> Unit = { Text("page", Modifier.fillMaxSize()) }) {
-    val navigator = RootNavigator(NavBackStack(RootPage.Chat("g", "t")), mutableStateOf(RootTab.Groups))
+  private fun groupsWithAPage(page: @Composable () -> Unit = { Text("page", Modifier.fillMaxSize()) }) =
+    tabWithAPage(RootTab.Groups, RootPage.Chat("g", "t"), page)
+
+  /** [tab] with [route] open, as RootScreen lays it out, [route] showing [page]. */
+  private fun tabWithAPage(tab: RootTab, route: RootPage, page: @Composable () -> Unit = { Text("page", Modifier.fillMaxSize()) }) {
+    val navigator = RootNavigator(NavBackStack(route), mutableStateOf(tab))
     compose.setContent {
-      NavDisplay(backStack = navigator.routes, onBack = navigator::back, sceneStrategies = listOf(rememberTabPanes(navigator.tab))) { route ->
+      NavDisplay(backStack = navigator.routes, onBack = navigator::back, sceneStrategies = listOf(rememberTabPanes(navigator.tab, navigator.routes.last()))) { route ->
         NavEntry(route, route.toString(), paneOf(route) { navigator.tab }) {
           if (route == Tabs) Text("tabs", Modifier.fillMaxSize()) else page()
         }
@@ -77,6 +81,26 @@ class WindowSizesTest {
     assertEquals(456.dp.value, tabs.across, 1f)
     assertTrue(page.left >= tabs.right)
     assertEquals(tabs.top, page.top)
+  }
+
+  @Test
+  fun aTabletOnItsSideOpensTheShiftListInTheCalendarsPane() {
+    window("w1280dp-h800dp")
+    tabWithAPage(RootTab.Calendar, RootPage.ShiftChoice("2026-11-20"))
+    val tabs = compose.onNodeWithText("tabs").assertIsDisplayed().getUnclippedBoundsInRoot()
+    val page = compose.onNodeWithText("page").assertIsDisplayed().getUnclippedBoundsInRoot()
+    // The list as wide as the calendar's own pane, the tabs taking the rest (spec/calendar.md, On a wide screen).
+    assertEquals(SUPPORTING_PANE_WIDTH.value, page.across, 1f)
+    assertTrue(tabs.across > 456f)
+    assertTrue(page.left >= tabs.right)
+  }
+
+  @Test
+  fun aTabletUprightPushesTheShiftListOverTheCalendar() {
+    window("w800dp-h1280dp")
+    tabWithAPage(RootTab.Calendar, RootPage.ShiftChoice("2026-11-20"))
+    compose.onNodeWithText("page").assertIsDisplayed()
+    compose.onNodeWithText("tabs").assertDoesNotExist()
   }
 
   /** A page as every page is laid out, a field across what it holds. */
