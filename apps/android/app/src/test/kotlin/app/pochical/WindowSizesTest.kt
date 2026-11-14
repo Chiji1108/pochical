@@ -1,5 +1,7 @@
 package app.pochical
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -123,6 +125,31 @@ class WindowSizesTest {
     assertTrue(bar.across > PageMaxWidth.value)
     assertEquals(PageMaxWidth.value, field.across, 1f)
     assertEquals((bar.left + bar.right).value / 2, (field.left + field.right).value / 2, 1f)
+  }
+
+  @Test
+  fun aPagesFootKeepsToItsWidthWithWhatItHolds() {
+    window("w800dp-h1280dp")
+    compose.setContent {
+      PageScaffold(topBar = {}, bottomBar = { Text("foot", Modifier.fillMaxWidth().testTag("foot")) }) { padding ->
+        Text("field", Modifier.fillMaxWidth().padding(padding).testTag("field"))
+      }
+    }
+    val foot = compose.onNodeWithTag("foot").getUnclippedBoundsInRoot()
+    val field = compose.onNodeWithTag("field").getUnclippedBoundsInRoot()
+    assertEquals(PageMaxWidth.value, foot.across, 1f)
+    assertEquals(field.left.value, foot.left.value, 1f)
+  }
+
+  @Test
+  fun aPageWithoutAFootEndsAboveTheWindowsInsets() {
+    window("w800dp-h1280dp")
+    compose.setContent {
+      PageScaffold(topBar = {}, contentWindowInsets = WindowInsets(bottom = 48.dp)) { padding ->
+        Box(Modifier.fillMaxSize().padding(padding).testTag("field"))
+      }
+    }
+    assertEquals(1280f - 48f, compose.onNodeWithTag("field").getUnclippedBoundsInRoot().bottom.value, 1f)
   }
 
   private fun pageDialog() =

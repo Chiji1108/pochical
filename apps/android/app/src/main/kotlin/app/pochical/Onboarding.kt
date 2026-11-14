@@ -397,25 +397,28 @@ private fun StepPage(
   SettingsPage(
     "",
     onBack,
-    bottomBar = {
+    bottomBar =
       if (foot != null || footnote != null) {
-        Column(Modifier.fillMaxWidth().safeDrawingPadding().padding(horizontal = 20.dp).padding(bottom = 12.dp)) {
-          foot?.invoke()
-          if (footnote != null) {
-            Text(
-              footnote,
-              style = MaterialTheme.typography.bodySmall,
-              color = colors.textQuaternary,
-              textAlign = TextAlign.Center,
-              modifier = Modifier.fillMaxWidth(),
-            )
+        {
+          Column(Modifier.fillMaxWidth().safeDrawingPadding().padding(horizontal = 20.dp).padding(bottom = 12.dp)) {
+            foot?.invoke()
+            if (footnote != null) {
+              Text(
+                footnote,
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.textQuaternary,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+              )
+            }
           }
         }
-      }
-    },
+      } else {
+        null
+      },
   ) { padding ->
     Column(
-      Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 20.dp),
+      Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(padding).padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 20.dp),
       verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
       Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

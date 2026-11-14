@@ -22,6 +22,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,28 +54,16 @@ fun SettingsPage(
   closes: Boolean = false,
   snackbar: SnackbarHostState? = null,
   actions: @Composable RowScope.() -> Unit = {},
-  bottomBar: @Composable () -> Unit = {},
+  bottomBar: (@Composable () -> Unit)? = null,
   content: @Composable (PaddingValues) -> Unit,
 ) {
   val scroll = if (collapsing) TopAppBarDefaults.exitUntilCollapsedScrollBehavior() else TopAppBarDefaults.pinnedScrollBehavior()
-  val back: @Composable () -> Unit = {
-    if (onBack != null) {
-      IconButton(onClick = onBack) {
-        if (closes) {
-          Icon(painterResource(R.drawable.ic_close), contentDescription = stringResource(R.string.close))
-        } else {
-          Icon(painterResource(R.drawable.ic_back), contentDescription = stringResource(R.string.back))
-        }
-      }
-    }
-  }
+  val back: @Composable () -> Unit = { if (onBack != null) BackButton(onBack, closes) }
   val sub: (@Composable () -> Unit)? = subtitle?.let { { Text(it, maxLines = 2, overflow = TextOverflow.Ellipsis) } }
   PageScaffold(
     topBar = {
-      if (!collapsing && sub != null) {
-        TopAppBar(title = { Text(title) }, subtitle = sub, navigationIcon = back, actions = actions, scrollBehavior = scroll)
-      } else if (!collapsing) {
-        TopAppBar(title = { Text(title) }, navigationIcon = back, actions = actions, scrollBehavior = scroll)
+      if (!collapsing) {
+        PageBar(title, onBack, scroll, subtitle, closes, actions)
       } else if (large) {
         LargeFlexibleTopAppBar(title = { Text(title) }, subtitle = sub, navigationIcon = back, actions = actions, scrollBehavior = scroll)
       } else {
@@ -86,6 +75,47 @@ fun SettingsPage(
     snackbar = snackbar,
     content = content,
   )
+}
+
+/**
+ * A page's small bar, Material's, pinned: [title] with the words under it when it has some, ←
+ * back (✕ for a page that [closes]) and its [actions]; over what scrolls, taking the scrolled color
+ * as it goes under ([scrollBehavior], its page's nestedScroll). [SettingsPage]'s, and that of a
+ * page laid out on a scaffold of its own (みんなのシフト's, over its sheet).
+ */
+@Composable
+fun PageBar(
+  title: String,
+  onBack: (() -> Unit)?,
+  scrollBehavior: TopAppBarScrollBehavior? = null,
+  subtitle: String? = null,
+  closes: Boolean = false,
+  actions: @Composable RowScope.() -> Unit = {},
+) {
+  val back: @Composable () -> Unit = { if (onBack != null) BackButton(onBack, closes) }
+  if (subtitle != null) {
+    TopAppBar(
+      title = { Text(title) },
+      subtitle = { Text(subtitle, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+      navigationIcon = back,
+      actions = actions,
+      scrollBehavior = scrollBehavior,
+    )
+  } else {
+    TopAppBar(title = { Text(title) }, navigationIcon = back, actions = actions, scrollBehavior = scrollBehavior)
+  }
+}
+
+/** ← back, or ✕ for a page that [closes]. */
+@Composable
+private fun BackButton(onBack: () -> Unit, closes: Boolean) {
+  IconButton(onClick = onBack) {
+    if (closes) {
+      Icon(painterResource(R.drawable.ic_close), contentDescription = stringResource(R.string.close))
+    } else {
+      Icon(painterResource(R.drawable.ic_back), contentDescription = stringResource(R.string.back))
+    }
+  }
 }
 
 /**
@@ -102,7 +132,7 @@ fun SettingsPage(
 fun PageScaffold(
   topBar: @Composable () -> Unit,
   modifier: Modifier = Modifier,
-  bottomBar: @Composable () -> Unit = {},
+  bottomBar: (@Composable () -> Unit)? = null,
   snackbar: SnackbarHostState? = null,
   contentWindowInsets: WindowInsets = pageInsets,
   fillsWidth: Boolean = false,
@@ -111,11 +141,13 @@ fun PageScaffold(
   Scaffold(
     modifier,
     topBar = topBar,
+    // Only a page with a foot has one: Scaffold takes any bottom bar, however short, as what the
+    // content ends above, in place of the window's insets.
     bottomBar = {
-      if (fillsWidth) {
-        bottomBar()
-      } else {
-        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Box(Modifier.widthIn(max = PageMaxWidth)) { bottomBar() } }
+      when {
+        bottomBar == null -> Unit
+        fillsWidth -> bottomBar()
+        else -> Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Box(Modifier.widthIn(max = PageMaxWidth)) { bottomBar() } }
       }
     },
     snackbarHost = { if (snackbar != null) SnackbarHost(snackbar) },
