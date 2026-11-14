@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -16,7 +14,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.ConfirmAction
@@ -24,6 +21,7 @@ import app.pochical.PageDialog
 import app.pochical.R
 import app.pochical.ReviewPrompt
 import app.pochical.RowEnd
+import app.pochical.SettingsPage
 import app.pochical.SettingsRow
 import app.pochical.SettingsSection
 import app.pochical.SettingsSwitchRow
@@ -32,7 +30,6 @@ import app.pochical.calendar.rememberToday
 import app.pochical.kit.groupEndDay
 import app.pochical.kit.groupEndPickerFirstDay
 import app.pochical.kit.groupEndsAt
-import app.pochical.pageInsets
 import app.pochical.repeat.DayPickerDialog
 import java.time.LocalDate
 import java.time.ZoneId
@@ -84,7 +81,7 @@ fun noteWithEnd(note: String, ends: Boolean): String = note + if (ends) stringRe
 fun GroupEndPage(groupId: String, onBack: () -> Unit) {
   GroupPage(groupId, stringResource(R.string.group_end), onBack) {
     val end = groupEnd(groupId)
-    if (end == null) Scaffold(topBar = { PageBar(stringResource(R.string.group_end), onBack) }) { padding -> PageLoading(padding) }
+    if (end == null) SettingsPage(stringResource(R.string.group_end), onBack, collapsing = false) { padding -> PageLoading(padding) }
     else EndForm(groupId, end.day, onBack)
   }
 }
@@ -142,15 +139,12 @@ private fun GroupEndForm(current: LocalDate?, onBack: () -> Unit, saving: Boolea
   var day by rememberSaveable { mutableStateOf(current ?: today.plusMonths(1)) }
   var picking by rememberSaveable { mutableStateOf(false) }
   val shown = day.takeIf { on }
-  val bar = TopAppBarDefaults.pinnedScrollBehavior()
-  Scaffold(
-    modifier.nestedScroll(bar.nestedScrollConnection),
-    topBar = {
-      PageBar(stringResource(R.string.group_end), onBack, bar) {
-        ConfirmAction(stringResource(R.string.save), onClick = { onSave(shown) }, enabled = shown != current, busy = saving)
-      }
-    },
-    contentWindowInsets = pageInsets,
+  SettingsPage(
+    stringResource(R.string.group_end),
+    onBack,
+    modifier,
+    collapsing = false,
+    actions = { ConfirmAction(stringResource(R.string.save), onClick = { onSave(shown) }, enabled = shown != current, busy = saving) },
   ) { padding ->
     Column(Modifier.verticalScroll(rememberScrollState()).padding(padding)) {
       SettingsSection(footnote = stringResource(R.string.group_end_note)) {

@@ -62,6 +62,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.pochical.LocalDeviceSettings
 import app.pochical.LocalThemeColors
+import app.pochical.PageBar
 import app.pochical.R
 import app.pochical.calendar.MonthPicker
 import app.pochical.calendar.holidayCountry
