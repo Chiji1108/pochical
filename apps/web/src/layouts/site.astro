@@ -19,6 +19,7 @@ import "../styles.css";
 // Every page's frame: its head, as search and chat apps read it, and the
 // site's header and footer. A private page has no canonical address and
 // asks search to leave it out; a page for an error has no title of its own.
+// A page may add to the head (the slot "head").
 type Meta = {
   title: string;
   description: string;
@@ -75,6 +76,7 @@ const fullTitle = `${meta?.title} | ポチカル`;
     )}
     {/* Safari on an iPhone offers the app over the page, or to open it. */}
     {appId && <meta content={`app-id=${appId}`} name="apple-itunes-app" />}
+    <slot name="head" />
     <link href={siteIcon} rel="icon" type="image/png" />
     {/* Any page added to an iPhone's home screen. */}
     <link href={homeScreenIcon} rel="apple-touch-icon" />
