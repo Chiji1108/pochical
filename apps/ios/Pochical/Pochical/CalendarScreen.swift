@@ -54,10 +54,6 @@ struct CalendarScreen: View {
   /// The day last entered, open in the pane on a wide screen once
   /// entering has ended and its blank days were asked about.
   @State private var lastEntered: Day?
-  /// `wide` as it last changed, for the sheet: UIKit takes the sheet away
-  /// as the screen widens, and tells it through the sheet drawn before,
-  /// whose `wide` is still a phone's; this is read as it is now.
-  @State private var widened = false
   /// The tray's page of keys, kept as the tray moves between the phone's
   /// foot and the wide screen's pane.
   @State private var trayPage = 0
@@ -91,6 +87,8 @@ struct CalendarScreen: View {
   @State private var hinge: Hinge?
   private struct Room {
     var total: CGFloat = 0
+    /// The width `total` was measured at.
+    var width: CGFloat = 0
     var heading: CGFloat = 0
     var weekdays: CGFloat = 0
     var bottom: CGFloat = 0
@@ -155,9 +153,13 @@ struct CalendarScreen: View {
     .padding(.trailing, wide ? hinge?.width ?? 0 : 0)
     .environment(\.dayCellHeight, cellHeight)
     // Measured at rest, as the tabs give way on a phone; the month on a
-    // wide screen is as tall whatever the pane shows.
-    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
-      if wide || entering == nil && opened == nil { room.total = height }
+    // wide screen is as tall whatever the pane shows. A screen another
+    // width, turned or folded, is measured as it comes, a day open or not.
+    .onGeometryChange(for: CGSize.self) { $0.size } action: { size in
+      if wide || entering == nil && opened == nil || size.width != room.width {
+        room.total = size.height
+        room.width = size.width
+      }
     }
     .onGeometryChange(for: CGFloat.self) { proxy in
       proxy.frame(in: .global).maxY
@@ -208,7 +210,7 @@ struct CalendarScreen: View {
         withAnimation(folding) { opened = day }
       }
     }
-    .onChange(of: opened) { before, day in
+    .onChange(of: opened) { _, day in
       // Whatever closed or changed the day, its sheet's going is over.
       leaving = false
       guard let day else {
@@ -219,8 +221,9 @@ struct CalendarScreen: View {
         return
       }
       shownMonth = monthShowing(day)
-      // On a wide screen a day closes as another takes the pane.
-      if wide, before != nil { askForReviewIfDue() }
+      // On a wide screen a day closes as another takes the pane, today's
+      // shown while none was open included.
+      if wide { askForReviewIfDue() }
     }
     .onChange(of: entering) { _, day in
       if day == nil { askForReviewIfDue(afterEntering: true) }
@@ -234,16 +237,14 @@ struct CalendarScreen: View {
     // just under it with the week still to tap, and goes down as it is
     // swiped away, the month unfolding behind it.
     .daySheet(folded, first: underWeek) {
-      // Gone as the screen widens, the day stays open in the pane.
-      if !widened { withAnimation(folding) { opened = nil } }
+      withAnimation(folding) { opened = nil }
     } onDismiss: {
       handover.sheetGoing = false
     } content: { day in
       detail(calendar, of: day)
-        // Closed by its × or in code, the day has closed already; gone as
-        // the screen widens, it stays open in the pane.
+        // Closed by its × or in code, the day has closed already.
         .onSheetLeaving { going in
-          if opened != nil, !widened { withAnimation(folding) { leaving = going } }
+          if opened != nil { withAnimation(folding) { leaving = going } }
         }
         .presentationDragIndicator(.visible)
         .presentationBackground(colors.backgroundBase)
@@ -268,9 +269,11 @@ struct CalendarScreen: View {
     .ignoresSafeArea(.keyboard)
     // Widened or narrowed with a day open, its detail moves to the pane or
     // the sheet as it is (spec/calendar.md, On a wide screen).
-    .onChange(of: wide, initial: true) { before, now in
-      widened = now
-      if before != now, opened != nil {
+    .onChange(of: wide) { _, now in
+      // The sheet going as the screen widens leaves the day open, and a
+      // day opened since is framed again as it narrows.
+      leaving = false
+      if opened != nil {
         handover.moving = true
         // Widened, the sheet the day was in goes.
         handover.sheetGoing = now
@@ -629,7 +632,7 @@ struct CalendarScreen: View {
   private func pageDays(_ calendar: OwnCalendar) -> PageDays {
     PageDays(
       today: today, calendar: calendar, colorsHolidays: settings.device.week.holiday,
-      offShown: offShown, selected: entering ?? shownOpen, isEntering: entering != nil,
+      offShown: offShown, selected: entering ?? (wide ? opened : shownOpen), isEntering: entering != nil,
       preview: gapPreview(calendar),
       onSelect: selectDay)
   }

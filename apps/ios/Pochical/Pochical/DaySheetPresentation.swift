@@ -26,13 +26,22 @@ private struct DaySheetPresentation<Sheet: View>: ViewModifier {
   /// The day last shown, kept as the sheet goes down once `day` is gone,
   /// so it goes with its day on it, as a sheet presented for an item does.
   @State private var shown: Day?
+  /// Whether a day is set, as it is now: the sheet tells of its going
+  /// through the binding of the body that presented it, whose `day` may
+  /// be gone already, as when the screen widens and the day moves beside
+  /// the month. Only a sheet going with its day still set closes it.
+  @State private var up = false
 
   func body(content: Content) -> some View {
     content
       .onChange(of: day, initial: true) {
         if let day { shown = day }
+        up = day != nil
       }
-      .sheet(isPresented: Binding { day != nil } set: { if !$0 { onClose() } }, onDismiss: onDismiss) {
+      .sheet(
+        isPresented: Binding { day != nil } set: { if !$0, up { onClose() } },
+        onDismiss: onDismiss
+      ) {
         if let day = day ?? shown {
           sheet(day)
             .presentationDetents([first, .large])

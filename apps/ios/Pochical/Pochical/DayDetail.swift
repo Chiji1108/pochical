@@ -118,6 +118,17 @@ struct DayDetail<Foot: View>: View {
       tellHandover()
     }
     .onChange(of: lists) { tellHandover() }
+    // The memo changed elsewhere, from another device or as the day's data
+    // comes, shows while it is not being written, so the pane, open as long
+    // as the calendar is, never keeps an older one to write back.
+    .onChange(of: note) {
+      if !writingNote { draft = note ?? "" }
+    }
+    // A day that no longer takes people, its shift gone or off, has no
+    // list of them to stay open on.
+    .onChange(of: takesPeople) {
+      if !takesPeople { lists.removeAll { $0 == .people } }
+    }
     // Moved, it is kept as its screen closes, and again once the field is
     // left in the detail that took its place.
     .onDisappear { keepNote() }
@@ -144,8 +155,7 @@ struct DayDetail<Foot: View>: View {
             }
           }
         }
-        // Someone works alongside on any shift but a day off.
-        if let entry, let pattern, !pattern.countsAsOff {
+        if takesPeople, let entry {
           peopleRows(entry)
         }
       }
@@ -183,6 +193,11 @@ struct DayDetail<Foot: View>: View {
     .scrollContentBackground(.hidden)
     .background(colors.backgroundBase)
     .tint(colors.accentDefault)
+  }
+
+  /// Someone works alongside on any shift but a day off.
+  private var takesPeople: Bool {
+    entry != nil && pattern.map { !$0.countsAsOff } ?? false
   }
 
   private var pattern: Pattern? {
