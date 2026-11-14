@@ -6,6 +6,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -42,9 +45,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.unit.toSize
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
@@ -314,9 +324,37 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
       handlers.readOn(readHere)
     }
   }
+  // With a keyboard a line is gone to by Tab and the arrows too, drawn with Material's focus layer,
+  // and Enter activates it; its menu closed, the focus comes back to it (spec/chat.md, A keyboard and
+  // a mouse).
+  val keyboard = LocalInputModeManager.current.inputMode == InputMode.Keyboard
+  val interactions = remember { MutableInteractionSource() }
+  var keyed by remember { mutableStateOf(false) }
+  LaunchedEffect(lifted) {
+    if (!lifted && keyed) {
+      keyed = false
+      focus.requestFocus()
+    }
+  }
   Box(
     modifier
-      .then(if (handlers.reading) Modifier.focusRequester(focus).focusable() else Modifier)
+      .then(
+        if (handlers.reading || keyboard) {
+          Modifier.focusRequester(focus)
+            .onKeyEvent { event ->
+              if (event.key !in ACTIVATING_KEYS) return@onKeyEvent false
+              if (event.type == KeyEventType.KeyUp) {
+                keyed = photoSeq == null
+                activate()
+              }
+              true
+            }
+            .focusable(interactionSource = interactions)
+            .indication(interactions, ripple())
+        } else {
+          Modifier
+        }
+      )
       .zIndex(if (handlers.spray?.seq == look.seq && look.seq != null) 1f else 0f)
       .fillMaxWidth()
       .padding(top = (if (look.startsRun) Chat.runGap else Chat.lineGap).dp)
@@ -923,3 +961,6 @@ private const val LIGHT = 0.35f
 
 /** Half the shine's band, in pixels across. */
 private const val BAND = 80f
+
+/** The keys that activate a line, as they do a button. */
+private val ACTIVATING_KEYS = setOf(Key.Enter, Key.NumPadEnter, Key.Spacebar, Key.DirectionCenter)

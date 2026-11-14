@@ -24,6 +24,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.res.stringResource
@@ -224,10 +226,12 @@ fun LineMenu(state: LineMenuState, reducedMotion: Boolean) {
   val gone = state.visible.isIdle && !state.visible.targetState
   LaunchedEffect(gone) { if (gone) state.gone() }
   BackHandler(state.visible.targetState) { state.close() }
-  // A screen reader goes into it as it opens, on its first reaction or item, as iOS moves VoiceOver there.
+  // A screen reader goes into it as it opens, on its first reaction or item, as iOS moves VoiceOver
+  // there, and so does a keyboard's focus.
   val first = remember(line) { FocusRequester() }
   val reading = rememberScreenReaderOn()
-  LaunchedEffect(line, reading) { if (reading) first.requestFocus() }
+  val keys = LocalInputModeManager.current.inputMode == InputMode.Keyboard
+  LaunchedEffect(line, reading) { if (reading || keys) first.requestFocus() }
   // Lifted about its middle from the press's give as the menu opens, and back to its size as it goes.
   val lift = remember(line) { Animatable(if (reducedMotion) 1f else state.given) }
   val spatial = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()

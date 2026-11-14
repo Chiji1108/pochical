@@ -9,6 +9,8 @@
   <string name="chat_unread_from">ここから新着</string>
   <string name="chat_message">メッセージ</string>
   <string name="chat_send">送信</string>
+  <!-- Shift+Enter in the composer, as the Keyboard Shortcuts Helper lists it (KeyboardShortcuts). -->
+  <string name="chat_new_line">改行</string>
   <string name="chat_to_latest">最新のメッセージへ</string>
   <string name="chat_to_unread">ここから新着へ</string>
   <string name="chat_unseen">%1$s、まだ見ていない新着%2$d件</string>
