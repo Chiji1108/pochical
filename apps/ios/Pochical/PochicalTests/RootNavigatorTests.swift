@@ -56,8 +56,8 @@ import Testing
   @Test func aPageGoneBackFromStaysGoneWhenTheScreenWidens() {
     let navigator = RootNavigator()
     let controller = RootController(
-      navigator: navigator, tabs: AnyView(EmptyView()), page: { _ in AnyView(EmptyView()) },
-      nothingOpen: { _ in AnyView(EmptyView()) })
+      navigator: navigator, tabs: AnyView(EmptyView()), screen: { _ in AnyView(EmptyView()) },
+      page: { _ in AnyView(EmptyView()) }, nothingOpen: { _ in AnyView(EmptyView()) })
     let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
     window.rootViewController = controller
     window.makeKeyAndVisible()
@@ -73,7 +73,8 @@ import Testing
     controller.traitOverrides.horizontalSizeClass = .regular
     controller.view.layoutIfNeeded()
     #expect(controller.hostedPages == [photos("a")])
-    #expect(controller.side.viewControllers.count == 1)
+    #expect(controller.side(of: .groups)?.viewControllers.count == 1)
+    #expect(controller.wide.selectedTab?.identifier == RootTab.groups.rawValue)
     #expect(navigator.pages == [photos("a")])
   }
 }

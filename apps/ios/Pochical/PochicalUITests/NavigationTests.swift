@@ -15,7 +15,7 @@ final class NavigationTests: XCTestCase {
   func testSettingsPagesOpenOverTheTabs() throws {
     continueAfterFailure = false
     app.launchPastFirstRun()
-    let tab = app.tabBars.buttons["設定"]
+    let tab = app.tab("設定")
     XCTAssertTrue(tab.waitForExistence(timeout: 15), "the tabs show")
     tab.tap()
     XCTAssertTrue(app.navigationBars["設定"].waitForExistence(timeout: 5), "設定 is titled in the bar")
@@ -44,7 +44,7 @@ final class NavigationTests: XCTestCase {
   func testSettingsTitleIsLargeAtItsRoot() throws {
     continueAfterFailure = false
     app.launchPastFirstRun()
-    let tab = app.tabBars.buttons["設定"]
+    let tab = app.tab("設定")
     XCTAssertTrue(tab.waitForExistence(timeout: 15), "the tabs show")
     tab.tap()
     let bar = app.navigationBars["設定"]
@@ -70,7 +70,7 @@ final class NavigationTests: XCTestCase {
     XCTAssertTrue(settles(bar) { $0 < large - 30 }, "the title goes into the bar as the list scrolls")
     let scrolled = bar.frame.height
     snap("scrolled", of: app)
-    app.tabBars.buttons["グループ"].tap()
+    app.tab("グループ").tap()
     tab.tap()
     XCTAssertTrue(settles(bar) { $0 == scrolled }, "the title stays in the bar while the list is scrolled")
     for _ in 0..<5 where bar.frame.height != large {
@@ -85,7 +85,7 @@ final class NavigationTests: XCTestCase {
     continueAfterFailure = false
     app.launchPastFirstRun()
     XCUIDevice.shared.orientation = .landscapeLeft
-    let tab = app.tabBars.buttons["設定"]
+    let tab = app.tab("設定")
     XCTAssertTrue(tab.waitForExistence(timeout: 15), "the tabs show")
     tab.tap()
     let bar = app.navigationBars["設定"]
@@ -115,7 +115,7 @@ final class NavigationTests: XCTestCase {
   func testLicensesOpenTheirText() throws {
     continueAfterFailure = false
     app.launchPastFirstRun()
-    let tab = app.tabBars.buttons["設定"]
+    let tab = app.tab("設定")
     XCTAssertTrue(tab.waitForExistence(timeout: 15), "the tabs show")
     tab.tap()
     let row = reveal("ライセンス")

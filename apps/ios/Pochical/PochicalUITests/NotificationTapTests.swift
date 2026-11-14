@@ -37,7 +37,7 @@ final class NotificationTapTests: XCTestCase {
     for _ in 0..<5 where !last.isHittable { app.swipeUp() }
     XCTAssertTrue(last.isHittable, "the chat's lines are read to the latest")
     app.navigationBars.firstMatch.buttons.firstMatch.tap()
-    app.tabBars.buttons["設定"].tap()
+    app.tab("設定").tap()
     openRow("チャット")
     app.buttons["通知をオンにする"].tap()
     let allow = springboard.buttons.matching(NSPredicate(format: "label IN {'許可', 'Allow'}"))
@@ -51,7 +51,7 @@ final class NotificationTapTests: XCTestCase {
   @MainActor
   func test2TapInTheBackgroundOpensTheChatOverItsTab() throws {
     app.launch()
-    app.tabBars.buttons["設定"].tap()
+    app.tab("設定").tap()
     openRow("外観")
     XCTAssertTrue(app.navigationBars["外観"].waitForExistence(timeout: 5), "外観 is open")
     XCUIDevice.shared.press(.home)
@@ -87,7 +87,7 @@ final class NotificationTapTests: XCTestCase {
     snap(name, of: app)
     bar.buttons.firstMatch.tap()
     XCTAssertTrue(app.buttons["月で見る"].waitForExistence(timeout: 5), "back is the group's hub")
-    XCTAssertTrue(app.tabBars.buttons["グループ"].isSelected, "over グループ")
+    XCTAssertTrue(app.tab("グループ").isSelected, "over グループ")
     snap("\(name)-back", of: app)
   }
 

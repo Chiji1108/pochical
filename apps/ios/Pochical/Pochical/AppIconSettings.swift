@@ -67,6 +67,7 @@ struct AppIconSettings: View {
       }
       .padding(16)
     }
+    .readableWidth()
     .background(colors.backgroundBase)
     .navigationTitle("アプリアイコン")
   }

@@ -38,7 +38,7 @@ final class StoreScreenshotTests: XCTestCase {
   @MainActor
   func test00Cares() throws {
     launch()
-    app.tabBars.buttons["設定"].tap()
+    app.tab("設定").tap()
     open(page: "リマインド")
     press("前日")
     XCTAssertTrue(app.navigationBars["リマインドを編集"].waitForExistence(timeout: 5), "the reminder opens")
@@ -235,7 +235,7 @@ final class StoreScreenshotTests: XCTestCase {
   @MainActor
   func test11Repeat() throws {
     launch()
-    app.tabBars.buttons["設定"].tap()
+    app.tab("設定").tap()
     open(page: "シフトパターン")
     for step in ["新しい仕事にする", "次へ", "繰り返しがある", "当番・非番・休み", "次へ"] { press(step) }
     XCTAssertTrue(
@@ -281,7 +281,7 @@ final class StoreScreenshotTests: XCTestCase {
   @MainActor
   func test12GroupEnd() throws {
     launch()
-    app.tabBars.buttons["グループ"].tap()
+    app.tab("グループ").tap()
     press("グループを作る")
     let name = app.textFields.firstMatch
     XCTAssertTrue(name.waitForExistence(timeout: 5), "the group's name can be typed")
@@ -538,7 +538,7 @@ final class StoreScreenshotTests: XCTestCase {
   /// Picks `period` as 設定's カレンダー's シフトの期間, and comes back to the
   /// calendar in it.
   @MainActor private func pick(period: String) {
-    app.tabBars.buttons["設定"].tap()
+    app.tab("設定").tap()
     open(page: "カレンダー")
     // The list's last row, below the page as it opens.
     let row = app.descendants(matching: .any)
@@ -550,7 +550,7 @@ final class StoreScreenshotTests: XCTestCase {
     for _ in 0..<8 where !(choice.exists && choice.isHittable) { app.swipeDown() }
     choice.tap()
     app.navigationBars["カレンダー"].buttons.firstMatch.tap()
-    app.tabBars.buttons["カレンダー"].tap()
+    app.tab("カレンダー").tap()
     XCTAssertTrue(app.buttons["ポチポチ入力"].waitForExistence(timeout: 5), "the calendar shows")
   }
 
@@ -593,7 +593,7 @@ final class StoreScreenshotTests: XCTestCase {
   /// カレンダー's 月と曜日, in `english` or not, and 色をつける日, and comes
   /// back to the calendar in them.
   @MainActor private func pick(_ style: Style, english: Bool = false) {
-    app.tabBars.buttons["設定"].tap()
+    app.tab("設定").tap()
     open(page: "スタイル")
     for choice in [style.shape, style.theme, style.colors, style.off] {
       let tile = app.buttons[choice]
@@ -624,7 +624,7 @@ final class StoreScreenshotTests: XCTestCase {
       XCTAssertEqual(toggle.value as? String, value, "\(day) is colored or not")
     }
     app.navigationBars["カレンダー"].buttons.firstMatch.tap()
-    app.tabBars.buttons["カレンダー"].tap()
+    app.tab("カレンダー").tap()
     XCTAssertTrue(app.buttons["ポチポチ入力"].waitForExistence(timeout: 5), "the calendar shows")
   }
 

@@ -10,7 +10,7 @@ final class PictureHeaderTests: XCTestCase {
   func testPatternPagesHeadWithTheirMarkAsFacesAndGroupsDo() throws {
     continueAfterFailure = false
     app.launchPastFirstRun()
-    let settings = app.tabBars.buttons["設定"]
+    let settings = app.tab("設定")
     XCTAssertTrue(settings.waitForExistence(timeout: 20))
     settings.tap()
 
@@ -53,7 +53,7 @@ final class PictureHeaderTests: XCTestCase {
     snap("5-profile", of: app)
     app.navigationBars.buttons.firstMatch.tap()
 
-    app.tabBars.buttons["グループ"].tap()
+    app.tab("グループ").tap()
     let new = app.buttons["グループを作る"].firstMatch
     XCTAssertTrue(new.waitForExistence(timeout: 5))
     new.tap()
