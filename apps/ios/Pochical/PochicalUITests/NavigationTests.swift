@@ -1,8 +1,8 @@
 import XCTest
 
-/// The app's one navigation (POC-157): 設定's pages are pushed over the
-/// tabs, in the one bar the tabs' title is in, the tab bar going with the
-/// tabs, and come back to 設定 as it was.
+/// The app's navigation (POC-157): 設定's pages are pushed over it, in the
+/// bar its title is in, the tab bar going with it, and come back to 設定 as
+/// it was, at every width (#1237).
 @MainActor
 final class NavigationTests: XCTestCase {
   private let app = XCUIApplication()
@@ -68,11 +68,11 @@ final class NavigationTests: XCTestCase {
     let list = app.collectionViews.firstMatch
     list.swipeUp()
     XCTAssertTrue(settles(bar) { $0 < large - 30 }, "the title goes into the bar as the list scrolls")
-    let scrolled = bar.frame.height
     snap("scrolled", of: app)
     app.tab("グループ").tap()
     tab.tap()
-    XCTAssertTrue(settles(bar) { $0 == scrolled }, "the title stays in the bar while the list is scrolled")
+    XCTAssertTrue(
+      settles(bar) { $0 < large - 30 }, "the title stays in the bar while the list is scrolled")
     for _ in 0..<5 where bar.frame.height != large {
       list.swipeDown()
     }
@@ -100,6 +100,33 @@ final class NavigationTests: XCTestCase {
       "a compact width, its pages over the tabs")
     XCTAssertTrue(tab.isHittable, "シフトパターン is beside the tabs")
     snap("beside", of: app)
+  }
+
+  /// 設定's list stays where it was scrolled to as the screen widens and
+  /// narrows again (#1237): on a large iPhone turned on its side, its
+  /// width regular, the same list stands in its column.
+  func testSettingsKeepsItsPlaceAsTheScreenTurns() throws {
+    continueAfterFailure = false
+    app.launchPastFirstRun()
+    let tab = app.tab("設定")
+    XCTAssertTrue(tab.waitForExistence(timeout: 15), "the tabs show")
+    tab.tap()
+    let first = app.collectionViews.firstMatch.buttons
+      .matching(NSPredicate(format: "label BEGINSWITH %@", "シフトパターン")).firstMatch
+    XCTAssertTrue(first.waitForExistence(timeout: 5), "設定's list shows")
+    let last = reveal("ライセンス")
+    XCTAssertTrue(last.isHittable && !first.isHittable, "the list is scrolled to its end")
+    for orientation in [UIDeviceOrientation.landscapeLeft, .portrait] {
+      XCUIDevice.shared.orientation = orientation
+      let window = app.windows.firstMatch
+      let turned = XCTNSPredicateExpectation(
+        predicate: NSPredicate { _, _ in
+          (window.frame.width > window.frame.height) == orientation.isLandscape
+        }, object: nil)
+      XCTAssertEqual(XCTWaiter().wait(for: [turned], timeout: 5), .completed, "the app turns")
+      snap("turned \(orientation.rawValue)", of: app)
+      XCTAssertFalse(first.isHittable, "the list stays scrolled")
+    }
   }
 
   /// Whether `bar`'s height comes to what `holds` asks within a few

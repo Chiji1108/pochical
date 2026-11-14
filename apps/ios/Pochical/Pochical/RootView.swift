@@ -36,8 +36,6 @@ struct RootView: View {
   /// Said over the tabs for a moment, as a toast is.
   @State private var notice: String?
   @State private var notices = 0
-  /// How far down the screen its own top is, the bar's under the status bar.
-  @State private var barTop: CGFloat = 0
 
   /// The place whose socket is held (spec/sync-protocol.md, Sockets): that
   /// of the top page of a place over the tabs, else the open group's while
@@ -65,15 +63,13 @@ struct RootView: View {
 
   var body: some View {
     RootNavigation(
-      navigator: navigator, tabs: hosted(tabs), screen: { hosted(wideScreen($0)) },
-      badges: badges
+      navigator: navigator, screen: { hosted(screen($0)) }, badges: badges
     ) { page in
       hosted(self.page(page).environment(\.photoShelf, navigator.photoShelf(of: page)))
     } nothingOpen: { tab in
       hosted(NothingOpen(tab: tab, hasGroups: !groups.isEmpty))
     }
     .ignoresSafeArea()
-    .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.top } action: { barTop = $0 }
     // The reminders' notifications, put in anew as what they read changes.
     .modifier(ReminderUpdates())
     // The days kept in the device's calendar while 自動で反映 is on.
@@ -175,34 +171,7 @@ struct RootView: View {
     [.groups: groupsUnread, .settings: unread[ChatPlace.supportID] ?? 0]
   }
 
-  /// The tabs on a narrow screen, the tab bar under them.
-  private var tabs: some View {
-    TabView(selection: Binding(get: { navigator.tab }, set: navigator.select)) {
-      Tab(RootTab.calendar.title, systemImage: RootTab.calendar.systemImage, value: .calendar) {
-        screen(.calendar)
-      }
-      Tab(RootTab.groups.title, systemImage: RootTab.groups.systemImage, value: .groups) {
-        screen(.groups)
-      }
-      .badge(badges[.groups] ?? 0)
-      Tab(RootTab.settings.title, systemImage: RootTab.settings.systemImage, value: .settings) {
-        screen(.settings)
-          .tabRoot()
-      }
-      .badge(badges[.settings] ?? 0)
-    }
-    // The tab's title and buttons, in the one bar: a tab's own content does
-    // not reach it through the TabView.
-    .modifier(TabBar(tab: navigator.tab, buttons: groupButtons))
-  }
-
-  /// A tab's screen on a wide screen, at the root of a navigation of its
-  /// own, its title and buttons in its own bar.
-  private func wideScreen(_ tab: RootTab) -> some View {
-    screen(tab).modifier(TabBar(tab: tab, buttons: groupButtons))
-  }
-
-  /// A tab's screen.
+  /// A tab's screen, at the root of its navigation.
   @ViewBuilder private func screen(_ tab: RootTab) -> some View {
     switch tab {
     case .calendar:
@@ -214,11 +183,6 @@ struct RootView: View {
     case .settings:
       SettingsScreen()
     }
-  }
-
-  /// The open group's buttons, in グループ's bar.
-  private var groupButtons: GroupHubButtons? {
-    openGroup(openGroupID, among: groups).map { GroupHubButtons(group: $0, navigator: navigator) }
   }
 
   /// A page over the tabs.
@@ -261,7 +225,6 @@ struct RootView: View {
         .environment(\.english, settings.device.heading.english)
         .environment(\.meID, meID)
         .environment(\.rootNavigator, navigator)
-        .environment(\.barTop, barTop)
         .environment(\.openInvite, OpenInviteAction { code in invite = OpenedInvite(code: code) })
         .environment(\.say, SayAction(say: say)))
   }
@@ -399,22 +362,6 @@ enum RootTab: String, CaseIterable, Hashable {
     case .groups: "person.2"
     case .settings: "gearshape"
     }
-  }
-}
-
-/// A tab's title and buttons in the bar over it: the calendar has none,
-/// its month heading it, and グループ heads itself in the bar's band
-/// (GroupsScreen), the open group's buttons beside.
-private struct TabBar: ViewModifier {
-  let tab: RootTab
-  let buttons: GroupHubButtons?
-
-  func body(content: Content) -> some View {
-    content
-      .navigationTitle(tab == .settings ? tab.title : "")
-      .toolbar {
-        if tab == .groups, let buttons { buttons }
-      }
   }
 }
 
