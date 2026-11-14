@@ -3,6 +3,9 @@ package app.pochical
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.view.KeyEvent
+import android.view.KeyboardShortcutGroup
+import android.view.Menu
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -127,6 +130,30 @@ class MainActivity(
         }
       }
     }
+  }
+
+  /**
+   * Esc does what back does, when there is something to go back from: a menu or a sheet the app
+   * draws itself closes, a page goes (spec/chat.md, A keyboard and a mouse). At the calendar, with
+   * nothing behind it, it leaves the app where it is rather than closing it. Compose's own dialogs and
+   * menus close by it themselves, before it gets here.
+   */
+  override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+    if (keyCode != KeyEvent.KEYCODE_ESCAPE || !onBackPressedDispatcher.hasEnabledCallbacks()) return super.onKeyDown(keyCode, event)
+    // Tracked as the back key is, so an Esc let go elsewhere, or cancelled, goes back from nothing.
+    event.startTracking()
+    return true
+  }
+
+  override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+    if (keyCode != KeyEvent.KEYCODE_ESCAPE || !event.isTracking || event.isCanceled) return super.onKeyUp(keyCode, event)
+    onBackPressedDispatcher.onBackPressed()
+    return true
+  }
+
+  override fun onProvideKeyboardShortcuts(data: MutableList<KeyboardShortcutGroup>, menu: Menu?, deviceId: Int) {
+    super.onProvideKeyboardShortcuts(data, menu, deviceId)
+    data += keyboardShortcuts(this)
   }
 
   /** Where [intent] opens the app at, for the screens; a chat's notification tapped goes, as it is read. */
