@@ -11,7 +11,6 @@ struct SettingsScreen: View {
   @Environment(Settings.self) private var settings
   @Environment(\.themeColors) private var colors
   @Environment(\.openURL) private var openURL
-  @Environment(\.say) private var say
   @FetchAll private var patterns: [PatternRow]
   @FetchAll private var patternOrder: [PatternOrderRow]
   @FetchAll(GroupRow.order(by: \.joinedAtMs)) private var groups
@@ -145,13 +144,7 @@ struct SettingsScreen: View {
   private var about: some View {
     Section {
       outside("ヘルプ") { openURL(Site.page("support"), prefersInApp: true) }
-      outside("App Storeでレビューを書く") {
-        if let url = Site.writeReview {
-          openURL(url)
-        } else {
-          say("公開後はレビューを書く画面が開きます")
-        }
-      }
+      outside("App Storeでレビューを書く") { openURL(Site.writeReview) }
       outside("利用規約") { openURL(Site.page("terms"), prefersInApp: true) }
       outside("プライバシーポリシー") { openURL(Site.page("privacy"), prefersInApp: true) }
       PageLink("ライセンス") { LicensesPage() }
@@ -450,7 +443,7 @@ enum Site {
     root.appending(path: path)
   }
 
-  /// The App Store's page for writing a review (?action=write-review),
-  /// which there is none of before release.
-  static let writeReview: URL? = nil
+  /// The App Store's page for writing a review (spec/review.md), in Japan's
+  /// store, the only one Pochical is in.
+  static let writeReview = URL(string: "https://apps.apple.com/jp/app/id6821849894?action=write-review")!
 }

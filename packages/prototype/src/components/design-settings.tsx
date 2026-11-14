@@ -535,17 +535,22 @@ function openOutside(url: string) {
   window.open(url, "_blank", "noopener,noreferrer");
 }
 
+// Each store's page for writing a review, as the apps' Site has them.
+const writeReview = {
+  android: "https://play.google.com/store/apps/details?id=app.pochical",
+  ios: "https://apps.apple.com/jp/app/id6821849894?action=write-review",
+} as const;
+
 // Pochical itself, at the foot of the settings, under the chat with the
 // people who make it (SupportRow). Rows that leave the app end in ↗
 // instead of the arrow of rows that go on inside it. The store's
 // own review prompt comes by itself only now and then (spec/review.md);
 // the review row is there whenever someone wants to write one, and opens
 // the store's page for writing it (App Store's ?action=write-review,
-// Google Play's listing), which the prototype has none of before release.
+// Google Play's listing).
 // ライセンス, last, goes on inside the app.
 function AboutSection({ onLicenses }: { onLicenses: () => void }) {
   const platform = useDevice((state) => state.platform);
-  const toast = useContext(ToastContext);
   const store = platform === "ios" ? "App Store" : "Google Play";
   return (
     <div>
@@ -562,7 +567,7 @@ function AboutSection({ onLicenses }: { onLicenses: () => void }) {
           leaves
           label={`${store}でレビューを書く`}
           onClick={() => {
-            toast("公開後はレビューを書く画面が開きます", "problem");
+            openOutside(writeReview[platform]);
           }}
           symbol={rateReviewSymbol}
         />
