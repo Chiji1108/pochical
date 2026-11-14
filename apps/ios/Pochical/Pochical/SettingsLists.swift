@@ -1,5 +1,6 @@
 import PochicalDesign
 import SwiftUI
+import UIKit
 
 extension View {
   /// A list of 設定 on the テーマ's own page, as /design's are, rather than
@@ -49,7 +50,75 @@ private struct SettingsList: ViewModifier {
   func body(content: Content) -> some View {
     content
       .scrollContentBackground(.hidden)
+      .readableWidth()
       .background(colors.backgroundBase)
+  }
+}
+
+extension View {
+  /// A page's scrolling content kept within the readable width UIKit's
+  /// readable content guide gives it, as the system's Settings keeps its
+  /// lists on an iPad, rather than stretched across a wide page: its rows,
+  /// fields and buttons. Nothing changes where the page is no wider than
+  /// that, as on a phone.
+  func readableWidth() -> some View {
+    modifier(ReadableWidth())
+  }
+}
+
+private struct ReadableWidth: ViewModifier {
+  /// How much further in than the page's margins the readable width is,
+  /// on each side.
+  @State private var inset: CGFloat = 0
+
+  func body(content: Content) -> some View {
+    // Further in than the safe area, as a list's own margins stay its
+    // own; the guide read outside it, which is not further in.
+    content
+      .safeAreaPadding(.horizontal, inset)
+      .background(ReadableGuide { inset = $0 })
+  }
+}
+
+/// Says how much further in than its margins its readable content guide
+/// is, as UIKit sizes the guide for the width and the text size.
+private struct ReadableGuide: UIViewRepresentable {
+  let onInset: (CGFloat) -> Void
+
+  func makeUIView(context: Context) -> Guide {
+    let view = Guide()
+    view.isUserInteractionEnabled = false
+    return view
+  }
+
+  func updateUIView(_ view: Guide, context: Context) {
+    view.onInset = onInset
+  }
+
+  final class Guide: UIView {
+    var onInset: (CGFloat) -> Void = { _ in }
+    private var inset: CGFloat = 0
+
+    override init(frame: CGRect) {
+      super.init(frame: frame)
+      // The guide follows the text size too.
+      registerForTraitChanges([UITraitPreferredContentSizeCategory.self]) { (view: Self, _) in
+        view.setNeedsLayout()
+      }
+    }
+
+    @available(*, unavailable) required init?(coder: NSCoder) { fatalError() }
+
+    /// Told on the next turn of the main loop, not while SwiftUI lays the
+    /// page out, which may not change the state it is laying out by.
+    override func layoutSubviews() {
+      super.layoutSubviews()
+      let inset = max(0, readableContentGuide.layoutFrame.minX - layoutMarginsGuide.layoutFrame.minX)
+      guard inset != self.inset else { return }
+      self.inset = inset
+      let onInset = onInset
+      Task { @MainActor in onInset(inset) }
+    }
   }
 }
 

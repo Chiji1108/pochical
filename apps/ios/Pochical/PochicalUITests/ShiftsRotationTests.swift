@@ -429,7 +429,7 @@ final class ShiftsRotationTests: XCTestCase {
 
   /// The big group's hub, or 少人数's, picked in the rail.
   @MainActor private func openHub(small: Bool = false) {
-    let tab = app.tabBars.buttons["グループ"]
+    let tab = app.tab("グループ")
     if tab.waitForExistence(timeout: 10) { tab.tap() }
     let name = small ? "少人数" : "ポチカルのテスト"
     let group = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", name)).firstMatch

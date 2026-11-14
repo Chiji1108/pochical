@@ -64,7 +64,10 @@ struct RootView: View {
   }
 
   var body: some View {
-    RootNavigation(navigator: navigator, tabs: hosted(tabs)) { page in
+    RootNavigation(
+      navigator: navigator, tabs: hosted(tabs), screen: { hosted(wideScreen($0)) },
+      badges: badges
+    ) { page in
       hosted(self.page(page).environment(\.photoShelf, navigator.photoShelf(of: page)))
     } nothingOpen: { tab in
       hosted(NothingOpen(tab: tab, hasGroups: !groups.isEmpty))
@@ -165,34 +168,57 @@ struct RootView: View {
     }
   }
 
+  /// The groups' unread lines on グループ, and on 設定 Pochical's people's
+  /// answers not read yet, in its chat with them (spec/chat.md, Unread
+  /// lines and typing).
+  private var badges: [RootTab: Int] {
+    [.groups: groupsUnread, .settings: unread[ChatPlace.supportID] ?? 0]
+  }
+
+  /// The tabs on a narrow screen, the tab bar under them.
   private var tabs: some View {
     TabView(selection: Binding(get: { navigator.tab }, set: navigator.select)) {
-      Tab("カレンダー", systemImage: "calendar", value: .calendar) {
-        CalendarScreen()
+      Tab(RootTab.calendar.title, systemImage: RootTab.calendar.systemImage, value: .calendar) {
+        screen(.calendar)
       }
-      Tab("グループ", systemImage: "person.2", value: .groups) {
-        GroupsScreen(openID: $openGroupID, unread: unread) {
-          scanning = true
-        }
+      Tab(RootTab.groups.title, systemImage: RootTab.groups.systemImage, value: .groups) {
+        screen(.groups)
       }
-      .badge(groupsUnread)
-      Tab("設定", systemImage: "gearshape", value: .settings) {
-        SettingsScreen()
+      .badge(badges[.groups] ?? 0)
+      Tab(RootTab.settings.title, systemImage: RootTab.settings.systemImage, value: .settings) {
+        screen(.settings)
           .tabRoot()
       }
-      // Pochical's people's answers not read yet, on 設定's chat with them
-      // (spec/chat.md, Unread lines and typing).
-      .badge(unread[ChatPlace.supportID] ?? 0)
+      .badge(badges[.settings] ?? 0)
     }
     // The tab's title and buttons, in the one bar: a tab's own content does
-    // not reach it through the TabView. The calendar has none, its month
-    // heading it, and グループ heads itself in the bar's band (GroupsScreen).
-    .navigationTitle(navigator.tab == .settings ? "設定" : "")
-    .toolbar {
-      if navigator.tab == .groups, let group = openGroup(openGroupID, among: groups) {
-        GroupHubButtons(group: group, navigator: navigator)
+    // not reach it through the TabView.
+    .modifier(TabBar(tab: navigator.tab, buttons: groupButtons))
+  }
+
+  /// A tab's screen on a wide screen, at the root of a navigation of its
+  /// own, its title and buttons in its own bar.
+  private func wideScreen(_ tab: RootTab) -> some View {
+    screen(tab).modifier(TabBar(tab: tab, buttons: groupButtons))
+  }
+
+  /// A tab's screen.
+  @ViewBuilder private func screen(_ tab: RootTab) -> some View {
+    switch tab {
+    case .calendar:
+      CalendarScreen()
+    case .groups:
+      GroupsScreen(openID: $openGroupID, unread: unread) {
+        scanning = true
       }
+    case .settings:
+      SettingsScreen()
     }
+  }
+
+  /// The open group's buttons, in グループ's bar.
+  private var groupButtons: GroupHubButtons? {
+    openGroup(openGroupID, among: groups).map { GroupHubButtons(group: $0, navigator: navigator) }
   }
 
   /// A page over the tabs.
@@ -355,8 +381,41 @@ struct UnreadRequest: FetchKeyRequest, Hashable {
   }
 }
 
-enum RootTab: Hashable {
+/// A tab, named to the system's tab bar controller by its raw value.
+enum RootTab: String, CaseIterable, Hashable {
   case calendar, groups, settings
+
+  var title: String {
+    switch self {
+    case .calendar: "カレンダー"
+    case .groups: "グループ"
+    case .settings: "設定"
+    }
+  }
+
+  var systemImage: String {
+    switch self {
+    case .calendar: "calendar"
+    case .groups: "person.2"
+    case .settings: "gearshape"
+    }
+  }
+}
+
+/// A tab's title and buttons in the bar over it: the calendar has none,
+/// its month heading it, and グループ heads itself in the bar's band
+/// (GroupsScreen), the open group's buttons beside.
+private struct TabBar: ViewModifier {
+  let tab: RootTab
+  let buttons: GroupHubButtons?
+
+  func body(content: Content) -> some View {
+    content
+      .navigationTitle(tab == .settings ? tab.title : "")
+      .toolbar {
+        if tab == .groups, let buttons { buttons }
+      }
+  }
 }
 
 /// The system's switch, its track on in the テーマ's switch color rather

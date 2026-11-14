@@ -97,6 +97,7 @@ struct InvitePage: View {
       }
       .padding(16)
     }
+    .readableWidth()
     .background(colors.backgroundBase)
     .sensoryFeedback(.success, trigger: done)
     .overlay(alignment: .top) {

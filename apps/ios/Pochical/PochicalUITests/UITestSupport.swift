@@ -19,7 +19,17 @@ extension XCUIApplication {
       XCTAssertTrue(button.waitForExistence(timeout: 10), "はじめの設定 offers \(step)")
       button.tap()
     }
-    XCTAssertTrue(tabBars.firstMatch.waitForExistence(timeout: 10), "the tabs show")
+    XCTAssertTrue(tab("カレンダー").waitForExistence(timeout: 10), "the tabs show")
+  }
+
+  /// The tab named `name`: in the tab bar, or on an iPad in the sidebar
+  /// or the tab bar at the top.
+  @MainActor func tab(_ name: String) -> XCUIElement {
+    descendants(matching: .any).matching(
+      NSPredicate(
+        format: "label == %@ AND (elementType == %d OR elementType == %d)", name,
+        XCUIElement.ElementType.button.rawValue, XCUIElement.ElementType.cell.rawValue)
+    ).firstMatch
   }
 
   /// Joins the group whose invitation code the test's script kept in
