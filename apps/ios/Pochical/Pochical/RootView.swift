@@ -175,7 +175,7 @@ struct RootView: View {
   @ViewBuilder private func screen(_ tab: RootTab) -> some View {
     switch tab {
     case .calendar:
-      CalendarScreen()
+      CalendarScreen(place: navigator.calendar)
     case .groups:
       GroupsScreen(openID: $openGroupID, unread: unread) {
         scanning = true

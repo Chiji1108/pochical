@@ -15,10 +15,12 @@ struct EntryTray: View {
   let canClear: Bool
   /// Whether a day of the month comes after it.
   let canSkip: Bool
+  /// The page of keys shown, kept by the calendar as the tray moves
+  /// between a phone's foot and a wide screen's pane.
+  @Binding var page: Int
   let onEnter: (PatternID?) -> Void
   let onSkip: () -> Void
   @State private var keys = 0
-  @State private var page = 0
 
   var body: some View {
     VStack(spacing: 8) {

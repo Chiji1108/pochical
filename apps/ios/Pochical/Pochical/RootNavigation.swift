@@ -82,6 +82,10 @@ struct PhotosOfChat: Hashable {
 @MainActor @Observable final class RootNavigator {
   private(set) var tab = RootTab.calendar
   private(set) var pages: [RootPage] = []
+  /// Where the calendar is, which the phone's calendar and the wide
+  /// screen's both show, one in the place of the other as the width
+  /// changes.
+  let calendar = CalendarPlace()
   @ObservationIgnored fileprivate weak var controller: RootController?
 
   /// Opens `page` over those open. A chat already open below, as when its
@@ -243,6 +247,9 @@ final class RootController: UITabBarController, UINavigationControllerDelegate,
     // A screen widened or narrowed, as an iPad's window is or a phone
     // unfolds, moves the pages beside the tab or over it.
     registerForTraitChanges([UITraitHorizontalSizeClass.self]) { (self: Self, _) in
+      // Before the calendar's day moves between its sheet and its pane,
+      // so what its detail is in the middle of goes with it.
+      self.navigator.calendar.show(wide: self.isWide)
       self.arrange(animated: false)
     }
   }
@@ -251,6 +258,8 @@ final class RootController: UITabBarController, UINavigationControllerDelegate,
 
   override func viewDidLoad() {
     super.viewDidLoad()
+    // Before the calendar's day moves between its sheet and its pane.
+    navigator.calendar.show(wide: isWide)
     arrange(animated: false)
   }
 
