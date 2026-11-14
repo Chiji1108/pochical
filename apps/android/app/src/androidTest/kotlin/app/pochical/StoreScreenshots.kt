@@ -68,7 +68,8 @@ import org.junit.runner.RunWith
  * in the order the app is walked rather than the stores': the sample month as a new user's,
  * リマインド's reminder of the evening before, who joins the groups tools/store-screenshots/seed.ts
  * made, the friends' as まい and the coworkers' as 佐藤; a page of a シフトの期間 from the 15th; the
- * month in 墨, in black and white ([Style.Sumi]), and with its shifts as letters ([Style.Letters]);
+ * month in 墨, in black and white ([Style.Sumi]) with 月と曜日 in English, and with its shifts as
+ * letters ([Style.Letters]);
  * ポチポチ入力 halfway through the month, the days it takes out entered again after; then, every
  * picture of the month taken, what changes its days: the widgets, each kind by itself at each
  * size it offers, in the app's look and in 墨, on each of today's shifts the wall shows, those that
@@ -186,7 +187,7 @@ class StoreScreenshots {
     pickPeriod("1日〜末日")
 
     // Every picture of the month before the widgets change its days.
-    pick(Style.Sumi)
+    pick(Style.Sumi, english = true)
     launch()
     device.find(calendar)
     photograph("05-calendar-sumi")
@@ -323,8 +324,11 @@ class StoreScreenshots {
     device.tap(By.text("参加する"), By.text("全体チャット"))
   }
 
-  /** Picks [style] in 設定, as the person would: スタイル's choices, and カレンダー's 色をつける日. */
-  private fun pick(style: Style) {
+  /**
+   * Picks [style] in 設定, as the person would: スタイル's choices, and カレンダー's 月と曜日, in [english]
+   * or not, and 色をつける日.
+   */
+  private fun pick(style: Style, english: Boolean = false) {
     device.tap(By.text("設定"), By.text("スタイル"))
     device.tap(By.text("スタイル"), By.text("テーマ"))
     for (choice in listOf(style.shape, style.theme, style.colors, style.off)) {
@@ -335,6 +339,8 @@ class StoreScreenshots {
     device.back(By.text("テーマ"))
     // カレンダー's row, by what it says of the week: the tab is カレンダー too.
     device.tap(By.textContains("曜はじまり"), By.text("週の始まり"))
+    val names = if (english) "英語" else "日本語"
+    if (!device.hasObject(By.desc(names).checked(true))) device.tap(By.desc(names), By.desc(names).checked(true))
     for (day in listOf("土曜", "日曜", "祝日")) {
       reveal(By.text(day))
       if (!device.hasObject(switch(day, style.coloredDays))) device.tap(switch(day, !style.coloredDays), switch(day, style.coloredDays))
