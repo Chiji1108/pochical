@@ -36,7 +36,7 @@
 
 | 変数 | 設定場所 | 用途 |
 | --- | --- | --- |
-| `VITE_SITE_URL` | `.env.local` / CIのビルド環境 | 決定した本番HTTPSオリジン。canonicalとOG画像URL |
+| `VITE_SITE_URL` | `.env.local` / CIのビルド環境 | 決定した本番HTTPSオリジン。canonicalとOG画像URL、サイトマップ、トップページの構造化データ |
 | `VITE_APP_STORE_URL` | 同上 | 公開後のApp Store URL |
 | `VITE_GOOGLE_PLAY_URL` | 同上 | 公開後のGoogle Play URL |
 
