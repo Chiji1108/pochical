@@ -246,6 +246,7 @@ fun MemberWeek(members: List<GroupMember>, groupId: String, today: LocalDate, on
       Modifier.fillMaxWidth()
         .then(if (next != null && onOpen != null) Modifier.clickable { onOpen(next) } else Modifier)
         .padding(start = 12.dp, top = 10.dp, end = 4.dp, bottom = 2.dp),
+      horizontalArrangement = Arrangement.spacedBy(8.dp),
       verticalAlignment = Alignment.CenterVertically,
     ) {
       Text(stringResource(R.string.next_together), Modifier.weight(1f), style = PochicalTextStyles.footnote, color = colors.textSecondary)

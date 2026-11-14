@@ -39,6 +39,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.pochical.LocalThemeColors
 import app.pochical.R
+import app.pochical.contextClick
 import app.pochical.design.Chat
 import app.pochical.design.Radius
 import app.pochical.kit.ChatLine
@@ -121,7 +122,9 @@ private fun PinItem(line: ChatLine, modifier: Modifier, onJump: (Long) -> Unit, 
   Box(modifier) {
     Box(
       Modifier.fillMaxWidth()
-        // The long press named ピン留めを外す for a screen reader, which offers it as the item's action.
+        // The long press named ピン留めを外す for a screen reader, which offers it as the item's action;
+        // a right click opens it too.
+        .contextClick { menu = true }
         .combinedClickable(onClickLabel = hint, onLongClickLabel = unpin, onLongClick = { menu = true }, onClick = { onJump(line.seq) })
         .padding(8.dp)
     ) {

@@ -11,6 +11,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -137,16 +138,34 @@ class LineMenuState {
   internal val visible
     get() = shown
 
-  fun open(line: MenuLine, at: Rect, given: Float = 1f) {
+  /** Whether the menu takes the focus as it opens: opened by a key, or a screen reader's activation, not by a press. */
+  internal var takesFocus = false
+    private set
+
+  fun open(line: MenuLine, at: Rect, given: Float = 1f, takesFocus: Boolean = false) {
     targets.clear()
     this.given = given
+    this.takesFocus = takesFocus
     lit = null
     bounds = at
     open = line
     shown.targetState = true
   }
 
+  /**
+   * Whether the focus goes back to the line as the menu goes: closed without a pick, or by a
+   * reaction; not after an item, which may have put it elsewhere (返信 and 編集 on the composer), nor
+   * after +, whose picker takes it.
+   */
+  internal var focusReturns = true
+    private set
+
   fun close() {
+    focusReturns = true
+    shut()
+  }
+
+  private fun shut() {
     shown.targetState = false
     lit = null
   }
@@ -179,7 +198,8 @@ class LineMenuState {
 
   /** + in the bar: the system's emoji picker, as the menu closes. */
   fun more(bar: ReactionBar) {
-    close()
+    focusReturns = false
+    shut()
     bar.onMore()
   }
 
@@ -191,7 +211,8 @@ class LineMenuState {
 
   /** A pick acts as the menu closes, as the system's context menu does. */
   fun pick(item: LineMenuItem) {
-    close()
+    focusReturns = false
+    shut()
     item.run()
   }
 }
@@ -224,23 +245,28 @@ fun LineMenu(state: LineMenuState, reducedMotion: Boolean) {
   val gone = state.visible.isIdle && !state.visible.targetState
   LaunchedEffect(gone) { if (gone) state.gone() }
   BackHandler(state.visible.targetState) { state.close() }
-  // A screen reader goes into it as it opens, on its first reaction or item, as iOS moves VoiceOver there.
+  // A screen reader goes into it as it opens, on its first reaction or item, as iOS moves VoiceOver
+  // there, and so does a keyboard's focus, opened by a key; a right click leaves the focus where it is.
   val first = remember(line) { FocusRequester() }
   val reading = rememberScreenReaderOn()
-  LaunchedEffect(line, reading) { if (reading) first.requestFocus() }
+  LaunchedEffect(line, reading) { if (reading || state.takesFocus) first.requestFocus() }
   // Lifted about its middle from the press's give as the menu opens, and back to its size as it goes.
   val lift = remember(line) { Animatable(if (reducedMotion) 1f else state.given) }
   val spatial = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
   LaunchedEffect(line, state.visible.targetState, reducedMotion) {
     if (reducedMotion) lift.snapTo(1f) else lift.animateTo(if (state.visible.targetState) LIFTED_SCALE else 1f, spatial)
   }
-  Box(Modifier.fillMaxSize().onGloballyPositioned { origin = it.positionInWindow() }) {
+  // A keyboard's focus stays among the reactions and the items while it is open, as in the system's
+  // menus, which are windows of their own: never out to the chat under the scrim. Closing, it lets
+  // the focus go where a pick puts it (返信 and 編集 on the composer).
+  Box(Modifier.fillMaxSize().onGloballyPositioned { origin = it.positionInWindow() }.focusProperties { onExit = { if (state.visible.targetState) cancelFocusChange() } }.focusGroup()) {
     AnimatedVisibility(state.visible, enter = fadeIn(), exit = fadeOut()) {
       Box(
         Modifier.fillMaxSize()
           .background(MaterialTheme.colorScheme.scrim.copy(alpha = SCRIM))
           // Not a screen reader's: it closes the menu by a back, as the chat under it is out of its reach.
           .clearAndSetSemantics {}
+          .focusProperties { canFocus = false }
           .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { state.close() }
       )
     }

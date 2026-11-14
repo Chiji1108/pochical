@@ -40,6 +40,7 @@ import androidx.compose.ui.util.lerp
 import androidx.compose.ui.unit.sp
 import app.pochical.LocalThemeColors
 import app.pochical.R
+import app.pochical.contextClick
 import app.pochical.kit.GroupMemberRow
 import app.pochical.kit.LineReaction
 import app.pochical.kit.PhotoShelf
@@ -186,6 +187,7 @@ private fun ReactionPill(
       }
         .background(if (own) colors.accentContainer else MaterialTheme.colorScheme.surfaceContainerHigh, shape)
         .border(1.dp, if (own) colors.accentDefault else Color.Transparent, shape)
+        .then(if (onTap != null) Modifier.contextClick { onLongPress() } else Modifier)
         .combinedClickable(enabled = onTap != null, onClick = { onTap?.invoke() }, onLongClick = onLongPress)
         .padding(horizontal = 8.dp, vertical = 3.dp)
         .clearAndSetSemantics {},
