@@ -42,6 +42,6 @@ export const googlePlayUrl = (): string | undefined =>
 // The stores the app is on, each with the phone it is for and its page,
 // none until its URL is set.
 export const stores = () => [
-  { name: "App Store", phone: "iPhone", url: appStoreUrl() },
-  { name: "Google Play", phone: "Android", url: googlePlayUrl() },
+  { name: "App Store", phone: "iPhone", url: appStoreUrl() } as const,
+  { name: "Google Play", phone: "Android", url: googlePlayUrl() } as const,
 ];
