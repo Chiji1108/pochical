@@ -17,10 +17,14 @@ import type { PresetShift } from "./design-patterns";
 // more than twice the other:
 // https://support.google.com/googleplay/android-developer/answer/9866151
 // `widgetRow` is how tall a Home Screen's cell is in its widths, by the
-// platform's small widget (Android's SMALL, WidgetParts.kt).
+// platform's small widget (Android's SMALL, WidgetParts.kt). `corner` is
+// how round a screen's corners are drawn, in hundredths of the picture's
+// width: an iPhone's own, which its status bar keeps clear of, and for
+// Android a card's, as the emulator's screen is square and its clock
+// stands near the corner.
 export const STORES = {
-  android: { height: 1920, widgetRow: 202 / 179, width: 1080 },
-  ios: { height: 2622, widgetRow: 1, width: 1206 },
+  android: { corner: 4.25, height: 1920, widgetRow: 202 / 179, width: 1080 },
+  ios: { corner: 9, height: 2622, widgetRow: 1, width: 1206 },
 } as const;
 
 export type StoreId = keyof typeof STORES;
@@ -158,7 +162,8 @@ export const WALL_SHOT = {
 // at most, the App Store ten. A raw file or folder named `-sumi` is in the
 // look the app's own settings give it in black and white: テーマ 墨,
 // シフトの色 ワントーン, シフトの見た目 線, 休みの見せ方 印だけ, and
-// 色をつける日 all off; one named `-letters` has the shifts as letters,
+// 色をつける日 all off, the month's own picture with 月と曜日 in English;
+// one named `-letters` has the shifts as letters,
 // シフトの見た目 文字, in the テーマ the app starts in. Everything else is
 // as the app starts. The wall is placed by hand and mixes the two, medium and large
 // widgets carrying it and small ones its accents, those set to someone
