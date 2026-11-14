@@ -159,8 +159,8 @@ export const WALL_SHOT = {
 // look the app's own settings give it in black and white: テーマ 墨,
 // シフトの色 ワントーン, シフトの見た目 線, 休みの見せ方 印だけ, and
 // 色をつける日 all off; one named `-letters` has the shifts as letters,
-// シフトの見た目 文字, in テーマ ソーダ. Everything else is as the app
-// starts. The wall is placed by hand and mixes the two, medium and large
+// シフトの見た目 文字, in the テーマ the app starts in. Everything else is
+// as the app starts. The wall is placed by hand and mixes the two, medium and large
 // widgets carrying it and small ones its accents, those set to someone
 // or to the group among them, with 次の休み counting to a day off and on
 // one, and いまのシフト, its ring drawn while a shift is on, together

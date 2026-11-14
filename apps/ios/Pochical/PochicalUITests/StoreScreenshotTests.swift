@@ -583,9 +583,9 @@ final class StoreScreenshotTests: XCTestCase {
     /// 墨 with nothing colored and nothing filled: black and white.
     static let sumi = Style(
       shape: "線", theme: "墨", colors: "ワントーン", off: "印だけ", coloredDays: false)
-    /// The shifts as letters, each in its color, in ソーダ.
+    /// The shifts as letters, each in its color, in the テーマ the app starts in.
     static let letters = Style(
-      shape: "文字", theme: "ソーダ", colors: "色分け", off: "印だけ", coloredDays: true)
+      shape: "文字", theme: "ポチカル", colors: "色分け", off: "印だけ", coloredDays: true)
   }
 
   /// Picks `style` in 設定, as the person would: スタイル's choices and

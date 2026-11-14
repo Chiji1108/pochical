@@ -100,8 +100,8 @@ class StoreScreenshots {
     /** 墨 with nothing colored and nothing filled: black and white. */
     Sumi("線", "墨", "ワントーン", "印だけ", coloredDays = false),
 
-    /** The shifts as letters, each in its color, in ソーダ. */
-    Letters("文字", "ソーダ", "色分け", "印だけ", coloredDays = true),
+    /** The shifts as letters, each in its color, in the テーマ the app starts in. */
+    Letters("文字", "ポチカル", "色分け", "印だけ", coloredDays = true),
   }
 
   /** The notifications a photograph put off, to bring back as the run ends. */
@@ -368,8 +368,8 @@ class StoreScreenshots {
 
   /**
    * Turns テーマ's pages, a few テーマ each, to the one holding [theme]: back to the first, then on to
-   * the last, a page a drag across the テーマ, over the pages' dots, which say the page once it is
-   * the one shown, its テーマ on it by then.
+   * the last, a page a drag across the テーマ, over the pages' dots, which say the page as it
+   * becomes the one shown; its テーマ are read once the page has settled.
    */
   private fun showTheme(theme: String) {
     val dots = By.descStartsWith("テーマのページ")
@@ -383,6 +383,8 @@ class StoreScreenshots {
       if (device.hasObject(By.text(theme))) return
       if (next < on) device.swipe(start, at, end, at, 20) else device.swipe(end, at, start, at, 20)
       device.find(By.desc("テーマのページ $next / $pages"))
+      // The dots say the page as it becomes the one shown; its テーマ are read once it has settled.
+      device.waitForIdle()
       on = next
     }
     check(device.hasObject(By.text(theme))) { "None of テーマ's $pages pages has $theme" }
