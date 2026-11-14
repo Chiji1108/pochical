@@ -193,7 +193,7 @@ struct CalendarScreen: View {
       .ignoresSafeArea()
     }
     // The tabs give way to entering and to a day's week, as /design's do.
-    .toolbarVisibility(entering == nil && shownOpen == nil ? .visible : .hidden, for: .tabBar)
+    .tabBarHidden(entering != nil || shownOpen != nil)
     // A page turned to while entering starts on its first blank day; a
     // day picked on a page around it turns to that page.
     .onChange(of: shownMonth) { _, month in

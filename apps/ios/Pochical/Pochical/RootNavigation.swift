@@ -305,6 +305,9 @@ final class RootController: UITabBarController, UINavigationControllerDelegate,
   /// heads, has no bar: hidden only while it shows alone, so never as a
   /// page comes or goes.
   func arrange(animated: Bool) {
+    // Laid out once the width is known, as the controller comes into its
+    // window: the change to it arranges them.
+    guard traitCollection.horizontalSizeClass != .unspecified else { return }
     let tab = navigator.tab
     let pages = navigator.pages
     arranging = true
@@ -364,6 +367,7 @@ final class RootController: UITabBarController, UINavigationControllerDelegate,
     if selectedTab?.identifier != tab.rawValue {
       selectedTab = self.tab(forIdentifier: tab.rawValue)
     }
+    stacks[tab]?.screen.placeTabBar()
   }
 
   /// A tab picked in the tab bar, or in the sidebar.
@@ -371,7 +375,8 @@ final class RootController: UITabBarController, UINavigationControllerDelegate,
     _ tabBarController: UITabBarController, didSelectTab selectedTab: UITab,
     previousTab: UITab?
   ) {
-    guard let tab = RootTab(rawValue: selectedTab.identifier) else { return }
+    // Not the tabs put in again for another width, which take the one shown.
+    guard !arranging, let tab = RootTab(rawValue: selectedTab.identifier) else { return }
     navigator.select(tab)
   }
 
@@ -400,7 +405,6 @@ private struct TabStack {
   let wideColumn: UINavigationController?
   /// The pages beside the screen, and what stands there while none is open.
   let side: (navigation: UINavigationController, nothing: UIHostingController<AnyView>)?
-  let split: UISplitViewController?
   /// The tab, as the tab bar controller shows it on a narrow screen and on
   /// a wide one: one for the calendar, a controller being only one tab's.
   let narrowTab: UITab
@@ -418,7 +422,6 @@ private struct TabStack {
     guard tab != .calendar else {
       wideColumn = nil
       side = nil
-      split = nil
       wideTab = narrowTab
       return
     }
@@ -437,7 +440,6 @@ private struct TabStack {
     split.presentsWithGesture = false
     split.setViewController(wideColumn, for: .primary)
     split.setViewController(side.navigation, for: .secondary)
-    self.split = split
     wideTab = Self.item(tab, showing: split)
   }
 
@@ -469,18 +471,39 @@ private struct TabStack {
 /// A tab's screen, told where its bar's top is (barTop): UIKit lays the
 /// bar out for the window, under the status bar, or on an iPad with the
 /// tab bar at the top under that tab bar, the bar's buttons in the row
-/// below it.
+/// below it. It hides the tab bar as the screen asks (tabBarHidden).
 private final class ScreenHost: UIHostingController<AnyView> {
   private let band = BarBand()
+  /// The screen asks for the tab bar's place.
+  private var wantsTabBarHidden = false
 
   init() {
     super.init(rootView: AnyView(EmptyView()))
+    registerForTraitChanges([UITraitHorizontalSizeClass.self]) { (self: Self, _) in
+      self.placeTabBar()
+    }
   }
 
   @available(*, unavailable) required init?(coder: NSCoder) { fatalError() }
 
   func show(_ screen: AnyView) {
-    rootView = AnyView(screen.modifier(BarBandTop(band: band)))
+    let hide = HideTabBarAction { [weak self] hidden in
+      self?.wantsTabBarHidden = hidden
+      self?.placeTabBar()
+    }
+    rootView = AnyView(
+      screen.modifier(BarBandTop(band: band)).environment(\.hideTabBar, hide))
+  }
+
+  /// Hides the tab bar while the screen shows and asks, on a narrow
+  /// screen: a wide one keeps the calendar's tray and day in a pane of
+  /// their own, clear of the tabs (spec/calendar.md, On a wide screen).
+  func placeTabBar() {
+    guard let tabs = tabBarController, tabs.selectedViewController === navigationController
+    else { return }
+    let hidden = wantsTabBarHidden && traitCollection.horizontalSizeClass == .compact
+    guard tabs.isTabBarHidden != hidden else { return }
+    tabs.setTabBarHidden(hidden, animated: view.window != nil)
   }
 
   override func viewDidLayoutSubviews() {
@@ -501,6 +524,38 @@ private struct BarBandTop: ViewModifier {
 
   func body(content: Content) -> some View {
     content.environment(\.barTop, band.top)
+  }
+}
+
+/// Hides the tab bar of the tab a screen is, or shows it again.
+struct HideTabBarAction {
+  let hide: @MainActor (Bool) -> Void
+
+  @MainActor func callAsFunction(_ hidden: Bool) {
+    hide(hidden)
+  }
+}
+
+extension EnvironmentValues {
+  @Entry var hideTabBar = HideTabBarAction { _ in }
+}
+
+extension View {
+  /// Gives the tab bar's place to what the tab's screen shows there while
+  /// `hidden`, as the calendar's tray and day do (spec/calendar.md): the
+  /// tab bar is the system's tab bar controller's, which SwiftUI's
+  /// `toolbarVisibility(_:for: .tabBar)` reaches only in its own TabView.
+  func tabBarHidden(_ hidden: Bool) -> some View {
+    modifier(TabBarHiding(hidden: hidden))
+  }
+}
+
+private struct TabBarHiding: ViewModifier {
+  @Environment(\.hideTabBar) private var hideTabBar
+  let hidden: Bool
+
+  func body(content: Content) -> some View {
+    content.onChange(of: hidden, initial: true) { _, hidden in hideTabBar(hidden) }
   }
 }
 
