@@ -24,7 +24,7 @@ final class WideCalendarTests: XCTestCase {
     day.tap()
     XCTAssertTrue(title(of: "\(thisMonth)月13日").waitForExistence(timeout: 5), "the day tapped is in the pane")
     XCTAssertTrue(self.day(on: 1).isHittable, "the month stays unfolded")
-    snap("pane", of: app)
+    snap("pane", of: XCUIScreen.main)
   }
 
   /// A memo being written in the pane goes on being written in the sheet
@@ -50,7 +50,7 @@ final class WideCalendarTests: XCTestCase {
     for _ in 0..<3 where !keyboard.waitForExistence(timeout: 1) { memo.tap() }
     XCTAssertTrue(keyboard.exists, "the memo is being written")
     app.typeText("ABCD")
-    snap("memo-written", of: app)
+    snap("memo-written", of: XCUIScreen.main)
     XCUIDevice.shared.orientation = .portrait
     XCTAssertTrue(title(of: "\(thisMonth)月13日").waitForExistence(timeout: 5), "the day is in the sheet")
     let moved = memoField(holding: "ABCD")
@@ -60,12 +60,12 @@ final class WideCalendarTests: XCTestCase {
     XCTAssertTrue(
       memoField(holding: "ABCDE").exists,
       "the caret is where it was: \(String(describing: memoField(holding: "ABCD").value))")
-    snap("memo-sheet", of: app)
+    snap("memo-sheet", of: XCUIScreen.main)
     XCUIDevice.shared.orientation = .landscapeLeft
     let back = memoField(holding: "ABCDE")
     XCTAssertTrue(back.waitForExistence(timeout: 5), "the memo comes back to the pane")
     XCTAssertTrue(hasFocus(back), "and is still being written")
-    snap("memo-pane", of: app)
+    snap("memo-pane", of: XCUIScreen.main)
   }
 
   /// シフト's list open in the pane stays open in the sheet.
@@ -77,7 +77,7 @@ final class WideCalendarTests: XCTestCase {
     XCTAssertTrue(app.navigationBars["シフト"].waitForExistence(timeout: 5), "シフト's list is pushed in the pane")
     XCUIDevice.shared.orientation = .portrait
     XCTAssertTrue(app.navigationBars["シフト"].waitForExistence(timeout: 5), "the list stays open in the sheet")
-    snap("list-sheet", of: app)
+    snap("list-sheet", of: XCUIScreen.main)
   }
 
   /// ポチポチ入力 at the pane's foot puts the tray in the pane, the month
@@ -91,7 +91,7 @@ final class WideCalendarTests: XCTestCase {
     XCTAssertTrue(app.buttons["消す"].exists, "the tray is in the pane")
     XCTAssertTrue(day(on: 1).isHittable, "the month stays beside it")
     XCTAssertTrue(app.buttons["グループ"].exists, "the tabs stay")
-    snap("entering", of: app)
+    snap("entering", of: XCUIScreen.main)
   }
 
   /// Launches with the sample month on its side; skipped on a compact one.
