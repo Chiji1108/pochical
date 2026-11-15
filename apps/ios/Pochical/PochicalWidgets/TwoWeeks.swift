@@ -90,7 +90,8 @@ struct GridDay: View {
             // upright extra large), so it never runs over the next week.
             GeometryReader { room in
               ShiftMark(
-                pattern: pattern, size: min(markSize, room.size.height), change: day.timeChange
+                pattern: pattern, size: ShiftMark.size(markSize, fitting: room.size.height),
+                change: day.timeChange
               )
               .frame(maxWidth: .infinity, maxHeight: .infinity)
             }

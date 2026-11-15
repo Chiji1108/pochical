@@ -526,10 +526,11 @@ fun CalendarScreen(
   val select by rememberUpdatedState<(LocalDate) -> Unit> { selectDay(it) }
 
   @Composable
-  fun pageDays(cell: Dp): PageDays {
+  fun pageDays(cell: Dp, weekWidth: Dp): PageDays {
     // While 完了 asks, the blank days show faint as the pattern picked would fill them.
     val preview = if (gapFill != null) gaps.associateWith { gapFill } else emptyMap()
-    return remember(calendar, week, period, today, country, cell, opened, entering, preview) {
+    val markScale = monthMarkScale(cell, weekWidth)
+    return remember(calendar, week, period, today, country, cell, markScale, opened, entering, preview) {
       PageDays(
         calendar,
         week,
@@ -537,6 +538,7 @@ fun CalendarScreen(
         today,
         country,
         cell,
+        markScale,
         selected = entering ?: opened,
         isEntering = entering != null,
         preview = preview,
@@ -691,9 +693,10 @@ fun CalendarScreen(
                 // The days take their size from the room the foot leaves them once it is still, the tray's
                 // while entering, as the tabs stay.
                 val room = remember { mutableStateOf(maxHeight) }.apply { if (!footMoving) value = maxHeight }.value
-                val cell by animateDpAsState(monthCellHeight(room - DAY_GAP, tallestDay(maxWidth - SCREEN_EDGE * 2)), Springs.standard(), label = "cell")
+                val weekWidth = maxWidth - SCREEN_EDGE * 2
+                val cell by animateDpAsState(monthCellHeight(room - DAY_GAP, tallestDay(weekWidth)), Springs.standard(), label = "cell")
                 // A window too short for six weeks at their shortest, a phone on its side, scrolls them.
-                Box(Modifier.verticalScroll(rememberScrollState())) { MonthPager(pager, range, pageDays(cell)) }
+                Box(Modifier.verticalScroll(rememberScrollState())) { MonthPager(pager, range, pageDays(cell, weekWidth)) }
               }
               monthFoot()
             }
@@ -733,11 +736,12 @@ fun CalendarScreen(
         // Measured at rest too, with neither a day open nor entering, as the days' size follows the room.
         val atRest = !footMoving && opened == null && entering == null
         val room = remember { mutableStateOf(maxHeight) }.apply { if (atRest) value = maxHeight }.value
-        val cell by animateDpAsState(monthCellHeight(room - DAY_GAP, tallestDay(maxWidth - SCREEN_EDGE * 2)), Springs.standard(), label = "cell")
+        val weekWidth = maxWidth - SCREEN_EDGE * 2
+        val cell by animateDpAsState(monthCellHeight(room - DAY_GAP, tallestDay(weekWidth)), Springs.standard(), label = "cell")
         val monthHeight = monthGridHeight(cell)
         val monthScroll = rememberScrollState()
         Column {
-          val pageDays = pageDays(cell)
+          val pageDays = pageDays(cell, weekWidth)
           // Pulling the week down unfolds the month, following the finger: let
           // go past a third of the way, or flicked down, it unfolds, else it
           // folds back. A pull never presses the day it starts on.
@@ -1033,6 +1037,8 @@ private class PageDays(
   val today: LocalDate,
   val country: String,
   val cell: Dp,
+  /** How much larger than a phone's the days draw their marks (monthMarkScale). */
+  val markScale: Float,
   /** The day opened, or the day being entered, framed. */
   val selected: LocalDate?,
   /** ポチポチ入力 is on: today's frame gives way to the day being entered. */
@@ -1083,6 +1089,7 @@ private class PageDays(
       onClick = { onSelect(day) },
       enabled = selectable,
       modifier = Modifier.weight(1f),
+      markScale = markScale,
     )
   }
 }

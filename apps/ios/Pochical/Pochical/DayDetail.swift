@@ -32,6 +32,9 @@ struct DayDetail: View {
   /// Where it says what it is in the middle of, and takes it from as it
   /// comes in place of the detail of the same day moved.
   let handover: DayDetailHandover
+  /// The lists pushed over the day, in the navigation around it
+  /// (DayNavigation), which outlives the day.
+  @Binding var lists: [DayList]
   /// The memo as it is written, kept when the field is left, the detail
   /// closes or the app goes to the background (spec/calendar.md, Text
   /// fields).
@@ -49,8 +52,6 @@ struct DayDetail: View {
   /// The memo's row, scrolled to.
   private static var memoRow: String { "memo" }
   @FocusState private var writingNote: Bool
-  /// The lists pushed over the day.
-  @State private var lists: [DayList] = []
   @State private var clearing = false
   @State private var addingCoworker = false
   @State private var newCoworker = ""
@@ -61,7 +62,7 @@ struct DayDetail: View {
   /// and ‹ › to the day before and after; シフト and 一緒に働く人 push
   /// their lists within it.
   var body: some View {
-    NavigationStack(path: $lists) {
+    Group {
       ScrollViewReader { rows in
         form
           // A memo moved here while written is scrolled to, for its row
@@ -107,6 +108,8 @@ struct DayDetail: View {
         movedWriting = handover.writing
       } else {
         draft = note ?? ""
+        // Another day's lists go with it.
+        lists = []
         tellHandover()
       }
     }
@@ -598,4 +601,19 @@ private struct Searching: ViewModifier {
 func hoursText(_ start: String, _ end: String) -> String {
   let trim = { (time: String) in time.hasPrefix("0") ? String(time.dropFirst()) : time }
   return "\(trim(start)) – \(end <= start ? "翌" : "")\(trim(end))"
+}
+
+/// The day's navigation, which its bar and the lists pushed over it are
+/// in, kept as one day gives way to the next: put in anew with each day,
+/// a navigation in the inspector has SwiftUI keep a toolbar's row over the
+/// whole window, the month and the pane coming down by it (#1260).
+struct DayNavigation<Content: View>: View {
+  @State private var lists: [DayList] = []
+  @ViewBuilder let content: (Binding<[DayList]>) -> Content
+
+  var body: some View {
+    NavigationStack(path: $lists) {
+      content($lists)
+    }
+  }
 }

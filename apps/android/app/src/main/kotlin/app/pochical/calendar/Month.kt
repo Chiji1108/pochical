@@ -31,6 +31,13 @@ fun monthRowPitch(cell: Dp): Dp = cell + DAY_GAP
 fun monthCellHeight(room: Dp, most: Dp = DAY_FULL_HEIGHT): Dp = ((room - DAY_GAP * 5) / 6).coerceIn(Metrics.touch, most)
 
 /**
+ * How much larger than a phone's a day [cell] tall in a week [width] wide draws its mark: the smaller of how much
+ * taller and how much wider it is than a phone's day (design/src/metrics.ts, DAY_PROPORTION), so the mark keeps to
+ * the day either way; never smaller, as a short day fits its mark to its room instead.
+ */
+fun monthMarkScale(cell: Dp, width: Dp): Float = maxOf(1f, minOf(cell, (width - DAY_GAP * 6) / 7 * Metrics.DAY_PROPORTION) / DAY_FULL_HEIGHT)
+
+/**
  * The tallest a day of a week [width] wide is drawn: a phone's day for its width (design/src/metrics.ts,
  * DAY_PROPORTION), never under its full height.
  */

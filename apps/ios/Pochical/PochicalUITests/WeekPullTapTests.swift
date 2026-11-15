@@ -49,6 +49,18 @@ final class WeekPullTapTests: XCTestCase {
     XCTAssertFalse(anySelected, "the flick unfolds the month with no day open")
   }
 
+  /// The next day's detail, in the navigation kept from day to day,
+  /// pushes its lists as the first day's does (#1260).
+  func testTheNextDayPushesItsList() throws {
+    let (_, other) = try openADay()
+    other.tap()
+    XCTAssertTrue(becomesSelected(other), "the next day opens")
+    let shift = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'シフト'")).firstMatch
+    XCTAssertTrue(shift.waitForExistence(timeout: 5), "its detail shows シフト")
+    shift.tap()
+    XCTAssertTrue(app.navigationBars["シフト"].waitForExistence(timeout: 5), "シフト's list is pushed")
+  }
+
   func testSwipeOpensTheNextWeek() throws {
     let (opened, _) = try openADay()
     let start = opened.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))

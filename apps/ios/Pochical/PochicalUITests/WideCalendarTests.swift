@@ -156,6 +156,25 @@ final class WideCalendarTests: XCTestCase {
     snap("foot", of: XCUIScreen.main)
   }
 
+  /// The month and the pane stay where they are as a day opens and as
+  /// entering starts and ends: the pane's navigation is kept from day to
+  /// day, so no toolbar's row comes over the window (#1260).
+  func testNothingMovesAsTheDayChanges() throws {
+    try launchWide()
+    let top = day(on: 1).frame.minY
+    let paneTop = title(of: today).frame.minY
+    day(on: 13).tap()
+    XCTAssertTrue(title(of: "\(thisMonth)月13日").waitForExistence(timeout: 5), "the day is in the pane")
+    XCTAssertEqual(day(on: 1).frame.minY, top, accuracy: 0.5, "the month stays as a day opens")
+    XCTAssertEqual(title(of: "\(thisMonth)月13日").frame.minY, paneTop, accuracy: 0.5, "the pane stays")
+    app.buttons["ポチポチ入力"].tap()
+    XCTAssertTrue(app.buttons["完了"].waitForExistence(timeout: 5), "entering")
+    XCTAssertEqual(day(on: 1).frame.minY, top, accuracy: 0.5, "the month stays as entering starts")
+    app.buttons["完了"].tap()
+    XCTAssertTrue(app.buttons["ポチポチ入力"].waitForExistence(timeout: 5), "entering ended")
+    XCTAssertEqual(day(on: 1).frame.minY, top, accuracy: 0.5, "the month stays as entering ends")
+  }
+
   /// Launches with the sample month on its side; skipped on a compact one.
   private func launchWide() throws {
     continueAfterFailure = false

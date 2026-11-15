@@ -179,6 +179,7 @@ struct CalendarScreen: View {
     // Off the fold, which the pane begins past.
     .padding(.trailing, wide ? hinge?.width ?? 0 : 0)
     .environment(\.dayCellHeight, cellHeight)
+    .environment(\.dayMarkScale, MonthPage.markScale(cell: cellHeight, across: room.week))
     // Measured at rest, as the tabs give way on a phone; the month on a
     // wide screen is as tall whatever the pane shows. Widened or
     // narrowed, it is measured anew as it comes, a day open or not.
@@ -503,44 +504,46 @@ struct CalendarScreen: View {
     let entry = calendar.shown(from: day, through: day)[day]
     // One day gives way to the next however it is opened, by a tap,
     // ‹ ›, 今週 or a swipe.
-    return ZStack {
-      DayDetail(
-        day: day, entry: entry, note: calendar.note(on: day), patterns: calendar.patterns,
-        coworkers: calendar.coworkers,
-        onChange: { entry in
-          keep { db, now in try OwnValues.set(day, to: entry, now: now, in: db) }
-        },
-        onNoteChange: { note in
-          keep { db, now in try OwnValues.setNote(day, to: note, now: now, in: db) }
-        },
-        // Someone added from a day is on that day too, while it takes
-        // one more, counting those still listed as the day's list does.
-        onAddCoworker: { name in
-          keep { db, now in
-            let id = try OwnValues.addCoworker(named: name, now: now, in: db)
-            let listed = (entry?.people ?? []).filter { id in
-              calendar.coworkers.contains { $0.id == id }
+    return DayNavigation { lists in
+      ZStack {
+        DayDetail(
+          day: day, entry: entry, note: calendar.note(on: day), patterns: calendar.patterns,
+          coworkers: calendar.coworkers,
+          onChange: { entry in
+            keep { db, now in try OwnValues.set(day, to: entry, now: now, in: db) }
+          },
+          onNoteChange: { note in
+            keep { db, now in try OwnValues.setNote(day, to: note, now: now, in: db) }
+          },
+          // Someone added from a day is on that day too, while it takes
+          // one more, counting those still listed as the day's list does.
+          onAddCoworker: { name in
+            keep { db, now in
+              let id = try OwnValues.addCoworker(named: name, now: now, in: db)
+              let listed = (entry?.people ?? []).filter { id in
+                calendar.coworkers.contains { $0.id == id }
+              }
+              if var entry, fitsDayPeople(listed + [id]) {
+                entry.people = listed + [id]
+                try OwnValues.set(day, to: entry, now: now, in: db)
+              }
             }
-            if var entry, fitsDayPeople(listed + [id]) {
-              entry.people = listed + [id]
-              try OwnValues.set(day, to: entry, now: now, in: db)
+          },
+          // While entering, ‹ › move the day being entered, as a day tapped
+          // in the month does.
+          onStep: { step in
+            if entering != nil {
+              select(day.adding(days: step))
+            } else {
+              go(to: day.adding(days: step))
             }
-          }
-        },
-        // While entering, ‹ › move the day being entered, as a day tapped
-        // in the month does.
-        onStep: { step in
-          if entering != nil {
-            select(day.adding(days: step))
-          } else {
-            go(to: day.adding(days: step))
-          }
-        },
-        closes: !inPane, entering: entering != nil, handover: handover
-      )
-      .id(PaneShowing(day: day, time: paneShowing))
+          },
+          closes: !inPane, entering: entering != nil, handover: handover, lists: lists
+        )
+        .id(PaneShowing(day: day, time: paneShowing))
+      }
+      .animation(folding, value: day)
     }
-    .animation(folding, value: day)
   }
 
   /// How far a pull unfolds the month: the month's foot comes down with
@@ -1189,6 +1192,16 @@ struct MonthPage: View {
   static func cellHeight(fitting room: CGFloat, upTo most: CGFloat = DayCell.fullHeight) -> CGFloat {
     let fitted = ((room - 5 * gap) / 6).rounded(.down)
     return max(leastCell, min(most, fitted))
+  }
+
+  /// How much larger than a phone's a day `cell` tall in a week `width`
+  /// wide draws its mark: the smaller of how much taller and how much
+  /// wider it is than a phone's day (design/src/metrics.ts,
+  /// DAY_PROPORTION), so the mark keeps to the day either way; never
+  /// smaller, as a short day fits its mark to its room instead.
+  static func markScale(cell: CGFloat, across width: CGFloat) -> CGFloat {
+    let wide = (width - 6 * gap) / 7 * Metrics.dayProportion
+    return max(1, min(cell, wide) / DayCell.fullHeight)
   }
 
   /// The tallest a day of a week `width` wide is drawn: a phone's day for
