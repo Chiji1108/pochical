@@ -21,9 +21,8 @@ import type { PresetShift } from "./design-patterns";
 // its sides from 1080 to 7680 pixels, one set for both its 7-inch and
 // its 10-inch tablets:
 // https://support.google.com/googleplay/android-developer/answer/9866151
-// A tablet is photographed on its side, where its wide layouts show: an
-// iPad's sidebar, a group's chat beside its column and the day's pane
-// beside the month (spec/chat.md, spec/calendar.md), which on Android an
+// A tablet is photographed on its side, where its wide layouts show: a
+// group's chat beside its column and the day's pane beside the month (spec/chat.md, spec/calendar.md), which on Android an
 // expanded width alone has.
 // `screen` is the screen the capture photographs, in pixels, on the side
 // it is held. `callouts` is whether a shot's callout lifts its part
@@ -34,7 +33,10 @@ import type { PresetShift } from "./design-patterns";
 // platform's small widget (Android's SMALL, WidgetParts.kt). `corner` is how round a screen's corners are drawn, in
 // the picture's units (unitOf): an iPhone's and an iPad's own, which the
 // status bar keeps clear of, and for Android a card's, as the emulator's
-// screen is square and its clock stands near the corner.
+// screen is square and its clock stands near the corner. A tablet's screen
+// has far smaller corners for its size than a phone's, and the emulator's
+// Pixel Tablet has none at all, its clock at the screen's very edge (#1248):
+// drawn at a tablet's, they clear it, two screens of a pair included.
 export const STORES = {
   android: {
     callouts: true,
@@ -46,7 +48,7 @@ export const STORES = {
   },
   "android-tablet": {
     callouts: false,
-    corner: 4.25,
+    corner: 2,
     height: 1440,
     screen: { height: 1600, width: 2560 },
     widgetRow: 202 / 179,

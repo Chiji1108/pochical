@@ -83,16 +83,26 @@ struct GroupsScreen: View {
         // an item of the bar: an item there would turn into the next
         // page's back button as it is pushed.
         .overlay(alignment: .topLeading) {
-          GroupHeading(group: open)
-            // Level with the bar's buttons, at its top.
-            .frame(maxWidth: .infinity, minHeight: Metrics.touch, alignment: .leading)
-            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { headingHeight = $0 }
-            .padding(.leading, GroupRail.width + 16)
-            // Clear of the bar's buttons, unless they stand down the
-            // screen's side, out of the band.
-            .padding(.trailing, barButtonsBeside ? 16 : GroupHub.actionsWidth)
-            .padding(.top, barTop)
-            .ignoresSafeArea(.container, edges: .top)
+          // Level with the bar's buttons, at its top, where the whole name
+          // fits beside them; else under them, as iOS sets a large title
+          // under a bar's items, where a column as narrow as an iPad's
+          // leaves it the column's width (#1245).
+          ViewThatFits(in: .horizontal) {
+            GroupHeading(group: open)
+              .frame(minHeight: Metrics.touch)
+              // Clear of the bar's buttons, unless they stand down the
+              // screen's side, out of the band.
+              .padding(.trailing, barButtonsBeside ? 16 : GroupHub.actionsWidth)
+            GroupHeading(group: open)
+              .frame(minHeight: Metrics.touch)
+              .padding(.top, Metrics.touch)
+              .padding(.trailing, 16)
+          }
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { headingHeight = $0 }
+          .padding(.leading, GroupRail.width + 16)
+          .padding(.top, barTop)
+          .ignoresSafeArea(.container, edges: .top)
         }
       } else {
         NoGroups(onNew: newGroup, onScan: onScan)

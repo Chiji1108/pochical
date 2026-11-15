@@ -30,8 +30,8 @@ final class StoreScreenshotTests: XCTestCase {
     }
     raw = URL(filePath: dir)
     app = XCUIApplication()
-    // An iPad's pictures are of it on its side, where its sidebar, a group's chat beside its
-    // column and the day's pane beside the month all show (#1226).
+    // An iPad's pictures are of it on its side, as it opens (the tab bar at the top), where a
+    // group's chat beside its column and the day's pane beside the month show (#1226).
     if UIDevice.current.userInterfaceIdiom == .pad { XCUIDevice.shared.orientation = .landscapeLeft }
   }
 
@@ -325,7 +325,7 @@ final class StoreScreenshotTests: XCTestCase {
     XCTAssertTrue(app.navigationBars["グループの設定"].waitForExistence(timeout: 5), "its settings open")
     // The section グループ's rows and what is said under them, from under
     // its name down to the section after it, in the settings' list (on an
-    // iPad the sidebar's and the column's stand beside it).
+    // iPad the group's column stands beside it).
     let rows = app.collectionViews.containing(.staticText, identifier: "このグループでのあなた")
       .firstMatch
     let after = rows.staticTexts["このグループでのあなた"]
@@ -539,8 +539,7 @@ final class StoreScreenshotTests: XCTestCase {
 
   /// How far across the screen the calendar's week of `date` is: from its
   /// first day to its last, with the room its days keep between them at
-  /// both sides, the calendar standing beside the sidebar and the day's
-  /// pane on an iPad.
+  /// both sides, the calendar standing beside the day's pane on an iPad.
   @MainActor private func week(_ date: DateComponents) -> ClosedRange<CGFloat> {
     let row = Calendar.current.component(.weekday, from: Calendar.current.date(from: date)!) - 1
     let days = (0..<7).map { day(date, after: $0 - row).frame }
@@ -573,7 +572,7 @@ final class StoreScreenshotTests: XCTestCase {
 
   /// Keeps as `name` the part of the screen from `top` down to `foot`, as
   /// wide as the page it is of, `across` (the screen's width on a phone, a
-  /// page beside the sidebar and the column on an iPad): whole rows of
+  /// page beside a column on an iPad): whole rows of
   /// it, for a tile of a shot of them.
   @MainActor private func snap(
     _ name: String, from top: CGFloat, until foot: CGFloat, across: ClosedRange<CGFloat>
@@ -695,8 +694,8 @@ final class StoreScreenshotTests: XCTestCase {
   }
 
   /// Scrolls up the page `element` is on, at its place across the screen:
-  /// on an iPad the sidebar and a column stand beside a page, so the
-  /// screen's middle may be theirs.
+  /// on an iPad a column stands beside a page, so the screen's middle
+  /// may be its.
   @MainActor private func swipeUp(on element: XCUIElement) {
     let middle = app.coordinate(withNormalizedOffset: .zero)
       .withOffset(CGVector(dx: element.frame.midX, dy: app.frame.midY))
@@ -711,9 +710,8 @@ final class StoreScreenshotTests: XCTestCase {
     if !app.navigationBars["設定"].exists { app.navigationBars[name].buttons.firstMatch.tap() }
   }
 
-  /// Opens the page 設定 lists as `name`: in its list, which on an iPad
-  /// stands beside the sidebar's, by the row saying its name and what it
-  /// holds (カレンダー、日曜はじまり), not the sidebar's tab of the name.
+  /// Opens the page 設定 lists as `name`: by the row saying its name and
+  /// what it holds (カレンダー、日曜はじまり), not a tab of the name.
   @MainActor private func open(page name: String) {
     let row = app.collectionViews.buttons
       .matching(NSPredicate(format: "label BEGINSWITH %@", "\(name)、")).firstMatch
@@ -746,13 +744,6 @@ final class StoreScreenshotTests: XCTestCase {
   @MainActor private func launch() {
     app.launchPastFirstRun(["-sample", "-reminderOffered", "YES"])
     XCTAssertTrue(app.tab("カレンダー").waitForExistence(timeout: 15), "the tabs show")
-    // On an iPad the sidebar, turned on by its button where iPadOS shows the tab bar at the top:
-    // a tab is a row of it then.
-    let sidebar = app.buttons["ToggleSideBar"]
-    if sidebar.exists && !app.cells["カレンダー"].exists {
-      sidebar.tap()
-      XCTAssertTrue(app.cells["カレンダー"].waitForExistence(timeout: 5), "the sidebar shows")
-    }
   }
 }
 
