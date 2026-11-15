@@ -83,6 +83,14 @@ extension XCUIApplication {
 }
 
 extension XCTestCase {
+  /// Whether `holds` comes true within a few seconds, a turn or a window
+  /// resized included.
+  func settled(_ holds: @escaping () -> Bool) -> Bool {
+    let settled = XCTNSPredicateExpectation(
+      predicate: NSPredicate { _, _ in holds() }, object: nil)
+    return XCTWaiter().wait(for: [settled], timeout: 5) == .completed
+  }
+
   /// Keeps a screenshot of `shown` with the test's results as `name`, and
   /// as `name`.png in `directory` when a script reads it from there.
   @MainActor func snap(

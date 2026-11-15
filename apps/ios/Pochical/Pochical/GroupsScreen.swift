@@ -66,6 +66,9 @@ struct GroupsScreen: View {
             onOpen: { pick($0, over: open.id) }, onNew: newGroup, onScan: onScan)
           // Up beside the bar's heading, as it stood beside the page's.
           .padding(.top, barTop)
+          // Under an iPad window's controls, which stand at its top-leading
+          // corner, where the rail's first group would be.
+          .containerCornerOffset(.top, sizeToFit: true)
           .ignoresSafeArea(.container, edges: .top)
           GroupHub(group: open) { day in
             navigator?.open(.group(.shifts(open, day: day)))
