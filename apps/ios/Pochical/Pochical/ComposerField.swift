@@ -52,6 +52,9 @@ struct ComposerField: UIViewRepresentable {
   /// as the photo picker's are; none where photos cannot go, where an
   /// image pastes nothing, as before.
   var onPasteImages: (([NSItemProvider]) -> Void)?
+  /// Sends what is written, as a keyboard's Return does (spec/chat.md, A
+  /// keyboard and a mouse); none while there is nothing to send.
+  var onSend: (() -> Void)?
 
   static let maxLines = 5
 
@@ -77,8 +80,9 @@ struct ComposerField: UIViewRepresentable {
   }
 
   func makeUIView(context: Context) -> UITextView {
-    let view = Self.setUp(PastingTextView())
+    let view = Self.setUp(ComposerTextView())
     view.onPasteImages = onPasteImages
+    view.onSend = onSend
     view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
     view.delegate = context.coordinator
     view.accessibilityLabel = placeholder
@@ -89,7 +93,10 @@ struct ComposerField: UIViewRepresentable {
   func updateUIView(_ view: UITextView, context: Context) {
     context.coordinator.parent = self
     box.view = view
-    (view as? PastingTextView)?.onPasteImages = onPasteImages
+    if let view = view as? ComposerTextView {
+      view.onPasteImages = onPasteImages
+      view.onSend = onSend
+    }
     if view.markedTextRange == nil, view.text != text {
       view.text = text
       view.setNeedsLayout()
@@ -156,8 +163,30 @@ struct ComposerField: UIViewRepresentable {
 /// do: the system's own paste, so ペースト shows in the edit menu for an
 /// image and pasting asks nothing more. Words paste as any text view's.
 /// It scrolls once its words run past `maxLines`, told as it lays them out.
-private final class PastingTextView: UITextView {
+/// A keyboard's Return sends and Shift+Return starts a new line, as in
+/// Messages on iPad: key commands, which only a hardware keyboard gives,
+/// so the screen keyboard's return key still starts a new line, and named
+/// in the list holding ⌘ shows.
+final class ComposerTextView: UITextView {
   var onPasteImages: (([NSItemProvider]) -> Void)?
+  var onSend: (() -> Void)?
+
+  override var keyCommands: [UIKeyCommand]? {
+    let send = UIKeyCommand(title: "送信", action: #selector(sendFromKeyboard), input: "\r")
+    let newLine = UIKeyCommand(
+      title: "改行", action: #selector(newLineFromKeyboard), input: "\r", modifierFlags: .shift)
+    // Ahead of the text view's own Return, which would start a new line.
+    for command in [send, newLine] { command.wantsPriorityOverSystemBehavior = true }
+    return (super.keyCommands ?? []) + [send, newLine]
+  }
+
+  @objc private func sendFromKeyboard() {
+    onSend?()
+  }
+
+  @objc private func newLineFromKeyboard() {
+    insertText("\n")
+  }
 
   /// What scrolling was last decided for: a scroll view lays out again on
   /// every move, and its words need not be measured for each.
@@ -178,6 +207,10 @@ private final class PastingTextView: UITextView {
   }
 
   override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
+    // A word being converted takes its Return to settle it, sending nothing.
+    if action == #selector(sendFromKeyboard) || action == #selector(newLineFromKeyboard) {
+      return markedTextRange == nil
+    }
     if action == #selector(paste(_:)), onPasteImages != nil, UIPasteboard.general.hasImages {
       return true
     }
