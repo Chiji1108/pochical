@@ -27,8 +27,14 @@ fun monthGridHeight(cell: Dp): Dp = cell * 6 + DAY_GAP * 5
 /** From one week's top to the next's in a [MonthGrid] of [cell]-tall days. */
 fun monthRowPitch(cell: Dp): Dp = cell + DAY_GAP
 
-/** How tall a day is for six weeks to fit in [room]: its full height where there is room, else less, never under a touch's. */
-fun monthCellHeight(room: Dp): Dp = ((room - DAY_GAP * 5) / 6).coerceIn(Metrics.touch, DAY_FULL_HEIGHT)
+/** How tall a day is for six weeks to fit in [room]: up to [most], its full height unless said otherwise, else less, never under a touch's. */
+fun monthCellHeight(room: Dp, most: Dp = DAY_FULL_HEIGHT): Dp = ((room - DAY_GAP * 5) / 6).coerceIn(Metrics.touch, most)
+
+/**
+ * The tallest a day of a week [width] wide is drawn: a phone's day for its width (design/src/metrics.ts,
+ * DAY_PROPORTION), never under its full height.
+ */
+fun tallestDay(width: Dp): Dp = maxOf(DAY_FULL_HEIGHT, (width - DAY_GAP * 6) / 7 * Metrics.DAY_PROPORTION)
 
 /**
  * A month's weeks as every calendar of the app draws them, a row each, with room kept for six, so

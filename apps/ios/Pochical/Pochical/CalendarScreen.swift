@@ -72,8 +72,7 @@ struct CalendarScreen: View {
     get { place.lastEntered }
     nonmutating set { place.lastEntered = newValue }
   }
-  /// The tray's page of keys, kept as the tray moves between the phone's
-  /// foot and the wide screen's pane.
+  /// The tray's page of keys, kept as the screen widens or narrows.
   private var trayPage: Int {
     get { place.trayPage }
     nonmutating set { place.trayPage = newValue }
@@ -116,14 +115,17 @@ struct CalendarScreen: View {
     var heading: CGFloat = 0
     var weekdays: CGFloat = 0
     var bottom: CGFloat = 0
+    /// A week's width, its seven days and the gaps between them.
+    var week: CGFloat = 0
   }
-  /// How tall a day is: DayCell.fullHeight where the screen has room, as
-  /// /design's; on a short screen, as tall as six weeks fit between the
-  /// heading and the bottom, which keep their size.
+  /// How tall a day is: a sixth of the room between the weekdays and the
+  /// bottom, which keep their size, so the six weeks fill it, down to the
+  /// least a day can be and up to a phone's day for its width.
   private var cellHeight: CGFloat {
     guard room.total > 0 else { return DayCell.fullHeight }
     return MonthPage.cellHeight(
-      fitting: room.total - room.heading - room.weekdays - room.bottom - Self.leastSpare)
+      fitting: room.total - room.heading - room.weekdays - room.bottom - Self.leastSpare,
+      upTo: MonthPage.tallestDay(across: room.week))
   }
   /// Kept free over the bottom however short the screen.
   private static let leastSpare: CGFloat = 8
@@ -153,23 +155,20 @@ struct CalendarScreen: View {
         .padding(.horizontal, Self.screenEdge)
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { room.heading = $0 }
       WeekdayRow(week: settings.device.week)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { room.week = $0 }
         .padding(.horizontal, Self.screenEdge)
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { room.weekdays = $0 }
-      if wide {
-        // The month with 今月のお休み under it, the rest in the pane; a
-        // side too short for six weeks at their shortest, a large iPhone
-        // on its side, scrolls them under the heading.
-        ScrollView(.vertical) {
-          VStack(spacing: 0) {
-            pager(calendar)
-            if entering == nil { under(calendar) }
-          }
-        }
-        .scrollBounceBehavior(.basedOnSize)
-      } else {
+      // The month at the top, filling the room down to the bottom; a
+      // side too short for six weeks at their shortest, an iPhone on its
+      // side, scrolls them under the heading while the month is unfolded.
+      ScrollView(.vertical) {
         pager(calendar)
-        Spacer(minLength: 0)
-        // The day's detail is a sheet over the folded week (below).
+      }
+      .scrollBounceBehavior(.basedOnSize)
+      .scrollDisabled(shownFolded != nil)
+      .safeAreaBar(edge: .bottom, spacing: 0) {
+        // The day's detail is a sheet over the folded week on a phone
+        // (below), and beside the month on a wide screen, which never folds.
         if shownFolded == nil { under(calendar) }
       }
     }
@@ -214,7 +213,8 @@ struct CalendarScreen: View {
     // scroll the memo above it.
     .ignoresSafeArea(.keyboard)
     // The tabs give way to entering and to a day's week, as /design's do;
-    // on a wide screen both are in the pane, and the tabs stay.
+    // on a wide screen, where the tabs are not under the tray and the
+    // day is in the pane, the tabs stay.
     .tabBarHidden(!wide && (entering != nil || shownOpen != nil))
     // A page turned to while entering starts on its first blank day; a
     // day picked on a page around it turns to that page.
@@ -418,16 +418,18 @@ struct CalendarScreen: View {
   }
 
   /// Under the month: 今月のお休み with ポチポチ入力, or its tray while
-  /// entering, on a phone; 今月のお休み alone on a wide screen.
+  /// entering.
   private func under(_ calendar: OwnCalendar) -> some View {
     bottom(calendar)
       .padding(.horizontal, Self.screenEdge)
       // Clear of the tab bar's glass, as /design's; while entering the
-      // tabs give way, and the tray sits low for the thumb.
+      // tabs give way on a phone, and the tray sits low for the thumb.
       .padding(.bottom, entering == nil ? Self.clearOfTabBar : 8)
-      // Measured at rest, so the days keep their size while entering.
+      // Measured at rest on a phone, so the days keep their size while
+      // entering, the tray taking the tabs' room; on a wide screen the
+      // tabs stay, and the days give the tray its room.
       .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
-        if entering == nil { room.bottom = height }
+        if wide || entering == nil { room.bottom = height }
       }
   }
 
@@ -483,28 +485,9 @@ struct CalendarScreen: View {
 
   /// The pane beside the month on a wide screen: the day being entered
   /// while entering, else the day open, the last day entered while 完了
-  /// asks about the blank days, and today's while none is; ポチポチ入力 at
-  /// its foot, or its tray while entering.
+  /// asks about the blank days, and today's while none is.
   private func pane(_ calendar: OwnCalendar) -> some View {
     detail(calendar, of: entering ?? opened ?? (gaps.isEmpty ? nil : lastEntered) ?? today, inPane: true)
-      // Under the detail's every page, and outside the day's own detail
-      // that gives way to the next day's, so a key moving entering on
-      // keeps the tray as it is; it gives way to the keyboard while the
-      // memo is written, leaving the memo the room. The rows scroll under
-      // it behind the bar's edge effect.
-      .safeAreaBar(edge: .bottom, spacing: 0) {
-        if !handover.writing {
-          Group {
-            if let day = entering {
-              tray(calendar, entering: day)
-            } else {
-              enterButton(calendar)
-            }
-          }
-          .padding(.horizontal, Self.screenEdge)
-          .padding(.vertical, 8)
-        }
-      }
   }
 
   /// `day`'s detail, in the sheet or the pane.
@@ -696,12 +679,10 @@ struct CalendarScreen: View {
   }
 
   /// Under the month: 今月のお休み and ポチポチ入力, or its tray while
-  /// entering; on a wide screen 今月のお休み alone, the rest in the pane.
+  /// entering.
   @ViewBuilder private func bottom(_ calendar: OwnCalendar) -> some View {
     if let day = entering {
       tray(calendar, entering: day)
-    } else if wide {
-      summary(calendar)
     } else {
       // One piece, so what is padded below it is padded once.
       VStack(spacing: 12) {
@@ -773,8 +754,7 @@ struct CalendarScreen: View {
       trayPage = 0
       lastEntered = nil
       // With the tabs giving way, so the tray and the tab bar move as one;
-      // on a wide screen the pane shows the day entered, the tray at its
-      // foot.
+      // on a wide screen the pane shows the day entered.
       withAnimation(entryChange) {
         opened = nil
         entering = first
@@ -1148,7 +1128,7 @@ struct PageDays {
   func row(
     _ week: [Day], shown: [Day: DayEntry], fadingOutside page: Period?, byPeriod: Bool = false
   ) -> some View {
-    HStack(spacing: 4) {
+    HStack(spacing: MonthPage.dayGap) {
       ForEach(week, id: \.self) { day in
         let entry = shown[day]
         let previewed = entry == nil ? preview[day] : nil
@@ -1194,13 +1174,22 @@ struct MonthPage: View {
   /// Six weeks of days `cell` tall.
   static func height(cell: CGFloat) -> CGFloat { 6 * cell + 5 * rowGap }
 
-  /// How tall a day can be for six weeks to fit in `room`: DayCell's
-  /// full height where there is room, as /design's, else less, down to
-  /// what keeps a date and its mark clear.
-  static func cellHeight(fitting room: CGFloat) -> CGFloat {
+  /// How tall a day can be for six weeks to fit in `room`: up to `most`,
+  /// DayCell's full height as /design's unless said otherwise, else less,
+  /// down to what keeps a date and its mark clear.
+  static func cellHeight(fitting room: CGFloat, upTo most: CGFloat = DayCell.fullHeight) -> CGFloat {
     let fitted = ((room - 5 * rowGap) / 6).rounded(.down)
-    return min(DayCell.fullHeight, max(leastCell, fitted))
+    return max(leastCell, min(most, fitted))
   }
+
+  /// The tallest a day of a week `width` wide is drawn: a phone's day for
+  /// its width (design/src/metrics.ts, DAY_PROPORTION), never under
+  /// DayCell's full height.
+  static func tallestDay(across width: CGFloat) -> CGFloat {
+    max(DayCell.fullHeight, ((width - 6 * dayGap) / 7 * Metrics.dayProportion).rounded(.down))
+  }
+  /// Between a week's days.
+  static let dayGap: CGFloat = 4
   private static let leastCell: CGFloat = 44
 
   var body: some View {

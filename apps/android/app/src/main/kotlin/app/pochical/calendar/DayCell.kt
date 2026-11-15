@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,7 +44,7 @@ import app.pochical.kit.timeChange
 import app.pochical.mark
 import java.time.LocalDate
 
-/** Its height where the screen has room, as /design's and iOS's. */
+/** Its height as /design's and iOS's, and the room its date and mark take in a taller day. */
 val DAY_FULL_HEIGHT = 64.dp
 
 private val CELL_PADDING = 4.dp
@@ -135,6 +136,7 @@ fun DayCell(
       )
     }
   val description = description(look)
+  val drawn = minOf(height, DAY_FULL_HEIGHT)
   Column(
     modifier
       // Faded whole, with its tint and frame, as iOS's.
@@ -150,6 +152,10 @@ fun DayCell(
       )
       .clip(shape)
       .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+      // A day taller than its full height, a tall window's, keeps its date and mark as they are, at its top; the
+      // rest is the day's room.
+      .wrapContentHeight(Alignment.Top)
+      .height(drawn)
       .padding(vertical = CELL_PADDING)
       .clearAndSetSemantics {
         contentDescription = description
@@ -200,7 +206,7 @@ fun DayCell(
           mark.symbol,
           mark.color,
           // As large as iOS's where the day has room, smaller on a short screen's shorter days.
-          size = minOf(full, height - CELL_PADDING * 2 - DATE_LINE - 2.dp - if (names) NAME_LINE + 2.dp else 0.dp),
+          size = minOf(full, drawn - CELL_PADDING * 2 - DATE_LINE - 2.dp - if (names) NAME_LINE + 2.dp else 0.dp),
           change = look.entry?.let { timeChange(it.start, it.end, mark.time) },
           look = style,
         )

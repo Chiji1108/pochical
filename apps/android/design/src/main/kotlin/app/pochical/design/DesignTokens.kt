@@ -1485,6 +1485,7 @@ object PochicalTextStyles {
 
 object Metrics {
   val spacingStep = 4.dp
+  const val DAY_PROPORTION = 1.341317365269461f
   val action = 40.dp
   val control = 52.dp
   val signIn = 50.dp

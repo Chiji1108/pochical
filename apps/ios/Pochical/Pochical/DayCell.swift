@@ -37,7 +37,8 @@ struct DayCell: View {
   /// Picks the day: to enter while entering, else to open.
   var onSelect: Handler<Day>?
 
-  /// Its height where the screen has room, as /design's.
+  /// Its height as /design's, and the room its date and mark take in a
+  /// taller day.
   static let fullHeight: CGFloat = 64
 
   var body: some View {
@@ -78,7 +79,10 @@ struct DayCell: View {
     }
     .padding(.vertical, 4)
     .frame(maxWidth: .infinity)
-    .frame(height: height)
+    // A day taller than its full height, a tall screen's, keeps its date
+    // and mark as they are, at its top; the rest is the day's room.
+    .frame(height: min(height, Self.fullHeight))
+    .frame(height: height, alignment: .top)
     .background {
       if let tile {
         RoundedRectangle(cornerRadius: Radius.md).fill(tile.tint)
@@ -194,7 +198,7 @@ enum OffShown {
 }
 
 extension EnvironmentValues {
-  /// How tall a month's day is: DayCell.fullHeight, or less on a short
-  /// screen, where the calendar fits its six weeks to the room left.
+  /// How tall a month's day is: DayCell.fullHeight, or as the calendar
+  /// fits its six weeks to the room left, taller or shorter.
   @Entry var dayCellHeight = DayCell.fullHeight
 }
