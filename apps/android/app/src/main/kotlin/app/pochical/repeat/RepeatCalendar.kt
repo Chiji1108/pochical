@@ -63,7 +63,7 @@ import app.pochical.calendar.holidayName
 import app.pochical.calendar.monthCellHeight
 import app.pochical.calendar.monthWeeks
 import app.pochical.calendar.monthWithYear
-import app.pochical.calendar.pageCount
+import app.pochical.calendar.rememberKeyPages
 import app.pochical.design.Metrics
 import app.pochical.design.Springs
 import app.pochical.design.SyncLimits
@@ -115,7 +115,7 @@ fun RepeatCalendar(
   val haptics = LocalHapticFeedback.current
   val origin = remember { YearMonth.from(typing.anchor) }
   val pages = rememberPagerState(initialPage = MONTHS_AROUND) { MONTHS_AROUND * 2 + 1 }
-  val keyPages = rememberPagerState { pageCount(patterns.size) }
+  val keyPages = rememberKeyPages(patterns.size)
   val scope = rememberCoroutineScope()
   fun monthAt(page: Int): YearMonth = origin.plusMonths((page - MONTHS_AROUND).toLong())
   fun pageOf(month: YearMonth): Int = (ChronoUnit.MONTHS.between(origin, month).toInt() + MONTHS_AROUND).coerceIn(0, MONTHS_AROUND * 2)

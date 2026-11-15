@@ -244,7 +244,7 @@ fun CalendarScreen(
   // The day a key last entered, opened in the pane once entering has ended on a wide window.
   var lastEnteredKey by rememberSaveable { mutableStateOf<String?>(null) }
   // The tray's page of keys, kept as the tray moves between the screen's foot and the pane.
-  val keyPages = rememberPagerState { pageCount(calendar.patterns.count { !it.archived }) }
+  val keyPages = rememberKeyPages(calendar.patterns.count { !it.archived })
   // The blank days 完了 asks about, and the pattern picked to fill them.
   var gapKeys by rememberSaveable { mutableStateOf("") }
   // The first day of the page they are on, as the question dates a month's 1st past it.
