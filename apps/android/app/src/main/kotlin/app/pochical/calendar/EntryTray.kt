@@ -174,7 +174,7 @@ fun PatternKeys(patterns: List<Pattern>, pages: PagerState, enabled: Boolean = t
     }
   } else {
     // Fewer patterns sit in fewer columns, as /design lays them out: two rows from five on.
-    val columns = if (patterns.size <= 4) maxOf(patterns.size, 1) else minOf((patterns.size + 1) / KEY_ROWS, perPage / KEY_ROWS)
+    val columns = minOf(if (patterns.size <= 4) maxOf(patterns.size, 1) else (patterns.size + 1) / KEY_ROWS, perPage / KEY_ROWS)
     KeyGrid(patterns, columns, rows = (patterns.size + columns - 1) / columns, tall = patterns.size <= 4, enabled, onPick)
   }
 }
