@@ -637,6 +637,19 @@ export type WallTile = {
   rows: number;
 };
 
+// The wall as it is placed, `across` times side by side: each widget with
+// the cells its size covers.
+export const wallOf = (places: readonly WallPlace[], across = 1): WallTile[] =>
+  Array.from({ length: across }, (_, copy) =>
+    places.map(({ column, file, look, row }) => ({
+      ...cellsOf(file),
+      column: column + copy * WALL.columns,
+      file,
+      look,
+      row,
+    }))
+  ).flat();
+
 // The wall's widgets in a store's picture: the store's own (its `wall`),
 // and every one of the shared wall's that none of them is placed over.
 export const wallPlacesOf = (store: StoreId): readonly WallPlace[] => {
@@ -657,19 +670,6 @@ export const wallPlacesOf = (store: StoreId): readonly WallPlace[] => {
     ...STORES[store].wall,
   ];
 };
-
-// The wall as it is placed, `across` times side by side: each widget with
-// the cells its size covers.
-export const wallOf = (places: readonly WallPlace[], across = 1): WallTile[] =>
-  Array.from({ length: across }, (_, copy) =>
-    places.map(({ column, file, look, row }) => ({
-      ...cellsOf(file),
-      column: column + copy * WALL.columns,
-      file,
-      look,
-      row,
-    }))
-  ).flat();
 
 // A widget's four corners in a picture the wall lies in as `lie` says,
 // its cells `cellRow` times as tall as they are wide, as [across, down] in
