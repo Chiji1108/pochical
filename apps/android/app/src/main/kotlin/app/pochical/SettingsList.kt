@@ -34,6 +34,8 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -138,7 +140,9 @@ enum class RowEnd {
  * A row of a settings list, in its section's segment: led by [icon] (or [leading], a face or a
  * mark), its [headline] over [supporting] when it has some (or [headlineContent] and
  * [supportingContent], drawn by the row), [overline] over both, then [value] (what it holds, in
- * the secondary color, or [valueContent]) and how it ends. [oneLine] cuts the words to a line each,
+ * the secondary color, or [valueContent]), [endContent] (a control or a state that ends it: a
+ * switch, a handle, a spinner) and how it ends. In a window narrower than a phone the value goes
+ * under the headline; [endContent] stays at the end. [oneLine] cuts the words to a line each,
  * as a name's. [danger] draws it in the danger color, as a row that deletes. [onClickLabel] says
  * what pressing it does where that is not its headline's own, as one that opens the browser.
  */
@@ -151,6 +155,7 @@ fun SettingsRow(
   supporting: String? = null,
   value: String? = null,
   valueContent: (@Composable () -> Unit)? = null,
+  endContent: (@Composable () -> Unit)? = null,
   end: RowEnd = if (onClick != null) RowEnd.Chevron else RowEnd.None,
   leading: (@Composable () -> Unit)? = null,
   overline: String? = null,
@@ -164,15 +169,29 @@ fun SettingsRow(
   val tint = if (danger) MaterialTheme.colorScheme.error else Color.Unspecified
   val lines = if (oneLine) 1 else Int.MAX_VALUE
   val lead = leading ?: icon?.let { { RowIcon(it, if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary) } }
+  val hasValue = value != null || valueContent != null
+  // Under the headline in a narrow window, as a list's supporting text, so it never squeezes the
+  // headline into a column of letters (spec/calendar.md, In a narrow window).
+  val valueUnder = hasValue && valuesGoUnderHeadlines()
+  val shownValue: @Composable () -> Unit = {
+    valueContent?.invoke()
+    if (value != null) {
+      Text(
+        value,
+        if (valueUnder) Modifier else Modifier.widthIn(max = 168.dp),
+        style = MaterialTheme.typography.bodyMedium,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+      )
+    }
+  }
   val trail: (@Composable () -> Unit)? =
-    if (value == null && valueContent == null && end == RowEnd.None) null
+    if ((!hasValue || valueUnder) && endContent == null && end == RowEnd.None) null
     else {
       {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-          valueContent?.invoke()
-          if (value != null) {
-            Text(value, Modifier.widthIn(max = 168.dp), style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-          }
+          if (!valueUnder) shownValue()
+          endContent?.invoke()
           when (end) {
             RowEnd.Chevron -> Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = null)
             RowEnd.Outside -> Icon(painterResource(R.drawable.ic_arrow_outward), contentDescription = null, Modifier.size(20.dp))
@@ -181,6 +200,7 @@ fun SettingsRow(
         }
       }
     }
+  val supportingText: (@Composable () -> Unit)? = supportingContent ?: supporting?.let { { Text(it, maxLines = lines, overflow = TextOverflow.Ellipsis) } }
   Segment(
     onClick = onClick,
     modifier = if (onClick != null && onClickLabel != null) modifier.semantics { onClick(onClickLabel) { onClick(); true } } else modifier,
@@ -188,11 +208,37 @@ fun SettingsRow(
     leading = lead,
     trailing = trail,
     overline = overline?.let { { Text(it) } },
-    supporting = supportingContent ?: supporting?.let { { Text(it, maxLines = lines, overflow = TextOverflow.Ellipsis) } },
+    supporting =
+      if (valueUnder) {
+        {
+          Column {
+            supportingText?.invoke()
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) { shownValue() }
+          }
+        }
+      } else supportingText,
   ) {
     if (headlineContent != null) headlineContent() else Text(headline, color = tint, maxLines = lines, overflow = TextOverflow.Ellipsis)
   }
 }
+
+/**
+ * Whether a row's value goes under its headline rather than at its end: in a window narrower than
+ * the phones the rows are laid out for, 360dp, counted at the size its words are drawn, so a phone
+ * with its text made large stacks them too. That size is the body's own, as the system's nonlinear
+ * font scaling and a size kept down where the row stands give it, not the setting's raw scale.
+ */
+@Composable
+private fun valuesGoUnderHeadlines(): Boolean {
+  val density = LocalDensity.current
+  val body = MaterialTheme.typography.bodyLarge.fontSize
+  val width = with(density) { LocalWindowInfo.current.containerSize.width.toDp() }
+  val textScale = with(density) { body.toDp() } / body.value.dp
+  return width / textScale < PHONE_WIDTH
+}
+
+/** The width of the phones the rows are laid out for. */
+private val PHONE_WIDTH = 360.dp
 
 /** A segment of the section, pressed when [onClick] is given: the one place a row's segment is drawn. */
 @Composable

@@ -158,7 +158,7 @@ fun GroupSettingsPage(
                 R.drawable.ic_logout,
                 onClick = { confirmingLeave = true },
                 end = RowEnd.None,
-                valueContent = if (leaving) ({ CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp) }) else null,
+                endContent = if (leaving) ({ CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp) }) else null,
                 enabled = !leaving,
                 danger = true,
               )

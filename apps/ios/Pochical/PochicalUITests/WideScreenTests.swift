@@ -84,11 +84,4 @@ final class WideScreenTests: XCTestCase {
   private func row(_ name: String) -> XCUIElement {
     app.collectionViews.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", name)).firstMatch
   }
-
-  /// Whether `holds` comes true within a few seconds, a turn included.
-  private func settled(_ holds: @escaping () -> Bool) -> Bool {
-    let settled = XCTNSPredicateExpectation(
-      predicate: NSPredicate { _, _ in holds() }, object: nil)
-    return XCTWaiter().wait(for: [settled], timeout: 5) == .completed
-  }
 }

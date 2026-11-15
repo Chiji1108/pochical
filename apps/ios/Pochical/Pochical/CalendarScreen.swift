@@ -963,6 +963,10 @@ struct CalendarScreen: View {
       actions
         .foregroundStyle(colors.textPrimary)
     }
+    // Clear of an iPad window's controls at its top-leading corner, which
+    // the calendar has no bar to wrap its buttons around (spec/calendar.md,
+    // In a narrow window).
+    .containerCornerOffset(.leading, sizeToFit: true)
     .padding(.horizontal, 8)
     .padding(.top, 8)
     .padding(.bottom, 12)
