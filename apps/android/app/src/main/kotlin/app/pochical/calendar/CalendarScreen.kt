@@ -50,7 +50,9 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.exclude
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -178,7 +180,7 @@ private const val FADE_THROUGH_IN = 210
  * `opening` is a day a link asks to open, as a tap on it does (spec/widgets.md,
  * Opening the app), taken with `onOpening`.
  */
-@OptIn(ExperimentalMaterial3AdaptiveApi::class)
+@OptIn(ExperimentalMaterial3AdaptiveApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun CalendarScreen(
   open: (RootPage) -> Unit,
@@ -235,11 +237,6 @@ fun CalendarScreen(
   var pulled by remember { mutableFloatStateOf(0f) }
   val folding = (fold.value - pulled).coerceIn(0f, 1f)
   var closing by remember { mutableStateOf(false) }
-  // The day the pane shows on a wide window, and what is under its bar on the way to another.
-  val paneDay = opened ?: today
-  val paneHolds = remember { SeekableTransitionState(paneDay) }
-  val paneTransition = rememberTransition(paneHolds, label = "pane")
-  LaunchedEffect(paneDay) { if (reduceMotion) paneHolds.snapTo(paneDay) else paneHolds.animateTo(paneDay) }
   // The day ポチポチ入力 enters next, while entering, and what its last key did, for a screen reader.
   var enteringKey by rememberSaveable { mutableStateOf<String?>(null) }
   val entering = enteringKey?.let(LocalDate::parse)
@@ -275,6 +272,17 @@ fun CalendarScreen(
   var entered by rememberSaveable { mutableStateOf(false) }
   // From 完了 until its question about the blank days has closed too, as long as the work that asks it.
   var finishing by remember { mutableStateOf(false) }
+  // The day the pane shows on a wide window: the day being entered while entering, else the day open,
+  // the last day entered while 完了 asks about the blank days, and today's while none is; and what is
+  // under its bar on the way to another.
+  val paneDay = entering ?: opened ?: lastEnteredKey?.takeIf { finishing }?.let(LocalDate::parse) ?: today
+  val paneHolds = remember { SeekableTransitionState(paneDay) }
+  val paneTransition = rememberTransition(paneHolds, label = "pane")
+  LaunchedEffect(paneDay) { if (reduceMotion) paneHolds.snapTo(paneDay) else paneHolds.animateTo(paneDay) }
+  // Widened or narrowed, the memo being written goes on only where its day's detail comes: the pane
+  // has no place on a phone, so today's or the day being entered's is left, kept as its field went,
+  // rather than taken up by the field of the day once it is opened.
+  LaunchedEffect(wide) { if (memoWriting.draft?.day != if (wide) paneDay else opened) memoWriting.draft = null }
   // The edits of the days the review prompt has seen; one made since is asked about once done.
   val dayEdits by days.dayEdits.collectAsStateWithLifecycle()
   var reviewSeen by rememberSaveable { mutableIntStateOf(dayEdits) }
@@ -294,7 +302,7 @@ fun CalendarScreen(
   // not one chip or hour at a time.
   val done = (wide || opened == null) && entering == null && !finishing && gaps.isEmpty() && offeringReminders == null
   val edits by rememberUpdatedState(dayEdits)
-  LaunchedEffect(done, if (wide) paneDay else edits) {
+  LaunchedEffect(done, if (wide) opened ?: today else edits) {
     // The count starts from 0 in each process, so one kept from an ended process is taken as seen.
     if (edits < reviewSeen) reviewSeen = edits
     if (!done || edits == reviewSeen || activity == null) return@LaunchedEffect
@@ -324,17 +332,6 @@ fun CalendarScreen(
     foldedKey = monthShowing(day, from).toString()
     openedKey = day.toString()
     scope.launch { if (reduceMotion || wide) fold.snapTo(1f) else fold.animateTo(1f, Springs.standard()) }
-  }
-
-  // ‹ and ›: the day before or after the one shown; on a wide window, past the page's weeks, the
-  // pages turn to the page holding it, as a swipe turns them.
-  fun step(by: Int) {
-    val day = paneDay.plusDays(by.toLong())
-    if (wide) {
-      val shown = range.monthAt(pager.currentPage)
-      if (day in reachable && monthShowing(day, shown) != shown) turnTo(period.monthHolding(day))
-    }
-    openDay(day)
   }
 
   // On a wide window the month a day's week would fold out of follows the page shown, so the window
@@ -372,6 +369,19 @@ fun CalendarScreen(
     said = null
     val month = period.monthHolding(day)
     if (month != range.monthAt(pager.currentPage)) turnTo(month)
+  }
+
+  // ‹ and ›: the day before or after the one shown; on a wide window, past the page's weeks, the
+  // pages turn to the page holding it, as a swipe turns them. While entering, they move the day being
+  // entered, as a day tapped does.
+  fun step(by: Int) {
+    val day = paneDay.plusDays(by.toLong())
+    if (entering != null) return selectDay(day)
+    if (wide) {
+      val shown = range.monthAt(pager.currentPage)
+      if (day in reachable && monthShowing(day, shown) != shown) turnTo(period.monthHolding(day))
+    }
+    openDay(day)
   }
 
   /** Says what a key did on [day] and where entering goes on, as /design's live region does. */
@@ -659,35 +669,35 @@ fun CalendarScreen(
         },
         supportingPane = {
           AnimatedPane(Modifier.preferredWidth(SUPPORTING_PANE_WIDTH)) {
-            // The day's detail, today's while none is open, ポチポチ入力 at its foot; entering, the
-            // tray in their place, trading places in the fade through the phone's foot has.
-            foot.AnimatedContent(
-              Modifier.fillMaxSize().padding(top = 8.dp).windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)),
-              transitionSpec = { fadeIn(tween(FADE_THROUGH_IN, delayMillis = FADE_THROUGH_OUT, easing = LinearOutSlowInEasing)) togetherWith fadeOut(tween(FADE_THROUGH_OUT, easing = FastOutLinearInEasing)) },
-              contentAlignment = Alignment.BottomCenter,
-            ) { on ->
-              val day = trayDay
-              if (on && day != null) {
-                Box(Modifier.fillMaxSize().padding(SCREEN_EDGE), contentAlignment = Alignment.BottomCenter) { tray(day) }
-              } else {
-                Column(Modifier.fillMaxSize()) {
-                  DayDetail(
-                    day = paneDay,
-                    holds = paneTransition,
-                    calendar = calendar,
-                    days = days,
-                    writing = memoWriting,
-                    peopleOpen = peopleOpen,
-                    onPeopleOpenChange = { peopleOpen = it },
-                    onStep = { step(it) },
-                    canStep = { paneDay.plusDays(it.toLong()) in reachable },
-                    // Always there: no ×.
-                    onClose = null,
-                    onPickShift = { open(RootPage.ShiftChoice(paneDay.toString())) },
-                    reduceMotion = reduceMotion,
-                    modifier = Modifier.weight(1f),
-                  )
-                  enterButton(Modifier.padding(SCREEN_EDGE))
+            // The day's detail, today's while none is open and the day being entered while entering,
+            // ポチポチ入力 at its foot, or its tray, trading places in the fade through the phone's foot
+            // has; the foot gives way to the keyboard, leaving the memo the room.
+            Column(Modifier.fillMaxSize().padding(top = 8.dp).windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))) {
+              DayDetail(
+                day = paneDay,
+                holds = paneTransition,
+                calendar = calendar,
+                days = days,
+                writing = memoWriting,
+                peopleOpen = peopleOpen,
+                onPeopleOpenChange = { peopleOpen = it },
+                onStep = { step(it) },
+                canStep = { paneDay.plusDays(it.toLong()) in reachable },
+                // Always there: no ×.
+                onClose = null,
+                // Entering, the shift is the tray's to change and to clear.
+                onPickShift = if (entering == null) ({ open(RootPage.ShiftChoice(paneDay.toString())) }) else null,
+                reduceMotion = reduceMotion,
+                modifier = Modifier.weight(1f),
+              )
+              if (!WindowInsets.isImeVisible) {
+                foot.AnimatedContent(
+                  Modifier.padding(SCREEN_EDGE),
+                  transitionSpec = { fadeIn(tween(FADE_THROUGH_IN, delayMillis = FADE_THROUGH_OUT, easing = LinearOutSlowInEasing)) togetherWith fadeOut(tween(FADE_THROUGH_OUT, easing = FastOutLinearInEasing)) },
+                  contentAlignment = Alignment.BottomCenter,
+                ) { on ->
+                  val day = trayDay
+                  if (on && day != null) tray(day) else enterButton()
                 }
               }
             }

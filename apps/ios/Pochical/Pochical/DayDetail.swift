@@ -5,8 +5,8 @@ import SwiftUI
 /// A day opened from the month: its shift, its own hours, the people on
 /// it and a memo (spec/calendar.md, A day's detail): in the day's sheet on
 /// a phone, or in the pane beside the month on a wide screen, which has no
-/// × and holds ポチポチ入力 at its foot (spec/calendar.md, On a wide screen).
-struct DayDetail<Foot: View>: View {
+/// × (spec/calendar.md, On a wide screen).
+struct DayDetail: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.scenePhase) private var scenePhase
   @Environment(\.dismiss) private var dismiss
@@ -25,12 +25,13 @@ struct DayDetail<Foot: View>: View {
   /// Whether its bar holds ×: a sheet's does; the pane beside the month,
   /// always there, has none.
   var closes = true
+  /// While ポチポチ入力 enters the day, in the pane beside the month: the
+  /// shift is the tray's to change, so シフト shows it without opening
+  /// its list, and この日のシフトを消す is the tray's 消す.
+  var entering = false
   /// Where it says what it is in the middle of, and takes it from as it
   /// comes in place of the detail of the same day moved.
   let handover: DayDetailHandover
-  /// What stands at its foot, under the rows, while the keyboard is not
-  /// up.
-  @ViewBuilder var foot: () -> Foot
   /// The memo as it is written, kept when the field is left, the detail
   /// closes or the app goes to the background (spec/calendar.md, Text
   /// fields).
@@ -68,11 +69,6 @@ struct DayDetail<Foot: View>: View {
           .onChange(of: movedWriting, initial: true) {
             if movedWriting { rows.scrollTo(Self.memoRow) }
           }
-      }
-      // The rows scroll under it behind the bar's edge effect; it gives
-      // way to the keyboard, leaving the memo the room.
-      .safeAreaBar(edge: .bottom, spacing: 0) {
-        if !writingNote { foot() }
       }
       .navigationDestination(for: DayList.self) { list in
         switch list {
@@ -135,6 +131,11 @@ struct DayDetail<Foot: View>: View {
     .onChange(of: takesPeople) {
       if !takesPeople { lists.removeAll { $0 == .people } }
     }
+    // Entering starting on the day shown makes its shift the tray's: シフト's
+    // list open on it goes, as its row no longer opens it.
+    .onChange(of: entering) {
+      if entering { lists.removeAll { $0 == .shift } }
+    }
     // Moved, it is kept as its screen closes, and again once the field is
     // left in the detail that took its place.
     .onDisappear {
@@ -177,7 +178,7 @@ struct DayDetail<Foot: View>: View {
           .onChange(of: handover.sheetGoing) { takeMovedFocus() }
       }
       .listRowBackground(colors.fillQuaternary)
-      if let entry {
+      if let entry, !entering {
         Section {
           Button("この日のシフトを消す", role: .destructive) {
             if lost(entry).isEmpty {
@@ -218,21 +219,29 @@ struct DayDetail<Foot: View>: View {
   /// runs long past a few, and the list shows each one's hours too.
   /// Picking another keeps the day's memo and people, as entering does.
   private var shiftRow: some View {
-    NavigationLink(value: DayList.shift) {
-      LabeledContent("シフト") {
-        if let pattern {
-          Label {
-            Text(pattern.name).lineLimit(1)
-          } icon: {
-            ShiftMark(pattern: pattern, size: 16)
-          }
-        } else {
-          Text("なし")
-        }
+    Group {
+      if entering {
+        shiftLabel
+      } else {
+        NavigationLink(value: DayList.shift) { shiftLabel }
       }
     }
     // The line under it from where its words start, not the mark's.
     .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
+  }
+
+  private var shiftLabel: some View {
+    LabeledContent("シフト") {
+      if let pattern {
+        Label {
+          Text(pattern.name).lineLimit(1)
+        } icon: {
+          ShiftMark(pattern: pattern, size: 16)
+        }
+      } else {
+        Text("なし")
+      }
+    }
   }
 
   /// シフト's list, pushed from its row.
