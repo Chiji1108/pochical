@@ -155,11 +155,16 @@ export type WidgetEntry = {
   // This week and the next, from the person's week start.
   twoWeeks: WidgetDay[];
   // Whole weeks covering today's month, from the person's week start.
-  month: {
-    first: Date;
-    weekdays: { day: number; label: string; tone: DayTone }[];
-    days: (WidgetDay & { inMonth: boolean })[];
-  };
+  month: WidgetMonth;
+  // The month after, as `month`: カレンダー's extra large on the iPad shows
+  // it beside this one.
+  nextMonth: WidgetMonth;
+};
+
+export type WidgetMonth = {
+  first: Date;
+  weekdays: { day: number; label: string; tone: DayTone }[];
+  days: (WidgetDay & { inMonth: boolean })[];
 };
 
 const UPCOMING_DAYS = 7;
@@ -440,7 +445,18 @@ export function widgetEntry(
     widgetDay(addDays(date, index), schedule, week, book)
   );
   const today = upcoming[0] ?? widgetDay(date, schedule, week, book);
-  const first = new Date(date.getFullYear(), date.getMonth(), 1);
+  const monthOf = (first: Date): WidgetMonth => ({
+    days: monthDatesFrom(first, week.weekStart).map((day) => ({
+      ...widgetDay(day, schedule, week, book),
+      inMonth: day.getMonth() === first.getMonth(),
+    })),
+    first,
+    weekdays: weekdaysFrom(week).map(({ day, label, tone }) => ({
+      day,
+      label,
+      tone,
+    })),
+  });
   const thisWeek = weekDatesFrom(date, week.weekStart);
   const twoWeeks = [
     ...thisWeek,
@@ -448,18 +464,8 @@ export function widgetEntry(
   ].map((day) => widgetDay(day, schedule, week, book));
   return {
     date,
-    month: {
-      days: monthDatesFrom(first, week.weekStart).map((day) => ({
-        ...widgetDay(day, schedule, week, book),
-        inMonth: day.getMonth() === first.getMonth(),
-      })),
-      first,
-      weekdays: weekdaysFrom(week).map(({ day, label, tone }) => ({
-        day,
-        label,
-        tone,
-      })),
-    },
+    month: monthOf(new Date(date.getFullYear(), date.getMonth(), 1)),
+    nextMonth: monthOf(new Date(date.getFullYear(), date.getMonth() + 1, 1)),
     nothingEntered: !Object.values(schedule).some(
       (day) => day?.shift !== undefined
     ),

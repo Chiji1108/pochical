@@ -12,6 +12,7 @@ import {
 } from "@pochical/prototype/components/design-widget-frame";
 import type { WidgetFamily } from "@pochical/prototype/components/design-widget-frame";
 import {
+  CalendarExtraLarge,
   CalendarLarge,
   TwoWeeksMedium,
 } from "@pochical/prototype/components/design-widgets-calendar";
@@ -186,7 +187,7 @@ function scheduleFor(day: WidgetVariants["day"]): Schedule {
   return { ...sampleSchedule, ...days[day] };
 }
 
-type Size = "small" | "medium" | "large";
+type Size = "small" | "medium" | "large" | "extraLarge";
 type WidgetView = ComponentType<{ entry: WidgetEntry }>;
 
 // The kinds a person picks from the widget gallery, each in its sizes.
@@ -194,6 +195,7 @@ const kinds = {
   calendar: [
     { View: TwoWeeksMedium, size: "medium" },
     { View: CalendarLarge, size: "large" },
+    { View: CalendarExtraLarge, size: "extraLarge" },
   ],
   nextOff: [{ View: NextOffSmall, size: "small" }],
   now: [{ View: NowSmall, size: "small" }],
@@ -210,11 +212,13 @@ const kinds = {
 export type WidgetKind = keyof typeof kinds;
 
 const iosFamilies: Record<Size, WidgetFamily> = {
+  extraLarge: "systemExtraLarge",
   large: "systemLarge",
   medium: "systemMedium",
   small: "systemSmall",
 };
-const androidFamilies: Record<Size, WidgetFamily> = {
+// Android has no extra large: a widget there is resized, up to 4×4.
+const androidFamilies: Partial<Record<Size, WidgetFamily>> = {
   large: "android4x4",
   medium: "android4x2",
   small: "android2x2",
@@ -390,11 +394,16 @@ export function HomeWidgets({ kind }: { kind: WidgetKind }) {
   return (
     <SettingsAround variants={variants}>
       <Wallpaper {...placement}>
-        {kinds[kind].map(({ size, View }) => (
-          <LabelledWidget {...placement} family={families[size]} key={size}>
-            <View entry={entry} />
-          </LabelledWidget>
-        ))}
+        {kinds[kind].map(({ size, View }) => {
+          const family = families[size];
+          return (
+            family && (
+              <LabelledWidget {...placement} family={family} key={size}>
+                <View entry={entry} />
+              </LabelledWidget>
+            )
+          );
+        })}
       </Wallpaper>
     </SettingsAround>
   );

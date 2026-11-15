@@ -107,8 +107,11 @@ public struct WidgetEntry: Sendable {
   public var upcoming: [WidgetDay]
   /// This week and the next, from the person's week start.
   public var twoWeeks: [WidgetDay]
-  /// Whole weeks covering today's month, from the person's week start.
-  public var month: [[WidgetDay]]
+  /// Today's month.
+  public var month: WidgetMonth
+  /// The month after: カレンダー's extra large on the iPad shows it beside
+  /// this one.
+  public var nextMonth: WidgetMonth
   /// Who the widget is set to, as it shows them.
   public var with: WidgetWith?
   /// これから set to someone: their days beside the person's.
@@ -116,6 +119,20 @@ public struct WidgetEntry: Sendable {
   /// The group of someone picked whom the person or they have left: the
   /// widget asks for them to be picked again.
   public var pickAgain: String?
+}
+
+/// A month as the calendar lays it out.
+public struct WidgetMonth: Sendable {
+  /// Its first day.
+  public var first: Day
+  /// Whole weeks covering it, from the person's week start.
+  public var weeks: [[WidgetDay]]
+
+  /// The month `first` begins, each day drawn by `day`.
+  init(_ first: Day, week: DeviceSettings.Week, day: (Day) -> WidgetDay) {
+    self.first = first
+    weeks = monthWeeks(first, weekStart: week.start).map { $0.map(day) }
+  }
 }
 
 /// Someone or a group a widget is set to, by the name and picture they
@@ -321,7 +338,9 @@ extension OwnCalendar {
     let today = Day(now, in: calendar)
     let reach = max(Widgets.offLookaheadDays, Widgets.shiftLookaheadDays)
     let firstShown = min(today.adding(days: -1), monthWeeks(today, weekStart: week.start)[0][0])
-    let lastShown = max(today.adding(days: reach), today.firstOfMonth.daysOfMonth.last ?? today)
+    let next = today.firstOfMonth.addingMonths(1)
+    let lastShown = max(
+      today.adding(days: reach), monthWeeks(next, weekStart: week.start).last?.last ?? today)
     let shown = self.shown(from: firstShown, through: lastShown.adding(days: 14))
     func day(_ date: Day) -> WidgetDay {
       let entry = shown[date]
@@ -349,7 +368,8 @@ extension OwnCalendar {
       },
       upcoming: upcoming,
       twoWeeks: (0..<14).map { day(weekStart.adding(days: $0)) },
-      month: monthWeeks(today, weekStart: week.start).map { $0.map(day) },
+      month: WidgetMonth(today.firstOfMonth, week: week, day: day),
+      nextMonth: WidgetMonth(next, week: week, day: day),
       with: companion?.with,
       pair: companion.flatMap { pair($0, upcoming: upcoming, week: week, holiday: holiday) })
   }
@@ -413,7 +433,8 @@ extension WidgetEntry {
       offs: widgetOffs(today: todayDay, people: []) { day(today.adding(days: $0)) },
       upcoming: (0..<7).map { day(today.adding(days: $0)) },
       twoWeeks: (0..<14).map { day(weekStart.adding(days: $0)) },
-      month: monthWeeks(today, weekStart: week.start).map { $0.map(day) })
+      month: WidgetMonth(today.firstOfMonth, week: week, day: day),
+      nextMonth: WidgetMonth(today.firstOfMonth.addingMonths(1), week: week, day: day))
   }
 
   /// The day 次の休み opens: the widget's tap, its control and the

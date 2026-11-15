@@ -2,7 +2,11 @@ import { css, cva, cx } from "@pochical/styled-system/css";
 import { useContext } from "react";
 
 import { presetPatterns } from "../lib/design-patterns";
-import type { WidgetDay, WidgetEntry } from "../lib/design-widgets";
+import type {
+  WidgetDay,
+  WidgetEntry,
+  WidgetMonth,
+} from "../lib/design-widgets";
 import { dayCell, dayParts, todayMark } from "./design-day-cell";
 import { englishMonthOf } from "./design-month-name";
 import { useWeek } from "./design-week";
@@ -21,7 +25,8 @@ import {
 } from "./design-widgets";
 import { useDisplayColor } from "./shift-mark";
 
-// カレンダー: this week and the next, and the month.
+// カレンダー: this week and the next, the month, and on the iPad this month
+// and the next.
 
 const TWO_WEEKS_ROOMY = 150;
 
@@ -213,6 +218,8 @@ const month = {
       flex: 1,
       gridAutoRows: "1fr",
       gridTemplateColumns: "repeat(7, 1fr)",
+      // As tall as the widget leaves it, the weeks sharing that.
+      minHeight: 0,
     },
     variants: { named: { false: { rowGap: "4px" }, true: { rowGap: "2px" } } },
   }),
@@ -221,11 +228,19 @@ const month = {
     display: "flex",
     justifyContent: "space-between",
   }),
+  pair: css({
+    display: "grid",
+    gap: "24px",
+    gridTemplateColumns: "1fr 1fr",
+    gridTemplateRows: "minmax(0, 1fr)",
+    height: "100%",
+  }),
   root: css({
     display: "flex",
     flexDirection: "column",
     gap: "8px",
     height: "100%",
+    minWidth: 0,
   }),
   summary: css({
     color: "text.secondary",
@@ -241,21 +256,70 @@ const month = {
   }),
 };
 
+const WEEK = 7;
+
 // Where the month has room, as on Android's 4×4, its marks grow.
 const MONTH_ROOMY = 360;
 
 // The month with every day's mark, and today's time over it.
 function CalendarLargeView({ entry }: { entry: WidgetEntry }) {
-  const { english, weekdayLetter } = useWeek();
   const roomy = useContext(WidgetSizeContext).height >= MONTH_ROOMY;
+  return (
+    <MonthView
+      entry={entry}
+      month={entry.month}
+      roomy={roomy}
+      rows={entry.month.days.length / WEEK}
+    />
+  );
+}
+
+// This month and the next side by side, each with the large's room: the
+// iPad's extra large is two larges wide and as tall, so the calendar shows
+// more of what is coming, as Apple's Calendar shows more days there, rather
+// than one month stretched.
+function CalendarExtraLargeView({ entry }: { entry: WidgetEntry }) {
+  const roomy = useContext(WidgetSizeContext).height >= MONTH_ROOMY;
+  // Their weeks level across, though one month has a week more.
+  const rows =
+    Math.max(entry.month.days.length, entry.nextMonth.days.length) / WEEK;
+  return (
+    <div className={month.pair}>
+      <MonthView entry={entry} month={entry.month} roomy={roomy} rows={rows} />
+      <MonthView
+        entry={entry}
+        month={entry.nextMonth}
+        roomy={roomy}
+        rows={rows}
+      />
+    </div>
+  );
+}
+
+// A month with every day's mark, and today's time over today's month.
+function MonthView({
+  entry,
+  month: shown,
+  roomy,
+  rows,
+}: {
+  entry: WidgetEntry;
+  month: WidgetMonth;
+  roomy: boolean;
+  // How many weeks' rows to lay out: more than the month has leaves the
+  // rest empty under it.
+  rows: number;
+}) {
+  const { english, weekdayLetter } = useWeek();
   const named = useShiftNames();
   // A name under each mark takes the room of a smaller mark.
   let markSize = roomy ? 24 : 20;
   if (named) {
     markSize = roomy ? 20 : 16;
   }
-  const { first, days, weekdays } = entry.month;
+  const { first, days, weekdays } = shown;
   const todayTime = entry.today.date.getTime();
+  const isTodays = first.getMonth() === entry.today.date.getMonth();
   return (
     <div className={month.root}>
       <div className={month.header}>
@@ -264,7 +328,7 @@ function CalendarLargeView({ entry }: { entry: WidgetEntry }) {
             ? englishMonthOf(first)
             : `${first.getMonth() + MONTH_NUMBER}月`}
         </span>
-        {entry.today.change && (
+        {isTodays && entry.today.change && (
           <span className={month.summary}>今日 {entry.today.change}</span>
         )}
       </div>
@@ -275,7 +339,10 @@ function CalendarLargeView({ entry }: { entry: WidgetEntry }) {
           </span>
         ))}
       </div>
-      <ol className={`${list} ${month.grid({ named })}`}>
+      <ol
+        className={`${list} ${month.grid({ named })}`}
+        style={{ gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))` }}
+      >
         {days.map((day) => (
           <MonthDay
             day={day}
@@ -317,3 +384,5 @@ function MonthDay({
 export const TwoWeeksMedium = firstRunOr(TwoWeeksMediumView);
 
 export const CalendarLarge = firstRunOr(CalendarLargeView);
+
+export const CalendarExtraLarge = firstRunOr(CalendarExtraLargeView);
