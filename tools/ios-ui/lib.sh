@@ -128,3 +128,23 @@ push_line() {
   }' >"$5"
   xcrun simctl push "$device" app.pochical "$5"
 }
+
+# Runs the UI test class "$1" on its own against a new group whose chat
+# holds thirty lines, its invitation code in "$shared/invite", the test
+# reading `shared` from the environment variable "$2", then shuts the
+# simulator down. Fails as the test does, naming where its results are.
+run_with_chat() {
+  prepare
+  new_group "$shared/invite"
+  pnpm --dir "$root" exec tsx "$root/tools/chat-try/index.ts" "$(cat "$shared/invite")" 30
+  local failed=0
+  # xcodebuild passes TEST_RUNNER_-prefixed variables on to the tests.
+  export "TEST_RUNNER_$2=$shared"
+  xcodebuild_for test-without-building \
+    -collect-test-diagnostics never -parallel-testing-enabled NO \
+    -resultBundlePath "$shared/results.xcresult" \
+    -only-testing:"PochicalUITests/$1" || failed=1
+  xcrun simctl shutdown "$device" || true
+  echo "results and screenshots: $shared"
+  return "$failed"
+}

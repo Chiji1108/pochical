@@ -207,6 +207,10 @@ run = "tools/chat-open/run.sh"
 description = "Run the UI test of the app's own parts staying clear of the system's bars, down the side on iPhone Duo's outer display, in a simulator, erasing it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default): <simulator name> [derived data]"
 run = "tools/side-bars/run.sh"
 
+[tasks."ios:chat-pointer"]
+description = "Run the chat's pointer UI test (a right click on a line) in a simulator (an iPad's, where a pointer is used most), erasing it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default): <simulator name> [derived data]"
+run = "tools/chat-pointer/run.sh"
+
 [tasks."ios:shifts-rotation"]
 description = "Run a big group's 一覧 rotation UI tests in a simulator, erasing it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default): <simulator name> [derived data]"
 run = "tools/shifts-rotation/run.sh"
