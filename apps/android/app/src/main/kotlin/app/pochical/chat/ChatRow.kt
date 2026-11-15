@@ -193,7 +193,7 @@ internal fun ChatRow(
     },
     supportingContent = { RowWords(summary, me, names, blocked, empty) },
     leading = icon,
-    valueContent =
+    endContent =
       if (time == null && summary.unread == 0) null
       else {
         {

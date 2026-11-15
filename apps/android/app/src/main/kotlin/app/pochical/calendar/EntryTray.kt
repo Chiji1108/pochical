@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -37,6 +38,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -70,8 +72,8 @@ import kotlinx.coroutines.launch
  * ポチポチ入力's tray (spec/calendar.md, ポチポチ入力): the day being entered, a key for each
  * pattern in the person's order, and 消す and 翌日へ. It is entered like a keyboard, so every key
  * ticks alike (spec/haptics.md). [said] is what the last key did, for a screen reader to hear.
- * [keyPages] is the page of keys shown, kept by the calendar so it stays as the tray moves between
- * the screen's foot and the day's pane.
+ * [keyPages] is the page of keys shown, kept by the calendar so it stays as the window widens or
+ * narrows.
  */
 @Composable
 fun EntryTray(
@@ -113,8 +115,25 @@ fun EntryTray(
   }
 }
 
-/** How many pages of keys `count` patterns take. */
-fun pageCount(count: Int): Int = maxOf(1, (count + PATTERNS_PER_PAGE - 1) / PATTERNS_PER_PAGE)
+/** The pages of keys `count` patterns take, [keysPerPage] on each. */
+@Composable
+fun rememberKeyPages(count: Int): PagerState {
+  val perPage = keysPerPage()
+  return rememberPagerState { maxOf(1, (count + perPage - 1) / perPage) }
+}
+
+/**
+ * How many keys a page holds: [PATTERNS_PER_PAGE] in two rows, as many columns fewer as a window
+ * narrower than a phone takes to keep every key a finger wide, the rest on the pages after
+ * (spec/calendar.md, In a narrow window). A tray spans the window inside its margins wherever the
+ * window is that narrow.
+ */
+@Composable
+private fun keysPerPage(): Int {
+  val window = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.width.toDp() }
+  val fit = ((window - TRAY_MARGIN * 2 + KEY_GAP) / (Metrics.touch + KEY_GAP)).toInt()
+  return fit.coerceIn(1, PAGE_COLUMNS) * KEY_ROWS
+}
 
 /**
  * The day being entered, over the keys: words, not a button, as another day is picked on the
@@ -141,20 +160,21 @@ private fun TrayDateLabel(day: LocalDate, week: Week, country: String, said: Str
 
 /**
  * A key for each pattern, as ポチポチ入力's tray and an order being typed have them: up to
- * [PATTERNS_PER_PAGE] on a page, fewer in fewer columns, more paged and swiped, every page as tall
+ * [keysPerPage] on a page, fewer in fewer columns, more paged and swiped, every page as tall
  * as the fullest so what is under them stays put. The keys keep their size at every text size, as a
  * keyboard's do.
  */
 @Composable
 fun PatternKeys(patterns: List<Pattern>, pages: PagerState, enabled: Boolean = true, onPick: (Pattern) -> Unit) {
-  val paged = patterns.chunked(PATTERNS_PER_PAGE)
+  val perPage = keysPerPage()
+  val paged = patterns.chunked(perPage)
   if (paged.size > 1) {
     HorizontalPager(pages, Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) { page ->
-      KeyGrid(paged[page], columns = PAGE_COLUMNS, rows = KEY_ROWS, tall = false, enabled, onPick)
+      KeyGrid(paged[page], columns = perPage / KEY_ROWS, rows = KEY_ROWS, tall = false, enabled, onPick)
     }
   } else {
     // Fewer patterns sit in fewer columns, as /design lays them out: two rows from five on.
-    val columns = if (patterns.size <= 4) maxOf(patterns.size, 1) else minOf((patterns.size + 1) / KEY_ROWS, PAGE_COLUMNS)
+    val columns = minOf(if (patterns.size <= 4) maxOf(patterns.size, 1) else (patterns.size + 1) / KEY_ROWS, perPage / KEY_ROWS)
     KeyGrid(patterns, columns, rows = (patterns.size + columns - 1) / columns, tall = patterns.size <= 4, enabled, onPick)
   }
 }
@@ -164,6 +184,8 @@ private const val KEY_ROWS = 2
 private const val PAGE_COLUMNS = (PATTERNS_PER_PAGE + KEY_ROWS - 1) / KEY_ROWS
 
 private val KEY_GAP = 8.dp
+/** The screen's margins a tray stands inside, as the calendar and 繰り返し lay it out. */
+private val TRAY_MARGIN = 16.dp
 private const val DISABLED_ALPHA = 0.38f
 private val KEY_WIDTH = 72.dp
 

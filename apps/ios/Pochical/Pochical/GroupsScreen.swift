@@ -66,6 +66,11 @@ struct GroupsScreen: View {
             onOpen: { pick($0, over: open.id) }, onNew: newGroup, onScan: onScan)
           // Up beside the bar's heading, as it stood beside the page's.
           .padding(.top, barTop)
+          // Under an iPad window's controls, which stand at its top-leading
+          // corner where the rail's first group would be: the rail then
+          // starts under the bar's band, which the controls and the heading
+          // share, level with the hub's first section.
+          .containerCornerOffset(.top, sizeToFit: true)
           .ignoresSafeArea(.container, edges: .top)
           GroupHub(group: open) { day in
             navigator?.open(.group(.shifts(open, day: day)))
@@ -83,16 +88,26 @@ struct GroupsScreen: View {
         // an item of the bar: an item there would turn into the next
         // page's back button as it is pushed.
         .overlay(alignment: .topLeading) {
-          GroupHeading(group: open)
-            // Level with the bar's buttons, at its top.
-            .frame(maxWidth: .infinity, minHeight: Metrics.touch, alignment: .leading)
-            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { headingHeight = $0 }
-            .padding(.leading, GroupRail.width + 16)
-            // Clear of the bar's buttons, unless they stand down the
-            // screen's side, out of the band.
-            .padding(.trailing, barButtonsBeside ? 16 : GroupHub.actionsWidth)
-            .padding(.top, barTop)
-            .ignoresSafeArea(.container, edges: .top)
+          // Level with the bar's buttons, at its top, where the whole name
+          // fits beside them; else under them, as iOS sets a large title
+          // under a bar's items, where a column as narrow as an iPad's
+          // leaves it the column's width (#1245).
+          ViewThatFits(in: .horizontal) {
+            GroupHeading(group: open)
+              .frame(minHeight: Metrics.touch)
+              // Clear of the bar's buttons, unless they stand down the
+              // screen's side, out of the band.
+              .padding(.trailing, barButtonsBeside ? 16 : GroupHub.actionsWidth)
+            GroupHeading(group: open)
+              .frame(minHeight: Metrics.touch)
+              .padding(.top, Metrics.touch)
+              .padding(.trailing, 16)
+          }
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { headingHeight = $0 }
+          .padding(.leading, GroupRail.width + 16)
+          .padding(.top, barTop)
+          .ignoresSafeArea(.container, edges: .top)
         }
       } else {
         NoGroups(onNew: newGroup, onScan: onScan)

@@ -160,12 +160,16 @@ struct CalendarScreen: View {
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { room.weekdays = $0 }
       // The month at the top, filling the room down to the bottom; a
       // side too short for six weeks at their shortest, an iPhone on its
-      // side, scrolls them under the heading while the month is unfolded.
+      // side, scrolls them under the heading. Only then: folded to its
+      // week, or with room for its weeks, it has nothing to scroll, and the
+      // pages inside keep their own swipe.
       ScrollView(.vertical) {
         pager(calendar)
       }
       .scrollBounceBehavior(.basedOnSize)
-      .scrollDisabled(shownFolded != nil)
+      // The days ease to the room the foot leaves them, as the tray comes
+      // under the month on a wide screen.
+      .animation(reduceMotion ? nil : Springs.standard, value: cellHeight)
       .safeAreaBar(edge: .bottom, spacing: 0) {
         // The day's detail is a sheet over the folded week on a phone
         // (below), and beside the month on a wide screen, which never folds.
@@ -943,6 +947,10 @@ struct CalendarScreen: View {
       actions
         .foregroundStyle(colors.textPrimary)
     }
+    // Clear of an iPad window's controls at its top-leading corner, which
+    // the calendar has no bar to wrap its buttons around (spec/calendar.md,
+    // In a narrow window).
+    .containerCornerOffset(.leading, sizeToFit: true)
     .padding(.horizontal, 8)
     .padding(.top, 8)
     .padding(.bottom, 12)
@@ -1128,7 +1136,7 @@ struct PageDays {
   func row(
     _ week: [Day], shown: [Day: DayEntry], fadingOutside page: Period?, byPeriod: Bool = false
   ) -> some View {
-    HStack(spacing: MonthPage.dayGap) {
+    HStack(spacing: MonthPage.gap) {
       ForEach(week, id: \.self) { day in
         let entry = shown[day]
         let previewed = entry == nil ? preview[day] : nil
@@ -1169,16 +1177,17 @@ struct MonthPage: View {
   let fold: CGFloat
   @Environment(\.dayCellHeight) private var cell
 
-  static let rowGap: CGFloat = 4
+  /// Between the weeks, and between a week's days.
+  static let gap: CGFloat = 4
 
   /// Six weeks of days `cell` tall.
-  static func height(cell: CGFloat) -> CGFloat { 6 * cell + 5 * rowGap }
+  static func height(cell: CGFloat) -> CGFloat { 6 * cell + 5 * gap }
 
   /// How tall a day can be for six weeks to fit in `room`: up to `most`,
   /// DayCell's full height as /design's unless said otherwise, else less,
   /// down to what keeps a date and its mark clear.
   static func cellHeight(fitting room: CGFloat, upTo most: CGFloat = DayCell.fullHeight) -> CGFloat {
-    let fitted = ((room - 5 * rowGap) / 6).rounded(.down)
+    let fitted = ((room - 5 * gap) / 6).rounded(.down)
     return max(leastCell, min(most, fitted))
   }
 
@@ -1186,17 +1195,15 @@ struct MonthPage: View {
   /// its width (design/src/metrics.ts, DAY_PROPORTION), never under
   /// DayCell's full height.
   static func tallestDay(across width: CGFloat) -> CGFloat {
-    max(DayCell.fullHeight, ((width - 6 * dayGap) / 7 * Metrics.dayProportion).rounded(.down))
+    max(DayCell.fullHeight, ((width - 6 * gap) / 7 * Metrics.dayProportion).rounded(.down))
   }
-  /// Between a week's days.
-  static let dayGap: CGFloat = 4
   private static let leastCell: CGFloat = 44
 
   var body: some View {
     let weeks = page.weeks(weekStart: weekStart)
     let row = openedWeek.flatMap { day in weeks.firstIndex { $0.contains(day) } } ?? 0
     let shown = days.calendar.shown(from: weeks.first![0], through: weeks.last![6])
-    VStack(spacing: Self.rowGap) {
+    VStack(spacing: Self.gap) {
       ForEach(Array(weeks.enumerated()), id: \.element.first) { index, week in
         // Folded away, the rest of the month is out of reach.
         let away = openedWeek != nil && index != row
@@ -1207,7 +1214,7 @@ struct MonthPage: View {
           .accessibilityHidden(away)
       }
     }
-    .offset(y: -CGFloat(row) * (cell + Self.rowGap) * fold)
+    .offset(y: -CGFloat(row) * (cell + Self.gap) * fold)
     .frame(height: cell + (Self.height(cell: cell) - cell) * (1 - fold), alignment: .top)
   }
 }

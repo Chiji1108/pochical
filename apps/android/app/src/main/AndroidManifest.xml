@@ -50,6 +50,10 @@
       android:theme="@style/Theme.Pochical.Starting"
       android:windowSoftInputMode="adjustResize"
       tools:ignore="Instantiatable">
+      <!-- The narrowest window the screens are laid out for (spec/calendar.md, In a narrow
+           window): a third of a folding phone opened, in split screen. Narrower is only a
+           free-form window the system's 220dp default lets go further, which stops here. -->
+      <layout android:minWidth="280dp" />
       <intent-filter>
         <action android:name="android.intent.action.MAIN" />
         <category android:name="android.intent.category.LAUNCHER" />

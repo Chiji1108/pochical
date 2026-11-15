@@ -52,6 +52,7 @@ import java.util.concurrent.TimeUnit
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.regex.Pattern
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.mapNotNull
@@ -113,11 +114,23 @@ class StoreScreenshots {
     for (key in snoozed) device.executeShellCommand("cmd notification unsnooze $key")
   }
 
+  /** The device turning with its sensor again, as it did before a tablet was laid on its side. */
+  @After
+  fun turnFreely() {
+    if (tablet) device.unfreezeRotation()
+  }
+
+  /** A tablet's (Material's window sizes: 600dp or more at its narrowest), whose pictures are of it on its side. */
+  private val tablet = app.resources.configuration.smallestScreenWidthDp >= 600
+
   @Test
   fun photographsTheScreens() {
     val invite = arguments.getString("invite")
     val friends = arguments.getString("friends")
     assumeTrue("Only when asked for, by mise run store:shots:android", invite != null && friends != null)
+    // A tablet's pictures are of it on its side, an expanded width, where the rail, a group's chat
+    // beside its column and the day's pane beside the month all show (#1226).
+    if (tablet) device.setOrientationLandscape()
     // The server on the emulator's host, and the device's calendars, as the person would allow them.
     for (permission in listOf("ACCESS_LOCAL_NETWORK", "READ_CALENDAR", "WRITE_CALENDAR")) {
       device.executeShellCommand("pm grant $PACKAGE android.permission.$permission")
@@ -183,7 +196,7 @@ class StoreScreenshots {
     device.find(calendar)
     // The page's heading and the week its first day is in.
     val first = LocalDate.now().let { if (it.dayOfMonth < 15) it.minusMonths(1) else it }.withDayOfMonth(15)
-    photograph("tile-period", top = topOf(By.descContains("日〜")), foot = topOf(dayOf(first.plusDays(7))))
+    photograph("tile-period", top = topOf(By.descContains("日〜")), foot = topOf(dayOf(first.plusDays(7))), across = week(first))
     pickPeriod("1日〜末日")
 
     // Every picture of the month before the widgets change its days.
@@ -221,10 +234,12 @@ class StoreScreenshots {
 
     startFixedCycle()
     // The month's name and its first two weeks, the cycle come round in them.
+    val cycle = LocalDate.now().plusMonths(1).withDayOfMonth(1)
     photograph(
       "tile-repeat",
       top = topOf(By.desc(Pattern.compile("\\d+年\\d+月"))),
-      foot = topOf(dayOf(LocalDate.now().plusMonths(1).withDayOfMonth(1).plusDays(14))),
+      foot = topOf(dayOf(cycle.plusDays(14))),
+      across = week(cycle),
     )
 
     // After everything else, as it leaves a group. The calendar, next shown after 新しい仕事にする set
@@ -233,11 +248,16 @@ class StoreScreenshots {
     device.tap(By.text("あとで"), Until.gone(By.text("あとで")))
     makeGroupWithEnd()
     // The section グループ's rows and what is said under them, from under its name to the section after it.
-    photograph(
-      "tile-group-end",
-      top = between(By.text("グループ"), By.text("忘年会")),
-      foot = between(By.textStartsWith("グループ名とアイコンは"), By.text("このグループでのあなた")),
-    )
+    // On a tablet the rail says グループ and the column 忘年会 beside the page: the page's own are
+    // those over its note, the heading right over the group's name.
+    val note = device.find(By.textStartsWith("グループ名とアイコンは")).visibleBounds
+    fun inPage(words: String) =
+      device.findObjects(By.text(words)).map { it.visibleBounds }.filter { it.right > note.left && it.left < note.right && it.bottom <= note.top }
+    val name = inPage("忘年会").minBy { it.top }
+    val section = inPage("グループ").filter { it.bottom <= name.top }.maxBy { it.bottom }
+    val rows = (section.bottom + name.top) / 2
+    val under = between(By.textStartsWith("グループ名とアイコンは"), By.text("このグループでのあなた"))
+    photograph("tile-group-end", top = rows, foot = under, across = page(rows, under))
   }
 
   /**
@@ -249,7 +269,9 @@ class StoreScreenshots {
     device.tap(By.text("リマインド"), By.text("リマインドを追加"))
     device.tap(By.textStartsWith("前日"), By.text("リマインドを編集"))
     // The notification under its heading.
-    photograph("tile-reminder", top = topOf(By.textStartsWith("次の通知")), foot = device.find(By.descStartsWith("明日は")).visibleBounds.bottom)
+    val heading = topOf(By.textStartsWith("次の通知"))
+    val notification = device.find(By.descStartsWith("明日は")).visibleBounds.bottom
+    photograph("tile-reminder", top = heading, foot = notification, across = page(heading, notification))
   }
 
   /**
@@ -641,6 +663,9 @@ class StoreScreenshots {
     /** The first day ポチポチ入力 has yet to enter. */
     const val HALF = 16
 
+    /** Material's margin of a page's content, in dp. */
+    const val PAGE_MARGIN_DP = 16
+
     /** A size to read a face's photo at, any: the loader keeps the file whatever is asked of it. */
     const val FACE_PX = 96
   }
@@ -711,6 +736,31 @@ class StoreScreenshots {
   /** Midway from the foot of what [over] finds to the top of what [under] finds: where one piece of a page gives way to the next. */
   private fun between(over: BySelector, under: BySelector): Int = (device.find(over).visibleBounds.bottom + topOf(under)) / 2
 
+  /**
+   * How far across the screen the calendar's week of [date] is: from its first day to its last, with
+   * the room its days keep between them at both sides, the month standing beside the rail and the
+   * day's pane on a tablet.
+   */
+  private fun week(date: LocalDate): IntRange {
+    val first = date.minusDays((date.dayOfWeek.value % 7).toLong())
+    val days = (0L..6L).map { device.find(dayOf(first.plusDays(it))).visibleBounds }
+    val gap = days[1].left - days[0].right
+    return days[0].left - gap..days[6].right + gap
+  }
+
+  /**
+   * How far across the screen the page is from [top] to [foot], beside the rail and the column on a
+   * tablet: what it says there, right of its bar's 戻る, with the room Material's margin keeps
+   * around it (16dp), the screen's width at most, which a phone's page with rows edge to edge is.
+   */
+  private fun page(top: Int, foot: Int): IntRange {
+    val back = device.find(By.desc("戻る")).visibleBounds.left
+    val pieces = said().map { it.at }.filter { it.top >= top && it.bottom <= foot && it.left >= back }
+    check(pieces.isNotEmpty()) { "The page says nothing from $top to $foot" }
+    val margin = (PAGE_MARGIN_DP * app.resources.displayMetrics.density).roundToInt()
+    return pieces.minOf { it.left } - margin..pieces.maxOf { it.right } + margin
+  }
+
   /** The calendar's day [date], whatever it holds: a day of the month before or after shows in the month's weeks too. */
   private fun dayOf(date: LocalDate): BySelector = By.desc(Pattern.compile("${spoken(date)}、.*"))
 
@@ -718,9 +768,10 @@ class StoreScreenshots {
    * The screen as it is, kept as [name], once the app's window has drawn what it holds: the words a
    * walk waits for are on a page before the page is on the screen, so a frame is asked of the
    * window and waited for until it is committed. With [top] and [foot], only the part between
-   * them, as wide as the screen: whole rows of it, for a tile of a shot of them.
+   * them, as wide as the page it is of, [across] (the screen's width on a phone, a page beside the
+   * rail on a tablet): whole rows of it, for a tile of a shot of them.
    */
-  private fun photograph(name: String, top: Int = 0, foot: Int? = null) {
+  private fun photograph(name: String, top: Int = 0, foot: Int? = null, across: IntRange? = null) {
     // Android 17's status bar keeps the notifications' icons through the demo's
     // `notifications -e visible false` (#1189), and one may come at any time of a run: each there
     // is snoozed until the run ends ([wakeNotifications]).
@@ -737,7 +788,8 @@ class StoreScreenshots {
     }
     check(committed.await(WAIT, TimeUnit.MILLISECONDS)) { "No frame drawn for $name" }
     val screen = checkNotNull(instrumentation.uiAutomation.takeScreenshot()) { "Could not photograph $name" }
-    val part = Bitmap.createBitmap(screen, 0, top, screen.width, (foot ?: screen.height) - top)
+    val (left, right) = across?.let { it.first.coerceAtLeast(0) to it.last.coerceAtMost(screen.width) } ?: (0 to screen.width)
+    val part = Bitmap.createBitmap(screen, left, top, right - left, (foot ?: screen.height) - top)
     File(out, "$name.png").outputStream().use { check(part.compress(Bitmap.CompressFormat.PNG, 100, it)) { "Could not keep $name" } }
   }
 }

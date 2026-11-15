@@ -144,10 +144,12 @@ final class WideCalendarTests: XCTestCase {
     let paneX = title(of: today).frame.minX
     XCTAssertLessThan(enter.frame.maxX, paneX, "ポチポチ入力 is under the month, not in the pane")
     XCTAssertGreaterThan(enter.frame.minY, summary.frame.maxY, "ポチポチ入力 is under 今月のお休み")
-    // A phone's day for its width (design/src/metrics.ts, DAY_PROPORTION).
-    if first.height > 44 && first.height < (first.width * 1.341).rounded(.down) {
-      // Six weeks and their gaps, from the first week's top.
-      let monthFoot = first.minY + 6 * first.height + 5 * 4
+    // Short of a phone's day for its width (design/src/metrics.ts,
+    // DAY_PROPORTION, about 1.34), with a point to spare for rounding.
+    if first.height > 44 && first.height < first.width * 1.34 - 1 {
+      // Six weeks and the gaps between them, from the first week's top.
+      let gap: CGFloat = 4
+      let monthFoot = first.minY + 6 * first.height + 5 * gap
       let spare = summary.frame.minY - monthFoot
       XCTAssertTrue((0...16).contains(spare), "the weeks fill the room down to 今月のお休み: \(spare) left")
     }

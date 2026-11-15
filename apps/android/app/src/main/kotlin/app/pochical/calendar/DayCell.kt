@@ -152,15 +152,15 @@ fun DayCell(
       )
       .clip(shape)
       .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+      .clearAndSetSemantics {
+        contentDescription = description
+        selected = look.isSelected
+      }
       // A day taller than its full height, a tall window's, keeps its date and mark as they are, at its top; the
       // rest is the day's room.
       .wrapContentHeight(Alignment.Top)
       .height(drawn)
-      .padding(vertical = CELL_PADDING)
-      .clearAndSetSemantics {
-        contentDescription = description
-        selected = look.isSelected
-      },
+      .padding(vertical = CELL_PADDING),
     horizontalAlignment = Alignment.CenterHorizontally,
     verticalArrangement = Arrangement.spacedBy(2.dp),
   ) {

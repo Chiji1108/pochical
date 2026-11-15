@@ -291,7 +291,7 @@ private fun <F : Any> AccountActionRow(
     icon,
     onClick = { confirming = true },
     end = RowEnd.None,
-    valueContent = if (action.running) ({ CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp) }) else null,
+    endContent = if (action.running) ({ CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp) }) else null,
     enabled = enabled,
     danger = true,
   )

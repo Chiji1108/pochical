@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -20,6 +21,11 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
+import app.pochical.calendar.Pattern
+import app.pochical.calendar.PatternKeys
+import app.pochical.calendar.rememberKeyPages
+import app.pochical.design.Metrics
+import app.pochical.kit.DeviceSettings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -205,6 +211,69 @@ class WindowSizesTest {
     pageDialog()
     val bounds = compose.onNodeWithTag("dialog").getUnclippedBoundsInRoot()
     assertEquals(891f, bounds.across, 1f)
+  }
+
+  /** 設定's 繰り返し row, its value 6日ごと, in a window of [qualifiers]. */
+  private fun aSettingsRowIn(qualifiers: String): Pair<DpRect, DpRect> {
+    window(qualifiers)
+    compose.setContent { SettingsRow("繰り返し", R.drawable.ic_repeat, onClick = {}, value = "6日ごと") }
+    // The row reads as one, so its words are found in the tree unmerged.
+    return compose.onNodeWithText("繰り返し", useUnmergedTree = true).getUnclippedBoundsInRoot() to
+      compose.onNodeWithText("6日ごと", useUnmergedTree = true).getUnclippedBoundsInRoot()
+  }
+
+  @Test
+  fun aSettingsRowsValueEndsItOnAPhone() {
+    val (headline, value) = aSettingsRowIn("w360dp-h780dp")
+    // Beside the headline, on its line (spec/calendar.md, In a narrow window).
+    assertTrue(value.left >= headline.right)
+    assertTrue(value.top < headline.bottom)
+  }
+
+  @Test
+  fun aSettingsRowsValueGoesUnderItsHeadlineInAWindowNarrowerThanAPhone() {
+    val (headline, value) = aSettingsRowIn("w280dp-h780dp")
+    // Under the headline, from where it starts, which keeps to one line.
+    assertTrue(value.top >= headline.bottom)
+    assertEquals(headline.left.value, value.left.value, 1f)
+    assertTrue(headline.down < 2 * value.down)
+  }
+
+  @Test
+  fun aSettingsRowsControlStaysAtItsEndInAWindowNarrowerThanAPhone() {
+    window("w280dp-h780dp")
+    compose.setContent { SettingsRow("リマインド", R.drawable.ic_repeat, onClick = null, endContent = { Text("switch") }) }
+    val headline = compose.onNodeWithText("リマインド", useUnmergedTree = true).getUnclippedBoundsInRoot()
+    val control = compose.onNodeWithText("switch", useUnmergedTree = true).getUnclippedBoundsInRoot()
+    // A switch, a handle or a spinner ends the row at every width, beside the headline.
+    assertTrue(control.left >= headline.right)
+    assertTrue(control.top < headline.bottom)
+  }
+
+  /** ポチポチ入力's keys for ten patterns, k1 to k10, at the screen's margins in a window of [qualifiers]. */
+  private fun tenKeysIn(qualifiers: String) {
+    window(qualifiers)
+    val patterns = (1..10).map { Pattern(id = "k$it", name = "k$it", icon = "", emoji = "", symbol = "k", color = 0, time = null, countsAsOff = false) }
+    compose.setContent {
+      CompositionLocalProvider(LocalDeviceSettings provides DeviceSettingsState(DeviceSettings()) {}) {
+        Box(Modifier.padding(horizontal = 16.dp)) { PatternKeys(patterns, rememberKeyPages(patterns.size)) {} }
+      }
+    }
+  }
+
+  @Test
+  fun aPhonesTrayHoldsTenKeysOnAPage() {
+    tenKeysIn("w360dp-h780dp")
+    compose.onNodeWithText("k10").assertIsDisplayed()
+  }
+
+  @Test
+  fun aTrayInAWindowNarrowerThanAPhoneHoldsFewerKeysAFingerWide() {
+    tenKeysIn("w280dp-h780dp")
+    // Four columns of two rows, the rest on the next page (spec/calendar.md, In a narrow window).
+    compose.onNodeWithText("k8").assertIsDisplayed()
+    compose.onNodeWithText("k9").assertDoesNotExist()
+    assertTrue(compose.onNodeWithText("k1").getUnclippedBoundsInRoot().across >= Metrics.touch.value)
   }
 }
 

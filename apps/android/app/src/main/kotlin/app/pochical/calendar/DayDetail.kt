@@ -288,7 +288,7 @@ private fun PeopleRow(onDay: List<String>, coworkers: List<Coworker>, open: Bool
     // Read as what unfolds or folds the chips, as the arrow shows.
     modifier = Modifier.semantics { if (open) collapse { onOpenChange(false); true } else expand { onOpenChange(true); true } },
     supporting = coworkers.filter { it.id in onDay }.joinToString("、") { it.name }.ifEmpty { stringResource(R.string.none) },
-    valueContent = { Icon(painterResource(R.drawable.ic_expand_more), null, Modifier.rotate(if (open) 180f else 0f)) },
+    endContent = { Icon(painterResource(R.drawable.ic_expand_more), null, Modifier.rotate(if (open) 180f else 0f)) },
     end = RowEnd.None,
     oneLine = true,
   )

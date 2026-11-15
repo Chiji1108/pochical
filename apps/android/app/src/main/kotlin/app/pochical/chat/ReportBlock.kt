@@ -458,7 +458,7 @@ fun BlockedMembers(people: List<BlockedPerson>, onUnblock: (BlockedPerson) -> Un
           onClick = { onUnblock(person) },
           supporting = person.group.takeIf { it.isNotEmpty() },
           leading = { MemberAvatar(person.name, person.photoId, person.shelf, 40.dp) },
-          valueContent = { Text(stringResource(R.string.unblock_confirm), color = MaterialTheme.colorScheme.primary) },
+          endContent = { Text(stringResource(R.string.unblock_confirm), color = MaterialTheme.colorScheme.primary) },
           end = RowEnd.None,
           oneLine = true,
         )
