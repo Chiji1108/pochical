@@ -240,12 +240,6 @@ fun CalendarScreen(
   // The day ポチポチ入力 enters next, while entering, and what its last key did, for a screen reader.
   var enteringKey by rememberSaveable { mutableStateOf<String?>(null) }
   val entering = enteringKey?.let(LocalDate::parse)
-  // The day the pane shows on a wide window, the day being entered while entering, and what is under
-  // its bar on the way to another.
-  val paneDay = entering ?: opened ?: today
-  val paneHolds = remember { SeekableTransitionState(paneDay) }
-  val paneTransition = rememberTransition(paneHolds, label = "pane")
-  LaunchedEffect(paneDay) { if (reduceMotion) paneHolds.snapTo(paneDay) else paneHolds.animateTo(paneDay) }
   var said by remember { mutableStateOf<String?>(null) }
   // The day a key last entered, opened in the pane once entering has ended on a wide window.
   var lastEnteredKey by rememberSaveable { mutableStateOf<String?>(null) }
@@ -278,6 +272,17 @@ fun CalendarScreen(
   var entered by rememberSaveable { mutableStateOf(false) }
   // From 完了 until its question about the blank days has closed too, as long as the work that asks it.
   var finishing by remember { mutableStateOf(false) }
+  // The day the pane shows on a wide window: the day being entered while entering, else the day open,
+  // the last day entered while 完了 asks about the blank days, and today's while none is; and what is
+  // under its bar on the way to another.
+  val paneDay = entering ?: opened ?: lastEnteredKey?.takeIf { finishing }?.let(LocalDate::parse) ?: today
+  val paneHolds = remember { SeekableTransitionState(paneDay) }
+  val paneTransition = rememberTransition(paneHolds, label = "pane")
+  LaunchedEffect(paneDay) { if (reduceMotion) paneHolds.snapTo(paneDay) else paneHolds.animateTo(paneDay) }
+  // Widened or narrowed, the memo being written goes on only where its day's detail comes: the pane
+  // has no place on a phone, so today's or the day being entered's is left, kept as its field went,
+  // rather than taken up by the field of the day once it is opened.
+  LaunchedEffect(wide) { if (memoWriting.draft?.day != if (wide) paneDay else opened) memoWriting.draft = null }
   // The edits of the days the review prompt has seen; one made since is asked about once done.
   val dayEdits by days.dayEdits.collectAsStateWithLifecycle()
   var reviewSeen by rememberSaveable { mutableIntStateOf(dayEdits) }
@@ -297,7 +302,7 @@ fun CalendarScreen(
   // not one chip or hour at a time.
   val done = (wide || opened == null) && entering == null && !finishing && gaps.isEmpty() && offeringReminders == null
   val edits by rememberUpdatedState(dayEdits)
-  LaunchedEffect(done, if (wide) paneDay else edits) {
+  LaunchedEffect(done, if (wide) opened ?: today else edits) {
     // The count starts from 0 in each process, so one kept from an ended process is taken as seen.
     if (edits < reviewSeen) reviewSeen = edits
     if (!done || edits == reviewSeen || activity == null) return@LaunchedEffect
@@ -680,8 +685,8 @@ fun CalendarScreen(
                 canStep = { paneDay.plusDays(it.toLong()) in reachable },
                 // Always there: no ×.
                 onClose = null,
-                onPickShift = { open(RootPage.ShiftChoice(paneDay.toString())) },
-                entering = entering != null,
+                // Entering, the shift is the tray's to change and to clear.
+                onPickShift = if (entering == null) ({ open(RootPage.ShiftChoice(paneDay.toString())) }) else null,
                 reduceMotion = reduceMotion,
                 modifier = Modifier.weight(1f),
               )

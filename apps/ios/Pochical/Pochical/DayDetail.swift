@@ -5,8 +5,8 @@ import SwiftUI
 /// A day opened from the month: its shift, its own hours, the people on
 /// it and a memo (spec/calendar.md, A day's detail): in the day's sheet on
 /// a phone, or in the pane beside the month on a wide screen, which has no
-/// × and holds ポチポチ入力 at its foot (spec/calendar.md, On a wide screen).
-struct DayDetail<Foot: View>: View {
+/// × (spec/calendar.md, On a wide screen).
+struct DayDetail: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.scenePhase) private var scenePhase
   @Environment(\.dismiss) private var dismiss
@@ -32,9 +32,6 @@ struct DayDetail<Foot: View>: View {
   /// Where it says what it is in the middle of, and takes it from as it
   /// comes in place of the detail of the same day moved.
   let handover: DayDetailHandover
-  /// What stands at its foot, under the rows, while the keyboard is not
-  /// up.
-  @ViewBuilder var foot: () -> Foot
   /// The memo as it is written, kept when the field is left, the detail
   /// closes or the app goes to the background (spec/calendar.md, Text
   /// fields).
@@ -72,11 +69,6 @@ struct DayDetail<Foot: View>: View {
           .onChange(of: movedWriting, initial: true) {
             if movedWriting { rows.scrollTo(Self.memoRow) }
           }
-      }
-      // The rows scroll under it behind the bar's edge effect; it gives
-      // way to the keyboard, leaving the memo the room.
-      .safeAreaBar(edge: .bottom, spacing: 0) {
-        if !writingNote { foot() }
       }
       .navigationDestination(for: DayList.self) { list in
         switch list {

@@ -482,13 +482,32 @@ struct CalendarScreen: View {
   }
 
   /// The pane beside the month on a wide screen: the day being entered
-  /// while entering, else the day open, today's while none is.
+  /// while entering, else the day open, the last day entered while 完了
+  /// asks about the blank days, and today's while none is; ポチポチ入力 at
+  /// its foot, or its tray while entering.
   private func pane(_ calendar: OwnCalendar) -> some View {
-    detail(calendar, of: entering ?? opened ?? today, inPane: true)
+    detail(calendar, of: entering ?? opened ?? (gaps.isEmpty ? nil : lastEntered) ?? today, inPane: true)
+      // Under the detail's every page, and outside the day's own detail
+      // that gives way to the next day's, so a key moving entering on
+      // keeps the tray as it is; it gives way to the keyboard while the
+      // memo is written, leaving the memo the room. The rows scroll under
+      // it behind the bar's edge effect.
+      .safeAreaBar(edge: .bottom, spacing: 0) {
+        if !handover.writing {
+          Group {
+            if let day = entering {
+              tray(calendar, entering: day)
+            } else {
+              enterButton(calendar)
+            }
+          }
+          .padding(.horizontal, Self.screenEdge)
+          .padding(.vertical, 8)
+        }
+      }
   }
 
-  /// `day`'s detail, in the sheet or the pane, where on a wide screen
-  /// ポチポチ入力 stands at its foot, or its tray while entering.
+  /// `day`'s detail, in the sheet or the pane.
   ///
   /// Which of the two it is in is said by where it is put, never by the
   /// width now: the one going is drawn again at the new width before it
@@ -525,25 +544,13 @@ struct CalendarScreen: View {
         // in the month does.
         onStep: { step in
           if entering != nil {
-            entering = day.adding(days: step)
+            select(day.adding(days: step))
           } else {
             go(to: day.adding(days: step))
           }
         },
         closes: !inPane, entering: entering != nil, handover: handover
-      ) {
-        if inPane {
-          Group {
-            if entering != nil {
-              tray(calendar, entering: day)
-            } else {
-              enterButton(calendar)
-            }
-          }
-          .padding(.horizontal, Self.screenEdge)
-          .padding(.vertical, 8)
-        }
-      }
+      )
       .id(PaneShowing(day: day, time: paneShowing))
     }
     .animation(folding, value: day)
