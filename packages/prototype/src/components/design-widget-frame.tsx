@@ -31,6 +31,9 @@ const androidHome = { margin: HOME_MARGIN, radius: ANDROID_RADIUS };
 // iPhone sizes in pt for a 390 × 844 phone, the one the /design screens
 // are drawn at, from Apple's Human Interface Guidelines (Widgets); an
 // iPhone 16 Pro's measure the same once scaled from 402 to 390.
+// The iPad's extra large in pt as an 11-inch iPad (834 × 1194) lays it out
+// before scaling it to the Home Screen, from the same guidelines; only the
+// iPad has it.
 // Android sizes in dp as a Pixel 9a's launcher gives them: its cells
 // are 97dp wide and 107dp tall, less the room between them.
 export const widgetFamilies = {
@@ -45,6 +48,7 @@ export const widgetFamilies = {
   android2x2: { ...androidHome, height: 202, label: "2×2", width: 179 },
   android4x2: { ...androidHome, height: 202, label: "4×2", width: 373 },
   android4x4: { ...androidHome, height: 415, label: "4×4", width: 373 },
+  systemExtraLarge: { ...iosHome, height: 342, label: "特大", width: 715.5 },
   systemLarge: { ...iosHome, height: 354, label: "大", width: 338 },
   systemMedium: { ...iosHome, height: 158, label: "中", width: 338 },
   systemSmall: { ...iosHome, height: 158, label: "小", width: 158 },

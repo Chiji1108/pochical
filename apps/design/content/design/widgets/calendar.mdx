@@ -1,11 +1,13 @@
 ---
 title: カレンダー
-description: 中は今週と来週の2週間、大は月。アプリのカレンダーと同じ日のマスで。
+description: 中は今週と来週の2週間、大は月、iPad の特大は今月と来月。アプリのカレンダーと同じ日のマスで。
 ---
 
 import { HomeWidgets, WidgetSwitches } from "../../../src/components/widgets";
 
 大がいちばん詰まるのは6週ある月です。切り替えの月を8月（6週）にすると見られます。
+
+iPad の特大は大を2つ並べた広さなので、月を引き伸ばさず、今月と来月を大と同じ大きさで並べます。Apple のカレンダーが特大で先の日まで見せるのと同じく、広さを先の予定に使います。Android には特大がなく、4×4 まで広げられます。
 
 <Pieces light>
   <WidgetSwitches page="calendar" />
