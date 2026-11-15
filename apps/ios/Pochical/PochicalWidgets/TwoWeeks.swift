@@ -85,8 +85,17 @@ struct GridDay: View {
           .frame(height: 14)
         if let pattern = day.pattern, off.mark != .none {
           VStack(spacing: 1) {
-            ShiftMark(pattern: pattern, size: markSize, change: day.timeChange)
-              .opacity(off.mark == .faint ? 0.35 : 1)
+            // The mark at its size where the day has the room, and as large
+            // as the room where its row is shorter (a six-week month in the
+            // upright extra large), so it never runs over the next week.
+            GeometryReader { room in
+              ShiftMark(
+                pattern: pattern, size: min(markSize, room.size.height), change: day.timeChange
+              )
+              .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .frame(maxHeight: markSize)
+            .opacity(off.mark == .faint ? 0.35 : 1)
             if look.options.names {
               Text(dayName(pattern.name))
                 .font(.system(size: 9))

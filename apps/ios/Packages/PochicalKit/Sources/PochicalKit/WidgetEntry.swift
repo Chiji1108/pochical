@@ -109,7 +109,7 @@ public struct WidgetEntry: Sendable {
   public var twoWeeks: [WidgetDay]
   /// Today's month.
   public var month: WidgetMonth
-  /// The month after: カレンダー's extra large on the iPad shows it beside
+  /// The month after: カレンダー's extra large shows it beside or under
   /// this one.
   public var nextMonth: WidgetMonth
   /// Who the widget is set to, as it shows them.
