@@ -25,6 +25,10 @@ struct DayDetail<Foot: View>: View {
   /// Whether its bar holds ×: a sheet's does; the pane beside the month,
   /// always there, has none.
   var closes = true
+  /// While ポチポチ入力 enters the day, in the pane beside the month: the
+  /// shift is the tray's to change, so シフト shows it without opening
+  /// its list, and この日のシフトを消す is the tray's 消す.
+  var entering = false
   /// Where it says what it is in the middle of, and takes it from as it
   /// comes in place of the detail of the same day moved.
   let handover: DayDetailHandover
@@ -177,7 +181,7 @@ struct DayDetail<Foot: View>: View {
           .onChange(of: handover.sheetGoing) { takeMovedFocus() }
       }
       .listRowBackground(colors.fillQuaternary)
-      if let entry {
+      if let entry, !entering {
         Section {
           Button("この日のシフトを消す", role: .destructive) {
             if lost(entry).isEmpty {
@@ -218,21 +222,29 @@ struct DayDetail<Foot: View>: View {
   /// runs long past a few, and the list shows each one's hours too.
   /// Picking another keeps the day's memo and people, as entering does.
   private var shiftRow: some View {
-    NavigationLink(value: DayList.shift) {
-      LabeledContent("シフト") {
-        if let pattern {
-          Label {
-            Text(pattern.name).lineLimit(1)
-          } icon: {
-            ShiftMark(pattern: pattern, size: 16)
-          }
-        } else {
-          Text("なし")
-        }
+    Group {
+      if entering {
+        shiftLabel
+      } else {
+        NavigationLink(value: DayList.shift) { shiftLabel }
       }
     }
     // The line under it from where its words start, not the mark's.
     .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
+  }
+
+  private var shiftLabel: some View {
+    LabeledContent("シフト") {
+      if let pattern {
+        Label {
+          Text(pattern.name).lineLimit(1)
+        } icon: {
+          ShiftMark(pattern: pattern, size: 16)
+        }
+      } else {
+        Text("なし")
+      }
+    }
   }
 
   /// シフト's list, pushed from its row.

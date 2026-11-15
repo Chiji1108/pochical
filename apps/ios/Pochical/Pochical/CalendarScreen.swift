@@ -481,24 +481,14 @@ struct CalendarScreen: View {
     shownFolded == nil ? 0 : 1 - pull
   }
 
-  /// The pane beside the month on a wide screen: the day open, today's
-  /// while none is, or the tray in its place while entering.
-  @ViewBuilder private func pane(_ calendar: OwnCalendar) -> some View {
-    if let day = entering {
-      VStack {
-        Spacer(minLength: 0)
-        tray(calendar, entering: day)
-      }
-      .padding(.horizontal, Self.screenEdge)
-      .padding(.bottom, 8)
-      .background(colors.backgroundBase)
-    } else {
-      detail(calendar, of: opened ?? today, inPane: true)
-    }
+  /// The pane beside the month on a wide screen: the day being entered
+  /// while entering, else the day open, today's while none is.
+  private func pane(_ calendar: OwnCalendar) -> some View {
+    detail(calendar, of: entering ?? opened ?? today, inPane: true)
   }
 
   /// `day`'s detail, in the sheet or the pane, where on a wide screen
-  /// 今月のお休み and ポチポチ入力 stand at its foot.
+  /// ポチポチ入力 stands at its foot, or its tray while entering.
   ///
   /// Which of the two it is in is said by where it is put, never by the
   /// width now: the one going is drawn again at the new width before it
@@ -531,13 +521,27 @@ struct CalendarScreen: View {
             }
           }
         },
-        onStep: { step in go(to: day.adding(days: step)) },
-        closes: !inPane, handover: handover
+        // While entering, ‹ › move the day being entered, as a day tapped
+        // in the month does.
+        onStep: { step in
+          if entering != nil {
+            entering = day.adding(days: step)
+          } else {
+            go(to: day.adding(days: step))
+          }
+        },
+        closes: !inPane, entering: entering != nil, handover: handover
       ) {
         if inPane {
-          enterButton(calendar)
-            .padding(.horizontal, Self.screenEdge)
-            .padding(.vertical, 8)
+          Group {
+            if entering != nil {
+              tray(calendar, entering: day)
+            } else {
+              enterButton(calendar)
+            }
+          }
+          .padding(.horizontal, Self.screenEdge)
+          .padding(.vertical, 8)
         }
       }
       .id(PaneShowing(day: day, time: paneShowing))
@@ -762,7 +766,8 @@ struct CalendarScreen: View {
       trayPage = 0
       lastEntered = nil
       // With the tabs giving way, so the tray and the tab bar move as one;
-      // on a wide screen the tray takes the place of the day open.
+      // on a wide screen the pane shows the day entered, the tray at its
+      // foot.
       withAnimation(entryChange) {
         opened = nil
         entering = first

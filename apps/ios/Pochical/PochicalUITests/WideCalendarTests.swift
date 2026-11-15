@@ -93,18 +93,26 @@ final class WideCalendarTests: XCTestCase {
     XCTAssertFalse(app.navigationBars["シフト"].exists, "the list is gone")
   }
 
-  /// ポチポチ入力 at the pane's foot puts the tray in the pane, the month
-  /// beside it as it was, and the tabs staying.
+  /// ポチポチ入力 at the pane's foot puts the tray at the pane's foot,
+  /// under the detail of the day being entered, which follows the day a
+  /// tap or 翌日へ moves entering to; the month beside it as it was, and
+  /// the tabs staying.
   func testEnteringIsInThePane() throws {
     try launchWide()
     let enter = app.buttons["ポチポチ入力"]
     XCTAssertTrue(enter.waitForExistence(timeout: 5), "ポチポチ入力 is at the pane's foot")
     enter.tap()
     XCTAssertTrue(app.buttons["完了"].waitForExistence(timeout: 5), "entering, 完了 is in the heading")
-    XCTAssertTrue(app.buttons["消す"].exists, "the tray is in the pane")
+    XCTAssertTrue(app.buttons["翌日へ"].exists, "the tray is in the pane")
     XCTAssertTrue(day(on: 1).isHittable, "the month stays beside it")
     XCTAssertTrue(app.tab("グループ").exists, "the tabs stay")
+    day(on: 13).tap()
+    XCTAssertTrue(
+      title(of: "\(thisMonth)月13日").waitForExistence(timeout: 5), "the day being entered is in the pane")
+    XCTAssertFalse(app.buttons["この日のシフトを消す"].exists, "the shift is the tray's to clear")
     snap("entering", of: XCUIScreen.main)
+    app.buttons["翌日へ"].tap()
+    XCTAssertTrue(title(of: "\(thisMonth)月14日").waitForExistence(timeout: 5), "the detail follows 翌日へ")
   }
 
   /// Launches with the sample month on its side; skipped on a compact one.

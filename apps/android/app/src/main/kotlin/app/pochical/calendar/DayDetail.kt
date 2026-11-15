@@ -90,7 +90,9 @@ import java.time.LocalDate
  * hours, the people on it and a memo (spec/calendar.md, A day's detail). Its bar holds the date, ‹ ›
  * to the day before and after, and × to close, which the pane, always there, has none of ([onClose]
  * null). What is under the bar follows [holds] to the day it is going to, as another opens or a
- * predictive back takes it.
+ * predictive back takes it. While ポチポチ入力 enters the day, in the pane beside the month ([entering]),
+ * its shift is the tray's to change: シフト shows it without opening its list, and この日のシフトを消す
+ * is the tray's 消す.
  */
 @Composable
 fun DayDetail(
@@ -109,6 +111,7 @@ fun DayDetail(
   onPickShift: () -> Unit,
   reduceMotion: Boolean,
   modifier: Modifier = Modifier,
+  entering: Boolean = false,
 ) {
   // Above the keyboard, so the memo being written scrolls into sight.
   Column(modifier.imePadding().verticalScroll(rememberScrollState()).navigationBarsPadding()) {
@@ -131,7 +134,7 @@ fun DayDetail(
     holds.AnimatedContent(
       transitionSpec = { if (reduceMotion) EnterTransition.None togetherWith ExitTransition.None else fadeIn() togetherWith fadeOut() },
     ) { shown ->
-      DayHolds(shown, calendar, writing, days, peopleOpen, onPeopleOpenChange, onPickShift)
+      DayHolds(shown, calendar, writing, days, peopleOpen, onPeopleOpenChange, onPickShift.takeUnless { entering })
     }
   }
 }
@@ -145,7 +148,8 @@ private fun DayHolds(
   days: OwnDays,
   peopleOpen: Boolean,
   onPeopleOpenChange: (Boolean) -> Unit,
-  onPickShift: () -> Unit,
+  /** Null while entering, the shift being the tray's to change and to clear. */
+  onPickShift: (() -> Unit)?,
 ) {
   val entry = calendar.shown(day, day)[day]
   val pattern = entry?.let { shown -> calendar.patterns.find { it.id == shown.shift } }
@@ -185,7 +189,7 @@ private fun DayHolds(
     if (people) PeopleChips(entry, calendar.coworkers, peopleOpen, days) { days.set(day, it) }
     // A field of its own for each day, so the one left keeps its own memo as it goes.
     key(day) { MemoField(day, calendar.note(day), days, writing, Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp)) }
-    if (entry != null) {
+    if (entry != null && onPickShift != null) {
       ClearButton(entry, calendar.coworkers) { days.set(day, null) }
     }
   }
