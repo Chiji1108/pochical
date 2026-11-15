@@ -1,5 +1,5 @@
 import { css, cva, cx } from "@pochical/styled-system/css";
-import { useContext } from "react";
+import { useContext, useLayoutEffect, useRef, useState } from "react";
 
 import { presetPatterns } from "../lib/design-patterns";
 import type {
@@ -25,8 +25,8 @@ import {
 } from "./design-widgets";
 import { useDisplayColor } from "./shift-mark";
 
-// カレンダー: this week and the next, the month, and on the iPad this month
-// and the next.
+// カレンダー: this week and the next, the month, and in the extra large
+// sizes this month and the next.
 
 const TWO_WEEKS_ROOMY = 150;
 
@@ -161,6 +161,7 @@ function GridDay({
   const tile = look.tile && inMonth;
   const isToday = day.date.getTime() === todayTime;
   const marked = day.shift !== undefined && look.mark !== "none";
+  const [markRoom, room] = useRoomHeight();
   return (
     <div
       className={cx(
@@ -186,14 +187,43 @@ function GridDay({
           {day.date.getDate()}
         </span>
       </span>
-      <span aria-hidden="true" className={gridMark}>
+      <span aria-hidden="true" className={gridMark} ref={markRoom}>
         {marked && (
-          <DayMark day={day} faint={look.mark === "faint"} size={markSize} />
+          <DayMark
+            day={day}
+            faint={look.mark === "faint"}
+            size={Math.min(markSize, room ?? markSize)}
+          />
         )}
       </span>
       {named && marked && <MarkName day={day} />}
     </div>
   );
+}
+
+// How tall the room under a day's date is, measured, so its mark is drawn
+// at its size where the day has the room and as large as the room where
+// its row is shorter (a six-week month in the upright extra large), never
+// running over the next week, as GridDay on iOS fits its mark.
+function useRoomHeight() {
+  const ref = useRef<HTMLSpanElement>(null);
+  const [height, setHeight] = useState<number>();
+  useLayoutEffect(() => {
+    const element = ref.current;
+    if (!element) {
+      return undefined;
+    }
+    const measure = () => {
+      setHeight(element.clientHeight);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+  return [ref, height] as const;
 }
 
 // The mark in the room under the date, in its middle.
@@ -228,22 +258,21 @@ const month = {
     display: "flex",
     justifyContent: "space-between",
   }),
-  pair: cva({
-    base: { display: "grid", height: "100%" },
-    variants: {
-      upright: {
-        false: {
-          gap: "24px",
-          gridTemplateColumns: "1fr 1fr",
-          gridTemplateRows: "minmax(0, 1fr)",
-        },
-        true: {
-          gap: "16px",
-          gridTemplateColumns: "minmax(0, 1fr)",
-          gridTemplateRows: "repeat(2, minmax(0, 1fr))",
-        },
-      },
-    },
+  // The upright extra large's months, one over the other, as tall alike
+  // until their headings are measured.
+  stack: css({
+    display: "flex",
+    flexDirection: "column",
+    height: "100%",
+  }),
+  // Where a month's weeks are measured from.
+  stacked: css({ flex: "1 1 0", minHeight: 0, position: "relative" }),
+  pair: css({
+    display: "grid",
+    gap: "24px",
+    gridTemplateColumns: "1fr 1fr",
+    gridTemplateRows: "minmax(0, 1fr)",
+    height: "100%",
   }),
   root: css({
     display: "flex",
@@ -284,30 +313,91 @@ function CalendarLargeView({ entry }: { entry: WidgetEntry }) {
   );
 }
 
-// This month and the next, each with a large's room: the iPad's extra large
-// is two larges wide and as tall, and lays them side by side; the upright
-// one (iOS 27) is a large wide and about two tall, and stacks them. So the
-// calendar shows more of what is coming, as Apple's Calendar shows more
-// days there, rather than one month stretched.
+// This month and the next side by side, each with the large's room: the
+// iPad's extra large is two larges wide and as tall, so the calendar shows
+// more of what is coming, as Apple's Calendar shows more days there, rather
+// than one month stretched. The extra large is iOS's alone, whose marks keep
+// the large's size.
 function CalendarExtraLargeView({ entry }: { entry: WidgetEntry }) {
-  const { height, width } = useContext(WidgetSizeContext);
-  const upright = height > width;
-  const roomy = (upright ? height / 2 : height) >= MONTH_ROOMY;
-  // Their weeks as tall in both, though one month has a week more.
+  // Their weeks level across, though one month has a week more.
   const rows =
     Math.max(entry.month.days.length, entry.nextMonth.days.length) / WEEK;
   return (
-    <div className={month.pair({ upright })}>
-      <MonthView entry={entry} month={entry.month} roomy={roomy} rows={rows} />
+    <div className={month.pair}>
+      <MonthView entry={entry} month={entry.month} roomy={false} rows={rows} />
       <MonthView
         entry={entry}
         month={entry.nextMonth}
-        roomy={roomy}
+        roomy={false}
         rows={rows}
       />
     </div>
   );
 }
+
+// This month over the next, in the upright extra large (iOS 27), a large
+// wide and less than two tall: the room under their headings goes to their
+// weeks, so a week is as tall in both, a month of six weeks taking more of
+// it than one of five, and each day's mark is as large as that leaves it
+// (GridDay), as iOS's MonthsByWeeks lays them.
+function CalendarExtraLargePortraitView({ entry }: { entry: WidgetEntry }) {
+  const { height } = useContext(WidgetSizeContext);
+  const months = [entry.month, entry.nextMonth];
+  const weeks = months.map((shown) => shown.days.length / WEEK);
+  const first = useRef<HTMLDivElement>(null);
+  // A month's heading and weekdays, measured: what each month takes before
+  // its weeks.
+  const [heading, setHeading] = useState<number>();
+  useLayoutEffect(() => {
+    const days = first.current?.querySelector("ol");
+    if (!days) {
+      return undefined;
+    }
+    const measure = () => {
+      setHeading(days.offsetTop);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(days);
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+  const weekHeight =
+    heading === undefined
+      ? undefined
+      : (height - UPRIGHT_GAP - heading * months.length) /
+        weeks.reduce((sum, count) => sum + count, 0);
+  return (
+    <div className={month.stack} style={{ gap: UPRIGHT_GAP }}>
+      {months.map((shown, index) => (
+        <div
+          className={month.stacked}
+          key={shown.first.getTime()}
+          ref={index === 0 ? first : undefined}
+          style={
+            heading === undefined || weekHeight === undefined
+              ? undefined
+              : {
+                  flex: "none",
+                  height: heading + weekHeight * (weeks[index] ?? 0),
+                }
+          }
+        >
+          <MonthView
+            entry={entry}
+            month={shown}
+            roomy={false}
+            rows={weeks[index] ?? 0}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// The room between the upright extra large's months.
+const UPRIGHT_GAP = 16;
 
 // A month with every day's mark, and today's time over today's month.
 function MonthView({
@@ -399,3 +489,7 @@ export const TwoWeeksMedium = firstRunOr(TwoWeeksMediumView);
 export const CalendarLarge = firstRunOr(CalendarLargeView);
 
 export const CalendarExtraLarge = firstRunOr(CalendarExtraLargeView);
+
+export const CalendarExtraLargePortrait = firstRunOr(
+  CalendarExtraLargePortraitView
+);

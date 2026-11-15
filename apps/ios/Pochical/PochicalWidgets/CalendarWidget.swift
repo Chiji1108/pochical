@@ -38,14 +38,20 @@ private struct CalendarView: View {
     Group {
       if entry.nothingEntered {
         FirstRun()
-      } else if family == .systemExtraLarge || upright {
-        // A month in each half: side by side in the iPad's, each with the
-        // large's room, and one over the other in the upright one. Their
-        // weeks are as tall in both, though one has a week more.
+      } else if upright {
+        // This month over the next, a large wide and less than two tall:
+        // the room under their headings goes to their weeks, so a week is
+        // as tall in both and each day's mark as large as that leaves it.
+        let weeks = [entry.month.weeks.count, entry.nextMonth.weeks.count]
+        MonthsByWeeks(weeks: weeks, spacing: 16) {
+          MonthView(month: entry.month, rows: weeks[0], entry: entry, week: week)
+          MonthView(month: entry.nextMonth, rows: weeks[1], entry: entry, week: week)
+        }
+      } else if family == .systemExtraLarge {
+        // A month in each half, each with the large's room, their weeks
+        // level across though one has a week more.
         let rows = max(entry.month.weeks.count, entry.nextMonth.weeks.count)
-        let halves =
-          upright ? AnyLayout(VStackLayout(spacing: 16)) : AnyLayout(HStackLayout(spacing: 24))
-        halves {
+        HStack(spacing: 24) {
           MonthView(month: entry.month, rows: rows, entry: entry, week: week)
           MonthView(month: entry.nextMonth, rows: rows, entry: entry, week: week)
         }
@@ -65,6 +71,40 @@ private struct CalendarView: View {
       return family == .systemExtraLargePortrait
     }
     return false
+  }
+}
+
+/// Months one over the other, each as tall as its heading and its weeks:
+/// the room left under the headings is shared by every week alike, so a
+/// month of six weeks takes more of it than one of five.
+private struct MonthsByWeeks: Layout {
+  /// Each month's number of weeks, in order.
+  let weeks: [Int]
+  let spacing: CGFloat
+
+  func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+    proposal.replacingUnspecifiedDimensions()
+  }
+
+  func placeSubviews(
+    in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()
+  ) {
+    // Each month's least height, its heading and weekdays with no room for
+    // its weeks, and what is left over them, shared by the weeks.
+    let least = subviews.map {
+      $0.sizeThatFits(ProposedViewSize(width: bounds.width, height: 0)).height
+    }
+    let gaps = spacing * CGFloat(max(subviews.count - 1, 0))
+    let room = max(bounds.height - gaps - least.reduce(0, +), 0)
+    let week = room / CGFloat(max(weeks.reduce(0, +), 1))
+    var y = bounds.minY
+    for (index, subview) in subviews.enumerated() {
+      let height = least[index] + week * CGFloat(weeks[index])
+      subview.place(
+        at: CGPoint(x: bounds.minX, y: y), anchor: .topLeading,
+        proposal: ProposedViewSize(width: bounds.width, height: height))
+      y += height + spacing
+    }
   }
 }
 

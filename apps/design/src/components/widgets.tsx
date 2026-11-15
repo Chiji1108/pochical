@@ -13,6 +13,7 @@ import {
 import type { WidgetFamily } from "@pochical/prototype/components/design-widget-frame";
 import {
   CalendarExtraLarge,
+  CalendarExtraLargePortrait,
   CalendarLarge,
   TwoWeeksMedium,
 } from "@pochical/prototype/components/design-widgets-calendar";
@@ -196,7 +197,7 @@ const kinds = {
     { View: TwoWeeksMedium, size: "medium" },
     { View: CalendarLarge, size: "large" },
     { View: CalendarExtraLarge, size: "extraLarge" },
-    { View: CalendarExtraLarge, size: "extraLargePortrait" },
+    { View: CalendarExtraLargePortrait, size: "extraLargePortrait" },
   ],
   nextOff: [{ View: NextOffSmall, size: "small" }],
   now: [{ View: NowSmall, size: "small" }],
