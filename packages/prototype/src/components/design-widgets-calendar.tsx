@@ -218,6 +218,8 @@ const month = {
       flex: 1,
       gridAutoRows: "1fr",
       gridTemplateColumns: "repeat(7, 1fr)",
+      // As tall as the widget leaves it, the weeks sharing that.
+      minHeight: 0,
     },
     variants: { named: { false: { rowGap: "4px" }, true: { rowGap: "2px" } } },
   }),
@@ -230,6 +232,7 @@ const month = {
     display: "grid",
     gap: "24px",
     gridTemplateColumns: "1fr 1fr",
+    gridTemplateRows: "minmax(0, 1fr)",
     height: "100%",
   }),
   root: css({
@@ -253,13 +256,22 @@ const month = {
   }),
 };
 
+const WEEK = 7;
+
 // Where the month has room, as on Android's 4×4, its marks grow.
 const MONTH_ROOMY = 360;
 
 // The month with every day's mark, and today's time over it.
 function CalendarLargeView({ entry }: { entry: WidgetEntry }) {
   const roomy = useContext(WidgetSizeContext).height >= MONTH_ROOMY;
-  return <MonthView entry={entry} month={entry.month} roomy={roomy} />;
+  return (
+    <MonthView
+      entry={entry}
+      month={entry.month}
+      roomy={roomy}
+      rows={entry.month.days.length / WEEK}
+    />
+  );
 }
 
 // This month and the next side by side, each with the large's room: the
@@ -267,10 +279,19 @@ function CalendarLargeView({ entry }: { entry: WidgetEntry }) {
 // more of what is coming, as Apple's Calendar shows more days there, rather
 // than one month stretched.
 function CalendarExtraLargeView({ entry }: { entry: WidgetEntry }) {
+  const roomy = useContext(WidgetSizeContext).height >= MONTH_ROOMY;
+  // Their weeks level across, though one month has a week more.
+  const rows =
+    Math.max(entry.month.days.length, entry.nextMonth.days.length) / WEEK;
   return (
     <div className={month.pair}>
-      <MonthView entry={entry} month={entry.month} roomy={false} />
-      <MonthView entry={entry} month={entry.nextMonth} roomy={false} />
+      <MonthView entry={entry} month={entry.month} roomy={roomy} rows={rows} />
+      <MonthView
+        entry={entry}
+        month={entry.nextMonth}
+        roomy={roomy}
+        rows={rows}
+      />
     </div>
   );
 }
@@ -280,10 +301,14 @@ function MonthView({
   entry,
   month: shown,
   roomy,
+  rows,
 }: {
   entry: WidgetEntry;
   month: WidgetMonth;
   roomy: boolean;
+  // How many weeks' rows to lay out: more than the month has leaves the
+  // rest empty under it.
+  rows: number;
 }) {
   const { english, weekdayLetter } = useWeek();
   const named = useShiftNames();
@@ -314,7 +339,10 @@ function MonthView({
           </span>
         ))}
       </div>
-      <ol className={`${list} ${month.grid({ named })}`}>
+      <ol
+        className={`${list} ${month.grid({ named })}`}
+        style={{ gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))` }}
+      >
         {days.map((day) => (
           <MonthDay
             day={day}

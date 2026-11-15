@@ -30,15 +30,15 @@ private struct CalendarView: View {
       if entry.nothingEntered {
         FirstRun()
       } else if family == .systemExtraLarge {
-        // A month in each half, each with the large's room.
+        // A month in each half, each with the large's room, their weeks
+        // level across though one has a week more.
+        let rows = max(entry.month.weeks.count, entry.nextMonth.weeks.count)
         HStack(spacing: 24) {
-          MonthView(first: entry.date.firstOfMonth, weeks: entry.month, entry: entry, week: week)
-          MonthView(
-            first: entry.date.firstOfMonth.addingMonths(1), weeks: entry.nextMonth, entry: entry,
-            week: week)
+          MonthView(month: entry.month, rows: rows, entry: entry, week: week)
+          MonthView(month: entry.nextMonth, rows: rows, entry: entry, week: week)
         }
       } else if family == .systemLarge {
-        MonthView(first: entry.date.firstOfMonth, weeks: entry.month, entry: entry, week: week)
+        MonthView(month: entry.month, rows: entry.month.weeks.count, entry: entry, week: week)
       } else {
         TwoWeeksView(days: entry.twoWeeks, today: entry.date, week: week)
       }
@@ -53,15 +53,16 @@ private struct MonthView: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.look) private var look
   @Environment(\.english) private var english
-  /// The month's first day.
-  let first: Day
-  /// Its whole weeks from the week start.
-  let weeks: [[WidgetDay]]
+  let month: WidgetMonth
+  /// How many weeks' rows to lay out: more than the month has leaves the
+  /// rest empty under it.
+  let rows: Int
   let entry: WidgetEntry
   let week: DeviceSettings.Week
 
   var body: some View {
     let named = look.options.names
+    let first = month.first
     VStack(spacing: 8) {
       HStack(alignment: .firstTextBaseline) {
         // The month as the calendar titles it: 9月, or sep.
@@ -80,7 +81,7 @@ private struct MonthView: View {
         WeekdayHeads(week: week)
           .padding(.bottom, 4)
         VStack(spacing: named ? 2 : 4) {
-          ForEach(weeks, id: \.first?.date) { days in
+          ForEach(month.weeks, id: \.first?.date) { days in
             HStack(spacing: 2) {
               ForEach(days, id: \.date) { day in
                 GridDay(
@@ -88,8 +89,12 @@ private struct MonthView: View {
                   inMonth: day.date.month == first.month)
               }
             }
-            // The weeks share the widget's height, as the month's do.
-            .frame(maxHeight: .infinity)
+            // The weeks share the widget's height evenly, as the month's
+            // do, the rows left empty under a shorter month among them.
+            .frame(minHeight: 0, maxHeight: .infinity)
+          }
+          ForEach(month.weeks.count..<max(rows, month.weeks.count), id: \.self) { _ in
+            Color.clear.frame(minHeight: 0, maxHeight: .infinity)
           }
         }
       }
