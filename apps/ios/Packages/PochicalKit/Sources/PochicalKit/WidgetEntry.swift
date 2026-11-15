@@ -109,6 +109,9 @@ public struct WidgetEntry: Sendable {
   public var twoWeeks: [WidgetDay]
   /// Whole weeks covering today's month, from the person's week start.
   public var month: [[WidgetDay]]
+  /// The month after, as `month`: カレンダー's extra large on the iPad
+  /// shows it beside this one.
+  public var nextMonth: [[WidgetDay]]
   /// Who the widget is set to, as it shows them.
   public var with: WidgetWith?
   /// これから set to someone: their days beside the person's.
@@ -321,7 +324,8 @@ extension OwnCalendar {
     let today = Day(now, in: calendar)
     let reach = max(Widgets.offLookaheadDays, Widgets.shiftLookaheadDays)
     let firstShown = min(today.adding(days: -1), monthWeeks(today, weekStart: week.start)[0][0])
-    let lastShown = max(today.adding(days: reach), today.firstOfMonth.daysOfMonth.last ?? today)
+    let nextMonth = monthWeeks(today.firstOfMonth.addingMonths(1), weekStart: week.start)
+    let lastShown = max(today.adding(days: reach), nextMonth.last?.last ?? today)
     let shown = self.shown(from: firstShown, through: lastShown.adding(days: 14))
     func day(_ date: Day) -> WidgetDay {
       let entry = shown[date]
@@ -350,6 +354,7 @@ extension OwnCalendar {
       upcoming: upcoming,
       twoWeeks: (0..<14).map { day(weekStart.adding(days: $0)) },
       month: monthWeeks(today, weekStart: week.start).map { $0.map(day) },
+      nextMonth: nextMonth.map { $0.map(day) },
       with: companion?.with,
       pair: companion.flatMap { pair($0, upcoming: upcoming, week: week, holiday: holiday) })
   }
@@ -413,7 +418,10 @@ extension WidgetEntry {
       offs: widgetOffs(today: todayDay, people: []) { day(today.adding(days: $0)) },
       upcoming: (0..<7).map { day(today.adding(days: $0)) },
       twoWeeks: (0..<14).map { day(weekStart.adding(days: $0)) },
-      month: monthWeeks(today, weekStart: week.start).map { $0.map(day) })
+      month: monthWeeks(today, weekStart: week.start).map { $0.map(day) },
+      nextMonth: monthWeeks(today.firstOfMonth.addingMonths(1), weekStart: week.start).map {
+        $0.map(day)
+      })
   }
 
   /// The day 次の休み opens: the widget's tap, its control and the
