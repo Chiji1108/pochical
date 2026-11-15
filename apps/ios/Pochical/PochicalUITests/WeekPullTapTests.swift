@@ -50,7 +50,8 @@ final class WeekPullTapTests: XCTestCase {
   }
 
   /// The next day's detail, in the navigation kept from day to day,
-  /// pushes its lists as the first day's does (#1260).
+  /// pushes its lists as the first day's does, and stays once gone back
+  /// to (#1260).
   func testTheNextDayPushesItsList() throws {
     let (_, other) = try openADay()
     other.tap()
@@ -58,7 +59,14 @@ final class WeekPullTapTests: XCTestCase {
     let shift = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'シフト'")).firstMatch
     XCTAssertTrue(shift.waitForExistence(timeout: 5), "its detail shows シフト")
     shift.tap()
-    XCTAssertTrue(app.navigationBars["シフト"].waitForExistence(timeout: 5), "シフト's list is pushed")
+    let list = app.navigationBars["シフト"]
+    XCTAssertTrue(list.waitForExistence(timeout: 5), "シフト's list is pushed")
+    // Gone back from, the sheet stays on the day's detail.
+    list.buttons.firstMatch.tap()
+    XCTAssertTrue(shift.waitForExistence(timeout: 5), "back on the day's detail")
+    sleep(1)
+    XCTAssertFalse(list.exists, "the list stays gone")
+    XCTAssertTrue(shift.isHittable, "the day's detail stays")
   }
 
   func testSwipeOpensTheNextWeek() throws {

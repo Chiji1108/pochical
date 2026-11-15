@@ -79,6 +79,22 @@ final class WideCalendarTests: XCTestCase {
     snap("list-sheet", of: XCUIScreen.main)
   }
 
+  /// Gone back from シフト's list, the pane stays on the day's detail,
+  /// the list not coming back over it.
+  func testGoingBackFromAListStaysOnTheDay() throws {
+    try launchWide()
+    day(on: 13).tap()
+    XCTAssertTrue(title(of: "\(thisMonth)月13日").waitForExistence(timeout: 5), "the day is in the pane")
+    app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'シフト'")).firstMatch.tap()
+    let list = app.navigationBars["シフト"]
+    XCTAssertTrue(list.waitForExistence(timeout: 5), "シフト's list is pushed in the pane")
+    list.buttons.firstMatch.tap()
+    XCTAssertTrue(title(of: "\(thisMonth)月13日").waitForExistence(timeout: 5), "back on the day")
+    sleep(1)
+    XCTAssertFalse(list.exists, "the list stays gone")
+    XCTAssertTrue(title(of: "\(thisMonth)月13日").exists, "the day's detail stays")
+  }
+
   /// The pane's day tapped again while シフト's list is open shows the
   /// day in the list's place.
   func testTheDayTappedAgainTakesTheListsPlace() throws {
