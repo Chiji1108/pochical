@@ -194,7 +194,7 @@ private fun ReminderRow(reminder: Reminder, calendar: OwnCalendar, onOpen: () ->
           )
         }
       } else null,
-    valueContent = {
+    endContent = {
       Switch(
         checked = reminder.on,
         onCheckedChange = onSwitch,

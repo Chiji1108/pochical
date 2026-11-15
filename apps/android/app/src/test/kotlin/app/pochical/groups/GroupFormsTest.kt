@@ -12,7 +12,6 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextReplacement
 import app.pochical.DeviceSettingsState
@@ -92,7 +91,7 @@ class GroupFormsTest {
     val making = GoingIn<NewGroupDraft> { draft, _, _ -> CompletableDeferred<InGroup>().also { asked += draft.sent!! } }
     show { NewGroupPage(onBack = {}, onMade = {}, making = making) }
     // The person's name first, asked for as they have no usual one.
-    compose.onNodeWithText("名前を入れてください").performScrollTo().performClick()
+    compose.onNodeWithText("名前を入れてください").performClick()
     compose.onNode(hasSetTextAction() and hasText("名前")).performTextReplacement("さくら")
     compose.onNodeWithContentDescription("閉じる").performClick()
     compose.waitForIdle()
@@ -125,7 +124,7 @@ class GroupFormsTest {
     val making = GoingIn<NewGroupDraft> { draft, _, _ -> CompletableDeferred<InGroup>().also { asked += draft.sent!!; answers += it } }
     var open by mutableStateOf(true)
     show { if (open) NewGroupPage(onBack = {}, onMade = {}, making = making) }
-    compose.onNodeWithText("名前を入れてください").performScrollTo().performClick()
+    compose.onNodeWithText("名前を入れてください").performClick()
     compose.onNode(hasSetTextAction() and hasText("名前")).performTextReplacement("幹事")
     compose.onNodeWithContentDescription("閉じる").performClick()
     compose.onNode(hasSetTextAction() and hasText("グループ名")).performTextReplacement("忘年会")

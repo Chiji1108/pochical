@@ -143,7 +143,7 @@ fun CoworkersPage(navigation: PageNavigation) {
               oneLine = true,
               onClick = if (sorting) null else ({ navigation.open(RootPage.CoworkerEditor(person.id)) }),
               value = if (sorting) null else stringResource(R.string.coworker_days, counts[person.id] ?: 0),
-              valueContent = if (sorting) ({ order.Handle(this, stringResource(R.string.coworkers_move, person.name)) }) else null,
+              endContent = if (sorting) ({ order.Handle(this, stringResource(R.string.coworkers_move, person.name)) }) else null,
             )
           }
         }

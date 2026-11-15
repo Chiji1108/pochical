@@ -155,7 +155,7 @@ private fun PatternRow(pattern: Pattern, keyPage: Int?, onClick: (() -> Unit)?, 
     supporting = patternTimeText(pattern.time),
     leading = { ShiftMark(pattern.icon, pattern.emoji, pattern.symbol, pattern.color, size = 24.dp) },
     overline = keyPage?.let { stringResource(R.string.patterns_key_page, it) },
-    valueContent = handle,
+    endContent = handle,
     oneLine = true,
   )
 }

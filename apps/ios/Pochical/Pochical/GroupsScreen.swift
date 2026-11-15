@@ -67,7 +67,9 @@ struct GroupsScreen: View {
           // Up beside the bar's heading, as it stood beside the page's.
           .padding(.top, barTop)
           // Under an iPad window's controls, which stand at its top-leading
-          // corner, where the rail's first group would be.
+          // corner where the rail's first group would be: the rail then
+          // starts under the bar's band, which the controls and the heading
+          // share, level with the hub's first section.
           .containerCornerOffset(.top, sizeToFit: true)
           .ignoresSafeArea(.container, edges: .top)
           GroupHub(group: open) { day in

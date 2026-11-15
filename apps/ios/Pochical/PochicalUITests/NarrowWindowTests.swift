@@ -30,7 +30,9 @@ final class NarrowWindowTests: XCTestCase {
     app.startsAsNewUser()
     try app.joins(invitation: shared.appending(path: "invite"), named: "テスト")
     walk("upright")
+    let upright = app.windows.firstMatch.frame
     XCUIDevice.shared.orientation = .landscapeLeft
+    XCTAssertTrue(settled { self.app.windows.firstMatch.frame != upright }, "the iPad turns")
     narrowed()
     walk("on its side")
   }

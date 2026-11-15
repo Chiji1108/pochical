@@ -232,6 +232,17 @@ class WindowSizesTest {
     assertEquals(headline.left.value, value.left.value, 1f)
     assertTrue(headline.down < 2 * value.down)
   }
+
+  @Test
+  fun aSettingsRowsControlStaysAtItsEndInAWindowNarrowerThanAPhone() {
+    window("w280dp-h780dp")
+    compose.setContent { SettingsRow("リマインド", R.drawable.ic_repeat, onClick = null, endContent = { Text("switch") }) }
+    val headline = compose.onNodeWithText("リマインド", useUnmergedTree = true).getUnclippedBoundsInRoot()
+    val control = compose.onNodeWithText("switch", useUnmergedTree = true).getUnclippedBoundsInRoot()
+    // A switch, a handle or a spinner ends the row at every width, beside the headline.
+    assertTrue(control.left >= headline.right)
+    assertTrue(control.top < headline.bottom)
+  }
 }
 
 private val DpRect.across
