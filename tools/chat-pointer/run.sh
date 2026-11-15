@@ -23,15 +23,4 @@ server_log=$shared/server.log
 . "$root/tools/ios-ui/lib.sh"
 trap stop_server EXIT
 
-prepare
-new_group "$shared/invite"
-pnpm --dir "$root" exec tsx "$root/tools/chat-try/index.ts" "$(cat "$shared/invite")" 30
-
-failed=0
-TEST_RUNNER_CHAT_POINTER_DIR=$shared xcodebuild_for test-without-building \
-  -collect-test-diagnostics never -parallel-testing-enabled NO \
-  -resultBundlePath "$shared/results.xcresult" \
-  -only-testing:PochicalUITests/ChatPointerTests || failed=1
-xcrun simctl shutdown "$device" || true
-echo "results and screenshots: $shared"
-exit "$failed"
+run_with_chat ChatPointerTests CHAT_POINTER_DIR

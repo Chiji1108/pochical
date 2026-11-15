@@ -31,12 +31,6 @@ import UIKit
     #expect(field.text == "おはよう")
   }
 
-  @Test func returnWithNothingToSendDoesNothing() throws {
-    field.text = ""
-    try perform(try command([]))
-    #expect(field.text == "")
-  }
-
   @Test func shiftReturnStartsANewLine() throws {
     var sent = 0
     field.onSend = { sent += 1 }

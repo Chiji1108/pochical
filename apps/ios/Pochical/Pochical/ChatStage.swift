@@ -460,6 +460,9 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     lines.addGestureRecognizer(press)
     rightClick.delegate = self
     lines.addGestureRecognizer(rightClick)
+    // A right click held is not also a press: the bubble gives under no
+    // finger. It fails at once for anything else, so the press never waits.
+    press.require(toFail: rightClick)
     NotificationCenter.default.addObserver(
       self, selector: #selector(leftScreen), name: UIApplication.didEnterBackgroundNotification,
       object: nil)
@@ -1514,12 +1517,15 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
   /// system's menus.
   override var keyCommands: [UIKeyCommand]? {
     guard menuLayer?.isOpen == true else { return super.keyCommands }
-    let commands = [
-      UIKeyCommand(input: UIKeyCommand.inputEscape, modifierFlags: [], action: #selector(escaped)),
-      UIKeyCommand(input: ".", modifierFlags: .command, action: #selector(escaped)),
-    ]
-    for command in commands { command.wantsPriorityOverSystemBehavior = true }
-    return (super.keyCommands ?? []) + commands
+    return (super.keyCommands ?? []) + Self.closeCommands
+  }
+
+  private static let closeCommands = [
+    UIKeyCommand(input: UIKeyCommand.inputEscape, modifierFlags: [], action: #selector(escaped)),
+    UIKeyCommand(input: ".", modifierFlags: .command, action: #selector(escaped)),
+  ].map { command in
+    command.wantsPriorityOverSystemBehavior = true
+    return command
   }
 
   @objc private func escaped() {

@@ -172,12 +172,17 @@ final class ComposerTextView: UITextView {
   var onSend: (() -> Void)?
 
   override var keyCommands: [UIKeyCommand]? {
-    let send = UIKeyCommand(title: "送信", action: #selector(sendFromKeyboard), input: "\r")
-    let newLine = UIKeyCommand(
-      title: "改行", action: #selector(newLineFromKeyboard), input: "\r", modifierFlags: .shift)
-    // Ahead of the text view's own Return, which would start a new line.
-    for command in [send, newLine] { command.wantsPriorityOverSystemBehavior = true }
-    return (super.keyCommands ?? []) + [send, newLine]
+    (super.keyCommands ?? []) + Self.returnCommands
+  }
+
+  /// Ahead of the text view's own Return, which would start a new line.
+  private static let returnCommands = [
+    UIKeyCommand(title: "送信", action: #selector(sendFromKeyboard), input: "\r"),
+    UIKeyCommand(
+      title: "改行", action: #selector(newLineFromKeyboard), input: "\r", modifierFlags: .shift),
+  ].map { command in
+    command.wantsPriorityOverSystemBehavior = true
+    return command
   }
 
   @objc private func sendFromKeyboard() {
