@@ -366,6 +366,10 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
   private let replyFeel = UIImpactFeedbackGenerator(style: .light)
   /// Holds a line's bubble for its reactions and menu.
   private lazy var press = TouchedPress(target: self, action: #selector(pressed))
+  /// A right click on a bubble (a mouse's secondary button, a trackpad's
+  /// two-finger click) opens its line's reactions and menu as the button
+  /// goes down, as the system's context menus open to it.
+  private lazy var rightClick = RightClick(target: self, action: #selector(rightClicked))
   /// The line whose bubble the press is on, and the cell's space it was
   /// found in, which gives under the finger.
   private var pressing: (lineID: String, space: LineSpace)?
@@ -454,6 +458,11 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     press.delegate = self
     press.onTouched = { [weak self] down in self?.give(down) }
     lines.addGestureRecognizer(press)
+    rightClick.delegate = self
+    lines.addGestureRecognizer(rightClick)
+    // A right click held is not also a press: the bubble gives under no
+    // finger. It fails at once for anything else, so the press never waits.
+    press.require(toFail: rightClick)
     NotificationCenter.default.addObserver(
       self, selector: #selector(leftScreen), name: UIApplication.didEnterBackgroundNotification,
       object: nil)
@@ -1203,7 +1212,7 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
   func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch)
     -> Bool
   {
-    if gestureRecognizer === press { return pressable(touch) }
+    if gestureRecognizer === press || gestureRecognizer === rightClick { return pressable(touch) }
     guard gestureRecognizer === swipe else { return true }
     swipeStart = touch.location(in: view)
     // On a line dragged rightward to reply, going back by a drag
@@ -1370,7 +1379,7 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
       heldAt = press.location(in: nil)
       // The menu opens and a light haptic marks it, the two together.
       UIImpactFeedbackGenerator(style: .light).impactOccurred()
-      settings?.onHold(lineID, link(held: lineID))
+      settings?.onHold(lineID, link(held: lineID, by: press))
     case .changed:
       menuLayer?.fingerMoved(to: press.location(in: nil))
     case .ended:
@@ -1383,11 +1392,18 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     }
   }
 
-  /// The link under the press on the bubble of `lineID`, which opens its
+  /// No haptic, as no finger feels it, and no finger held to slide onto a
+  /// pick: the menu stays open for one.
+  @objc private func rightClicked() {
+    guard let lineID = pressing?.lineID else { return }
+    settings?.onHold(lineID, link(held: lineID, by: rightClick))
+  }
+
+  /// The link under `pointer` on the bubble of `lineID`, which opens its
   /// own menu instead.
-  private func link(held lineID: String) -> URL? {
+  private func link(held lineID: String, by pointer: UIGestureRecognizer) -> URL? {
     guard let (cell, spot) = bubble(of: lineID) else { return nil }
-    return spot.links.link(at: press.location(in: cell))
+    return spot.links.link(at: pointer.location(in: cell))
   }
 
   /// The cell showing the bubble of `lineID`, and where it is in it.
@@ -1495,6 +1511,25 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
 
   @objc private func leftScreen() {
     closeMenuNow()
+  }
+
+  /// Esc or ⌘. closes the open menu without a pick, as they close the
+  /// system's menus.
+  override var keyCommands: [UIKeyCommand]? {
+    guard menuLayer?.isOpen == true else { return super.keyCommands }
+    return (super.keyCommands ?? []) + Self.closeCommands
+  }
+
+  private static let closeCommands = [
+    UIKeyCommand(input: UIKeyCommand.inputEscape, modifierFlags: [], action: #selector(escaped)),
+    UIKeyCommand(input: ".", modifierFlags: .command, action: #selector(escaped)),
+  ].map { command in
+    command.wantsPriorityOverSystemBehavior = true
+    return command
+  }
+
+  @objc private func escaped() {
+    menuLayer?.close()
   }
 
   // MARK: Scrolling
@@ -1653,6 +1688,17 @@ private final class SwipePan: UIPanGestureRecognizer {
     super.reset()
     heldBack?.isEnabled = true
     heldBack = nil
+  }
+}
+
+/// A secondary click, told as the button goes down, as UIKit's context
+/// menus take it: the tap's `buttonMaskRequired` would tell it as the
+/// button comes up. Anything else (a finger, the primary button) it lets
+/// go at once.
+private final class RightClick: UIGestureRecognizer {
+  override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+    super.touchesBegan(touches, with: event)
+    state = event.buttonMask.contains(.secondary) ? .recognized : .failed
   }
 }
 
