@@ -131,6 +131,11 @@ struct DayDetail: View {
     .onChange(of: takesPeople) {
       if !takesPeople { lists.removeAll { $0 == .people } }
     }
+    // Entering starting on the day shown makes its shift the tray's: シフト's
+    // list open on it goes, as its row no longer opens it.
+    .onChange(of: entering) {
+      if entering { lists.removeAll { $0 == .shift } }
+    }
     // Moved, it is kept as its screen closes, and again once the field is
     // left in the detail that took its place.
     .onDisappear {

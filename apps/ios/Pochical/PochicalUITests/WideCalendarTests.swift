@@ -115,6 +115,21 @@ final class WideCalendarTests: XCTestCase {
     XCTAssertTrue(title(of: "\(thisMonth)月14日").waitForExistence(timeout: 5), "the detail follows 翌日へ")
   }
 
+  /// ポチポチ入力 tapped while シフト's list is open on the day entering
+  /// starts on (the 1st, the sample month having no blank day) closes the
+  /// list: the shift is the tray's while entering.
+  func testEnteringClosesTheShiftList() throws {
+    try launchWide()
+    day(on: 1).tap()
+    XCTAssertTrue(title(of: "\(thisMonth)月1日").waitForExistence(timeout: 5), "the day is in the pane")
+    app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'シフト'")).firstMatch.tap()
+    XCTAssertTrue(app.navigationBars["シフト"].waitForExistence(timeout: 5), "シフト's list is pushed in the pane")
+    app.buttons["ポチポチ入力"].tap()
+    XCTAssertTrue(app.buttons["翌日へ"].waitForExistence(timeout: 5), "entering, the tray is in the pane")
+    XCTAssertTrue(title(of: "\(thisMonth)月1日").waitForExistence(timeout: 5), "the day being entered is in the pane")
+    XCTAssertFalse(app.navigationBars["シフト"].exists, "the list is gone")
+  }
+
   /// Launches with the sample month on its side; skipped on a compact one.
   private func launchWide() throws {
     continueAfterFailure = false
