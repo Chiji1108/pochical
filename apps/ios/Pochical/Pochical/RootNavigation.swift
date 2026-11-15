@@ -17,14 +17,14 @@ import UIKit
 // NavigationStack, as of the iOS 27.1 SDK, still takes the edge effect off
 // a page pushed from the calendar, its bar shown with the push.
 //
-// On a wide screen, a regular width (an iPad, a large iPhone on its side,
-// a folding one opened up), the same tab bar controller has its tabs in its
-// sidebar, as iPadOS's own apps have their sections, and the pages of
-// グループ and 設定 open beside the tab's screen, on a navigation of their
-// own, as Mail and Settings do on an iPad: the first at its root, the rest
-// pushed over it. One tab bar controller at every width, and in it each
-// tab's screen, the same one, moved between navigations as the pages are,
-// so it keeps where it was as the width changes (#1237).
+// On a wide screen, a regular width (an iPad, a large iPhone on its side, a
+// folding one opened up), the same tab bar controller has its tabs in its
+// tab bar at the top, which the person may turn into its sidebar, and the
+// pages of グループ and 設定 open beside the tab's screen, on a navigation of
+// their own, as Mail and Settings do on an iPad: the first at its root, the
+// rest pushed over it. One tab bar controller at every width, and in it
+// each tab's screen, the same one, moved between navigations as the pages
+// are, so it keeps where it was as the width changes (#1237).
 
 /// A page over the tabs.
 enum RootPage: Hashable {
@@ -199,14 +199,13 @@ struct RootNavigation: UIViewControllerRepresentable {
 /// at the root. On a narrow screen (a compact width) its tab bar is under
 /// the tabs, and the pages are pushed over the tab, the tab bar going with
 /// it. On a wide one (a regular width: an iPad, a large iPhone on its side,
-/// a folding one opened up) its tabs are in the sidebar as iPadOS's own
-/// apps have their sections, or in the tab bar at the top as the person
-/// turns it: グループ and 設定 each a split of their screen, as wide as a
-/// phone's, and the pages beside it, as Mail and Settings have their lists
-/// and what is picked in them; the calendar its screen across the rest,
-/// what opens over it pushed over it. The controller only says which
-/// navigation holds what, keeps no list of its own, and tells the navigator
-/// of a page gone back from.
+/// a folding one opened up) its tabs are in the tab bar at the top, or in
+/// the sidebar as the person turns it: グループ and 設定 each a split of their
+/// screen, as wide as a phone's, and the pages beside it, as Mail and
+/// Settings have their lists and what is picked in them; the calendar its
+/// screen across the rest, what opens over it pushed over it. The
+/// controller only says which navigation holds what, keeps no list of its
+/// own, and tells the navigator of a page gone back from.
 final class RootController: UITabBarController, UINavigationControllerDelegate,
   UITabBarControllerDelegate
 {
@@ -240,12 +239,14 @@ final class RootController: UITabBarController, UINavigationControllerDelegate,
       // are on an iPad.
       navigation.navigationBar.prefersLargeTitles = true
     }
-    // The sidebar, or the tab bar at the top, as iPadOS chooses for the
-    // window and the person turns it (spec/chat.md); a phone's tab bar on
-    // a narrow screen. The tab's screen stands beside the sidebar rather
+    // The tab bar at the top, which the person may turn into the sidebar
+    // with its button (spec/chat.md): the HIG's tab bar first, for an app
+    // of three sections whose calendar wants the width. A phone's tab bar
+    // on a narrow screen. The tab's screen stands beside the sidebar rather
     // than under it: the calendar's months beside the one shown, and
     // グループ's rail, are not drawn to be seen through it.
     mode = .tabSidebar
+    sidebar.isHidden = true
     sidebar.preferredLayout = .tile
     delegate = self
     navigator.controller = self

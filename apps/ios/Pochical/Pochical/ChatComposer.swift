@@ -219,7 +219,8 @@ struct ChatComposer: View {
           placeholder: "メッセージ", text: $draft.writing.text, limit: TextLimits.chatMessage,
           composing: $draft.composing, box: draft.field,
           // A message being changed keeps what it carries, as the tools go.
-          onPasteImages: editing == nil ? { pastePhotos($0) } : nil)
+          onPasteImages: editing == nil ? { pastePhotos($0) } : nil,
+          onSend: blocked ? nil : onSubmit)
         .overlay(alignment: .leading) {
           if draft.writing.text.isEmpty {
             Text("メッセージ")
