@@ -1,7 +1,7 @@
 import XCTest
 
-/// On an iPad (#1222): the tabs are the system's sidebar, or its tab bar at
-/// the top, and グループ's and 設定's pages open beside the tab's screen,
+/// On an iPad (#1222): the tabs are the system's tab bar at the top as the
+/// app opens, or its sidebar once turned, and グループ's and 設定's pages open beside the tab's screen,
 /// their rows kept to the readable width.
 @MainActor
 final class WideScreenTests: XCTestCase {
@@ -21,6 +21,10 @@ final class WideScreenTests: XCTestCase {
     app.launchPastFirstRun(["-sample"])
     let settings = app.tab("設定")
     XCTAssertTrue(settings.waitForExistence(timeout: 15), "the tabs show")
+    // The tab bar at the top, not the sidebar's rows, even on its side.
+    XCTAssertEqual(settings.elementType, .button, "the app opens with the tab bar")
+    XCTAssertLessThan(
+      settings.frame.midY, app.windows.firstMatch.frame.height / 4, "the tab bar is at the top")
     snap("calendar", of: XCUIScreen.main)
     settings.tap()
     XCTAssertTrue(app.navigationBars["設定"].waitForExistence(timeout: 5), "設定 is titled in its bar")
