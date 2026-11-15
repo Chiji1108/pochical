@@ -43,6 +43,7 @@ export const STORES = {
     corner: 4.25,
     height: 1920,
     screen: { height: 2424, width: 1080 },
+    wall: [],
     widgetRow: 202 / 179,
     width: 1080,
   },
@@ -51,6 +52,7 @@ export const STORES = {
     corner: 2,
     height: 1440,
     screen: { height: 1600, width: 2560 },
+    wall: [],
     widgetRow: 202 / 179,
     width: 2560,
   },
@@ -59,6 +61,7 @@ export const STORES = {
     corner: 9,
     height: 2622,
     screen: { height: 2868, width: 1320 },
+    wall: [],
     widgetRow: 1,
     width: 1206,
   },
@@ -67,6 +70,10 @@ export const STORES = {
     corner: 3.8,
     height: 2064,
     screen: { height: 2064, width: 2752 },
+    // An iPad's カレンダー in its extra large size, this month and the
+    // next side by side, under the widgets marked whole, where the
+    // phone's wall has three medium widgets and two small ones.
+    wall: [{ column: 2, file: "calendar-extra-large.png", look: 0, row: 5 }],
     widgetRow: 1,
     width: 2752,
   },
@@ -420,8 +427,9 @@ export const storeShotFile = (name: StoreShotName): string => {
 };
 
 // The sizes a widget on the wall comes in, by the cells of a Home Screen
-// it covers across and down.
+// it covers across and down: an iPad's extra large among them.
 const WIDGET_CELLS = {
+  "extra-large": { columns: 4, rows: 2 },
   large: { columns: 2, rows: 2 },
   medium: { columns: 2, rows: 1 },
   small: { columns: 1, rows: 1 },
@@ -432,12 +440,11 @@ type WidgetSize = keyof typeof WIDGET_CELLS;
 const isWidgetSize = (value: string | undefined): value is WidgetSize =>
   value !== undefined && Object.hasOwn(WIDGET_CELLS, value);
 
-// The cells a widget covers, by its size, the last word of its file's name.
+// The cells a widget covers, by its size, the end of its file's name.
 const cellsOf = (file: string) => {
-  const size = file
-    .replace(/\.png$/u, "")
-    .split("-")
-    .at(-1);
+  const size = Object.keys(WIDGET_CELLS).find((one) =>
+    file.endsWith(`-${one}.png`)
+  );
   return WIDGET_CELLS[isWidgetSize(size) ? size : "small"];
 };
 
@@ -628,6 +635,27 @@ export type WallTile = {
   look: number;
   row: number;
   rows: number;
+};
+
+// The wall's widgets in a store's picture: the store's own (its `wall`),
+// and every one of the shared wall's that none of them is placed over.
+export const wallPlacesOf = (store: StoreId): readonly WallPlace[] => {
+  const own = wallOf(STORES[store].wall);
+  const covered = (place: WallPlace) => {
+    const { column, row } = place;
+    const { columns, rows } = cellsOf(place.file);
+    return own.some(
+      (tile) =>
+        column < tile.column + tile.columns &&
+        tile.column < column + columns &&
+        row < tile.row + tile.rows &&
+        tile.row < row + rows
+    );
+  };
+  return [
+    ...WALL_SHOT.tiles.filter((place) => !covered(place)),
+    ...STORES[store].wall,
+  ];
 };
 
 // The wall as it is placed, `across` times side by side: each widget with

@@ -20,6 +20,7 @@ import {
   wallCornersOf,
   wallLieOf,
   wallOf,
+  wallPlacesOf,
 } from "@pochical/prototype/lib/store-shots";
 import type {
   Rect,
@@ -286,26 +287,28 @@ test("a callout's card leaves what is over its part in sight, and the phone's fo
   );
 });
 
-const tiles = wallOf(WALL_SHOT.tiles);
-
 // Which widgets there are to place is the captures' to say: the script
 // fails a wall whose widget is not among those photographed.
-test("the wall covers its grid, each widget in one of its looks", () => {
-  const cells = tiles.flatMap(({ column, columns, row, rows }) =>
-    Array.from(
-      { length: columns * rows },
-      (_, cell) =>
-        `${column + (cell % columns)} ${row + Math.floor(cell / columns)}`
-    )
-  );
-  expect(new Set(cells).size).toBe(cells.length);
-  expect(cells).toHaveLength(WALL.columns * WALL.rows);
-  for (const { column, columns, look, row, rows } of tiles) {
-    expect(look).toBeLessThan(WALL_SHOT.raw.length);
-    expect(column + columns).toBeLessThanOrEqual(WALL.columns);
-    expect(row + rows).toBeLessThanOrEqual(WALL.rows);
+test.each(storeIds)(
+  "%s's wall covers its grid, each widget in one of its looks",
+  (store) => {
+    const tiles = wallOf(wallPlacesOf(store));
+    const cells = tiles.flatMap(({ column, columns, row, rows }) =>
+      Array.from(
+        { length: columns * rows },
+        (_, cell) =>
+          `${column + (cell % columns)} ${row + Math.floor(cell / columns)}`
+      )
+    );
+    expect(new Set(cells).size).toBe(cells.length);
+    expect(cells).toHaveLength(WALL.columns * WALL.rows);
+    for (const { column, columns, look, row, rows } of tiles) {
+      expect(look).toBeLessThan(WALL_SHOT.raw.length);
+      expect(column + columns).toBeLessThanOrEqual(WALL.columns);
+      expect(row + rows).toBeLessThanOrEqual(WALL.rows);
+    }
   }
-});
+);
 
 // How many cells lie between two tiles: none for two side by side or
 // corner to corner.
@@ -317,40 +320,48 @@ const between = (a: WallTile, b: WallTile): number =>
     b.row - a.row - a.rows
   );
 
-test("no picture on the wall is beside itself, even corner to corner", () => {
-  for (const tile of tiles) {
-    for (const other of tiles) {
-      if (
-        other !== tile &&
-        other.file === tile.file &&
-        other.look === tile.look
-      ) {
-        expect(
-          between(tile, other),
-          `${tile.file} at ${tile.column}, ${tile.row}`
-        ).toBeGreaterThan(0);
+test.each(storeIds)(
+  "no picture on %s's wall is beside itself, even corner to corner, nor beside the next copy's",
+  (store) => {
+    const tiles = wallOf(wallPlacesOf(store), 3);
+    for (const tile of tiles) {
+      for (const other of tiles) {
+        if (
+          other !== tile &&
+          other.file === tile.file &&
+          other.look === tile.look
+        ) {
+          expect(
+            between(tile, other),
+            `${tile.file} at ${tile.column}, ${tile.row}`
+          ).toBeGreaterThan(0);
+        }
       }
     }
   }
-});
-
-// The widgets marked whole, where the eye lands first.
-const whole = WALL_SHOT.tiles.flatMap((place, index) =>
-  "whole" in place ? [index] : []
 );
 
+// The widgets marked whole on a store's wall, where the eye lands first.
+const wholeOf = (store: StoreId) =>
+  wallPlacesOf(store).flatMap((place, index) =>
+    "whole" in place ? [index] : []
+  );
+
 test("the widgets marked whole show whole in every store's picture, clear of the fade under its headline", () => {
-  expect(whole.map((index) => tiles[index]?.file)).toEqual([
-    "next-off-small.png",
-    "next-off-day-small.png",
-    "now-small.png",
-  ]);
-  for (const { height, widgetRow, width } of Object.values(STORES)) {
+  for (const store of storeIds) {
+    const { height, widgetRow, width } = STORES[store];
+    const places = wallPlacesOf(store);
+    const whole = wholeOf(store);
+    expect(whole.map((index) => places[index]?.file)).toEqual([
+      "next-off-small.png",
+      "next-off-day-small.png",
+      "now-small.png",
+    ]);
     // The wall side by side as often as covers the picture, the widgets
     // marked whole those of the copy in its middle.
     const lie = wallLieOf({ height, width });
-    const placed = wallOf(WALL_SHOT.tiles, lie.across);
-    const middle = ((lie.across - 1) / 2) * WALL_SHOT.tiles.length;
+    const placed = wallOf(places, lie.across);
+    const middle = ((lie.across - 1) / 2) * places.length;
     const corners = whole.flatMap((index) => {
       const tile = placed[middle + index];
       return tile ? wallCornersOf(tile, widgetRow, lie) : [];
@@ -408,10 +419,11 @@ test.each([...pictures])(
       ((across - clearing.middle[0]) / clearing.across) ** 2 +
         ((down - clearing.middle[1]) / clearing.down) ** 2 <
         1;
-    const placed = wallOf(WALL_SHOT.tiles, lie.across);
+    const places = wallPlacesOf(picture.store);
+    const placed = wallOf(places, lie.across);
     const copies = Array.from({ length: lie.across }, (_, copy) =>
-      whole.map((index) => {
-        const tile = placed[copy * WALL_SHOT.tiles.length + index];
+      wholeOf(picture.store).map((index) => {
+        const tile = placed[copy * places.length + index];
         return tile
           ? wallCornersOf(tile, STORES[picture.store].widgetRow, lie)
           : [];

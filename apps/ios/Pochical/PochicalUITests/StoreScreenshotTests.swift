@@ -726,7 +726,9 @@ final class StoreScreenshotTests: XCTestCase {
     "シンプル": "simple", "これから": "upcoming", "カレンダー": "calendar", "次の休み": "next-off",
     "いまのシフト": "now",
   ]
-  private static let widgetSizes = ["小": "small", "中": "medium", "大": "large"]
+  private static let widgetSizes = [
+    "小": "small", "中": "medium", "大": "large", "特大": "extra-large",
+  ]
   /// Whom a widget can be set to, of the seed's group: its first member,
   /// and for 次の休み the group itself. Each by the word its file takes,
   /// the choice as the widget's editing lists it, under its group, and
@@ -809,13 +811,16 @@ final class StoreScreenshotTests: XCTestCase {
         XCTWaiter().wait(for: [next], timeout: 5), .completed, "the gallery turns to \(turned + 1)")
     }
     let shown = springboard.buttons
-      .matching(NSPredicate(format: "label BEGINSWITH 'ポチカル, ' AND value BEGINSWITH 'ウィジェット, '"))
+      .matching(NSPredicate(format: "label BEGINSWITH 'ポチカル, ' AND value BEGINSWITH 'ウィジェット'"))
       .allElementsBoundByIndex.first(where: \.isHittable)
-    guard let shown, let size = (shown.value as? String)?.split(separator: ", ").last else {
+    guard let shown, let value = shown.value as? String else {
       XCTFail("page \(page) shows a widget")
       return ("", "")
     }
-    return (String(shown.label.dropFirst("ポチカル, ".count)), String(size))
+    // Its size after the word, which iPadOS leaves out for the extra
+    // large alone (#1251).
+    let size = value.split(separator: ", ").dropFirst().first.map(String.init) ?? "特大"
+    return (String(shown.label.dropFirst("ポチカル, ".count)), size)
   }
 
   /// Puts the widget the gallery shows on the Home Screen, and waits for

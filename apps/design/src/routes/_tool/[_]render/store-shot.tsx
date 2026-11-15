@@ -16,6 +16,7 @@ import {
   WALL_SHOT,
   wallLieOf,
   wallOf,
+  wallPlacesOf,
 } from "@pochical/prototype/lib/store-shots";
 import type {
   CardPicture,
@@ -267,7 +268,7 @@ function StoreShotPage() {
   if (shot === undefined) {
     return <p>No shot is named {name}.</p>;
   }
-  const { corner, height, screen, widgetRow, width } = STORES[store];
+  const { corner, height, screen, width } = STORES[store];
   const pair = `${width > height ? PAIR.side : PAIR.upright}%`;
   return (
     <div
@@ -286,7 +287,7 @@ function StoreShotPage() {
         <Wall
           lie={wallLieOf({ height, width })}
           mask={`linear-gradient(to bottom, transparent calc(var(--headline) * 0.8), black calc(var(--headline) * ${WALL_SHAPE.clear}))`}
-          row={widgetRow}
+          store={store}
         />
       )}
       <h1
@@ -613,9 +614,18 @@ function Pieces({ pieces, tall }: { pieces: readonly Piece[]; tall: number }) {
 }
 
 // The wall's widgets where they are placed, each from the folder of its
-// look, lying in the picture as `lie` says and seen through `mask`. A cell
-// is `row` times as tall as it is wide.
-function Wall({ lie, mask, row }: { lie: WallLie; mask: string; row: number }) {
+// look, lying in the picture as `lie` says and seen through `mask`: those
+// of `store`'s picture, whose cells are as tall as its Home Screen's.
+function Wall({
+  lie,
+  mask,
+  store,
+}: {
+  lie: WallLie;
+  mask: string;
+  store: StoreId;
+}) {
+  const row = STORES[store].widgetRow;
   return (
     <div className={styles.wall} style={{ maskImage: mask }}>
       <div
@@ -627,7 +637,7 @@ function Wall({ lie, mask, row }: { lie: WallLie; mask: string; row: number }) {
           top: lie.middle[1],
         }}
       >
-        {wallOf(WALL_SHOT.tiles, lie.across).map((tile) => (
+        {wallOf(wallPlacesOf(store), lie.across).map((tile) => (
           <div
             className={styles.widget}
             key={`${tile.column} ${tile.row}`}
@@ -668,7 +678,7 @@ function WallPicturePage({ picture }: { picture: WallPicture }) {
             ? "none"
             : `radial-gradient(ellipse ${clear.across}px ${clear.down}px at ${clear.middle[0]}px ${clear.middle[1]}px, transparent ${clear.whole * 100}%, black)`
         }
-        row={STORES[store].widgetRow}
+        store={store}
       />
       {line !== undefined && (
         <h1

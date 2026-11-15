@@ -22,6 +22,7 @@ import {
   storeShotFile,
   WALL_PICTURES,
   WALL_SHOT,
+  wallPlacesOf,
 } from "@pochical/prototype/lib/store-shots";
 import type { Rect, StoreId } from "@pochical/prototype/lib/store-shots";
 import {
@@ -53,7 +54,7 @@ const findScreens = (store: StoreId, shot: (typeof STORE_SHOTS)[number]) => {
       : [];
   const wall =
     shot.kind === "wall"
-      ? shot.tiles.map(({ file, look }) =>
+      ? wallPlacesOf(store).map(({ file, look }) =>
           path.join(shot.raw[look] ?? "", file)
         )
       : [];
