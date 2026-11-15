@@ -5,8 +5,8 @@ import WidgetKit
 
 /// カレンダー (/design's TwoWeeksMedium, CalendarLarge and
 /// CalendarExtraLarge; spec/widgets.md, Views): this week and the next, the
-/// month, and on the iPad this month and the next, drawn as the app's month
-/// draws its days.
+/// month, and in the extra large sizes this month and the next, drawn as the
+/// app's month draws its days.
 struct CalendarWidget: Widget {
   var body: some WidgetConfiguration {
     StaticConfiguration(kind: "calendar", provider: DayTimeline()) { moment in
@@ -16,7 +16,16 @@ struct CalendarWidget: Widget {
     }
     .configurationDisplayName("カレンダー")
     .description("2週間と、1か月のシフト。")
-    .supportedFamilies([.systemMedium, .systemLarge, .systemExtraLarge])
+    .supportedFamilies(families)
+  }
+
+  /// The upright extra large comes with iOS 27 (spec/widgets.md, Extra large).
+  private var families: [WidgetFamily] {
+    let families: [WidgetFamily] = [.systemMedium, .systemLarge, .systemExtraLarge]
+    if #available(iOS 27, *) {
+      return families + [.systemExtraLargePortrait]
+    }
+    return families
   }
 }
 
@@ -29,11 +38,14 @@ private struct CalendarView: View {
     Group {
       if entry.nothingEntered {
         FirstRun()
-      } else if family == .systemExtraLarge {
-        // A month in each half, each with the large's room, their weeks
-        // level across though one has a week more.
+      } else if family == .systemExtraLarge || upright {
+        // A month in each half: side by side in the iPad's, each with the
+        // large's room, and one over the other in the upright one. Their
+        // weeks are as tall in both, though one has a week more.
         let rows = max(entry.month.weeks.count, entry.nextMonth.weeks.count)
-        HStack(spacing: 24) {
+        let halves =
+          upright ? AnyLayout(VStackLayout(spacing: 16)) : AnyLayout(HStackLayout(spacing: 24))
+        halves {
           MonthView(month: entry.month, rows: rows, entry: entry, week: week)
           MonthView(month: entry.nextMonth, rows: rows, entry: entry, week: week)
         }
@@ -45,6 +57,14 @@ private struct CalendarView: View {
     }
     // Elsewhere than a day, today.
     .widgetURL(dayLink(entry.date))
+  }
+
+  /// The upright extra large (iOS 27), whose months stack.
+  private var upright: Bool {
+    if #available(iOS 27, *) {
+      return family == .systemExtraLargePortrait
+    }
+    return false
   }
 }
 

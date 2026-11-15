@@ -156,8 +156,8 @@ export type WidgetEntry = {
   twoWeeks: WidgetDay[];
   // Whole weeks covering today's month, from the person's week start.
   month: WidgetMonth;
-  // The month after, as `month`: カレンダー's extra large on the iPad shows
-  // it beside this one.
+  // The month after, as `month`: カレンダー's extra large shows it beside
+  // or under this one.
   nextMonth: WidgetMonth;
 };
 

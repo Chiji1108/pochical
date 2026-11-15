@@ -187,7 +187,7 @@ function scheduleFor(day: WidgetVariants["day"]): Schedule {
   return { ...sampleSchedule, ...days[day] };
 }
 
-type Size = "small" | "medium" | "large" | "extraLarge";
+type Size = "small" | "medium" | "large" | "extraLarge" | "extraLargePortrait";
 type WidgetView = ComponentType<{ entry: WidgetEntry }>;
 
 // The kinds a person picks from the widget gallery, each in its sizes.
@@ -196,6 +196,7 @@ const kinds = {
     { View: TwoWeeksMedium, size: "medium" },
     { View: CalendarLarge, size: "large" },
     { View: CalendarExtraLarge, size: "extraLarge" },
+    { View: CalendarExtraLarge, size: "extraLargePortrait" },
   ],
   nextOff: [{ View: NextOffSmall, size: "small" }],
   now: [{ View: NowSmall, size: "small" }],
@@ -213,6 +214,7 @@ export type WidgetKind = keyof typeof kinds;
 
 const iosFamilies: Record<Size, WidgetFamily> = {
   extraLarge: "systemExtraLarge",
+  extraLargePortrait: "systemExtraLargePortrait",
   large: "systemLarge",
   medium: "systemMedium",
   small: "systemSmall",

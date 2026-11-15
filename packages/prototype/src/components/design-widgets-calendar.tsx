@@ -228,12 +228,22 @@ const month = {
     display: "flex",
     justifyContent: "space-between",
   }),
-  pair: css({
-    display: "grid",
-    gap: "24px",
-    gridTemplateColumns: "1fr 1fr",
-    gridTemplateRows: "minmax(0, 1fr)",
-    height: "100%",
+  pair: cva({
+    base: { display: "grid", height: "100%" },
+    variants: {
+      upright: {
+        false: {
+          gap: "24px",
+          gridTemplateColumns: "1fr 1fr",
+          gridTemplateRows: "minmax(0, 1fr)",
+        },
+        true: {
+          gap: "16px",
+          gridTemplateColumns: "minmax(0, 1fr)",
+          gridTemplateRows: "repeat(2, minmax(0, 1fr))",
+        },
+      },
+    },
   }),
   root: css({
     display: "flex",
@@ -274,17 +284,20 @@ function CalendarLargeView({ entry }: { entry: WidgetEntry }) {
   );
 }
 
-// This month and the next side by side, each with the large's room: the
-// iPad's extra large is two larges wide and as tall, so the calendar shows
-// more of what is coming, as Apple's Calendar shows more days there, rather
-// than one month stretched.
+// This month and the next, each with a large's room: the iPad's extra large
+// is two larges wide and as tall, and lays them side by side; the upright
+// one (iOS 27) is a large wide and about two tall, and stacks them. So the
+// calendar shows more of what is coming, as Apple's Calendar shows more
+// days there, rather than one month stretched.
 function CalendarExtraLargeView({ entry }: { entry: WidgetEntry }) {
-  const roomy = useContext(WidgetSizeContext).height >= MONTH_ROOMY;
-  // Their weeks level across, though one month has a week more.
+  const { height, width } = useContext(WidgetSizeContext);
+  const upright = height > width;
+  const roomy = (upright ? height / 2 : height) >= MONTH_ROOMY;
+  // Their weeks as tall in both, though one month has a week more.
   const rows =
     Math.max(entry.month.days.length, entry.nextMonth.days.length) / WEEK;
   return (
-    <div className={month.pair}>
+    <div className={month.pair({ upright })}>
       <MonthView entry={entry} month={entry.month} roomy={roomy} rows={rows} />
       <MonthView
         entry={entry}
