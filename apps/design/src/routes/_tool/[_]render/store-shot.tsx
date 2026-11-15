@@ -8,6 +8,7 @@ import {
   STAGE_FOOT,
   STORE_SHOTS,
   STORES,
+  unitOf,
   WALL,
   CARD_PICTURES,
   WALL_PICTURES,
@@ -15,6 +16,7 @@ import {
   WALL_SHOT,
   wallLieOf,
   wallOf,
+  wallPlacesOf,
 } from "@pochical/prototype/lib/store-shots";
 import type {
   CardPicture,
@@ -69,8 +71,8 @@ export const Route = createFileRoute("/_tool/_render/store-shot")({
   }),
 });
 
-// Every length but the headline's room is in --u, a hundredth of a store's
-// picture's width, so each store's picture is laid out alike at its size.
+// Every length but the headline's room is in --u, the picture's unit
+// (unitOf), so each store's picture is laid out alike at its size.
 // The width of a widget's cell on the wall, in them.
 const WIDGET_CELL = `calc(var(--u) * ${WALL_SHAPE.cell})`;
 
@@ -78,9 +80,10 @@ const WIDGET_CELL = `calc(var(--u) * ${WALL_SHAPE.cell})`;
 // the gap from a tile to the next one's words, at least and at most,
 // several times that room so that words read as their own tile's, the room
 // a tile's card keeps around what it holds, and how wide a tile is at
-// most: as the phone is in the App Store's pictures of one screen, the sky
-// at its sides. Google Play's phone is narrower than a line of words, so
-// its tiles keep to the same width.
+// most: as the iPhone is in the App Store's pictures of one screen, the sky
+// at its sides, and as the screen is in its store's pictures where that is
+// wider, a tablet's on its side (tilesLie). Google Play's phone is
+// narrower than a line of words, so its tiles keep to the iPhone's width.
 const TILES = {
   gap: 8,
   line: 1.3,
@@ -92,26 +95,38 @@ const TILES = {
 };
 
 // How the tiles lie, in --u: from where a phone starts under the headline
-// to where it ends, in a picture `tall` times as tall as it is wide. Each
+// to where it ends, in `picture`, whose store's screen is `screen`. Each
 // holds a part as tall as `parts` says in its widths; they are as wide as
 // lets them all fit there with the least gap, and share the room they
 // leave evenly as the gaps between them, up to the most a gap may be,
 // beyond which the rest is sky over and under them alike: they are a group
-// of their own, not a phone, in a picture as tall as the App Store's.
-const tilesLie = (parts: number[], tall: number) => {
+// of their own, not a phone, one over the other in a picture on its side
+// too, as wide as its screen is drawn at most.
+const tilesLie = (
+  parts: number[],
+  picture: { height: number; width: number },
+  screen: { height: number; width: number }
+) => {
   const gaps = Math.max(parts.length - 1, 1);
+  const stage =
+    (picture.height * (1 - HEADLINE_SHARE)) / unitOf(picture) - STAGE_FOOT;
   const room =
-    100 * tall * (1 - HEADLINE_SHARE) -
-    STAGE_FOOT -
+    stage -
     (TILES.words * TILES.line + TILES.under + 2 * TILES.pad) * parts.length;
   const tallness = parts.reduce((sum, part) => sum + part, 0);
   const wide = Math.min(
-    TILES.widest,
+    Math.max(TILES.widest, (stage * screen.width) / screen.height),
     (room - TILES.gap * gaps) / tallness + 2 * TILES.pad
   );
   const left = room - tallness * (wide - 2 * TILES.pad);
   return { gap: Math.min(TILES.most, left / gaps), wide };
 };
+
+// How wide each of a pair's screens is, in hundredths of the picture's
+// width: upright, and on its side, where two screens on their side take
+// less of its width to lie over each other's corner as an upright pair
+// does.
+const PAIR = { side: 52, upright: 57 } as const;
 
 const styles = {
   // A callout's card, as a tile's is, lifted over the phone, its part in
@@ -146,13 +161,11 @@ const styles = {
     left: "calc(var(--u) * 4)",
     position: "absolute",
     top: 0,
-    width: "calc(var(--u) * 57)",
   }),
   pairSecond: css({
     bottom: "calc(var(--u) * 5)",
     position: "absolute",
     right: "calc(var(--u) * 4)",
-    width: "calc(var(--u) * 57)",
   }),
   root: css({
     bg: "var(--paper)",
@@ -255,7 +268,8 @@ function StoreShotPage() {
   if (shot === undefined) {
     return <p>No shot is named {name}.</p>;
   }
-  const { corner, height, widgetRow, width } = STORES[store];
+  const { corner, height, screen, width } = STORES[store];
+  const pair = `${width > height ? PAIR.side : PAIR.upright}%`;
   return (
     <div
       className={styles.root}
@@ -263,7 +277,7 @@ function StoreShotPage() {
       style={{
         "--corner": corner,
         "--headline": `${height * HEADLINE_SHARE}px`,
-        "--u": `${width / 100}px`,
+        "--u": `${unitOf({ height, width })}px`,
         height,
         width,
       }}
@@ -273,7 +287,7 @@ function StoreShotPage() {
         <Wall
           lie={wallLieOf({ height, width })}
           mask={`linear-gradient(to bottom, transparent calc(var(--headline) * 0.8), black calc(var(--headline) * ${WALL_SHAPE.clear}))`}
-          row={widgetRow}
+          store={store}
         />
       )}
       <h1
@@ -297,15 +311,19 @@ function StoreShotPage() {
           />
         </div>
       )}
-      {shot.kind === "screen" && "callout" in shot && (
+      {shot.kind === "screen" && "callout" in shot && callout !== "" && (
         <CalloutCard drawn={callout.split(",").map(Number)} raw={shot.raw} />
       )}
       {shot.kind === "tiles" && (
         <Tiles
           grounds={grounds.split(",")}
-          lie={tilesLie(parts.split(",").map(Number), height / width)}
+          lie={tilesLie(
+            parts.split(",").map(Number),
+            { height, width },
+            screen
+          )}
           tiles={shot.tiles}
-          unit={width / 100}
+          unit={unitOf({ height, width })}
         />
       )}
       {shot.kind === "pair" && (
@@ -314,11 +332,13 @@ function StoreShotPage() {
             alt=""
             className={cx(styles.screen, styles.pairFirst)}
             src={RAW + shot.raw[0]}
+            style={{ width: pair }}
           />
           <img
             alt=""
             className={cx(styles.screen, styles.pairSecond)}
             src={RAW + shot.raw[1]}
+            style={{ width: pair }}
           />
         </div>
       )}
@@ -377,9 +397,9 @@ function CalloutCard({ drawn, raw }: { drawn: number[]; raw: string }) {
   );
 }
 
-// The tiles, each `wide` hundredths of the picture across and `gap` from
-// the next: its words over its card, which holds its part of a screen or
-// its pieces. `unit` is a hundredth of the picture's width in pixels.
+// The tiles, each `wide` units across and `gap` from the next: its words
+// over its card, which holds its part of a screen or its pieces. `unit` is
+// the picture's unit in pixels.
 function Tiles({
   grounds,
   lie: { gap, wide },
@@ -594,9 +614,18 @@ function Pieces({ pieces, tall }: { pieces: readonly Piece[]; tall: number }) {
 }
 
 // The wall's widgets where they are placed, each from the folder of its
-// look, lying in the picture as `lie` says and seen through `mask`. A cell
-// is `row` times as tall as it is wide.
-function Wall({ lie, mask, row }: { lie: WallLie; mask: string; row: number }) {
+// look, lying in the picture as `lie` says and seen through `mask`: those
+// of `store`'s picture, whose cells are as tall as its Home Screen's.
+function Wall({
+  lie,
+  mask,
+  store,
+}: {
+  lie: WallLie;
+  mask: string;
+  store: StoreId;
+}) {
+  const row = STORES[store].widgetRow;
   return (
     <div className={styles.wall} style={{ maskImage: mask }}>
       <div
@@ -608,7 +637,7 @@ function Wall({ lie, mask, row }: { lie: WallLie; mask: string; row: number }) {
           top: lie.middle[1],
         }}
       >
-        {wallOf(WALL_SHOT.tiles, lie.across).map((tile) => (
+        {wallOf(wallPlacesOf(store), lie.across).map((tile) => (
           <div
             className={styles.widget}
             key={`${tile.column} ${tile.row}`}
@@ -649,7 +678,7 @@ function WallPicturePage({ picture }: { picture: WallPicture }) {
             ? "none"
             : `radial-gradient(ellipse ${clear.across}px ${clear.down}px at ${clear.middle[0]}px ${clear.middle[1]}px, transparent ${clear.whole * 100}%, black)`
         }
-        row={STORES[store].widgetRow}
+        store={store}
       />
       {line !== undefined && (
         <h1

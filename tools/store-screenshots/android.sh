@@ -2,15 +2,20 @@
 # Photographs the Android app for the stores' screenshots (#806), raw, as
 # the emulator shows it, by the names
 # packages/prototype/src/lib/store-shots.ts gives them: the screens into
-# .build/store-screenshots/android (01-entry.png, 05-calendar-sumi.png, ...),
+# .build/store-screenshots/<store> (01-entry.png, 05-calendar-sumi.png, ...),
 # and each widget by itself at each size it offers into its 02-widgets/ and
 # 02-widgets-sumi/ (<kind>-<size>.png), drawn there from the app's own days
 # and group; StoreScreenshots in :app's androidTest walks them all.
+# `<store>` is the store's device the pictures are for: `android`, a
+# phone's, or `android-tablet`, a tablet's (#1226), which the walk
+# photographs on its side; the run fails when the emulator is not of that
+# kind, by Material's window sizes (a tablet 600dp or more at its narrowest).
 # `mise run store:images` draws Google Play's pictures from them.
 #
 #   ANDROID_SERIAL=emulator-<port> mise run store:shots:android
+#   ANDROID_SERIAL=emulator-<port> mise run store:shots:android-tablet
 #
-# The emulator, a phone's with Google Play, is running already and is the
+# The emulator, a phone's or a tablet's with Google Play, is running already and is the
 # run's to change: the app is taken off it, with its data, and whoever the
 # app was signed in as there is signed out. For the run it shows the time
 # the group's chat was written at, with full signal and battery (SystemUI's
@@ -21,11 +26,21 @@
 # (seed.ts).
 set -euo pipefail
 
+store=${1:?the store: android or android-tablet}
 root=$(cd "$(dirname "$0")/../.." && pwd)
-out=$root/.build/store-screenshots/android
+out=$root/.build/store-screenshots/$store
 [[ ${ANDROID_SERIAL:-} == emulator-* ]] ||
   { echo "ANDROID_SERIAL must name an emulator (emulator-<port>): the run takes the app off it and changes its settings" >&2; exit 1; }
 adb() { command "${ANDROID_HOME:+$ANDROID_HOME/platform-tools/}adb" -s "$ANDROID_SERIAL" "$@"; }
+
+# The emulator's narrowest side in dp, which says whether it is a phone or a tablet.
+narrowest=$(adb shell wm size | awk -F'[ x]' '/size:/ { w = $(NF-1); h = $NF } END { print (w < h ? w : h) }')
+density=$(adb shell wm density | awk '/density:/ { d = $NF } END { print d }')
+case $store in
+  android) [ $((narrowest * 160 / density)) -lt 600 ] || { echo "$ANDROID_SERIAL is a tablet: name a phone's emulator for $store" >&2; exit 1; } ;;
+  android-tablet) [ $((narrowest * 160 / density)) -ge 600 ] || { echo "$ANDROID_SERIAL is a phone: name a tablet's emulator for $store" >&2; exit 1; } ;;
+  *) echo "no store's device is $store: android or android-tablet" >&2; exit 1 ;;
+esac
 gradle() { (cd "$root/apps/android" && ./gradlew "$@"); }
 
 work=$(mktemp -d)

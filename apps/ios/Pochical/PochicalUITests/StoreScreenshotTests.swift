@@ -30,6 +30,9 @@ final class StoreScreenshotTests: XCTestCase {
     }
     raw = URL(filePath: dir)
     app = XCUIApplication()
+    // An iPad's pictures are of it on its side, as it opens (the tab bar at the top), where a
+    // group's chat beside its column and the day's pane beside the month show (#1226).
+    if UIDevice.current.userInterfaceIdiom == .pad { XCUIDevice.shared.orientation = .landscapeLeft }
   }
 
   /// What the cares' shot shows of the app as it starts: リマインド's
@@ -42,11 +45,25 @@ final class StoreScreenshotTests: XCTestCase {
     open(page: "リマインド")
     press("前日")
     XCTAssertTrue(app.navigationBars["リマインドを編集"].waitForExistence(timeout: 5), "the reminder opens")
-    let heading = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH '次の通知'")).firstMatch
+    let next = NSPredicate(format: "label BEGINSWITH '次の通知'")
+    let heading = app.staticTexts.matching(next).firstMatch
     let banner = app.otherElements.matching(NSPredicate(format: "label BEGINSWITH '通知：'")).firstMatch
     XCTAssertTrue(banner.waitForExistence(timeout: 5), "the next notification is drawn")
-    // The notification under its heading.
-    try snap("tile-reminder", from: heading.frame.minY, until: banner.frame.maxY)
+    // The page scrolled to its end, the notification with the page's own room under it: on an
+    // iPad the page is a sheet, whose foot would otherwise cut through the notification's
+    // backdrop. A phone's page is all on the screen.
+    swipeUp(on: banner)
+    XCTAssertTrue(heading.isHittable, "the heading is still in sight")
+    // The notification under its heading, with as much room under it as its heading has over
+    // it, and at its sides half the page's margin, which holds its backdrop, drawn wider than
+    // it, and leaves out the scroll bar the scroll shows at the page's edge a while.
+    let page = app.collectionViews.containing(next).firstMatch
+    XCTAssertTrue(page.exists, "the reminder is a list")
+    let room = banner.frame.minY - heading.frame.maxY
+    let side = (banner.frame.minX - page.frame.minX) / 2
+    try snap(
+      "tile-reminder", from: heading.frame.minY, until: banner.frame.maxY + room,
+      across: (banner.frame.minX - side)...(banner.frame.maxX + side))
   }
 
   @MainActor
@@ -115,7 +132,15 @@ final class StoreScreenshotTests: XCTestCase {
       _ = down.waitForNonExistence(timeout: 3)
     }
     XCTAssertTrue(votes.isHittable && !down.exists, "the chat is read to the poll's votes")
-    app.navigationBars.firstMatch.buttons.firstMatch.tap()
+    // Out of the chat: on a phone back to the hub it opened over; on an iPad, where the groups'
+    // rail stands beside it, to the friends' group and back, which leaves the group's pages.
+    let friends = app.buttons["学生時代の友だち"]
+    if friends.isHittable {
+      friends.tap()
+      app.buttons["職場のみんな"].tap()
+    } else {
+      app.navigationBars.firstMatch.buttons.firstMatch.tap()
+    }
     chat.tap()
     XCTAssertTrue(composer.waitForExistence(timeout: 15), "the chat opens again")
     XCTAssertTrue(votes.waitForExistence(timeout: 10) && votes.isHittable, "on its latest line")
@@ -144,7 +169,7 @@ final class StoreScreenshotTests: XCTestCase {
     XCTAssertTrue(heading.waitForExistence(timeout: 5), "the page is named by its days")
     try snap(
       "tile-period", from: heading.frame.minY,
-      until: rowTop(first, after: 7))
+      until: rowTop(first, after: 7), across: week(first))
     pick(period: "1日〜末日")
   }
 
@@ -258,7 +283,7 @@ final class StoreScreenshotTests: XCTestCase {
     }
     XCTAssertTrue(
       app.navigationBars["シフトパターン"].waitForExistence(timeout: 5), "the patterns show")
-    app.navigationBars["シフトパターン"].buttons.firstMatch.tap()
+    back(from: "シフトパターン")
     open(page: "繰り返し")
     let coming = app.buttons.matching(NSPredicate(format: "label ENDSWITH 'からの繰り返し'"))
       .firstMatch
@@ -270,9 +295,9 @@ final class StoreScreenshotTests: XCTestCase {
     let today = Calendar.current.dateComponents([.year, .month], from: .now)
     let title = app.buttons.matching(NSPredicate(format: "label MATCHES '[0-9]+年[0-9]+月.*'"))
       .firstMatch
+    let first = DateComponents(year: today.year, month: today.month! + 1, day: 1)
     try snap(
-      "tile-repeat", from: title.frame.minY,
-      until: rowTop(DateComponents(year: today.year, month: today.month! + 1, day: 1), after: 14))
+      "tile-repeat", from: title.frame.minY, until: rowTop(first, after: 14), across: week(first))
   }
 
   /// A group with an end, 忘年会, made in グループを作る with 終了日をつける on,
@@ -292,16 +317,28 @@ final class StoreScreenshotTests: XCTestCase {
     app.switches["終了日をつける"].switches.firstMatch.tap()
     app.navigationBars["終了日"].buttons["保存"].tap()
     app.navigationBars["グループを作る"].buttons["作る"].tap()
-    XCTAssertTrue(app.navigationBars["メンバーを招待"].waitForExistence(timeout: 15), "the group is made")
-    app.navigationBars["メンバーを招待"].buttons.firstMatch.tap()
+    let invite = app.navigationBars["メンバーを招待"]
+    XCTAssertTrue(invite.waitForExistence(timeout: 15), "the group is made")
+    // Back to the group: on a phone メンバーを招待 is over it, on an iPad beside it already.
+    if invite.buttons["BackButton"].exists { invite.buttons["BackButton"].tap() }
     press("グループの設定")
     XCTAssertTrue(app.navigationBars["グループの設定"].waitForExistence(timeout: 5), "its settings open")
     // The section グループ's rows and what is said under them, from under
-    // its name down to the section after it.
-    let rows = app.collectionViews.firstMatch
+    // its name down to the section after it, in the settings' list (on an
+    // iPad the group's column stands beside it).
+    let rows = app.collectionViews.containing(.staticText, identifier: "このグループでのあなた")
+      .firstMatch
     let after = rows.staticTexts["このグループでのあなた"]
     XCTAssertTrue(after.waitForExistence(timeout: 5), "the settings show")
-    try snap("tile-group-end", from: rows.staticTexts["グループ"].frame.maxY, until: after.frame.minY)
+    // As wide as its rows, with the room their heading keeps from their side at both sides:
+    // on an iPad the list reaches under the groups' rail and column beside it.
+    let heading = rows.staticTexts["グループ"]
+    let end = rows.cells.containing(NSPredicate(format: "label CONTAINS '終了日'")).firstMatch
+    XCTAssertTrue(end.exists, "the group's rows show its end")
+    let side = heading.frame.minX - end.frame.minX
+    try snap(
+      "tile-group-end", from: heading.frame.maxY, until: after.frame.minY,
+      across: (end.frame.minX - side)...(end.frame.maxX + side))
   }
 
   /// Taps the button whose words hold `name`, a page down where the page
@@ -309,7 +346,7 @@ final class StoreScreenshotTests: XCTestCase {
   @MainActor private func press(_ name: String) {
     let button = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", name)).firstMatch
     XCTAssertTrue(button.waitForExistence(timeout: 5), "\(name) is offered")
-    for _ in 0..<4 where !button.isHittable { app.swipeUp() }
+    for _ in 0..<4 where !button.isHittable { swipeUp(on: button) }
     button.tap()
   }
 
@@ -494,6 +531,22 @@ final class StoreScreenshotTests: XCTestCase {
     return ((over ?? top) + top) / 2
   }
 
+  /// How far across the screen a page is, by `element`, which spans it:
+  /// its bar or its list.
+  @MainActor private func across(_ element: XCUIElement) -> ClosedRange<CGFloat> {
+    element.frame.minX...element.frame.maxX
+  }
+
+  /// How far across the screen the calendar's week of `date` is: from its
+  /// first day to its last, with the room its days keep between them at
+  /// both sides, the calendar standing beside the day's pane on an iPad.
+  @MainActor private func week(_ date: DateComponents) -> ClosedRange<CGFloat> {
+    let row = Calendar.current.component(.weekday, from: Calendar.current.date(from: date)!) - 1
+    let days = (0..<7).map { day(date, after: $0 - row).frame }
+    let gap = days[1].minX - days[0].maxX
+    return (days[0].minX - gap)...(days[6].maxX + gap)
+  }
+
   /// Writes beside the screen `name` what a callout of it takes
   /// (store-shots.ts): where its `parts` are, and every piece of the
   /// screen that says something, each its left, top, width and height in
@@ -518,11 +571,16 @@ final class StoreScreenshotTests: XCTestCase {
   }
 
   /// Keeps as `name` the part of the screen from `top` down to `foot`, as
-  /// wide as the screen: whole rows of it, for a tile of a shot of them.
-  @MainActor private func snap(_ name: String, from top: CGFloat, until foot: CGFloat) throws {
-    let screen = XCUIScreen.main.screenshot().image
+  /// wide as the page it is of, `across` (the screen's width on a phone, a
+  /// page beside a column on an iPad): whole rows of
+  /// it, for a tile of a shot of them.
+  @MainActor private func snap(
+    _ name: String, from top: CGFloat, until foot: CGFloat, across: ClosedRange<CGFloat>
+  ) throws {
+    let screen = XCUIScreen.main.screenshot().upright
     let rows = CGRect(
-      x: 0, y: top * screen.scale, width: screen.size.width * screen.scale,
+      x: across.lowerBound * screen.scale, y: top * screen.scale,
+      width: (across.upperBound - across.lowerBound) * screen.scale,
       height: (foot - top) * screen.scale)
     let part = try XCTUnwrap(screen.cgImage?.cropping(to: rows), "\(name) is cut from the screen")
     try XCTUnwrap(UIImage(cgImage: part).pngData()).write(to: raw.appending(path: "\(name).png"))
@@ -543,13 +601,20 @@ final class StoreScreenshotTests: XCTestCase {
     // The list's last row, below the page as it opens.
     let row = app.descendants(matching: .any)
       .matching(NSPredicate(format: "label CONTAINS '1ページの期間'")).firstMatch
-    for _ in 0..<4 where !(row.exists && row.isHittable) { app.swipeUp() }
+    for _ in 0..<4 where !(row.exists && row.isHittable) { swipeUp(on: app.navigationBars["カレンダー"]) }
     row.tap()
-    // The menu opens on the period in use: the month is its first, above.
+    // The menu opens on the period in use, the others over it or under it as the screen has
+    // room: the month is its first.
     let choice = app.buttons[period]
-    for _ in 0..<8 where !(choice.exists && choice.isHittable) { app.swipeDown() }
+    let menu = app.collectionViews.containing(
+      NSPredicate(
+        format: "elementType == %d AND label MATCHES '[0-9]+日〜.*'",
+        XCUIElement.ElementType.button.rawValue)
+    ).firstMatch
+    for _ in 0..<8 where !(choice.exists && choice.isHittable) { menu.swipeDown() }
+    for _ in 0..<8 where !(choice.exists && choice.isHittable) { menu.swipeUp() }
     choice.tap()
-    app.navigationBars["カレンダー"].buttons.firstMatch.tap()
+    back(from: "カレンダー")
     app.tab("カレンダー").tap()
     XCTAssertTrue(app.buttons["ポチポチ入力"].waitForExistence(timeout: 5), "the calendar shows")
   }
@@ -600,16 +665,16 @@ final class StoreScreenshotTests: XCTestCase {
       if choice == style.theme {
         // テーマ's pages, a few テーマ each: turned by their dots to the one holding it.
         let dots = app.otherElements["テーマのページ"]
-        for _ in 0..<4 where !(dots.exists && dots.isHittable) { app.swipeUp() }
+        for _ in 0..<4 where !(dots.exists && dots.isHittable) { swipeUp(on: app.navigationBars["スタイル"]) }
         for dot in dots.buttons.allElementsBoundByIndex where !(tile.exists && tile.isHittable) {
           dot.tap()
         }
       }
-      for _ in 0..<4 where !(tile.exists && tile.isHittable) { app.swipeUp() }
+      for _ in 0..<4 where !(tile.exists && tile.isHittable) { swipeUp(on: app.navigationBars["スタイル"]) }
       tile.tap()
       XCTAssertTrue(tile.isSelected, "\(choice) is picked")
     }
-    app.navigationBars["スタイル"].buttons.firstMatch.tap()
+    back(from: "スタイル")
     open(page: "カレンダー")
     // 月と曜日, the page's first choice of two: 日本語, then 英語.
     let names = app.segmentedControls.firstMatch.buttons.element(boundBy: english ? 1 : 0)
@@ -619,19 +684,37 @@ final class StoreScreenshotTests: XCTestCase {
     let value = style.coloredDays ? "1" : "0"
     for day in ["土曜", "日曜", "祝日"] {
       let toggle = app.switches.matching(NSPredicate(format: "label == %@", day)).firstMatch
-      for _ in 0..<4 where !(toggle.exists && toggle.isHittable) { app.swipeUp() }
+      for _ in 0..<4 where !(toggle.exists && toggle.isHittable) { swipeUp(on: app.navigationBars["カレンダー"]) }
       if toggle.value as? String != value { toggle.switches.firstMatch.tap() }
       XCTAssertEqual(toggle.value as? String, value, "\(day) is colored or not")
     }
-    app.navigationBars["カレンダー"].buttons.firstMatch.tap()
+    back(from: "カレンダー")
     app.tab("カレンダー").tap()
     XCTAssertTrue(app.buttons["ポチポチ入力"].waitForExistence(timeout: 5), "the calendar shows")
   }
 
-  /// Opens the page 設定 lists as `name`.
+  /// Scrolls up the page `element` is on, at its place across the screen:
+  /// on an iPad a column stands beside a page, so the screen's middle
+  /// may be its.
+  @MainActor private func swipeUp(on element: XCUIElement) {
+    let middle = app.coordinate(withNormalizedOffset: .zero)
+      .withOffset(CGVector(dx: element.frame.midX, dy: app.frame.midY))
+    middle.press(
+      forDuration: 0.05, thenDragTo: middle.withOffset(CGVector(dx: 0, dy: -app.frame.height / 3)),
+      withVelocity: .fast, thenHoldForDuration: 0)
+  }
+
+  /// Back from 設定's page `name` to its list: over which the page is on a
+  /// phone, and beside which it is already on an iPad.
+  @MainActor private func back(from name: String) {
+    if !app.navigationBars["設定"].exists { app.navigationBars[name].buttons.firstMatch.tap() }
+  }
+
+  /// Opens the page 設定 lists as `name`: by the row saying its name and
+  /// what it holds (カレンダー、日曜はじまり), not a tab of the name.
   @MainActor private func open(page name: String) {
-    let row = app.collectionViews.firstMatch.buttons
-      .matching(NSPredicate(format: "label BEGINSWITH %@", name)).firstMatch
+    let row = app.collectionViews.buttons
+      .matching(NSPredicate(format: "label BEGINSWITH %@", "\(name)、")).firstMatch
     XCTAssertTrue(row.waitForExistence(timeout: 5), "設定 lists \(name)")
     row.tap()
     XCTAssertTrue(app.navigationBars[name].waitForExistence(timeout: 5), "\(name) opens")
@@ -643,7 +726,9 @@ final class StoreScreenshotTests: XCTestCase {
     "シンプル": "simple", "これから": "upcoming", "カレンダー": "calendar", "次の休み": "next-off",
     "いまのシフト": "now",
   ]
-  private static let widgetSizes = ["小": "small", "中": "medium", "大": "large"]
+  private static let widgetSizes = [
+    "小": "small", "中": "medium", "大": "large", "特大": "extra-large",
+  ]
   /// Whom a widget can be set to, of the seed's group: its first member,
   /// and for 次の休み the group itself. Each by the word its file takes,
   /// the choice as the widget's editing lists it, under its group, and
@@ -660,7 +745,7 @@ final class StoreScreenshotTests: XCTestCase {
   /// its offer of reminders already answered.
   @MainActor private func launch() {
     app.launchPastFirstRun(["-sample", "-reminderOffered", "YES"])
-    XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 15), "the tabs show")
+    XCTAssertTrue(app.tab("カレンダー").waitForExistence(timeout: 15), "the tabs show")
   }
 }
 
@@ -688,9 +773,10 @@ final class StoreScreenshotTests: XCTestCase {
   /// Opens the gallery on the app's widgets, from the Home Screen at
   /// rest, and says how many pages it has.
   func openGallery() -> Int {
-    XCTAssertTrue(
-      springboard.otherElements["spotlight-pill"].waitForExistence(timeout: 10),
-      "the Home Screen is at rest")
+    // An iPhone's search over the Dock, or an iPad's pages' dots.
+    let rest = springboard.descendants(matching: .any)
+      .matching(NSPredicate(format: "identifier IN {'spotlight-pill', 'Page control'}")).firstMatch
+    XCTAssertTrue(rest.waitForExistence(timeout: 10), "the Home Screen is at rest")
     // Between the icons' last row and the Dock, where no page has an icon.
     springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.12, dy: 0.79))
       .press(forDuration: 1.5)
@@ -725,13 +811,16 @@ final class StoreScreenshotTests: XCTestCase {
         XCTWaiter().wait(for: [next], timeout: 5), .completed, "the gallery turns to \(turned + 1)")
     }
     let shown = springboard.buttons
-      .matching(NSPredicate(format: "label BEGINSWITH 'ポチカル, ' AND value BEGINSWITH 'ウィジェット, '"))
+      .matching(NSPredicate(format: "label BEGINSWITH 'ポチカル, ' AND value BEGINSWITH 'ウィジェット'"))
       .allElementsBoundByIndex.first(where: \.isHittable)
-    guard let shown, let size = (shown.value as? String)?.split(separator: ", ").last else {
+    guard let shown, let value = shown.value as? String else {
       XCTFail("page \(page) shows a widget")
       return ("", "")
     }
-    return (String(shown.label.dropFirst("ポチカル, ".count)), String(size))
+    // Its size after the word, which iPadOS leaves out for the extra
+    // large alone (#1251).
+    let size = value.split(separator: ", ").dropFirst().first.map(String.init) ?? "特大"
+    return (String(shown.label.dropFirst("ポチカル, ".count)), size)
   }
 
   /// Puts the widget the gallery shows on the Home Screen, and waits for

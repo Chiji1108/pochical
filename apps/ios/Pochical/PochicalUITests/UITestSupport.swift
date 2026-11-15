@@ -82,6 +82,22 @@ extension XCUIApplication {
   }
 }
 
+extension XCUIScreenshot {
+  /// The screenshot as the person sees the screen: on a device on its
+  /// side its pixels are kept as the device holds them upright, the turn
+  /// only noted beside them, which a PNG leaves out; drawn again, they are
+  /// turned as the interface is, and as the elements' frames are.
+  @MainActor var upright: UIImage {
+    guard image.imageOrientation != .up else { return image }
+    let format = UIGraphicsImageRendererFormat()
+    format.scale = image.scale
+    format.opaque = true
+    return UIGraphicsImageRenderer(size: image.size, format: format).image { _ in
+      image.draw(at: .zero)
+    }
+  }
+}
+
 extension XCTestCase {
   /// Whether `holds` comes true within a few seconds, a turn or a window
   /// resized included.
@@ -103,7 +119,8 @@ extension XCTestCase {
     add(shot)
     guard let directory else { return }
     do {
-      try screenshot.pngRepresentation.write(to: directory.appending(path: "\(name).png"))
+      let png = try XCTUnwrap(screenshot.upright.pngData(), "\(name) is drawn")
+      try png.write(to: directory.appending(path: "\(name).png"))
     } catch {
       XCTFail("\(name).png is not written: \(error)")
     }

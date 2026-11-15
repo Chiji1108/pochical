@@ -22,6 +22,7 @@ import {
   storeShotFile,
   WALL_PICTURES,
   WALL_SHOT,
+  wallPlacesOf,
 } from "@pochical/prototype/lib/store-shots";
 import type { Rect, StoreId } from "@pochical/prototype/lib/store-shots";
 import {
@@ -37,7 +38,9 @@ const OUTPUT = path.join(ROOT, "store");
 // Where the page asks for a screen, answered with its file.
 const RAW_PATH = "/_render/store-raw/";
 
-const storeIds: StoreId[] = ["ios", "android"];
+const storeIds = Object.keys(STORES).filter((id): id is StoreId =>
+  Object.hasOwn(STORES, id)
+);
 const photographed = storeIds.filter((store) =>
   existsSync(path.join(RAW, store))
 );
@@ -51,7 +54,7 @@ const findScreens = (store: StoreId, shot: (typeof STORE_SHOTS)[number]) => {
       : [];
   const wall =
     shot.kind === "wall"
-      ? shot.tiles.map(({ file, look }) =>
+      ? wallPlacesOf(store).map(({ file, look }) =>
           path.join(shot.raw[look] ?? "", file)
         )
       : [];
@@ -93,7 +96,11 @@ const calloutFor = async (
   store: StoreId,
   shot: (typeof STORE_SHOTS)[number]
 ) => {
-  if (shot.kind !== "screen" || !("callout" in shot)) {
+  if (
+    shot.kind !== "screen" ||
+    !("callout" in shot) ||
+    !STORES[store].callouts
+  ) {
     return "";
   }
   const file = path.join(RAW, store, shot.raw);

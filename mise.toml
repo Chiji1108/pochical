@@ -184,8 +184,12 @@ exit $status
 """
 
 [tasks."store:shots:android"]
-description = "Photograph the Android app for the stores' screenshots on the emulator ANDROID_SERIAL names, taking the app off it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default) and seeds: the screens and the widgets, raw, into .build/store-screenshots/android"
-run = "tools/store-screenshots/android.sh"
+description = "Photograph the Android app for the stores' phone screenshots on the emulator ANDROID_SERIAL names, a phone's, taking the app off it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default) and seeds: the screens and the widgets, raw, into .build/store-screenshots/android"
+run = "tools/store-screenshots/android.sh android"
+
+[tasks."store:shots:android-tablet"]
+description = "Photograph the Android app for the stores' tablet screenshots on the emulator ANDROID_SERIAL names, a tablet's, on its side, taking the app off it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default) and seeds: the screens and the widgets, raw, into .build/store-screenshots/android-tablet"
+run = "tools/store-screenshots/android.sh android-tablet"
 
 [tasks."ios:photo-touches"]
 description = "Run the chat photo line's touch UI tests in a simulator, erasing it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default): <simulator name> [derived data]"
@@ -220,8 +224,12 @@ description = "Run 自動で反映's UI test in a simulator, erasing it, against
 run = "tools/calendar-reflect/run.sh"
 
 [tasks."store:shots:ios"]
-description = "Photograph the screens of the App Store's screenshots in the simulator pochical-store, an iPhone 18 Pro Max made if there is none, erasing it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default) and seeds: [derived data]"
-run = "tools/store-screenshots/ios.sh"
+description = "Photograph the screens of the App Store's iPhone screenshots in the simulator pochical-store, an iPhone 18 Pro Max made if there is none, erasing it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default) and seeds: [derived data]"
+run = "tools/store-screenshots/ios.sh ios"
+
+[tasks."store:shots:ipad"]
+description = "Photograph the screens of the App Store's iPad screenshots, on its side, in the simulator pochical-store-ipad, an iPad Pro 13-inch (M5) made if there is none, erasing it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default) and seeds: [derived data]"
+run = "tools/store-screenshots/ios.sh ipad"
 
 [tasks."store:images"]
 description = "Draw the stores' pictures in store/ from the screens photographed"
