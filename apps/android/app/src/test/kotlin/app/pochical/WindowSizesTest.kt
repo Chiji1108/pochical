@@ -206,6 +206,32 @@ class WindowSizesTest {
     val bounds = compose.onNodeWithTag("dialog").getUnclippedBoundsInRoot()
     assertEquals(891f, bounds.across, 1f)
   }
+
+  /** 設定's 繰り返し row, its value 6日ごと, in a window of [qualifiers]. */
+  private fun aSettingsRowIn(qualifiers: String): Pair<DpRect, DpRect> {
+    window(qualifiers)
+    compose.setContent { SettingsRow("繰り返し", R.drawable.ic_repeat, onClick = {}, value = "6日ごと") }
+    // The row reads as one, so its words are found in the tree unmerged.
+    return compose.onNodeWithText("繰り返し", useUnmergedTree = true).getUnclippedBoundsInRoot() to
+      compose.onNodeWithText("6日ごと", useUnmergedTree = true).getUnclippedBoundsInRoot()
+  }
+
+  @Test
+  fun aSettingsRowsValueEndsItOnAPhone() {
+    val (headline, value) = aSettingsRowIn("w360dp-h780dp")
+    // Beside the headline, on its line (spec/calendar.md, In a narrow window).
+    assertTrue(value.left >= headline.right)
+    assertTrue(value.top < headline.bottom)
+  }
+
+  @Test
+  fun aSettingsRowsValueGoesUnderItsHeadlineInAWindowNarrowerThanAPhone() {
+    val (headline, value) = aSettingsRowIn("w280dp-h780dp")
+    // Under the headline, from where it starts, which keeps to one line.
+    assertTrue(value.top >= headline.bottom)
+    assertEquals(headline.left.value, value.left.value, 1f)
+    assertTrue(headline.down < 2 * value.down)
+  }
 }
 
 private val DpRect.across
