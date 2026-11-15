@@ -2,28 +2,37 @@
 # Photographs the screens the App Store's screenshots are drawn from
 # (#806): runs StoreScreenshotTests (apps/ios/Pochical/PochicalUITests) in
 # a simulator against `mise run server`, seeded with 職場のみんな and
-# 学生時代の友だち by seed.ts, and keeps each screen under `.build/store-screenshots/ios`, by
-# the names packages/prototype/src/lib/store-shots.ts gives them.
+# 学生時代の友だち by seed.ts, and keeps each screen under
+# `.build/store-screenshots/<store>`, by the names
+# packages/prototype/src/lib/store-shots.ts gives them. `<store>` is the
+# store's device the pictures are for: `ios`, an iPhone's, or `ipad`, an
+# iPad's (#1226), which the tests photograph on its side.
 # `mise run store:images` draws the store's pictures from them.
 # It starts the server itself, so nothing else may be on
-# POCHICAL_DEV_SERVER (:8787 by default), and erases the simulator
-# `pochical-store`, its own and no other: an iPhone 18 Pro Max, of the
-# shape the App Store's pictures are drawn from (store-shots.ts), made
-# here when no simulator has the name. It fails when one has the name and
-# is another device.
+# POCHICAL_DEV_SERVER (:8787 by default), and erases the store's own
+# simulator and no other, of the shape the App Store's pictures are drawn
+# from (store-shots.ts): `pochical-store`, an iPhone 18 Pro Max, or
+# `pochical-store-ipad`, an iPad Pro 13-inch (M5), made here when no
+# simulator has the name. It fails when one has the name and is another
+# device.
 #
 #   mise run store:shots:ios [-- <derived data>]
+#   mise run store:shots:ipad [-- <derived data>]
 #
 # It builds the app and its tests first (build-for-testing) into the
 # derived data, `.build/DerivedData` by default. It fails when a test
 # does, and leaves the results in the folder it names last.
 set -euo pipefail
 
-device=pochical-store
-type=com.apple.CoreSimulator.SimDeviceType.iPhone-18-Pro-Max
+store=${1:?the store: ios or ipad}
+case $store in
+  ios) device=pochical-store type=com.apple.CoreSimulator.SimDeviceType.iPhone-18-Pro-Max kind="an iPhone 18 Pro Max" ;;
+  ipad) device=pochical-store-ipad type=com.apple.CoreSimulator.SimDeviceType.iPad-Pro-13-inch-M5-12GB kind="an iPad Pro 13-inch (M5)" ;;
+  *) echo "no store's device is $store: ios or ipad" >&2; exit 1 ;;
+esac
 root=$(cd "$(dirname "$0")/../.." && pwd)
-derived=${1:-$root/.build/DerivedData}
-raw=$root/.build/store-screenshots/ios
+derived=${2:-$root/.build/DerivedData}
+raw=$root/.build/store-screenshots/$store
 shared=$(mktemp -d)
 server_log=$shared/server.log
 . "$root/tools/store-screenshots/when.sh"
@@ -36,7 +45,7 @@ case $(xcrun simctl list devices -j |
   jq -r --arg name "$device" '[.devices[][] | select(.name == $name) | .deviceTypeIdentifier] | unique | join(" ")') in
   "") xcrun simctl create "$device" "$type" >/dev/null ;;
   "$type") ;;
-  *) echo "the simulator $device is not an iPhone 18 Pro Max: delete it, and the run makes its own" >&2; exit 1 ;;
+  *) echo "the simulator $device is not $kind: delete it, and the run makes its own" >&2; exit 1 ;;
 esac
 prepare
 # The phone as its owner in Japan has it, for what the system words: the
@@ -44,6 +53,11 @@ prepare
 xcrun simctl bootstatus "$device" >/dev/null
 xcrun simctl spawn "$device" defaults write -g AppleLanguages -array ja-JP
 xcrun simctl spawn "$device" defaults write -g AppleLocale ja_JP
+# An iPad's Home Screen, being edited, jiggles its icons for as long as it
+# is, and XCTest waits for the animations of each step to end: with motion
+# reduced they stand still, as they do on an iPhone under the gallery.
+[ "$store" != ipad ] ||
+  xcrun simctl spawn "$device" defaults write com.apple.Accessibility ReduceMotionEnabled -bool true
 xcrun simctl shutdown "$device"
 xcrun simctl boot "$device"
 xcrun simctl bootstatus "$device" >/dev/null

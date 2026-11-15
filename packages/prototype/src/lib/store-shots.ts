@@ -8,34 +8,91 @@ import type { PresetShift } from "./design-patterns";
 // apps/design's /_render/store-shot, which `pnpm --dir apps/design
 // image:store` photographs into `store/screenshots/<store>`.
 
-// A phone screenshot's size in each store. The App Store's is the one
-// App Store Connect requires on a version's page, for an iPhone with
-// Dynamic Island (medium display, 6.3 inches), as tall for its width as
-// the Pro Max's screen the capture photographs:
+// A screenshot's size in each store, by the device it is of: a phone's,
+// an iPad's and an Android tablet's (#1226). The App Store's iPhone
+// pictures are the ones App Store Connect requires on a version's page,
+// for an iPhone with Dynamic Island (medium display, 6.3 inches), as tall
+// for its width as the Pro Max's screen the capture photographs; its iPad
+// pictures the 13-inch display's, required once the app runs on an iPad,
+// of it on its side as the iPad Pro 13-inch the capture photographs is:
 // https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications
-// Google Play's is the 9:16 it asks of the pictures it features, no side
-// more than twice the other:
+// Google Play's are the 9:16 it asks of the pictures it features, no side
+// more than twice the other, and for a tablet the same on its side, 16:9,
+// its sides from 1080 to 7680 pixels, one set for both its 7-inch and
+// its 10-inch tablets:
 // https://support.google.com/googleplay/android-developer/answer/9866151
+// A tablet is photographed on its side, where its wide layouts show: an
+// iPad's sidebar, a group's chat beside its column and the day's pane
+// beside the month (spec/chat.md, spec/calendar.md), which on Android an
+// expanded width alone has.
+// `screen` is the screen the capture photographs, in pixels, on the side
+// it is held. `callouts` is whether a shot's callout lifts its part
+// (calloutOf): on a phone, whose screen is drawn too small to read the
+// part well; a tablet's screen is drawn large enough to read as it is, and
+// a part of it stands on a page beside others, with no room to grow.
 // `widgetRow` is how tall a Home Screen's cell is in its widths, by the
-// platform's small widget (Android's SMALL, WidgetParts.kt). `corner` is
-// how round a screen's corners are drawn, in hundredths of the picture's
-// width: an iPhone's own, which its status bar keeps clear of, and for
-// Android a card's, as the emulator's screen is square and its clock
-// stands near the corner.
+// platform's small widget (Android's SMALL, WidgetParts.kt). `corner` is how round a screen's corners are drawn, in
+// the picture's units (unitOf): an iPhone's and an iPad's own, which the
+// status bar keeps clear of, and for Android a card's, as the emulator's
+// screen is square and its clock stands near the corner.
 export const STORES = {
-  android: { corner: 4.25, height: 1920, widgetRow: 202 / 179, width: 1080 },
-  ios: { corner: 9, height: 2622, widgetRow: 1, width: 1206 },
+  android: {
+    callouts: true,
+    corner: 4.25,
+    height: 1920,
+    screen: { height: 2424, width: 1080 },
+    widgetRow: 202 / 179,
+    width: 1080,
+  },
+  "android-tablet": {
+    callouts: false,
+    corner: 4.25,
+    height: 1440,
+    screen: { height: 1600, width: 2560 },
+    widgetRow: 202 / 179,
+    width: 2560,
+  },
+  ios: {
+    callouts: true,
+    corner: 9,
+    height: 2622,
+    screen: { height: 2868, width: 1320 },
+    widgetRow: 1,
+    width: 1206,
+  },
+  ipad: {
+    callouts: false,
+    corner: 3.8,
+    height: 2064,
+    screen: { height: 2064, width: 2752 },
+    widgetRow: 1,
+    width: 2752,
+  },
 } as const;
 
 export type StoreId = keyof typeof STORES;
+
+// How long a picture's unit is, in its pixels, every length of a store's
+// picture but the headline's room being in units: a hundredth of its
+// width, or for a picture on its side, a tablet's, of the width an upright
+// picture as tall would have at 9:16, Google Play's, so that a headline,
+// the room around a screen and the widgets on the wall are as large for
+// its height as in a phone's picture.
+export const unitOf = ({
+  height,
+  width,
+}: {
+  height: number;
+  width: number;
+}): number => (width > height ? (height * 9) / 16 : width) / 100;
 
 // How much of a picture's height its headline may take, with the room
 // around it: Google Play asks that a tagline take no more than about a
 // fifth of a screenshot, and the App Store's pictures keep to it too.
 export const HEADLINE_SHARE = 0.2;
 
-// How large a headline's letters are, in hundredths of the picture's
-// width, the room a line of it keeps to each of the picture's sides, and
+// How large a headline's letters are, in units (unitOf), the room a line
+// of it keeps to each of the picture's sides, and
 // the room its share of the picture keeps over its lines: a line is one
 // row, never broken.
 export const HEADLINE = { margin: 2, over: 4, size: 8.6 } as const;
@@ -260,10 +317,10 @@ export const STORE_SHOTS = [
 
 type StoreShotName = (typeof STORE_SHOTS)[number]["name"];
 
-// The room under a phone, in hundredths of the picture's width.
+// The room under a phone, in units (unitOf).
 export const STAGE_FOOT = 5;
 
-// A callout's card, lengths in hundredths of the picture's width: the room
+// A callout's card, lengths in units (unitOf): the room
 // it leaves to the picture's sides, how many times larger than the phone
 // has it the part is drawn at most, and the room it keeps around its part.
 const CALLOUT = { margin: 2, most: 1.35, pad: 1.5 } as const;
@@ -290,14 +347,14 @@ export const calloutOf = (
   screen: { height: number; width: number },
   picture: { height: number; width: number }
 ) => {
-  const unit = picture.width / 100;
+  const unit = unitOf(picture);
   const headline = picture.height * HEADLINE_SHARE;
   const phone = (picture.height - headline - STAGE_FOOT * unit) / screen.height;
   const pad = (CALLOUT.pad * unit) / phone;
   const top = measured.top - pad;
   const scale = Math.min(
     CALLOUT.most,
-    (100 - 2 * CALLOUT.margin - 2 * CALLOUT.pad) /
+    (picture.width / unit - 2 * CALLOUT.margin - 2 * CALLOUT.pad) /
       ((screen.width * phone) / unit),
     (screen.height - (STAGE_FOOT * unit) / phone - pad - measured.top) /
       measured.height
@@ -387,8 +444,7 @@ const cellsOf = (file: string) => {
 // picture's height.
 export const WALL = { columns: 6, rows: 9 } as const;
 
-// How the wall is shaped, lengths in units, a unit a hundredth of the
-// width of a store's picture: a cell's width and the gap between cells;
+// How the wall is shaped, lengths in units (unitOf): a cell's width and the gap between cells;
 // how far down a store's picture the grid's middle is, in its heights;
 // how far the grid is turned, in degrees; and where the fade under the
 // headline ends, in the headline's heights.
@@ -409,15 +465,21 @@ export type WallLie = {
   unit: number;
 };
 
-// The wall as it lies in a store's picture, and in any other of its shape.
+// The wall as it lies in a store's picture, and in any other of its shape:
+// as many times side by side as covers a picture wider than one does, an
+// odd number of them, so that the widgets marked `whole` are those of the
+// one in the middle.
 export const wallLieOf = (picture: {
   height: number;
   width: number;
-}): WallLie => ({
-  across: 1,
-  middle: [picture.width / 2, picture.height * WALL_SHAPE.middle],
-  unit: picture.width / 100,
-});
+}): WallLie => {
+  const unit = unitOf(picture);
+  return {
+    across: 1 + 2 * Math.ceil((picture.width / unit / 100 - 1) / 2),
+    middle: [picture.width / 2, picture.height * WALL_SHAPE.middle],
+    unit,
+  };
+};
 
 // A line of words a picture carries: its lines, their size in the
 // picture's pixels, and where their middle is.

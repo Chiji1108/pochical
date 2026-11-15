@@ -12,6 +12,7 @@ import {
   STORES,
   storeShotFile,
   TITLE,
+  unitOf,
   WALL,
   WALL_PICTURES,
   WALL_SHAPE,
@@ -22,6 +23,7 @@ import {
 } from "@pochical/prototype/lib/store-shots";
 import type {
   Rect,
+  StoreId,
   WallPicture,
   WallTile,
 } from "@pochical/prototype/lib/store-shots";
@@ -35,33 +37,47 @@ import { unsaid } from "./store-words";
 // own page, once:
 // - the App Store's screenshots of an iPhone with Dynamic Island (medium
 //   display, 6.3 inches), the ones App Store Connect requires on a
-//   version's page, 1206 by 2622, with no alpha channel:
+//   version's page, 1206 by 2622, and of an iPad's 13-inch display,
+//   required once the app runs on an iPad, 2752 by 2064 on its side, with
+//   no alpha channel:
 //   https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications
 // - its product page header, 3840 by 1646, with none either:
 //   https://developer.apple.com/help/app-store-connect/reference/app-information/creative-assets-specifications
 // - Google Play's feature graphic, 1024 by 500, and its screenshots, each
 //   side from 320 to 3840 pixels, the longer no more than twice the
 //   shorter, 9:16 for those it features, their words no more than a fifth
-//   of the picture, eight at most:
+//   of the picture, eight at most; a tablet's 16:9 on its side, each side
+//   from 1080 to 7680 pixels:
 //   https://support.google.com/googleplay/android-developer/answer/9866151
 const ASKED = {
+  appStoreIpad: { height: 2064, width: 2752 },
   appStoreScreenshot: { height: 2622, width: 1206 },
   featureGraphic: { height: 500, width: 1024 },
   headlineShare: 0.2,
   productPageHeader: { height: 1646, width: 3840 },
   screenshots: 8,
   side: { least: 320, most: 3840 },
+  tabletSide: { least: 1080, most: 7680 },
 } as const;
+
+const storeIds = Object.keys(STORES).filter((id): id is StoreId =>
+  Object.hasOwn(STORES, id)
+);
 
 const root = path.join(import.meta.dirname, "../../..");
 const pictures: readonly WallPicture[] = WALL_PICTURES;
 
 test("the pictures are of the sizes the stores ask for", () => {
   expect(STORES.ios).toMatchObject(ASKED.appStoreScreenshot);
+  expect(STORES.ipad).toMatchObject(ASKED.appStoreIpad);
   const { height, width } = STORES.android;
   expect(width).toBeGreaterThanOrEqual(ASKED.side.least);
   expect(height).toBeLessThanOrEqual(ASKED.side.most);
   expect(height / width).toBeCloseTo(16 / 9);
+  const tablet = STORES["android-tablet"];
+  expect(tablet.height).toBeGreaterThanOrEqual(ASKED.tabletSide.least);
+  expect(tablet.width).toBeLessThanOrEqual(ASKED.tabletSide.most);
+  expect(tablet.width / tablet.height).toBeCloseTo(16 / 9);
   expect(pictures.find(({ name }) => name === "feature-graphic")).toMatchObject(
     ASKED.featureGraphic
   );
@@ -72,7 +88,7 @@ test("the pictures are of the sizes the stores ask for", () => {
   expect(HEADLINE_SHARE).toBeLessThanOrEqual(ASKED.headlineShare);
 });
 
-const drawn = (["ios", "android"] as const).flatMap((id) =>
+const drawn = storeIds.flatMap((id) =>
   STORE_SHOTS.map((shot) => ({
     file: path.join("store/screenshots", id, storeShotFile(shot.name)),
     size: STORES[id],
@@ -103,19 +119,20 @@ test.each([
 // A headline is set in rows that are never broken, every letter as wide
 // as it is tall at most: each row keeps the picture's margin at both
 // sides, and the rows, under the room kept over them, keep to the
-// headline's share of the shortest picture.
+// headline's share of every store's picture, in its units.
 test.each(STORE_SHOTS.map(({ headline, name }) => ({ headline, name })))(
   "$name's headline fits its room",
   ({ headline }) => {
-    for (const line of headline) {
-      expect(
-        line.length * HEADLINE.size * (1 + TITLE.spacing)
-      ).toBeLessThanOrEqual(100 - 2 * HEADLINE.margin);
-    }
-    for (const { height, width } of Object.values(STORES)) {
+    for (const picture of Object.values(STORES)) {
+      const unit = unitOf(picture);
+      for (const line of headline) {
+        expect(
+          line.length * HEADLINE.size * (1 + TITLE.spacing)
+        ).toBeLessThanOrEqual(picture.width / unit - 2 * HEADLINE.margin);
+      }
       expect(
         HEADLINE.over + headline.length * HEADLINE.size * TITLE.line
-      ).toBeLessThanOrEqual((100 * height * HEADLINE_SHARE) / width);
+      ).toBeLessThanOrEqual((picture.height * HEADLINE_SHARE) / unit);
     }
   }
 );
@@ -151,28 +168,25 @@ test.each(unsaid)("no picture says %s", (word) => {
   }
 });
 
-// A callout's card: a part of a screen lifted over the phone. A phone's
-// screen on each store, and parts as the captures measure them: a row as
-// wide as the screen, one set in from its sides, and a card near the
-// screen's foot.
-const SCREENS = {
-  android: { height: 2424, width: 1080 },
-  ios: { height: 2868, width: 1320 },
-} as const;
-
+// A callout's card: a part of a screen lifted over the phone. The screen
+// each store's capture photographs, and parts as the captures measure
+// them: a row as wide as the screen, one set in from its sides, and a card
+// near the screen's foot.
 test.each(
-  (["ios", "android"] as const).flatMap((on) =>
-    [
-      { height: 0.08, left: 0, top: 0.5, width: 1 },
-      { height: 0.1, left: 0.045, top: 0.54, width: 0.91 },
-      { height: 0.2, left: 0.12, top: 0.68, width: 0.6 },
-    ].map((part) => ({ on, part }))
-  )
+  storeIds
+    .filter((on) => STORES[on].callouts)
+    .flatMap((on) =>
+      [
+        { height: 0.08, left: 0, top: 0.5, width: 1 },
+        { height: 0.1, left: 0.045, top: 0.54, width: 0.91 },
+        { height: 0.2, left: 0.12, top: 0.68, width: 0.6 },
+      ].map((part) => ({ on, part }))
+    )
 )(
   "a callout's card covers its part, inside $on's picture, under the headline",
   ({ on, part }) => {
-    const screen = SCREENS[on];
     const picture = STORES[on];
+    const { screen } = picture;
     const measured = {
       height: part.height * screen.height,
       left: part.left * screen.width,
@@ -214,7 +228,7 @@ const onScreen = (
 });
 
 test("a callout's card cuts through no piece of the screen over or under it: it takes the piece in whole", () => {
-  const screen = SCREENS.ios;
+  const { screen } = STORES.ios;
   const row = { height: 200, left: 0, top: 1400, width: screen.width };
   // A note close under the row, and rows of a list touching one another
   // over it.
@@ -232,7 +246,7 @@ test("a callout's card cuts through no piece of the screen over or under it: it 
 });
 
 test("a callout's card cuts through no piece beside it either, and leaves alone what it does not reach", () => {
-  const screen = SCREENS.ios;
+  const { screen } = STORES.ios;
   // A bubble set in from the screen's sides, a face its card's side would
   // cut in two, and a button clear of the card.
   const bubble = { height: 600, left: 300, top: 1500, width: 600 };
@@ -254,7 +268,7 @@ test("a callout's card cuts through no piece beside it either, and leaves alone 
 });
 
 test("a callout's card leaves what is over its part in sight, and the phone's foot under it", () => {
-  const screen = SCREENS.android;
+  const { screen } = STORES.android;
   const picture = STORES.android;
   // An answer of a chat, and close under it the lines the card lifts, too
   // tall to grow as much as a card may.
@@ -268,7 +282,7 @@ test("a callout's card leaves what is over its part in sight, and the phone's fo
   expect(scale).toBeLessThan(1.35);
   // As far over the phone's foot as the phone is over the picture's.
   expect(over.foot).toBeCloseTo(
-    screen.height - (STAGE_FOOT * picture.width) / 100 / phone
+    screen.height - (STAGE_FOOT * unitOf(picture)) / phone
   );
 });
 
@@ -332,11 +346,14 @@ test("the widgets marked whole show whole in every store's picture, clear of the
     "now-small.png",
   ]);
   for (const { height, widgetRow, width } of Object.values(STORES)) {
+    // The wall side by side as often as covers the picture, the widgets
+    // marked whole those of the copy in its middle.
+    const lie = wallLieOf({ height, width });
+    const placed = wallOf(WALL_SHOT.tiles, lie.across);
+    const middle = ((lie.across - 1) / 2) * WALL_SHOT.tiles.length;
     const corners = whole.flatMap((index) => {
-      const tile = tiles[index];
-      return tile
-        ? wallCornersOf(tile, widgetRow, wallLieOf({ height, width }))
-        : [];
+      const tile = placed[middle + index];
+      return tile ? wallCornersOf(tile, widgetRow, lie) : [];
     });
     expect(corners).toHaveLength(whole.length * 4);
     for (const [across, down] of corners) {
