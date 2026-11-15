@@ -3,6 +3,7 @@ package app.pochical.walk
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.BySelector
 import androidx.test.uiautomator.SearchCondition
+import androidx.test.uiautomator.StaleObjectException
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.Until
@@ -22,11 +23,16 @@ fun UiDevice.find(selector: BySelector): UiObject2 =
 
 /**
  * Taps [target] until [done]. A tap is waited on in full before it is made again: the app takes no
- * tap while a page slides in or out, which a person waits for and a test does not.
+ * tap while a page slides in or out, which a person waits for and a test does not. What was found
+ * may be drawn again before the tap (stale), and is found again for the next.
  */
 fun UiDevice.tap(target: BySelector, done: SearchCondition<Boolean>) {
   repeat(3) {
-    wait(Until.findObject(target), WAIT)?.click()
+    try {
+      wait(Until.findObject(target), WAIT)?.click()
+    } catch (_: StaleObjectException) {
+      return@repeat
+    }
     if (wait(done, WAIT)) return
   }
   error("Tapping $target changed nothing")
