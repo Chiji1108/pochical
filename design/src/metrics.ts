@@ -5,6 +5,16 @@
 export const SPACING_STEP = 4;
 export const HAIRLINE_MAX = 2;
 
+// How tall a month's day is for its width, at most, as a phone draws it:
+// /design's day, 64 tall, seven to a row of its 390-wide phone between
+// the screen's 16 at each side and a SPACING_STEP between them. A taller
+// screen's days stretch to this and no further (spec/calendar.md, The
+// month).
+const PHONE_DAY = { height: 64, phone: 390, screenEdge: 16 } as const;
+export const DAY_PROPORTION =
+  PHONE_DAY.height /
+  ((PHONE_DAY.phone - 2 * PHONE_DAY.screenEdge - 6 * SPACING_STEP) / 7);
+
 // The corners a piece may take, by size. A list, a card or a table laid
 // on a screen or a sheet takes 2xl, as iOS's grouped lists; a piece set
 // inside another near its corner takes the outer's radius less the room

@@ -31,6 +31,7 @@ import {
   textLimits,
 } from "../src/limits";
 import {
+  DAY_PROPORTION,
   HAIRLINE_MAX,
   radii,
   shadows,
@@ -194,6 +195,7 @@ function json() {
       textFields,
     },
     metrics: {
+      dayProportion: DAY_PROPORTION,
       hairlineMax: HAIRLINE_MAX,
       radii,
       shadows,
@@ -311,6 +313,7 @@ function swift() {
     "",
     "public enum Metrics {",
     `  public static let spacingStep: CGFloat = ${SPACING_STEP}`,
+    `  public static let dayProportion: CGFloat = ${DAY_PROPORTION}`,
     ...Object.entries(sizes).map(
       ([name, value]) => `  public static let ${name}: CGFloat = ${value}`
     ),
@@ -477,6 +480,7 @@ function kotlin() {
     "",
     "object Metrics {",
     `  val spacingStep = ${SPACING_STEP}.dp`,
+    `  const val DAY_PROPORTION = ${DAY_PROPORTION}f`,
     ...Object.entries(sizes).map(
       ([name, value]) => `  val ${name} = ${value}.dp`
     ),

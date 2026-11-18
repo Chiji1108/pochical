@@ -50,9 +50,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.exclude
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -173,14 +171,14 @@ private const val FADE_THROUGH_IN = 210
  * カレンダー: the person's month, a page a month, turned by swiping, a
  * day opened from it under its week, and ポチポチ入力 under the month
  * (spec/calendar.md, The month, A day's detail and ポチポチ入力). On a wide window the month never
- * folds: the day stands in a pane beside it, today's while none is open, with ポチポチ入力 at its
- * foot (On a wide screen); the state is one, so the window widened or narrowed keeps where it was.
+ * folds: the day stands in a pane beside it, today's while none is open, and ポチポチ入力 stays under
+ * the month (On a wide screen); the state is one, so the window widened or narrowed keeps where it was.
  * `hidesTabBar` says when a day or the tray takes the tab bar's place.
  * `closePane` takes away シフト's list standing in the pane's place, as a day tapped does.
  * `opening` is a day a link asks to open, as a tap on it does (spec/widgets.md,
  * Opening the app), taken with `onOpening`.
  */
-@OptIn(ExperimentalMaterial3AdaptiveApi::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
 fun CalendarScreen(
   open: (RootPage) -> Unit,
@@ -243,7 +241,7 @@ fun CalendarScreen(
   var said by remember { mutableStateOf<String?>(null) }
   // The day a key last entered, opened in the pane once entering has ended on a wide window.
   var lastEnteredKey by rememberSaveable { mutableStateOf<String?>(null) }
-  // The tray's page of keys, kept as the tray moves between the screen's foot and the pane.
+  // The tray's page of keys, kept as the window widens or narrows.
   val keyPages = rememberKeyPages(calendar.patterns.count { !it.archived })
   // The blank days 完了 asks about, and the pattern picked to fill them.
   var gapKeys by rememberSaveable { mutableStateOf("") }
@@ -528,10 +526,11 @@ fun CalendarScreen(
   val select by rememberUpdatedState<(LocalDate) -> Unit> { selectDay(it) }
 
   @Composable
-  fun pageDays(cell: Dp): PageDays {
+  fun pageDays(cell: Dp, weekWidth: Dp): PageDays {
     // While 完了 asks, the blank days show faint as the pattern picked would fill them.
     val preview = if (gapFill != null) gaps.associateWith { gapFill } else emptyMap()
-    return remember(calendar, week, period, today, country, cell, opened, entering, preview) {
+    val markScale = monthMarkScale(cell, weekWidth)
+    return remember(calendar, week, period, today, country, cell, markScale, opened, entering, preview) {
       PageDays(
         calendar,
         week,
@@ -539,6 +538,7 @@ fun CalendarScreen(
         today,
         country,
         cell,
+        markScale,
         selected = entering ?: opened,
         isEntering = entering != null,
         preview = preview,
@@ -628,10 +628,42 @@ fun CalendarScreen(
     )
   }
 
-  // What stands under the days, or at the pane's foot: ポチポチ入力, or its tray while entering. The
-  // tray fading out keeps its last day.
+  // What stands under the days: 今月のお休み and ポチポチ入力, or its tray while entering. The tray fading
+  // out keeps its last day.
   val foot = updateTransition(entering != null, "entering")
+  val footMoving = foot.isRunning || foot.currentState != foot.targetState
   val trayDay = remember { mutableStateOf<LocalDate?>(null) }.apply { if (entering != null) value = entering }.value
+
+  // ポチポチ入力 and its tray trade places in a fade through, the one gone before the other shows. Both stand
+  // on the foot's lower edge, which goes with the tab bar, so that alone moves them; the height follows on
+  // Material's standard spatial spring, the one the scaffold gives the bar. Clear of the navigation bar, but
+  // not of the keyboard: the memo is written in the pane on a wide window, and the month stays as it is.
+  @Composable
+  fun monthFoot() =
+    foot.AnimatedContent(
+      Modifier.padding(horizontal = SCREEN_EDGE).padding(top = 12.dp, bottom = 12.dp),
+      transitionSpec = {
+        fadeIn(tween(FADE_THROUGH_IN, delayMillis = FADE_THROUGH_OUT, easing = LinearOutSlowInEasing)) togetherWith
+          fadeOut(tween(FADE_THROUGH_OUT, easing = FastOutLinearInEasing)) using
+          SizeTransform(clip = false) { _, _ -> MotionScheme.standard().defaultSpatialSpec() }
+      },
+      contentAlignment = Alignment.BottomCenter,
+    ) { on ->
+      val bottom = WindowInsets.safeDrawing.exclude(WindowInsets.ime).only(WindowInsetsSides.Bottom)
+      val day = trayDay
+      if (!on || day == null) {
+        // Clear of the navigation bar beside a rail, a tablet's; the tab bar takes it on a phone.
+        Column(Modifier.windowInsetsPadding(bottom), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+          summary()
+          enterButton()
+        }
+      } else {
+        // Read from the window, as the tab bar's scaffold takes the inset away the moment the bar starts
+        // back, which would drop the tray by it.
+        tray(day, Modifier.padding(bottom.asPaddingValues()))
+      }
+    }
+
   val sky = rememberSurpriseSky(reduceMotion)
   Column(
     Modifier.fillMaxSize()
@@ -652,26 +684,27 @@ fun CalendarScreen(
           ),
         mainPane = {
           AnimatedPane {
-            // Clear of the navigation bar but not of the keyboard: the memo is written in the pane,
-            // and the month stays as it is.
-            Column(Modifier.windowInsetsPadding(WindowInsets.safeDrawing.exclude(WindowInsets.ime).only(WindowInsetsSides.Bottom))) {
+            // The phone's calendar, which never folds: the month, and under it 今月のお休み and
+            // ポチポチ入力, or its tray while entering.
+            Column {
               heading()
               WeekdayRow(week, Modifier.padding(horizontal = SCREEN_EDGE).padding(bottom = 12.dp))
               BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
-                val cell by animateDpAsState(monthCellHeight(maxHeight - DAY_GAP), Springs.standard(), label = "cell")
+                // The days take their size from the room the foot leaves them once it is still, the tray's
+                // while entering, as the tabs stay.
+                val room = remember { mutableStateOf(maxHeight) }.apply { if (!footMoving) value = maxHeight }.value
+                val weekWidth = maxWidth - SCREEN_EDGE * 2
+                val cell by animateDpAsState(monthCellHeight(room - DAY_GAP, tallestDay(weekWidth)), Springs.standard(), label = "cell")
                 // A window too short for six weeks at their shortest, a phone on its side, scrolls them.
-                Box(Modifier.verticalScroll(rememberScrollState())) { MonthPager(pager, range, pageDays(cell)) }
+                Box(Modifier.verticalScroll(rememberScrollState())) { MonthPager(pager, range, pageDays(cell, weekWidth)) }
               }
-              // 今月のお休み stays under the month, which never folds, while not entering.
-              if (entering == null) summary(Modifier.padding(horizontal = SCREEN_EDGE).padding(vertical = 12.dp))
+              monthFoot()
             }
           }
         },
         supportingPane = {
           AnimatedPane(Modifier.preferredWidth(SUPPORTING_PANE_WIDTH)) {
-            // The day's detail, today's while none is open and the day being entered while entering,
-            // ポチポチ入力 at its foot, or its tray, trading places in the fade through the phone's foot
-            // has; the foot gives way to the keyboard, leaving the memo the room.
+            // The day's detail, today's while none is open and the day being entered while entering.
             Column(Modifier.fillMaxSize().padding(top = 8.dp).windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))) {
               DayDetail(
                 day = paneDay,
@@ -690,16 +723,6 @@ fun CalendarScreen(
                 reduceMotion = reduceMotion,
                 modifier = Modifier.weight(1f),
               )
-              if (!WindowInsets.isImeVisible) {
-                foot.AnimatedContent(
-                  Modifier.padding(SCREEN_EDGE),
-                  transitionSpec = { fadeIn(tween(FADE_THROUGH_IN, delayMillis = FADE_THROUGH_OUT, easing = LinearOutSlowInEasing)) togetherWith fadeOut(tween(FADE_THROUGH_OUT, easing = FastOutLinearInEasing)) },
-                  contentAlignment = Alignment.BottomCenter,
-                ) { on ->
-                  val day = trayDay
-                  if (on && day != null) tray(day) else enterButton()
-                }
-              }
             }
           }
         },
@@ -710,12 +733,15 @@ fun CalendarScreen(
       BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
         // The days take their size from the room left at rest, so neither the foot nor the tab bar moves
         // them on the way, and ease to a room that differs once all is still.
-        val footMoving = foot.isRunning || foot.currentState != foot.targetState
-        val room = remember { mutableStateOf(maxHeight) }.apply { if (!footMoving) value = maxHeight }.value
-        val cell by animateDpAsState(monthCellHeight(room - DAY_GAP), Springs.standard(), label = "cell")
+        // Measured at rest too, with neither a day open nor entering, as the days' size follows the room.
+        val atRest = !footMoving && opened == null && entering == null
+        val room = remember { mutableStateOf(maxHeight) }.apply { if (atRest) value = maxHeight }.value
+        val weekWidth = maxWidth - SCREEN_EDGE * 2
+        val cell by animateDpAsState(monthCellHeight(room - DAY_GAP, tallestDay(weekWidth)), Springs.standard(), label = "cell")
         val monthHeight = monthGridHeight(cell)
+        val monthScroll = rememberScrollState()
         Column {
-          val pageDays = pageDays(cell)
+          val pageDays = pageDays(cell, weekWidth)
           // Pulling the week down unfolds the month, following the finger: let
           // go past a third of the way, or flicked down, it unfolds, else it
           // folds back. A pull never presses the day it starts on.
@@ -745,7 +771,9 @@ fun CalendarScreen(
               )
           ) {
             when {
-              opened == null && folding == 0f -> MonthPager(pager, range, pageDays)
+              // A window too short for six weeks at their shortest, a phone on its side, scrolls them while
+              // the month is unfolded.
+              opened == null && folding == 0f -> Box(Modifier.verticalScroll(monthScroll)) { MonthPager(pager, range, pageDays) }
               opened != null && folding == 1f && !closing ->
                 // Its pages counted anew from the range's first week when the range changes.
                 key(range) {
@@ -777,33 +805,7 @@ fun CalendarScreen(
           }
         }
       }
-      if (opened == null) {
-        // ポチポチ入力 and its tray trade places in a fade through, the one gone before the other shows. Both
-        // stand on the foot's lower edge, which goes with the tab bar, so that alone moves them; the
-        // height follows on Material's standard spatial spring, the one the scaffold gives the bar.
-        foot.AnimatedContent(
-          Modifier.padding(horizontal = SCREEN_EDGE).padding(top = 12.dp, bottom = 12.dp),
-          transitionSpec = {
-            fadeIn(tween(FADE_THROUGH_IN, delayMillis = FADE_THROUGH_OUT, easing = LinearOutSlowInEasing)) togetherWith
-              fadeOut(tween(FADE_THROUGH_OUT, easing = FastOutLinearInEasing)) using
-              SizeTransform(clip = false) { _, _ -> MotionScheme.standard().defaultSpatialSpec() }
-          },
-          contentAlignment = Alignment.BottomCenter,
-        ) { on ->
-          val day = trayDay
-          if (!on || day == null) {
-            // Clear of the navigation bar beside a rail, a tablet upright's; the tab bar takes it on a phone.
-            Column(Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-              summary()
-              enterButton()
-            }
-          } else {
-            // Read from the window, as the tab bar's scaffold takes the inset away the moment the bar
-            // starts back, which would drop the tray by it.
-            tray(day, Modifier.padding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom).asPaddingValues()))
-          }
-        }
-      }
+      if (opened == null) monthFoot()
     }
   }
   breakingDown?.let { month ->
@@ -1035,6 +1037,8 @@ private class PageDays(
   val today: LocalDate,
   val country: String,
   val cell: Dp,
+  /** How much larger than a phone's the days draw their marks (monthMarkScale). */
+  val markScale: Float,
   /** The day opened, or the day being entered, framed. */
   val selected: LocalDate?,
   /** ポチポチ入力 is on: today's frame gives way to the day being entered. */
@@ -1085,6 +1089,7 @@ private class PageDays(
       onClick = { onSelect(day) },
       enabled = selectable,
       modifier = Modifier.weight(1f),
+      markScale = markScale,
     )
   }
 }

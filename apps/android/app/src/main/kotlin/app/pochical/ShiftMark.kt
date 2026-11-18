@@ -24,12 +24,19 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.pochical.design.MarkColor
 import app.pochical.design.MarkIcons
+import app.pochical.design.Metrics
 import app.pochical.kit.Look
 import app.pochical.kit.MarkStyle
 import app.pochical.kit.TimeChange
 
 /** The side of the grid Phosphor draws the marks' icons on. */
 private const val ICON_GRID = 256f
+
+/**
+ * How large a day draws its mark: [size] where the day has the [room], else as large as the room, so it
+ * never runs over the next week, and never larger than a button's height, as iOS's ShiftMark.size.
+ */
+fun markSize(size: Dp, room: Dp): Dp = minOf(size, room, Metrics.control).coerceAtLeast(0.dp)
 
 /**
  * A pattern's mark, `size` across, in `look`: its icon, its emoji, or its

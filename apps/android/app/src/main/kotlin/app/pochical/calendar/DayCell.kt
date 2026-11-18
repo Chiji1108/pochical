@@ -41,9 +41,10 @@ import app.pochical.kit.dayName
 import app.pochical.kit.hoursText
 import app.pochical.kit.timeChange
 import app.pochical.mark
+import app.pochical.markSize
 import java.time.LocalDate
 
-/** Its height where the screen has room, as /design's and iOS's. */
+/** Its height as /design's and iOS's, and the room its date and mark take in a taller day. */
 val DAY_FULL_HEIGHT = 64.dp
 
 private val CELL_PADDING = 4.dp
@@ -105,6 +106,7 @@ fun DayCell(
   modifier: Modifier = Modifier,
   enabled: Boolean = true,
   style: Look = LocalDeviceSettings.current.device.look,
+  markScale: Float = 1f,
 ) {
   val colors = LocalThemeColors.current
   val pattern = look.pattern
@@ -150,11 +152,11 @@ fun DayCell(
       )
       .clip(shape)
       .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
-      .padding(vertical = CELL_PADDING)
       .clearAndSetSemantics {
         contentDescription = description
         selected = look.isSelected
-      },
+      }
+      .padding(vertical = CELL_PADDING),
     horizontalAlignment = Alignment.CenterHorizontally,
     verticalArrangement = Arrangement.spacedBy(2.dp),
   ) {
@@ -193,27 +195,33 @@ fun DayCell(
       val faint = pattern == null || look.faint || blank
       // Letters stand on a tile a little larger; a name under the mark takes some of the room.
       val full = if (style.style == MarkStyle.Badge) (if (names) 22.dp else 26.dp) else if (names) 21.dp else 24.dp
-      Box(Modifier.weight(1f).alpha(if (faint) PREVIEW_ALPHA else 1f), contentAlignment = if (names) Alignment.BottomCenter else Alignment.Center) {
+      val room = height - CELL_PADDING * 2 - DATE_LINE - 2.dp - if (names) NAME_LINE + 2.dp else 0.dp
+      // The mark, and its name under it, in the middle of the room under the date.
+      Column(
+        Modifier.fillMaxWidth().weight(1f),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
+      ) {
         ShiftMark(
           mark.icon,
           mark.emoji,
           mark.symbol,
           mark.color,
-          // As large as iOS's where the day has room, smaller on a short screen's shorter days.
-          size = minOf(full, height - CELL_PADDING * 2 - DATE_LINE - 2.dp - if (names) NAME_LINE + 2.dp else 0.dp),
+          size = markSize(full * markScale, room),
+          modifier = Modifier.alpha(if (faint) PREVIEW_ALPHA else 1f),
           change = look.entry?.let { timeChange(it.start, it.end, mark.time) },
           look = style,
         )
-      }
-      if (names) {
-        Text(
-          dayName(mark.name),
-          Modifier.height(NAME_LINE).alpha(if (faint) PREVIEW_ALPHA else 1f),
-          style = nameStyle,
-          color = colors.textSecondary,
-          maxLines = 1,
-          softWrap = false,
-        )
+        if (names) {
+          Text(
+            dayName(mark.name),
+            Modifier.height(NAME_LINE).alpha(if (faint) PREVIEW_ALPHA else 1f),
+            style = nameStyle,
+            color = colors.textSecondary,
+            maxLines = 1,
+            softWrap = false,
+          )
+        }
       }
     } else {
       Spacer(Modifier.fillMaxWidth().weight(1f))

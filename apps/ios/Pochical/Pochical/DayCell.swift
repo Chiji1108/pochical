@@ -7,6 +7,7 @@ struct DayCell: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.look) private var look
   @Environment(\.dayCellHeight) private var height
+  @Environment(\.dayMarkScale) private var markScale
   let day: Day
   let entry: DayEntry?
   /// The day's memo, its own whether it has a shift or not
@@ -37,7 +38,8 @@ struct DayCell: View {
   /// Picks the day: to enter while entering, else to open.
   var onSelect: Handler<Day>?
 
-  /// Its height where the screen has room, as /design's.
+  /// Its height as /design's, and the room its date and mark take in a
+  /// taller day.
   static let fullHeight: CGFloat = 64
 
   var body: some View {
@@ -59,26 +61,30 @@ struct DayCell: View {
       date
       // A preview shows whatever the look: it is what would be filled.
       if let pattern, preview || !(blank && offShown == .hidden) {
-        ShiftMark(
-          pattern: pattern, size: markSize,
-          change: timeChange(start: entry?.start, end: entry?.end, standard: pattern.time)
-        )
-        .opacity(faint || preview || (blank && offShown == .faint) ? 0.35 : 1)
-        .frame(maxHeight: look.options.names ? nil : .infinity)
-        if look.options.names {
-          Text(dayName(pattern.name))
-            .font(.system(size: 9))
-            .foregroundStyle(colors.textSecondary)
-            .lineLimit(1)
-            .frame(maxHeight: .infinity, alignment: .top)
+        // The mark, and its name under it, in the middle of the room
+        // under the date.
+        VStack(spacing: Self.gap) {
+          ShiftMark(
+            pattern: pattern, size: drawnMarkSize,
+            change: timeChange(start: entry?.start, end: entry?.end, standard: pattern.time)
+          )
+          .opacity(faint || preview || (blank && offShown == .faint) ? 0.35 : 1)
+          if look.options.names {
+            Text(dayName(pattern.name))
+              .font(.system(size: 9))
+              .foregroundStyle(colors.textSecondary)
+              .lineLimit(1)
+              .frame(height: Self.nameLine)
+          }
         }
+        .frame(maxHeight: .infinity)
       } else {
         Spacer(minLength: 0)
       }
     }
-    .padding(.vertical, 4)
+    .padding(.vertical, Self.padding)
     .frame(maxWidth: .infinity)
-    .frame(height: height)
+    .frame(height: height, alignment: .top)
     .background {
       if let tile {
         RoundedRectangle(cornerRadius: Radius.md).fill(tile.tint)
@@ -135,7 +141,20 @@ struct DayCell: View {
             .offset(y: -1)
         }
       }
-      .frame(height: 14)
+      .frame(height: Self.dateLine)
+  }
+
+  private static let padding: CGFloat = 4
+  private static let gap: CGFloat = 2
+  private static let dateLine: CGFloat = 14
+  private static let nameLine: CGFloat = 11
+
+  /// The mark as large as the day draws it (`markScale`), up to a
+  /// button's height, and never larger than the room under the date.
+  private var drawnMarkSize: CGFloat {
+    let names = look.options.names ? Self.gap + Self.nameLine : 0
+    let room = height - 2 * Self.padding - Self.dateLine - Self.gap - names
+    return ShiftMark.size(markSize * markScale, fitting: room)
   }
 
   /// Letters stand on a tile a little larger; a name under the mark takes
@@ -194,7 +213,10 @@ enum OffShown {
 }
 
 extension EnvironmentValues {
-  /// How tall a month's day is: DayCell.fullHeight, or less on a short
-  /// screen, where the calendar fits its six weeks to the room left.
+  /// How tall a month's day is: DayCell.fullHeight, or as the calendar
+  /// fits its six weeks to the room left, taller or shorter.
   @Entry var dayCellHeight = DayCell.fullHeight
+  /// How much larger than a phone's a month's day draws its mark: 1 on a
+  /// phone, more as the calendar's days grow (MonthPage.markScale).
+  @Entry var dayMarkScale: CGFloat = 1
 }

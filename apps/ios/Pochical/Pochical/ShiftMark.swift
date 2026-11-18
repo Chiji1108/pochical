@@ -22,6 +22,14 @@ struct ShiftMark: View {
   let size: CGFloat
   var change: TimeChange?
 
+  /// How large a day draws its mark: `size` where the day has the room,
+  /// else as large as the room, so it never runs over the next week, and
+  /// never larger than a button's height. One rule for every grid of
+  /// days, the calendar's and the widgets'.
+  static func size(_ size: CGFloat, fitting room: CGFloat) -> CGFloat {
+    max(0, min(size, room, Metrics.control)).rounded(.down)
+  }
+
   var body: some View {
     glyph
       .overlay(alignment: .topLeading) {

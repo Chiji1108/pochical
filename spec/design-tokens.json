@@ -3217,6 +3217,7 @@
     }
   },
   "metrics": {
+    "dayProportion": 1.341317365269461,
     "hairlineMax": 2,
     "radii": {
       "2xl": 24,

@@ -10,6 +10,9 @@ struct DayDetail: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.scenePhase) private var scenePhase
   @Environment(\.dismiss) private var dismiss
+  /// The detail is on screen: its navigation is, whatever list is pushed
+  /// over the day (DayNavigation).
+  @Environment(\.dayDetailPresent) private var present
   let day: Day
   let entry: DayEntry?
   /// The day's memo, its own whether it has a shift or not.
@@ -32,6 +35,9 @@ struct DayDetail: View {
   /// Where it says what it is in the middle of, and takes it from as it
   /// comes in place of the detail of the same day moved.
   let handover: DayDetailHandover
+  /// The lists pushed over the day, in the navigation around it
+  /// (DayNavigation), which outlives the day.
+  @Binding var lists: [DayList]
   /// The memo as it is written, kept when the field is left, the detail
   /// closes or the app goes to the background (spec/calendar.md, Text
   /// fields).
@@ -49,8 +55,6 @@ struct DayDetail: View {
   /// The memo's row, scrolled to.
   private static var memoRow: String { "memo" }
   @FocusState private var writingNote: Bool
-  /// The lists pushed over the day.
-  @State private var lists: [DayList] = []
   @State private var clearing = false
   @State private var addingCoworker = false
   @State private var newCoworker = ""
@@ -61,7 +65,7 @@ struct DayDetail: View {
   /// and ‹ › to the day before and after; シフト and 一緒に働く人 push
   /// their lists within it.
   var body: some View {
-    NavigationStack(path: $lists) {
+    Group {
       ScrollViewReader { rows in
         form
           // A memo moved here while written is scrolled to, for its row
@@ -91,23 +95,15 @@ struct DayDetail: View {
         }
       }
     }
-    .onAppear {
-      shown = true
-      // Moved, or shown again, it goes on with the memo, its caret and the
-      // list open as they were; it says nothing until it has, as the focus
-      // comes after.
-      if handover.day == day {
-        // A memo not being written was kept as it was left: the day's own,
-        // which may have changed since, is shown.
-        draft = handover.writing ? handover.memo : note ?? ""
-        lists = handover.lists
-        // The field puts its caret at its start as it takes the focus:
-        // the caret moved goes back once it has.
-        movedCaret = handover.writing ? handover.caret : nil
-        movedWriting = handover.writing
-      } else {
-        draft = note ?? ""
-        tellHandover()
+    // As the detail comes and goes, not as a list is pushed over the day
+    // and gone back from, which the day's own appearing would follow (and
+    // `initial` with it, run again as the day shows again under the list).
+    .onChange(of: present, initial: true) { _, present in
+      if present, !shown {
+        comeIn()
+      } else if !present, shown {
+        shown = false
+        keepNote()
       }
     }
     .onChange(of: draft) { tellHandover() }
@@ -136,12 +132,10 @@ struct DayDetail: View {
     .onChange(of: entering) {
       if entering { lists.removeAll { $0 == .shift } }
     }
-    // Moved, it is kept as its screen closes, and again once the field is
-    // left in the detail that took its place.
-    .onDisappear {
-      shown = false
-      keepNote()
-    }
+    // Moved, it is kept as its screen closes (above), and again once the
+    // field is left in the detail that took its place; and as the day
+    // goes for another's, or under a list pushed over it.
+    .onDisappear { keepNote() }
     .onChange(of: scenePhase) { _, phase in
       if phase != .active {
         keepNote()
@@ -394,6 +388,28 @@ struct DayDetail: View {
     handover.lists = lists
   }
 
+  /// The detail come on screen: moved, or shown again, it goes on with the
+  /// memo, its caret and the list open as they were; it says nothing until
+  /// it has, as the focus comes after.
+  private func comeIn() {
+    shown = true
+    if handover.day == day {
+      // A memo not being written was kept as it was left: the day's own,
+      // which may have changed since, is shown.
+      draft = handover.writing ? handover.memo : note ?? ""
+      lists = handover.lists
+      // The field puts its caret at its start as it takes the focus: the
+      // caret moved goes back once it has.
+      movedCaret = handover.writing ? handover.caret : nil
+      movedWriting = handover.writing
+    } else {
+      draft = note ?? ""
+      // Another day's lists go with it.
+      lists = []
+      tellHandover()
+    }
+  }
+
   /// "" clears the memo; an entry without one keeps the day's.
   private func keepNote() {
     if draft != (note ?? "") {
@@ -598,4 +614,29 @@ private struct Searching: ViewModifier {
 func hoursText(_ start: String, _ end: String) -> String {
   let trim = { (time: String) in time.hasPrefix("0") ? String(time.dropFirst()) : time }
   return "\(trim(start)) – \(end <= start ? "翌" : "")\(trim(end))"
+}
+
+/// The day's navigation, which its bar and the lists pushed over it are
+/// in, kept as one day gives way to the next: put in anew with each day,
+/// a navigation in the inspector has SwiftUI keep a toolbar's row over the
+/// whole window, the month and the pane coming down by it (#1260).
+struct DayNavigation<Content: View>: View {
+  @State private var lists: [DayList] = []
+  /// On screen: said to the day's detail, whose own appearing follows the
+  /// lists pushed over it too.
+  @State private var present = false
+  @ViewBuilder let content: (Binding<[DayList]>) -> Content
+
+  var body: some View {
+    NavigationStack(path: $lists) {
+      content($lists).environment(\.dayDetailPresent, present)
+    }
+    .onAppear { present = true }
+    .onDisappear { present = false }
+  }
+}
+
+extension EnvironmentValues {
+  /// A day's detail is on screen (DayNavigation).
+  @Entry var dayDetailPresent = false
 }

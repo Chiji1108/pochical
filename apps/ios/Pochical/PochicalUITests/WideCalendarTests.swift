@@ -38,9 +38,8 @@ final class WideCalendarTests: XCTestCase {
     let paneX = title(of: "\(thisMonth)月13日").frame.midX
     let middle = app.coordinate(withNormalizedOffset: .zero)
       .withOffset(CGVector(dx: paneX, dy: app.frame.height * 0.45))
-    // Above the pane's foot, held still as it ends so a tap reaches it.
-    let foot = app.buttons["ポチポチ入力"]
-    for _ in 0..<6 where memo.frame.maxY > foot.frame.minY {
+    // Above the screen's foot, held still as it ends so a tap reaches it.
+    for _ in 0..<6 where memo.frame.maxY > app.frame.maxY - 80 {
       middle.press(
         forDuration: 0.05, thenDragTo: middle.withOffset(CGVector(dx: 0, dy: -60)),
         withVelocity: 200, thenHoldForDuration: 0.3)
@@ -80,6 +79,22 @@ final class WideCalendarTests: XCTestCase {
     snap("list-sheet", of: XCUIScreen.main)
   }
 
+  /// Gone back from シフト's list, the pane stays on the day's detail,
+  /// the list not coming back over it.
+  func testGoingBackFromAListStaysOnTheDay() throws {
+    try launchWide()
+    day(on: 13).tap()
+    XCTAssertTrue(title(of: "\(thisMonth)月13日").waitForExistence(timeout: 5), "the day is in the pane")
+    app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'シフト'")).firstMatch.tap()
+    let list = app.navigationBars["シフト"]
+    XCTAssertTrue(list.waitForExistence(timeout: 5), "シフト's list is pushed in the pane")
+    list.buttons.firstMatch.tap()
+    XCTAssertTrue(title(of: "\(thisMonth)月13日").waitForExistence(timeout: 5), "back on the day")
+    sleep(1)
+    XCTAssertFalse(list.exists, "the list stays gone")
+    XCTAssertTrue(title(of: "\(thisMonth)月13日").exists, "the day's detail stays")
+  }
+
   /// The pane's day tapped again while シフト's list is open shows the
   /// day in the list's place.
   func testTheDayTappedAgainTakesTheListsPlace() throws {
@@ -93,17 +108,18 @@ final class WideCalendarTests: XCTestCase {
     XCTAssertFalse(app.navigationBars["シフト"].exists, "the list is gone")
   }
 
-  /// ポチポチ入力 at the pane's foot puts the tray at the pane's foot,
-  /// under the detail of the day being entered, which follows the day a
-  /// tap or 翌日へ moves entering to; the month beside it as it was, and
-  /// the tabs staying.
-  func testEnteringIsInThePane() throws {
+  /// ポチポチ入力 puts the tray under the month in its place, as on a
+  /// phone, and the pane shows the detail of the day being entered, which
+  /// follows the day a tap or 翌日へ moves entering to; the tabs stay.
+  func testEnteringIsUnderTheMonth() throws {
     try launchWide()
     let enter = app.buttons["ポチポチ入力"]
-    XCTAssertTrue(enter.waitForExistence(timeout: 5), "ポチポチ入力 is at the pane's foot")
+    XCTAssertTrue(enter.waitForExistence(timeout: 5), "ポチポチ入力 is under the month")
     enter.tap()
     XCTAssertTrue(app.buttons["完了"].waitForExistence(timeout: 5), "entering, 完了 is in the heading")
-    XCTAssertTrue(app.buttons["翌日へ"].exists, "the tray is in the pane")
+    XCTAssertTrue(app.buttons["翌日へ"].exists, "the tray is in ポチポチ入力's place")
+    XCTAssertLessThan(
+      app.buttons["翌日へ"].frame.maxX, title(of: "\(thisMonth)月1日").frame.minX, "the tray is under the month")
     XCTAssertTrue(day(on: 1).isHittable, "the month stays beside it")
     XCTAssertTrue(app.tab("グループ").exists, "the tabs stay")
     day(on: 13).tap()
@@ -125,9 +141,54 @@ final class WideCalendarTests: XCTestCase {
     app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'シフト'")).firstMatch.tap()
     XCTAssertTrue(app.navigationBars["シフト"].waitForExistence(timeout: 5), "シフト's list is pushed in the pane")
     app.buttons["ポチポチ入力"].tap()
-    XCTAssertTrue(app.buttons["翌日へ"].waitForExistence(timeout: 5), "entering, the tray is in the pane")
+    XCTAssertTrue(app.buttons["翌日へ"].waitForExistence(timeout: 5), "entering, the tray is under the month")
     XCTAssertTrue(title(of: "\(thisMonth)月1日").waitForExistence(timeout: 5), "the day being entered is in the pane")
     XCTAssertFalse(app.navigationBars["シフト"].exists, "the list is gone")
+  }
+
+  /// 今月のお休み and ポチポチ入力 stand under the month, as on a phone,
+  /// not in the pane, and the six weeks fill the room down to them where
+  /// the side is tall enough for more than the shortest days and the
+  /// days are not yet as tall as a phone's for their width.
+  func testTheFootIsUnderTheMonth() throws {
+    try launchWide()
+    let enter = app.buttons["ポチポチ入力"]
+    let summary = app.buttons.matching(NSPredicate(format: "label BEGINSWITH '今月のお休み'")).firstMatch
+    XCTAssertTrue(enter.waitForExistence(timeout: 5), "ポチポチ入力 shows")
+    XCTAssertTrue(summary.exists, "今月のお休み shows")
+    let first = day(on: 1).frame
+    let paneX = title(of: today).frame.minX
+    XCTAssertLessThan(enter.frame.maxX, paneX, "ポチポチ入力 is under the month, not in the pane")
+    XCTAssertGreaterThan(enter.frame.minY, summary.frame.maxY, "ポチポチ入力 is under 今月のお休み")
+    // Short of a phone's day for its width (design/src/metrics.ts,
+    // DAY_PROPORTION, about 1.34), with a point to spare for rounding.
+    if first.height > 44 && first.height < first.width * 1.34 - 1 {
+      // Six weeks and the gaps between them, from the first week's top.
+      let gap: CGFloat = 4
+      let monthFoot = first.minY + 6 * first.height + 5 * gap
+      let spare = summary.frame.minY - monthFoot
+      XCTAssertTrue((0...16).contains(spare), "the weeks fill the room down to 今月のお休み: \(spare) left")
+    }
+    snap("foot", of: XCUIScreen.main)
+  }
+
+  /// The month and the pane stay where they are as a day opens and as
+  /// entering starts and ends: the pane's navigation is kept from day to
+  /// day, so no toolbar's row comes over the window (#1260).
+  func testNothingMovesAsTheDayChanges() throws {
+    try launchWide()
+    let top = day(on: 1).frame.minY
+    let paneTop = title(of: today).frame.minY
+    day(on: 13).tap()
+    XCTAssertTrue(title(of: "\(thisMonth)月13日").waitForExistence(timeout: 5), "the day is in the pane")
+    XCTAssertEqual(day(on: 1).frame.minY, top, accuracy: 0.5, "the month stays as a day opens")
+    XCTAssertEqual(title(of: "\(thisMonth)月13日").frame.minY, paneTop, accuracy: 0.5, "the pane stays")
+    app.buttons["ポチポチ入力"].tap()
+    XCTAssertTrue(app.buttons["完了"].waitForExistence(timeout: 5), "entering")
+    XCTAssertEqual(day(on: 1).frame.minY, top, accuracy: 0.5, "the month stays as entering starts")
+    app.buttons["完了"].tap()
+    XCTAssertTrue(app.buttons["ポチポチ入力"].waitForExistence(timeout: 5), "entering ended")
+    XCTAssertEqual(day(on: 1).frame.minY, top, accuracy: 0.5, "the month stays as entering ends")
   }
 
   /// Launches with the sample month on its side; skipped on a compact one.

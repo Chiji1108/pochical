@@ -72,8 +72,8 @@ import kotlinx.coroutines.launch
  * ポチポチ入力's tray (spec/calendar.md, ポチポチ入力): the day being entered, a key for each
  * pattern in the person's order, and 消す and 翌日へ. It is entered like a keyboard, so every key
  * ticks alike (spec/haptics.md). [said] is what the last key did, for a screen reader to hear.
- * [keyPages] is the page of keys shown, kept by the calendar so it stays as the tray moves between
- * the screen's foot and the day's pane.
+ * [keyPages] is the page of keys shown, kept by the calendar so it stays as the window widens or
+ * narrows.
  */
 @Composable
 fun EntryTray(

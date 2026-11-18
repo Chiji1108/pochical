@@ -1493,6 +1493,7 @@ extension ThemeColors {
 
 public enum Metrics {
   public static let spacingStep: CGFloat = 4
+  public static let dayProportion: CGFloat = 1.341317365269461
   public static let action: CGFloat = 40
   public static let control: CGFloat = 52
   public static let signIn: CGFloat = 50
