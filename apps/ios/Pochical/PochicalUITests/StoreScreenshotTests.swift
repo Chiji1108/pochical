@@ -611,8 +611,16 @@ final class StoreScreenshotTests: XCTestCase {
         format: "elementType == %d AND label MATCHES '[0-9]+日〜.*'",
         XCUIElement.ElementType.button.rawValue)
     ).firstMatch
-    for _ in 0..<8 where !(choice.exists && choice.isHittable) { menu.swipeDown() }
-    for _ in 0..<8 where !(choice.exists && choice.isHittable) { menu.swipeUp() }
+    // Half the menu at a time, held at the end so it stops where the finger does: a swipe
+    // flings it on past rows it never shows.
+    let scroll = { (by: CGFloat) in
+      let middle = menu.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+      middle.press(
+        forDuration: 0.05, thenDragTo: middle.withOffset(CGVector(dx: 0, dy: by * menu.frame.height / 2)),
+        withVelocity: .slow, thenHoldForDuration: 0.3)
+    }
+    for _ in 0..<16 where !(choice.exists && choice.isHittable) { scroll(1) }
+    for _ in 0..<16 where !(choice.exists && choice.isHittable) { scroll(-1) }
     choice.tap()
     back(from: "カレンダー")
     app.tab("カレンダー").tap()
