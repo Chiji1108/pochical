@@ -333,7 +333,9 @@ describe("setting a group's end", () => {
 
   it("answers a group made again with the group, its end come since", async () => {
     const maker = await signInAnonymously();
-    const endsAt = Date.now() + DAY_MS;
+    // Past the notice, so no alarm is due while the clock is moved to the
+    // end: one run then would end the group before the retry came.
+    const endsAt = Date.now() + NOTICE_MS + DAY_MS;
     const requestId = crypto.randomUUID();
     const made = await createGroup(endsAt, maker, requestId);
     const { groupId } = (await made.json()) as { groupId: string };
