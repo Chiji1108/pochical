@@ -19,7 +19,7 @@
   },
   "devDependencies": {
     "@astrojs/compiler-rs": "^0.5.2",
-    "@bufbuild/protobuf": "2.16.0",
+    "@bufbuild/protobuf": "2.17.0",
     "@pochical/design": "workspace:*",
     "@types/node": "catalog:",
     "lefthook": "^2.2.2",

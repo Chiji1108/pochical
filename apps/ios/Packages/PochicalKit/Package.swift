@@ -17,7 +17,7 @@ let package = Package(
     // SQLiteData's own, for ValueObservation, which it does not export.
     .package(url: "https://github.com/groue/GRDB.swift", exact: "7.11.1"),
     // PochicalProto's, for Message, which it does not export.
-    .package(url: "https://github.com/apple/swift-protobuf.git", exact: "1.39.0"),
+    .package(url: "https://github.com/apple/swift-protobuf.git", exact: "1.41.0"),
   ],
   targets: [
     .target(
