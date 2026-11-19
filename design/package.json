@@ -16,7 +16,7 @@
     "@phosphor-icons/react": "^2.1.10",
     "@types/node": "catalog:",
     "@types/react": "~19.3.0",
-    "budoux": "^0.10.0",
+    "budoux": "catalog:",
     "react": "19.3.1",
     "svgpath": "^2.6.0",
     "tsx": "catalog:",
