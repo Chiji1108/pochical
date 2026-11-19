@@ -7,10 +7,10 @@ minSdk = "29"
 agp = "9.5.1"
 kotlin = "2.4.21"
 # protobuf's Java and Kotlin runtimes for the protoc v36.2 plugins in
-# proto/buf.gen.yaml, and connect-kotlin for its v0.9.0 plugin: they move
+# proto/buf.gen.yaml, and connect-kotlin for its plugin there: they move
 # with buf.gen.yaml and mise run gen.
 protobuf = "4.36.2"
-connect = "0.9.0"
+connect = "0.10.0"
 compose-bom = "2026.09.00"
 # Material 3 ahead of the BOM's 1.4.0: 1.5 is the release with Material 3 Expressive's components
 # (segmented list items, flexible app bars, button groups) and its motion scheme.
