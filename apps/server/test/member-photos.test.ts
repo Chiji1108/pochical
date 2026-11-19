@@ -132,6 +132,8 @@ describe("members' photos", () => {
     ).resolves.not.toBeNull();
     const deleted = await call("UserService/DeleteAccount", {}, maker);
     expect(deleted.status).toBe(200);
+    // The group sweeps the photos it no longer shows in its alarm.
+    await alarmsSettled(env.GROUPS.getByName(groupId));
     await expect(
       env.PHOTOS.head(photoKey(groupId, photoId))
     ).resolves.toBeNull();
