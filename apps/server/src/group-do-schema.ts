@@ -14,6 +14,7 @@ import {
 } from "drizzle-orm/sqlite-core";
 
 import type { LineContent } from "./chat-content";
+import type { DayField } from "./gen/pochical/v1/sync_pb";
 
 // What the group shows of itself to members and to invite links: one row,
 // at the cursor it got when it last changed.
@@ -103,7 +104,7 @@ export const memberDays = sqliteTable(
   {
     cursor: integer().notNull(),
     date: text().notNull(),
-    field: integer().notNull(),
+    field: integer().$type<DayField>().notNull(),
     hlcCounter: integer("hlc_counter").notNull(),
     hlcDevice: text("hlc_device").notNull(),
     hlcMs: integer("hlc_ms").notNull(),

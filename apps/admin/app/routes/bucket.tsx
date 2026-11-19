@@ -39,10 +39,12 @@ export const action = async ({ request }: Route.ActionArgs) => {
   if (!Number.isInteger(asOfMs) || asOfMs <= 0) {
     return data({ failed: true as const }, { status: 400 });
   }
-  return await env.SERVER.cleanBucket(asOfMs, staffOf(request)).then(
-    (cleanup) => ({ cleanup }),
-    () => data({ failed: true as const }, { status: 502 })
-  );
+  const staff = staffOf(request);
+  try {
+    return { cleanup: await env.SERVER.cleanBucket(asOfMs, staff) };
+  } catch {
+    return data({ failed: true as const }, { status: 502 });
+  }
 };
 
 // The audit runs again after 消す, whether it deleted or failed part way;
