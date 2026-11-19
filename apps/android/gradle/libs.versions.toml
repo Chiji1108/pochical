@@ -7,7 +7,7 @@ minSdk = "29"
 agp = "9.5.1"
 kotlin = "2.4.21"
 # protobuf's Java and Kotlin runtimes for the protoc v36.2 plugins in
-# proto/buf.gen.yaml, and connect-kotlin for its v0.9.0 plugin: they move
+# proto/buf.gen.yaml, and connect-kotlin for its plugin there: they move
 # with buf.gen.yaml and mise run gen.
 protobuf = "4.36.2"
 connect = "0.10.0"
