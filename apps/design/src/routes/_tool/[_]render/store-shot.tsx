@@ -184,7 +184,7 @@ const styles = {
     display: "flex",
     fontSize: `calc(var(--u) * ${BESIDE.size})`,
     inset: `0 ${BESIDE.tiles * 100}% 0 0`,
-    paddingLeft: `calc(var(--u) * ${BESIDE.margin})`,
+    paddingInline: `calc(var(--u) * ${BESIDE.margin})`,
     position: "absolute",
     textAlign: "left",
     whiteSpace: "nowrap",
