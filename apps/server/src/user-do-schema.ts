@@ -13,6 +13,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
+import type { DayField } from "./gen/pochical/v1/sync_pb";
 import type { Push } from "./push";
 
 // The groups the user is in, so an id that is not theirs never wakes a
@@ -73,7 +74,7 @@ export const dayFields = sqliteTable(
     cursor: integer().notNull(),
     date: text().notNull(),
     // DayField's number in proto/pochical/v1/sync.proto.
-    field: integer().notNull(),
+    field: integer().$type<DayField>().notNull(),
     hlcCounter: integer("hlc_counter").notNull(),
     hlcDevice: text("hlc_device").notNull(),
     hlcMs: integer("hlc_ms").notNull(),

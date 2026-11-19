@@ -178,8 +178,12 @@ class SessionEndedTest {
 
   @Test
   fun aStoreOutOfReachIsWaitedForAndNeverOffersToStartAfresh() = runBlocking<Unit> {
-    val (phone, again) = startedAgain { it.kept.reachable = false }
-    val reads = phone.kept.reads.get()
+    // Counted before the device starts again, as its sign-in reads the store once and may be done by then.
+    var reads = 0
+    val (phone, again) = startedAgain {
+      it.kept.reachable = false
+      reads = it.kept.reads.get()
+    }
     eventually { phone.kept.reads.get() > reads }
 
     again.startAfresh()
