@@ -245,10 +245,6 @@ const styles = {
   }),
   // The tiles one over the other, each as tall as its part is, in the middle
   // of where a phone is under the headline (tilesLie).
-  // Beside the headline, the tiles' column on the right (besideOf).
-  tilesBeside: css({
-    inset: `calc(var(--u) * ${STAGE_FOOT}) 0 calc(var(--u) * ${STAGE_FOOT}) ${(1 - BESIDE.tiles) * 100}%`,
-  }),
   tiles: css({
     "& figure": { margin: 0 },
     alignItems: "center",
@@ -256,6 +252,10 @@ const styles = {
     flexDirection: "column",
     justifyContent: "center",
     position: "absolute",
+  }),
+  // Beside the headline, the tiles' column on the right (besideOf).
+  tilesBeside: css({
+    inset: `calc(var(--u) * ${STAGE_FOOT}) 0 calc(var(--u) * ${STAGE_FOOT}) ${(1 - BESIDE.tiles) * 100}%`,
   }),
   // Under the headline, where a phone is.
   tilesUnder: css({
