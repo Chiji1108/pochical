@@ -1,6 +1,8 @@
 import { ShiftMark } from "@pochical/prototype/components/shift-mark";
 import { presetPatterns } from "@pochical/prototype/lib/design-patterns";
 import {
+  BESIDE,
+  besideOf,
   HEADLINE,
   HEADLINE_SHARE,
   lineClearOf,
@@ -94,28 +96,47 @@ const TILES = {
   words: 4.8,
 };
 
-// How the tiles lie, in --u: from where a phone starts under the headline
-// to where it ends, in `picture`, whose store's screen is `screen`. Each
-// holds a part as tall as `parts` says in its widths; they are as wide as
-// lets them all fit there with the least gap, and share the room they
-// leave evenly as the gaps between them, up to the most a gap may be,
-// beyond which the rest is sky over and under them alike: they are a group
-// of their own, not a phone, one over the other in a picture on its side
-// too, as wide as its screen is drawn at most.
+// Where the tiles stand, in --u: `stage` units tall, `widest` across at
+// most. Under the headline, where a phone is, as wide as the screen is
+// drawn there at most (or as the iPhone is, where that is wider); beside
+// the headline (besideOf), the tiles' column, from the picture's top to
+// its foot with the room under a phone at both.
+const tilesStage = (
+  picture: { height: number; width: number },
+  screen: { height: number; width: number },
+  beside: boolean
+) => {
+  const unit = unitOf(picture);
+  if (beside) {
+    return {
+      stage: picture.height / unit - 2 * STAGE_FOOT,
+      widest: (picture.width * BESIDE.tiles) / unit - 2 * BESIDE.margin,
+    };
+  }
+  const stage = (picture.height * (1 - HEADLINE_SHARE)) / unit - STAGE_FOOT;
+  return {
+    stage,
+    widest: Math.max(TILES.widest, (stage * screen.width) / screen.height),
+  };
+};
+
+// How the tiles lie, in --u, on their stage (tilesStage). Each holds a
+// part as tall as `parts` says in its widths; they are as wide as lets
+// them all fit there with the least gap, `widest` at most, and share the
+// room they leave evenly as the gaps between them, up to the most a gap
+// may be, beyond which the rest is sky over and under them alike: they are
+// a group of their own, not a phone, one over the other.
 const tilesLie = (
   parts: number[],
-  picture: { height: number; width: number },
-  screen: { height: number; width: number }
+  { stage, widest }: { stage: number; widest: number }
 ) => {
   const gaps = Math.max(parts.length - 1, 1);
-  const stage =
-    (picture.height * (1 - HEADLINE_SHARE)) / unitOf(picture) - STAGE_FOOT;
   const room =
     stage -
     (TILES.words * TILES.line + TILES.under + 2 * TILES.pad) * parts.length;
   const tallness = parts.reduce((sum, part) => sum + part, 0);
   const wide = Math.min(
-    Math.max(TILES.widest, (stage * screen.width) / screen.height),
+    widest,
     (room - TILES.gap * gaps) / tallness + 2 * TILES.pad
   );
   const left = room - tallness * (wide - 2 * TILES.pad);
@@ -152,6 +173,20 @@ const styles = {
     paddingTop: `calc(var(--u) * ${HEADLINE.over})`,
     position: "relative",
     textAlign: "center",
+    whiteSpace: "nowrap",
+    zIndex: 1,
+  }),
+  // The headline beside the tiles (besideOf): in the picture's left part,
+  // down its middle, left-aligned.
+  headlineBeside: css({
+    alignItems: "center",
+    boxSizing: "border-box",
+    display: "flex",
+    fontSize: `calc(var(--u) * ${BESIDE.size})`,
+    inset: `0 ${BESIDE.tiles * 100}% 0 0`,
+    paddingLeft: `calc(var(--u) * ${BESIDE.margin})`,
+    position: "absolute",
+    textAlign: "left",
     whiteSpace: "nowrap",
     zIndex: 1,
   }),
@@ -210,14 +245,21 @@ const styles = {
   }),
   // The tiles one over the other, each as tall as its part is, in the middle
   // of where a phone is under the headline (tilesLie).
+  // Beside the headline, the tiles' column on the right (besideOf).
+  tilesBeside: css({
+    inset: `calc(var(--u) * ${STAGE_FOOT}) 0 calc(var(--u) * ${STAGE_FOOT}) ${(1 - BESIDE.tiles) * 100}%`,
+  }),
   tiles: css({
     "& figure": { margin: 0 },
     alignItems: "center",
     display: "flex",
     flexDirection: "column",
-    inset: `var(--headline) 0 calc(var(--u) * ${STAGE_FOOT})`,
     justifyContent: "center",
     position: "absolute",
+  }),
+  // Under the headline, where a phone is.
+  tilesUnder: css({
+    inset: `var(--headline) 0 calc(var(--u) * ${STAGE_FOOT})`,
   }),
   // The widgets on a Home Screen's grid, tilted, running off every edge
   // and fading into the sky where the picture's words are.
@@ -270,6 +312,7 @@ function StoreShotPage() {
   }
   const { corner, height, screen, width } = STORES[store];
   const pair = `${width > height ? PAIR.side : PAIR.upright}%`;
+  const beside = besideOf(shot, { height, width });
   return (
     <div
       className={styles.root}
@@ -291,7 +334,10 @@ function StoreShotPage() {
         />
       )}
       <h1
-        className={cx(pictureTitle, styles.headline)}
+        className={cx(
+          pictureTitle,
+          beside ? styles.headlineBeside : styles.headline
+        )}
         style={pictureTitleStyle}
       >
         <span>
@@ -316,11 +362,11 @@ function StoreShotPage() {
       )}
       {shot.kind === "tiles" && (
         <Tiles
+          beside={beside}
           grounds={grounds.split(",")}
           lie={tilesLie(
             parts.split(",").map(Number),
-            { height, width },
-            screen
+            tilesStage({ height, width }, screen, beside)
           )}
           tiles={shot.tiles}
           unit={unitOf({ height, width })}
@@ -401,18 +447,26 @@ function CalloutCard({ drawn, raw }: { drawn: number[]; raw: string }) {
 // over its card, which holds its part of a screen or its pieces. `unit` is
 // the picture's unit in pixels.
 function Tiles({
+  beside,
   grounds,
   lie: { gap, wide },
   tiles,
   unit,
 }: {
+  beside: boolean;
   grounds: string[];
   lie: { gap: number; wide: number };
   tiles: readonly Tile[];
   unit: number;
 }) {
   return (
-    <div className={styles.tiles} style={{ gap: `calc(var(--u) * ${gap})` }}>
+    <div
+      className={cx(
+        styles.tiles,
+        beside ? styles.tilesBeside : styles.tilesUnder
+      )}
+      style={{ gap: `calc(var(--u) * ${gap})` }}
+    >
       {tiles.map((tile, index) => (
         <figure key={tile.words} style={{ width: `calc(var(--u) * ${wide})` }}>
           <figcaption className={styles.tileWords}>{tile.words}</figcaption>

@@ -106,6 +106,20 @@ export const HEADLINE_SHARE = 0.2;
 // row, never broken.
 export const HEADLINE = { margin: 2, over: 4, size: 8.6 } as const;
 
+// A picture on its side of tiles, a tablet's, lays its headline beside
+// them rather than over them, where it would leave the tiles the narrow
+// column a phone's are: the tiles' column on the right, `tiles` of the
+// picture's width, and the headline in the rest, left-aligned, its
+// letters `size` units large, `margin` units from the picture's left
+// side and from the tiles. A picture on its side of a screen keeps its
+// headline over the screen.
+export const BESIDE = { margin: 6, size: 10, tiles: 0.56 } as const;
+
+export const besideOf = (
+  shot: { kind: string },
+  picture: { height: number; width: number }
+): boolean => shot.kind === "tiles" && picture.width > picture.height;
+
 // How a picture's title is set (apps/design's site-picture.tsx): how tall
 // a line is in its letters' size, and how far apart the letters are, in
 // it too.

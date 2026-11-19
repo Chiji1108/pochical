@@ -3,6 +3,8 @@ import path from "node:path";
 
 import {
   calloutOf,
+  BESIDE,
+  besideOf,
   HEADLINE,
   HEADLINE_SHARE,
   STAGE_FOOT,
@@ -114,6 +116,37 @@ test.each([
       height: size.height,
       width: size.width,
     });
+  }
+);
+
+// A headline beside the tiles (besideOf) keeps its rows, never broken,
+// inside the picture's part left of the tiles' column, its margin at both
+// sides, and its lines inside the picture's height.
+test.each(
+  STORE_SHOTS.flatMap((shot) =>
+    Object.entries(STORES)
+      .filter(([, picture]) => besideOf(shot, picture))
+      .map(([store, picture]) => ({
+        headline: shot.headline,
+        name: shot.name,
+        picture,
+        store,
+      }))
+  )
+)(
+  "$name's headline fits beside its tiles in $store",
+  ({ headline, picture }) => {
+    const unit = unitOf(picture);
+    for (const line of headline) {
+      expect(
+        line.length * BESIDE.size * (1 + TITLE.spacing)
+      ).toBeLessThanOrEqual(
+        (picture.width * (1 - BESIDE.tiles)) / unit - 2 * BESIDE.margin
+      );
+    }
+    expect(headline.length * BESIDE.size * TITLE.line).toBeLessThanOrEqual(
+      picture.height / unit
+    );
   }
 );
 
