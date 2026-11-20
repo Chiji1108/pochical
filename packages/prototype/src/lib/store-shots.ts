@@ -37,6 +37,10 @@ import type { PresetShift } from "./design-patterns";
 // has far smaller corners for its size than a phone's, and the emulator's
 // Pixel Tablet has none at all, its clock at the screen's very edge (#1248):
 // drawn at a tablet's, they clear it, two screens of a pair included.
+// iPhone Duo's outer display has pictures of its own (#1224), folded,
+// upright as a phone is, its bars down its side, the size the App Store
+// asks of it, the display's own pixels. Its inner one has none yet:
+// XCUITest cannot drive a Duo open in Xcode 27 (#1267).
 export const STORES = {
   android: {
     callouts: true,
@@ -55,6 +59,15 @@ export const STORES = {
     wall: [],
     widgetRow: 202 / 179,
     width: 2560,
+  },
+  "duo-outer": {
+    callouts: true,
+    corner: 2,
+    height: 2034,
+    screen: { height: 2034, width: 1398 },
+    wall: [],
+    widgetRow: 1,
+    width: 1398,
   },
   ios: {
     callouts: true,

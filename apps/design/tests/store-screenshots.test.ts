@@ -39,8 +39,8 @@ import { unsaid } from "./store-words";
 // - the App Store's screenshots of an iPhone with Dynamic Island (medium
 //   display, 6.3 inches), the ones App Store Connect requires on a
 //   version's page, 1206 by 2622, and of an iPad's 13-inch display,
-//   required once the app runs on an iPad, 2752 by 2064 on its side, with
-//   no alpha channel:
+//   required once the app runs on an iPad, 2752 by 2064 on its side, and
+//   of iPhone Duo's outer display, 1398 by 2034, with no alpha channel:
 //   https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications
 // - its product page header, 3840 by 1646, with none either:
 //   https://developer.apple.com/help/app-store-connect/reference/app-information/creative-assets-specifications
@@ -51,6 +51,7 @@ import { unsaid } from "./store-words";
 //   from 1080 to 7680 pixels:
 //   https://support.google.com/googleplay/android-developer/answer/9866151
 const ASKED = {
+  appStoreDuoOuter: { height: 2034, width: 1398 },
   appStoreIpad: { height: 2064, width: 2752 },
   appStoreScreenshot: { height: 2622, width: 1206 },
   featureGraphic: { height: 500, width: 1024 },
@@ -71,6 +72,7 @@ const pictures: readonly WallPicture[] = WALL_PICTURES;
 test("the pictures are of the sizes the stores ask for", () => {
   expect(STORES.ios).toMatchObject(ASKED.appStoreScreenshot);
   expect(STORES.ipad).toMatchObject(ASKED.appStoreIpad);
+  expect(STORES["duo-outer"]).toMatchObject(ASKED.appStoreDuoOuter);
   const { height, width } = STORES.android;
   expect(width).toBeGreaterThanOrEqual(ASKED.side.least);
   expect(height).toBeLessThanOrEqual(ASKED.side.most);

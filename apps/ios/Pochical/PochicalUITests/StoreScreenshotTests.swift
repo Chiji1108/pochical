@@ -139,7 +139,7 @@ final class StoreScreenshotTests: XCTestCase {
       friends.tap()
       app.buttons["職場のみんな"].tap()
     } else {
-      app.navigationBars.firstMatch.buttons.firstMatch.tap()
+      button("BackButton", of: app.navigationBars.firstMatch).tap()
     }
     chat.tap()
     XCTAssertTrue(composer.waitForExistence(timeout: 15), "the chat opens again")
@@ -265,7 +265,7 @@ final class StoreScreenshotTests: XCTestCase {
     for step in ["新しい仕事にする", "次へ", "繰り返しがある", "当番・非番・休み", "次へ"] { press(step) }
     XCTAssertTrue(
       app.navigationBars["「当番」の日を押す"].waitForExistence(timeout: 5), "the order is typed")
-    app.navigationBars.buttons["完了"].tap()
+    button("完了", of: app.navigationBars["「当番」の日を押す"]).tap()
     let change = app.alerts.buttons["切り替える"]
     XCTAssertTrue(change.waitForExistence(timeout: 5), "完了 asks first")
     change.tap()
@@ -279,7 +279,7 @@ final class StoreScreenshotTests: XCTestCase {
       field.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).doubleTap()
       field.typeText(called)
       XCTAssertEqual(field.value as? String, called, "\(name) is named \(called)")
-      app.navigationBars["パターンを編集"].buttons["保存"].tap()
+      button("保存", of: app.navigationBars["パターンを編集"]).tap()
     }
     XCTAssertTrue(
       app.navigationBars["シフトパターン"].waitForExistence(timeout: 5), "the patterns show")
@@ -315,12 +315,13 @@ final class StoreScreenshotTests: XCTestCase {
     press("終了日")
     XCTAssertTrue(app.navigationBars["終了日"].waitForExistence(timeout: 5), "終了日 opens")
     app.switches["終了日をつける"].switches.firstMatch.tap()
-    app.navigationBars["終了日"].buttons["保存"].tap()
-    app.navigationBars["グループを作る"].buttons["作る"].tap()
+    button("保存", of: app.navigationBars["終了日"]).tap()
+    button("作る", of: app.navigationBars["グループを作る"]).tap()
     let invite = app.navigationBars["メンバーを招待"]
     XCTAssertTrue(invite.waitForExistence(timeout: 15), "the group is made")
     // Back to the group: on a phone メンバーを招待 is over it, on an iPad beside it already.
-    if invite.buttons["BackButton"].exists { invite.buttons["BackButton"].tap() }
+    let back = button("BackButton", of: invite)
+    if back.exists { back.tap() }
     press("グループの設定")
     XCTAssertTrue(app.navigationBars["グループの設定"].waitForExistence(timeout: 5), "its settings open")
     // The section グループ's rows and what is said under them, from under
@@ -466,7 +467,7 @@ final class StoreScreenshotTests: XCTestCase {
     let home = HomeScreen()
     let widgets = raw.appending(path: folder)
     try FileManager.default.createDirectory(at: widgets, withIntermediateDirectories: true)
-    XCUIDevice.shared.press(.home)
+    home.open()
     var page = 1
     var pages = 1
     var taken: Set<String> = []
@@ -503,13 +504,18 @@ final class StoreScreenshotTests: XCTestCase {
 
   /// The calendar's `day`, holding `shift` when one is named, whatever
   /// else it says (a holiday's name before the shift, a change of hours
-  /// after): the one on the screen, as the months beside the one shown
-  /// hold its first and last days too.
+  /// after): the shown month's, as the months beside it hold its first
+  /// and last days too. The shown page starts at the screen's leading
+  /// edge, so of the copies on the screen it holds the one furthest left:
+  /// the page after's lies to its right, where the pages run on under the
+  /// bars down the side of iPhone Duo's outer display (#1224), clipped
+  /// out of sight and still in the app's frame.
   @MainActor private func day(_ month: Int, _ day: Int, holding shift: String? = nil) -> XCUIElement {
     let said = Self.spoken("\(month)", "\(day)")
     let days = app.descendants(matching: .any).matching(
       NSPredicate(format: "label MATCHES %@", said + (shift.map { "(.+、)?\($0)(、.*)?" } ?? ".*")))
-    return days.allElementsBoundByIndex.first { app.frame.contains($0.frame) } ?? days.firstMatch
+    return days.allElementsBoundByIndex.filter { app.frame.contains($0.frame) }
+      .min { $0.frame.minX < $1.frame.minX } ?? days.firstMatch
   }
 
   /// The calendar's day `days` after `date`, whatever it holds: a day of
@@ -715,7 +721,15 @@ final class StoreScreenshotTests: XCTestCase {
   /// Back from 設定's page `name` to its list: over which the page is on a
   /// phone, and beside which it is already on an iPad.
   @MainActor private func back(from name: String) {
-    if !app.navigationBars["設定"].exists { app.navigationBars[name].buttons.firstMatch.tap() }
+    if !app.navigationBars["設定"].exists { button("BackButton", of: app.navigationBars[name]).tap() }
+  }
+
+  /// The button `label` (or identifier, BackButton for the way back) of a page's navigation
+  /// `bar`: in the bar, or where the bars stand down the screen's side, as on iPhone Duo's outer
+  /// display (#1224), in the toolbar there, which the system moves the bar's buttons into.
+  @MainActor private func button(_ label: String, of bar: XCUIElement) -> XCUIElement {
+    let own = bar.buttons[label]
+    return own.exists ? own : app.toolbars.buttons[label]
   }
 
   /// Opens the page 設定 lists as `name`: by the row saying its name and
@@ -778,13 +792,26 @@ final class StoreScreenshotTests: XCTestCase {
       .firstMatch
   }
 
+  /// Goes to the Home Screen. SpringBoard is brought to the front rather
+  /// than Home pressed, which a folded iPhone Duo's outer display takes
+  /// no notice of in Xcode 27's simulator, the app staying in front: this
+  /// goes with devicehubctl when Xcode can drive a Duo (#1267).
+  func open() {
+    springboard.activate()
+  }
+
   /// Opens the gallery on the app's widgets, from the Home Screen at
   /// rest, and says how many pages it has.
   func openGallery() -> Int {
-    // An iPhone's search over the Dock, or an iPad's pages' dots.
-    let rest = springboard.descendants(matching: .any)
-      .matching(NSPredicate(format: "identifier IN {'spotlight-pill', 'Page control'}")).firstMatch
-    XCTAssertTrue(rest.waitForExistence(timeout: 10), "the Home Screen is at rest")
+    // An iPhone's search over the Dock, or an iPad's pages' dots. A Duo's Home Screen holds both
+    // displays', the one not lit out of reach: the Home Screen is at rest once one of them can
+    // be touched.
+    let rests = springboard.descendants(matching: .any)
+      .matching(NSPredicate(format: "identifier IN {'spotlight-pill', 'Page control'}"))
+    let atRest = XCTNSPredicateExpectation(
+      predicate: NSPredicate { _, _ in rests.allElementsBoundByIndex.contains(where: \.isHittable) },
+      object: nil)
+    XCTAssertEqual(XCTWaiter.wait(for: [atRest], timeout: 10), .completed, "the Home Screen is at rest")
     // Between the icons' last row and the Dock, where no page has an icon.
     springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.12, dy: 0.79))
       .press(forDuration: 1.5)
