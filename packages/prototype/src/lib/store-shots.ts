@@ -109,11 +109,11 @@ export const HEADLINE = { margin: 2, over: 4, size: 8.6 } as const;
 // A picture on its side of tiles, a tablet's, lays its headline beside
 // them rather than over them, where it would leave the tiles the narrow
 // column a phone's are: the tiles' column on the right, `tiles` of the
-// picture's width, and the headline in the rest, left-aligned, its
-// letters `size` units large, `margin` units from the picture's left
-// side and from the tiles. A picture on its side of a screen keeps its
-// headline over the screen.
-export const BESIDE = { margin: 6, size: 10, tiles: 0.56 } as const;
+// picture's width, and the headline in the rest, left-aligned, `margin`
+// units from the picture's left side and from the tiles, its letters as
+// large as fills that room (besideSizeOf). A picture on its side of a
+// screen keeps its headline over the screen.
+export const BESIDE = { margin: 6, tiles: 0.56 } as const;
 
 export const besideOf = (
   shot: { kind: string },
@@ -337,6 +337,25 @@ export const STORE_SHOTS = [
     ],
   },
 ] as const satisfies readonly StoreShot[];
+
+// How large, in units (unitOf), the letters of a headline beside its
+// tiles (besideOf) are in a picture: the size at which the longest row of
+// every such headline fills the room left of the tiles' column, so that
+// the pictures of one store set them alike, and a wider picture's, with
+// more room there, larger.
+export const besideSizeOf = (picture: {
+  height: number;
+  width: number;
+}): number => {
+  const room =
+    (picture.width * (1 - BESIDE.tiles)) / unitOf(picture) - 2 * BESIDE.margin;
+  const longest = Math.max(
+    ...STORE_SHOTS.filter((shot) => besideOf(shot, picture)).flatMap((shot) =>
+      shot.headline.map((line) => line.length)
+    )
+  );
+  return room / (longest * (1 + TITLE.spacing));
+};
 
 type StoreShotName = (typeof STORE_SHOTS)[number]["name"];
 

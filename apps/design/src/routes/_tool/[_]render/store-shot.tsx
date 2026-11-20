@@ -3,6 +3,7 @@ import { presetPatterns } from "@pochical/prototype/lib/design-patterns";
 import {
   BESIDE,
   besideOf,
+  besideSizeOf,
   HEADLINE,
   HEADLINE_SHARE,
   lineClearOf,
@@ -182,7 +183,7 @@ const styles = {
     alignItems: "center",
     boxSizing: "border-box",
     display: "flex",
-    fontSize: `calc(var(--u) * ${BESIDE.size})`,
+    fontSize: "calc(var(--u) * var(--beside-size))",
     inset: `0 ${BESIDE.tiles * 100}% 0 0`,
     paddingInline: `calc(var(--u) * ${BESIDE.margin})`,
     position: "absolute",
@@ -318,6 +319,7 @@ function StoreShotPage() {
       className={styles.root}
       data-store-shot
       style={{
+        "--beside-size": besideSizeOf({ height, width }),
         "--corner": corner,
         "--headline": `${height * HEADLINE_SHARE}px`,
         "--u": `${unitOf({ height, width })}px`,
