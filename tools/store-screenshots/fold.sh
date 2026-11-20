@@ -43,7 +43,12 @@ quit_devicehub() {
     return 1
   fi
   osascript -e 'quit app "DeviceHub"' >/dev/null
-  while pgrep -x DeviceHub >/dev/null; do sleep 1; done
+  local waited=0
+  while pgrep -x DeviceHub >/dev/null; do
+    waited=$((waited + 1))
+    [ "$waited" -lt 30 ] || { echo "DeviceHub did not quit" >&2; return 1; }
+    sleep 1
+  done
 }
 
 # Presses DeviceHub's control "$2..." for the simulator "$1". DeviceHub,
@@ -63,7 +68,7 @@ hub() {
 # The display a pose lights, as simctl numbers them: 1 the outer, 3 the
 # inner.
 fold() {
-  local udid=$1 pose=$2 display shot
+  local udid=$1 pose=$2 display shots
   case $pose in
     closed) display=1 ;;
     open) display=3 ;;
@@ -71,12 +76,12 @@ fold() {
   esac
   hub "$udid" pose "$pose"
   # The display that is not lit is photographed black.
-  shot=$(mktemp -t fold).png
-  xcrun simctl io "$udid" screenshot --display="$display" "$shot" >/dev/null 2>&1
-  if [ "$(magick "$shot" -alpha off -colorspace gray -format '%[fx:maxima]' info:)" = 0 ]; then
-    rm -f "$shot"
+  shots=$(mktemp -d)
+  if ! xcrun simctl io "$udid" screenshot --display="$display" "$shots/shot.png" >/dev/null 2>&1 ||
+    [ "$(magick "$shots/shot.png" -alpha off -colorspace gray -format '%[fx:maxima>0]' info:)" != 1 ]; then
+    rm -rf "$shots"
     echo "the Duo's display $display is not lit after pose $pose" >&2
     return 1
   fi
-  rm -f "$shot"
+  rm -rf "$shots"
 }

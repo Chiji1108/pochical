@@ -514,8 +514,8 @@ final class StoreScreenshotTests: XCTestCase {
     let said = Self.spoken("\(month)", "\(day)")
     let days = app.descendants(matching: .any).matching(
       NSPredicate(format: "label MATCHES %@", said + (shift.map { "(.+、)?\($0)(、.*)?" } ?? ".*")))
-    return days.allElementsBoundByIndex.filter { app.frame.contains($0.frame) }
-      .min { $0.frame.minX < $1.frame.minX } ?? days.firstMatch
+    return days.allElementsBoundByIndex.map { ($0, $0.frame) }.filter { app.frame.contains($1) }
+      .min { $0.1.minX < $1.1.minX }?.0 ?? days.firstMatch
   }
 
   /// The calendar's day `days` after `date`, whatever it holds: a day of
