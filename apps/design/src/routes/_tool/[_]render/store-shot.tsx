@@ -83,10 +83,11 @@ const WIDGET_CELL = `calc(var(--u) * ${WALL_SHAPE.cell})`;
 // the gap from a tile to the next one's words, at least and at most,
 // several times that room so that words read as their own tile's, the room
 // a tile's card keeps around what it holds, and how wide a tile is at
-// most: as the iPhone is in the App Store's pictures of one screen, the sky
-// at its sides, and as the screen is in its store's pictures where that is
-// wider, a tablet's on its side (tilesLie). Google Play's phone is
-// narrower than a line of words, so its tiles keep to the iPhone's width.
+// most under a headline: as the iPhone is in the App Store's pictures of
+// one screen, the sky at its sides. Google Play's phone is narrower than a
+// line of words, so its tiles keep to the iPhone's width. Beside a
+// headline (besideOf), a tablet's tiles are as wide as their column lets
+// them (tilesStage).
 const TILES = {
   gap: 8,
   line: 1.3,
@@ -98,13 +99,12 @@ const TILES = {
 };
 
 // Where the tiles stand, in --u: `stage` units tall, `widest` across at
-// most. Under the headline, where a phone is, as wide as the screen is
-// drawn there at most (or as the iPhone is, where that is wider); beside
-// the headline (besideOf), the tiles' column, from the picture's top to
-// its foot with the room under a phone at both.
+// most. Under the headline, where a phone is, as wide as the iPhone is
+// drawn there; beside the headline (besideOf), the tiles' column, from the
+// picture's top to its foot with the room under a phone at both, and its
+// margin at both sides.
 const tilesStage = (
   picture: { height: number; width: number },
-  screen: { height: number; width: number },
   beside: boolean
 ) => {
   const unit = unitOf(picture);
@@ -114,10 +114,9 @@ const tilesStage = (
       widest: (picture.width * BESIDE.tiles) / unit - 2 * BESIDE.margin,
     };
   }
-  const stage = (picture.height * (1 - HEADLINE_SHARE)) / unit - STAGE_FOOT;
   return {
-    stage,
-    widest: Math.max(TILES.widest, (stage * screen.width) / screen.height),
+    stage: (picture.height * (1 - HEADLINE_SHARE)) / unit - STAGE_FOOT,
+    widest: TILES.widest,
   };
 };
 
@@ -311,7 +310,7 @@ function StoreShotPage() {
   if (shot === undefined) {
     return <p>No shot is named {name}.</p>;
   }
-  const { corner, height, screen, width } = STORES[store];
+  const { corner, height, width } = STORES[store];
   const pair = `${width > height ? PAIR.side : PAIR.upright}%`;
   const beside = besideOf(shot, { height, width });
   return (
@@ -319,7 +318,7 @@ function StoreShotPage() {
       className={styles.root}
       data-store-shot
       style={{
-        "--beside-size": besideSizeOf({ height, width }),
+        ...(beside && { "--beside-size": besideSizeOf({ height, width }) }),
         "--corner": corner,
         "--headline": `${height * HEADLINE_SHARE}px`,
         "--u": `${unitOf({ height, width })}px`,
@@ -368,7 +367,7 @@ function StoreShotPage() {
           grounds={grounds.split(",")}
           lie={tilesLie(
             parts.split(",").map(Number),
-            tilesStage({ height, width }, screen, beside)
+            tilesStage({ height, width }, beside)
           )}
           tiles={shot.tiles}
           unit={unitOf({ height, width })}

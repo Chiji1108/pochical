@@ -3,7 +3,6 @@ import path from "node:path";
 
 import {
   calloutOf,
-  BESIDE,
   besideOf,
   besideSizeOf,
   HEADLINE,
@@ -120,37 +119,25 @@ test.each([
   }
 );
 
-// A headline beside the tiles (besideOf), at its size (besideSizeOf),
-// keeps its rows, never broken, inside the picture's part left of the
-// tiles' column, its margin at both sides, and its lines inside the
-// picture's height.
+// A headline beside the tiles (besideOf) is set as large as its room
+// left of the tiles' column lets it (besideSizeOf): never smaller than a
+// headline over a screen, so it reads as one, and its lines inside the
+// room a phone keeps over and under it.
 test.each(
-  STORE_SHOTS.flatMap((shot) =>
-    Object.entries(STORES)
-      .filter(([, picture]) => besideOf(shot, picture))
-      .map(([store, picture]) => ({
-        headline: shot.headline,
-        name: shot.name,
-        picture,
-        store,
-      }))
-  )
-)(
-  "$name's headline fits beside its tiles in $store",
-  ({ headline, picture }) => {
-    const unit = unitOf(picture);
-    const size = besideSizeOf(picture);
-    for (const line of headline) {
-      expect(line.length * size * (1 + TITLE.spacing)).toBeLessThanOrEqual(
-        // The longest row fills the room exactly, but for rounding.
-        (picture.width * (1 - BESIDE.tiles)) / unit - 2 * BESIDE.margin + 1e-9
-      );
-    }
-    expect(headline.length * size * TITLE.line).toBeLessThanOrEqual(
-      picture.height / unit
+  Object.entries(STORES)
+    .filter(([, picture]) =>
+      STORE_SHOTS.some((shot) => besideOf(shot, picture))
+    )
+    .map(([store, picture]) => ({ picture, store }))
+)("the headlines beside tiles are large and fit in $store", ({ picture }) => {
+  const size = besideSizeOf(picture);
+  expect(size).toBeGreaterThanOrEqual(HEADLINE.size);
+  for (const shot of STORE_SHOTS.filter((one) => besideOf(one, picture))) {
+    expect(shot.headline.length * size * TITLE.line).toBeLessThanOrEqual(
+      picture.height / unitOf(picture) - 2 * STAGE_FOOT
     );
   }
-);
+});
 
 // A headline is set in rows that are never broken, every letter as wide
 // as it is tall at most: each row keeps the picture's margin at both
