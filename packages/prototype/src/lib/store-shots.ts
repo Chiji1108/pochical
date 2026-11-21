@@ -31,8 +31,8 @@ import type { PresetShift } from "./design-patterns";
 // a part of it stands on a page beside others, with no room to grow.
 // `widgetRow` is how tall a Home Screen's cell is in its widths, by the
 // platform's small widget (Android's SMALL, WidgetParts.kt). `corner` is how round a screen's corners are drawn, in
-// the picture's units (unitOf), one for all four or each from the top
-// leading one around as CSS's border-radius takes them: an iPhone's and an iPad's own, which the
+// the picture's units (unitOf), one for all four or each from the
+// top-left clockwise, as CSS's border-radius takes them: an iPhone's and an iPad's own, which the
 // status bar keeps clear of, and for Android a card's, as the emulator's
 // screen is square and its clock stands near the corner. A tablet's screen
 // has far smaller corners for its size than a phone's, and the emulator's
@@ -569,10 +569,12 @@ export type WallPicture = {
 };
 
 // The site's top page (apps/web) shows the wall too, on its own paper: as
-// it lies in a store's picture, at twice the size the page shows it.
+// it lies in a store's picture, at twice the size the page shows it, in
+// the units of a hundredth of its width, though it is wider than 9:16.
 export const SITE_WALL = {
   file: "packages/prototype/src/assets/widget-wall.png",
   height: 1200,
+  lie: { across: 1, middle: [390, 1200 * WALL_SHAPE.middle], unit: 7.8 },
   name: "widget-wall",
   plain: true,
   store: "ios",

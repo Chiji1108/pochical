@@ -69,6 +69,23 @@ const storeIds = Object.keys(STORES).filter((id): id is StoreId =>
 const root = path.join(import.meta.dirname, "../../..");
 const pictures: readonly WallPicture[] = WALL_PICTURES;
 
+test("a picture wider than 9:16 is laid out in the units of a 9:16 picture as tall", () => {
+  expect(unitOf({ height: 2622, width: 1206 })).toBe(12.06);
+  expect(unitOf({ height: 1920, width: 1080 })).toBe(10.8);
+  expect(unitOf({ height: 2034, width: 1398 })).toBeCloseTo((2034 * 9) / 1600);
+  expect(unitOf({ height: 2064, width: 2752 })).toBeCloseTo((2064 * 9) / 1600);
+});
+
+test("every store's screen has one corner or four", () => {
+  for (const { corner } of Object.values(STORES)) {
+    expect(typeof corner === "number" || corner.length === 4).toBe(true);
+  }
+  // iPhone Duo's outer display is round at the side away from its hinge,
+  // its right as it is photographed.
+  const [topLeft, topRight] = STORES["duo-outer"].corner;
+  expect(topRight).toBeGreaterThan(topLeft);
+});
+
 test("the pictures are of the sizes the stores ask for", () => {
   expect(STORES.ios).toMatchObject(ASKED.appStoreScreenshot);
   expect(STORES.ipad).toMatchObject(ASKED.appStoreIpad);

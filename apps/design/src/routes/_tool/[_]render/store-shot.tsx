@@ -122,11 +122,16 @@ const tilesLie = (
   return { gap: Math.min(TILES.most, left / gaps), wide };
 };
 
-// A store's screen's corners (STORES' `corner`) as CSS's border-radius.
-const radiusOf = (corner: number | readonly number[]) =>
-  (typeof corner === "number" ? [corner] : corner)
-    .map((one) => `calc(var(--u) * ${one})`)
-    .join(" ");
+// A store's screen's corners (STORES' `corner`), top-left clockwise, as
+// the numbers --corner-1 to --corner-4 the screen's border-radius takes in
+// --u where it is drawn: a card's picture sets --u on each screen alone.
+const cornersOf = (corner: number | readonly number[]) =>
+  Object.fromEntries(
+    [0, 1, 2, 3].map((index) => [
+      `--corner-${index + 1}`,
+      typeof corner === "number" ? corner : corner[index],
+    ])
+  );
 
 // How wide each of a pair's screens is, in hundredths of the picture's
 // width: upright, and on its side, where two screens on their side take
@@ -180,9 +185,11 @@ const styles = {
     position: "relative",
   }),
   // A screen as the phone shows it: its corners rounded as its store's
-  // are (--corner, radiusOf), nothing around it.
+  // are (cornersOf), nothing around it.
   screen: css({
-    borderRadius: "var(--corner)",
+    // Written out whole, as Panda reads it.
+    borderRadius:
+      "calc(var(--u) * var(--corner-1)) calc(var(--u) * var(--corner-2)) calc(var(--u) * var(--corner-3)) calc(var(--u) * var(--corner-4))",
     boxShadow:
       "0 calc(var(--u) * 2) calc(var(--u) * 7) rgba(60, 70, 60, 0.2), 0 0 0 1px rgba(60, 70, 60, 0.08)",
     display: "block",
@@ -281,7 +288,7 @@ function StoreShotPage() {
       className={styles.root}
       data-store-shot
       style={{
-        "--corner": radiusOf(corner),
+        ...cornersOf(corner),
         "--headline": `${height * HEADLINE_SHARE}px`,
         "--u": `${unitOf({ height, width })}px`,
         height,
@@ -723,7 +730,7 @@ function CardPicturePage({
       className={styles.root}
       data-store-shot
       style={{
-        "--corner": radiusOf(STORES[picture.store].corner),
+        ...cornersOf(STORES[picture.store].corner),
         background: `#${ground}`,
         height,
         width,
