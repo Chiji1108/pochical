@@ -31,12 +31,19 @@ import type { PresetShift } from "./design-patterns";
 // a part of it stands on a page beside others, with no room to grow.
 // `widgetRow` is how tall a Home Screen's cell is in its widths, by the
 // platform's small widget (Android's SMALL, WidgetParts.kt). `corner` is how round a screen's corners are drawn, in
-// the picture's units (unitOf): an iPhone's and an iPad's own, which the
+// the picture's units (unitOf), one for all four or each from the
+// top-left clockwise, as CSS's border-radius takes them: an iPhone's and an iPad's own, which the
 // status bar keeps clear of, and for Android a card's, as the emulator's
 // screen is square and its clock stands near the corner. A tablet's screen
 // has far smaller corners for its size than a phone's, and the emulator's
 // Pixel Tablet has none at all, its clock at the screen's very edge (#1248):
 // drawn at a tablet's, they clear it, two screens of a pair included.
+// iPhone Duo's outer display has pictures of its own (#1224), folded,
+// upright as a phone is, its bars down its side, the size the App Store
+// asks of it, the display's own pixels, its corners its own: barely round
+// at the hinge's side, round at the other (fit to `simctl io screenshot
+// --mask=alpha` of it). Its inner one has none yet:
+// XCUITest cannot drive a Duo open in Xcode 27 (#1267).
 export const STORES = {
   android: {
     callouts: true,
@@ -55,6 +62,15 @@ export const STORES = {
     wall: [],
     widgetRow: 202 / 179,
     width: 2560,
+  },
+  "duo-outer": {
+    callouts: true,
+    corner: [1.7, 12, 12, 1.7],
+    height: 2034,
+    screen: { height: 2034, width: 1398 },
+    wall: [],
+    widgetRow: 1,
+    width: 1398,
   },
   ios: {
     callouts: true,
@@ -83,17 +99,18 @@ export type StoreId = keyof typeof STORES;
 
 // How long a picture's unit is, in its pixels, every length of a store's
 // picture but the headline's room being in units: a hundredth of its
-// width, or for a picture on its side, a tablet's, of the width an upright
-// picture as tall would have at 9:16, Google Play's, so that a headline,
-// the room around a screen and the widgets on the wall are as large for
-// its height as in a phone's picture.
+// width, or for a picture wider than 9:16, Google Play's (a tablet's on
+// its side, iPhone Duo's outer display's), of the width a picture as tall
+// would have at 9:16, so that a headline, the room around a screen, the
+// tiles' words and the widgets on the wall are as large for its height as
+// in a phone's picture.
 export const unitOf = ({
   height,
   width,
 }: {
   height: number;
   width: number;
-}): number => (width > height ? (height * 9) / 16 : width) / 100;
+}): number => Math.min(width, (height * 9) / 16) / 100;
 
 // How much of a picture's height its headline may take, with the room
 // around it: Google Play asks that a tagline take no more than about a
@@ -552,10 +569,12 @@ export type WallPicture = {
 };
 
 // The site's top page (apps/web) shows the wall too, on its own paper: as
-// it lies in a store's picture, at twice the size the page shows it.
+// it lies in a store's picture, at twice the size the page shows it, in
+// the units of a hundredth of its width, though it is wider than 9:16.
 export const SITE_WALL = {
   file: "packages/prototype/src/assets/widget-wall.png",
   height: 1200,
+  lie: { across: 1, middle: [390, 1200 * WALL_SHAPE.middle], unit: 7.8 },
   name: "widget-wall",
   plain: true,
   store: "ios",
