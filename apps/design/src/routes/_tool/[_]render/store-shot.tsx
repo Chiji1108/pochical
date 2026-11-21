@@ -122,6 +122,12 @@ const tilesLie = (
   return { gap: Math.min(TILES.most, left / gaps), wide };
 };
 
+// A store's screen's corners (STORES' `corner`) as CSS's border-radius.
+const radiusOf = (corner: number | readonly number[]) =>
+  (typeof corner === "number" ? [corner] : corner)
+    .map((one) => `calc(var(--u) * ${one})`)
+    .join(" ");
+
 // How wide each of a pair's screens is, in hundredths of the picture's
 // width: upright, and on its side, where two screens on their side take
 // less of its width to lie over each other's corner as an upright pair
@@ -174,9 +180,9 @@ const styles = {
     position: "relative",
   }),
   // A screen as the phone shows it: its corners rounded as its store's
-  // are (--corner), nothing around it.
+  // are (--corner, radiusOf), nothing around it.
   screen: css({
-    borderRadius: "calc(var(--u) * var(--corner))",
+    borderRadius: "var(--corner)",
     boxShadow:
       "0 calc(var(--u) * 2) calc(var(--u) * 7) rgba(60, 70, 60, 0.2), 0 0 0 1px rgba(60, 70, 60, 0.08)",
     display: "block",
@@ -275,7 +281,7 @@ function StoreShotPage() {
       className={styles.root}
       data-store-shot
       style={{
-        "--corner": corner,
+        "--corner": radiusOf(corner),
         "--headline": `${height * HEADLINE_SHARE}px`,
         "--u": `${unitOf({ height, width })}px`,
         height,
@@ -717,7 +723,7 @@ function CardPicturePage({
       className={styles.root}
       data-store-shot
       style={{
-        "--corner": STORES[picture.store].corner,
+        "--corner": radiusOf(STORES[picture.store].corner),
         background: `#${ground}`,
         height,
         width,
