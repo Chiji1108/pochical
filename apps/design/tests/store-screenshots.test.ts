@@ -3,6 +3,8 @@ import path from "node:path";
 
 import {
   calloutOf,
+  besideOf,
+  besideSizeOf,
   HEADLINE,
   HEADLINE_SHARE,
   STAGE_FOOT,
@@ -135,6 +137,26 @@ test.each([
     });
   }
 );
+
+// A headline beside the tiles (besideOf) is set as large as its room
+// left of the tiles' column lets it (besideSizeOf): never smaller than a
+// headline over a screen, so it reads as one, and its lines inside the
+// room a phone keeps over and under it.
+test.each(
+  Object.entries(STORES)
+    .filter(([, picture]) =>
+      STORE_SHOTS.some((shot) => besideOf(shot, picture))
+    )
+    .map(([store, picture]) => ({ picture, store }))
+)("the headlines beside tiles are large and fit in $store", ({ picture }) => {
+  const size = besideSizeOf(picture);
+  expect(size).toBeGreaterThanOrEqual(HEADLINE.size);
+  for (const shot of STORE_SHOTS.filter((one) => besideOf(one, picture))) {
+    expect(shot.headline.length * size * TITLE.line).toBeLessThanOrEqual(
+      picture.height / unitOf(picture) - 2 * STAGE_FOOT
+    );
+  }
+});
 
 // A headline is set in rows that are never broken, every letter as wide
 // as it is tall at most: each row keeps the picture's margin at both

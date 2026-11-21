@@ -123,6 +123,21 @@ export const HEADLINE_SHARE = 0.2;
 // row, never broken.
 export const HEADLINE = { margin: 2, over: 4, size: 8.6 } as const;
 
+// A picture on its side of tiles, a tablet's, lays its headline beside
+// them rather than over them, where it would leave the tiles the narrow
+// column a phone's are: the tiles' column on the right, `tiles` of the
+// picture's width, and the headline in the rest, left-aligned, keeping
+// `margin` units to the picture's left side and to the column, which keeps
+// as much inside it again, its letters as large as fills that room
+// (besideSizeOf). A picture on its side of a
+// screen keeps its headline over the screen.
+export const BESIDE = { margin: 6, tiles: 0.56 } as const;
+
+export const besideOf = (
+  shot: { kind: string },
+  picture: { height: number; width: number }
+): boolean => shot.kind === "tiles" && picture.width > picture.height;
+
 // How a picture's title is set (apps/design's site-picture.tsx): how tall
 // a line is in its letters' size, and how far apart the letters are, in
 // it too.
@@ -340,6 +355,26 @@ export const STORE_SHOTS = [
     ],
   },
 ] as const satisfies readonly StoreShot[];
+
+// How large, in units (unitOf), the letters of a headline beside its
+// tiles (besideOf) are in a picture: the size at which the longest row of
+// every such headline fills the room left of the tiles' column, so that
+// the pictures of one store set them alike, and a wider picture's, with
+// more room there, larger.
+export const besideSizeOf = (picture: {
+  height: number;
+  width: number;
+}): number => {
+  const room =
+    (picture.width * (1 - BESIDE.tiles)) / unitOf(picture) - 2 * BESIDE.margin;
+  const rows = STORE_SHOTS.filter((shot) => besideOf(shot, picture)).flatMap(
+    (shot) => shot.headline.map((line) => line.length)
+  );
+  if (rows.length === 0) {
+    throw new Error("No headline is beside tiles in this picture");
+  }
+  return room / (Math.max(...rows) * (1 + TITLE.spacing));
+};
 
 type StoreShotName = (typeof STORE_SHOTS)[number]["name"];
 
