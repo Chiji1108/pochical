@@ -1,6 +1,6 @@
 [tools]
 buf = "1.75.0"
-java = "temurin-21.0.13+100000002.0.LTS"
+java = "temurin-21.0.13.1+2.0.LTS"
 
 [settings]
 # Node's version is in .node-version and pnpm's in package.json's
@@ -230,6 +230,10 @@ run = "tools/store-screenshots/ios.sh ios"
 [tasks."store:shots:ipad"]
 description = "Photograph the screens of the App Store's iPad screenshots, on its side, in the simulator pochical-store-ipad, an iPad Pro 13-inch (M5) made if there is none, erasing it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default) and seeds: [derived data]"
 run = "tools/store-screenshots/ios.sh ipad"
+
+[tasks."store:shots:duo"]
+description = "Photograph the screens of the App Store's iPhone Duo screenshots, of its outer display, in the simulator pochical-store-duo, an iPhone Duo made if there is none, erasing it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default) and seeds, folded by devicehubctl, which needs Accessibility access"
+run = "tools/store-screenshots/ios.sh duo-outer"
 
 [tasks."store:images"]
 description = "Draw the stores' pictures in store/ from the screens photographed"

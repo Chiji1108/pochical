@@ -143,6 +143,17 @@ const tilesLie = (
   return { gap: Math.min(TILES.most, left / gaps), wide };
 };
 
+// A store's screen's corners (STORES' `corner`), top-left clockwise, as
+// the numbers --corner-1 to --corner-4 the screen's border-radius takes in
+// --u where it is drawn: a card's picture sets --u on each screen alone.
+const cornersOf = (corner: number | readonly number[]) =>
+  Object.fromEntries(
+    [0, 1, 2, 3].map((index) => [
+      `--corner-${index + 1}`,
+      typeof corner === "number" ? corner : corner[index],
+    ])
+  );
+
 // How wide each of a pair's screens is, in hundredths of the picture's
 // width: upright, and on its side, where two screens on their side take
 // less of its width to lie over each other's corner as an upright pair
@@ -209,9 +220,11 @@ const styles = {
     position: "relative",
   }),
   // A screen as the phone shows it: its corners rounded as its store's
-  // are (--corner), nothing around it.
+  // are (cornersOf), nothing around it.
   screen: css({
-    borderRadius: "calc(var(--u) * var(--corner))",
+    // Written out whole, as Panda reads it.
+    borderRadius:
+      "calc(var(--u) * var(--corner-1)) calc(var(--u) * var(--corner-2)) calc(var(--u) * var(--corner-3)) calc(var(--u) * var(--corner-4))",
     boxShadow:
       "0 calc(var(--u) * 2) calc(var(--u) * 7) rgba(60, 70, 60, 0.2), 0 0 0 1px rgba(60, 70, 60, 0.08)",
     display: "block",
@@ -319,7 +332,7 @@ function StoreShotPage() {
       data-store-shot
       style={{
         ...(beside && { "--beside-size": besideSizeOf({ height, width }) }),
-        "--corner": corner,
+        ...cornersOf(corner),
         "--headline": `${height * HEADLINE_SHARE}px`,
         "--u": `${unitOf({ height, width })}px`,
         height,
@@ -772,7 +785,7 @@ function CardPicturePage({
       className={styles.root}
       data-store-shot
       style={{
-        "--corner": STORES[picture.store].corner,
+        ...cornersOf(STORES[picture.store].corner),
         background: `#${ground}`,
         height,
         width,
