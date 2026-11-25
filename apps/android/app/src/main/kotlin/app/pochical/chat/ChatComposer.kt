@@ -569,8 +569,7 @@ class LinkPages {
   }
 }
 
-/** What the bar over the composer says: what it is, the line in one line of words, and its ×. */
-/** A bar over the composer; answering a line, the [quote] whose picture shows beside its words. */
+/** What the bar over the composer says: what it is, the line in one line of words, and its ×; answering a line, the [quote] whose picture shows beside its words. */
 private data class Bar(val title: String, val words: String?, @param:StringRes val stop: Int, val quote: LineQuote? = null)
 
 /** The most lines the field grows to before its words scroll. */
