@@ -8,28 +8,32 @@ import UIKit
 /// takes images, so the keyboard pastes the sticker as an image rather
 /// than putting in a glyph its words read as U+FFFC alone.
 @MainActor struct ComposerStickerTests {
-  private func window() throws -> UIWindow {
-    let windows = UIApplication.shared.connectedScenes.compactMap {
-      ($0 as? UIWindowScene)?.keyWindow
-    }
-    return try #require(windows.first)
+  /// `view` focused in a key window of its own.
+  private func focused(_ view: UITextView) throws -> UIWindow {
+    let scene = try #require(
+      UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+    let window = UIWindow(windowScene: scene)
+    window.addSubview(view)
+    window.makeKeyAndVisible()
+    #expect(view.becomeFirstResponder())
+    return window
   }
 
   @Test func takesNoAdaptiveImageGlyphsWhileItsPasteTakesImages() throws {
     let field = ComposerTextView()
     field.onPasteImages = { _ in }
-    try window().addSubview(field)
-    defer { field.removeFromSuperview() }
-    #expect(field.becomeFirstResponder())
+    let window = try focused(field)
+    defer { window.isHidden = true }
     #expect(!field.supportsAdaptiveImageGlyph)
   }
 
-  /// UIKit's own default, which the field turns off: why it does.
+  /// UIKit's own default, which the field turns off: why it does. Should
+  /// an iOS no longer turn them on, this says so, and the field's setting
+  /// can go.
   @Test func aTextViewWhosePasteTakesImagesWouldTakeThem() throws {
     let view = PastesImages()
-    try window().addSubview(view)
-    defer { view.removeFromSuperview() }
-    #expect(view.becomeFirstResponder())
+    let window = try focused(view)
+    defer { window.isHidden = true }
     #expect(view.supportsAdaptiveImageGlyph)
   }
 }
