@@ -167,9 +167,25 @@ struct ComposerField: UIViewRepresentable {
 /// Messages on iPad: key commands, which only a hardware keyboard gives,
 /// so the screen keyboard's return key still starts a new line, and named
 /// in the list holding ⌘ shows.
+///
+/// It holds words alone, so it takes no adaptive image glyphs (iOS 18's
+/// inline stickers and Genmoji): UIKit turns them on for a text view whose
+/// paste takes images, and the keyboard would then put a sticker in as a
+/// glyph, which the field's words read as U+FFFC alone. Without them the
+/// keyboard pastes a sticker, which comes as an image like any other.
 final class ComposerTextView: UITextView {
   var onPasteImages: (([NSItemProvider]) -> Void)?
   var onSend: (() -> Void)?
+
+  override init(frame: CGRect, textContainer: NSTextContainer?) {
+    super.init(frame: frame, textContainer: textContainer)
+    supportsAdaptiveImageGlyph = false
+  }
+
+  required init?(coder: NSCoder) {
+    super.init(coder: coder)
+    supportsAdaptiveImageGlyph = false
+  }
 
   override var keyCommands: [UIKeyCommand]? {
     (super.keyCommands ?? []) + Self.returnCommands
