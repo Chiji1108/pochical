@@ -84,6 +84,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.zIndex
 import app.pochical.LocalThemeColors
 import app.pochical.R
@@ -514,7 +515,8 @@ private fun LargeEmoji(text: String, alone: Boolean, look: MessageLook, handlers
       .litWhenGoneTo(handlers.lit?.takeIf { it.seq == look.seq && look.seq != null }, RoundedCornerShape(Radius.lg), handlers.reducedMotion, handlers.litShown)
   if (alone) {
     Box(modifier.size(Chat.stickerSize.dp), contentAlignment = Alignment.Center) {
-      Text(text, maxLines = 1, autoSize = TextAutoSize.StepBased(maxFontSize = Chat.stickerSize.sp))
+      // Its line as tall for its size as the few's, so the size picked fits the box both ways.
+      Text(text, maxLines = 1, lineHeight = 1.2.em, autoSize = TextAutoSize.StepBased(maxFontSize = Chat.stickerSize.sp))
     }
   } else {
     Text(text, modifier.padding(horizontal = 4.dp), fontSize = Chat.largeEmojiSize.sp, lineHeight = (Chat.largeEmojiSize * 1.2).sp)
