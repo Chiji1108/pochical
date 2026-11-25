@@ -1,5 +1,7 @@
 package app.pochical
 
+import android.content.Context
+import android.content.SharedPreferences
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
@@ -11,6 +13,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSerializable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.edit
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation3.runtime.NavBackStack
@@ -351,7 +355,11 @@ fun rememberPageNavigation(navigator: RootNavigator): PageNavigation {
   return remember(navigator, lifecycle) { PageNavigation(navigator, lifecycle) }
 }
 
-/** A navigator kept across a configuration change and the process's death. */
+/**
+ * A navigator kept across a configuration change and the process's death, and the group open in
+ * グループ kept on the device besides, so the app opens on it again however it was closed, a
+ * force-quit included (spec/shift-patterns.md).
+ */
 @Composable
 fun rememberRootNavigator(): RootNavigator {
   val pages =
@@ -359,6 +367,25 @@ fun rememberRootNavigator(): RootNavigator {
       NavBackStack<RootPage>()
     }
   val tab = rememberSaveable { mutableStateOf(RootTab.entries.first()) }
-  val openGroup = rememberSaveable { mutableStateOf<String?>(null) }
+  val context = LocalContext.current
+  val openGroup = remember(context) { KeptGroup(context.getSharedPreferences(KeptGroup.FILE, Context.MODE_PRIVATE)) }
   return remember(pages, tab, openGroup) { RootNavigator(pages, tab, openGroup) }
+}
+
+/** The group open in グループ, read from the device and kept there as it is picked. */
+private class KeptGroup(private val kept: SharedPreferences, private val state: MutableState<String?> = mutableStateOf(kept.getString(KEY, null))) :
+  MutableState<String?> by state {
+  override var value: String?
+    get() = state.value
+    set(id) {
+      state.value = id
+      kept.edit { putString(KEY, id) }
+    }
+
+  override fun component2(): (String?) -> Unit = { value = it }
+
+  companion object {
+    const val FILE = "open-group"
+    private const val KEY = "id"
+  }
 }

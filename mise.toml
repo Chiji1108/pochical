@@ -207,6 +207,10 @@ run = "tools/chat-open/run.sh"
 description = "Run the UI test of the app's own parts staying clear of the system's bars, down the side on iPhone Duo's outer display, in a simulator, erasing it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default): <simulator name> [derived data]"
 run = "tools/side-bars/run.sh"
 
+[tasks."ios:group-rail"]
+description = "Run the UI test of picking each group in グループ's rail, the first one too, and the one picked staying open across a force-quit, in a simulator, erasing it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default): <simulator name> [derived data]"
+run = "tools/group-rail/run.sh"
+
 [tasks."ios:narrow-window"]
 description = "Run the UI test of every screen in an iPad's narrowest window, upright and on its side, in an iPad simulator, erasing it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default): <iPad simulator name> [derived data]"
 run = "tools/narrow-window/run.sh"

@@ -64,14 +64,9 @@ struct GroupsScreen: View {
           GroupRail(
             groups: groups, openID: open.id, unread: unread,
             onOpen: { pick($0, over: open.id) }, onNew: newGroup, onScan: onScan)
-          // Up beside the bar's heading, as it stood beside the page's.
-          .padding(.top, barTop)
-          // Under an iPad window's controls, which stand at its top-leading
-          // corner where the rail's first group would be: the rail then
-          // starts under the bar's band, which the controls and the heading
-          // share, level with the hub's first section.
-          .containerCornerOffset(.top, sizeToFit: true)
-          .ignoresSafeArea(.container, edges: .top)
+          // In the safe area, under the bar, as the hub is: the bar takes
+          // every touch in its band, beside its heading too, so a mark
+          // there could not be pressed (#1281).
           GroupHub(group: open) { day in
             navigator?.open(.group(.shifts(open, day: day)))
           } onChat: { thread, other in
@@ -443,7 +438,7 @@ private struct GroupRail: View {
       .animation(.easeOut(duration: 0.15), value: openID)
     }
     .scrollIndicators(.hidden)
-    // Under the bar only where its heading is, which leaves the marks clear.
+    // Flat at its top, where the bar ends over it.
     .scrollEdgeEffectHidden(true, for: .top)
     // The last of many groups can rise clear of the fade.
     .contentMargins(.bottom, barTop + Self.fade, for: .scrollContent)
