@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -150,8 +151,9 @@ fun InvitePage(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp),
       ) {
-        // As wide as the full code whatever its size, so もう一度確認する keeps its one line.
-        Box(Modifier.size(width = QR_SIDE, height = qrSide), contentAlignment = Alignment.Center) {
+        // As wide as the full code whatever its size, and as tall as もう一度確認する needs, so the
+        // retry is never squeezed into a short window's smaller code.
+        Box(Modifier.width(QR_SIDE).heightIn(min = qrSide), contentAlignment = Alignment.Center) {
           val shownQr = qr.takeUnless { remaking }
           when {
             shownQr != null -> {
