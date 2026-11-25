@@ -12,11 +12,14 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -78,14 +81,19 @@ import kotlinx.coroutines.withContext
 /**
  * メンバーを招待 (/design's InvitePage): the group's link as a QR code to be read off the screen,
  * shared or saved with a long press; the link to send through Android's share sheet or to copy;
- * and a way to remake it, which stops the old link and QR code at once.
+ * and a way to remake it, which stops the old link and QR code at once. [inviteCode] reads the
+ * group's code from the server, a new one when it is to [remake][inviteCode] it.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun InvitePage(groupId: String, onBack: () -> Unit) {
+fun InvitePage(
+  groupId: String,
+  onBack: () -> Unit,
+  inviteCode: suspend (remake: Boolean) -> String =
+    LocalGroupCalls.current.let { calls -> { remake -> if (remake) calls.remakeInviteCode(groupId) else calls.inviteCode(groupId) } },
+) {
   // A group just made opens here before it has reached the device: its code is read all the same.
   val name = pageGroup(groupId)?.name.orEmpty()
-  val calls = LocalGroupCalls.current
   val context = LocalContext.current
   val resources = LocalResources.current
   val clipboard = LocalClipboard.current
@@ -107,7 +115,7 @@ fun InvitePage(groupId: String, onBack: () -> Unit) {
     copied = false
     remaking = remake
     try {
-      link = inviteLink(if (remake) calls.remakeInviteCode(groupId) else calls.inviteCode(groupId))
+      link = inviteLink(inviteCode(remake))
     } catch (e: CancellationException) {
       throw e
     } catch (_: Exception) {
@@ -125,98 +133,115 @@ fun InvitePage(groupId: String, onBack: () -> Unit) {
     scope.launch { snackbar.showSnackbar(resources.getString(words)) }
   }
 
+  val shownLink = link.takeUnless { remaking }
   SettingsPage(stringResource(R.string.invite), onBack, collapsing = false, snackbar = snackbar) { padding ->
-    Column(
-      Modifier.verticalScroll(rememberScrollState()).padding(padding).padding(16.dp),
-      verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-      val card = RoundedCornerShape(Radius.xxl)
+    BoxWithConstraints {
+      // The first screenful holds the QR code and 招待リンクを送る together: in a window too short for
+      // both at the code's full size, a phone on its side, the code gives up height to the button,
+      // down to where a phone still reads it; below that, the page scrolls to the button (spec/calendar.md,
+      // In a short window).
+      val firstScreenful =
+        (maxHeight - padding.calculateTopPadding() - padding.calculateBottomPadding() - 32.dp).coerceAtLeast(ShortestFirstScreenful)
       Column(
-        Modifier.fillMaxWidth()
-          .background(MaterialTheme.colorScheme.surfaceContainerHigh, card)
-          .border(1.dp, MaterialTheme.colorScheme.outlineVariant, card)
-          .padding(top = 24.dp, bottom = 20.dp, start = 16.dp, end = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+        Modifier.verticalScroll(rememberScrollState()).padding(padding).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
       ) {
-        Box(Modifier.size(200.dp), contentAlignment = Alignment.Center) {
-          val shownQr = qr.takeUnless { remaking }
-          when {
-            shownQr != null -> {
-              Image(
-                shownQr.asImageBitmap(),
-                contentDescription = null,
-                Modifier.size(200.dp)
-                  .semantics { contentDescription = resources.getString(R.string.invite_qr) }
-                  .contextClick { qrMenu = true }
-                  .pointerInput(Unit) {
-                    detectTapGestures(onLongPress = {
-                      haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                      qrMenu = true
-                    })
-                  }
-                  .semantics { onLongClick(qrMenuLabel) { qrMenu = true; true } },
-                filterQuality = FilterQuality.None,
-              )
-              GroupedMenu(
-                qrMenu,
-                onDismiss = { qrMenu = false },
-                items =
-                  listOf(
-                    LineMenuItem(stringResource(R.string.share), R.drawable.ic_share) {
-                      scope.launch { if (!shareQr(context, shownQr, name)) say(R.string.not_shared, done = false) }
-                    },
-                    LineMenuItem(stringResource(R.string.save_to_photos), R.drawable.ic_download) {
-                      scope.launch {
-                        val saved = saveQr(context, shownQr)
-                        say(if (saved) R.string.saved_to_photos else R.string.not_saved, done = saved)
+        Column(Modifier.heightIn(max = firstScreenful), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+          val card = RoundedCornerShape(Radius.xxl)
+          Column(
+            Modifier.weight(1f, fill = false)
+              .fillMaxWidth()
+              .background(MaterialTheme.colorScheme.surfaceContainerHigh, card)
+              .border(1.dp, MaterialTheme.colorScheme.outlineVariant, card)
+              .padding(top = 24.dp, bottom = 20.dp, start = 16.dp, end = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+          ) {
+            Box(
+              Modifier.weight(1f, fill = false).sizeIn(maxWidth = QrSide, maxHeight = QrSide).aspectRatio(1f, matchHeightConstraintsFirst = true),
+              contentAlignment = Alignment.Center,
+            ) {
+              val shownQr = qr.takeUnless { remaking }
+              when {
+                shownQr != null -> {
+                  Image(
+                    shownQr.asImageBitmap(),
+                    contentDescription = null,
+                    Modifier.fillMaxSize()
+                      .semantics { contentDescription = resources.getString(R.string.invite_qr) }
+                      .contextClick { qrMenu = true }
+                      .pointerInput(Unit) {
+                        detectTapGestures(onLongPress = {
+                          haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                          qrMenu = true
+                        })
                       }
-                    },
-                  ),
-              )
-            }
-            failed ->
-              TextButton(onClick = { scope.launch { load(remake = false) } }) {
-                Icon(painterResource(R.drawable.ic_refresh), contentDescription = null)
-                Text(stringResource(R.string.check_again), Modifier.padding(start = 8.dp))
+                      .semantics { onLongClick(qrMenuLabel) { qrMenu = true; true } },
+                    filterQuality = FilterQuality.None,
+                  )
+                  GroupedMenu(
+                    qrMenu,
+                    onDismiss = { qrMenu = false },
+                    items =
+                      listOf(
+                        LineMenuItem(stringResource(R.string.share), R.drawable.ic_share) {
+                          scope.launch { if (!shareQr(context, shownQr, name)) say(R.string.not_shared, done = false) }
+                        },
+                        LineMenuItem(stringResource(R.string.save_to_photos), R.drawable.ic_download) {
+                          scope.launch {
+                            val saved = saveQr(context, shownQr)
+                            say(if (saved) R.string.saved_to_photos else R.string.not_saved, done = saved)
+                          }
+                        },
+                      ),
+                  )
+                }
+                failed ->
+                  TextButton(onClick = { scope.launch { load(remake = false) } }) {
+                    Icon(painterResource(R.drawable.ic_refresh), contentDescription = null)
+                    Text(stringResource(R.string.check_again), Modifier.padding(start = 8.dp))
+                  }
+                else -> CircularProgressIndicator()
               }
-            else -> CircularProgressIndicator()
+            }
+            Text(
+              stringResource(if (failed) R.string.invite_link_failed else R.string.invite_qr_note),
+              style = MaterialTheme.typography.bodySmall,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+          }
+          shownLink?.let { shown ->
+            Button(onClick = { sendLink(context, shown) }, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
+              Icon(painterResource(R.drawable.ic_share), contentDescription = null)
+              Text(stringResource(R.string.invite_send), Modifier.padding(start = 8.dp))
+            }
+          }
+        }
+        shownLink?.let { shown ->
+          OutlinedButton(
+            shapes = ButtonDefaults.shapes(),
+            onClick = {
+              scope.launch {
+                clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(name, shown)))
+                copied = true
+                haptics.performHapticFeedback(HapticFeedbackType.Confirm)
+              }
+            },
+            modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control),
+          ) {
+            Icon(painterResource(if (copied) R.drawable.ic_check else R.drawable.ic_content_copy), contentDescription = null)
+            Text(stringResource(if (copied) R.string.copied else R.string.invite_copy), Modifier.padding(start = 8.dp))
           }
         }
         Text(
-          stringResource(if (failed) R.string.invite_link_failed else R.string.invite_qr_note),
+          stringResource(R.string.invite_anyone, name),
+          Modifier.padding(horizontal = 4.dp),
           style = MaterialTheme.typography.bodySmall,
           color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-      }
-      link?.takeUnless { remaking }?.let { shown ->
-        Button(onClick = { sendLink(context, shown) }, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
-          Icon(painterResource(R.drawable.ic_share), contentDescription = null)
-          Text(stringResource(R.string.invite_send), Modifier.padding(start = 8.dp))
+        if (link != null) {
+          TextButton(onClick = { confirmingRemake = true }, enabled = !remaking) { Text(stringResource(R.string.invite_remake)) }
         }
-        OutlinedButton(
-          shapes = ButtonDefaults.shapes(),
-          onClick = {
-            scope.launch {
-              clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(name, shown)))
-              copied = true
-              haptics.performHapticFeedback(HapticFeedbackType.Confirm)
-            }
-          },
-          modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control),
-        ) {
-          Icon(painterResource(if (copied) R.drawable.ic_check else R.drawable.ic_content_copy), contentDescription = null)
-          Text(stringResource(if (copied) R.string.copied else R.string.invite_copy), Modifier.padding(start = 8.dp))
-        }
-      }
-      Text(
-        stringResource(R.string.invite_anyone, name),
-        Modifier.padding(horizontal = 4.dp),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-      )
-      if (link != null) {
-        TextButton(onClick = { confirmingRemake = true }, enabled = !remaking) { Text(stringResource(R.string.invite_remake)) }
       }
     }
   }
@@ -274,3 +299,13 @@ fun qrCode(link: String): Bitmap {
 }
 
 private const val MODULE = 16
+
+/** The QR code's side on the page, as /design's InvitePage draws it, where the window has room. */
+private val QrSide = 200.dp
+
+/**
+ * The least room the page's first screenful is fitted to: at the system's text size the QR code is
+ * about 72dp there, as small as a phone held to the screen still reads it at once. A phone on its
+ * side about 400dp tall or more, most of them, fits the button under it.
+ */
+private val ShortestFirstScreenful = 232.dp
