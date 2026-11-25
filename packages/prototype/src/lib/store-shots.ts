@@ -44,6 +44,20 @@ import type { PresetShift } from "./design-patterns";
 // at the hinge's side, round at the other (fit to `simctl io screenshot
 // --mask=alpha` of it). Its inner one has none yet:
 // XCUITest cannot drive a Duo open in Xcode 27 (#1267).
+// Google Play's foldable pictures (#1285) are three to eight, at least one
+// of each of three shapes, each side from 960 to 3840 pixels, at the sizes
+// its own capture of an emulator gives them
+// (https://developer.android.com/google/play/requirements/screenshots-android-cli):
+// the square inner display, unfolded (`android-foldable`, a Pixel 9 Pro
+// Fold's, on its side as a tablet is, its width expanded); the wide inner
+// display, unfolded on its side, 4:3 (`android-foldable-wide`, a Pixel
+// Fold's); and the outer display, folded, upright, 10:16
+// (`android-foldable-outer`, the same Pixel Fold's, a phone's width). They
+// share eight places between them, so each takes some of the shots
+// (`shots`), every shot in one of them, the storyline's order kept by the
+// files' numbers: the wide inner display those whose wide layouts show
+// most, the outer one a screen of the phone it is folded, the square inner
+// display the rest. Every other store takes every shot.
 export const STORES = {
   android: {
     callouts: true,
@@ -53,6 +67,36 @@ export const STORES = {
     wall: [],
     widgetRow: 202 / 179,
     width: 1080,
+  },
+  "android-foldable": {
+    callouts: false,
+    corner: 2,
+    height: 2106,
+    screen: { height: 2076, width: 2152 },
+    shots: ["entry", "widgets", "details", "cares"],
+    wall: [],
+    widgetRow: 202 / 179,
+    width: 2106,
+  },
+  "android-foldable-outer": {
+    callouts: true,
+    corner: 4.25,
+    height: 2016,
+    screen: { height: 2092, width: 1080 },
+    shots: ["device-calendar"],
+    wall: [],
+    widgetRow: 202 / 179,
+    width: 1260,
+  },
+  "android-foldable-wide": {
+    callouts: false,
+    corner: 2,
+    height: 2016,
+    screen: { height: 1840, width: 2208 },
+    shots: ["group-shifts", "chat", "themes"],
+    wall: [],
+    widgetRow: 202 / 179,
+    width: 2688,
   },
   "android-tablet": {
     callouts: false,
@@ -377,6 +421,15 @@ export const besideSizeOf = (picture: {
 };
 
 type StoreShotName = (typeof STORE_SHOTS)[number]["name"];
+
+// The shots a store's pictures are of, in the stores' order: those it
+// takes (its `shots`), or every one.
+export const storeShotsOf = (store: StoreId) => {
+  const picture = STORES[store];
+  const shots: readonly StoreShotName[] | undefined =
+    "shots" in picture ? picture.shots : undefined;
+  return STORE_SHOTS.filter(({ name }) => shots?.includes(name) ?? true);
+};
 
 // The room under a phone, in units (unitOf).
 export const STAGE_FOOT = 5;

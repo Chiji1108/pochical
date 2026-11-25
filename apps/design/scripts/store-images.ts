@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 // Draws the stores' pictures (#806) from the screens each platform's UI
 // test photographed into .build/store-screenshots/<store>
 // (`mise run store:shots:ios`, `mise run store:shots:android`): each shot of @pochical/prototype's
-// lib/store-shots.ts from /_render/store-shot into
+// lib/store-shots.ts a store takes (storeShotsOf) from /_render/store-shot into
 // store/screenshots/<store>, each picture drawn from the wall of widgets
 // (WALL_PICTURES), Google Play's feature graphic among them, into its own
 // file, on a dev server of its own. A store
@@ -17,14 +17,18 @@ import {
   HEADLINE_SHARE,
   CARD_PICTURES,
   PIECES_TALL,
-  STORE_SHOTS,
   STORES,
   storeShotFile,
+  storeShotsOf,
   WALL_PICTURES,
   WALL_SHOT,
   wallPlacesOf,
 } from "@pochical/prototype/lib/store-shots";
-import type { Rect, StoreId } from "@pochical/prototype/lib/store-shots";
+import type {
+  Rect,
+  StoreId,
+  STORE_SHOTS,
+} from "@pochical/prototype/lib/store-shots";
 import {
   photographDevServer,
   waitUntilDrawn,
@@ -198,7 +202,7 @@ await photographDevServer(
     };
 
     for (const store of photographed) {
-      for (const shot of STORE_SHOTS) {
+      for (const shot of storeShotsOf(store)) {
         findScreens(store, shot);
         // oxlint-disable-next-line no-await-in-loop -- one page at a time
         const tiles = await tilesOf(store, shot);
