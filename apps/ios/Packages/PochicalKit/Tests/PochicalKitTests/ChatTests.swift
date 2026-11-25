@@ -456,7 +456,8 @@ func aLinesContentFromTheWire(_ vector: ChatVectors.Content) throws {
   switch content {
   case .words(let words): #expect(words.text == vector.expected.words)
   case .unknown: #expect(LineContent.unknownWords == vector.expected.words)
-  case .photos, .days, .poll, .notice, .unsent, .hidden: #expect(vector.expected.words == nil)
+  case .photos, .sticker, .days, .poll, .notice, .unsent, .hidden:
+    #expect(vector.expected.words == nil)
   }
 }
 
@@ -604,11 +605,13 @@ private func line(_ seq: UInt64, _ text: String, op: String = "") -> Pochical_V1
     words.words.text = "見て"
     var photos = Pochical_V1_ChatSendContent()
     photos.photos.photos = wirePhotos(["a", "b"])
+    var sticker = Pochical_V1_ChatSendContent()
+    sticker.sticker = LineSticker(id: "s", width: 512, height: 480).wire
     var days = Pochical_V1_ChatSendContent()
     days.days.days = ["2026-11-03"]
     var poll = Pochical_V1_ChatSendContent()
     poll.poll.days = ["2026-11-03", "2026-11-04"]
-    let contents = [words, photos, days, poll, Pochical_V1_ChatSendContent()]
+    let contents = [words, photos, sticker, days, poll, Pochical_V1_ChatSendContent()]
     for (at, content) in contents.enumerated() {
       var send = Pochical_V1_ChatSend()
       send.threadID = groupThread
@@ -621,6 +624,7 @@ private func line(_ seq: UInt64, _ text: String, op: String = "") -> Pochical_V1
       state.waiting.map(\.content) == [
         .words(LineContent.Words(text: "見て")),
         .photos(wirePhotos(["a", "b"]).map(LinePhoto.init)),
+        .sticker(LineSticker(id: "s", width: 512, height: 480)),
         .days([november3]),
         .poll(LineContent.Poll(days: [november3, Day(year: 2026, month: 11, day: 4)])),
         .hidden,

@@ -92,6 +92,9 @@ struct ChatComposer: View {
   /// the chat as it is: taken back or its writer blocked, it says so.
   let quoteOf: (Int64) -> LineQuote
   let onSubmit: () -> Void
+  /// Sends a sticker pasted from the keyboard, at once (spec/chat.md,
+  /// Stickers).
+  let onSticker: (ShrunkSticker) -> Void
   /// Keeps the draft as it is now (spec/chat.md, Drafts).
   let keepDraft: () -> Void
   /// 日にちを共有, in a group's chat.
@@ -219,7 +222,7 @@ struct ChatComposer: View {
           placeholder: "メッセージ", text: $draft.writing.text, limit: TextLimits.chatMessage,
           composing: $draft.composing, box: draft.field,
           // A message being changed keeps what it carries, as the tools go.
-          onPasteImages: editing == nil ? { pastePhotos($0) } : nil,
+          onPaste: editing == nil ? { paste($0) } : nil,
           onSend: blocked ? nil : onSubmit)
         .overlay(alignment: .leading) {
           if draft.writing.text.isEmpty {
@@ -388,6 +391,25 @@ struct ChatComposer: View {
 
   /// What the photo button and a paste say past the tray's room.
   private static let photosFull = "写真は一度に\(Chat.photosPerSend)枚まで送れます"
+
+  /// What is pasted: a sticker goes at once as a line of its own, and
+  /// photos into the tray.
+  private func paste(_ pasted: PastedImages) {
+    switch pasted {
+    case .photos(let images): pastePhotos(images)
+    case .sticker(let sticker): Task { await sendSticker(sticker) }
+    }
+  }
+
+  /// A sticker pasted, written to send and sent, the words written left in
+  /// the field.
+  private func sendSticker(_ pasted: NSItemProvider) async {
+    guard let sticker = await ChatStickers.read(pasted) else {
+      say("開けないスタンプでした")
+      return
+    }
+    onSticker(sticker)
+  }
 
   /// Images pasted into the field go in the tray as picked photos do, as
   /// many as it has room for, saying so past it as the picker's button does.

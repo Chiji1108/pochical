@@ -1,5 +1,5 @@
 {
-  "originHash" : "bca691013833582590d2bdfadd398d126f5b58f53ca5a33d4ba1c5a0e0e599ea",
+  "originHash" : "88ea28d9e0313e2d8b70dac43c36b7450edd2d77f7b1c07d8084bddafa417aac",
   "pins" : [
     {
       "identity" : "combine-schedulers",
@@ -26,6 +26,15 @@
       "state" : {
         "revision" : "92a554cd0d5e8d67cb18993c6054e73fe42c066c",
         "version" : "7.12.0"
+      }
+    },
+    {
+      "identity" : "libwebp-xcode",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/SDWebImage/libwebp-Xcode.git",
+      "state" : {
+        "revision" : "2b5256c29ff4e20f2a0d5ee863b62b1a22144434",
+        "version" : "1.6.0"
       }
     },
     {

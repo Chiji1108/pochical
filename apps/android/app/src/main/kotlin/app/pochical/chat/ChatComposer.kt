@@ -9,6 +9,7 @@ import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.content.MediaType
+import androidx.compose.foundation.content.TransferableContent
 import androidx.compose.foundation.content.consume
 import androidx.compose.foundation.content.contentReceiver
 import androidx.compose.foundation.content.hasMediaType
@@ -174,7 +175,8 @@ fun rememberComposerState(): ComposerState = rememberSaveable(saver = ComposerSt
  * own. Where the place shares days, ＋ opens a small menu from itself instead, as Messages' ＋ opens
  * its apps: 写真, then 日にちを共有, and in a group chat 日にちの投票 ([onShareDays], [onPollDays]).
  * Days brought to share wait over the field as 共有する日, × taking them off, and go before the
- * photos and the words, each a line of its own answering what the composer answers.
+ * photos and the words, each a line of its own answering what the composer answers. A sticker the
+ * keyboard gives goes at once, a line of its own (spec/chat.md, Stickers).
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -216,6 +218,29 @@ fun Composer(
       if (!changing && uris.size > room) onSay(resources.getString(R.string.chat_photo_limit, Chat.photosPerSend))
       dropPicked(context, picked.photos.drop(room))
       state.writing = state.writing.copy(photos = state.writing.photos + picked.photos.take(room))
+    }
+    Unit
+  }
+  // A sticker the keyboard gave goes at once as a line of its own, as Telegram sends one, answering
+  // what the composer answers, the words staying in the field (spec/chat.md, Stickers).
+  val sendSticker = { uri: Uri ->
+    asking.askOnce()
+    scope.launch {
+      val sticker = keyboardSticker(context, uri) ?: return@launch onSay(resources.getString(R.string.chat_sticker_unreadable))
+      // The quote as it stands once the sticker is read: gone from the composer as it goes.
+      val replyTo = state.writing.replyTo.takeIf { state.writing.editing == null }
+      if (replyTo != null) state.writing = state.writing.copy(replyTo = null)
+      try {
+        withContext(NonCancellable) { chats.sendSticker(groupId, threadId, sticker, replyTo) }
+      } catch (e: CancellationException) {
+        throw e
+      } catch (_: Exception) {
+        // Not kept: the quote comes back, should the composer answer nothing else meanwhile.
+        if (replyTo != null && state.writing.replyTo == null && state.writing.editing == null) state.writing = state.writing.copy(replyTo = replyTo)
+        onNotKept()
+        return@launch
+      }
+      onSent()
     }
     Unit
   }
@@ -422,14 +447,19 @@ fun Composer(
                 true
               }
               .contentReceiver { content ->
-              // Images pasted, by the edit menu or the keyboard, go above it as picked photos do, an
-              // image copied with words as the image; while a line is changed, nothing (spec/chat.md, Photos).
+              // Images pasted, by the edit menu or the keyboard's paste, go above it as picked photos do,
+              // an image copied with words as the image; one the keyboard commits (its stickers, Emoji
+              // Kitchen's, its GIFs) is a sticker; while a line is changed, nothing (spec/chat.md, Photos; Stickers).
               val clip = content.clipEntry.clipData
               val images = (0 until clip.itemCount).mapNotNull { clip.getItemAt(it).uri }
               if (!content.hasMediaType(MediaType.Image) || images.isEmpty()) return@contentReceiver content
               when {
                 // Its words paste as ever while a line is changed.
                 editing != null -> content.consume { it.uri != null }
+                content.source == TransferableContent.Source.Keyboard -> {
+                  images.forEach(sendSticker)
+                  null
+                }
                 else -> {
                   took(images)
                   null

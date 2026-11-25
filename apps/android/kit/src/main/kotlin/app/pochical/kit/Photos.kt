@@ -171,17 +171,21 @@ internal class Photos(http: Lazy<OkHttpClient>, private val server: HttpUrl, hel
     }
 }
 
-/** A JPEG to put, telling [onSent] how many of its bytes have gone, a chunk at a time, each time it is written. */
-private class CountedBody(private val jpeg: ByteArray, private val onSent: (Long) -> Unit) : RequestBody() {
-  override fun contentType() = JPEG
+/**
+ * An image to put, a photo's JPEG or a sticker's WebP or GIF, said as its bytes are (the server
+ * tells it by them too), telling [onSent] how many of its bytes have gone, a chunk at a time, each
+ * time it is written.
+ */
+private class CountedBody(private val bytes: ByteArray, private val onSent: (Long) -> Unit) : RequestBody() {
+  override fun contentType() = (imageType(bytes) ?: JPEG).toMediaType()
 
-  override fun contentLength() = jpeg.size.toLong()
+  override fun contentLength() = bytes.size.toLong()
 
   override fun writeTo(sink: BufferedSink) {
     var sent = 0
-    while (sent < jpeg.size) {
-      val chunk = minOf(CHUNK, jpeg.size - sent)
-      sink.write(jpeg, sent, chunk)
+    while (sent < bytes.size) {
+      val chunk = minOf(CHUNK, bytes.size - sent)
+      sink.write(bytes, sent, chunk)
       sink.flush()
       sent += chunk
       onSent(sent.toLong())
@@ -189,7 +193,6 @@ private class CountedBody(private val jpeg: ByteArray, private val onSent: (Long
   }
 
   private companion object {
-    val JPEG = "image/jpeg".toMediaType()
     const val CHUNK = 16 * 1024
   }
 }

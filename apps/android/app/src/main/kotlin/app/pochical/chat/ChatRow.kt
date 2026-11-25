@@ -270,7 +270,7 @@ private fun RowWords(summary: ChatSummary, me: String, names: Map<String, String
 }
 
 /**
- * A line as the list says it: photos as 写真を送りました, days shared or a poll still open as
+ * A line as the list says it: photos as 写真を送りました, a sticker as スタンプを送りました, days shared or a poll still open as
  * 〜を共有しました, a settled poll its day (/design's lastLine).
  */
 @Composable
@@ -278,6 +278,7 @@ private fun listWords(content: LineContent, nameOf: (String) -> String): String 
   val words = lineWords(content, nameOf)
   return when (content) {
     is LineContent.Photos -> stringResource(R.string.chat_sent_photos)
+    is LineContent.Sticker -> stringResource(R.string.chat_sent_sticker)
     is LineContent.Days -> stringResource(R.string.chat_shared, words)
     is LineContent.Poll -> if (content.poll.decided.isEmpty()) stringResource(R.string.chat_shared, words) else words
     else -> words

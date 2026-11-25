@@ -259,6 +259,7 @@ fun lineWords(content: LineContent, nameOf: (String) -> String): String =
     is LineContent.Words -> plainText(content.text, nameOf)
     is LineContent.Photos ->
       if (content.photos.size > 1) stringResource(R.string.chat_photos_count, content.photos.size) else stringResource(R.string.chat_photos)
+    is LineContent.Sticker -> stringResource(R.string.chat_sticker)
     is LineContent.Days -> {
       val first = content.days.firstOrNull()?.let { LocalDate.parse(it).fullText }.orEmpty()
       if (content.days.size > 1) stringResource(R.string.chat_days_more, first) else stringResource(R.string.chat_days, first)

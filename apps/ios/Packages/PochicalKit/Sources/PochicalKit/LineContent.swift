@@ -9,6 +9,8 @@ public enum LineContent: Hashable, Sendable {
   /// The photos sent as the line, in the order sent: one, or several
   /// drawn as an album (spec/chat.md, Albums).
   case photos([LinePhoto])
+  /// A sticker from the keyboard, alone (spec/chat.md, Stickers).
+  case sticker(LineSticker)
   /// The days it shares with everyone's shifts, in order.
   case days([Day])
   case poll(Poll)
@@ -58,13 +60,14 @@ public enum LineContent: Hashable, Sendable {
   }
 
   public enum Kind: String, Codable, Sendable, QueryBindable {
-    case words, photos, days, poll, notice, unsent, hidden, unknown
+    case words, photos, sticker, days, poll, notice, unsent, hidden, unknown
   }
 
   public var kind: Kind {
     switch self {
     case .words: .words
     case .photos: .photos
+    case .sticker: .sticker
     case .days: .days
     case .poll: .poll
     case .notice: .notice
@@ -74,9 +77,25 @@ public enum LineContent: Hashable, Sendable {
     }
   }
 
-  /// The photos it carries, none for a line of anything else.
+  /// The photos it carries, as the chat's photos have them: none for a
+  /// line of anything else, a sticker's among them.
   public var photos: [LinePhoto] {
     if case .photos(let photos) = self { photos } else { [] }
+  }
+
+  /// Its sticker, none for a line of anything else.
+  public var sticker: LineSticker? {
+    if case .sticker(let sticker) = self { sticker } else { nil }
+  }
+
+  /// What it keeps among the group's photos, uploaded before it goes:
+  /// its photos', or its sticker's; none for a line of anything else.
+  public var photoIDs: [String] {
+    switch self {
+    case .photos(let photos): photos.map(\.id)
+    case .sticker(let sticker): [sticker.id]
+    case .words, .days, .poll, .notice, .unsent, .hidden, .unknown: []
+    }
   }
 
   /// Its words, none for a line of anything else.
@@ -90,7 +109,7 @@ public enum LineContent: Hashable, Sendable {
     switch self {
     case .days(let days): days
     case .poll(let poll): poll.days
-    case .words, .photos, .notice, .unsent, .hidden, .unknown: []
+    case .words, .photos, .sticker, .notice, .unsent, .hidden, .unknown: []
     }
   }
 
@@ -105,6 +124,7 @@ public enum LineContent: Hashable, Sendable {
           text: words.text, edited: words.edited,
           preview: words.hasPreview ? LinePreview(words.preview) : nil))
     case .photos(let album): self = .photos(album.photos.map(LinePhoto.init))
+    case .sticker(let sticker): self = .sticker(LineSticker(sticker))
     case .days(let days): self = .days(days.days.compactMap(Day.init))
     case .poll(let poll):
       self = .poll(
@@ -131,6 +151,7 @@ public enum LineContent: Hashable, Sendable {
       line.words.text = words.text
       if words.hasPreview { line.words.preview = words.preview }
     case .photos(let album): line.photos = album
+    case .sticker(let sticker): line.sticker = sticker
     case .days(let days): line.days = days
     case .poll(let poll): line.poll.days = poll.days
     case nil: line.hidden = Pochical_V1_ChatHidden()
@@ -139,10 +160,16 @@ public enum LineContent: Hashable, Sendable {
   }
 }
 
+extension Pochical_V1_ChatSendContent {
+  /// What the send keeps among the group's photos, uploaded before it
+  /// goes (`LineContent.photoIDs`).
+  var photoIDs: [String] { LineContent(self).photoIDs }
+}
+
 /// Kept as JSON with its `kind`, the rest of a kind beside it.
 extension LineContent: Codable {
   private enum Key: String, CodingKey {
-    case kind, photos, days, notice
+    case kind, photos, sticker, days, notice
   }
 
   public init(from decoder: any Decoder) throws {
@@ -150,6 +177,7 @@ extension LineContent: Codable {
     switch try container.decode(Kind.self, forKey: .kind) {
     case .words: self = .words(try Words(from: decoder))
     case .photos: self = .photos(try container.decode([LinePhoto].self, forKey: .photos))
+    case .sticker: self = .sticker(try container.decode(LineSticker.self, forKey: .sticker))
     case .days: self = .days(try container.decode([Day].self, forKey: .days))
     case .poll: self = .poll(try Poll(from: decoder))
     case .notice: self = .notice(try container.decode(LineNotice.self, forKey: .notice))
@@ -165,6 +193,7 @@ extension LineContent: Codable {
     switch self {
     case .words(let words): try words.encode(to: encoder)
     case .photos(let photos): try container.encode(photos, forKey: .photos)
+    case .sticker(let sticker): try container.encode(sticker, forKey: .sticker)
     case .days(let days): try container.encode(days, forKey: .days)
     case .poll(let poll): try poll.encode(to: encoder)
     case .notice(let notice): try container.encode(notice, forKey: .notice)

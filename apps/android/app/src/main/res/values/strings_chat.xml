@@ -24,6 +24,8 @@
   <string name="chat_typing">%1$sが入力中</string>
   <string name="chat_photos">📷 写真</string>
   <string name="chat_photos_count">📷 写真%1$d枚</string>
+  <!-- A sticker in a line of words (a quote, the pin bar) and as a screen reader reads its line (spec/chat.md, Stickers). -->
+  <string name="chat_sticker">スタンプ</string>
   <string name="chat_days">📅 %1$s</string>
   <string name="chat_days_more">📅 %1$sほか</string>
   <string name="chat_poll">📅 日にちの投票：%1$sほか</string>
@@ -57,6 +59,7 @@
   <string name="chat_blocked_line">ブロック中のメンバーのメッセージ</string>
   <string name="chat_unknown_line">このメッセージを見るには、アプリをアップデートしてください</string>
   <string name="chat_sent_photos">写真を送りました</string>
+  <string name="chat_sent_sticker">スタンプを送りました</string>
   <string name="chat_shared">%1$sを共有しました</string>
   <string name="chat_reply">返信</string>
   <string name="chat_copy">コピー</string>
@@ -138,6 +141,8 @@
   <string name="chat_photo_not_saved">保存できませんでした</string>
   <string name="chat_photo_not_sent_menu">送れなかった写真</string>
   <string name="chat_photo_open">写真を開く</string>
+  <string name="chat_sticker_retry">スタンプをもう一度読み込む</string>
+  <string name="chat_sticker_unreadable">開けないスタンプでした</string>
   <string name="chat_photo_panorama">パノラマの写真</string>
   <string name="chat_photo_wide">横長の写真</string>
   <string name="chat_photo_tall">縦長の写真</string>

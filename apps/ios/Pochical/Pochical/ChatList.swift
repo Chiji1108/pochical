@@ -302,7 +302,7 @@ struct ChatRow<Icon: View>: View {
     case .hidden:
       // Never the latest line: not the reader's to see.
       return empty
-    case .words, .photos, .days, .poll, .unknown:
+    case .words, .photos, .sticker, .days, .poll, .unknown:
       if last.folds(blocked: blocked) {
         return "ブロック中のメンバーのメッセージ"
       }
@@ -311,13 +311,15 @@ struct ChatRow<Icon: View>: View {
     }
   }
 
-  /// A line as the list says it: photos as 写真を送りました; days shared,
+  /// A line as the list says it: photos as 写真を送りました, a sticker as
+  /// スタンプを送りました; days shared,
   /// or a poll still open, as 〜を共有しました (/design's lastLine); a
   /// decided poll says its day.
   private static func words(_ content: LineContent, nameOf: (String) -> String) -> String {
     let words = lineWords(content, nameOf: nameOf)
     return switch content {
     case .photos: "写真を送りました"
+    case .sticker: "スタンプを送りました"
     case .days: "\(words)を共有しました"
     case .poll(let poll): poll.decided == nil ? "\(words)を共有しました" : words
     case .words, .notice, .unsent, .hidden, .unknown: words

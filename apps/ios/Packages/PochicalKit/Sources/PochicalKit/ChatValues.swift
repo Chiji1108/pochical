@@ -54,7 +54,8 @@ public struct ChatLineRow: Hashable, Sendable, Identifiable {
   public func writer(for me: String) -> LineWriter {
     switch content {
     case .notice, .hidden: .app
-    case .words, .photos, .days, .poll, .unsent, .unknown: authorID == me ? .me : .others
+    case .words, .photos, .sticker, .days, .poll, .unsent, .unknown:
+      authorID == me ? .me : .others
     }
   }
 
@@ -299,10 +300,11 @@ public enum Chats {
       $0.groupID.eq(groupID) && $0.threadID.eq(line.threadID) && $0.seq.eq(seq)
     }
     let content = LineContent(line.content)
-    // Photos taken back go from the device too, as from the group.
-    if content == .unsent, case .photos(let photos) = try held.fetchOne(db)?.content {
-      for photo in photos {
-        ChatPhotos.forget(photo.id, in: PhotoShelf(place: groupID))
+    // Photos and a sticker taken back go from the device too, as from
+    // the group.
+    if content == .unsent, let taken = try held.fetchOne(db)?.content {
+      for photoID in taken.photoIDs {
+        ChatPhotos.forget(photoID, in: PhotoShelf(place: groupID))
       }
     }
     try held.delete().execute(db)
@@ -1222,7 +1224,7 @@ extension LineContent.Kind {
   /// not delivered to them.
   public var isMessage: Bool {
     switch self {
-    case .words, .photos, .days, .poll, .unknown: true
+    case .words, .photos, .sticker, .days, .poll, .unknown: true
     case .notice, .unsent, .hidden: false
     }
   }

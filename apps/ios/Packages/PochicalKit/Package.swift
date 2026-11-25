@@ -18,6 +18,8 @@ let package = Package(
     .package(url: "https://github.com/groue/GRDB.swift", exact: "7.12.0"),
     // PochicalProto's, for Message, which it does not export.
     .package(url: "https://github.com/apple/swift-protobuf.git", exact: "1.41.0"),
+    // libwebp, for writing a sticker as WebP, which iOS does not write.
+    .package(url: "https://github.com/SDWebImage/libwebp-Xcode.git", exact: "1.6.0"),
   ],
   targets: [
     .target(
@@ -29,6 +31,7 @@ let package = Package(
         .product(name: "Connect", package: "connect-swift"),
         .product(name: "GRDB", package: "GRDB.swift"),
         .product(name: "SwiftProtobuf", package: "swift-protobuf"),
+        .product(name: "libwebp", package: "libwebp-Xcode"),
       ]
     ),
     .testTarget(

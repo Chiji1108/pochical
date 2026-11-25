@@ -164,7 +164,8 @@ public enum ChatPhotos {
     directory(.applicationSupportDirectory, "PendingPhotos/\(shelf.key)")
   }
 
-  /// Keeps the member's own photo to send: until uploaded, and to show.
+  /// Keeps the member's own photo, or sticker, to send: until uploaded,
+  /// and to show.
   public static func keep(_ jpeg: Data, as photoID: String, in shelf: PhotoShelf) throws {
     try jpeg.write(to: pending(photoID, in: shelf), options: .atomic)
     try jpeg.write(to: cached(photoID, in: shelf), options: .atomic)
@@ -248,8 +249,9 @@ public enum ChatPhotos {
     case refused(Int)
   }
 
-  /// Uploads the member's own photo to the group's photos, once; a retry
-  /// stores it again. A chat's photo goes with its small version, first,
+  /// Uploads the member's own photo, or sticker, to the group's photos,
+  /// once; a retry stores it again. A chat's photo goes with its small
+  /// version (a sticker, no larger than one, has none), first,
   /// so the lines find it as soon as they are sent; the user's own photos
   /// (`PhotoShelf.mine`) are small already. How far it has gone is told in
   /// `PhotoUploads`, where the chat line `opID` it goes with may be
@@ -330,7 +332,7 @@ public enum ChatPhotos {
   ) async throws {
     var request = URLRequest(url: photoURL(photoID, in: shelf, small: small, server: server))
     request.httpMethod = "PUT"
-    request.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
+    request.setValue(mediaType(of: jpeg), forHTTPHeaderField: "Content-Type")
     request.setValue("Bearer \(credentials.token)", forHTTPHeaderField: "Authorization")
     let response: URLResponse
     if let send {
@@ -342,6 +344,14 @@ public enum ChatPhotos {
     }
     let status = (response as? HTTPURLResponse)?.statusCode ?? 0
     guard status == 204 else { throw UploadError.refused(status) }
+  }
+
+  /// What an upload is, as the server tells it by its bytes too: a
+  /// photo's JPEG, or a sticker's WebP.
+  private static func mediaType(of data: Data) -> String {
+    CGImageSourceCreateWithData(data as CFData, nil)
+      .flatMap(CGImageSourceGetType)
+      .flatMap { UTType($0 as String)?.preferredMIMEType } ?? "application/octet-stream"
   }
 
   /// The group's photo, from the device or else the server. `small` asks

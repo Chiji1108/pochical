@@ -542,7 +542,7 @@ struct ChatScreen: View {
         draft: draft, place: place, threadID: threadID,
         mentionable: otherID != nil || !place.rules.mentions
           ? [] : chat.writers.filter { !$0.left && $0.userID != meID },
-        nameOf: nameOf, quoteOf: quote(of:), onSubmit: submit,
+        nameOf: nameOf, quoteOf: quote(of:), onSubmit: submit, onSticker: sendSticker,
         keepDraft: { keepDraft() },
         onShareDays: place.rules.days ? { pickingDays = .share } : nil,
         onPollDays: otherID == nil && place.rules.polls ? { pickingDays = .poll } : nil,
@@ -721,7 +721,7 @@ struct ChatScreen: View {
   /// a line taken back, which sits apart from the runs of messages.
   private func isMessage(_ line: ChatLineRow) -> Bool {
     switch line.content {
-    case .words, .photos, .days, .poll, .hidden, .unknown: true
+    case .words, .photos, .sticker, .days, .poll, .hidden, .unknown: true
     case .notice, .unsent: false
     }
   }
@@ -770,7 +770,7 @@ struct ChatScreen: View {
           .multilineTextAlignment(.center)
           .frame(maxWidth: .infinity)
           .padding(.vertical, 8)
-      case .words, .photos, .days, .poll, .unknown:
+      case .words, .photos, .sticker, .days, .poll, .unknown:
         if folded(line) {
           BlockedLine { shownBlocked.insert(line.seq) }
         } else {
@@ -842,7 +842,7 @@ struct ChatScreen: View {
       return notice.words(by: name, subject: nameOf(notice.subjectID))
     case .photos(let photos):
       words = photoWords(photos)
-    case .words, .days, .poll, .unknown:
+    case .words, .sticker, .days, .poll, .unknown:
       words = lineWords(line.content, nameOf: nameOf)
     }
     guard !line.folds(blocked: blocked) else { return nil }
@@ -974,18 +974,33 @@ struct ChatScreen: View {
     return true
   }
 
-  /// Stops a line's photos going up: the line is not sent, its ! offering
-  /// もう一度送る and 削除 (spec/chat.md, Photos).
-  /// Nothing once its photos are up and the line is being sent.
+  /// Sends a sticker from the keyboard at once as a line of its own,
+  /// answering the line being answered, kept on the device to upload
+  /// before it goes as a photo's line is (spec/chat.md, Stickers); the
+  /// words written stay in the composer.
+  private func sendSticker(_ sticker: ShrunkSticker) {
+    let id = UUID().uuidString.lowercased()
+    let shelf = place.shelf
+    var send = Pochical_V1_ChatSend()
+    send.threadID = threadID
+    send.content.sticker = sticker.line(id).wire
+    if !write.keeping({ try ChatPhotos.keep(sticker.webp, as: id, in: shelf) }) || !sent(send) {
+      ChatPhotos.forget(id, in: shelf)
+    }
+  }
+
+  /// Stops a line's photos or sticker going up: the line is not sent, its
+  /// ! offering もう一度送る and 削除 (spec/chat.md, Photos).
+  /// Nothing once they are up and the line is being sent.
   private func stopSending(_ line: WaitingLine) {
-    if !line.content.photos.isEmpty, !PhotoUploads.shared.stop(line.opID) { return }
+    if !line.content.photoIDs.isEmpty, !PhotoUploads.shared.stop(line.opID) { return }
     write { try Chats.fail(line.opID, in: $0) }
   }
 
   /// Sends a line not sent once more, after the rest, as if written now.
   /// Its photos not up go again from waiting their turn, × stopping it.
   private func sendAgain(_ line: WaitingLine) {
-    PhotoUploads.shared.forget(line.opID, photos: line.content.photos.map(\.id))
+    PhotoUploads.shared.forget(line.opID, photos: line.content.photoIDs)
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
     sendingAgain[line.opID] = line.madeAtMs
     if !write({ try Chats.sendAgain(line.opID, now: now, in: $0) }) {
@@ -999,9 +1014,9 @@ struct ChatScreen: View {
   /// before (spec/chat.md, Lines on their way).
   private func takeBack(_ line: WaitingLine) {
     guard write({ try Chats.takeBack(line.opID, in: $0) }) else { return }
-    PhotoUploads.shared.forget(line.opID, photos: line.content.photos.map(\.id))
-    for photo in line.content.photos {
-      ChatPhotos.forget(photo.id, in: place.shelf)
+    PhotoUploads.shared.forget(line.opID, photos: line.content.photoIDs)
+    for photoID in line.content.photoIDs {
+      ChatPhotos.forget(photoID, in: place.shelf)
     }
   }
 
@@ -1364,19 +1379,20 @@ struct ChatScreen: View {
     return sent(send)
   }
 
-  /// Fetches ahead the photos of the lines near those in sight, as their
-  /// lines draw them, and lets go of the rest: not a blocked member's
-  /// folded away.
+  /// Fetches ahead the photos and stickers of the lines near those in
+  /// sight, as their lines draw them, and lets go of the rest: not a
+  /// blocked member's folded away.
   private func prefetchPhotos(of near: [ChatItem]) {
-    let photos = near.flatMap { item -> [LinePhoto] in
+    let contents = near.compactMap { item -> LineContent? in
       switch item {
-      case .line(let line, _):
-        return folded(line) ? [] : line.content.photos
-      case .waiting(let line, _): return line.content.photos
-      default: return []
+      case .line(let line, _): folded(line) ? nil : line.content
+      case .waiting(let line, _): line.content
+      default: nil
       }
     }
-    photoPrefetch.near(photos, in: place.shelf, scale: displayScale, calls: groupCalls)
+    photoPrefetch.near(
+      contents.flatMap(\.photos), stickers: contents.compactMap(\.sticker), in: place.shelf,
+      scale: displayScale, calls: groupCalls)
   }
 
   /// The line's photo `key` opened large among the chat's, one by one:
@@ -1582,13 +1598,14 @@ struct ChatScreen: View {
       // A notice takes no reply, nor a line never delivered: quoted as
       // one not held.
       return LineQuote(seq: seq, words: "以前のメッセージ")
-    case .words, .photos, .days, .poll, .unknown:
+    case .words, .photos, .sticker, .days, .poll, .unknown:
       if line.folds(blocked: blocked) {
         return LineQuote(seq: seq, words: "ブロック中のメンバーのメッセージ")
       }
+      let sticker = line.content.sticker
       return LineQuote(
         seq: seq, writer: writer, words: lineWords(line.content, nameOf: nameOf),
-        photo: line.content.photos.first)
+        photo: sticker?.photo ?? line.content.photos.first, sticker: sticker != nil)
     }
   }
 
@@ -1622,8 +1639,8 @@ struct ChatScreen: View {
     var actions = [
       MessageAction(title: "返信", systemImage: "arrowshape.turn.up.left") { reply(to: line) }
     ]
-    // Shared days and polls have no words to copy or change, nor a line
-    // of a kind the app does not know.
+    // Shared days, polls and stickers have no words to copy or change,
+    // nor a line of a kind the app does not know.
     var words = false
     var poll: LineContent.Poll?
     switch line.content {
@@ -1635,7 +1652,7 @@ struct ChatScreen: View {
         MessageAction(title: "保存", systemImage: "square.and.arrow.down") { save(photos) })
     case .poll(let asked):
       poll = asked
-    case .days, .notice, .unsent, .hidden, .unknown:
+    case .sticker, .days, .notice, .unsent, .hidden, .unknown:
       break
     }
     // Anyone's line, for everyone in the chat (spec/chat.md, Pins).

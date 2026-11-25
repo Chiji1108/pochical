@@ -221,7 +221,7 @@ class MessageHandlers(
   val openShifts: (LocalDate) -> Unit = {},
   /** Whose shifts a card of days shows, over every day the chat's lines share: everyone in the group, or the two of a one-to-one chat. */
   val dayMembers: List<GroupMember> = emptyList(),
-  /** 送信をやめる: the member's line of photos [opId] stops going up, not sent. */
+  /** 送信をやめる: the member's line of photos or sticker [opId] stops going up, not sent. */
   val stopSending: (opId: String) -> Unit,
   /** A line's photo, by its place in the line, opened large. */
   val openPhoto: (seq: Long, index: Int) -> Unit,
@@ -460,12 +460,14 @@ fun Message(look: MessageLook, handlers: MessageHandlers, modifier: Modifier = M
 private fun LineBody(look: MessageLook, handlers: MessageHandlers, live: Boolean = true, onQuote: () -> Unit, links: LinkHits? = null) {
   val poll = look.poll
   val photos = look.content as? LineContent.Photos
+  val sticker = look.content as? LineContent.Sticker
   val shared = look.content as? LineContent.Days
   val words = look.content as? LineContent.Words
   when {
     poll != null -> PollCard(poll, handlers, look.seq.takeIf { live }, live)
     shared != null -> SharedDaysBody(shared, look, handlers)
     photos != null -> PhotoBody(look, photos, handlers, live, onQuote)
+    sticker != null -> StickerBody(look, sticker, handlers, live, onQuote)
     look.content == LineContent.Unknown -> StandIn(look, handlers, onQuote)
     // Nothing but a few emoji, large and without a bubble; a reply keeps its bubble for its quote.
     words != null && look.quote == null && remember(words.text) { largeEmojiCount(words.text) } > 0 -> LargeEmoji(words.text, look, handlers)
@@ -516,13 +518,13 @@ private fun LargeEmoji(text: String, look: MessageLook, handlers: MessageHandler
 
 /**
  * A line of photos, with no bubble (spec/chat.md, Photos): one answering a line sits in a bubble
- * under its quote, a little in from its edge, keeping its own corners and edge. [live] false for the
- * copy lifted over the menu, on which nothing acts.
+ * under its quote (`UnderQuote`), keeping its own corners and edge. [live] false for the copy lifted
+ * over the menu, on which nothing acts.
  */
 @Composable
 private fun PhotoBody(look: MessageLook, photos: LineContent.Photos, handlers: MessageHandlers, live: Boolean, onQuote: () -> Unit) {
   val waiting = look.waiting
-  val line = @Composable {
+  UnderQuote(look, handlers, onQuote) {
     PhotoLine(
       photos.photos,
       handlers.groupId,
@@ -532,6 +534,27 @@ private fun PhotoBody(look: MessageLook, photos: LineContent.Photos, handlers: M
       onOpen = if (!live) null else look.seq?.let { seq -> { index -> handlers.openPhoto(seq, index) } } ?: waiting?.let { { index -> handlers.openOwnPhoto(it, index) } },
     )
   }
+}
+
+/**
+ * A sticker, with no bubble, edge or ground (spec/chat.md, Stickers): one answering a line sits in
+ * a bubble under its quote, as a photo does. A tap opens nothing; [live] false for the copy lifted
+ * over the menu, on which nothing acts.
+ */
+@Composable
+private fun StickerBody(look: MessageLook, sticker: LineContent.Sticker, handlers: MessageHandlers, live: Boolean, onQuote: () -> Unit) {
+  val waiting = look.waiting
+  UnderQuote(look, handlers, onQuote) {
+    StickerImage(sticker.sticker, handlers.groupId, waiting, onStop = waiting?.takeIf { live }?.let { { handlers.stopSending(it.opId) } })
+  }
+}
+
+/**
+ * What is drawn with no bubble, photos or a sticker ([line]): alone, lit in its own rounded outline
+ * as it is gone to; answering a line, in a bubble under its quote, a little in from its edge.
+ */
+@Composable
+private fun UnderQuote(look: MessageLook, handlers: MessageHandlers, onQuote: () -> Unit, line: @Composable () -> Unit) {
   val quote = look.quote
   if (quote == null) {
     // Lit in its own rounded outline as it is gone to, as a bubble is.
@@ -849,7 +872,7 @@ private fun partsOf(content: LineContent, quote: LineQuote?, reactions: Reaction
   val mentions = textParts.mapNotNull { it.mention }
   // A first link that is one of Pochical's invitations shows the group in place of any page.
   val invitation = invitationOf(content)
-  val photos = (content as? LineContent.Photos)?.let { PhotosPart(it.photos.size, waiting) }
+  val photos = (content as? LineContent.Photos)?.let { PhotosPart(it.photos.size, waiting) } ?: (content as? LineContent.Sticker)?.let { StickerPart(waiting) }
   // シフト表で見る for a line sent, as its link under the card offers.
   val days = (content as? LineContent.Days)?.days?.firstOrNull()?.takeIf { waiting == null }?.let { DaysPart(LocalDate.parse(it)) }
   return listOfNotNull(
@@ -901,7 +924,7 @@ private val PREVIEW_WIDTH = 240.dp
 private const val ACCESSIBILITY_SCALE = 1.3f
 
 /** How dim a line on its way is, as it would be on the chat's ground. */
-private const val WAITING_ALPHA = 0.6f
+internal const val WAITING_ALPHA = 0.6f
 
 /**
  * Words and, under them only while they run past their lines, [more] (続きを読む): told in the same

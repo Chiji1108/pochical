@@ -152,7 +152,7 @@ internal suspend fun SyncDao.photosToUpload(opId: String, now: Long): List<Strin
   val row = chatEdit(opId) ?: return emptyList()
   val edit = row.chatEdit
   if (edit.kindCase != ChatEdit.KindCase.SEND) return emptyList()
-  return row.up.toUpload(edit.send.content.photos.photosList.map { it.id }, state().corrected(now))
+  return row.up.toUpload(edit.send.content.photoIds, state().corrected(now))
 }
 
 /** The line [opId]'s photo [photoId] went up, its upload begun at the device's time [began]. */
@@ -188,8 +188,7 @@ internal suspend fun SyncDao.photosLetGo(changes: List<Change>, groupId: String)
     .filter { it.kindCase == KindCase.CHAT_LINE && it.chatLine.content.kindCase == ChatContent.KindCase.UNSENT }
     .flatMap { change ->
       val held = line(groupId, change.chatLine.threadId, change.chatLine.seq) ?: return@flatMap emptyList()
-      if (held.kind != LineKind.Photos.key) return@flatMap emptyList()
-      WireLine.parseFrom(held.line).content.photos.photosList.map { it.id }
+      WireLine.parseFrom(held.line).content.photoIds
     }
 
 /**
@@ -198,7 +197,7 @@ internal suspend fun SyncDao.photosLetGo(changes: List<Change>, groupId: String)
  * (spec/chat.md, Photos). Read in the transaction that lets go of the lines, before it does.
  */
 internal suspend fun SyncDao.photosHeld(groupId: String): List<String> =
-  linesOf(groupId, LineKind.Photos.key).flatMap { WireLine.parseFrom(it).content.photos.photosList.map { photo -> photo.id } }
+  listOf(LineKind.Photos, LineKind.Sticker).flatMap { kind -> linesOf(groupId, kind.key).flatMap { WireLine.parseFrom(it).content.photoIds } }
 
 /**
  * The groups [changes] say the user left (or was taken out of), each with the photos the device

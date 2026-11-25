@@ -145,6 +145,7 @@ private let strings = [
   "GROUP_ENDS": "このグループはまもなく終了し、チャットや写真も消えます",
   "CHAT_GROUP_TEXT": "%1$@: %2$@",
   "CHAT_GROUP_PHOTO": "%@が写真を送りました",
+  "CHAT_GROUP_STICKER": "%@がスタンプを送りました",
   "CHAT_GROUP_MESSAGE": "%@がメッセージを送りました",
   "UPDATE_TO_SEE": "この通知を見るには、アプリをアップデートしてください",
 ]
@@ -194,14 +195,15 @@ func aGroupsEndWithNoMomentToReadNamesNoDay(_ args: [String]) throws {
 @Test func otherBodiesSayTheirStringsFormats() throws {
   #expect(try said("CHAT_GROUP_TEXT", ["さくら", "今週どう？"]) == "さくら: 今週どう？")
   #expect(try said("CHAT_GROUP_PHOTO", ["さくら"]) == "さくらが写真を送りました")
+  #expect(try said("CHAT_GROUP_STICKER", ["さくら"]) == "さくらがスタンプを送りました")
   // Fewer arguments than the format reads: blanks, never a crash.
   #expect(try said("CHAT_GROUP_TEXT", ["さくら"]) == "さくら: ")
-  #expect(try said("CHAT_GROUP_STICKER", ["さくら", "poodle"]) == "さくらがメッセージを送りました")
+  #expect(try said("CHAT_GROUP_VOICE", ["さくら", "voice"]) == "さくらがメッセージを送りました")
   // A line whose words are a moment's digits is no group's end.
   #expect(try said("CHAT_GROUP_TEXT", ["さくら", "1798729200000"]) == "さくら: 1798729200000")
   let known = PushWords(key: "CHAT_GROUP_TEXT", args: ["さくら", "今週どう？"])
   #expect(known.saysItsFormat(known: { strings[$0] != nil }))
-  let later = PushWords(key: "CHAT_GROUP_STICKER", args: ["さくら", "poodle"])
+  let later = PushWords(key: "CHAT_GROUP_VOICE", args: ["さくら", "voice"])
   #expect(!later.saysItsFormat(known: { strings[$0] != nil }))
 }
 

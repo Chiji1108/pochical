@@ -140,7 +140,7 @@ extension Chats {
       case .send(let send) = try Pochical_V1_ChatEdit(serializedBytes: row.edit).kind
     else { return [] }
     return row.up.toUpload(
-      send.content.photos.photos.map(\.id), now: try SyncState.corrected(now, in: db))
+      send.content.photoIDs, now: try SyncState.corrected(now, in: db))
   }
 
   /// The line `opID`'s photo `photoID` went up, its upload begun at the

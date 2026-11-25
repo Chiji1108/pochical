@@ -59,9 +59,20 @@ data class PhotosPart(val count: Int, val waiting: WaitingLine?) : LinePart {
     val seq = line.seq
     // A sent line's photos open large, the first of several, from where it swipes on to the rest.
     if (seq != null) return listOf(CustomAccessibilityAction(open) { line.handlers.openPhoto(seq, 0); true })
-    val going = waiting?.takeIf { !it.failed && !it.sending } ?: return emptyList()
-    return listOf(CustomAccessibilityAction(stop) { line.handlers.stopSending(going.opId); true })
+    return stopping(waiting, line, stop)
   }
+}
+
+/** A sticker, which opens nothing large: going up, 送信をやめる, as its × (spec/chat.md, Stickers). */
+data class StickerPart(val waiting: WaitingLine?) : LinePart {
+  @Composable
+  override fun actions(line: PartLine): List<CustomAccessibilityAction> = stopping(waiting, line, stringResource(R.string.chat_photo_stop))
+}
+
+/** 送信をやめる ([stop]) on a line whose photos go up, until they are up and it is being sent. */
+private fun stopping(waiting: WaitingLine?, line: PartLine, stop: String): List<CustomAccessibilityAction> {
+  val going = waiting?.takeIf { !it.failed && !it.sending } ?: return emptyList()
+  return listOf(CustomAccessibilityAction(stop) { line.handlers.stopSending(going.opId); true })
 }
 
 /** The line a reply answers, quoted inside its bubble: 返信元を表示 goes to it. */

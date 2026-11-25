@@ -807,7 +807,7 @@ public actor SyncClient {
   ) async throws -> [Pochical_V1_ChatEdit] {
     var kept: [Pochical_V1_ChatEdit] = []
     for edit in edits {
-      guard case .send(let send) = edit.kind, case .photos = send.content.kind else {
+      guard case .send(let send) = edit.kind, !send.content.photoIDs.isEmpty else {
         kept.append(edit)
         continue
       }

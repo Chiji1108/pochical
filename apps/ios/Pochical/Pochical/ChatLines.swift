@@ -411,7 +411,7 @@ struct LineView: View {
   private var carded: Bool {
     switch content {
     case .days, .poll: true
-    case .words, .photos, .notice, .unsent, .hidden, .unknown: false
+    case .words, .photos, .sticker, .notice, .unsent, .hidden, .unknown: false
     }
   }
 
@@ -451,7 +451,7 @@ struct LineView: View {
       if let preview = words.preview, !preview.title.isEmpty {
         parts.append("リンク「\(preview.title)」")
       }
-    case .days, .poll, .notice, .unsent, .hidden, .unknown:
+    case .sticker, .days, .poll, .notice, .unsent, .hidden, .unknown:
       parts.append(lineWords(content, nameOf: nameOf))
     }
     parts.append(ChatTime.clock(time))
@@ -477,7 +477,7 @@ struct LineView: View {
     if failed {
       actions.append(VoiceAction(title: "もう一度送る") { act(.sendAgain) })
       actions.append(VoiceAction(title: "削除") { act(.deleteUnsent) })
-    } else if waiting, !photos.isEmpty, PhotoUploads.shared.stoppable(lineID) {
+    } else if waiting, !content.photoIDs.isEmpty, PhotoUploads.shared.stoppable(lineID) {
       actions.append(VoiceAction(title: "送信をやめる") { act(.stopSending) })
     }
     if !photos.isEmpty, !waiting {
@@ -522,13 +522,13 @@ struct LineView: View {
   }
 
   /// What lights when the line is jumped to: the bubble's shape (a photo
-  /// answering a line sits in one), or the card's.
+  /// or a sticker answering a line sits in one), or the card's.
   private var highlightShape: AnyShape {
     let bubbled =
       switch content {
       // Emoji drawn large stand without a bubble.
       case .words(let words): quote != nil || words.preview != nil || drawing.largeEmoji == 0
-      case .photos: quote != nil
+      case .photos, .sticker: quote != nil
       case .days, .poll, .notice, .unsent, .hidden, .unknown: false
       }
     return bubbled
@@ -684,6 +684,14 @@ struct LineBody: View {
       } else {
         photoMedia(photos)
       }
+    case .sticker(let sticker):
+      if let quote {
+        QuotedMedia(quote: quote, shelf: shelf, mine: mine, first: first, onOpen: onOpenQuote) {
+          stickerLine(sticker)
+        }
+      } else {
+        stickerLine(sticker)
+      }
     case .poll(let poll):
       PollCard(
         days: poll.days, votes: poll.votes, decided: poll.decided, members: members,
@@ -739,10 +747,17 @@ extension LineBody {
       photo: photo, shelf: shelf, waiting: waiting, up: up.contains(photo.id),
       lineID: lineID, onStop: onStopSending, cell: cell)
   }
+
+  /// A sticker, ringed as a photo is while it goes up.
+  private func stickerLine(_ sticker: LineSticker) -> StickerLine {
+    StickerLine(
+      sticker: sticker, shelf: shelf, waiting: waiting, up: up.contains(sticker.id),
+      lineID: lineID, onStop: onStopSending)
+  }
 }
 
-/// A photo or an album answering a line: in a bubble under its quote, a
-/// little in from its edge.
+/// A photo, an album or a sticker answering a line: in a bubble under its
+/// quote, a little in from its edge.
 struct QuotedMedia<Media: View>: View {
   @Environment(\.themeColors) private var colors
   let quote: LineQuote
