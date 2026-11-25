@@ -29,6 +29,7 @@ import app.pochical.v1.ChatSticker
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import coil3.gif.AnimatedImageDecoder
+import coil3.gif.MovieDrawable
 import coil3.gif.repeatCount
 import coil3.request.ImageRequest
 import kotlin.coroutines.cancellation.CancellationException
@@ -63,19 +64,19 @@ fun stickerSize(sticker: ChatSticker): DpSize {
 
 /**
  * A sticker's request, the file itself (it has no small version), as its line draws it and the
- * chat fetches it ahead: read by Android's ImageDecoder to move as the file loops, or [still], as
- * the loader reads any image, at its first frame.
+ * chat fetches it ahead: read by Android's ImageDecoder to move, looping for ever whatever the file
+ * says, or [still], as the loader reads any image, at its first frame.
  */
 fun stickerRequest(context: Context, stickerId: String, groupId: String, still: Boolean, attempt: Int = 0): ImageRequest =
   ImageRequest.Builder(context)
     .data(ChatPhotoData(stickerId, groupId, small = false, attempt = attempt))
-    .apply { if (!still) decoderFactory(AnimatedImageDecoder.Factory()).repeatCount(AnimatedImageDecoder.ENCODED_LOOP_COUNT).memoryCacheKeyExtra(MOVING, "") }
+    .apply { if (!still) decoderFactory(AnimatedImageDecoder.Factory()).repeatCount(MovieDrawable.REPEAT_INFINITE).memoryCacheKeyExtra(MOVING, "") }
     .build()
 
 /**
  * A sticker as it loads, the file itself (it has no small version): its place empty while it
  * comes, ↻ in it should it not come, a tap fetching it again. A moving one plays as its file says,
- * as often as it loops, and stands still at its first frame while motion is reduced. While its line
+ * looping for ever, and stands still at its first frame while motion is reduced. While its line
  * goes up ([waiting] still being sent) it is dimmed under the photos' ring, × in it stopping the
  * line ([onStop]).
  */

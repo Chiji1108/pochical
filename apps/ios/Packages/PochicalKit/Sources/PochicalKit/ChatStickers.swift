@@ -144,7 +144,8 @@ public enum ChatStickers {
 
   /// A sticker's image, still or moving, written as WebP to send: its
   /// longer side shrunk to `maxEdge`, its see-through parts kept, moving
-  /// as its frames' times say and looping as often as it says. One moving
+  /// as its frames' times say and looping for ever, whatever it says, as
+  /// every sticker is played (spec/chat.md, Stickers). One moving
   /// past `maxBytes` goes as its first frame, still; nil for what the
   /// device cannot read, or a still one past `maxBytes`. Off the caller's
   /// actor, as writing a moving one takes a while.
@@ -175,7 +176,8 @@ public enum ChatStickers {
     let height = first.height
     var options = WebPAnimEncoderOptions()
     guard WebPAnimEncoderOptionsInit(&options) != 0 else { return nil }
-    options.anim_params.loop_count = Int32(loopCount(of: source))
+    // For ever.
+    options.anim_params.loop_count = 0
     var config = WebPConfig()
     guard WebPConfigInit(&config) != 0 else { return nil }
     config.quality = 80
@@ -246,26 +248,13 @@ public enum ChatStickers {
   }
 
   /// Where each kind of moving image keeps its frames' times, as the file
-  /// has them rather than as ImageIO slows the quicker ones, and how often
-  /// it loops.
-  private static var timings: [(dictionary: CFString, delay: CFString, loops: CFString)] {
+  /// has them rather than as ImageIO slows the quicker ones.
+  private static var timings: [(dictionary: CFString, delay: CFString)] {
     [
-      (
-        kCGImagePropertyHEICSDictionary, kCGImagePropertyHEICSUnclampedDelayTime,
-        kCGImagePropertyHEICSLoopCount
-      ),
-      (
-        kCGImagePropertyGIFDictionary, kCGImagePropertyGIFUnclampedDelayTime,
-        kCGImagePropertyGIFLoopCount
-      ),
-      (
-        kCGImagePropertyPNGDictionary, kCGImagePropertyAPNGUnclampedDelayTime,
-        kCGImagePropertyAPNGLoopCount
-      ),
-      (
-        kCGImagePropertyWebPDictionary, kCGImagePropertyWebPUnclampedDelayTime,
-        kCGImagePropertyWebPLoopCount
-      ),
+      (kCGImagePropertyHEICSDictionary, kCGImagePropertyHEICSUnclampedDelayTime),
+      (kCGImagePropertyGIFDictionary, kCGImagePropertyGIFUnclampedDelayTime),
+      (kCGImagePropertyPNGDictionary, kCGImagePropertyAPNGUnclampedDelayTime),
+      (kCGImagePropertyWebPDictionary, kCGImagePropertyWebPUnclampedDelayTime),
     ]
   }
 
@@ -282,17 +271,6 @@ public enum ChatStickers {
       }
     }
     return 100
-  }
-
-  /// How many times the source loops, 0 for ever, as its file says.
-  private static func loopCount(of source: CGImageSource) -> Int {
-    let properties = CGImageSourceCopyProperties(source, nil) as? [CFString: Any]
-    for timing in timings {
-      if let loops = (properties?[timing.dictionary] as? [CFString: Any])?[timing.loops] as? Int {
-        return loops
-      }
-    }
-    return 0
   }
 }
 

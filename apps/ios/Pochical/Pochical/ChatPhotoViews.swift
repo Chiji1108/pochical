@@ -171,15 +171,16 @@ private struct PhotoComing: View {
   }
 }
 
-/// How a sticker shows: moving as its file says, in its line, or still at
+/// How a sticker shows: moving, looping for ever, in its line, or still at
 /// its first frame, small in a quote.
 enum StickerLook {
   case moving, still
 }
 
 /// A sticker's frames, played over its first (`still`) as ImageIO reads
-/// them one by one from its bytes (`whole`), looping as its file says;
-/// still while motion is reduced (spec/chat.md, Reduced motion).
+/// them one by one from its bytes (`whole`), looping for ever whatever
+/// its file says, as one played once would be missed (spec/chat.md, Stickers);
+/// still while motion is reduced (Reduced motion).
 private struct MovingSticker: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   let still: UIImage
@@ -213,7 +214,8 @@ private struct MovingSticker: View {
   func play(_ data: Data) {
     let playing = UUID()
     self.playing = playing
-    CGAnimateImageDataWithBlock(data as CFData, nil) { [weak self] _, frame, stop in
+    let forEver = [kCGImageAnimationLoopCount: kCFNumberPositiveInfinity] as CFDictionary
+    CGAnimateImageDataWithBlock(data as CFData, forEver) { [weak self] _, frame, stop in
       // ImageIO hands each frame over on the main queue.
       MainActor.assumeIsolated {
         guard let self, self.playing == playing else {

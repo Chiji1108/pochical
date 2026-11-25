@@ -109,11 +109,11 @@ private struct Read {
   #expect(sticker.webp.count <= Chat.stickerMaxBytes)
 }
 
-@Test(arguments: [0, 2])
-func aMovingStickerLoopsAsOftenAsItsFileSays(_ loops: Int) async throws {
+@Test(arguments: [0, 1, 2])
+func aMovingStickerLoopsForEverWhateverItsFileSays(_ loops: Int) async throws {
   let sticker = try #require(
     await ChatStickers.shrink(written(frames(3), as: .gif, loops: loops)))
-  #expect(try Read(sticker.webp).loops == loops)
+  #expect(try Read(sticker.webp).loops == 0)
 }
 
 @Test func aMovingStickerPastItsBytesGoesAsItsFirstFrameStill() async throws {
