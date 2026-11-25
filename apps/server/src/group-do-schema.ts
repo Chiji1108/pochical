@@ -87,6 +87,10 @@ export const members = sqliteTable("members", {
   // Who took them out (RemoveMember), set as they leave; none when they
   // left themselves.
   removedBy: text("removed_by"),
+  // The group's end they were last notified is coming (spec/sync-
+  // protocol.md, A group's end), once their DO has taken it; none before,
+  // and none again once they are back in after leaving.
+  toldEndsAt: integer("told_ends_at", { mode: "timestamp_ms" }),
   userId: text("user_id").primaryKey(),
   // Their usual name, as their User DO pushes it (spec/sync-protocol.md,
   // Profile).
@@ -415,7 +419,8 @@ export const membershipOutbox = sqliteTable("membership_outbox", {
 // Who is still to be notified that the group ends soon (spec/sync-
 // protocol.md, A group's end): a row for each member, written with the
 // chat's line of it and told by the alarm until their DO takes it, as
-// membership_outbox is. A new end, or their leaving, takes it away.
+// membership_outbox is. A new end, or their leaving, takes it away. Only
+// members not already told of an end no later still to come are owed it.
 export const endNoticeOutbox = sqliteTable("end_notice_outbox", {
   // When to tell it next.
   dueAt: integer("due_at", { mode: "timestamp_ms" }).notNull(),
