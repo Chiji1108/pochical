@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -163,8 +162,8 @@ fun HoldSocket(groupId: String) {
  * 参加, at the foot. Text too large to leave the sample room scrolls the words alone.
  */
 @Composable
-private fun NoGroups(actions: GroupsActions) {
-  Column(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 20.dp)) {
+internal fun NoGroups(actions: GroupsActions) = PageScaffold { padding ->
+  Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp)) {
     SampleDays(Modifier.weight(1f).fillMaxWidth())
     Column(
       Modifier.verticalScroll(rememberScrollState()).padding(top = 12.dp, bottom = 16.dp),

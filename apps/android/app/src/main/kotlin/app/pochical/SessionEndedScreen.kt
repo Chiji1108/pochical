@@ -1,6 +1,5 @@
 package app.pochical
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -51,46 +49,48 @@ fun SessionEndedScreen(unreadable: Boolean, tryAgain: suspend () -> Unit, startA
   var confirming by rememberSaveable { mutableStateOf(false) }
   var trying by remember { mutableStateOf(false) }
   val scope = rememberCoroutineScope()
-  Column(
-    Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).safeDrawingPadding().padding(horizontal = 20.dp, vertical = 12.dp),
-    horizontalAlignment = Alignment.CenterHorizontally,
-    verticalArrangement = Arrangement.spacedBy(16.dp),
-  ) {
-    Spacer(Modifier.weight(1f))
-    Text(
-      stringResource(if (unreadable) R.string.session_unreadable else R.string.session_ended),
-      style = MaterialTheme.typography.titleLarge,
-      color = MaterialTheme.colorScheme.onSurface,
-      textAlign = TextAlign.Center,
-    )
-    Text(
-      stringResource(if (unreadable) R.string.session_unreadable_body else R.string.session_ended_body),
-      style = MaterialTheme.typography.bodyMedium,
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-      textAlign = TextAlign.Center,
-    )
-    Spacer(Modifier.weight(1f))
-    Button(onClick = { confirming = true }, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
-      Text(stringResource(R.string.session_ended_start_afresh))
-    }
-    if (!unreadable) {
-      TextButton(
-        onClick = {
-          trying = true
-          scope.launch {
-            try {
-              tryAgain()
-            } finally {
-              trying = false
+  PageScaffold { padding ->
+    Column(
+      Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp, vertical = 12.dp),
+      horizontalAlignment = Alignment.CenterHorizontally,
+      verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+      Spacer(Modifier.weight(1f))
+      Text(
+        stringResource(if (unreadable) R.string.session_unreadable else R.string.session_ended),
+        style = MaterialTheme.typography.titleLarge,
+        color = MaterialTheme.colorScheme.onSurface,
+        textAlign = TextAlign.Center,
+      )
+      Text(
+        stringResource(if (unreadable) R.string.session_unreadable_body else R.string.session_ended_body),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+      )
+      Spacer(Modifier.weight(1f))
+      Button(onClick = { confirming = true }, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
+        Text(stringResource(R.string.session_ended_start_afresh))
+      }
+      if (!unreadable) {
+        TextButton(
+          onClick = {
+            trying = true
+            scope.launch {
+              try {
+                tryAgain()
+              } finally {
+                trying = false
+              }
             }
+          },
+          enabled = !trying,
+        ) {
+          // The label keeps its size under the spinner, so nothing moves.
+          Box(contentAlignment = Alignment.Center) {
+            Text(stringResource(R.string.session_ended_try_again), Modifier.alpha(if (trying) 0f else 1f))
+            if (trying) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
           }
-        },
-        enabled = !trying,
-      ) {
-        // The label keeps its size under the spinner, so nothing moves.
-        Box(contentAlignment = Alignment.Center) {
-          Text(stringResource(R.string.session_ended_try_again), Modifier.alpha(if (trying) 0f else 1f))
-          if (trying) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
         }
       }
     }

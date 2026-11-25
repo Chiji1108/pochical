@@ -239,37 +239,39 @@ fun Onboarding() {
  * at the foot, in reach of the thumb.
  */
 @Composable
-private fun Welcome(onStart: () -> Unit, onSignIn: () -> Unit) {
+internal fun Welcome(onStart: () -> Unit, onSignIn: () -> Unit) {
   val dark = isDark(LocalDeviceSettings.current.device, isSystemInDarkTheme())
   val colors = LocalThemeColors.current
-  Column(
-    Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).safeDrawingPadding().padding(horizontal = 20.dp).padding(bottom = 12.dp),
-    horizontalAlignment = Alignment.CenterHorizontally,
-  ) {
+  PageScaffold { padding ->
     Column(
-      Modifier.weight(1f).padding(horizontal = 12.dp),
+      Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp).padding(bottom = 12.dp),
       horizontalAlignment = Alignment.CenterHorizontally,
-      verticalArrangement = Arrangement.Center,
     ) {
-      Image(
-        painterResource(if (dark) R.drawable.welcome_poodle_dark else R.drawable.welcome_poodle),
-        contentDescription = null,
-        Modifier.size(200.dp),
-      )
-      Headline(stringResource(R.string.app_name), Modifier.padding(top = 8.dp), large = true)
-      Text(
-        stringResource(R.string.welcome_about),
-        style = MaterialTheme.typography.bodyLarge,
-        color = colors.textTertiary,
-        textAlign = TextAlign.Center,
-        modifier = Modifier.padding(top = 12.dp),
-      )
-    }
-    Button(onClick = onStart, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
-      Text(stringResource(R.string.welcome_start), style = MaterialTheme.typography.titleMedium)
-    }
-    TextButton(onClick = onSignIn, modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.touch).padding(top = 4.dp)) {
-      Text(stringResource(R.string.welcome_sign_in))
+      Column(
+        Modifier.weight(1f).padding(horizontal = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+      ) {
+        Image(
+          painterResource(if (dark) R.drawable.welcome_poodle_dark else R.drawable.welcome_poodle),
+          contentDescription = null,
+          Modifier.size(200.dp),
+        )
+        Headline(stringResource(R.string.app_name), Modifier.padding(top = 8.dp), large = true)
+        Text(
+          stringResource(R.string.welcome_about),
+          style = MaterialTheme.typography.bodyLarge,
+          color = colors.textTertiary,
+          textAlign = TextAlign.Center,
+          modifier = Modifier.padding(top = 12.dp),
+        )
+      }
+      Button(onClick = onStart, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
+        Text(stringResource(R.string.welcome_start), style = MaterialTheme.typography.titleMedium)
+      }
+      TextButton(onClick = onSignIn, modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.touch).padding(top = 4.dp)) {
+        Text(stringResource(R.string.welcome_sign_in))
+      }
     }
   }
 }
