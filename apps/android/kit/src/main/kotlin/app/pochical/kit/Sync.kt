@@ -24,10 +24,11 @@ import app.pochical.v1.RepeatOrdersEdits
  * preference's value as its key's message (`PreferenceValue.message`). 3: the user's `Profile`,
  * their usual name and photo. 4: the chats' lines and read marks, the unread counts, blocks, chats
  * turned off and メンションはいつも通知. 5: a group's end (`GroupProfile.ends_at_ms`) and the chat's
- * lines of it. 6: a chat line of a sticker (`ChatContent.sticker`). `mise run sync:check` fails
- * when `Change`'s messages in proto/ change while this stays.
+ * lines of it. 6: a chat line of a sticker (`ChatContent.sticker`) on the wire, read as one of a
+ * later kind until the app draws it (#1276). 7: the sticker drawn. `mise run sync:check` fails when
+ * `Change`'s messages in proto/ change while this stays.
  */
-const val SYNC_SCHEMA = 6
+const val SYNC_SCHEMA = 7
 
 // What the user's socket brings into the device's database (spec/sync-protocol.md, Sockets; Change
 // log and cursor), each in one transaction with the cursor it moves.
