@@ -158,8 +158,10 @@ fun HoldSocket(groupId: String) {
 
 /**
  * No group yet (/design's NoGroups): a sample of 一覧, the table a group is mostly read in, filling the
- * screen and fading out under what sharing shifts is for and the buttons, グループを作る and QRコードで
- * 参加, at the foot. Text too large to leave the sample room scrolls the words alone.
+ * page and fading out under what sharing shifts is for and the buttons, グループを作る and QRコードで
+ * 参加, at the foot. Text too large to leave the sample room scrolls the words alone. A page as any
+ * other, kept to its width with its buttons: the sample is a picture of a phone's table, not one to
+ * read, so it has nothing more to show wider.
  */
 @Composable
 internal fun NoGroups(actions: GroupsActions) = PageScaffold { padding ->
