@@ -115,7 +115,10 @@ public enum ChatStickers {
       throw ChatPhotos.UploadError.gone
     }
     if let webp = try await written(held) {
-      try ChatPhotos.keep(webp, as: photoID, in: shelf)
+      // In place of the pasted one only where it still is, on the main
+      // actor, where a line taken back lets go of it: one taken back
+      // while it was written stays gone.
+      try await MainActor.run { try ChatPhotos.replace(webp, as: photoID, in: shelf) }
     }
   }
 
