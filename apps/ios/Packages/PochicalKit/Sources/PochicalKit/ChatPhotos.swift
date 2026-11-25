@@ -171,6 +171,15 @@ public enum ChatPhotos {
     try jpeg.write(to: cached(photoID, in: shelf), options: .atomic)
   }
 
+  /// Puts `data` in place of the photo kept to send and to show, where
+  /// either still is; nowhere once it is let go of (`forget`).
+  static func replace(_ data: Data, as photoID: String, in shelf: PhotoShelf) throws {
+    for file in [pending(photoID, in: shelf), cached(photoID, in: shelf)]
+    where FileManager.default.fileExists(atPath: file.path()) {
+      try data.write(to: file, options: .atomic)
+    }
+  }
+
   /// Keeps a photo picked to send later among the device's caches, so one
   /// never sent leaves nothing for long.
   static func hold(_ jpeg: Data, as photoID: String, in shelf: PhotoShelf) throws {
