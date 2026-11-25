@@ -12,6 +12,8 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.pressKey
 import app.pochical.DeviceSettingsState
 import app.pochical.LocalDeviceSettings
@@ -151,6 +153,21 @@ class CalendarKeysTest {
     tabTo(day)
     press(Key.Enter)
     compose.onNodeWithText(day.fullText).assertIsDisplayed()
+  }
+
+  @Test
+  fun aSwipeUnderAKeysFocusTakesItToTheMonthShown() {
+    show()
+    tabTo(month.atDay(8))
+    compose.onRoot().performTouchInput { swipeLeft() }
+    compose.waitForIdle()
+    theMonthIsStill(month.plusMonths(1))
+    // On a day of the page shown, inside the screen, rather than on the page that went.
+    val width = compose.onRoot().fetchSemanticsNode().boundsInRoot.width
+    val day = compose.onAllNodes(isFocused(), useUnmergedTree = true).fetchSemanticsNodes().single()
+    val bounds = day.boundsInRoot
+    assertTrue(bounds.toString(), bounds.width > 0f && bounds.left >= 0f && bounds.right <= width)
+    assertTrue(focused().toString(), focused()?.contains("日(") == true)
   }
 
   private companion object {

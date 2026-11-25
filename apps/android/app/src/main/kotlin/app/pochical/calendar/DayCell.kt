@@ -140,9 +140,17 @@ fun DayCell(
   val description = description(look)
   Column(
     modifier
+      .height(height)
+      .clip(shape)
+      // Material's focus ring, as the theme draws it, inside the day's own corners, and drawn whole
+      // on a faded day too, outside its fading.
+      .clickable(interactionSource = null, indication = ripple(focusRingShape = shape), enabled = enabled, role = Role.Button, onClick = onClick)
+      .clearAndSetSemantics {
+        contentDescription = description
+        selected = look.isSelected
+      }
       // Faded whole, with its tint and frame, as iOS's.
       .alpha(if (look.outside) 0.35f else 1f)
-      .height(height)
       .then(if (tile != null) Modifier.background(tile.tint, shape) else Modifier)
       .then(
         when {
@@ -151,13 +159,6 @@ fun DayCell(
           else -> Modifier
         }
       )
-      .clip(shape)
-      // Material's focus ring, as the theme draws it, inside the day's own corners.
-      .clickable(interactionSource = null, indication = ripple(focusRingShape = shape), enabled = enabled, role = Role.Button, onClick = onClick)
-      .clearAndSetSemantics {
-        contentDescription = description
-        selected = look.isSelected
-      }
       .padding(vertical = CELL_PADDING),
     horizontalAlignment = Alignment.CenterHorizontally,
     verticalArrangement = Arrangement.spacedBy(2.dp),
