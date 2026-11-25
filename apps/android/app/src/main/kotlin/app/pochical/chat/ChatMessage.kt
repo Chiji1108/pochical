@@ -11,6 +11,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
@@ -463,6 +464,7 @@ private fun LineBody(look: MessageLook, handlers: MessageHandlers, live: Boolean
   val sticker = look.content as? LineContent.Sticker
   val shared = look.content as? LineContent.Days
   val words = look.content as? LineContent.Words
+  val emoji = remember(words?.text) { words?.let { largeEmojiCount(it.text) } ?: 0 }
   when {
     poll != null -> PollCard(poll, handlers, look.seq.takeIf { live }, live)
     shared != null -> SharedDaysBody(shared, look, handlers)
@@ -470,7 +472,7 @@ private fun LineBody(look: MessageLook, handlers: MessageHandlers, live: Boolean
     sticker != null -> StickerBody(look, sticker, handlers, live, onQuote)
     look.content == LineContent.Unknown -> StandIn(look, handlers, onQuote)
     // Nothing but a few emoji, large and without a bubble; a reply keeps its bubble for its quote.
-    words != null && look.quote == null && remember(words.text) { largeEmojiCount(words.text) } > 0 -> LargeEmoji(words.text, look, handlers)
+    words != null && look.quote == null && emoji > 0 -> LargeEmoji(words.text, alone = emoji == 1, look, handlers)
     else -> Bubble(look, handlers, onQuote, live, links)
   }
 }
@@ -501,19 +503,22 @@ private fun StandIn(look: MessageLook, handlers: MessageHandlers, onQuote: () ->
 
 /**
  * A message of nothing but 1 to `chatRules.largeEmojiMax` emoji (spec/chat.md, Large emoji): drawn
- * at `chatRules.largeEmojiSize` sp, growing with the reader's text size, without a bubble; lit in its
- * own rounded ground as it is gone to, as a card is.
+ * at `chatRules.largeEmojiSize` sp, growing with the reader's text size, without a bubble; one
+ * [alone] shrunk to fit a sticker's box, as large as a sticker. Lit in its own rounded ground as it
+ * is gone to, as a card is.
  */
 @Composable
-private fun LargeEmoji(text: String, look: MessageLook, handlers: MessageHandlers) {
-  Text(
-    text,
+private fun LargeEmoji(text: String, alone: Boolean, look: MessageLook, handlers: MessageHandlers) {
+  val modifier =
     Modifier.alpha(if (look.waiting != null && !look.waiting.failed) WAITING_ALPHA else 1f)
       .litWhenGoneTo(handlers.lit?.takeIf { it.seq == look.seq && look.seq != null }, RoundedCornerShape(Radius.lg), handlers.reducedMotion, handlers.litShown)
-      .padding(horizontal = 4.dp),
-    fontSize = Chat.largeEmojiSize.sp,
-    lineHeight = (Chat.largeEmojiSize * 1.2).sp,
-  )
+  if (alone) {
+    Box(modifier.size(Chat.stickerSize.dp), contentAlignment = Alignment.Center) {
+      Text(text, maxLines = 1, autoSize = TextAutoSize.StepBased(maxFontSize = Chat.stickerSize.sp))
+    }
+  } else {
+    Text(text, modifier.padding(horizontal = 4.dp), fontSize = Chat.largeEmojiSize.sp, lineHeight = (Chat.largeEmojiSize * 1.2).sp)
+  }
 }
 
 /**

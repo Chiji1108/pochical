@@ -41,7 +41,8 @@ export const chatRules = {
   // without a bubble, as iMessage does.
   largeEmojiMax: 3,
   // The size such emoji are drawn at, in points (sp on Android) at the
-  // reader's default text size, growing with it as body does.
+  // reader's default text size, growing with it as body does; one alone
+  // is as large as a sticker (stickerSize).
   largeEmojiSize: 48,
   // The room between one writer's lines in a run, in points: close, so a
   // run reads as one turn, as iMessage and LINE draw them.

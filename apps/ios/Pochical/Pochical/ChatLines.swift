@@ -816,13 +816,27 @@ struct MessageBubble: View {
   var body: some View {
     let drawing = drawing.flatMap { $0.text == text ? $0 : nil } ?? LineDrawing(text: text)
     // Nothing but a few emoji: large, without a bubble (spec/chat.md,
-    // Large emoji); a reply keeps its bubble, its quote inside it.
+    // Large emoji); a reply keeps its bubble, its quote inside it. One
+    // alone fills a sticker's box, as large as a sticker.
     if quote == nil, preview == nil, drawing.invitation == nil, drawing.largeEmoji > 0 {
-      Text(text)
-        .font(.system(size: emojiSize))
-        .dimmedWhileWaiting(waiting) { Text(text).font(.system(size: emojiSize)) }
+      let emoji = largeEmoji(alone: drawing.largeEmoji == 1)
+      emoji.dimmedWhileWaiting(waiting) { emoji }
     } else {
       bubble(drawing)
+    }
+  }
+
+  /// The emoji drawn large: a few at `emojiSize`, one alone shrunk to fit
+  /// a sticker's box from that size up.
+  @ViewBuilder private func largeEmoji(alone: Bool) -> some View {
+    if alone {
+      Text(text)
+        .font(.system(size: StickerBox.side))
+        .lineLimit(1)
+        .minimumScaleFactor(0.1)
+        .frame(width: StickerBox.side, height: StickerBox.side)
+    } else {
+      Text(text).font(.system(size: emojiSize))
     }
   }
 

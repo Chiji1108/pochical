@@ -216,10 +216,17 @@ export function Bubble({
 }
 
 // A message of nothing but a few emoji (spec/chat.md, Large emoji), drawn
-// large without a bubble in its place, as iMessage does.
-export function LargeEmoji({ children }: { children: ReactNode }) {
+// large without a bubble in its place, as iMessage does; one `alone` as
+// large as a sticker.
+export function LargeEmoji({
+  alone,
+  children,
+}: {
+  alone: boolean;
+  children: ReactNode;
+}) {
   return (
-    <span className={chatStyle.largeEmoji} data-part="bubble">
+    <span className={chatStyle.largeEmoji({ alone })} data-part="bubble">
       {children}
     </span>
   );

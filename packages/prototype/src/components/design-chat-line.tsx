@@ -226,7 +226,8 @@ export function MessageLine({
   const inviteCode = firstUrl && inviteOf ? inviteCodeOf(firstUrl) : undefined;
   // Nothing but a few emoji: drawn large, without a bubble. A reply keeps
   // its bubble, as the line it answers sits inside one.
-  const largeEmoji = !quoted && words && largeEmojiCount(words.text) > 0;
+  const emoji = !quoted && words ? largeEmojiCount(words.text) : 0;
+  const largeEmoji = emoji > 0;
   const quote = quoted && (
     <BubbleQuote
       name={writerOf(quoted.from)?.name ?? ""}
@@ -369,7 +370,7 @@ export function MessageLine({
             case "words": {
               if (largeEmoji) {
                 return (
-                  <LargeEmoji>
+                  <LargeEmoji alone={emoji === 1}>
                     <MessageActions {...actions}>
                       <button
                         aria-label={`${member?.name ?? ""}のメッセージ：${content.text}。長押しでリアクションと返信`}
