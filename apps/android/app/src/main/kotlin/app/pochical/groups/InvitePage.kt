@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -31,6 +32,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -56,6 +58,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.window.core.layout.WindowSizeClass
 import app.pochical.R
 import app.pochical.SettingsPage
 import app.pochical.chat.GroupedMenu
@@ -78,14 +81,19 @@ import kotlinx.coroutines.withContext
 /**
  * メンバーを招待 (/design's InvitePage): the group's link as a QR code to be read off the screen,
  * shared or saved with a long press; the link to send through Android's share sheet or to copy;
- * and a way to remake it, which stops the old link and QR code at once.
+ * and a way to remake it, which stops the old link and QR code at once. [inviteCode] reads the
+ * group's code from the server, a new one when it is to [remake][inviteCode] it.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun InvitePage(groupId: String, onBack: () -> Unit) {
+fun InvitePage(
+  groupId: String,
+  onBack: () -> Unit,
+  inviteCode: suspend (remake: Boolean) -> String =
+    LocalGroupCalls.current.let { calls -> { remake -> if (remake) calls.remakeInviteCode(groupId) else calls.inviteCode(groupId) } },
+) {
   // A group just made opens here before it has reached the device: its code is read all the same.
   val name = pageGroup(groupId)?.name.orEmpty()
-  val calls = LocalGroupCalls.current
   val context = LocalContext.current
   val resources = LocalResources.current
   val clipboard = LocalClipboard.current
@@ -100,6 +108,10 @@ fun InvitePage(groupId: String, onBack: () -> Unit) {
   var qrMenu by remember { mutableStateOf(false) }
   // Remaking, the link shown is stopping: it is not offered until the new one comes.
   var remaking by remember { mutableStateOf(false) }
+  // In a window as short as a phone on its side, the code is smaller, so that 招待リンクを送る shows
+  // under it (spec/calendar.md, In a short window).
+  val qrSide =
+    if (currentWindowAdaptiveInfoV2().windowSizeClass.isHeightAtLeastBreakpoint(WindowSizeClass.HEIGHT_DP_MEDIUM_LOWER_BOUND)) QR_SIDE else SHORT_QR_SIDE
   val qr by produceState<Bitmap?>(null, link) { value = link?.let { withContext(Dispatchers.Default) { qrCode(it) } } }
 
   suspend fun load(remake: Boolean) {
@@ -107,7 +119,7 @@ fun InvitePage(groupId: String, onBack: () -> Unit) {
     copied = false
     remaking = remake
     try {
-      link = inviteLink(if (remake) calls.remakeInviteCode(groupId) else calls.inviteCode(groupId))
+      link = inviteLink(inviteCode(remake))
     } catch (e: CancellationException) {
       throw e
     } catch (_: Exception) {
@@ -139,14 +151,16 @@ fun InvitePage(groupId: String, onBack: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp),
       ) {
-        Box(Modifier.size(200.dp), contentAlignment = Alignment.Center) {
+        // As wide as the full code whatever its size, and as tall as もう一度確認する needs, so the
+        // retry is never squeezed into a short window's smaller code.
+        Box(Modifier.width(QR_SIDE).heightIn(min = qrSide), contentAlignment = Alignment.Center) {
           val shownQr = qr.takeUnless { remaking }
           when {
             shownQr != null -> {
               Image(
                 shownQr.asImageBitmap(),
                 contentDescription = null,
-                Modifier.size(200.dp)
+                Modifier.size(qrSide)
                   .semantics { contentDescription = resources.getString(R.string.invite_qr) }
                   .contextClick { qrMenu = true }
                   .pointerInput(Unit) {
@@ -274,3 +288,13 @@ fun qrCode(link: String): Bitmap {
 }
 
 private const val MODULE = 16
+
+/** The QR code's side on the page, as /design's InvitePage draws it. */
+private val QR_SIDE = 200.dp
+
+/**
+ * The QR code's side in a window of Material's compact height (under 480dp), a phone on its side:
+ * small enough that the code's card and 招待リンクを送る fill no more than the first screenful a
+ * phone's bars leave there at the system's text size, and still read at once by a phone held to it.
+ */
+private val SHORT_QR_SIDE = 88.dp
