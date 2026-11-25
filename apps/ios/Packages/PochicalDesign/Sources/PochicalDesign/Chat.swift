@@ -39,6 +39,9 @@ public enum Chat {
   public static let replySwipe = 56
   public static let replySwipeRubber = 0.3
   public static let runGap = 12
+  public static let stickerMaxBytes = 1000000
+  public static let stickerMaxEdge = 512
+  public static let stickerSize = 160
   public static let supportPlace = "support"
   public static let typingSendMs = 3000
   public static let typingShowMs = 5000

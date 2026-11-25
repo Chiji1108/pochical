@@ -144,6 +144,17 @@ export const chatRules = {
   // The room before a run's first line, a day's title and ここから新着,
   // in points: where the writer changes, the lines part more.
   runGap: 12,
+  // The most bytes a sticker may be as sent (WebP or GIF, still or
+  // moving); the server refuses a larger one, and a moving one that will
+  // not fit goes as its first frame, still.
+  stickerMaxBytes: 1_000_000,
+  // A sticker is shrunk to send until its longer side is at most this many
+  // pixels, as Telegram's are 512: enough for its box at 3x.
+  stickerMaxEdge: 512,
+  // The box a sticker is drawn within in the chat, in points (dp on
+  // Android), its shape kept: larger than large emoji, as LINE's and
+  // Telegram's stickers stand larger than their emoji.
+  stickerSize: 160,
   // The place id the chat with Pochical's people is kept by, on the
   // devices and in the User DO's counts, mutes and notifications, as a
   // group's chats are kept by the group's id: group ids are random, so

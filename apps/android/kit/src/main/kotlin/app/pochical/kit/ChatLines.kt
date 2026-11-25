@@ -108,6 +108,8 @@ sealed interface LineContent {
           }
         ChatContent.KindCase.UNSENT -> Unsent
         ChatContent.KindCase.HIDDEN -> Hidden
+        // Not read yet: its line asks to update, as one of a later kind (#1276).
+        ChatContent.KindCase.STICKER,
         ChatContent.KindCase.KIND_NOT_SET,
         null -> Unknown
       }
@@ -121,6 +123,7 @@ sealed interface LineContent {
         ChatSendContent.KindCase.DAYS -> Days(send.days.daysList)
         ChatSendContent.KindCase.POLL -> Poll(ChatPoll.newBuilder().addAllDays(send.poll.daysList).build())
         // Only this app writes its sends, each of a kind: one of none is nothing to show.
+        ChatSendContent.KindCase.STICKER,
         ChatSendContent.KindCase.KIND_NOT_SET,
         null -> Hidden
       }

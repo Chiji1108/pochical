@@ -32,6 +32,7 @@ public  final class ChatContent extends
     NOTICE(5),
     UNSENT(6),
     HIDDEN(7),
+    STICKER(8),
     KIND_NOT_SET(0);
     private final int value;
     private KindCase(int value) {
@@ -54,6 +55,7 @@ public  final class ChatContent extends
         case 5: return NOTICE;
         case 6: return UNSENT;
         case 7: return HIDDEN;
+        case 8: return STICKER;
         case 0: return KIND_NOT_SET;
         default: return null;
       }
@@ -575,6 +577,86 @@ public  final class ChatContent extends
    */
   private void clearHidden() {
     if (kindCase_ == 7) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int STICKER_FIELD_NUMBER = 8;
+  /**
+   * <pre>
+   * A sticker from the keyboard, alone, with no words (spec/chat.md,
+   * Stickers): drawn with no bubble, see-through where it is, moving
+   * where it moves.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatSticker sticker = 8 [json_name = "sticker"];</code>
+   */
+  @java.lang.Override
+  public boolean hasSticker() {
+    return kindCase_ == 8;
+  }
+  /**
+   * <pre>
+   * A sticker from the keyboard, alone, with no words (spec/chat.md,
+   * Stickers): drawn with no bubble, see-through where it is, moving
+   * where it moves.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatSticker sticker = 8 [json_name = "sticker"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.ChatSticker getSticker() {
+    if (kindCase_ == 8) {
+       return (app.pochical.v1.ChatSticker) kind_;
+    }
+    return app.pochical.v1.ChatSticker.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * A sticker from the keyboard, alone, with no words (spec/chat.md,
+   * Stickers): drawn with no bubble, see-through where it is, moving
+   * where it moves.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatSticker sticker = 8 [json_name = "sticker"];</code>
+   */
+  private void setSticker(app.pochical.v1.ChatSticker value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 8;
+  }
+  /**
+   * <pre>
+   * A sticker from the keyboard, alone, with no words (spec/chat.md,
+   * Stickers): drawn with no bubble, see-through where it is, moving
+   * where it moves.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatSticker sticker = 8 [json_name = "sticker"];</code>
+   */
+  private void mergeSticker(app.pochical.v1.ChatSticker value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 8 &&
+        kind_ != app.pochical.v1.ChatSticker.getDefaultInstance()) {
+      kind_ = app.pochical.v1.ChatSticker.newBuilder((app.pochical.v1.ChatSticker) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 8;
+  }
+  /**
+   * <pre>
+   * A sticker from the keyboard, alone, with no words (spec/chat.md,
+   * Stickers): drawn with no bubble, see-through where it is, moving
+   * where it moves.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatSticker sticker = 8 [json_name = "sticker"];</code>
+   */
+  private void clearSticker() {
+    if (kindCase_ == 8) {
       kindCase_ = 0;
       kind_ = null;
     }
@@ -1216,6 +1298,90 @@ public  final class ChatContent extends
       return this;
     }
 
+    /**
+     * <pre>
+     * A sticker from the keyboard, alone, with no words (spec/chat.md,
+     * Stickers): drawn with no bubble, see-through where it is, moving
+     * where it moves.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatSticker sticker = 8 [json_name = "sticker"];</code>
+     */
+    @java.lang.Override
+    public boolean hasSticker() {
+      return instance.hasSticker();
+    }
+    /**
+     * <pre>
+     * A sticker from the keyboard, alone, with no words (spec/chat.md,
+     * Stickers): drawn with no bubble, see-through where it is, moving
+     * where it moves.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatSticker sticker = 8 [json_name = "sticker"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.ChatSticker getSticker() {
+      return instance.getSticker();
+    }
+    /**
+     * <pre>
+     * A sticker from the keyboard, alone, with no words (spec/chat.md,
+     * Stickers): drawn with no bubble, see-through where it is, moving
+     * where it moves.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatSticker sticker = 8 [json_name = "sticker"];</code>
+     */
+    public Builder setSticker(app.pochical.v1.ChatSticker value) {
+      copyOnWrite();
+      instance.setSticker(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * A sticker from the keyboard, alone, with no words (spec/chat.md,
+     * Stickers): drawn with no bubble, see-through where it is, moving
+     * where it moves.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatSticker sticker = 8 [json_name = "sticker"];</code>
+     */
+    public Builder setSticker(
+        app.pochical.v1.ChatSticker.Builder builderForValue) {
+      copyOnWrite();
+      instance.setSticker(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * A sticker from the keyboard, alone, with no words (spec/chat.md,
+     * Stickers): drawn with no bubble, see-through where it is, moving
+     * where it moves.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatSticker sticker = 8 [json_name = "sticker"];</code>
+     */
+    public Builder mergeSticker(app.pochical.v1.ChatSticker value) {
+      copyOnWrite();
+      instance.mergeSticker(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * A sticker from the keyboard, alone, with no words (spec/chat.md,
+     * Stickers): drawn with no bubble, see-through where it is, moving
+     * where it moves.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatSticker sticker = 8 [json_name = "sticker"];</code>
+     */
+    public Builder clearSticker() {
+      copyOnWrite();
+      instance.clearSticker();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ChatContent)
   }
   @java.lang.Override
@@ -1241,10 +1407,11 @@ public  final class ChatContent extends
             app.pochical.v1.ChatNotice.class,
             app.pochical.v1.ChatTakenBack.class,
             app.pochical.v1.ChatHidden.class,
+            app.pochical.v1.ChatSticker.class,
           };
           java.lang.String info =
-              "\u0000\u0007\u0001\u0000\u0001\u0007\u0007\u0000\u0000\u0000\u0001<\u0000\u0002<" +
-              "\u0000\u0003<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000";
+              "\u0000\b\u0001\u0000\u0001\b\b\u0000\u0000\u0000\u0001<\u0000\u0002<\u0000\u0003" +
+              "<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

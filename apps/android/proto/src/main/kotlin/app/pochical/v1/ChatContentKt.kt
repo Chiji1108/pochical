@@ -294,6 +294,48 @@ public object ChatContentKt {
     public fun hasHidden(): kotlin.Boolean {
       return _builder.hasHidden()
     }
+
+    /**
+     * ```
+     * A sticker from the keyboard, alone, with no words (spec/chat.md,
+     * Stickers): drawn with no bubble, see-through where it is, moving
+     * where it moves.
+     * ```
+     *
+     * `.pochical.v1.ChatSticker sticker = 8 [json_name = "sticker"];`
+     */
+    public var sticker: app.pochical.v1.ChatSticker
+      @kotlin.jvm.JvmName("getSticker")
+        get() = _builder.sticker
+      @kotlin.jvm.JvmName("setSticker")
+        set(value) {
+        _builder.sticker = value
+      }
+    /**
+     * ```
+     * A sticker from the keyboard, alone, with no words (spec/chat.md,
+     * Stickers): drawn with no bubble, see-through where it is, moving
+     * where it moves.
+     * ```
+     *
+     * `.pochical.v1.ChatSticker sticker = 8 [json_name = "sticker"];`
+     */
+    public fun clearSticker() {
+      _builder.clearSticker()
+    }
+    /**
+     * ```
+     * A sticker from the keyboard, alone, with no words (spec/chat.md,
+     * Stickers): drawn with no bubble, see-through where it is, moving
+     * where it moves.
+     * ```
+     *
+     * `.pochical.v1.ChatSticker sticker = 8 [json_name = "sticker"];`
+     * @return Whether the sticker field is set.
+     */
+    public fun hasSticker(): kotlin.Boolean {
+      return _builder.hasSticker()
+    }
     public val kindCase: app.pochical.v1.ChatContent.KindCase
     @kotlin.jvm.JvmName("getKindCase")
       get() = _builder.kindCase
@@ -326,4 +368,7 @@ public val app.pochical.v1.ChatContentOrBuilder.unsentOrNull: app.pochical.v1.Ch
 
 public val app.pochical.v1.ChatContentOrBuilder.hiddenOrNull: app.pochical.v1.ChatHidden?
   get() = if (hasHidden()) getHidden() else null
+
+public val app.pochical.v1.ChatContentOrBuilder.stickerOrNull: app.pochical.v1.ChatSticker?
+  get() = if (hasSticker()) getSticker() else null
 
