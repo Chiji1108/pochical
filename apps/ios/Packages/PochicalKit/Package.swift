@@ -20,6 +20,8 @@ let package = Package(
     .package(url: "https://github.com/apple/swift-protobuf.git", exact: "1.41.0"),
     // libwebp, for writing a sticker as WebP, which iOS does not write.
     .package(url: "https://github.com/SDWebImage/libwebp-Xcode.git", exact: "1.6.0"),
+    // The app's image pipeline, whose caches keep each group's photos apart.
+    .package(url: "https://github.com/kean/Nuke", exact: "13.2.3"),
   ],
   targets: [
     .target(
@@ -32,11 +34,15 @@ let package = Package(
         .product(name: "GRDB", package: "GRDB.swift"),
         .product(name: "SwiftProtobuf", package: "swift-protobuf"),
         .product(name: "libwebp", package: "libwebp-Xcode"),
+        .product(name: "Nuke", package: "Nuke"),
       ]
     ),
     .testTarget(
       name: "PochicalKitTests",
-      dependencies: ["PochicalKit", .product(name: "SwiftProtobuf", package: "swift-protobuf")]
+      dependencies: [
+        "PochicalKit", .product(name: "SwiftProtobuf", package: "swift-protobuf"),
+        .product(name: "Nuke", package: "Nuke"),
+      ]
     ),
   ]
 )

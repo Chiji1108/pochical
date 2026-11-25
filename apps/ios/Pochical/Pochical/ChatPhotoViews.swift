@@ -49,7 +49,7 @@ struct ChatPhotoImage: View {
     let wanted = !measuring && (!whileInSight || inSight)
     // Out of sight, nothing is held, not even what memory keeps.
     let kept = wanted ? image ?? ChatPhotoLoading.pipeline.cache[request]?.image : nil
-    let blur = ChatPhotoLoading.blur(of: photo)
+    let blur = ChatPhotoLoading.blur(of: photo, in: shelf)
     ZStack {
       if let blur {
         // Under the photo, in the photo's own shape, so the photo comes in
