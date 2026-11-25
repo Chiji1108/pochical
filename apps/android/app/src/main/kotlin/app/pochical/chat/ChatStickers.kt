@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -13,6 +14,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -22,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import app.pochical.R
 import app.pochical.calendar.rememberReducedMotion
 import app.pochical.design.Chat
+import app.pochical.design.Radius
 import app.pochical.kit.StickerEncoding
 import app.pochical.kit.StickerFile
 import app.pochical.kit.WaitingLine
@@ -74,8 +77,8 @@ fun stickerRequest(context: Context, stickerId: String, groupId: String, still: 
     .build()
 
 /**
- * A sticker as it loads, the file itself (it has no small version): its place empty while it
- * comes, ↻ in it should it not come, a tap fetching it again. A moving one plays as its file says,
+ * A sticker as it loads, the file itself (it has no small version): a photo's grey in its place
+ * while it comes, ↻ in it should it not come, a tap fetching it again. A moving one plays as its file says,
  * looping for ever, and stands still at its first frame while motion is reduced. While its line
  * goes up ([waiting] still being sent) it is dimmed under the photos' ring, × in it stopping the
  * line ([onStop]).
@@ -86,15 +89,21 @@ fun StickerImage(sticker: ChatSticker, groupId: String, waiting: WaitingLine?, o
   val still = rememberReducedMotion()
   var attempt by remember(sticker.id) { mutableIntStateOf(0) }
   var failed by remember(sticker.id) { mutableStateOf(false) }
+  var shown by remember(sticker.id) { mutableStateOf(false) }
   val request = remember(sticker.id, groupId, attempt, still) { stickerRequest(context, sticker.id, groupId, still, attempt) }
   val going = waiting != null && !waiting.failed
   Box(modifier.size(stickerSize(sticker))) {
+    // A photo's grey while it comes, rounded as a photo's line is.
+    if (!shown) PhotoComing(breathing = !failed, Modifier.matchParentSize().clip(RoundedCornerShape(Radius.lg)))
     AsyncImage(
       request,
       contentDescription = null,
       Modifier.matchParentSize().alpha(if (going) WAITING_ALPHA else 1f),
       contentScale = ContentScale.Fit,
-      onState = { failed = it is AsyncImagePainter.State.Error },
+      onState = {
+        failed = it is AsyncImagePainter.State.Error
+        shown = it is AsyncImagePainter.State.Success
+      },
     )
     // The member's own is on the device.
     if (failed && waiting == null) PhotoRetry(Modifier.align(Alignment.Center), onClick = { attempt++ }, label = stringResource(R.string.chat_sticker_retry))

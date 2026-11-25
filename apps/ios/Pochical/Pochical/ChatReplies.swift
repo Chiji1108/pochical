@@ -73,7 +73,8 @@ private struct QuoteThumbnail: View {
     let square = CGSize(width: 32, height: 32)
     Group {
       if sticker {
-        ChatPhotoImage(photo: photo, shelf: shelf, shown: square, sticker: .still)
+        ChatPhotoImage(
+          photo: photo, shelf: shelf, shown: square, sticker: .still, corner: Radius.xs)
           .frame(width: square.width, height: square.height)
       } else {
         ChatPhotoImage(photo: photo, shelf: shelf, shown: square)
