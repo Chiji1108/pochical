@@ -382,6 +382,8 @@ private class KeptGroup(private val kept: SharedPreferences, private val state: 
       kept.edit { putString(KEY, id) }
     }
 
+  override fun component2(): (String?) -> Unit = { value = it }
+
   companion object {
     const val FILE = "open-group"
     private const val KEY = "id"

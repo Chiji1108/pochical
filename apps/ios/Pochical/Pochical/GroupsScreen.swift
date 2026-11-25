@@ -64,10 +64,9 @@ struct GroupsScreen: View {
           GroupRail(
             groups: groups, openID: open.id, unread: unread,
             onOpen: { pick($0, over: open.id) }, onNew: newGroup, onScan: onScan)
-          // Its marks start under the bar, level with the hub's first
-          // section, as the hub does: the bar takes every touch in its
-          // band, beside its heading too, so a mark there could not be
-          // pressed (#1281).
+          // In the safe area, under the bar, as the hub is: the bar takes
+          // every touch in its band, beside its heading too, so a mark
+          // there could not be pressed (#1281).
           GroupHub(group: open) { day in
             navigator?.open(.group(.shifts(open, day: day)))
           } onChat: { thread, other in
