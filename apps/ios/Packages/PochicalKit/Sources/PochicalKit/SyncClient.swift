@@ -66,8 +66,9 @@ public actor SyncClient {
     case notTheOwner
     /// The user is not in the group: taken out, left on another device, or
     /// the group gone (403, or closed with `SyncSocket.notMemberCloseCode`).
-    /// Their own socket tells the device so; opening the group again tries
-    /// once more, as after joining it again.
+    /// The device lets go of the group then, as of one left, whether or not
+    /// their own socket ever tells it so; opening it again, as after joining
+    /// it again, tries once more.
     case notMember
   }
 
@@ -395,8 +396,10 @@ public actor SyncClient {
         emptying?.cancel()
         Logger.sync.error("Stopped syncing: \(String(describing: stop))")
         running = nil
-        if case .signedOut = stop {
-          await sessionUnknown(credentials.generation)
+        switch (stop, peer) {
+        case (.signedOut, _): await sessionUnknown(credentials.generation)
+        case (.notMember, .group(let groupID)): await letGo(of: groupID, as: credentials)
+        default: break
         }
         return
       } catch is ClockAhead {
@@ -881,6 +884,27 @@ public actor SyncClient {
       try Chats.fail(edit.opID, in: db)
     }
     return false
+  }
+
+  /// The group refused the user as not in it, which the group decides: the
+  /// device lets go of it as of a group left, though the user's own socket
+  /// may never say so (a group their DO does not list, as one held from
+  /// before their DO lost it, hears no `Membership` marked left).
+  private func letGo(of groupID: String, as credentials: Credentials) async {
+    do {
+      try await database.write { db in
+        try Self.owned(by: credentials, db)
+        try Groups.leave(groupID, in: db)
+      }
+    } catch {
+      // Another user's data now, or a write that failed: the group stays
+      // as it was, and opening it again tries once more.
+      Logger.sync.error("Kept the group refused: \(error)")
+      return
+    }
+    // Told even when the list did not hold it, as while a Reset's catch-up
+    // is still to bring it again: its pages go with it.
+    Groups.tellLeft([groupID])
   }
 
   /// Throws unless the database is the user's `credentials` are of and the

@@ -190,6 +190,15 @@ class FakeServer : AutoCloseable {
   /** Whether a group refuses the chat sends it is sent, as not fitting. */
   @Volatile var refuseSends = false
 
+  /** The groups whose socket the Worker refuses as not the user's (403), as one their own DO does not list. */
+  val notListed: MutableSet<String> = ConcurrentHashMap.newKeySet()
+
+  /** Closes the sockets open on [groupId] as the group closes those of someone taken out of it. */
+  @Synchronized
+  fun closeAsNotMember(groupId: String) {
+    for (each in groupSocketsOf(groupId)) each.close(SyncSocket.notMemberCloseCode, "Not in the group")
+  }
+
   /** A group's frame of chat edits sending a line, held unanswered. */
   private data class HeldSend(val user: String, val groupId: String, val frame: ClientFrame, val socket: WebSocket)
 
@@ -409,7 +418,9 @@ class FakeServer : AutoCloseable {
               if (request.url.encodedPath.matches(Regex("/v1/groups/[^/]+/socket"))) {
                 when (val user = userOf(request.headers["Authorization"])) {
                   null -> MockResponse.Builder().code(401).build()
-                  else -> MockResponse.Builder().webSocketUpgrade(GroupSocket(user, request.url.pathSegments[2])).build().also { placeSockets += request.url.encodedPath }
+                  else ->
+                    if (request.url.pathSegments[2] in notListed) MockResponse.Builder().code(403).build()
+                    else MockResponse.Builder().webSocketUpgrade(GroupSocket(user, request.url.pathSegments[2])).build().also { placeSockets += request.url.encodedPath }
                 }
               } else if (request.method == "PUT" && request.url.encodedPath.startsWith("/v1/me/photos/")) {
                 ownPhotos += request.url.encodedPath.removePrefix("/v1/me/photos/")

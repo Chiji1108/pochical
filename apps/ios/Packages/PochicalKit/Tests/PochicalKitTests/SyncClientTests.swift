@@ -1,6 +1,7 @@
 import Foundation
 import Network
 import PochicalDesign
+import PochicalProto
 import SQLiteData
 import Synchronization
 import Testing
@@ -108,15 +109,69 @@ private final class ClosingServer: Sendable {
 
 }
 
+/// A database claimed by "me" holding the group `groupID`, as their own
+/// socket listed it, with a member its socket brought.
+private func database(holding groupID: String) throws -> any DatabaseWriter {
+  let database = try database(ownedBy: "me")
+  try database.write { db in
+    var listed = Pochical_V1_Change()
+    listed.cursor = 1
+    listed.membership.groupID = groupID
+    listed.membership.name = "いとこ会"
+    try Sync.take([listed], in: db)
+    var member = Pochical_V1_Change()
+    member.cursor = 1
+    member.member.userID = "u1"
+    member.member.displayName = "さくら"
+    try GroupSync.take([member], of: groupID, in: db)
+  }
+  return database
+}
+
+/// Whether the device has let go of `groupID` in `database` as of a group
+/// left: nothing of it held, and the app told so (`groupLeft`).
+private final class LettingGo: Sendable {
+  let groupID: String
+  private let told = Mutex(0)
+  private nonisolated(unsafe) var watching: (any NSObjectProtocol)?
+
+  init(_ groupID: String) {
+    self.groupID = groupID
+    watching = NotificationCenter.default.addObserver(
+      forName: groupLeft, object: nil, queue: nil
+    ) { [weak self] note in
+      if note.userInfo?["groupID"] as? String == groupID { self?.told.withLock { $0 += 1 } }
+    }
+  }
+
+  deinit {
+    if let watching { NotificationCenter.default.removeObserver(watching) }
+  }
+
+  func letGo(in database: any DatabaseWriter) async throws -> Bool {
+    let groupID = groupID
+    guard await eventually({ told.withLock { $0 } > 0 }) else { return false }
+    return try await database.read { db in
+      try GroupRow.fetchCount(db) == 0 && GroupMemberRow.fetchCount(db) == 0
+        && GroupSync.cursor(of: groupID, in: db) == 0
+    }
+  }
+}
+
 @Test func aGroupsSocketRefusedWith403StopsUntilTheGroupIsOpenedAgain() async throws {
   let server = try RefusingServer(status: "403 Forbidden")
   defer { server.listener.cancel() }
   let url = try await server.start()
   let credentials = try #require(CurrentAccount().begin(StoredSession(token: "t", userID: "me")))
-  let client = SyncClient(database: try database(ownedBy: "me"), peer: .group("g"), server: url)
+  let group = LettingGo("refused-\(UUID().uuidString)")
+  let database = try database(holding: group.groupID)
+  let client = SyncClient(database: database, peer: .group(group.groupID), server: url)
 
   await client.start(as: credentials)
   #expect(await eventually { await client.stopped == .notMember })
+  // A group the user's own DO does not list, which their socket will never
+  // say they left: the device lets go of it as of one left.
+  #expect(try await group.letGo(in: database))
   // No retry of its own, past the first wait it would take.
   try await Task.sleep(for: .milliseconds(SyncSocket.reconnectFirstMs + 200))
   #expect(server.asked == 1)
@@ -133,10 +188,13 @@ private final class ClosingServer: Sendable {
   defer { server.listener.cancel() }
   let url = try await server.start()
   let credentials = try #require(CurrentAccount().begin(StoredSession(token: "t", userID: "me")))
-  let client = SyncClient(database: try database(ownedBy: "me"), peer: .group("g"), server: url)
+  let group = LettingGo("closed-\(UUID().uuidString)")
+  let database = try database(holding: group.groupID)
+  let client = SyncClient(database: database, peer: .group(group.groupID), server: url)
 
   await client.start(as: credentials)
   #expect(await eventually { await client.stopped == .notMember })
+  #expect(try await group.letGo(in: database))
   // No retry of its own, past the first wait it would take.
   try await Task.sleep(for: .milliseconds(SyncSocket.reconnectFirstMs + 200))
   #expect(server.opened.withLock { $0 } == 1)

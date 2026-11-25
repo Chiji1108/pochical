@@ -275,6 +275,11 @@ class SyncClient internal constructor(
             SocketMessage.Closing -> return@coroutineScope null
           }
       } while (ended == null)
+      // The group decides who is in it: one that refuses the user goes from the device as one left
+      // does, though their own socket may never say so (a group their User DO does not list).
+      if (ended == SocketEvent.Refused(Stop.NotMember) && peer is Peer.Group) {
+        letGo(mapOf(peer.id to write { placeLeft(peer.id) }))
+      }
       ended
     } catch (_: NotTheOwner) {
       SocketEvent.Refused(Stop.NotTheOwner)
