@@ -364,6 +364,13 @@ describe("setting a group's end", () => {
   });
 });
 
+/** What the group says as its end is moved to `moved` within the hours. */
+const saidMovingTo = (moved: number) => [
+  { endsAtMs: BigInt(moved) },
+  { notice: { endsAtMs: BigInt(moved), kind: ChatNotice_Kind.END_SET } },
+  { notice: { endsAtMs: BigInt(moved), kind: ChatNotice_Kind.ENDS_SOON } },
+];
+
 describe("a group's end coming", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -461,6 +468,76 @@ describe("a group's end coming", () => {
       { aps: { alert: { "loc-args": [String(near)] } } },
       { aps: { alert: { "loc-args": [String(nearer)] } } },
     ]);
+  });
+
+  it("notifies no one again for an end moved later or back, only one sooner than told", async () => {
+    const { groupId, guest, maker } = await pair();
+    await registerToken(guest, GUEST_TOKEN);
+    const calls = apnsCalls();
+    const near = Date.now() + DAY_MS;
+    await setEnd(groupId, near, maker);
+    await runAlarm(env.GROUPS.getByName(groupId));
+    expect(calls).toHaveLength(1);
+
+    // Back and forth between two near ends: each said in the chat, but
+    // the end told is no later, so no one is notified again.
+    const mine = await groupSocket(groupId, maker, PAIR_ROSTER + 3n);
+    const moveTo = async (moved: number): Promise<object[]> => {
+      await setEnd(groupId, moved, guest);
+      await runAlarm(env.GROUPS.getByName(groupId));
+      return [
+        ...endIn(await mine.frames.next()),
+        ...endIn(await mine.frames.next()),
+      ];
+    };
+    const back = near + HOUR_MS;
+    const lines = [
+      ...(await moveTo(back)),
+      ...(await moveTo(near)),
+      ...(await moveTo(back)),
+      ...(await moveTo(near)),
+    ];
+    expect(lines).toMatchObject([back, near, back, near].flatMap(saidMovingTo));
+    expect(calls).toHaveLength(1);
+
+    // Sooner than told: notified of the new day.
+    await setEnd(groupId, near - HOUR_MS, guest);
+    await runAlarm(env.GROUPS.getByName(groupId));
+    expect(calls.map(({ body }) => body)).toMatchObject([
+      { aps: { alert: { "loc-args": [String(near)] } } },
+      { aps: { alert: { "loc-args": [String(near - HOUR_MS)] } } },
+    ]);
+  });
+
+  it("notifies of an end moved later a member not yet told, or back in since", async () => {
+    const { groupId, guest, inviteCode, maker } = await pair();
+    await registerToken(guest, GUEST_TOKEN);
+    const calls = apnsCalls();
+    const guestId = await userIdOf(guest);
+    const near = Date.now() + DAY_MS;
+    const restore = await failTelling(groupId, guestId);
+    await setEnd(groupId, near, maker);
+    await runAlarm(env.GROUPS.getByName(groupId));
+    await restore();
+    expect(calls).toHaveLength(0);
+
+    // What was owed went with the end before; the new one is theirs.
+    await setEnd(groupId, near + HOUR_MS, maker);
+    await runAlarm(env.GROUPS.getByName(groupId));
+    expect(calls.map(({ body }) => body)).toMatchObject([
+      { aps: { alert: { "loc-args": [String(near + HOUR_MS)] } } },
+    ]);
+
+    // Out and back in: told anew, as one never in the group.
+    await call("GroupService/LeaveGroup", { groupId }, guest);
+    await call(
+      "GroupService/JoinGroup",
+      { displayName: "ゆうき", inviteCode },
+      guest
+    );
+    await setEnd(groupId, near + 2 * HOUR_MS, maker);
+    await runAlarm(env.GROUPS.getByName(groupId));
+    expect(calls).toHaveLength(2);
   });
 
   it("comes anew for an end moved later, and not at all for one taken away", async () => {
