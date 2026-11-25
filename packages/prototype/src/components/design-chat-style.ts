@@ -197,14 +197,31 @@ export const chatStyle = {
     whiteSpace: "pre-wrap",
   }),
   // A message of nothing but a few emoji (LargeEmoji), large and without
-  // a bubble. Rounded for the ring a jump gives it.
-  largeEmoji: css({
-    borderRadius: "lg",
-    display: "flex",
-    fontSize: `${chatRules.largeEmojiSize}px`,
-    lineHeight: 1.15,
-    minWidth: 0,
-    whiteSpace: "nowrap",
+  // a bubble; one alone as large as fits a sticker's box. Rounded for the
+  // ring a jump gives it.
+  largeEmoji: cva({
+    base: {
+      borderRadius: "lg",
+      display: "flex",
+      fontSize: `${chatRules.largeEmojiSize}px`,
+      lineHeight: 1.15,
+      minWidth: 0,
+      whiteSpace: "nowrap",
+    },
+    variants: {
+      alone: {
+        false: {},
+        true: {
+          alignItems: "center",
+          // An emoji's glyph is about as wide as its size, its line a
+          // little taller: a size that fits the box both ways.
+          fontSize: `${chatRules.stickerSize * 0.8}px`,
+          height: `${chatRules.stickerSize}px`,
+          justifyContent: "center",
+          width: `${chatRules.stickerSize}px`,
+        },
+      },
+    },
   }),
   // A link in a message, underlined as the chat apps mark one; in
   // others' bubbles in the accent, in yours in the bubble's own color.

@@ -344,8 +344,10 @@ struct StickerLine: View {
 /// The box a sticker is drawn within in the chat (chatRules.stickerSize),
 /// its shape kept.
 enum StickerBox {
+  /// The box's side; an emoji sent alone fills it too (Large emoji).
+  static let side = CGFloat(Chat.stickerSize)
+
   static func size(of sticker: LineSticker) -> CGSize {
-    let side = CGFloat(Chat.stickerSize)
     guard sticker.width > 0, sticker.height > 0 else { return CGSize(width: side, height: side) }
     let scale = side / CGFloat(max(sticker.width, sticker.height))
     return CGSize(width: CGFloat(sticker.width) * scale, height: CGFloat(sticker.height) * scale)
