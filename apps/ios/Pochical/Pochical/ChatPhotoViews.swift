@@ -13,7 +13,8 @@ import SwiftUI
 /// its grey, while it comes; drawn at once when held drawn already, as a
 /// line scrolled back into sight is. One that could not be fetched keeps
 /// its blur and, with `retries`, is fetched again at a tap. A sticker is
-/// drawn whole, see-through, nothing in its place while it comes.
+/// drawn whole, see-through, over the grey of a photo with no ThumbHash
+/// while it comes, rounded at `corner` as nothing else clips it.
 struct ChatPhotoImage: View {
   @Environment(\.groupCalls) private var groupCalls
   @Environment(\.displayScale) private var displayScale
@@ -30,6 +31,9 @@ struct ChatPhotoImage: View {
   var retries = false
   /// It is a sticker's, and how it shows; none for a photo.
   var sticker: StickerLook?
+  /// The corners of a sticker's grey while it comes, where its line or
+  /// quote rounds a photo; a photo's own are its container's.
+  var corner: CGFloat = 0
   @State private var image: UIImage?
   @State private var inSight = false
   /// It could not be fetched, so nothing is said to be on its way.
@@ -53,9 +57,10 @@ struct ChatPhotoImage: View {
         Image(uiImage: blur)
           .resizable()
           .aspectRatio(aspect, contentMode: .fill)
-      } else if kept == nil, sticker == nil {
+      } else if kept == nil {
         // Only in sight: the chat lays out all its lines at once.
         PhotoComing(breathing: !failed && wanted)
+          .clipShape(RoundedRectangle(cornerRadius: corner))
       }
       if let kept, sticker == .moving {
         MovingSticker(
@@ -331,7 +336,8 @@ struct StickerLine: View {
   private func image(_ look: StickerLook) -> ChatPhotoImage {
     ChatPhotoImage(
       photo: sticker.photo, shelf: shelf, shown: StickerBox.size(of: sticker),
-      whileInSight: lineSpace == nil, retries: !waiting && look == .moving, sticker: look)
+      whileInSight: lineSpace == nil, retries: !waiting && look == .moving, sticker: look,
+      corner: Radius.lg)
   }
 }
 
