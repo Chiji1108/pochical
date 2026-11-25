@@ -21,7 +21,9 @@ struct RootView: View {
   @Fetch private var unread: [String: Int] = [:]
   /// What is read in each chat, for the notifications of lines read to go.
   @Fetch private var read = ReadState()
-  @State private var openGroupID: String?
+  /// The group open in グループ, kept as it is picked, so the app opens on
+  /// it again however it was closed (spec/shift-patterns.md).
+  @AppStorage("openGroup") private var openGroupID: String?
   /// The tab shown, and the pages over it.
   @State private var navigator = RootNavigator()
   /// A group just made, whose メンバーを招待 takes the place of グループを作る
