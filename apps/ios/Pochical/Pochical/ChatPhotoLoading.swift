@@ -12,21 +12,23 @@ import UIKit
 /// links' page pictures come the same way (PipelinePicture), drawn from
 /// memory as soon as a view drawing them is made again.
 enum ChatPhotoLoading {
-  /// The photos drawn at their size, `Chat.photoMemoryBytes` at most, and
-  /// the blurs their ThumbHashes draw. Nuke's caches and pipeline are
-  /// safe from any thread, and read so (followErasing).
-  nonisolated static let memory = ImageCache(costLimit: Chat.photoMemoryBytes)
-
-  nonisolated static let pipeline: ImagePipeline = {
-    var configuration = ImagePipeline.Configuration()
-    configuration.imageCache = memory
+  /// The photos drawn at their size and as fetched, each group's apart
+  /// (PhotoCaches), and the blurs their ThumbHashes draw. Nuke's caches and
+  /// pipeline are safe from any thread, and read so (followErasing).
+  nonisolated static let caches: PhotoCaches = {
     // Among the app's own caches, which the system may empty: all fetched
     // again as they show.
-    let disk = try? DataCache(name: "app.pochical.chat-photos")
-    disk?.sizeLimit = Chat.photoDiskBytes
-    configuration.dataCache = disk
-    return ImagePipeline(configuration: configuration)
+    let folder = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+    // Where 1.4.0 and before kept them, under names no group could be told
+    // by (#1174).
+    try? FileManager.default.removeItem(at: folder.appending(path: "app.pochical.chat-photos"))
+    return PhotoCaches(in: folder.appending(path: "app.pochical.chat-photo-cache"))
   }()
+
+  nonisolated static let pipeline = ImagePipeline(delegate: caches) {
+    $0.imageCache = caches.memory
+    $0.dataCache = caches.disk
+  }
 
   /// `photo` as a line or a quote shows it: read at most `pixels` on its
   /// longer side, from its small version when it has one (its longer side
@@ -44,6 +46,7 @@ enum ChatPhotoLoading {
       data: { try await calls.photo(photo.id, in: shelf, small: small, keep: false) },
       priority: priority,
       options: held ? [.disableDiskCache] : [])
+    request.shelf = shelf
     if let pixels {
       request.thumbnail = ImageRequest.ThumbnailOptions(maxPixelSize: Float(pixels))
     }
@@ -66,6 +69,7 @@ enum ChatPhotoLoading {
         return try await calls.photo(photoID, in: shelf)
       },
       options: [.disableDiskCache])
+    request.shelf = shelf
     request.thumbnail = filling(size, scale: scale)
     return request
   }
@@ -120,22 +124,18 @@ enum ChatPhotoLoading {
         let shelf = note.userInfo?["shelf"] as? PhotoShelf
       else { return }
       for small in [true, false] {
-        pipeline.configuration.dataCache?.removeData(
-          for: key(photoID, in: shelf, small: small))
+        caches.disk?.removeData(for: key(photoID, in: shelf, small: small))
       }
     }
-    // A group the device held, left or ended, takes its photos with it
-    // (`groupLeft` is told of no other, so never as a device takes its
-    // values again). Nuke's caches cannot let go of one group's alone: the
-    // memory cache gives up an image only by its whole request, the size it
-    // was drawn at included, and the disk cache only by a photo's key, with
-    // no way to list them, while the group's lines, which named its photos,
-    // may have gone from the device long before (a Reset, a page not held).
-    // So all go, and the other groups' come again as they show.
-    for name in [ChatPhotos.erased, groupLeft] {
-      center.addObserver(forName: name, object: nil, queue: nil) { _ in
-        pipeline.cache.removeAll()
-      }
+    center.addObserver(forName: ChatPhotos.erased, object: nil, queue: nil) { _ in
+      caches.removeAll()
+    }
+    // A group the device held, left or ended, takes its photos and faces
+    // with it, the other groups' staying (`groupLeft` is told of no other,
+    // so never as a device takes its values again).
+    center.addObserver(forName: groupLeft, object: nil, queue: nil) { note in
+      guard let groupID = note.userInfo?["groupID"] as? String else { return }
+      caches.forget(.group(groupID))
     }
   }
 
@@ -156,13 +156,14 @@ enum ChatPhotoLoading {
     let drawn = lineRequest(photo, in: shelf, scale: scale, calls: calls).flatMap {
       pipeline.cache[$0]?.image
     }
-    return drawn ?? blur(of: photo)
+    return drawn ?? blur(of: photo, in: shelf)
   }
 
-  /// The blur `photo`'s ThumbHash draws, kept beside the photos.
-  static func blur(of photo: LinePhoto) -> UIImage? {
+  /// The blur `photo`'s ThumbHash draws, kept beside the photos, `shelf`'s.
+  static func blur(of photo: LinePhoto, in shelf: PhotoShelf) -> UIImage? {
     guard let hash = photo.thumbHash else { return nil }
-    let key = ImageCacheKey(key: "blur/\(photo.id)")
+    let memory = caches.images(of: shelf)
+    let key = ImageCacheKey(key: "blur/\(shelf.key)/\(photo.id)")
     if let kept = memory[key] {
       return kept.image
     }

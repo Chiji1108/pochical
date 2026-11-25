@@ -1,5 +1,5 @@
 {
-  "originHash" : "88ea28d9e0313e2d8b70dac43c36b7450edd2d77f7b1c07d8084bddafa417aac",
+  "originHash" : "700c43d06374b8524e965cefa1732171b4ccb1685fa0af7891fd3e9c3859df35",
   "pins" : [
     {
       "identity" : "combine-schedulers",
@@ -35,6 +35,15 @@
       "state" : {
         "revision" : "2b5256c29ff4e20f2a0d5ee863b62b1a22144434",
         "version" : "1.6.0"
+      }
+    },
+    {
+      "identity" : "nuke",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/kean/Nuke",
+      "state" : {
+        "revision" : "9e37a277bdb527bf3ae71156ded1423f495f5168",
+        "version" : "13.2.3"
       }
     },
     {
