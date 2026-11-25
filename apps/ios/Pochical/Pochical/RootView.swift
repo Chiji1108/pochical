@@ -21,7 +21,11 @@ struct RootView: View {
   @Fetch private var unread: [String: Int] = [:]
   /// What is read in each chat, for the notifications of lines read to go.
   @Fetch private var read = ReadState()
-  @State private var openGroupID: String?
+  /// The group open in グループ, this window's own, starting on the one
+  /// picked last, which is kept as it changes, so the app opens on it again
+  /// however it was closed (spec/shift-patterns.md).
+  @State private var openGroupID = UserDefaults.standard.string(forKey: Self.openGroupKey)
+  private static let openGroupKey = "openGroup"
   /// The tab shown, and the pages over it.
   @State private var navigator = RootNavigator()
   /// A group just made, whose メンバーを招待 takes the place of グループを作る
@@ -86,6 +90,9 @@ struct RootView: View {
     // Here, under any cover over the tabs, rather than on a screen a cover
     // or a tab switch takes away.
     .onChange(of: openPlaceID, initial: true) { _, placeID in openPlace.want(placeID) }
+    .onChange(of: openGroupID) { _, id in
+      UserDefaults.standard.set(id, forKey: Self.openGroupKey)
+    }
     .environment(\.openInvite, OpenInviteAction { code in invite = OpenedInvite(code: code) })
     .environment(\.say, SayAction(say: say))
     // The app icon's badge follows what is read here too, as the
