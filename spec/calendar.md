@@ -79,6 +79,10 @@ A window narrower than a phone, an iPad's or an Android split screen's or free-f
 - **The widgets** are sized by the Home Screen's grid, not by the app's window, and do not change.
 - A window short as well as narrow keeps its width's layout, the month fitting its height as on every screen (The month).
 
+## In a short window
+
+A window of Material's compact height (under 480dp), a phone on its side above all, keeps the page's first screenful for what the page is for. メンバーを招待 draws its QR code at 88dp in place of 200 there, so the code's card and 招待リンクを送る fill no more than the first screenful a phone's bars leave on its side, at the system's text size; larger text scrolls to the button. A phone reads a code that size held to the screen at once (#1179). This is Android's for now: iOS keeps the code at 200pt on an iPhone on its side until #1297.
+
 ## Saving a month as a picture
 
 The month's heading has a way to save it (/design's save menu). Saving is never offered by itself, not even as a month is filled: a filled month shows as filled, and the heading's corner is there whenever it is wanted. 画像で保存 shows the month as it will go out: its name, the weekdays and its days drawn as the calendar draws them on the calendar's own ground, without today's frame or memo strokes, the days of the months around it faded and holding nothing, and ポチカル with the store's icon at its foot, so whoever gets it can find the app by the same dog. Its look is its own, apart from the person's スタイル: light or dark (the screen's until picked, kept on the device; an always-dark テーマ stays dark), and シフト名 and 休みの見せ方, kept with the account. Names start on, as it goes to people who do not know the marks. 休みの見せ方 is set for each pattern that counts as off, as on スタイル and as 端末カレンダーに追加 picks days off, those of a job left too, as 有休 may be worth showing family while 休み is not; each starts 強調, shown, as they could not tell an empty day from one not entered. 共有 opens the system's share sheet, 保存 puts it in Photos. 端末カレンダーに追加 is the menu's other way (below). A period's picture (The shift period) is titled by its days with its year, 2026年10月15日〜11月14日 (Oct 15 – Nov 14, 2026 in English; 2026年12月15日〜2027年1月14日 across a year), its days outside the period faded and holding nothing as a month's around it are, its month's 1st dated 11/1 as on the page; it is shared and read as 2026年10月15日〜11月14日のシフト.
@@ -121,6 +125,16 @@ What the eye takes from a day's place in the month, VoiceOver and TalkBack are t
 - A day is one button, the whole cell: 今日 first on today, the date with its weekday, a holiday's name, the shift's name or 未入力, hours moved from the pattern's as 早出, 残業 or 時間変更 with the hours, and メモあり: 「今日、11月3日(火)、文化の日、日勤、早出 7:00 – 16:00、メモあり」. The weekday is said with the date, as the row of weekdays above is not read with each day.
 - To a voice (Voice Control), a day answers to what it shows and to its date: 「12日」 or 「11月12日」.
 - Entering says what each key did (ポチポチ入力, above).
+
+## Keys
+
+With a keyboard the calendar is walked as it is read, on the month in sight alone (#1286).
+
+- **Tab** goes through the heading's controls (the month's name, 今月, ⤓), then each day of the month shown, its faded days around it included, in the order they are read, then on to what follows the month (今月のお休み, ポチポチ入力 or the tray, and on a wide screen the day's pane); Shift+Tab goes back the same way. With a day open, its week's days take the month's place.
+- **The arrow keys** move between the days by where they lie: left and right along a week, up and down between the weeks, up from the first week to the heading. Past the page's edge they go only to what lies beside the month on the screen (on a wide screen, the day's pane), never into the month beside it: the pages turn by a swipe, 今月 or 月を選ぶ (the month's name, unless おたのしみ has it change the sky), never as a key reaches past a page's last day.
+- **Enter** (or Space) opens the day reached, as a tap does, or while entering moves entering to it.
+- What a key has reached is drawn with Material 3 Expressive's focus ring (the theme's, so every control in the app has it), inside a day's own corners, rather than a faint layer over it. Only the page in sight takes focus: Compose's pager lays out the months beside it, and more beyond them as a key reaches past a page's edge, and each page but the one settled on turns focus away as it enters (`KeysOnPageShown`), so a key never reaches a month out of sight and turns the pages to it. As the pages turn under a key's focus (a swipe, or a faded day entered while entering), the focus moves to the page shown, at its first day, rather than staying on the page that went.
+- iOS leaves keys to the system, as its own apps do: a day is a button, which Tab reaches on an iPad with a keyboard where the system's Full Keyboard Access is on, with its own ring. It has not been walked with a keyboard yet (#1291).
 
 ## How days are written
 

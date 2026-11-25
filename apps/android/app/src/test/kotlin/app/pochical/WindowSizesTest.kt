@@ -25,6 +25,9 @@ import app.pochical.calendar.Pattern
 import app.pochical.calendar.PatternKeys
 import app.pochical.calendar.rememberKeyPages
 import app.pochical.design.Metrics
+import app.pochical.groups.GroupsActions
+import app.pochical.groups.NoGroups
+import app.pochical.kit.AccountState
 import app.pochical.kit.DeviceSettings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -181,6 +184,34 @@ class WindowSizesTest {
     }
     assertEquals(1280f - 48f, compose.onNodeWithTag("field").getUnclippedBoundsInRoot().bottom.value, 1f)
   }
+
+  /**
+   * A screen with no bar, the whole window's, on a tablet upright: its button keeps to a page's
+   * width in the middle, as every page's does.
+   */
+  private fun aScreensButtonKeepsToAPagesWidth(button: Int, screen: @Composable () -> Unit) {
+    window("w800dp-h1280dp")
+    compose.setContent {
+      CompositionLocalProvider(LocalDeviceSettings provides DeviceSettingsState(DeviceSettings()) {}) { screen() }
+    }
+    val bounds = compose.onNodeWithText(RuntimeEnvironment.getApplication().getString(button)).getUnclippedBoundsInRoot()
+    assertTrue(bounds.across <= PageMaxWidth.value)
+    assertEquals(400f, (bounds.left + bounds.right).value / 2, 1f)
+  }
+
+  @Test fun theWelcomesButtonKeepsToAPagesWidth() = aScreensButtonKeepsToAPagesWidth(R.string.welcome_start) { Welcome({}, {}) }
+
+  @Test
+  fun theSessionEndedButtonKeepsToAPagesWidth() =
+    aScreensButtonKeepsToAPagesWidth(R.string.session_ended_start_afresh) { SessionEndedScreen(unreadable = false, tryAgain = {}, startAfresh = {}) }
+
+  @Test
+  fun theErasingButtonKeepsToAPagesWidth() =
+    aScreensButtonKeepsToAPagesWidth(R.string.retry) { ErasingScreen(AccountState.Erasing(AccountState.Erasing.Why.SignedOut, failed = true)) {} }
+
+  @Test
+  fun noGroupsButtonKeepsToAPagesWidth() =
+    aScreensButtonKeepsToAPagesWidth(R.string.new_group) { NoGroups(GroupsActions(onNew = {}, onScan = {}, onShifts = { _, _ -> })) }
 
   private fun pageDialog() =
     compose.setContent { PageDialog(onDismissRequest = {}) { Text("dialog", Modifier.fillMaxSize().testTag("dialog")) } }

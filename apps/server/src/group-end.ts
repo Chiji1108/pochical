@@ -13,3 +13,16 @@ export const endNoticeAt = (
   setAt: number,
   noticeHours: number = GROUP_END_NOTICE_HOURS
 ): number => Math.max(endsAt - noticeHours * HOUR_MS, setAt);
+
+/**
+ * Whether a member is to be notified that the group ends at `endsAt`
+ * (spec/sync-protocol.md, A group's end), having last been notified of
+ * `told`: unless that end is no later and still to come, so an end moved
+ * later, or back and forth, notifies no one again, and one moved sooner
+ * than they were told notifies them of the new day.
+ */
+export const isToldAnew = (
+  endsAt: number,
+  told: number | null,
+  now: number
+): boolean => told === null || told <= now || endsAt < told;

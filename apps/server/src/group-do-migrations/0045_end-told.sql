@@ -1,0 +1,1 @@
+ALTER TABLE `members` ADD `told_ends_at` integer;

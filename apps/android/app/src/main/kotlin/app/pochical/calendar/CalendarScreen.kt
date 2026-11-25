@@ -34,6 +34,11 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusGroup
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.Orientation
@@ -79,6 +84,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -835,6 +841,7 @@ fun CalendarScreen(
 /** The months, a page each, running to the screen's or the pane's edges, so a month slides out of sight rather than being cut off inside them. */
 @Composable
 private fun MonthPager(pager: PagerState, range: CalendarRange, days: PageDays) {
+  val turnedAway = remember { mutableStateOf(false) }
   HorizontalPager(
     pager,
     Modifier.fillMaxWidth(),
@@ -842,7 +849,7 @@ private fun MonthPager(pager: PagerState, range: CalendarRange, days: PageDays) 
     verticalAlignment = Alignment.Top,
     flingBehavior = PagerDefaults.flingBehavior(pager, snapAnimationSpec = Springs.standard()),
   ) { page ->
-    MonthPage(range.monthAt(page), days, Modifier.padding(horizontal = SCREEN_EDGE))
+    KeysOnPageShown(pager, page, turnedAway) { keys -> MonthPage(range.monthAt(page), days, keys.padding(horizontal = SCREEN_EDGE)) }
   }
 }
 
@@ -1148,6 +1155,7 @@ private fun WeekPager(opened: LocalDate, range: CalendarRange, weekStart: Int, d
   LaunchedEffect(openedPage) {
     if (pager.currentPage != openedPage) pager.animateScrollToPage(openedPage, animationSpec = Springs.standard())
   }
+  val turnedAway = remember { mutableStateOf(false) }
   HorizontalPager(
     pager,
     Modifier.fillMaxWidth(),
@@ -1156,13 +1164,43 @@ private fun WeekPager(opened: LocalDate, range: CalendarRange, weekStart: Int, d
     flingBehavior = PagerDefaults.flingBehavior(pager, snapAnimationSpec = Springs.standard()),
   ) { page ->
     val week = List(7) { weekAt(page).plusDays(it.toLong()) }
-    days.Week(
-      week,
-      remember(days.calendar, week) { days.calendar.shown(week.first(), week.last()) },
-      fadingOutside = null,
-      Modifier.padding(horizontal = SCREEN_EDGE),
-    )
+    KeysOnPageShown(pager, page, turnedAway) { keys ->
+      days.Week(
+        week,
+        remember(days.calendar, week) { days.calendar.shown(week.first(), week.last()) },
+        fadingOutside = null,
+        keys.padding(horizontal = SCREEN_EDGE),
+      )
+    }
   }
+}
+
+/**
+ * A page of the calendar's pagers, [content] given what keeps the keys to the page shown
+ * (spec/calendar.md, Keys): only the page settled on takes focus as it is entered, so focus search
+ * passes over the pages Compose's pager lays out beside it, and those it lays out past them for a
+ * key; and focus left on a page as it turns out of sight (a swipe, or a faded day entered) moves to
+ * the page shown, through [turnedAway], which the pager's pages share. A key never acts on a month
+ * or week out of sight, so it never turns the pages to one.
+ */
+@Composable
+private fun KeysOnPageShown(pager: PagerState, page: Int, turnedAway: MutableState<Boolean>, content: @Composable (Modifier) -> Unit) {
+  val shown = page == pager.settledPage
+  val requester = remember { FocusRequester() }
+  var holdsFocus by remember { mutableStateOf(false) }
+  LaunchedEffect(shown, holdsFocus, turnedAway.value) {
+    if (!shown && holdsFocus) turnedAway.value = true
+    if (shown && turnedAway.value) {
+      turnedAway.value = false
+      requester.requestFocus()
+    }
+  }
+  content(
+    Modifier.onFocusChanged { holdsFocus = it.hasFocus }
+      .focusRequester(requester)
+      .focusProperties { onEnter = { if (page != pager.settledPage) cancelFocusChange() } }
+      .focusGroup()
+  )
 }
 
 /** How tall a day is for six weeks to fit in `room`: its full height where there is room, else less. */

@@ -1,6 +1,5 @@
 package app.pochical
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -8,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -70,9 +68,9 @@ fun AccountRoot() {
  * again by itself; 再試行 tries at once.
  */
 @Composable
-private fun ErasingScreen(erasing: AccountState.Erasing, retry: () -> Unit) {
+internal fun ErasingScreen(erasing: AccountState.Erasing, retry: () -> Unit) = PageScaffold { padding ->
   Column(
-    Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).safeDrawingPadding().padding(horizontal = 20.dp, vertical = 12.dp),
+    Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp, vertical = 12.dp),
     horizontalAlignment = Alignment.CenterHorizontally,
     verticalArrangement = Arrangement.spacedBy(16.dp),
   ) {

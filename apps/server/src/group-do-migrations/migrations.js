@@ -44,6 +44,7 @@ import m0041 from './0041_reaction-places-required.sql';
 import m0042 from './0042_group-end.sql';
 import m0043 from './0043_end-notice-outbox.sql';
 import m0044 from './0044_chat-line-sticker.sql';
+import m0045 from './0045_end-told.sql';
 
   export default {
     journal,
@@ -92,7 +93,8 @@ m0040,
 m0041,
 m0042,
 m0043,
-m0044
+m0044,
+m0045
     }
   }
   

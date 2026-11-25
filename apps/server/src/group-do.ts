@@ -72,7 +72,7 @@ import {
   profile,
   supportSlackLines,
 } from "./group-do-schema";
-import { endNoticeAt } from "./group-end";
+import { endNoticeAt, isToldAnew } from "./group-end";
 import { markColumns, markOfRow, sameMark } from "./group-marks";
 import type { MarkValue } from "./group-marks";
 import {
@@ -456,8 +456,9 @@ export class GroupDO extends DurableObject<Env> {
 
   /**
    * What the group's end asks for by now: its chat's line that it ends
-   * soon, once for each end set, with its notification to every member,
-   * or the end itself (spec/sync-protocol.md, A group's end).
+   * soon, once for each end set, with its notification to every member
+   * not told already of an end no later (`isToldAnew`), or the end
+   * itself (spec/sync-protocol.md, A group's end).
    * When the alarm is to come back for it: for what is still ahead, or
    * after `bucketRetryWait` for an ending that failed, which is then run
    * again whole.
@@ -487,13 +488,22 @@ export class GroupDO extends DurableObject<Env> {
     if (row.endNoticeAt !== null && row.endNoticeAt.getTime() <= Date.now()) {
       const notice = this.ctx.storage.transactionSync(() => {
         this.db.update(profile).set({ endNoticeAt: null }).run();
-        // Owed to each member from the line's own transaction, so none
-        // is lost between the line and its telling.
-        const owed = this.memberList().map(({ userId }) => ({
-          dueAt: new Date(),
-          endsAt: new Date(endsAt),
-          userId,
-        }));
+        // Owed to each member not told of it already, from the line's own
+        // transaction, so none is lost between the line and its telling.
+        const now = Date.now();
+        const owed = this.db
+          .select({ toldEndsAt: members.toldEndsAt, userId: members.userId })
+          .from(members)
+          .where(inGroup())
+          .all()
+          .filter(({ toldEndsAt }) =>
+            isToldAnew(endsAt, toldEndsAt?.getTime() ?? null, now)
+          )
+          .map(({ userId }) => ({
+            dueAt: new Date(now),
+            endsAt: new Date(endsAt),
+            userId,
+          }));
         if (owed.length > 0) {
           this.db.insert(endNoticeOutbox).values(owed).run();
         }
@@ -561,7 +571,22 @@ export class GroupDO extends DurableObject<Env> {
           eq(endNoticeOutbox.endsAt, endsAt)
         );
         if (again === undefined) {
-          this.db.delete(endNoticeOutbox).where(told).run();
+          this.ctx.storage.transactionSync(() => {
+            // Told of it while it was still owed: not once a new end, or
+            // their leaving, took it away as it went.
+            const taken = this.db
+              .delete(endNoticeOutbox)
+              .where(told)
+              .returning()
+              .get();
+            if (taken !== undefined) {
+              this.db
+                .update(members)
+                .set({ toldEndsAt: endsAt })
+                .where(eq(members.userId, userId))
+                .run();
+            }
+          });
         } else {
           this.db.update(endNoticeOutbox).set(again).where(told).run();
         }
@@ -1266,6 +1291,8 @@ export class GroupDO extends DurableObject<Env> {
       ownPhoto: null,
       // Back in by a live link: no longer taken out.
       removedBy: null,
+      // Told of the group's end anew, as one who was never in it.
+      toldEndsAt: null,
       userId,
       usualName,
       usualPhoto,
