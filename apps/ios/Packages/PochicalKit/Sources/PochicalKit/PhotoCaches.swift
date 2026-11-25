@@ -46,7 +46,8 @@ public final class PhotoCaches: ImagePipeline.Delegate {
   }
 
   /// Lets go of everything `shelf`'s requests drew and fetched, as its
-  /// group is left or ends.
+  /// group is left or ends. It waits on the disk, so off the main thread
+  /// and any actor.
   public func forget(_ shelf: PhotoShelf) {
     let images = shelves.withLock { $0.removeValue(forKey: shelf) }
     images?.removeAll()
@@ -54,8 +55,10 @@ public final class PhotoCaches: ImagePipeline.Delegate {
     // Writes still on their way are on the disk first, to be found there.
     disk.flush()
     let prefix = Self.filename(for: "\(shelf.key)/") ?? ""
-    let files = (try? FileManager.default.contentsOfDirectory(atPath: disk.path.path())) ?? []
-    for file in files where file.hasPrefix(prefix) {
+    let files =
+      (try? FileManager.default.contentsOfDirectory(
+        at: disk.path, includingPropertiesForKeys: nil)) ?? []
+    for file in files.map(\.lastPathComponent) where file.hasPrefix(prefix) {
       if let key = file.removingPercentEncoding {
         disk.removeData(for: key)
       }

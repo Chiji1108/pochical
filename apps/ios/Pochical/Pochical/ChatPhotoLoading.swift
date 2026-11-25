@@ -18,12 +18,12 @@ enum ChatPhotoLoading {
   nonisolated static let caches: PhotoCaches = {
     // Among the app's own caches, which the system may empty: all fetched
     // again as they show.
-    let folder = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-    // Where 1.4.0 and before kept them, under names no group could be told
-    // by (#1174).
-    try? FileManager.default.removeItem(at: folder.appending(path: "app.pochical.chat-photos"))
-    return PhotoCaches(in: folder.appending(path: "app.pochical.chat-photo-cache"))
+    PhotoCaches(in: cachesFolder.appending(path: "app.pochical.chat-photo-cache"))
   }()
+
+  nonisolated private static var cachesFolder: URL {
+    FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+  }
 
   nonisolated static let pipeline = ImagePipeline(delegate: caches) {
     $0.imageCache = caches.memory
@@ -118,6 +118,13 @@ enum ChatPhotoLoading {
   /// with the account, a group's with the group. What memory holds of one
   /// taken back goes as it is let go, its line no longer drawn.
   static func followErasing() {
+    // Where 1.4.0 and before kept the photos fetched, under names no group
+    // could be told by (#1174): let go of in the background, as the app
+    // starts.
+    DispatchQueue.global(qos: .utility).async {
+      try? FileManager.default.removeItem(
+        at: cachesFolder.appending(path: "app.pochical.chat-photos"))
+    }
     let center = NotificationCenter.default
     center.addObserver(forName: ChatPhotos.forgotten, object: nil, queue: nil) { note in
       guard let photoID = note.userInfo?["photoID"] as? String,
@@ -132,10 +139,11 @@ enum ChatPhotoLoading {
     }
     // A group the device held, left or ended, takes its photos and faces
     // with it, the other groups' staying (`groupLeft` is told of no other,
-    // so never as a device takes its values again).
+    // so never as a device takes its values again), in the background, as
+    // it is told from within the sync.
     center.addObserver(forName: groupLeft, object: nil, queue: nil) { note in
       guard let groupID = note.userInfo?["groupID"] as? String else { return }
-      caches.forget(.group(groupID))
+      DispatchQueue.global(qos: .utility).async { caches.forget(.group(groupID)) }
     }
   }
 
