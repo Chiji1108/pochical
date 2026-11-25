@@ -64,8 +64,9 @@ public actor SyncClient {
     /// or the account changed since. It neither sends nor takes anything
     /// until started again as whoever the device is then.
     case notTheOwner
-    /// The user is not in the group: taken out, left on another device, or
-    /// the group gone (403, or closed with `SyncSocket.notMemberCloseCode`).
+    /// The user is not in the group, as their own DO lists it or as the group
+    /// decides: taken out, left on another device, or the group gone (403, or
+    /// closed with `SyncSocket.notMemberCloseCode`).
     /// The device lets go of the group then, as of one left, whether or not
     /// their own socket ever tells it so; opening it again, as after joining
     /// it again, tries once more.
@@ -886,10 +887,11 @@ public actor SyncClient {
     return false
   }
 
-  /// The group refused the user as not in it, which the group decides: the
-  /// device lets go of it as of a group left, though the user's own socket
-  /// may never say so (a group their DO does not list, as one held from
-  /// before their DO lost it, hears no `Membership` marked left).
+  /// The user is not in the group, as their own DO lists it (the Worker's
+  /// 403) or as the group decides (its 403 or close): the device lets go of
+  /// it as of a group left, though the user's own socket may never say so (a
+  /// group their DO does not list, held from before it lost it, hears no
+  /// `Membership` marked left).
   private func letGo(of groupID: String, as credentials: Credentials) async {
     do {
       try await database.write { db in

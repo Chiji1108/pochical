@@ -217,6 +217,7 @@ class SyncClient internal constructor(
           on(ended)
           if (ended == SocketEvent.ClockAhead) restampAfterWelcome = true
           if (ended == SocketEvent.Refused(Stop.SignedOut)) signedOut()
+          if (ended == SocketEvent.Refused(Stop.NotMember) && peer is Peer.Group) letGoOf(peer.id)
         }
         is SocketState.CatchingUp,
         SocketState.Current -> on(SocketEvent.Dropped)
@@ -275,11 +276,6 @@ class SyncClient internal constructor(
             SocketMessage.Closing -> return@coroutineScope null
           }
       } while (ended == null)
-      // The group decides who is in it: one that refuses the user goes from the device as one left
-      // does, though their own socket may never say so (a group their User DO does not list).
-      if (ended == SocketEvent.Refused(Stop.NotMember) && peer is Peer.Group) {
-        letGo(mapOf(peer.id to write { placeLeft(peer.id) }))
-      }
       ended
     } catch (_: NotTheOwner) {
       SocketEvent.Refused(Stop.NotTheOwner)
@@ -434,6 +430,25 @@ class SyncClient internal constructor(
       else -> {}
     }
     return null
+  }
+
+  /**
+   * The user is not in the group, as their own DO lists it (the Worker's 403) or as the group
+   * decides (its 403 or close): the device lets go of it as of one left, though their own socket
+   * may never say so (a group their DO does not list, held from before it lost it, hears no
+   * `Membership` marked left). A write that fails keeps it, until the group is opened again.
+   */
+  private suspend fun letGoOf(groupId: String) {
+    val photos =
+      try {
+        write { placeLeft(groupId) }
+      } catch (e: CancellationException) {
+        throw e
+      } catch (e: Exception) {
+        log("Kept the group refused: $e")
+        return
+      }
+    letGo(mapOf(groupId to photos))
   }
 
   /** The groups left, with the photos the device held of them: their files go, and the app is told. */

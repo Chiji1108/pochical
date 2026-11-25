@@ -305,6 +305,7 @@ class ChatSyncTest {
     server.notListed += "g1"
     val phone = signedIn()
     phone.database.write { take(listOf(change { cursor = 1; member = member { userId = "u2"; photoId = "face" } }), "g1") }
+    assertEquals(listOf("g1"), phone.database.read { groupIds() })
     val left = phone.letGo()
     phone.account.hold("g1")
     eventually { left == listOf("g1") }
