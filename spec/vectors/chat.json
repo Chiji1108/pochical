@@ -1447,6 +1447,13 @@
       "expected": "others"
     },
     {
+      "name": "another member's sticker is others'",
+      "author": "u2",
+      "me": "me",
+      "kind": "sticker",
+      "expected": "others"
+    },
+    {
       "name": "a line from the app is the app's",
       "author": "u2",
       "me": "me",
@@ -2149,6 +2156,13 @@
       "expected": true
     },
     {
+      "name": "a blocked writer's sticker",
+      "kind": "sticker",
+      "ownChat": true,
+      "writerBlocked": true,
+      "expected": true
+    },
+    {
       "name": "a blocked writer's shared days",
       "kind": "days",
       "ownChat": true,
@@ -2216,6 +2230,13 @@
     {
       "name": "someone else's photos",
       "kind": "photos",
+      "mine": false,
+      "place": "group",
+      "expected": true
+    },
+    {
+      "name": "someone else's sticker",
+      "kind": "sticker",
       "mine": false,
       "place": "group",
       "expected": true

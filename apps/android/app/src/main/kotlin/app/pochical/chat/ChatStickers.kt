@@ -62,6 +62,17 @@ fun stickerSize(sticker: ChatSticker): DpSize {
 }
 
 /**
+ * A sticker's request, the file itself (it has no small version), as its line draws it and the
+ * chat fetches it ahead: read by Android's ImageDecoder to move as the file loops, or [still], as
+ * the loader reads any image, at its first frame.
+ */
+fun stickerRequest(context: Context, stickerId: String, groupId: String, still: Boolean, attempt: Int = 0): ImageRequest =
+  ImageRequest.Builder(context)
+    .data(ChatPhotoData(stickerId, groupId, small = false, attempt = attempt))
+    .apply { if (!still) decoderFactory(AnimatedImageDecoder.Factory()).repeatCount(AnimatedImageDecoder.ENCODED_LOOP_COUNT).memoryCacheKeyExtra(MOVING, "") }
+    .build()
+
+/**
  * A sticker as it loads, the file itself (it has no small version): its place empty while it
  * comes, ↻ in it should it not come, a tap fetching it again. A moving one plays as its file says,
  * as often as it loops, and stands still at its first frame while motion is reduced. While its line
@@ -74,16 +85,7 @@ fun StickerImage(sticker: ChatSticker, groupId: String, waiting: WaitingLine?, o
   val still = rememberReducedMotion()
   var attempt by remember(sticker.id) { mutableIntStateOf(0) }
   var failed by remember(sticker.id) { mutableStateOf(false) }
-  val request =
-    remember(sticker.id, groupId, attempt, still) {
-      ImageRequest.Builder(context)
-        .data(ChatPhotoData(sticker.id, groupId, small = false, attempt = attempt))
-        .apply {
-          // Read by Android's ImageDecoder, as the file loops; else as the loader reads any image, its first frame.
-          if (!still) decoderFactory(AnimatedImageDecoder.Factory()).repeatCount(AnimatedImageDecoder.ENCODED_LOOP_COUNT).memoryCacheKeyExtra(MOVING, "")
-        }
-        .build()
-    }
+  val request = remember(sticker.id, groupId, attempt, still) { stickerRequest(context, sticker.id, groupId, still, attempt) }
   val going = waiting != null && !waiting.failed
   Box(modifier.size(stickerSize(sticker))) {
     AsyncImage(

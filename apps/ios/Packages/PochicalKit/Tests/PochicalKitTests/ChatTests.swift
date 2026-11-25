@@ -56,7 +56,7 @@ struct ChatVectors: Decodable, Sendable {
 
   struct Writer: VectorCase {
     enum Kind: String, Decodable, Sendable {
-      case words, notice, hidden, unknown
+      case words, sticker, notice, hidden, unknown
     }
     let name: String
     let author: String
@@ -67,6 +67,7 @@ struct ChatVectors: Decodable, Sendable {
     var content: LineContent {
       switch kind {
       case .words: .words(LineContent.Words(text: "了解"))
+      case .sticker: .sticker(LineSticker(id: "s", width: 300, height: 300))
       case .notice: .notice(LineNotice(kind: .joined))
       case .hidden: .hidden
       case .unknown: .unknown

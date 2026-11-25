@@ -1,8 +1,11 @@
 import type { MessageInitShape } from "@bufbuild/protobuf";
 import { chatRules } from "@pochical/design/chat";
+import { runInDurableObject } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
+import { drizzle } from "drizzle-orm/durable-sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { groupReferences } from "../src/bucket-audit";
 import type { ChatEditSchema } from "../src/gen/pochical/v1/sync_pb";
 import { photoKey } from "../src/photos";
 import { alarmsSettled } from "./alarms";
@@ -176,6 +179,19 @@ describe("a sticker", () => {
     await expect(linesOf(groupId, guest)).resolves.toStrictEqual(["unsent"]);
     await alarmsSettled(env.GROUPS.getByName(groupId));
     await expect(stored(groupId, "s")).resolves.toBeFalsy();
+  });
+
+  it("is named by its line, so the bucket's audit never takes it for an orphan", async () => {
+    const { groupId, maker } = await pair();
+    await putStatus(`/v1/groups/${groupId}/photos/s`, WEBP, maker);
+    const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
+    await edit(mine, [stickerLine("s")]);
+    await expect(
+      runInDurableObject(
+        env.GROUPS.getByName(groupId),
+        (_, state) => groupReferences(drizzle(state.storage)).photos.s
+      )
+    ).resolves.toBe("referenced");
   });
 
   it("is left out of the chat's photos", async () => {

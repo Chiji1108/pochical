@@ -426,7 +426,28 @@ const isMessageOf =
  * file's message carries no metadata.
  */
 const photoName = (line: SupportLine, at: number): string =>
-  `photo-${line.seq}-${at + 1}.jpg`;
+  `photo-${line.seq}-${at + 1}`;
+
+// The extensions of a sticker's types.
+const STICKER_FILES: Partial<Record<string, string>> = {
+  "image/gif": "gif",
+  "image/webp": "webp",
+};
+
+/**
+ * A photo's file as Slack is given it: its name with the extension of its
+ * type, and what it is (a sticker is a WebP or a GIF, spec/chat.md
+ * Stickers).
+ */
+const photoFile = (
+  name: string,
+  type: string | undefined
+): { filename: string; title: string } => {
+  const sticker = STICKER_FILES[type ?? ""];
+  return sticker === undefined
+    ? { filename: `${name}.jpg`, title: "写真" }
+    : { filename: `${name}.${sticker}`, title: STICKER_WORDS };
+};
 
 const hasPhotoOf =
   (line: SupportLine) =>
@@ -437,7 +458,9 @@ const hasPhotoOf =
       typeof message.bot_id === "string" &&
       Array.isArray(message.files) &&
       message.files.some(
-        (file: unknown) => isRecord(file) && names.has(String(file.name))
+        (file: unknown) =>
+          isRecord(file) &&
+          names.has(String(file.name).replace(/\.[a-z]+$/u, ""))
       )
     );
   };
@@ -670,12 +693,12 @@ const sharedTs = (file: unknown, channel: string): string | undefined => {
 const uploadPhoto = async (
   env: Env,
   bytes: ArrayBuffer,
-  filename: string
+  { filename, title }: { filename: string; title: string }
 ): Promise<string> => {
   const slot = await slackTake(
     env,
     "files.getUploadURLExternal",
-    { alt_txt: "写真", filename, length: bytes.byteLength },
+    { alt_txt: title, filename, length: bytes.byteLength },
     "a photo"
   );
   const url = stringOf(slot.upload_url);
@@ -725,17 +748,23 @@ const postPhotos = async (
   if (found !== undefined) {
     return found;
   }
-  const fileIds: string[] = [];
+  const files: { id: string; title: string }[] = [];
   for (const [at, { id }] of line.photos.entries()) {
     // oxlint-disable-next-line no-await-in-loop -- the photos go in order
     const photo = await env.PHOTOS.get(photoKey(supportPlace(line.userId), id));
     if (photo !== null) {
-      fileIds.push(
-        // oxlint-disable-next-line no-await-in-loop -- the photos go in order
-        await uploadPhoto(env, await photo.arrayBuffer(), photoName(line, at))
+      const file = photoFile(
+        photoName(line, at),
+        photo.httpMetadata?.contentType
       );
+      files.push({
+        // oxlint-disable-next-line no-await-in-loop -- the photos go in order
+        id: await uploadPhoto(env, await photo.arrayBuffer(), file),
+        title: file.title,
+      });
     }
   }
+  const fileIds = files.map(({ id }) => id);
   const [first] = fileIds;
   if (first === undefined) {
     return null;
@@ -745,7 +774,7 @@ const postPhotos = async (
     "files.completeUploadExternal",
     {
       channel_id: env.SLACK_CHANNEL_ID,
-      files: fileIds.map((fileId) => ({ id: fileId, title: "写真" })),
+      files,
       thread_ts: thread,
       ...(quote === "" ? {} : { initial_comment: quote.trim() }),
     },

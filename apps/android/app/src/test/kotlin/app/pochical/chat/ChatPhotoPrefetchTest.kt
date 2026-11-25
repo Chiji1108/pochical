@@ -5,6 +5,8 @@ import androidx.compose.ui.unit.dp
 import app.pochical.kit.ChatLine
 import app.pochical.kit.LineContent
 import app.pochical.v1.chatPhoto
+import app.pochical.v1.chatSticker
+import app.pochical.v1.copy
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -40,5 +42,19 @@ class ChatPhotoPrefetchTest {
     val album = photosAt(listOf(line(1, LineContent.Photos(listOf(photo("a"), photo("b"), photo("c"))))), listOf(0)) { false }
     assertEquals(DpSize(240.dp, 120.dp), album["a"])
     assertEquals(DpSize(119.dp, 119.dp), album["b"])
+  }
+
+  @Test
+  fun aStickerIsFetchedAheadByItself() {
+    val sticker = chatSticker {
+      id = "s"
+      width = 300
+      height = 300
+    }
+    val items = listOf(line(1, LineContent.Sticker(sticker)), line(2, LineContent.Photos(listOf(photo("a")))), line(3, LineContent.Sticker(sticker.copy { id = "blocked" }), author = "u3"))
+    val folded = { line: ChatLine -> line.authorId == "u3" }
+    assertEquals(setOf("s"), stickersAt(items, listOf(0, 1, 2), folded))
+    // Not among the photos, which are fetched small.
+    assertEquals(setOf("a"), photosAt(items, listOf(0, 1, 2), folded).keys)
   }
 }
