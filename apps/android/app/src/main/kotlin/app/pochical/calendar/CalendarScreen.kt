@@ -34,6 +34,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusGroup
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.Orientation
@@ -842,7 +844,7 @@ private fun MonthPager(pager: PagerState, range: CalendarRange, days: PageDays) 
     verticalAlignment = Alignment.Top,
     flingBehavior = PagerDefaults.flingBehavior(pager, snapAnimationSpec = Springs.standard()),
   ) { page ->
-    MonthPage(range.monthAt(page), days, Modifier.padding(horizontal = SCREEN_EDGE))
+    MonthPage(range.monthAt(page), days, Modifier.focusedOnlyWhenShown(pager, page).padding(horizontal = SCREEN_EDGE))
   }
 }
 
@@ -1160,10 +1162,19 @@ private fun WeekPager(opened: LocalDate, range: CalendarRange, weekStart: Int, d
       week,
       remember(days.calendar, week) { days.calendar.shown(week.first(), week.last()) },
       fadingOutside = null,
-      Modifier.padding(horizontal = SCREEN_EDGE),
+      Modifier.focusedOnlyWhenShown(pager, page).padding(horizontal = SCREEN_EDGE),
     )
   }
 }
+
+/**
+ * A page of the calendar's pagers takes focus only while it is the page shown: the pages laid out
+ * beside it, and those the pager lays out past them for a key, are passed over, so Tab and the
+ * arrow keys keep to the month or the week in sight and never turn the pages (spec/calendar.md,
+ * Keys).
+ */
+private fun Modifier.focusedOnlyWhenShown(pager: PagerState, page: Int) =
+  focusProperties { onEnter = { if (page != pager.settledPage) cancelFocusChange() } }.focusGroup()
 
 /** How tall a day is for six weeks to fit in `room`: its full height where there is room, else less. */
 

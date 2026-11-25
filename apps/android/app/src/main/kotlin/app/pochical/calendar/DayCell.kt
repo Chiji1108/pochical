@@ -3,6 +3,7 @@ package app.pochical.calendar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.material3.ripple
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -151,7 +152,8 @@ fun DayCell(
         }
       )
       .clip(shape)
-      .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+      // Material's focus ring, as the theme draws it, inside the day's own corners.
+      .clickable(interactionSource = null, indication = ripple(focusRingShape = shape), enabled = enabled, role = Role.Button, onClick = onClick)
       .clearAndSetSemantics {
         contentDescription = description
         selected = look.isSelected

@@ -122,6 +122,16 @@ What the eye takes from a day's place in the month, VoiceOver and TalkBack are t
 - To a voice (Voice Control), a day answers to what it shows and to its date: 「12日」 or 「11月12日」.
 - Entering says what each key did (ポチポチ入力, above).
 
+## Keys
+
+With a keyboard the calendar is walked as it is read, on the month in sight alone (#1286).
+
+- **Tab** goes through the heading's controls (the month's name, 今月, ⤓), then each day of the month shown, its faded days around it included, in the order they are read, then on to what follows the month (今月のお休み, ポチポチ入力 or the tray, and on a wide screen the day's pane); Shift+Tab goes back the same way. With a day open, its week's days take the month's place.
+- **The arrow keys** move between the days by where they lie: left and right along a week, up and down between the weeks, up from the first week to the heading. Past the page's edge they go only to what lies beside the month on the screen (on a wide screen, the day's pane), never into the month beside it: the pages turn by a swipe, 今月 or 月を選ぶ (the month's name), never as a key reaches past a page's last day.
+- **Enter** (or Space) opens the day reached, as a tap does, or while entering moves entering to it.
+- What a key has reached is drawn with Material 3 Expressive's focus ring (the theme's, so every control in the app has it), inside a day's own corners, rather than a faint layer over it. Only the page in sight takes focus: Compose's pager lays out the months beside it, and more beyond them as a key reaches past a page's edge, and each page but the one settled on turns focus away as it enters (`focusedOnlyWhenShown`), so a key never reaches a month out of sight and turns the pages to it.
+- iOS leaves keys to the system, as its own apps do: a day is a button, which Tab reaches on an iPad with a keyboard where the system's Full Keyboard Access is on, with its own ring. It has not been walked with a keyboard yet (#1291).
+
 ## How days are written
 
 Each platform writes a day, its weekday and its month through one set of helpers, so another language changes them in one place: Swift's `DayText.swift` in PochicalKit, and on the web `design-days.ts` (`formatDay` and its kin) with `design-week.tsx`'s weekday names. In Japanese they are 11月1日(日) in full, 11月1日, 1日(日) where the month goes without saying, 11/1 where room is short, a year before them (2026年…, 2026/…) for a day of another year, and 2026年11月 or 11月 for a month; a period (The shift period) as 10/15〜11/14, 2026/10/15〜11/14 where its year shows, its last day's year too when that is another (2026/12/15〜2027/1/14), and 2026年10月15日〜11月14日 in full, never by a month's name, which would read as the month's own days. Screens never put a day's numbers together themselves.
