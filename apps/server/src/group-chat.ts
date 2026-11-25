@@ -1261,10 +1261,7 @@ const DEVICE_MAX = 100;
  * The app's version and device a line keeps, where its place's rules ask
  * for them: only what the app says of itself, kept short.
  */
-const deviceOf = (
-  { device }: ChatSend,
-  rules: ChatPlaceRules
-): string | null =>
+const deviceOf = ({ device }: ChatSend, rules: ChatPlaceRules): string | null =>
   rules.sendsDevice && device !== "" ? device.slice(0, DEVICE_MAX) : null;
 
 /** What taking an edit did: its change, and the line to send back when it was refused. */
