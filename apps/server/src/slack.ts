@@ -9,7 +9,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { erasingSlackThreads, supportChats } from "./db/schema";
 import { errorFields } from "./log";
 import { photoKey } from "./photos";
-import { photoWords, supportPlace } from "./support-lines";
+import { photoWords, STICKER_WORDS, supportPlace } from "./support-lines";
 import type { SupportLine } from "./support-lines";
 
 /**
@@ -959,6 +959,8 @@ const reportLineOf = (row: unknown): string | undefined => {
   );
   if (row.unsent === true) {
     words = "（取り消されたメッセージ）";
+  } else if (row.sticker === true) {
+    words = STICKER_WORDS;
   } else if (Array.isArray(row.photos) && row.photos.length > 0) {
     words = photoWords(row.photos.length);
   } else if (Array.isArray(row.days) && row.days.length > 0 && words === "") {

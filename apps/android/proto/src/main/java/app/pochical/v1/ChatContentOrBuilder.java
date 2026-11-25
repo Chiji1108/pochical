@@ -149,5 +149,28 @@ public interface ChatContentOrBuilder extends
    */
   app.pochical.v1.ChatHidden getHidden();
 
+  /**
+   * <pre>
+   * A sticker from the keyboard, alone, with no words (spec/chat.md,
+   * Stickers): drawn with no bubble, see-through where it is, moving
+   * where it moves.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatSticker sticker = 8 [json_name = "sticker"];</code>
+   * @return Whether the sticker field is set.
+   */
+  boolean hasSticker();
+  /**
+   * <pre>
+   * A sticker from the keyboard, alone, with no words (spec/chat.md,
+   * Stickers): drawn with no bubble, see-through where it is, moving
+   * where it moves.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatSticker sticker = 8 [json_name = "sticker"];</code>
+   * @return The sticker.
+   */
+  app.pochical.v1.ChatSticker getSticker();
+
   public app.pochical.v1.ChatContent.KindCase getKindCase();
 }

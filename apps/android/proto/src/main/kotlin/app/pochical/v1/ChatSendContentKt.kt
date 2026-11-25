@@ -175,6 +175,45 @@ public object ChatSendContentKt {
     public fun hasPoll(): kotlin.Boolean {
       return _builder.hasPoll()
     }
+
+    /**
+     * ```
+     * The sender's own, uploaded first and not sent before (spec/chat.md,
+     * Stickers).
+     * ```
+     *
+     * `.pochical.v1.ChatSticker sticker = 5 [json_name = "sticker"];`
+     */
+    public var sticker: app.pochical.v1.ChatSticker
+      @kotlin.jvm.JvmName("getSticker")
+        get() = _builder.sticker
+      @kotlin.jvm.JvmName("setSticker")
+        set(value) {
+        _builder.sticker = value
+      }
+    /**
+     * ```
+     * The sender's own, uploaded first and not sent before (spec/chat.md,
+     * Stickers).
+     * ```
+     *
+     * `.pochical.v1.ChatSticker sticker = 5 [json_name = "sticker"];`
+     */
+    public fun clearSticker() {
+      _builder.clearSticker()
+    }
+    /**
+     * ```
+     * The sender's own, uploaded first and not sent before (spec/chat.md,
+     * Stickers).
+     * ```
+     *
+     * `.pochical.v1.ChatSticker sticker = 5 [json_name = "sticker"];`
+     * @return Whether the sticker field is set.
+     */
+    public fun hasSticker(): kotlin.Boolean {
+      return _builder.hasSticker()
+    }
     public val kindCase: app.pochical.v1.ChatSendContent.KindCase
     @kotlin.jvm.JvmName("getKindCase")
       get() = _builder.kindCase
@@ -198,4 +237,7 @@ public val app.pochical.v1.ChatSendContentOrBuilder.daysOrNull: app.pochical.v1.
 
 public val app.pochical.v1.ChatSendContentOrBuilder.pollOrNull: app.pochical.v1.ChatSharedDays?
   get() = if (hasPoll()) getPoll() else null
+
+public val app.pochical.v1.ChatSendContentOrBuilder.stickerOrNull: app.pochical.v1.ChatSticker?
+  get() = if (hasSticker()) getSticker() else null
 

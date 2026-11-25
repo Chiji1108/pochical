@@ -2304,6 +2304,11 @@
       "expected": { "kind": "hidden" }
     },
     {
+      "name": "a sticker",
+      "bytes": "420a0a02733110ac0218c801",
+      "expected": { "kind": "sticker" }
+    },
+    {
       "name": "a kind added after the app, a field its content has not",
       "bytes": "7a080a06706f6f646c65",
       "expected": {
@@ -2355,8 +2360,8 @@
     },
     {
       "name": "a group chat's line of a kind added after the app is a message from its writer",
-      "key": "CHAT_GROUP_STICKER",
-      "args": ["さくら", "poodle"],
+      "key": "CHAT_GROUP_VOICE",
+      "args": ["さくら", "voice"],
       "known": [
         "CHAT_TEXT",
         "CHAT_PHOTO",
@@ -2367,7 +2372,7 @@
     },
     {
       "name": "one that came without its writer's name is a message",
-      "key": "CHAT_GROUP_STICKER",
+      "key": "CHAT_GROUP_VOICE",
       "args": [],
       "known": [
         "CHAT_TEXT",
@@ -2379,8 +2384,8 @@
     },
     {
       "name": "a one-to-one chat's line of a kind added after the app is a message",
-      "key": "CHAT_STICKER",
-      "args": ["poodle"],
+      "key": "CHAT_VOICE",
+      "args": ["voice"],
       "known": [
         "CHAT_TEXT",
         "CHAT_PHOTO",

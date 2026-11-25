@@ -1868,6 +1868,17 @@ public nonisolated struct Pochical_V1_ChatContent: Sendable {
     set {kind = .hidden(newValue)}
   }
 
+  /// A sticker from the keyboard, alone, with no words (spec/chat.md,
+  /// Stickers): drawn with no bubble, see-through where it is, moving
+  /// where it moves.
+  public var sticker: Pochical_V1_ChatSticker {
+    get {
+      if case .sticker(let v)? = kind {return v}
+      return Pochical_V1_ChatSticker()
+    }
+    set {kind = .sticker(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Kind: Equatable, Sendable {
@@ -1891,6 +1902,10 @@ public nonisolated struct Pochical_V1_ChatContent: Sendable {
     /// delivered to them, so it comes without its content and shows
     /// nothing.
     case hidden(Pochical_V1_ChatHidden)
+    /// A sticker from the keyboard, alone, with no words (spec/chat.md,
+    /// Stickers): drawn with no bubble, see-through where it is, moving
+    /// where it moves.
+    case sticker(Pochical_V1_ChatSticker)
 
   }
 
@@ -2128,6 +2143,27 @@ public nonisolated struct Pochical_V1_ChatPhoto: Sendable {
   /// its sender, at most chatRules.photoThumbHashMaxBytes; empty for a
   /// photo without one, which shows its grey while it comes.
   public var thumbHash: Data = Data()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// A sticker in a chat (spec/chat.md, Stickers): uploaded by its sender
+/// to the group's photos as a photo is (PUT /v1/groups/{group_id}/photos/
+/// {id}), as WebP or GIF, still or moving, within chatRules.stickerMaxBytes
+/// and chatRules.stickerMaxEdge, and kept, read and deleted as a photo is.
+/// Its size is sent with it, so the line keeps its place before it arrives.
+public nonisolated struct Pochical_V1_ChatSticker: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var id: String = String()
+
+  public var width: UInt32 = 0
+
+  public var height: UInt32 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -2461,6 +2497,16 @@ public nonisolated struct Pochical_V1_ChatSendContent: Sendable {
     set {kind = .poll(newValue)}
   }
 
+  /// The sender's own, uploaded first and not sent before (spec/chat.md,
+  /// Stickers).
+  public var sticker: Pochical_V1_ChatSticker {
+    get {
+      if case .sticker(let v)? = kind {return v}
+      return Pochical_V1_ChatSticker()
+    }
+    set {kind = .sticker(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Kind: Equatable, Sendable {
@@ -2474,6 +2520,9 @@ public nonisolated struct Pochical_V1_ChatSendContent: Sendable {
     /// Days put to the vote (spec/chat.md, Polls), in the group chat: 2
     /// at least.
     case poll(Pochical_V1_ChatSharedDays)
+    /// The sender's own, uploaded first and not sent before (spec/chat.md,
+    /// Stickers).
+    case sticker(Pochical_V1_ChatSticker)
 
   }
 
@@ -2574,9 +2623,10 @@ public nonisolated struct Pochical_V1_ChatRecall: Sendable {
 
   public var sendOpID: String = String()
 
-  /// The photos the send carries, uploaded before it went out: deleted with
-  /// the line, or at once when the group does not have the line, as no
-  /// line will ever carry them. None for a send of anything else.
+  /// The photos the send carries, an album's or its sticker, uploaded
+  /// before it went out: deleted with the line, or at once when the group
+  /// does not have the line, as no line will ever carry them. None for a
+  /// send of anything else.
   public var photoIds: [String] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -5346,7 +5396,7 @@ nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf
 
 nonisolated extension Pochical_V1_ChatContent: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ChatContent"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}words\0\u{1}photos\0\u{1}days\0\u{1}poll\0\u{1}notice\0\u{1}unsent\0\u{1}hidden\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}words\0\u{1}photos\0\u{1}days\0\u{1}poll\0\u{1}notice\0\u{1}unsent\0\u{1}hidden\0\u{1}sticker\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -5445,6 +5495,19 @@ nonisolated extension Pochical_V1_ChatContent: SwiftProtobuf.Message, SwiftProto
           self.kind = .hidden(v)
         }
       }()
+      case 8: try {
+        var v: Pochical_V1_ChatSticker?
+        var hadOneofValue = false
+        if let current = self.kind {
+          hadOneofValue = true
+          if case .sticker(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.kind = .sticker(v)
+        }
+      }()
       default: break
       }
     }
@@ -5483,6 +5546,10 @@ nonisolated extension Pochical_V1_ChatContent: SwiftProtobuf.Message, SwiftProto
     case .hidden?: try {
       guard case .hidden(let v)? = self.kind else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
+    }()
+    case .sticker?: try {
+      guard case .sticker(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
     }()
     case nil: break
     }
@@ -5772,6 +5839,46 @@ nonisolated extension Pochical_V1_ChatPhoto: SwiftProtobuf.Message, SwiftProtobu
     if lhs.width != rhs.width {return false}
     if lhs.height != rhs.height {return false}
     if lhs.thumbHash != rhs.thumbHash {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pochical_V1_ChatSticker: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ChatSticker"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}width\0\u{1}height\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
+      case 2: try { try decoder.decodeSingularUInt32Field(value: &self.width) }()
+      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.height) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.id.isEmpty {
+      try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
+    }
+    if self.width != 0 {
+      try visitor.visitSingularUInt32Field(value: self.width, fieldNumber: 2)
+    }
+    if self.height != 0 {
+      try visitor.visitSingularUInt32Field(value: self.height, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pochical_V1_ChatSticker, rhs: Pochical_V1_ChatSticker) -> Bool {
+    if lhs.id != rhs.id {return false}
+    if lhs.width != rhs.width {return false}
+    if lhs.height != rhs.height {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -6329,7 +6436,7 @@ nonisolated extension Pochical_V1_ChatSend: SwiftProtobuf.Message, SwiftProtobuf
 
 nonisolated extension Pochical_V1_ChatSendContent: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ChatSendContent"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}words\0\u{1}photos\0\u{1}days\0\u{1}poll\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}words\0\u{1}photos\0\u{1}days\0\u{1}poll\0\u{1}sticker\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -6389,6 +6496,19 @@ nonisolated extension Pochical_V1_ChatSendContent: SwiftProtobuf.Message, SwiftP
           self.kind = .poll(v)
         }
       }()
+      case 5: try {
+        var v: Pochical_V1_ChatSticker?
+        var hadOneofValue = false
+        if let current = self.kind {
+          hadOneofValue = true
+          if case .sticker(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.kind = .sticker(v)
+        }
+      }()
       default: break
       }
     }
@@ -6415,6 +6535,10 @@ nonisolated extension Pochical_V1_ChatSendContent: SwiftProtobuf.Message, SwiftP
     case .poll?: try {
       guard case .poll(let v)? = self.kind else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    }()
+    case .sticker?: try {
+      guard case .sticker(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
     }()
     case nil: break
     }

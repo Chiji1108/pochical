@@ -84,5 +84,26 @@ public interface ChatSendContentOrBuilder extends
    */
   app.pochical.v1.ChatSharedDays getPoll();
 
+  /**
+   * <pre>
+   * The sender's own, uploaded first and not sent before (spec/chat.md,
+   * Stickers).
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatSticker sticker = 5 [json_name = "sticker"];</code>
+   * @return Whether the sticker field is set.
+   */
+  boolean hasSticker();
+  /**
+   * <pre>
+   * The sender's own, uploaded first and not sent before (spec/chat.md,
+   * Stickers).
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatSticker sticker = 5 [json_name = "sticker"];</code>
+   * @return The sticker.
+   */
+  app.pochical.v1.ChatSticker getSticker();
+
   public app.pochical.v1.ChatSendContent.KindCase getKindCase();
 }

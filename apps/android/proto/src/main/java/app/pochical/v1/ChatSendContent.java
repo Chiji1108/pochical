@@ -30,6 +30,7 @@ public  final class ChatSendContent extends
     PHOTOS(2),
     DAYS(3),
     POLL(4),
+    STICKER(5),
     KIND_NOT_SET(0);
     private final int value;
     private KindCase(int value) {
@@ -49,6 +50,7 @@ public  final class ChatSendContent extends
         case 2: return PHOTOS;
         case 3: return DAYS;
         case 4: return POLL;
+        case 5: return STICKER;
         case 0: return KIND_NOT_SET;
         default: return null;
       }
@@ -340,6 +342,81 @@ public  final class ChatSendContent extends
    */
   private void clearPoll() {
     if (kindCase_ == 4) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int STICKER_FIELD_NUMBER = 5;
+  /**
+   * <pre>
+   * The sender's own, uploaded first and not sent before (spec/chat.md,
+   * Stickers).
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatSticker sticker = 5 [json_name = "sticker"];</code>
+   */
+  @java.lang.Override
+  public boolean hasSticker() {
+    return kindCase_ == 5;
+  }
+  /**
+   * <pre>
+   * The sender's own, uploaded first and not sent before (spec/chat.md,
+   * Stickers).
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatSticker sticker = 5 [json_name = "sticker"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.ChatSticker getSticker() {
+    if (kindCase_ == 5) {
+       return (app.pochical.v1.ChatSticker) kind_;
+    }
+    return app.pochical.v1.ChatSticker.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * The sender's own, uploaded first and not sent before (spec/chat.md,
+   * Stickers).
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatSticker sticker = 5 [json_name = "sticker"];</code>
+   */
+  private void setSticker(app.pochical.v1.ChatSticker value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 5;
+  }
+  /**
+   * <pre>
+   * The sender's own, uploaded first and not sent before (spec/chat.md,
+   * Stickers).
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatSticker sticker = 5 [json_name = "sticker"];</code>
+   */
+  private void mergeSticker(app.pochical.v1.ChatSticker value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 5 &&
+        kind_ != app.pochical.v1.ChatSticker.getDefaultInstance()) {
+      kind_ = app.pochical.v1.ChatSticker.newBuilder((app.pochical.v1.ChatSticker) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 5;
+  }
+  /**
+   * <pre>
+   * The sender's own, uploaded first and not sent before (spec/chat.md,
+   * Stickers).
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatSticker sticker = 5 [json_name = "sticker"];</code>
+   */
+  private void clearSticker() {
+    if (kindCase_ == 5) {
       kindCase_ = 0;
       kind_ = null;
     }
@@ -742,6 +819,84 @@ public  final class ChatSendContent extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The sender's own, uploaded first and not sent before (spec/chat.md,
+     * Stickers).
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatSticker sticker = 5 [json_name = "sticker"];</code>
+     */
+    @java.lang.Override
+    public boolean hasSticker() {
+      return instance.hasSticker();
+    }
+    /**
+     * <pre>
+     * The sender's own, uploaded first and not sent before (spec/chat.md,
+     * Stickers).
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatSticker sticker = 5 [json_name = "sticker"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.ChatSticker getSticker() {
+      return instance.getSticker();
+    }
+    /**
+     * <pre>
+     * The sender's own, uploaded first and not sent before (spec/chat.md,
+     * Stickers).
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatSticker sticker = 5 [json_name = "sticker"];</code>
+     */
+    public Builder setSticker(app.pochical.v1.ChatSticker value) {
+      copyOnWrite();
+      instance.setSticker(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The sender's own, uploaded first and not sent before (spec/chat.md,
+     * Stickers).
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatSticker sticker = 5 [json_name = "sticker"];</code>
+     */
+    public Builder setSticker(
+        app.pochical.v1.ChatSticker.Builder builderForValue) {
+      copyOnWrite();
+      instance.setSticker(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * The sender's own, uploaded first and not sent before (spec/chat.md,
+     * Stickers).
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatSticker sticker = 5 [json_name = "sticker"];</code>
+     */
+    public Builder mergeSticker(app.pochical.v1.ChatSticker value) {
+      copyOnWrite();
+      instance.mergeSticker(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The sender's own, uploaded first and not sent before (spec/chat.md,
+     * Stickers).
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatSticker sticker = 5 [json_name = "sticker"];</code>
+     */
+    public Builder clearSticker() {
+      copyOnWrite();
+      instance.clearSticker();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ChatSendContent)
   }
   @java.lang.Override
@@ -764,10 +919,11 @@ public  final class ChatSendContent extends
             app.pochical.v1.ChatAlbum.class,
             app.pochical.v1.ChatSharedDays.class,
             app.pochical.v1.ChatSharedDays.class,
+            app.pochical.v1.ChatSticker.class,
           };
           java.lang.String info =
-              "\u0000\u0004\u0001\u0000\u0001\u0004\u0004\u0000\u0000\u0000\u0001<\u0000\u0002<" +
-              "\u0000\u0003<\u0000\u0004<\u0000";
+              "\u0000\u0005\u0001\u0000\u0001\u0005\u0005\u0000\u0000\u0000\u0001<\u0000\u0002<" +
+              "\u0000\u0003<\u0000\u0004<\u0000\u0005<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

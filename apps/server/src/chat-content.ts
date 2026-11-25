@@ -13,6 +13,13 @@ export type KeptPhoto = {
   width: number;
 };
 
+/** A sticker as a line keeps it: pochical.v1.ChatSticker's fields. */
+export type KeptSticker = {
+  id: string;
+  height: number;
+  width: number;
+};
+
 /** What happened to the group, as a notice line keeps it. */
 export type Notice = {
   kind:
@@ -40,6 +47,7 @@ export type LineContent =
       preview: KeptPreview | null;
     }
   | { kind: "photos"; photos: KeptPhoto[] }
+  | { kind: "sticker"; sticker: KeptSticker }
   | { kind: "days"; days: string[] }
   | { kind: "poll"; days: string[]; decided: string | null }
   | { kind: "notice"; notice: Notice }
@@ -50,6 +58,28 @@ export type LineKind = LineContent["kind"];
 /** What a member sends: neither a notice nor a line taken back. */
 export type SentContent = Exclude<LineContent, { kind: "notice" | "unsent" }>;
 
-/** The line's photos: an album's, none for any other kind. */
-export const photosOf = (content: LineContent): KeptPhoto[] =>
-  content.kind === "photos" ? content.photos : [];
+/**
+ * What the line carries of the group's photos, each uploaded as a photo
+ * is and going with the line: an album's photos, or its sticker; none for
+ * any other kind.
+ */
+export const photosOf = (content: LineContent): KeptPhoto[] => {
+  switch (content.kind) {
+    case "photos": {
+      return content.photos;
+    }
+    case "sticker": {
+      return [content.sticker];
+    }
+    case "words":
+    case "days":
+    case "poll":
+    case "notice":
+    case "unsent": {
+      return [];
+    }
+    default: {
+      return content satisfies never;
+    }
+  }
+};

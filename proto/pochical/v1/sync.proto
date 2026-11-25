@@ -592,6 +592,10 @@ message ChatContent {
     // delivered to them, so it comes without its content and shows
     // nothing.
     ChatHidden hidden = 7;
+    // A sticker from the keyboard, alone, with no words (spec/chat.md,
+    // Stickers): drawn with no bubble, see-through where it is, moving
+    // where it moves.
+    ChatSticker sticker = 8;
   }
 }
 
@@ -683,6 +687,17 @@ message ChatPhoto {
   // its sender, at most chatRules.photoThumbHashMaxBytes; empty for a
   // photo without one, which shows its grey while it comes.
   bytes thumb_hash = 4;
+}
+
+// A sticker in a chat (spec/chat.md, Stickers): uploaded by its sender
+// to the group's photos as a photo is (PUT /v1/groups/{group_id}/photos/
+// {id}), as WebP or GIF, still or moving, within chatRules.stickerMaxBytes
+// and chatRules.stickerMaxEdge, and kept, read and deleted as a photo is.
+// Its size is sent with it, so the line keeps its place before it arrives.
+message ChatSticker {
+  string id = 1;
+  uint32 width = 2;
+  uint32 height = 3;
 }
 
 // Who can come on one of a poll's days.
@@ -799,6 +814,9 @@ message ChatSendContent {
     // Days put to the vote (spec/chat.md, Polls), in the group chat: 2
     // at least.
     ChatSharedDays poll = 4;
+    // The sender's own, uploaded first and not sent before (spec/chat.md,
+    // Stickers).
+    ChatSticker sticker = 5;
   }
 }
 
@@ -843,9 +861,10 @@ message ChatRecall {
   string send_op_id = 2;
   reserved 3;
   reserved "photo_id";
-  // The photos the send carries, uploaded before it went out: deleted with
-  // the line, or at once when the group does not have the line, as no
-  // line will ever carry them. None for a send of anything else.
+  // The photos the send carries, an album's or its sticker, uploaded
+  // before it went out: deleted with the line, or at once when the group
+  // does not have the line, as no line will ever carry them. None for a
+  // send of anything else.
   repeated string photo_ids = 4;
 }
 
