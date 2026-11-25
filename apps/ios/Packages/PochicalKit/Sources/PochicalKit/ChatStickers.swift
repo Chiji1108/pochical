@@ -50,6 +50,16 @@ public struct ShrunkSticker: Hashable, Sendable {
   public let webp: Data
   public let width: Int
   public let height: Int
+}
+
+/// A sticker as the keyboard gave it, kept to show while it is written to
+/// send (`ChatStickers.write`), at the size it is sent at: its line goes at
+/// once, as a photo's does, and the writing, which takes a moving one a
+/// while, is done on its way up.
+public struct PastedSticker: Hashable, Sendable {
+  public let data: Data
+  public let width: Int
+  public let height: Int
 
   /// The sticker as its line sends it, by the id it is kept under.
   public func line(_ id: String) -> LineSticker {
@@ -73,18 +83,53 @@ public enum ChatStickers {
     item.registeredTypeIdentifiers.contains(where: marks.contains)
   }
 
-  /// The pasted sticker written to send; nil when none of what it holds
-  /// can be read. Read on the caller's actor, which holds the pasteboard's
-  /// item, and written off it.
-  nonisolated(nonsending) public static func read(_ item: NSItemProvider) async -> ShrunkSticker? {
+  /// The pasted sticker, kept as given to write later, and the size it is
+  /// sent at; nil when none of what it holds can be read. Taken on the
+  /// caller's actor, which holds the pasteboard's item.
+  nonisolated(nonsending) public static func read(_ item: NSItemProvider) async -> PastedSticker? {
     for type in sources where item.registeredTypeIdentifiers.contains(type) {
       guard let data = await data(of: type, in: item),
-        type != "public.heics" || frames(of: data) > 1,
-        let sticker = await shrink(data)
+        let sticker = await pasted(data, moving: type == "public.heics")
       else { continue }
       return sticker
     }
     return nil
+  }
+
+  /// The sticker in `data`, at the size its first frame is written at
+  /// (`webp`); nil when it cannot be read, or holds one frame where it is
+  /// to move. Off the caller's actor, as reading a frame takes a moment.
+  @concurrent
+  private static func pasted(_ data: Data, moving: Bool) async -> PastedSticker? {
+    guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+      !moving || CGImageSourceGetCount(source) > 1,
+      let first = frame(0, of: source, maxEdge: Chat.stickerMaxEdge)
+    else { return nil }
+    return PastedSticker(data: data, width: first.width, height: first.height)
+  }
+
+  /// Writes the sticker `photoID` held to send as WebP, in its place, once
+  /// (`written`). Throws as gone, the line not sent, when it cannot be.
+  static func write(_ photoID: String, in shelf: PhotoShelf) async throws {
+    guard let held = ChatPhotos.held(photoID, in: shelf) else {
+      throw ChatPhotos.UploadError.gone
+    }
+    if let webp = try await written(held) {
+      try ChatPhotos.keep(webp, as: photoID, in: shelf)
+    }
+  }
+
+  /// A sticker held to send, as pasted, written as WebP; nil when what is
+  /// held is WebP already, written before. Throws as gone when it cannot
+  /// be written.
+  static func written(_ held: Data) async throws -> Data? {
+    guard !isWebP(held) else { return nil }
+    guard let sticker = await shrink(held) else { throw ChatPhotos.UploadError.gone }
+    return sticker.webp
+  }
+
+  private static func isWebP(_ data: Data) -> Bool {
+    data.prefix(4) == Data("RIFF".utf8) && data.dropFirst(8).prefix(4) == Data("WEBP".utf8)
   }
 
   nonisolated(nonsending) private static func data(of type: String, in item: NSItemProvider)
@@ -95,10 +140,6 @@ public enum ChatStickers {
         done.resume(returning: data)
       }
     }
-  }
-
-  private static func frames(of data: Data) -> Int {
-    CGImageSourceCreateWithData(data as CFData, nil).map(CGImageSourceGetCount) ?? 0
   }
 
   /// A sticker's image, still or moving, written as WebP to send: its

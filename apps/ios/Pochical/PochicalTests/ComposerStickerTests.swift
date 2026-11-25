@@ -60,9 +60,9 @@ import UniformTypeIdentifiers
     }
     // The words written stay in the field.
     #expect(field.text == "書きかけ")
+    // Kept moving, as the keyboard gave it, to write on its way up.
     let sticker = try #require(await ChatStickers.read(item))
-    let source = try #require(CGImageSourceCreateWithData(sticker.webp as CFData, nil))
-    #expect(CGImageSourceGetType(source) as String? == UTType.webP.identifier)
+    let source = try #require(CGImageSourceCreateWithData(sticker.data as CFData, nil))
     #expect(CGImageSourceGetCount(source) == 3)
   }
 

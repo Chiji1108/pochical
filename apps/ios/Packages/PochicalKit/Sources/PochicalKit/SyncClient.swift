@@ -845,8 +845,14 @@ public actor SyncClient {
       guard try await stillGoing(edit.opID) else { return false }
       let began = Self.nowMs()
       do {
+        let shelf = PhotoShelf(place: groupID)
+        // A sticker is kept as pasted, for its line to go at once, and
+        // written to send on its first try.
+        if case .send(let send) = edit.kind, case .sticker = send.content.kind {
+          try await ChatStickers.write(photoID, in: shelf)
+        }
         try await ChatPhotos.upload(
-          photoID, of: edit.opID, in: PhotoShelf(place: groupID), as: credentials, server: server)
+          photoID, of: edit.opID, in: shelf, as: credentials, server: server)
       } catch {
         try Task.checkCancellation()
         guard try await stillGoing(edit.opID),

@@ -174,10 +174,33 @@ private func keyboardSticker(moving: Int) -> NSItemProvider {
 
 @Test func aPastedStickerMovesFromItsSequenceAndStandsStillFromItsPNG() async throws {
   let moving = try #require(await ChatStickers.read(keyboardSticker(moving: 4)))
-  #expect(try Read(moving.webp).frames == 4)
+  #expect(try Read(#require(await ChatStickers.shrink(moving.data)).webp).frames == 4)
   // A sequence of one frame is no moving sticker: its PNG is read.
   let still = try #require(await ChatStickers.read(keyboardSticker(moving: 1)))
-  #expect(try Read(still.webp).frames == 1)
+  #expect(try Read(#require(await ChatStickers.shrink(still.data)).webp).frames == 1)
+}
+
+@Test func aPastedStickerIsKeptAsGivenAndWrittenOnceOnItsWayUpAtTheSizeItsLineSays()
+  async throws
+{
+  let pasted = try #require(await ChatStickers.read(keyboardSticker(moving: 4)))
+  #expect(pasted.line("s") == LineSticker(id: "s", width: 400, height: 400))
+  let webp = try #require(await ChatStickers.written(pasted.data))
+  let read = try Read(webp)
+  #expect(read.frames == 4)
+  #expect(read.width == pasted.width && read.height == pasted.height)
+  // Written already, it is left as it is.
+  #expect(try await ChatStickers.written(webp) == nil)
+}
+
+@Test func aStickerThatCannotBeWrittenIsGone() async {
+  do {
+    _ = try await ChatStickers.written(Data("no image".utf8))
+    Issue.record("written")
+  } catch ChatPhotos.UploadError.gone {
+  } catch {
+    Issue.record(error)
+  }
 }
 
 @Test func aStickerLineIsHeldAndItsStickerUploadedAndRecalledAsAPhoto() throws {

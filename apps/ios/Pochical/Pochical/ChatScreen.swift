@@ -975,16 +975,16 @@ struct ChatScreen: View {
   }
 
   /// Sends a sticker from the keyboard at once as a line of its own,
-  /// answering the line being answered, kept on the device to upload
-  /// before it goes as a photo's line is (spec/chat.md, Stickers); the
-  /// words written stay in the composer.
-  private func sendSticker(_ sticker: ShrunkSticker) {
+  /// answering the line being answered, kept on the device as pasted, to
+  /// be written and uploaded before it goes as a photo's line is
+  /// (spec/chat.md, Stickers); the words written stay in the composer.
+  private func sendSticker(_ sticker: PastedSticker) {
     let id = UUID().uuidString.lowercased()
     let shelf = place.shelf
     var send = Pochical_V1_ChatSend()
     send.threadID = threadID
     send.content.sticker = sticker.line(id).wire
-    if !write.keeping({ try ChatPhotos.keep(sticker.webp, as: id, in: shelf) }) || !sent(send) {
+    if !write.keeping({ try ChatPhotos.keep(sticker.data, as: id, in: shelf) }) || !sent(send) {
       ChatPhotos.forget(id, in: shelf)
     }
   }

@@ -94,7 +94,7 @@ struct ChatComposer: View {
   let onSubmit: () -> Void
   /// Sends a sticker pasted from the keyboard, at once (spec/chat.md,
   /// Stickers).
-  let onSticker: (ShrunkSticker) -> Void
+  let onSticker: (PastedSticker) -> Void
   /// Keeps the draft as it is now (spec/chat.md, Drafts).
   let keepDraft: () -> Void
   /// 日にちを共有, in a group's chat.
@@ -401,8 +401,7 @@ struct ChatComposer: View {
     }
   }
 
-  /// A sticker pasted, written to send and sent, the words written left in
-  /// the field.
+  /// A sticker pasted, sent as given, the words written left in the field.
   private func sendSticker(_ pasted: NSItemProvider) async {
     guard let sticker = await ChatStickers.read(pasted) else {
       say("開けないスタンプでした")
