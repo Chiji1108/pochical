@@ -12,14 +12,11 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -34,6 +31,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -59,6 +57,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.window.core.layout.WindowSizeClass
 import app.pochical.R
 import app.pochical.SettingsPage
 import app.pochical.chat.GroupedMenu
@@ -108,6 +107,10 @@ fun InvitePage(
   var qrMenu by remember { mutableStateOf(false) }
   // Remaking, the link shown is stopping: it is not offered until the new one comes.
   var remaking by remember { mutableStateOf(false) }
+  // In a window as short as a phone on its side, the code is smaller, so that 招待リンクを送る shows
+  // under it (spec/calendar.md, In a short window).
+  val qrSide =
+    if (currentWindowAdaptiveInfoV2().windowSizeClass.isHeightAtLeastBreakpoint(WindowSizeClass.HEIGHT_DP_MEDIUM_LOWER_BOUND)) QR_SIDE else SHORT_QR_SIDE
   val qr by produceState<Bitmap?>(null, link) { value = link?.let { withContext(Dispatchers.Default) { qrCode(it) } } }
 
   suspend fun load(remake: Boolean) {
@@ -133,115 +136,99 @@ fun InvitePage(
     scope.launch { snackbar.showSnackbar(resources.getString(words)) }
   }
 
-  val shownLink = link.takeUnless { remaking }
   SettingsPage(stringResource(R.string.invite), onBack, collapsing = false, snackbar = snackbar) { padding ->
-    BoxWithConstraints {
-      // The first screenful holds the QR code and 招待リンクを送る together: in a window too short for
-      // both at the code's full size, a phone on its side, the code gives up height to the button,
-      // down to where a phone still reads it; below that, the page scrolls to the button (spec/calendar.md,
-      // In a short window).
-      val firstScreenful =
-        (maxHeight - padding.calculateTopPadding() - padding.calculateBottomPadding() - 32.dp).coerceAtLeast(ShortestFirstScreenful)
+    Column(
+      Modifier.verticalScroll(rememberScrollState()).padding(padding).padding(16.dp),
+      verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+      val card = RoundedCornerShape(Radius.xxl)
       Column(
-        Modifier.verticalScroll(rememberScrollState()).padding(padding).padding(16.dp),
+        Modifier.fillMaxWidth()
+          .background(MaterialTheme.colorScheme.surfaceContainerHigh, card)
+          .border(1.dp, MaterialTheme.colorScheme.outlineVariant, card)
+          .padding(top = 24.dp, bottom = 20.dp, start = 16.dp, end = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp),
       ) {
-        Column(Modifier.heightIn(max = firstScreenful), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-          val card = RoundedCornerShape(Radius.xxl)
-          Column(
-            Modifier.weight(1f, fill = false)
-              .fillMaxWidth()
-              .background(MaterialTheme.colorScheme.surfaceContainerHigh, card)
-              .border(1.dp, MaterialTheme.colorScheme.outlineVariant, card)
-              .padding(top = 24.dp, bottom = 20.dp, start = 16.dp, end = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-          ) {
-            Box(
-              Modifier.weight(1f, fill = false).sizeIn(maxWidth = QrSide, maxHeight = QrSide).aspectRatio(1f, matchHeightConstraintsFirst = true),
-              contentAlignment = Alignment.Center,
-            ) {
-              val shownQr = qr.takeUnless { remaking }
-              when {
-                shownQr != null -> {
-                  Image(
-                    shownQr.asImageBitmap(),
-                    contentDescription = null,
-                    Modifier.fillMaxSize()
-                      .semantics { contentDescription = resources.getString(R.string.invite_qr) }
-                      .contextClick { qrMenu = true }
-                      .pointerInput(Unit) {
-                        detectTapGestures(onLongPress = {
-                          haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                          qrMenu = true
-                        })
-                      }
-                      .semantics { onLongClick(qrMenuLabel) { qrMenu = true; true } },
-                    filterQuality = FilterQuality.None,
-                  )
-                  GroupedMenu(
-                    qrMenu,
-                    onDismiss = { qrMenu = false },
-                    items =
-                      listOf(
-                        LineMenuItem(stringResource(R.string.share), R.drawable.ic_share) {
-                          scope.launch { if (!shareQr(context, shownQr, name)) say(R.string.not_shared, done = false) }
-                        },
-                        LineMenuItem(stringResource(R.string.save_to_photos), R.drawable.ic_download) {
-                          scope.launch {
-                            val saved = saveQr(context, shownQr)
-                            say(if (saved) R.string.saved_to_photos else R.string.not_saved, done = saved)
-                          }
-                        },
-                      ),
-                  )
-                }
-                failed ->
-                  TextButton(onClick = { scope.launch { load(remake = false) } }) {
-                    Icon(painterResource(R.drawable.ic_refresh), contentDescription = null)
-                    Text(stringResource(R.string.check_again), Modifier.padding(start = 8.dp))
+        // As wide as the full code whatever its size, so もう一度確認する keeps its one line.
+        Box(Modifier.size(width = QR_SIDE, height = qrSide), contentAlignment = Alignment.Center) {
+          val shownQr = qr.takeUnless { remaking }
+          when {
+            shownQr != null -> {
+              Image(
+                shownQr.asImageBitmap(),
+                contentDescription = null,
+                Modifier.size(qrSide)
+                  .semantics { contentDescription = resources.getString(R.string.invite_qr) }
+                  .contextClick { qrMenu = true }
+                  .pointerInput(Unit) {
+                    detectTapGestures(onLongPress = {
+                      haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                      qrMenu = true
+                    })
                   }
-                else -> CircularProgressIndicator()
-              }
+                  .semantics { onLongClick(qrMenuLabel) { qrMenu = true; true } },
+                filterQuality = FilterQuality.None,
+              )
+              GroupedMenu(
+                qrMenu,
+                onDismiss = { qrMenu = false },
+                items =
+                  listOf(
+                    LineMenuItem(stringResource(R.string.share), R.drawable.ic_share) {
+                      scope.launch { if (!shareQr(context, shownQr, name)) say(R.string.not_shared, done = false) }
+                    },
+                    LineMenuItem(stringResource(R.string.save_to_photos), R.drawable.ic_download) {
+                      scope.launch {
+                        val saved = saveQr(context, shownQr)
+                        say(if (saved) R.string.saved_to_photos else R.string.not_saved, done = saved)
+                      }
+                    },
+                  ),
+              )
             }
-            Text(
-              stringResource(if (failed) R.string.invite_link_failed else R.string.invite_qr_note),
-              style = MaterialTheme.typography.bodySmall,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-          }
-          shownLink?.let { shown ->
-            Button(onClick = { sendLink(context, shown) }, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
-              Icon(painterResource(R.drawable.ic_share), contentDescription = null)
-              Text(stringResource(R.string.invite_send), Modifier.padding(start = 8.dp))
-            }
-          }
-        }
-        shownLink?.let { shown ->
-          OutlinedButton(
-            shapes = ButtonDefaults.shapes(),
-            onClick = {
-              scope.launch {
-                clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(name, shown)))
-                copied = true
-                haptics.performHapticFeedback(HapticFeedbackType.Confirm)
+            failed ->
+              TextButton(onClick = { scope.launch { load(remake = false) } }) {
+                Icon(painterResource(R.drawable.ic_refresh), contentDescription = null)
+                Text(stringResource(R.string.check_again), Modifier.padding(start = 8.dp))
               }
-            },
-            modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control),
-          ) {
-            Icon(painterResource(if (copied) R.drawable.ic_check else R.drawable.ic_content_copy), contentDescription = null)
-            Text(stringResource(if (copied) R.string.copied else R.string.invite_copy), Modifier.padding(start = 8.dp))
+            else -> CircularProgressIndicator()
           }
         }
         Text(
-          stringResource(R.string.invite_anyone, name),
-          Modifier.padding(horizontal = 4.dp),
+          stringResource(if (failed) R.string.invite_link_failed else R.string.invite_qr_note),
           style = MaterialTheme.typography.bodySmall,
           color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        if (link != null) {
-          TextButton(onClick = { confirmingRemake = true }, enabled = !remaking) { Text(stringResource(R.string.invite_remake)) }
+      }
+      link?.takeUnless { remaking }?.let { shown ->
+        Button(onClick = { sendLink(context, shown) }, shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control)) {
+          Icon(painterResource(R.drawable.ic_share), contentDescription = null)
+          Text(stringResource(R.string.invite_send), Modifier.padding(start = 8.dp))
         }
+        OutlinedButton(
+          shapes = ButtonDefaults.shapes(),
+          onClick = {
+            scope.launch {
+              clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(name, shown)))
+              copied = true
+              haptics.performHapticFeedback(HapticFeedbackType.Confirm)
+            }
+          },
+          modifier = Modifier.fillMaxWidth().heightIn(min = Metrics.control),
+        ) {
+          Icon(painterResource(if (copied) R.drawable.ic_check else R.drawable.ic_content_copy), contentDescription = null)
+          Text(stringResource(if (copied) R.string.copied else R.string.invite_copy), Modifier.padding(start = 8.dp))
+        }
+      }
+      Text(
+        stringResource(R.string.invite_anyone, name),
+        Modifier.padding(horizontal = 4.dp),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+      )
+      if (link != null) {
+        TextButton(onClick = { confirmingRemake = true }, enabled = !remaking) { Text(stringResource(R.string.invite_remake)) }
       }
     }
   }
@@ -300,12 +287,12 @@ fun qrCode(link: String): Bitmap {
 
 private const val MODULE = 16
 
-/** The QR code's side on the page, as /design's InvitePage draws it, where the window has room. */
-private val QrSide = 200.dp
+/** The QR code's side on the page, as /design's InvitePage draws it. */
+private val QR_SIDE = 200.dp
 
 /**
- * The least room the page's first screenful is fitted to: at the system's text size the QR code is
- * about 72dp there, as small as a phone held to the screen still reads it at once. A phone on its
- * side about 400dp tall or more, most of them, fits the button under it.
+ * The QR code's side in a window of Material's compact height (under 480dp), a phone on its side:
+ * small enough that the code's card and 招待リンクを送る fill no more than the first screenful a
+ * phone's bars leave there at the system's text size, and still read at once by a phone held to it.
  */
-private val ShortestFirstScreenful = 232.dp
+private val SHORT_QR_SIDE = 88.dp

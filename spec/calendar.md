@@ -81,7 +81,7 @@ A window narrower than a phone, an iPad's or an Android split screen's or free-f
 
 ## In a short window
 
-A window shorter than a phone upright, a phone on its side above all, keeps the page's first screenful for what the page is for. メンバーを招待 shows its QR code and 招待リンクを送る together there: where both do not fit with the code at its full size, the code gives up height to the button, down to about 72 (pt, dp on Android) at the system's text size, as small as a phone held to the screen still reads it at once; in a window shorter still the code stays at that size and the page scrolls to the button (#1179; Android, iOS in #1297).
+A window of a compact height (Material's, under 480dp; on iOS a compact vertical size class), a phone on its side above all, keeps the page's first screenful for what the page is for. メンバーを招待 draws its QR code at 88 (pt, dp on Android) in place of 200 there, so the code's card and 招待リンクを送る fill no more than the first screenful a phone's bars leave on its side, at the system's text size; larger text scrolls to the button. A phone reads a code that size held to the screen at once (#1179; Android, iOS in #1297).
 
 ## Saving a month as a picture
 
