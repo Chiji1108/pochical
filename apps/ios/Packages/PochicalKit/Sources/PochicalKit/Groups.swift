@@ -162,7 +162,8 @@ extension DatabaseMigrator {
 /// of it, its photos among them, for what the app keeps of it outside the
 /// database (its chats' notifications, its pages over the tabs, the photos
 /// it drew) to go too. A group that ends is told so too: it reaches the
-/// device as one left (spec/sync-protocol.md, A group's end).
+/// device as one left (spec/sync-protocol.md, A group's end); and so is one
+/// whose socket refuses the user as not in it (Reconnecting).
 public let groupLeft = Notification.Name("Groups.left")
 
 enum Groups {

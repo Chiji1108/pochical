@@ -59,9 +59,15 @@ internal suspend fun SyncDao.facesHeld(): Map<String, List<String>> = groupIds()
  * with that change.
  */
 internal suspend fun SyncDao.placesGone(held: Map<String, List<String>>): Map<String, List<String>> =
-  held.filterKeys { !isListed(it) }.mapValues { (groupId, faces) ->
-    (photosHeld(groupId) + groupFaces(groupId) + faces).distinct().also { leaveGroup(groupId) }
-  }
+  held.filterKeys { !isListed(it) }.mapValues { (groupId, faces) -> (placeLeft(groupId) + faces).distinct() }
+
+/**
+ * A group the device lets go of as of one left, by itself rather than for a change that says so:
+ * one a Reset's catch-up did not mention, or one whose socket refused the user as not in it. The
+ * photos the device held of it (its lines', its members' faces and its mark's), read before it goes.
+ */
+internal suspend fun SyncDao.placeLeft(groupId: String): List<String> =
+  (photosHeld(groupId) + groupFaces(groupId)).distinct().also { leaveGroup(groupId) }
 
 /** A Reset of the user's socket: the groups and the profile come again with everything else. */
 internal suspend fun SyncDao.resetMemberships() {

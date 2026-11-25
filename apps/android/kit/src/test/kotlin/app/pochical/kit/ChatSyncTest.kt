@@ -20,6 +20,7 @@ import app.pochical.v1.chatNotifications
 import app.pochical.v1.member
 import app.pochical.v1.membership
 import app.pochical.v1.unreadCount
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
@@ -288,6 +289,40 @@ class ChatSyncTest {
     val earlier = phone.chat(me, from = 21) { it.lines.first().seq == 21L }
     assertEquals(120L, earlier.lines.last().seq)
     assertEquals(21L, earlier.heldFrom)
+  }
+
+  /** Each group [phone] is told it let go of, in order. */
+  private fun Device.letGo(): List<String> =
+    CopyOnWriteArrayList<String>().also { left -> scope.launch(start = CoroutineStart.UNDISPATCHED) { account.left.collect { left += it } } }
+
+  /** Whether [phone] holds nothing of g1: not listed, no members, lines or cursor. */
+  private suspend fun Device.holdsNothingOfG1(): Boolean =
+    database.read { groupIds().isEmpty() && groupFaces("g1").isEmpty() && linesOf("g1", LineKind.Words.key).isEmpty() && groupCursor("g1") == null }
+
+  @Test
+  fun aGroupsSocketRefusedAsNotTheUsersLetsGoOfTheGroup() = runBlocking {
+    // A group the user's own DO does not list, which their socket will never say they left.
+    server.notListed += "g1"
+    val phone = signedIn()
+    phone.database.write { take(listOf(change { cursor = 1; member = member { userId = "u2"; photoId = "face" } }), "g1") }
+    assertEquals(listOf("g1"), phone.database.read { groupIds() })
+    val left = phone.letGo()
+    phone.account.hold("g1")
+    eventually { left == listOf("g1") }
+    assertTrue(phone.holdsNothingOfG1())
+  }
+
+  @Test
+  fun aGroupsSocketClosedAsNotAMemberLetsGoOfTheGroup() = runBlocking {
+    server.write("g1", "u2", listOf("こんにちは"))
+    val phone = signedIn()
+    val me = server.userId
+    val left = phone.letGo()
+    phone.account.hold("g1")
+    phone.chat(me) { it.lines.size == 1 }
+    server.closeAsNotMember("g1")
+    eventually { left == listOf("g1") }
+    assertTrue(phone.holdsNothingOfG1())
   }
 
   @Test

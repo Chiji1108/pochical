@@ -15,8 +15,9 @@ enum class Stop {
   NotTheOwner,
 
   /**
-   * The user is not in the group (403, or closed with `notMemberCloseCode`): opening the group again
-   * tries once more, as after joining it again.
+   * The user is not in the group, as their own DO lists it or as the group decides (403, or closed
+   * with `notMemberCloseCode`): the device lets go of the group as of one left, and opening it
+   * again, as after joining it again, tries once more.
    */
   NotMember,
 }
