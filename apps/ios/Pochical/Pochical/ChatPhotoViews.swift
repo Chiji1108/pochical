@@ -5,13 +5,16 @@ import PochicalKit
 import SwiftUI
 
 // Photos in a chat (spec/chat.md, Photos): a photo's line, the photo
-// opened large, and the photos waiting above the composer.
+// opened large, and the photos waiting above the composer; and a
+// sticker's line, kept and fetched as a photo is (spec/chat.md, Stickers).
 
 /// One of the group's photos as it loads (ChatPhotoLoading), shrunk to
 /// the size it shows (`shown`), over the blur its ThumbHash draws, or else
 /// its grey, while it comes; drawn at once when held drawn already, as a
 /// line scrolled back into sight is. One that could not be fetched keeps
-/// its blur and, with `retries`, is fetched again at a tap.
+/// its blur and, with `retries`, is fetched again at a tap. A sticker is
+/// drawn whole, see-through, over the grey of a photo with no ThumbHash
+/// while it comes, rounded at `corner` as nothing else clips it.
 struct ChatPhotoImage: View {
   @Environment(\.groupCalls) private var groupCalls
   @Environment(\.displayScale) private var displayScale
@@ -26,6 +29,11 @@ struct ChatPhotoImage: View {
   /// A tap on it, could it not be fetched, fetches it again: a line's
   /// photo, not a quote's.
   var retries = false
+  /// It is a sticker's, and how it shows; none for a photo.
+  var sticker: StickerLook?
+  /// The corners of a sticker's grey while it comes, where its line or
+  /// quote rounds a photo; a photo's own are its container's.
+  var corner: CGFloat = 0
   @State private var image: UIImage?
   @State private var inSight = false
   /// It could not be fetched, so nothing is said to be on its way.
@@ -52,11 +60,19 @@ struct ChatPhotoImage: View {
       } else if kept == nil {
         // Only in sight: the chat lays out all its lines at once.
         PhotoComing(breathing: !failed && wanted)
+          .clipShape(RoundedRectangle(cornerRadius: corner))
       }
-      if let kept {
+      if let kept, sticker == .moving {
+        MovingSticker(
+          still: kept,
+          whole: ChatPhotoLoading.request(
+            photo, in: shelf, pixels: nil, calls: groupCalls, held: held ?? false)
+        )
+        .transition(.opacity)
+      } else if let kept {
         Image(uiImage: kept)
           .resizable()
-          .aspectRatio(contentMode: .fill)
+          .aspectRatio(contentMode: sticker == nil ? .fill : .fit)
           .transition(.opacity)
       } else if failed, retries {
         PhotoRetry { tries += 1 }
@@ -160,6 +176,68 @@ private struct PhotoComing: View {
   }
 }
 
+/// How a sticker shows: moving, looping for ever, in its line, or still at
+/// its first frame, small in a quote.
+enum StickerLook {
+  case moving, still
+}
+
+/// A sticker's frames, played over its first (`still`) as ImageIO reads
+/// them one by one from its bytes (`whole`), looping for ever whatever
+/// its file says, as one played once would be missed (spec/chat.md, Stickers);
+/// still while motion is reduced (Reduced motion).
+private struct MovingSticker: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  let still: UIImage
+  let whole: ImageRequest
+  @State private var player = StickerPlayer()
+
+  var body: some View {
+    Image(uiImage: player.frame.map { UIImage(cgImage: $0) } ?? still)
+      .resizable()
+      .aspectRatio(contentMode: .fit)
+      .task(id: reduceMotion) {
+        guard !reduceMotion, let data = try? await ChatPhotoLoading.pipeline.data(for: whole).0
+        else {
+          player.stop()
+          return
+        }
+        player.play(data)
+      }
+      .onDisappear { player.stop() }
+  }
+}
+
+/// Plays a moving image's frames as ImageIO reads them, one at a time
+/// (`CGAnimateImageDataWithBlock`), so only the frame showing is held, not
+/// the whole of them drawn.
+@MainActor @Observable private final class StickerPlayer {
+  private(set) var frame: CGImage?
+  /// The playing now, which the frames of an earlier one are not.
+  @ObservationIgnored private var playing: UUID?
+
+  func play(_ data: Data) {
+    let playing = UUID()
+    self.playing = playing
+    let forEver = [kCGImageAnimationLoopCount: kCFNumberPositiveInfinity] as CFDictionary
+    CGAnimateImageDataWithBlock(data as CFData, forEver) { [weak self] _, frame, stop in
+      // ImageIO hands each frame over on the main queue.
+      MainActor.assumeIsolated {
+        guard let self, self.playing == playing else {
+          stop.pointee = true
+          return
+        }
+        self.frame = frame
+      }
+    }
+  }
+
+  func stop() {
+    playing = nil
+    frame = nil
+  }
+}
+
 private struct PhotoLoad: Equatable {
   let id: String
   let pixels: Int?
@@ -221,6 +299,59 @@ struct PhotoLine: View {
   }
 }
 
+/// A sticker sent as a line (spec/chat.md, Stickers): no bubble, edge or
+/// ground, within its box with its shape kept; dimmed while it uploads,
+/// ringed with how far it has gone as a photo is, × in the ring stopping
+/// its line.
+struct StickerLine: View {
+  /// The chat line's cell it is drawn in, as a photo's line reads it.
+  @Environment(\.lineSpace) private var lineSpace
+  let sticker: LineSticker
+  let shelf: PhotoShelf
+  let waiting: Bool
+  /// It is up, its line still waiting.
+  var up = false
+  /// Its line's op_id, by which its line is stopped.
+  var lineID = ""
+  /// Stops its line going up, leaving the line not sent; none where it
+  /// cannot be stopped.
+  var onStop: (() -> Void)?
+
+  var body: some View {
+    let size = StickerBox.size(of: sticker)
+    image(.moving)
+      .frame(width: size.width, height: size.height)
+      // In its own outline, its first frame's.
+      .dimmedWhileWaiting(waiting) { image(.still) }
+      .overlay {
+        if waiting {
+          PhotoGoingUp(photoID: sticker.id, up: up, lineID: lineID, onStop: onStop, dims: false)
+        }
+      }
+      .accessibilityElement(children: waiting ? .contain : .ignore)
+      .accessibilityLabel(waiting ? "送信中のスタンプ" : "スタンプ")
+      .accessibilityAddTraits(.isImage)
+  }
+
+  private func image(_ look: StickerLook) -> ChatPhotoImage {
+    ChatPhotoImage(
+      photo: sticker.photo, shelf: shelf, shown: StickerBox.size(of: sticker),
+      whileInSight: lineSpace == nil, retries: !waiting && look == .moving, sticker: look,
+      corner: Radius.lg)
+  }
+}
+
+/// The box a sticker is drawn within in the chat (chatRules.stickerSize),
+/// its shape kept.
+enum StickerBox {
+  static func size(of sticker: LineSticker) -> CGSize {
+    let side = CGFloat(Chat.stickerSize)
+    guard sticker.width > 0, sticker.height > 0 else { return CGSize(width: side, height: side) }
+    let scale = side / CGFloat(max(sticker.width, sticker.height))
+    return CGSize(width: CGFloat(sticker.width) * scale, height: CGFloat(sticker.height) * scale)
+  }
+}
+
 /// A photo going up, dimmed as a photo's controls are: how far it has
 /// gone as a ring filling, turning while it waits its turn or for the
 /// network, full once up, × in it stopping its whole line, as Signal and
@@ -234,13 +365,18 @@ private struct PhotoGoingUp: View {
   let up: Bool
   let lineID: String
   let onStop: (() -> Void)?
+  /// Dimmed under its ring: a photo, not a sticker, which is dimmed as it
+  /// is shaped (StickerLine).
+  var dims = true
 
   var body: some View {
     let uploads = PhotoUploads.shared
     let sent = uploads.sent[photoID] ?? (up ? 1 : nil)
     let onStop = uploads.stoppable(lineID) ? onStop : nil
     ZStack {
-      colors.mediaDim
+      if dims {
+        colors.mediaDim
+      }
       ZStack {
         Circle().fill(colors.mediaShade)
         UploadRing(sent: sent)

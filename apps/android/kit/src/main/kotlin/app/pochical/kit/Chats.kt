@@ -1,6 +1,7 @@
 package app.pochical.kit
 
 import app.pochical.v1.ChatEdit
+import app.pochical.v1.ChatSendContentKt
 import app.pochical.v1.ChatSendKt
 import app.pochical.v1.LinkPreview
 import app.pochical.v1.ChatLine as WireLine
@@ -188,26 +189,51 @@ class Chats internal constructor(
    */
   suspend fun sendPhotos(groupId: String, threadId: String, photos: List<ShrunkPhoto>, replyTo: Long? = null) {
     val lined = photos.map { newId() to it }
+    sendUploaded(groupId, threadId, lined.associate { (id, photo) -> id to (photo.jpeg to photo.small) }, replyTo) {
+      this.photos = chatAlbum { this.photos += lined.map { (id, photo) -> photo.line(id) } }
+    }
+  }
+
+  /**
+   * Sends a [sticker] as a line of its own (spec/chat.md, Stickers), uploaded first as a line's
+   * one photo is, and shown at once as the member's line on its way. Throws as [sendPhotos] does.
+   */
+  suspend fun sendSticker(groupId: String, threadId: String, sticker: StickerFile, replyTo: Long? = null) {
+    val id = newId()
+    sendUploaded(groupId, threadId, mapOf(id to (sticker.bytes to null)), replyTo) { this.sticker = sticker.line(id) }
+  }
+
+  /**
+   * Sends the line [content] makes, its [files] (each photo's bytes and small version, by id) kept
+   * on the device to upload before the group's socket sends it; none of them kept should it throw.
+   */
+  private suspend fun sendUploaded(
+    groupId: String,
+    threadId: String,
+    files: Map<String, Pair<ByteArray, ByteArray?>>,
+    replyTo: Long?,
+    content: ChatSendContentKt.Dsl.() -> Unit,
+  ) {
     try {
-      for ((id, photo) in lined) this.photos.files.keep(groupId, id, photo)
+      for ((id, file) in files) photos.files.keep(groupId, id, file.first, file.second)
       database.write {
         chatEdit(groupId, now()) {
           send = chatSend {
             this.threadId = threadId
-            content = chatSendContent { this.photos = chatAlbum { this.photos += lined.map { (id, photo) -> photo.line(id) } } }
+            this.content = chatSendContent(content)
             replyTo?.let { this.replyTo = it }
             stamp(groupId)
           }
         }
       }
     } catch (e: Exception) {
-      withContext(NonCancellable) { this@Chats.photos.files.forget(groupId, lined.map { it.first }) }
+      withContext(NonCancellable) { photos.files.forget(groupId, files.keys.toList()) }
       throw e
     }
   }
 
   /**
-   * 送信をやめる: the member's line of photos [opId] stops going up, and is not sent, its ! offering
+   * 送信をやめる: the member's line of photos (or sticker) [opId] stops going up, and is not sent, its ! offering
    * もう一度送る and 削除 (spec/chat.md, Photos); nothing once its photos are up and it is being sent.
    */
   suspend fun stopSending(opId: String) {
@@ -347,11 +373,11 @@ class Chats internal constructor(
               threadId = edit.send.threadId
               sendOpId = opId
               // Its photos, uploaded, go with the line, or at once if it never came.
-              photoIds += edit.send.content.photos.photosList.map { it.id }
+              photoIds += edit.send.content.photoIds
             }
           }
         }
-        row.groupId to edit.send.content.photos.photosList.map { it.id }
+        row.groupId to edit.send.content.photoIds
       } ?: return
     // The photos kept for it go too, and one of them going up stops.
     val (groupId, photoIds) = taken

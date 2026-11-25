@@ -152,6 +152,8 @@ class ChatPhotoFiles internal constructor(caches: Lazy<File>, files: Lazy<File>)
    */
   fun wasLetGo(groupId: String, photoId: String): Boolean = "$groupId/$photoId" in letGo
 
+  // Named .jpg as photos were before stickers; a sticker's WebP or GIF is kept as one too, what it
+  // is told by its bytes wherever it is read.
   private fun shown(groupId: String, photoId: String) = File(caches, "chat-photos/$groupId/$photoId.jpg")
 
   internal fun pending(groupId: String, photoId: String) = File(files, "pending-photos/$groupId/$photoId.jpg")
@@ -159,10 +161,13 @@ class ChatPhotoFiles internal constructor(caches: Lazy<File>, files: Lazy<File>)
   /** Its small version, kept beside it until it is up. */
   private fun pendingSmall(groupId: String, photoId: String) = File(files, "pending-photos/$groupId/$photoId.small.jpg")
 
-  /** Keeps the member's own photo to send: until it is up, with its small version, and to show. */
-  internal suspend fun keep(groupId: String, photoId: String, photo: ShrunkPhoto) =
+  /**
+   * Keeps the member's own photo to send, a photo's JPEG or a sticker's: until it is up, with its
+   * small version if it has one, and to show.
+   */
+  internal suspend fun keep(groupId: String, photoId: String, bytes: ByteArray, small: ByteArray? = null) =
     withContext(Dispatchers.IO) {
-      val kept = listOf(pending(groupId, photoId) to photo.jpeg, shown(groupId, photoId) to photo.jpeg) + listOfNotNull(photo.small?.let { pendingSmall(groupId, photoId) to it })
+      val kept = listOf(pending(groupId, photoId) to bytes, shown(groupId, photoId) to bytes) + listOfNotNull(small?.let { pendingSmall(groupId, photoId) to it })
       for ((file, bytes) in kept) {
         file.parentFile?.mkdirs()
         file.writeBytes(bytes)
@@ -171,14 +176,15 @@ class ChatPhotoFiles internal constructor(caches: Lazy<File>, files: Lazy<File>)
 
   /**
    * The photo's bytes to upload, and its small version's: the copies kept to send, else the one kept
-   * to show and a small version made from it again; null once the photo is gone from the device.
+   * to show and, for a photo's JPEG, a small version made from it again (a sticker has none); null
+   * once the photo is gone from the device.
    */
   internal suspend fun toUpload(groupId: String, photoId: String): Pair<ByteArray, ByteArray?>? =
     withContext(Dispatchers.IO) {
       val pending = pending(groupId, photoId)
       if (pending.exists()) return@withContext pending.readBytes() to pendingSmall(groupId, photoId).takeIf { it.exists() }?.readBytes()
       val shown = shown(groupId, photoId).takeIf { it.exists() }?.readBytes() ?: return@withContext null
-      shown to PhotoShrinking.small(shown)
+      shown to shown.takeIf { imageType(it) == JPEG }?.let(PhotoShrinking::small)
     }
 
   /** It is up: only the copy to show stays. */

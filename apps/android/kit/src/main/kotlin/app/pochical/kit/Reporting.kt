@@ -32,6 +32,7 @@ private val LineKind.isMessage: Boolean
     when (this) {
       LineKind.Words,
       LineKind.Photos,
+      LineKind.Sticker,
       LineKind.Days,
       LineKind.Poll,
       LineKind.Unknown -> true

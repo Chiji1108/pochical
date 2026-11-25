@@ -15,10 +15,12 @@
   <!-- A group chat's line: who wrote it, then what. -->
   <string name="push_chat_group_text">%1$s: %2$s</string>
   <string name="push_chat_group_photo">%1$sが写真を送りました</string>
+  <string name="push_chat_group_sticker">%1$sがスタンプを送りました</string>
   <string name="push_chat_group_days">%1$sが日にちを共有しました</string>
   <string name="push_chat_group_poll">%1$sが日にちの投票を始めました</string>
   <!-- A one-to-one chat's line, and a group chat's once its writer shows as the message's sender. -->
   <string name="push_chat_photo">写真を送りました</string>
+  <string name="push_chat_sticker">スタンプを送りました</string>
   <string name="push_chat_days">日にちを共有しました</string>
   <string name="push_chat_poll">日にちの投票を始めました</string>
   <string name="push_chat_message">メッセージを送りました</string>

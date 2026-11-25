@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -254,13 +255,13 @@ fun ChatPhotoImage(photo: ChatPhoto, groupId: String, retries: Boolean, onOpen: 
 
 /** ↻ in a dark circle over a photo that could not be fetched, as Signal and Telegram mark one; the photo's tap, or opened large its own, fetches it again. */
 @Composable
-internal fun PhotoRetry(modifier: Modifier, onClick: (() -> Unit)? = null) {
+internal fun PhotoRetry(modifier: Modifier, label: String = stringResource(R.string.chat_photo_retry), onClick: (() -> Unit)? = null) {
   val colors = LocalThemeColors.current
   Box(
     modifier.size(48.dp).clip(CircleShape).background(colors.mediaShade).then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
     contentAlignment = Alignment.Center,
   ) {
-    Icon(painterResource(R.drawable.ic_refresh), stringResource(R.string.chat_photo_retry), Modifier.size(24.dp), tint = colors.mediaText)
+    Icon(painterResource(R.drawable.ic_refresh), label, Modifier.size(24.dp), tint = colors.mediaText)
   }
 }
 
@@ -279,17 +280,18 @@ fun PhotoComing(breathing: Boolean, modifier: Modifier = Modifier) {
 }
 
 /**
- * A photo going up, dimmed: how far it has gone as a ring filling, turning a quarter while it waits
- * its turn or for the network, full once up, × in it stopping its whole line ([onStop]), as Signal
- * and Telegram ring one. Once the line is being sent ([sending]) the ring stays full without ×.
+ * A photo going up, dimmed under [ground]: how far it has gone as a ring filling, turning a quarter
+ * while it waits its turn or for the network, full once up, × in it stopping its whole line
+ * ([onStop]), as Signal and Telegram ring one. Once the line is being sent ([sending]) the ring
+ * stays full without ×. A sticker, dimmed itself, has no ground under the ring.
  */
 @Composable
-private fun PhotoGoingUp(photoId: String, sending: Boolean, onStop: (() -> Unit)?, modifier: Modifier) {
+internal fun PhotoGoingUp(photoId: String, sending: Boolean, onStop: (() -> Unit)?, modifier: Modifier, ground: Color = LocalThemeColors.current.mediaDim) {
   val colors = LocalThemeColors.current
   val uploads = LocalPhotoUploads.current
   val sent by uploads.sent.collectAsStateWithLifecycle()
   val gone = sent[photoId] ?: if (sending) 1f else null
-  Box(modifier.background(colors.mediaDim), contentAlignment = Alignment.Center) {
+  Box(modifier.background(ground), contentAlignment = Alignment.Center) {
     Box(Modifier.size(48.dp).background(colors.mediaShade, CircleShape), contentAlignment = Alignment.Center) {
       Ring(gone, Modifier.fillMaxSize().padding(4.dp))
       if (onStop != null) {

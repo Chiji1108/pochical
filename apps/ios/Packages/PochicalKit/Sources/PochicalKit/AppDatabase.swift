@@ -111,6 +111,7 @@ var migrator: DatabaseMigrator {
   migrator.registerProfile()
   migrator.registerPreferences()
   migrator.registerChatDrafts()
+  migrator.registerStickers()
   // A new step goes here.
   return migrator
 }

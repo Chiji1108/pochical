@@ -4,7 +4,6 @@ import android.util.Log
 import app.pochical.design.Chat
 import app.pochical.design.SyncSocket
 import app.pochical.v1.ChatEdit
-import app.pochical.v1.ChatSendContent
 import app.pochical.v1.ClientFrame
 import app.pochical.v1.ServerError
 import app.pochical.v1.ServerFrame
@@ -495,13 +494,13 @@ class SyncClient internal constructor(
   }
 
   /**
-   * Whether the [edit] goes now: any but a line of photos, and one of photos once they are all up
-   * (spec/chat.md, Photos). One with a photo that cannot go is marked not sent, for the member to
+   * Whether the [edit] goes now: any but a line of photos (an album, or a sticker), and one of
+   * photos once they are all up (spec/chat.md, Photos; Stickers). One with a photo that cannot go is marked not sent, for the member to
    * send again or delete, and the edits after it go on; one the member stopped or took back while its
    * photos went up, or waited to, is left as they left it.
    */
   private suspend fun photosUp(edit: ChatEdit, groupId: String): Boolean {
-    if (edit.kindCase != ChatEdit.KindCase.SEND || edit.send.content.kindCase != ChatSendContent.KindCase.PHOTOS) return true
+    if (edit.kindCase != ChatEdit.KindCase.SEND || edit.send.content.photoIds.isEmpty()) return true
     for (photoId in read { photosToUpload(edit.opId, now()) }) {
       if (!upload(photoId, edit.opId, groupId)) return false
     }

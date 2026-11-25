@@ -18,11 +18,11 @@ public enum Sync {
   /// a group's end (`GroupProfile.ends_at_ms`) and the notices of it
   /// (`END_SET`, `END_CLEARED`, `ENDS_SOON`). 8: a chat line of a sticker
   /// (`ChatContent.sticker`) on the wire, read as one of a later kind
-  /// until the app draws it (#1276).
+  /// until the app draws it (#1276). 9: the sticker drawn.
   /// `mise run sync:check` fails when `Change`'s messages in proto/ change
   /// while this stays, and its `--write` records each raise in
   /// `sync-wire.json`.
-  static let schema = 8
+  static let schema = 9
 
   /// A device that took its values under an older schema moves every
   /// cursor back to the start, its User DO's and every place's, so its

@@ -28,15 +28,17 @@ enum ChatPhotoLoading {
     return ImagePipeline(configuration: configuration)
   }()
 
-  /// `photo` as a line or a quote shows it: its small version, read at
-  /// most `pixels` on its longer side; the photo itself, whole, with none.
-  /// The member's own photos, held on the device, are read from there and
-  /// not kept twice (`whole` held: as it is sent).
+  /// `photo` as a line or a quote shows it: read at most `pixels` on its
+  /// longer side, from its small version when it has one (its longer side
+  /// past `Chat.photoSmallEdge`, as only such a photo is sent with one, a
+  /// sticker never); the photo itself, whole, with no `pixels`. The
+  /// member's own photos, held on the device, are read from there and not
+  /// kept twice (`whole` held: as it is sent).
   static func request(
     _ photo: LinePhoto, in shelf: PhotoShelf, pixels: Int?, calls: GroupCalls,
     priority: ImageRequest.Priority = .normal, held: Bool = false
   ) -> ImageRequest {
-    let small = pixels != nil
+    let small = pixels != nil && max(photo.width, photo.height) > Chat.photoSmallEdge
     var request = ImageRequest(
       id: key(photo.id, in: shelf, small: small),
       data: { try await calls.photo(photo.id, in: shelf, small: small, keep: false) },
@@ -96,11 +98,13 @@ enum ChatPhotoLoading {
     "\(shelf.key)/\(photoID)\(small ? "?size=small" : "")"
   }
 
-  /// `photo` as a line shows it in its box at `scale`.
+  /// `photo` as a line shows it in its box at `scale`: a photo's, or a
+  /// sticker's (`shown`).
   static func lineRequest(
-    _ photo: LinePhoto, in shelf: PhotoShelf, scale: CGFloat, calls: GroupCalls, held: Bool = false
+    _ photo: LinePhoto, in shelf: PhotoShelf, shown: CGSize? = nil, scale: CGFloat,
+    calls: GroupCalls, held: Bool = false
   ) -> ImageRequest? {
-    pixels(of: photo, shown: PhotoBox.size(of: photo), scale: scale).map {
+    pixels(of: photo, shown: shown ?? PhotoBox.size(of: photo), scale: scale).map {
       request(photo, in: shelf, pixels: $0, calls: calls, held: held)
     }
   }
@@ -233,13 +237,19 @@ enum PhotoBox {
   private let prefetcher = ImagePrefetcher(pipeline: ChatPhotoLoading.pipeline)
   private var near: [String: ImageRequest] = [:]
 
-  /// The photos near those in sight, on `shelf`, are now
-  /// `photos`: each fetched as its line draws it.
-  func near(_ photos: [LinePhoto], in shelf: PhotoShelf, scale: CGFloat, calls: GroupCalls) {
+  /// The photos and stickers near those in sight, on `shelf`, are now
+  /// `photos` and `stickers`: each fetched as its line draws it.
+  func near(
+    _ photos: [LinePhoto], stickers: [LineSticker] = [], in shelf: PhotoShelf, scale: CGFloat,
+    calls: GroupCalls
+  ) {
+    let shown =
+      photos.map { ($0, PhotoBox.size(of: $0)) }
+      + stickers.map { ($0.photo, StickerBox.size(of: $0)) }
     var requests: [String: ImageRequest] = [:]
-    for photo in photos {
+    for (photo, size) in shown {
       if let request = ChatPhotoLoading.lineRequest(
-        photo, in: shelf, scale: scale, calls: calls,
+        photo, in: shelf, shown: size, scale: scale, calls: calls,
         held: ChatPhotos.heldFile(photo.id, in: shelf) != nil)
       {
         requests[photo.id] = request

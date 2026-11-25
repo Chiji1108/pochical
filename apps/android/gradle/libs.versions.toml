@@ -124,6 +124,8 @@ glance-appwidget = { module = "androidx.glance:glance-appwidget", version.ref = 
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 # The faces' drawings, SVGs as design/ draws them, read by the same loader.
 coil-svg = { module = "io.coil-kt.coil3:coil-svg", version.ref = "coil" }
+# Moving stickers, an animated WebP or GIF, played by Android's own ImageDecoder (spec/chat.md, Stickers).
+coil-gif = { module = "io.coil-kt.coil3:coil-gif", version.ref = "coil" }
 telephoto-zoomable-image-coil3 = { module = "me.saket.telephoto:zoomable-image-coil3", version.ref = "telephoto" }
 telephoto-flick = { module = "me.saket.telephoto:flick", version.ref = "telephoto" }
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebase-bom" }

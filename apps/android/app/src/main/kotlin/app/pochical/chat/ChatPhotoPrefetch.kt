@@ -9,6 +9,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.DpSize
+import app.pochical.calendar.rememberReducedMotion
 import app.pochical.design.Chat
 import app.pochical.kit.ChatLine
 import app.pochical.kit.LineContent
@@ -38,24 +39,32 @@ fun PrefetchPhotos(
   val density = LocalDensity.current
   val shown by rememberUpdatedState(items)
   val hidden by rememberUpdatedState(folded)
-  LaunchedEffect(list, groupId, density, enabled) {
+  val still = rememberReducedMotion()
+  LaunchedEffect(list, groupId, density, enabled, still) {
     if (!enabled) return@LaunchedEffect
     // Each fetch ahead by its photo while it is near: one come is in memory, so letting go of it does nothing.
     val fetching = mutableMapOf<String, Disposable>()
     try {
       // From where the lines are and what they are, both read here, so a line taken back or a page
       // come in counts as much as a scroll.
-      snapshotFlow { list.near()?.let { (ahead, inSight) -> Near(photosAt(shown, ahead, hidden), photosAt(shown, inSight, hidden).keys) } }
+      snapshotFlow {
+        list.near()?.let { (ahead, inSight) ->
+          Near(photosAt(shown, ahead, hidden), stickersAt(shown, ahead, hidden), photosAt(shown, inSight, hidden).keys + stickersAt(shown, inSight, hidden))
+        }
+      }
         .filterNotNull()
         .distinctUntilChanged()
         .collect { near ->
           // Scrolled further away, or gone from the lines: let go of before it comes.
-          (fetching.keys - near.ahead.keys - near.inSight).forEach { id -> fetching.remove(id)?.dispose() }
+          (fetching.keys - near.ahead.keys - near.stickersAhead - near.inSight).forEach { id -> fetching.remove(id)?.dispose() }
           val loader = SingletonImageLoader.get(context)
           for ((id, size) in near.ahead) {
             if (id in fetching) continue
             val request = linePhotoRequest(context, id, groupId).size(with(density) { size.width.roundToPx() }, with(density) { size.height.roundToPx() }).build()
             fetching[id] = loader.enqueue(request)
+          }
+          for (id in near.stickersAhead) {
+            if (id !in fetching) fetching[id] = loader.enqueue(stickerRequest(context, id, groupId, still))
           }
         }
     } finally {
@@ -64,8 +73,11 @@ fun PrefetchPhotos(
   }
 }
 
-/** The photos near the screen: those to fetch ahead, by id with the size each shows at, and the ids of those in sight. */
-private data class Near(val ahead: Map<String, DpSize>, val inSight: Set<String>)
+/**
+ * The photos near the screen: those to fetch ahead, by id with the size each shows at, the
+ * stickers to fetch ahead, and the ids of those in sight.
+ */
+private data class Near(val ahead: Map<String, DpSize>, val stickersAhead: Set<String>, val inSight: Set<String>)
 
 /** The photos of the unfolded lines at [indices], by id with the size each shows at. */
 internal fun photosAt(items: List<ChatItem>, indices: List<Int>, folded: (ChatLine) -> Boolean): Map<String, DpSize> =
@@ -73,6 +85,13 @@ internal fun photosAt(items: List<ChatItem>, indices: List<Int>, folded: (ChatLi
     .mapNotNull { index -> (items.getOrNull(index) as? ChatItem.Line)?.line?.takeIf { !folded(it) } }
     .flatMap { line -> (line.content as? LineContent.Photos)?.photos.orEmpty().let { photos -> photos.map { it.id }.zip(photoCells(photos)) } }
     .toMap()
+
+/** The stickers of the unfolded lines at [indices], by id. */
+internal fun stickersAt(items: List<ChatItem>, indices: List<Int>, folded: (ChatLine) -> Boolean): Set<String> =
+  indices
+    .mapNotNull { index -> (items.getOrNull(index) as? ChatItem.Line)?.line?.takeIf { !folded(it) } }
+    .mapNotNull { line -> (line.content as? LineContent.Sticker)?.sticker?.id }
+    .toSet()
 
 /**
  * The indices of the items within `chatRules.photoPrefetchScreens` screens above and below those on

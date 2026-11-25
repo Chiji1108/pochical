@@ -13,8 +13,10 @@ struct LineQuote: Hashable {
   var writer: String?
   /// It in one line of words (spec/chat.md, quotes).
   let words: String
-  /// Its photo, shown small beside the words.
+  /// Its photo, or its sticker, shown small beside the words.
   var photo: LinePhoto?
+  /// What shows small is a sticker: whole, see-through, still.
+  var sticker = false
 }
 
 /// The quote over a reply's words, in the bubble's own color, over a thin
@@ -41,7 +43,7 @@ struct BubbleQuote: View {
             .lineLimit(1)
         }
         if let photo = quote.photo {
-          QuoteThumbnail(photo: photo, shelf: shelf)
+          QuoteThumbnail(photo: photo, sticker: quote.sticker, shelf: shelf)
         }
       }
       Rectangle()
@@ -61,16 +63,26 @@ struct BubbleQuote: View {
   }
 }
 
-/// A quoted photo, small and square.
+/// A quoted photo, small and square; a sticker whole within the square.
 private struct QuoteThumbnail: View {
   let photo: LinePhoto
+  var sticker = false
   let shelf: PhotoShelf
 
   var body: some View {
-    ChatPhotoImage(photo: photo, shelf: shelf, shown: CGSize(width: 32, height: 32))
-      .frame(width: 32, height: 32)
-      .clipShape(RoundedRectangle(cornerRadius: Radius.xs))
-      .accessibilityHidden(true)
+    let square = CGSize(width: 32, height: 32)
+    Group {
+      if sticker {
+        ChatPhotoImage(
+          photo: photo, shelf: shelf, shown: square, sticker: .still, corner: Radius.xs)
+          .frame(width: square.width, height: square.height)
+      } else {
+        ChatPhotoImage(photo: photo, shelf: shelf, shown: square)
+          .frame(width: square.width, height: square.height)
+          .clipShape(RoundedRectangle(cornerRadius: Radius.xs))
+      }
+    }
+    .accessibilityHidden(true)
   }
 }
 
@@ -138,7 +150,7 @@ struct ReplyBar: View {
       onStop: onStop
     ) {
       if let photo = quote.photo {
-        QuoteThumbnail(photo: photo, shelf: shelf)
+        QuoteThumbnail(photo: photo, sticker: quote.sticker, shelf: shelf)
       }
     }
   }

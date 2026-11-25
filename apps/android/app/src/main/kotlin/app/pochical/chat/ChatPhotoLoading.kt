@@ -111,9 +111,10 @@ private class ChatPhotoFetcher(private val data: ChatPhotoData, private val load
 /** A chat's photo as kept: the member's own from the device, else as [diskCached] keeps it. */
 private suspend fun photoSource(data: ChatPhotoData, loader: ImageLoader, calls: GroupCalls, files: ChatPhotoFiles): SourceFetchResult {
   files.held(data.groupId, data.photoId)?.let { held ->
-    return SourceFetchResult(ImageSource(held.toOkioPath(), FileSystem.SYSTEM), JPEG, DataSource.DISK)
+    return SourceFetchResult(ImageSource(held.toOkioPath(), FileSystem.SYSTEM), null, DataSource.DISK)
   }
-  return diskCached(data.key, JPEG, loader) {
+  // Of no type said: a photo's JPEG or a sticker's WebP or GIF, the decoders tell it by its bytes.
+  return diskCached(data.key, null, loader) {
     calls.chatPhoto(data.photoId, PhotoShelf.place(data.groupId), data.small).also {
       // Let go of while it came (its line taken back): not kept, so it never comes back.
       if (files.wasLetGo(data.groupId, data.photoId)) throw PhotoLetGo()
@@ -146,8 +147,6 @@ private suspend fun diskCached(key: String, mimeType: String?, loader: ImageLoad
 /** The photo itself as it came, its bytes, to save or share: kept as the photo opened large is, fetched once. */
 suspend fun wholePhoto(context: Context, calls: GroupCalls, files: ChatPhotoFiles, groupId: String, photoId: String): ByteArray =
   photoSource(ChatPhotoData(photoId, groupId, small = false), SingletonImageLoader.get(context), calls, files).source.use { it.source().readByteArray() }
-
-private const val JPEG = "image/jpeg"
 
 /** A photo let go of while its fetch was on its way. */
 private class PhotoLetGo : Exception("The photo was let go of")

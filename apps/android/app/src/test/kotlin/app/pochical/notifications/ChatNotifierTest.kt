@@ -75,21 +75,22 @@ class ChatNotifierTest {
     notifier.show(groupLine(2, "今週どう？"))
     notifier.show(groupLine(3, "土曜とか"))
     notifier.show(groupLine(4, "", kind = "PHOTO"))
+    notifier.show(groupLine(5, "", kind = "STICKER"))
     assertEquals(1, shown().size)
-    assertEquals(listOf("今週どう？", "土曜とか", "写真を送りました"), messagesOf().messages.map { it.text.toString() })
+    assertEquals(listOf("今週どう？", "土曜とか", "写真を送りました", "スタンプを送りました"), messagesOf().messages.map { it.text.toString() })
   }
 
   /** A kind of line added after this app, whose key it has no words for (spec/sync-protocol.md, Push). */
   @Test
   fun aLineOfAKindTheAppHasNoWordsForIsAMessage() = runTest {
-    notifier.show(groupLine(2, "", kind = "STICKER"))
+    notifier.show(groupLine(2, "", kind = "VOICE"))
     assertEquals(listOf("メッセージを送りました"), messagesOf().messages.map { it.text.toString() })
     assertEquals("いとこ会", messagesOf().conversationTitle)
   }
 
   @Test
   fun aOneToOneLineOfAKindTheAppHasNoWordsForIsAMessage() = runTest {
-    notifier.show(groupLine(2, "").copy(body = Localized("CHAT_STICKER", emptyList()), threadId = "direct:$ME:$WRITER"))
+    notifier.show(groupLine(2, "").copy(body = Localized("CHAT_VOICE", emptyList()), threadId = "direct:$ME:$WRITER"))
     assertEquals(listOf("メッセージを送りました"), messagesOf().messages.map { it.text.toString() })
   }
 

@@ -8,6 +8,7 @@ import app.pochical.v1.ChatPoll
 import app.pochical.v1.ChatVotes
 import app.pochical.v1.chatVotes
 import app.pochical.v1.ChatSendContent
+import app.pochical.v1.ChatSticker
 import app.pochical.v1.LinkPreview
 import app.pochical.v1.ChatLine as WireLine
 
@@ -45,6 +46,12 @@ sealed interface LineContent {
   data class Photos(val photos: List<ChatPhoto>) : LineContent {
     override val kind
       get() = LineKind.Photos
+  }
+
+  /** A sticker from the keyboard, alone (spec/chat.md, Stickers): kept and fetched as a photo is. */
+  data class Sticker(val sticker: ChatSticker) : LineContent {
+    override val kind
+      get() = LineKind.Sticker
   }
 
   /** Days shared with everyone's shifts, "YYYY-MM-DD" in order. */
@@ -97,6 +104,7 @@ sealed interface LineContent {
         ChatContent.KindCase.WORDS ->
           Words(wire.words.text, wire.words.edited, if (wire.words.hasPreview()) wire.words.preview else null)
         ChatContent.KindCase.PHOTOS -> Photos(wire.photos.photosList)
+        ChatContent.KindCase.STICKER -> Sticker(wire.sticker)
         ChatContent.KindCase.DAYS -> Days(wire.days.daysList)
         ChatContent.KindCase.POLL -> Poll(wire.poll)
         ChatContent.KindCase.NOTICE ->
@@ -108,8 +116,6 @@ sealed interface LineContent {
           }
         ChatContent.KindCase.UNSENT -> Unsent
         ChatContent.KindCase.HIDDEN -> Hidden
-        // Not read yet: its line asks to update, as one of a later kind (#1276).
-        ChatContent.KindCase.STICKER,
         ChatContent.KindCase.KIND_NOT_SET,
         null -> Unknown
       }
@@ -120,10 +126,10 @@ sealed interface LineContent {
         ChatSendContent.KindCase.WORDS ->
           Words(send.words.text, preview = if (send.words.hasPreview()) send.words.preview else null)
         ChatSendContent.KindCase.PHOTOS -> Photos(send.photos.photosList)
+        ChatSendContent.KindCase.STICKER -> Sticker(send.sticker)
         ChatSendContent.KindCase.DAYS -> Days(send.days.daysList)
         ChatSendContent.KindCase.POLL -> Poll(ChatPoll.newBuilder().addAllDays(send.poll.daysList).build())
         // Only this app writes its sends, each of a kind: one of none is nothing to show.
-        ChatSendContent.KindCase.STICKER,
         ChatSendContent.KindCase.KIND_NOT_SET,
         null -> Hidden
       }
@@ -134,6 +140,7 @@ sealed interface LineContent {
 enum class LineKind(val key: String) {
   Words("words"),
   Photos("photos"),
+  Sticker("sticker"),
   Days("days"),
   Poll("poll"),
   Notice("notice"),
@@ -141,6 +148,27 @@ enum class LineKind(val key: String) {
   Hidden("hidden"),
   Unknown("unknown"),
 }
+
+/**
+ * The group's photos a line carries, uploaded, kept, fetched and let go of alike: an album's, or
+ * its sticker (spec/chat.md, Stickers); none for a line of anything else.
+ */
+val ChatContent.photoIds: List<String>
+  get() =
+    when (kindCase) {
+      ChatContent.KindCase.PHOTOS -> photos.photosList.map { it.id }
+      ChatContent.KindCase.STICKER -> listOf(sticker.id)
+      else -> emptyList()
+    }
+
+/** The group's photos a send carries, uploaded before it goes, as the line will carry them. */
+val ChatSendContent.photoIds: List<String>
+  get() =
+    when (kindCase) {
+      ChatSendContent.KindCase.PHOTOS -> photos.photosList.map { it.id }
+      ChatSendContent.KindCase.STICKER -> listOf(sticker.id)
+      else -> emptyList()
+    }
 
 /** Whose a line is, as every count of unread lines and ここから新着 go by (spec/vectors/chat.json, writer). */
 enum class LineWriter {

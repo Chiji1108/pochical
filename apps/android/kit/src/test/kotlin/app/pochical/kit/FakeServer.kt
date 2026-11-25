@@ -157,6 +157,9 @@ class FakeServer : AutoCloseable {
   /** The ids of the photos put in groups' photos, in the order they came, a small version's ending in ?small. */
   val groupPhotos = CopyOnWriteArrayList<String>()
 
+  /** The type each of [groupPhotos] was put as, in the same order. */
+  val groupPhotoTypes = CopyOnWriteArrayList<String>()
+
   /** The ids of the photos sent to the chat with Pochical's people, in the order they came. */
   val supportPhotos = CopyOnWriteArrayList<String>()
 
@@ -431,6 +434,7 @@ class FakeServer : AutoCloseable {
               } else if (request.method == "PUT" && request.url.encodedPath.matches(Regex("/v1/groups/[^/]+/photos/[^/]+"))) {
                 val small = request.url.queryParameter("size") == "small"
                 groupPhotos += request.url.pathSegments[4] + if (small) "?small" else ""
+                groupPhotoTypes += request.headers["Content-Type"].orEmpty()
                 MockResponse.Builder().code(photoStatus).headersDelay(photoDelayMs, TimeUnit.MILLISECONDS).build()
               } else {
                 MockResponse.Builder().code(404).build()
@@ -625,6 +629,7 @@ class FakeServer : AutoCloseable {
                   chatContent {
                     when {
                       send.content.hasPhotos() -> photos = send.content.photos
+                      send.content.hasSticker() -> sticker = send.content.sticker
                       send.content.hasDays() -> days = send.content.days
                       send.content.hasPoll() -> poll = chatPoll { days += send.content.poll.daysList }
                       else -> words = chatWords { text = send.content.words.text }

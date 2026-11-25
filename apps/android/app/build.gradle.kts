@@ -113,6 +113,7 @@ dependencies {
   implementation(libs.reorderable)
   implementation(libs.coil.compose)
   implementation(libs.coil.svg)
+  implementation(libs.coil.gif)
   implementation(libs.telephoto.zoomable.image.coil3)
   implementation(libs.telephoto.flick)
   implementation(libs.zxing.core)

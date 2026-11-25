@@ -1,4 +1,5 @@
 import PochicalDesign
+import PochicalKit
 import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
@@ -48,10 +49,10 @@ struct ComposerField: UIViewRepresentable {
   let limit: Int
   @Binding var composing: Bool
   let box: ComposerBox
-  /// Images pasted (the edit menu's ペースト, ⌘V), each a provider to read
-  /// as the photo picker's are; none where photos cannot go, where an
-  /// image pastes nothing, as before.
-  var onPasteImages: (([NSItemProvider]) -> Void)?
+  /// Images pasted (the edit menu's ペースト, ⌘V, a sticker from the
+  /// keyboard), to read as the photo picker's are; none where photos
+  /// cannot go, where an image pastes nothing, as before.
+  var onPaste: ((PastedImages) -> Void)?
   /// Sends what is written, as a keyboard's Return does (spec/chat.md, A
   /// keyboard and a mouse); none while there is nothing to send.
   var onSend: (() -> Void)?
@@ -81,7 +82,7 @@ struct ComposerField: UIViewRepresentable {
 
   func makeUIView(context: Context) -> UITextView {
     let view = Self.setUp(ComposerTextView())
-    view.onPasteImages = onPasteImages
+    view.onPaste = onPaste
     view.onSend = onSend
     view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
     view.delegate = context.coordinator
@@ -94,7 +95,7 @@ struct ComposerField: UIViewRepresentable {
     context.coordinator.parent = self
     box.view = view
     if let view = view as? ComposerTextView {
-      view.onPasteImages = onPasteImages
+      view.onPaste = onPaste
       view.onSend = onSend
     }
     if view.markedTextRange == nil, view.text != text {
@@ -159,6 +160,14 @@ struct ComposerField: UIViewRepresentable {
   }
 }
 
+/// Images pasted into the composer's field: photos for the tray, or a
+/// sticker from the keyboard, which the system marks as one (spec/chat.md,
+/// Stickers).
+enum PastedImages {
+  case photos([NSItemProvider])
+  case sticker(NSItemProvider)
+}
+
 /// A text view that takes images pasted, as Messages' and Signal's fields
 /// do: the system's own paste, so ペースト shows in the edit menu for an
 /// image and pasting asks nothing more. Words paste as any text view's.
@@ -172,9 +181,9 @@ struct ComposerField: UIViewRepresentable {
 /// inline stickers and Genmoji): UIKit turns them on for a text view whose
 /// paste takes images, and the keyboard would then put a sticker in as a
 /// glyph, which the field's words read as U+FFFC alone. Without them the
-/// keyboard pastes a sticker, which comes as an image like any other.
+/// keyboard pastes a sticker, which comes as an image marked a sticker.
 final class ComposerTextView: UITextView {
-  var onPasteImages: (([NSItemProvider]) -> Void)?
+  var onPaste: ((PastedImages) -> Void)?
   var onSend: (() -> Void)?
 
   override init(frame: CGRect, textContainer: NSTextContainer?) {
@@ -232,7 +241,7 @@ final class ComposerTextView: UITextView {
     if action == #selector(sendFromKeyboard) || action == #selector(newLineFromKeyboard) {
       return markedTextRange == nil
     }
-    if action == #selector(paste(_:)), onPasteImages != nil, UIPasteboard.general.hasImages {
+    if action == #selector(paste(_:)), onPaste != nil, UIPasteboard.general.hasImages {
       return true
     }
     return super.canPerformAction(action, withSender: sender)
@@ -240,16 +249,21 @@ final class ComposerTextView: UITextView {
 
   override func paste(_ sender: Any?) {
     let board = UIPasteboard.general
-    guard let onPasteImages, board.hasImages else {
+    guard let onPaste, board.hasImages else {
       super.paste(sender)
       return
     }
+    let items = board.itemProviders
+    if let sticker = items.first(where: ChatStickers.isSticker) {
+      onPaste(.sticker(sticker))
+      return
+    }
     // The items that are images; any words copied with them are left.
-    let images = board.itemProviders.filter { $0.hasItemConformingToTypeIdentifier(UTType.image.identifier) }
+    let images = items.filter { $0.hasItemConformingToTypeIdentifier(UTType.image.identifier) }
     guard !images.isEmpty else {
       super.paste(sender)
       return
     }
-    onPasteImages(images)
+    onPaste(.photos(images))
   }
 }

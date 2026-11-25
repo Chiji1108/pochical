@@ -195,6 +195,26 @@ class ChatSyncTest {
   }
 
   @Test
+  fun aStickerGoesOnceItIsUpAsALineOfItsOwn() = runBlocking {
+    val phone = signedIn()
+    val me = server.userId
+    val gif = "GIF89a".toByteArray() + byteArrayOf(1, 2, 3)
+    phone.chats.sendSticker("g1", GROUP_THREAD, StickerFile(gif, 120, 90), replyTo = null)
+    val sent = phone.chat(me) { it.waiting.isEmpty() && it.lines.isNotEmpty() }
+    val sticker = (sent.lines.single().content as LineContent.Sticker).sticker
+    assertEquals(120 to 90, sticker.width to sticker.height)
+    // Up before its line, as it is, with no small version, said as a GIF; kept to show.
+    assertEquals(listOf(sticker.id), server.groupPhotos.toList())
+    assertTrue(server.groupPhotoTypes.single().startsWith("image/gif"))
+    assertTrue(phone.linePhotos.files.held("g1", sticker.id) != null)
+
+    // Taken back, it goes from the device as a photo does.
+    phone.chats.unsend("g1", GROUP_THREAD, sent.lines.single().seq)
+    phone.chat(me) { it.lines.single().content == LineContent.Unsent }
+    eventually { phone.linePhotos.files.held("g1", sticker.id) == null }
+  }
+
+  @Test
   fun aPhotoTheServerRefusesLeavesItsLineNotSentAndTheLinesAfterItGo() = runBlocking {
     val phone = signedIn()
     val me = server.userId
@@ -533,8 +553,8 @@ class ChatValuesTest {
   @Test
   fun aGroupLeftTakesEveryPhotoOfTheMembersKeptForIt() = runBlocking {
     val files = testLinePhotos().files
-    files.keep("g1", "mine", ShrunkPhoto(byteArrayOf(1), 1, 1, byteArrayOf()))
-    files.keep("g2", "other", ShrunkPhoto(byteArrayOf(1), 1, 1, byteArrayOf()))
+    files.keep("g1", "mine", byteArrayOf(1))
+    files.keep("g2", "other", byteArrayOf(1))
     // Listening before it lets go, which may not suspend at all once the files go quickly.
     val forgotten = async(start = CoroutineStart.UNDISPATCHED) { files.forgotten.first() }
     files.forgetPlace("g1", listOf("p1"))
