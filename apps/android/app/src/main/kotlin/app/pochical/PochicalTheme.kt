@@ -10,7 +10,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialExpressiveTheme
+import androidx.compose.material3.LocalRippleThemeConfiguration
 import androidx.compose.material3.MotionScheme
+import androidx.compose.material3.RippleDefaults
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -50,8 +52,11 @@ fun PochicalTheme(settings: DeviceSettings, content: @Composable () -> Unit) {
     activity?.enableEdgeToEdge(statusBarStyle = bars, navigationBarStyle = bars)
   }
   CompositionLocalProvider(LocalThemeColors provides settings.theme.colors(dark)) {
-    // Material 3 Expressive: its motion scheme's springs, and its components' shapes and sizes.
-    MaterialExpressiveTheme(colorScheme = colorScheme(settings, dark), motionScheme = MotionScheme.expressive(), typography = Phrases, content = content)
+    // Material 3 Expressive: its motion scheme's springs, and its components' shapes and sizes;
+    // and its focus ring around what a key has reached, rather than a faint gray layer over it.
+    MaterialExpressiveTheme(colorScheme = colorScheme(settings, dark), motionScheme = MotionScheme.expressive(), typography = Phrases) {
+      CompositionLocalProvider(LocalRippleThemeConfiguration provides RippleDefaults.InsetFocusRingThemeConfiguration, content = content)
+    }
   }
 }
 
