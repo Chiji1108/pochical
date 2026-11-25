@@ -492,7 +492,7 @@ private fun StandIn(look: MessageLook, handlers: MessageHandlers, onQuote: () ->
       .padding(vertical = 8.dp)
       .width(IntrinsicSize.Max)
   ) {
-    look.quote?.let { BubbleQuote(it, colors.textPrimary, inset = 12.dp, onOpen = onQuote) }
+    look.quote?.let { BubbleQuote(it, handlers.groupId, colors.textPrimary, inset = 12.dp, onOpen = onQuote) }
     Text(
       lineWords(look.content, handlers.nameOf),
       Modifier.padding(horizontal = 12.dp),
@@ -552,7 +552,13 @@ private fun PhotoBody(look: MessageLook, photos: LineContent.Photos, handlers: M
 private fun StickerBody(look: MessageLook, sticker: LineContent.Sticker, handlers: MessageHandlers, live: Boolean, onQuote: () -> Unit) {
   val waiting = look.waiting
   UnderQuote(look, handlers, onQuote) {
-    StickerImage(sticker.sticker, handlers.groupId, waiting, onStop = waiting?.takeIf { live }?.let { { handlers.stopSending(it.opId) } })
+    StickerImage(
+      sticker.sticker,
+      handlers.groupId,
+      waiting,
+      onStop = waiting?.takeIf { live }?.let { { handlers.stopSending(it.opId) } },
+      Modifier.size(stickerSize(sticker.sticker)),
+    )
   }
 }
 
@@ -577,7 +583,7 @@ private fun UnderQuote(look: MessageLook, handlers: MessageHandlers, onQuote: ()
       .litWhenGoneTo(handlers.lit?.takeIf { it.seq == look.seq }, shape, handlers.reducedMotion, handlers.litShown)
       .padding(top = 8.dp, bottom = PHOTO_INSET, start = PHOTO_INSET, end = PHOTO_INSET)
   ) {
-    BubbleQuote(quote, ink, inset = 12.dp - PHOTO_INSET, onOpen = onQuote)
+    BubbleQuote(quote, handlers.groupId, ink, inset = 12.dp - PHOTO_INSET, onOpen = onQuote)
     Spacer(Modifier.height(6.dp))
     line()
   }
@@ -614,7 +620,7 @@ fun Bubble(look: MessageLook, handlers: MessageHandlers, onQuote: () -> Unit, li
         }
       )
   ) {
-    look.quote?.let { BubbleQuote(it, ink, inset = 12.dp, onOpen = onQuote) }
+    look.quote?.let { BubbleQuote(it, handlers.groupId, ink, inset = 12.dp, onOpen = onQuote) }
     // Past chatRules.foldLines lines, cut with … and 続きを読む under them, as they are laid out
     // (spec/chat.md, Long messages and shared days); opened, it stays open while the chat is.
     val unfolded = look.key in handlers.unfolded

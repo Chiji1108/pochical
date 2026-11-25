@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import app.pochical.R
@@ -83,20 +84,29 @@ fun stickerRequest(context: Context, stickerId: String, groupId: String, still: 
  * while it comes, ↻ in it should it not come, a tap fetching it again. A moving one plays as its file says,
  * looping for ever, and stands still at its first frame while motion is reduced. While its line
  * goes up ([waiting] still being sent) it is dimmed under the photos' ring, × in it stopping the
- * line ([onStop]).
+ * line ([onStop]). Drawn small in a quote it is [still] and leaves ↻ out ([retries] false), as a
+ * quoted photo does, its grey rounded at [corner].
  */
 @Composable
-fun StickerImage(sticker: ChatSticker, groupId: String, waiting: WaitingLine?, onStop: (() -> Unit)?, modifier: Modifier = Modifier) {
+fun StickerImage(
+  sticker: ChatSticker,
+  groupId: String,
+  waiting: WaitingLine?,
+  onStop: (() -> Unit)?,
+  modifier: Modifier = Modifier,
+  still: Boolean = rememberReducedMotion(),
+  retries: Boolean = true,
+  corner: Dp = Radius.lg,
+) {
   val context = LocalContext.current
-  val still = rememberReducedMotion()
   var attempt by remember(sticker.id) { mutableIntStateOf(0) }
   var failed by remember(sticker.id) { mutableStateOf(false) }
   var shown by remember(sticker.id) { mutableStateOf(false) }
   val request = remember(sticker.id, groupId, attempt, still) { stickerRequest(context, sticker.id, groupId, still, attempt) }
   val going = waiting != null && !waiting.failed
-  Box(modifier.size(stickerSize(sticker))) {
+  Box(modifier) {
     // A photo's grey while it comes, rounded as a photo's line is.
-    if (!shown) PhotoComing(breathing = !failed, Modifier.matchParentSize().clip(RoundedCornerShape(Radius.lg)))
+    if (!shown) PhotoComing(breathing = !failed, Modifier.matchParentSize().clip(RoundedCornerShape(corner)))
     AsyncImage(
       request,
       contentDescription = null,
@@ -108,7 +118,7 @@ fun StickerImage(sticker: ChatSticker, groupId: String, waiting: WaitingLine?, o
       },
     )
     // The member's own is on the device.
-    if (failed && waiting == null) PhotoRetry(Modifier.align(Alignment.Center), onClick = { attempt++ }, label = stringResource(R.string.chat_sticker_retry))
+    if (failed && retries && waiting == null) PhotoRetry(Modifier.align(Alignment.Center), onClick = { attempt++ }, label = stringResource(R.string.chat_sticker_retry))
     if (waiting != null && going) PhotoGoingUp(sticker.id, waiting.sending, onStop.takeIf { !waiting.sending }, Modifier.matchParentSize(), ground = Color.Transparent)
   }
 }

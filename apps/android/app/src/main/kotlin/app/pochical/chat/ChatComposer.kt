@@ -339,14 +339,16 @@ fun Composer(
       val bar =
         when {
           editing != null -> Bar(editingWords, null, R.string.chat_stop_editing)
-          quote != null -> Bar(quote.writer?.let { stringResource(R.string.chat_replying_to, it) } ?: stringResource(R.string.chat_replying), quote.words, R.string.chat_stop_replying)
+          quote != null -> Bar(quote.writer?.let { stringResource(R.string.chat_replying_to, it) } ?: stringResource(R.string.chat_replying), quote.words, R.string.chat_stop_replying, quote)
           else -> null
         }
       // The bar last shown, kept as it goes so it leaves whole.
       var shown by remember { mutableStateOf(bar) }
       if (bar != null) shown = bar
       AnimatedVisibility(bar != null) {
-        shown?.let { ComposerBar(it.title, it.words, stringResource(it.stop)) { state.writing = state.writing.stop() } }
+        shown?.let { bar ->
+          ComposerBar(bar.title, bar.words, stringResource(bar.stop), picture = bar.quote?.let { { QuotePicture(it, groupId) } }) { state.writing = state.writing.stop() }
+        }
       }
       // The days brought to share, kept as they go so the bar leaves whole.
       var daysShown by remember { mutableStateOf(days) }
@@ -514,7 +516,7 @@ private fun AttachMenu(onPhotos: () -> Unit, onShareDays: () -> Unit, onPollDays
  * one line of words, and × ([stop]) to stop. Read as one, its × apart (spec/chat.md, Screen readers).
  */
 @Composable
-private fun ComposerBar(title: String, words: String?, stop: String, onStop: () -> Unit) {
+private fun ComposerBar(title: String, words: String?, stop: String, picture: (@Composable () -> Unit)? = null, onStop: () -> Unit) {
   val colors = LocalThemeColors.current
   Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 4.dp, top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
     val said = listOfNotNull(title, words).joinToString("、")
@@ -524,6 +526,8 @@ private fun ComposerBar(title: String, words: String?, stop: String, onStop: () 
         Text(words, style = MaterialTheme.typography.bodySmall, color = colors.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
       }
     }
+    // What is answered, small beside its words (a quoted photo or sticker).
+    if (picture != null) Box(Modifier.padding(start = 8.dp)) { picture() }
     IconButton(onClick = onStop, Modifier.semantics { contentDescription = stop }) {
       Icon(painterResource(R.drawable.ic_close), contentDescription = null, Modifier.size(20.dp))
     }
@@ -565,8 +569,8 @@ class LinkPages {
   }
 }
 
-/** What the bar over the composer says: what it is, the line in one line of words, and its ×. */
-private data class Bar(val title: String, val words: String?, @param:StringRes val stop: Int)
+/** What the bar over the composer says: what it is, the line in one line of words, and its ×; answering a line, the [quote] whose picture shows beside its words. */
+private data class Bar(val title: String, val words: String?, @param:StringRes val stop: Int, val quote: LineQuote? = null)
 
 /** The most lines the field grows to before its words scroll. */
 private const val COMPOSER_LINES = 6
