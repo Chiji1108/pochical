@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -159,12 +158,14 @@ fun HoldSocket(groupId: String) {
 
 /**
  * No group yet (/design's NoGroups): a sample of 一覧, the table a group is mostly read in, filling the
- * screen and fading out under what sharing shifts is for and the buttons, グループを作る and QRコードで
- * 参加, at the foot. Text too large to leave the sample room scrolls the words alone.
+ * page and fading out under what sharing shifts is for and the buttons, グループを作る and QRコードで
+ * 参加, at the foot. Text too large to leave the sample room scrolls the words alone. A page as any
+ * other, kept to its width with its buttons: the sample is a picture of a phone's table, not one to
+ * read, so it has nothing more to show wider.
  */
 @Composable
-private fun NoGroups(actions: GroupsActions) {
-  Column(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 20.dp)) {
+internal fun NoGroups(actions: GroupsActions) = PageScaffold { padding ->
+  Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp)) {
     SampleDays(Modifier.weight(1f).fillMaxWidth())
     Column(
       Modifier.verticalScroll(rememberScrollState()).padding(top = 12.dp, bottom = 16.dp),

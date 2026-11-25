@@ -126,11 +126,13 @@ private fun BackButton(onBack: () -> Unit, closes: Boolean) {
  * adaptive design (and the large-screen quality's UI_Secondary_Elements). On a phone nothing
  * changes, as none is wider. The room beside it is the [content]'s padding, so what scrolls still
  * scrolls from the window's edges. A page whose content is the screen's to fill, the chat's lines
- * and the photos' grid as Messages and Photos fill a tablet, [fillsWidth].
+ * and the photos' grid as Messages and Photos fill a tablet, [fillsWidth]. A screen with no bar
+ * (はじめの画面, the one for a session the server no longer knows, the one erasing the device, グループ
+ * with no group yet) is a page too, laid out here with none, so its buttons keep to the same width.
  */
 @Composable
 fun PageScaffold(
-  topBar: @Composable () -> Unit,
+  topBar: @Composable () -> Unit = {},
   modifier: Modifier = Modifier,
   bottomBar: (@Composable () -> Unit)? = null,
   snackbar: SnackbarHostState? = null,
