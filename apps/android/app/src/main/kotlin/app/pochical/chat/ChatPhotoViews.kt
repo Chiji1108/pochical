@@ -234,7 +234,8 @@ fun ChatPhotoImage(photo: ChatPhoto, groupId: String, retries: Boolean, onOpen: 
       },
     )
   }
-  Box(modifier.then(tap)) {
+  // Without either it takes no tap, which goes on to what holds it (a quote's, to its line).
+  Box(modifier.then(if (onOpen != null || retries) tap else Modifier)) {
     when {
       blur != null -> Image(blur, contentDescription = null, Modifier.matchParentSize(), contentScale = ContentScale.Crop)
       !shown -> PhotoComing(breathing = !failed, Modifier.matchParentSize())
