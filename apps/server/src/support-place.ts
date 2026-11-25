@@ -36,7 +36,7 @@ import {
   tellStaffOfUnsend,
 } from "./slack";
 import type { SlackRefusal } from "./slack";
-import { photoWords } from "./support-lines";
+import { photoWords, STICKER_WORDS } from "./support-lines";
 import type { SupportLine } from "./support-lines";
 
 type LineRow = typeof chatLines.$inferSelect;
@@ -72,6 +72,10 @@ const contentView = (
         photos: photos.map(({ height, id, width }) => ({ height, id, width })),
         words: photoWords(photos.length),
       };
+    }
+    case "sticker": {
+      const { height, id, width } = content.sticker;
+      return { ...none, photos: [{ height, id, width }], words: STICKER_WORDS };
     }
     case "unsent": {
       return { ...none, unsent: true };

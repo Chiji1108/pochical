@@ -57,6 +57,7 @@ import type {
   ChatContent,
   ChatContentSchema,
   ChatEdit,
+  ChatPhoto,
   ChatPhotoEntrySchema,
   ChatLine,
   ChatDecide,
@@ -339,6 +340,9 @@ const contentWire = (
         },
       };
     }
+    case "sticker": {
+      return { kind: { case: "sticker", value: content.sticker } };
+    }
     case "days": {
       return { kind: { case: "days", value: { days: content.days } } };
     }
@@ -547,6 +551,9 @@ const fitsDays = (days: readonly string[]): boolean =>
 const fitsPhotoSize = (side: number): boolean =>
   side >= 1 && side <= chatRules.photoMaxEdge;
 
+const fitsStickerSize = (side: number): boolean =>
+  side >= 1 && side <= chatRules.stickerMaxEdge;
+
 /**
  * Those of `photoIds` that `userId` uploaded and has not sent; none past
  * the most one send holds, as no send names more.
@@ -572,10 +579,45 @@ const ownUnsentPhotos = (
         .map(({ id }) => id);
 
 /**
+ * An album as sent, when it fits: 1 to chatRules.photosPerSend photos,
+ * each once, each the sender's own, uploaded and not sent before.
+ */
+const sentAlbum = (
+  db: DrizzleSqliteDODatabase,
+  userId: string,
+  photos: ChatPhoto[]
+): SentContent | undefined => {
+  const ids = photos.map(({ id }) => id);
+  const fits =
+    ids.length > 0 &&
+    ids.length <= chatRules.photosPerSend &&
+    new Set(ids).size === ids.length &&
+    photos.every(
+      ({ width, height, thumbHash }) =>
+        fitsPhotoSize(width) &&
+        fitsPhotoSize(height) &&
+        fitsThumbHash(thumbHash)
+    ) &&
+    ownUnsentPhotos(db, userId, ids).length === ids.length;
+  return fits
+    ? {
+        kind: "photos",
+        photos: photos.map(({ height, id, thumbHash, width }) => ({
+          height,
+          id,
+          thumbHash: keptThumbHash(thumbHash),
+          width,
+        })),
+      }
+    : undefined;
+};
+
+/**
  * What a member's send is as a line, or none when it does not fit: words
  * that fit; days that fit, a poll's two at least and in the group chat (a
- * one-to-one chat has no polls); or 1 to chatRules.photosPerSend photos,
- * each once, each the sender's own, uploaded and not sent before.
+ * one-to-one chat has no polls); 1 to chatRules.photosPerSend photos,
+ * each once, or a sticker, each the sender's own, uploaded and not sent
+ * before.
  */
 const sentContent = (
   db: DrizzleSqliteDODatabase,
@@ -596,29 +638,14 @@ const sentContent = (
         : undefined;
     }
     case "photos": {
-      const { photos } = kind.value;
-      const ids = photos.map(({ id }) => id);
-      const fits =
-        ids.length > 0 &&
-        ids.length <= chatRules.photosPerSend &&
-        new Set(ids).size === ids.length &&
-        photos.every(
-          ({ width, height, thumbHash }) =>
-            fitsPhotoSize(width) &&
-            fitsPhotoSize(height) &&
-            fitsThumbHash(thumbHash)
-        ) &&
-        ownUnsentPhotos(db, userId, ids).length === ids.length;
-      return fits
-        ? {
-            kind: "photos",
-            photos: photos.map(({ height, id, thumbHash, width }) => ({
-              height,
-              id,
-              thumbHash: keptThumbHash(thumbHash),
-              width,
-            })),
-          }
+      return sentAlbum(db, userId, kind.value.photos);
+    }
+    case "sticker": {
+      const { height, id, width } = kind.value;
+      return fitsStickerSize(width) &&
+        fitsStickerSize(height) &&
+        ownUnsentPhotos(db, userId, [id]).length === 1
+        ? { kind: "sticker", sticker: { height, id, width } }
         : undefined;
     }
     case "days": {
@@ -1234,7 +1261,10 @@ const DEVICE_MAX = 100;
  * The app's version and device a line keeps, where its place's rules ask
  * for them: only what the app says of itself, kept short.
  */
-const deviceOf = ({ device }: ChatSend, rules: ChatPlaceRules): string | null =>
+const deviceOf = (
+  { device }: ChatSend,
+  rules: ChatPlaceRules
+): string | null =>
   rules.sendsDevice && device !== "" ? device.slice(0, DEVICE_MAX) : null;
 
 /** What taking an edit did: its change, and the line to send back when it was refused. */
@@ -1788,6 +1818,7 @@ export const reportContext = (
         photos: photos.length === 0 ? undefined : photos.map(({ id }) => id),
         reported: seq === target.seq,
         seq,
+        sticker: content.kind === "sticker",
         text: content.kind === "words" ? plainText(content.text, nameOf) : "",
         unsent: content.kind === "unsent",
       };
@@ -1809,6 +1840,9 @@ const alertKind = (content: ChatContent["kind"] | undefined): string => {
   switch (content?.case) {
     case "photos": {
       return "PHOTO";
+    }
+    case "sticker": {
+      return "STICKER";
     }
     case "poll": {
       return "POLL";

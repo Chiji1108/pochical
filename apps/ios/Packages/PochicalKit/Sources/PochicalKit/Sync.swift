@@ -16,11 +16,13 @@ public enum Sync {
   /// 6: a preference's value as its key's message, 5 recorded before it
   /// moved to its own field (`PreferenceValue.message`), never shipped. 7:
   /// a group's end (`GroupProfile.ends_at_ms`) and the notices of it
-  /// (`END_SET`, `END_CLEARED`, `ENDS_SOON`).
+  /// (`END_SET`, `END_CLEARED`, `ENDS_SOON`). 8: a chat line of a sticker
+  /// (`ChatContent.sticker`) on the wire, read as one of a later kind
+  /// until the app draws it (#1276).
   /// `mise run sync:check` fails when `Change`'s messages in proto/ change
   /// while this stays, and its `--write` records each raise in
   /// `sync-wire.json`.
-  static let schema = 7
+  static let schema = 8
 
   /// A device that took its values under an older schema moves every
   /// cursor back to the start, its User DO's and every place's, so its

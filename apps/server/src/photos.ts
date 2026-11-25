@@ -73,33 +73,70 @@ export const PHOTO_PATH =
 // A JPEG starts with its Start of Image marker and another marker.
 const JPEG_START = [0xff, 0xd8, 0xff];
 
-const isJpeg = (bytes: Uint8Array): boolean =>
-  JPEG_START.every((byte, at) => bytes[at] === byte);
+const startsWith = (bytes: Uint8Array, start: number[], at = 0): boolean =>
+  start.every((byte, index) => bytes[at + index] === byte);
+
+const ascii = (text: string): number[] =>
+  Array.from(text, (letter) => letter.codePointAt(0) ?? 0);
 
 /**
- * An upload's bytes when they are a photo the app shrank to send: a JPEG
- * of at most chatRules.photoMaxBytes under an id of the app's; else the
- * answer refusing it.
+ * What a group's upload is, by its first bytes: a photo the app shrank to
+ * send, a JPEG, or a sticker, a WebP (RIFF....WEBP) or a GIF, still or
+ * moving (spec/chat.md, Stickers); none for anything else.
  */
-const jpegOf = async (
+const uploadType = (
+  bytes: Uint8Array
+): { type: string; maxBytes: number } | undefined => {
+  if (startsWith(bytes, JPEG_START)) {
+    return { maxBytes: chatRules.photoMaxBytes, type: "image/jpeg" };
+  }
+  if (startsWith(bytes, ascii("RIFF")) && startsWith(bytes, ascii("WEBP"), 8)) {
+    return { maxBytes: chatRules.stickerMaxBytes, type: "image/webp" };
+  }
+  if (
+    startsWith(bytes, ascii("GIF87a")) ||
+    startsWith(bytes, ascii("GIF89a"))
+  ) {
+    return { maxBytes: chatRules.stickerMaxBytes, type: "image/gif" };
+  }
+  return undefined;
+};
+
+// The most bytes any upload may be, a photo's being the larger.
+const UPLOAD_MAX_BYTES = Math.max(
+  chatRules.photoMaxBytes,
+  chatRules.stickerMaxBytes
+);
+
+/**
+ * An upload's bytes and type when they are what the app sends under an id
+ * of its own: a JPEG within chatRules.photoMaxBytes, or a sticker's WebP
+ * or GIF within chatRules.stickerMaxBytes, a small version being a JPEG
+ * alone; else the answer refusing it.
+ */
+const uploadOf = async (
   request: Request,
   photoId: string
-): Promise<Uint8Array | Response> => {
+): Promise<{ bytes: Uint8Array; type: string } | Response> => {
   if (!isId(photoId)) {
     return new Response("Not a photo id", { status: 400 });
   }
   const declared = Number(request.headers.get("Content-Length") ?? 0);
-  if (declared > chatRules.photoMaxBytes) {
+  if (declared > UPLOAD_MAX_BYTES) {
     return new Response("Photo too large", { status: 413 });
   }
   const bytes = new Uint8Array(await request.arrayBuffer());
-  if (bytes.byteLength > chatRules.photoMaxBytes) {
+  const kind = uploadType(bytes);
+  if (
+    kind === undefined ||
+    (wantsSmall(request) && kind.type !== "image/jpeg")
+  ) {
+    return new Response("Not a JPEG, WebP or GIF", { status: 415 });
+  }
+  if (bytes.byteLength > kind.maxBytes) {
     return new Response("Photo too large", { status: 413 });
   }
-  if (!isJpeg(bytes)) {
-    return new Response("Not a JPEG", { status: 415 });
-  }
-  return bytes;
+  return { bytes, type: kind.type };
 };
 
 /**
@@ -115,15 +152,15 @@ export const putPhoto = async (
   photoId: string,
   userId: string
 ): Promise<Response> => {
-  const bytes = await jpegOf(request, photoId);
-  if (bytes instanceof Response) {
-    return bytes;
+  const upload = await uploadOf(request, photoId);
+  if (upload instanceof Response) {
+    return upload;
   }
   const note = await env.GROUPS.getByName(groupId).storePhoto(
     photoId,
     userId,
-    bytes,
-    { contentType: "image/jpeg", small: wantsSmall(request) }
+    upload.bytes,
+    { contentType: upload.type, small: wantsSmall(request) }
   );
   if (note === "refused") {
     return new Response("Not a photo of yours to upload", { status: 409 });
@@ -266,11 +303,15 @@ export const personPhoto = async (
 ): Promise<Response> => {
   switch (request.method) {
     case "PUT": {
-      const bytes = await jpegOf(request, photoId);
-      if (bytes instanceof Response) {
-        return bytes;
+      const upload = await uploadOf(request, photoId);
+      if (upload instanceof Response) {
+        return upload;
       }
-      await env.PHOTOS.put(uploadedPhotoKey(userId, photoId), bytes, {
+      // A face is a photo, never a sticker.
+      if (upload.type !== "image/jpeg") {
+        return new Response("Not a JPEG", { status: 415 });
+      }
+      await env.PHOTOS.put(uploadedPhotoKey(userId, photoId), upload.bytes, {
         httpMetadata: { contentType: "image/jpeg" },
       });
       return new Response(null, { status: 204 });

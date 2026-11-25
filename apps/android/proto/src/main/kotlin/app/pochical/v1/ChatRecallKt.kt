@@ -80,9 +80,10 @@ public object ChatRecallKt {
     public class PhotoIdsProxy private constructor() : com.google.protobuf.kotlin.DslProxy()
     /**
      * ```
-     * The photos the send carries, uploaded before it went out: deleted with
-     * the line, or at once when the group does not have the line, as no
-     * line will ever carry them. None for a send of anything else.
+     * The photos the send carries, an album's or its sticker, uploaded
+     * before it went out: deleted with the line, or at once when the group
+     * does not have the line, as no line will ever carry them. None for a
+     * send of anything else.
      * ```
      *
      * `repeated string photo_ids = 4 [json_name = "photoIds"];`
@@ -95,9 +96,10 @@ public object ChatRecallKt {
       )
     /**
      * ```
-     * The photos the send carries, uploaded before it went out: deleted with
-     * the line, or at once when the group does not have the line, as no
-     * line will ever carry them. None for a send of anything else.
+     * The photos the send carries, an album's or its sticker, uploaded
+     * before it went out: deleted with the line, or at once when the group
+     * does not have the line, as no line will ever carry them. None for a
+     * send of anything else.
      * ```
      *
      * `repeated string photo_ids = 4 [json_name = "photoIds"];`
@@ -110,9 +112,10 @@ public object ChatRecallKt {
     }
     /**
      * ```
-     * The photos the send carries, uploaded before it went out: deleted with
-     * the line, or at once when the group does not have the line, as no
-     * line will ever carry them. None for a send of anything else.
+     * The photos the send carries, an album's or its sticker, uploaded
+     * before it went out: deleted with the line, or at once when the group
+     * does not have the line, as no line will ever carry them. None for a
+     * send of anything else.
      * ```
      *
      * `repeated string photo_ids = 4 [json_name = "photoIds"];`
@@ -126,9 +129,10 @@ public object ChatRecallKt {
     }
     /**
      * ```
-     * The photos the send carries, uploaded before it went out: deleted with
-     * the line, or at once when the group does not have the line, as no
-     * line will ever carry them. None for a send of anything else.
+     * The photos the send carries, an album's or its sticker, uploaded
+     * before it went out: deleted with the line, or at once when the group
+     * does not have the line, as no line will ever carry them. None for a
+     * send of anything else.
      * ```
      *
      * `repeated string photo_ids = 4 [json_name = "photoIds"];`
@@ -141,9 +145,10 @@ public object ChatRecallKt {
     }
     /**
      * ```
-     * The photos the send carries, uploaded before it went out: deleted with
-     * the line, or at once when the group does not have the line, as no
-     * line will ever carry them. None for a send of anything else.
+     * The photos the send carries, an album's or its sticker, uploaded
+     * before it went out: deleted with the line, or at once when the group
+     * does not have the line, as no line will ever carry them. None for a
+     * send of anything else.
      * ```
      *
      * `repeated string photo_ids = 4 [json_name = "photoIds"];`
@@ -157,9 +162,10 @@ public object ChatRecallKt {
     }
     /**
      * ```
-     * The photos the send carries, uploaded before it went out: deleted with
-     * the line, or at once when the group does not have the line, as no
-     * line will ever carry them. None for a send of anything else.
+     * The photos the send carries, an album's or its sticker, uploaded
+     * before it went out: deleted with the line, or at once when the group
+     * does not have the line, as no line will ever carry them. None for a
+     * send of anything else.
      * ```
      *
      * `repeated string photo_ids = 4 [json_name = "photoIds"];`
@@ -172,9 +178,10 @@ public object ChatRecallKt {
       _builder.setPhotoIds(index, value)
     }/**
      * ```
-     * The photos the send carries, uploaded before it went out: deleted with
-     * the line, or at once when the group does not have the line, as no
-     * line will ever carry them. None for a send of anything else.
+     * The photos the send carries, an album's or its sticker, uploaded
+     * before it went out: deleted with the line, or at once when the group
+     * does not have the line, as no line will ever carry them. None for a
+     * send of anything else.
      * ```
      *
      * `repeated string photo_ids = 4 [json_name = "photoIds"];`

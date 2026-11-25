@@ -197,6 +197,7 @@ export const chatLines = sqliteTable(
         WHEN 'words' THEN content ->> '$.text' <> ''
           AND json_type(content, '$.edited') IN ('true', 'false')
         WHEN 'photos' THEN json_array_length(content, '$.photos') > 0
+        WHEN 'sticker' THEN json_type(content, '$.sticker') = 'object'
         WHEN 'days' THEN json_array_length(content, '$.days') > 0
         WHEN 'poll' THEN json_array_length(content, '$.days') > 0
         WHEN 'notice' THEN json_type(content, '$.notice') = 'object'

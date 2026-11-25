@@ -117,7 +117,8 @@ public enum LineContent: Hashable, Sendable {
     case .notice(let notice): self = LineNotice(notice).map(LineContent.notice) ?? .hidden
     case .unsent: self = .unsent
     case .hidden: self = .hidden
-    case nil: self = .unknown
+    // Not read yet: its line asks to update, as one of a later kind (#1276).
+    case .sticker, nil: self = .unknown
     }
   }
 
@@ -133,7 +134,7 @@ public enum LineContent: Hashable, Sendable {
     case .photos(let album): line.photos = album
     case .days(let days): line.days = days
     case .poll(let poll): line.poll.days = poll.days
-    case nil: line.hidden = Pochical_V1_ChatHidden()
+    case .sticker, nil: line.hidden = Pochical_V1_ChatHidden()
     }
     self.init(line)
   }

@@ -14,6 +14,9 @@ export const supportPlace = (userId: string): string => `support:${userId}`;
 export const photoWords = (count: number): string =>
   count === 1 ? "📷 写真" : `📷 写真${count}枚`;
 
+/** A sticker as a line of words says it, as the apps' quotes do. */
+export const STICKER_WORDS = "スタンプ";
+
 /** An emoji on a line, and who put it there. */
 export type SupportReaction = {
   emoji: string;

@@ -3,7 +3,7 @@
 // by where they are kept and why nothing names them, for Pochical's people
 // to read; and, once they have, the same walk deleting them, each judged
 // again by its owner first.
-import { eq } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 
@@ -131,12 +131,15 @@ const FAN_OUT = 20;
 // Keys kept of each row, for a look at a few.
 const SAMPLE = 20;
 
-/** The lines' photos, each of them carried by a line not taken back. */
+/**
+ * The lines' photos, an album's and a sticker's, each of them carried by
+ * a line not taken back.
+ */
 const linePhotos = (db: DrizzleSqliteDODatabase): string[] =>
   db
     .select({ content: chatLines.content })
     .from(chatLines)
-    .where(kindIs("photos"))
+    .where(or(kindIs("photos"), kindIs("sticker")))
     .all()
     .flatMap(({ content }) => photosOf(content).map(({ id }) => id));
 
