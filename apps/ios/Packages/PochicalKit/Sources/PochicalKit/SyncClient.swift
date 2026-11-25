@@ -850,6 +850,8 @@ public actor SyncClient {
         // written to send on its first try.
         if case .send(let send) = edit.kind, case .sticker = send.content.kind {
           try await ChatStickers.write(photoID, in: shelf)
+          // Stopped while it was written, before anything went up.
+          guard try await stillGoing(edit.opID) else { return false }
         }
         try await ChatPhotos.upload(
           photoID, of: edit.opID, in: shelf, as: credentials, server: server)

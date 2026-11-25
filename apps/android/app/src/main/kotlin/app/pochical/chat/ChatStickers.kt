@@ -44,9 +44,10 @@ import kotlinx.coroutines.withContext
 // photos are (`ChatPhotoData`).
 
 /** The sticker the keyboard gave at [uri], written to send (`StickerEncoding`); null for one the phone cannot read. */
-suspend fun keyboardSticker(context: Context, uri: Uri): StickerFile? =
-  withContext(Dispatchers.Default) {
-    val bytes =
+suspend fun keyboardSticker(context: Context, uri: Uri): StickerFile? {
+  // Read from the keyboard's provider, which waits on its files, and written on the CPU's threads.
+  val bytes =
+    withContext(Dispatchers.IO) {
       try {
         context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
       } catch (e: CancellationException) {
@@ -54,8 +55,9 @@ suspend fun keyboardSticker(context: Context, uri: Uri): StickerFile? =
       } catch (_: Exception) {
         null
       }
-    bytes?.let(StickerEncoding::encode)
-  }
+    } ?: return null
+  return withContext(Dispatchers.Default) { StickerEncoding.encode(bytes) }
+}
 
 /** The size a sticker takes in the chat: within `chatRules.stickerSize` square, its shape kept. */
 fun stickerSize(sticker: ChatSticker): DpSize {
