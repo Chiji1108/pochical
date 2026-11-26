@@ -284,25 +284,25 @@ fun PhotoViewer(
           val share = stringResource(R.string.chat_photo_share)
           val save = stringResource(R.string.chat_save)
           Tip(share) {
-          IconButton(
-            onClick = {
-              photo?.let {
-                scope.launch {
-                  val opened =
-                    try {
-                      sharePhoto(context, wholePhoto(context, calls, files, groupId, it.photo.id))
-                    } catch (e: CancellationException) {
-                      throw e
-                    } catch (_: Exception) {
-                      false
-                    }
-                  if (!opened) snackbar.showSnackbar(notShared)
+            IconButton(
+              onClick = {
+                photo?.let {
+                  scope.launch {
+                    val opened =
+                      try {
+                        sharePhoto(context, wholePhoto(context, calls, files, groupId, it.photo.id))
+                      } catch (e: CancellationException) {
+                        throw e
+                      } catch (_: Exception) {
+                        false
+                      }
+                    if (!opened) snackbar.showSnackbar(notShared)
+                  }
                 }
               }
+            ) {
+              Icon(painterResource(R.drawable.ic_share), share, tint = colors.mediaText)
             }
-          ) {
-            Icon(painterResource(R.drawable.ic_share), share, tint = colors.mediaText)
-          }
           }
           Tip(save) {
             IconButton(onClick = { photo?.let { scope.launch { snackbar.saying(savePhotos(context, calls, files, groupId, listOf(it.photo)), haptics) } } }) {

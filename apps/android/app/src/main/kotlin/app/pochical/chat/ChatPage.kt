@@ -96,8 +96,6 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -1064,9 +1062,7 @@ private fun LatestButton(
     val to = stringResource(if (toUnread) R.string.chat_to_unread else R.string.chat_to_latest)
     val label = if (unseen > 0) stringResource(R.string.chat_unseen, to, unseen) else to
     BadgedBox(badge = { if (unseen > 0) Badge { Text("$unseen") } }) {
-      SmallFloatingActionButton(onClick = { onClick(toUnread) }, Modifier.semantics { contentDescription = label }) {
-        Icon(painterResource(R.drawable.ic_keyboard_arrow_down), contentDescription = null)
-      }
+      Tip(label) { SmallFloatingActionButton(onClick = { onClick(toUnread) }) { Icon(painterResource(R.drawable.ic_keyboard_arrow_down), label) } }
     }
   }
 }
