@@ -13,6 +13,8 @@ import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedContent
 import app.pochical.paneDirective
+import app.pochical.TabletopSplit
+import app.pochical.tabletopHinge
 import app.pochical.SUPPORTING_PANE_WIDTH
 import androidx.compose.material3.adaptive.navigation3.LocalSupportingPaneSceneScope
 import androidx.compose.material3.adaptive.layout.ThreePaneScaffoldValue
@@ -56,6 +58,7 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -204,7 +207,11 @@ fun CalendarScreen(
   val resources = LocalResources.current
   // Two panes side by side, the window's own split (spec/calendar.md, On a wide screen).
   val directive = paneDirective()
-  val wide = directive.maxHorizontalPartitions > 1
+  val twoPanes = directive.maxHorizontalPartitions > 1
+  // A fold across the window, the device half folded on a table (spec/calendar.md, On a table).
+  val hinge = tabletopHinge()
+  // The month never folds: on a wide window the day stands beside it, on a table under it.
+  val wide = twoPanes || hinge != null
   // シフト's list stands in the pane's place, a page beside the tabs (TabPanes).
   val listBeside = LocalSupportingPaneSceneScope.current != null
   // The pages count from the month the screen opened on, so they stay put
@@ -457,6 +464,13 @@ fun CalendarScreen(
     }
   }
 
+  // A day closed at once, as a table's has no fold to go back through.
+  fun closeDay() {
+    scope.launch { fold.snapTo(0f) }
+    openedKey = null
+    foldedKey = null
+  }
+
   suspend fun unfold() {
     closing = true
     try {
@@ -670,13 +684,75 @@ fun CalendarScreen(
       }
     }
 
+  // The month unfolded, as a wide window and a table have it: its heading, weekdays and days.
+  @Composable
+  fun unfoldedMonth(modifier: Modifier) =
+    Column(modifier) {
+      heading()
+      WeekdayRow(week, Modifier.padding(horizontal = SCREEN_EDGE).padding(bottom = 12.dp))
+      BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
+        // The days take their size from the room the foot leaves them once it is still, the tray's
+        // while entering, as the tabs stay.
+        val room = remember { mutableStateOf(maxHeight) }.apply { if (!footMoving) value = maxHeight }.value
+        val weekWidth = maxWidth - SCREEN_EDGE * 2
+        val cell by animateDpAsState(monthCellHeight(room - DAY_GAP, tallestDay(weekWidth)), Springs.standard(), label = "cell")
+        // A window too short for six weeks at their shortest, a phone on its side, scrolls them.
+        Box(Modifier.verticalScroll(rememberScrollState())) { MonthPager(pager, range, pageDays(cell, weekWidth)) }
+      }
+    }
+
+  // The day's detail in a pane of its own, today's while none is open and the day being entered while entering.
+  @Composable
+  fun dayPane(onClose: (() -> Unit)? = null) =
+    Column(Modifier.fillMaxSize().padding(top = 8.dp).windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))) {
+      DayDetail(
+        day = paneDay,
+        holds = paneTransition,
+        calendar = calendar,
+        days = days,
+        writing = memoWriting,
+        peopleOpen = peopleOpen,
+        onPeopleOpenChange = { peopleOpen = it },
+        onStep = { step(it) },
+        canStep = { paneDay.plusDays(it.toLong()) in reachable },
+        // Always there beside the month: no ×.
+        onClose = onClose,
+        // Entering, the shift is the tray's to change and to clear.
+        onPickShift = if (entering == null) ({ open(RootPage.ShiftChoice(paneDay.toString())) }) else null,
+        reduceMotion = reduceMotion,
+        modifier = Modifier.weight(1f),
+      )
+    }
+
   val sky = rememberSurpriseSky(reduceMotion)
   Column(
     Modifier.fillMaxSize()
       .drawBehind(sky)
       .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
   ) {
-    if (wide) {
+    if (hinge != null) {
+      // On a table: the month to look at above the fold, what is touched below it (spec/calendar.md, On a table).
+      TabletopSplit(
+        hinge,
+        top = { unfoldedMonth(Modifier.fillMaxSize()) },
+        bottom = {
+          if (twoPanes) {
+            // Entering, the keys alone, as the days entered show above; else the day beside 今月のお休み and
+            // ポチポチ入力, at the foot as on a phone, nearest the hand.
+            Row(Modifier.fillMaxSize()) {
+              Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.BottomCenter) { monthFoot() }
+              // シフト's list takes the pane's place, a page beside the tabs, as on a wide window.
+              if (entering == null && !listBeside) Box(Modifier.width(SUPPORTING_PANE_WIDTH).fillMaxHeight()) { dayPane() }
+            }
+          } else if (entering == null && opened != null) {
+            // Too narrow for both: the day opened in their place, closed with its ×.
+            dayPane(onClose = { closeDay() })
+          } else {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) { monthFoot() }
+          }
+        },
+      )
+    } else if (wide) {
       // Material's supporting pane: the month in the main pane, the day in a pane of Material's
       // fixed width at the trailing side, or at a separating hinge one each side of it; the pane's
       // place goes to the month while シフト's list stands in it.
@@ -693,44 +769,13 @@ fun CalendarScreen(
             // The phone's calendar, which never folds: the month, and under it 今月のお休み and
             // ポチポチ入力, or its tray while entering.
             Column {
-              heading()
-              WeekdayRow(week, Modifier.padding(horizontal = SCREEN_EDGE).padding(bottom = 12.dp))
-              BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
-                // The days take their size from the room the foot leaves them once it is still, the tray's
-                // while entering, as the tabs stay.
-                val room = remember { mutableStateOf(maxHeight) }.apply { if (!footMoving) value = maxHeight }.value
-                val weekWidth = maxWidth - SCREEN_EDGE * 2
-                val cell by animateDpAsState(monthCellHeight(room - DAY_GAP, tallestDay(weekWidth)), Springs.standard(), label = "cell")
-                // A window too short for six weeks at their shortest, a phone on its side, scrolls them.
-                Box(Modifier.verticalScroll(rememberScrollState())) { MonthPager(pager, range, pageDays(cell, weekWidth)) }
-              }
+              unfoldedMonth(Modifier.weight(1f))
               monthFoot()
             }
           }
         },
         supportingPane = {
-          AnimatedPane(Modifier.preferredWidth(SUPPORTING_PANE_WIDTH)) {
-            // The day's detail, today's while none is open and the day being entered while entering.
-            Column(Modifier.fillMaxSize().padding(top = 8.dp).windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))) {
-              DayDetail(
-                day = paneDay,
-                holds = paneTransition,
-                calendar = calendar,
-                days = days,
-                writing = memoWriting,
-                peopleOpen = peopleOpen,
-                onPeopleOpenChange = { peopleOpen = it },
-                onStep = { step(it) },
-                canStep = { paneDay.plusDays(it.toLong()) in reachable },
-                // Always there: no ×.
-                onClose = null,
-                // Entering, the shift is the tray's to change and to clear.
-                onPickShift = if (entering == null) ({ open(RootPage.ShiftChoice(paneDay.toString())) }) else null,
-                reduceMotion = reduceMotion,
-                modifier = Modifier.weight(1f),
-              )
-            }
-          }
+          AnimatedPane(Modifier.preferredWidth(SUPPORTING_PANE_WIDTH)) { dayPane() }
         },
       )
     } else {
