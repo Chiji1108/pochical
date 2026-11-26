@@ -81,7 +81,9 @@ import androidx.compose.ui.unit.dp
 import app.pochical.LocalAccount
 import app.pochical.LocalThemeColors
 import app.pochical.R
+import app.pochical.TabletopSplit
 import app.pochical.groups.HoldSocket
+import app.pochical.tabletopHinge
 import app.pochical.groups.LocalGroupCalls
 import app.pochical.kit.ChatPhotoItem
 import app.pochical.kit.PhotoKey
@@ -230,7 +232,11 @@ fun PhotoViewer(
   // The system bars go with the buttons; they come back as it is pulled or goes, while the photo
   // still covers the page, which takes their room back under it.
   if (!closing) MediaBars(shown = controls || reading || pulled > 0f)
-  Box(Modifier.fillMaxSize().background(colors.mediaBackground.copy(alpha = 1f - pulled))) {
+  // The photo and the buttons over it; on a table the photo above the fold and the buttons below it
+  // (spec/chat.md, Photos), so the photo stands up and the buttons lie in reach.
+  val hinge = tabletopHinge()
+  @Composable
+  fun pages() {
     HorizontalPager(pager, Modifier.fillMaxSize(), key = { photos.getOrNull(it)?.layoutKey ?: it }, beyondViewportPageCount = 1) { page ->
       val photo = photos.getOrNull(page) ?: return@HorizontalPager
       // Read as whose it is, its shape and when it was sent, and its place among the chat's.
@@ -247,10 +253,13 @@ fun PhotoViewer(
         if (page == pager.settledPage) Modifier.largePhoto(photo.photo.id, zoom) else Modifier,
       )
     }
+  }
+  @Composable
+  fun buttons(belowFold: Boolean) {
     // Always in reach with a screen reader on, hidden before or not.
     AnimatedVisibility((controls || reading) && pulled == 0f, enter = fadeIn(), exit = fadeOut()) {
       Box(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().then(if (belowFold) Modifier else Modifier.windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility)).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
           IconButton(onClick = { close() }) {
             Icon(painterResource(R.drawable.ic_close), stringResource(R.string.chat_photo_close), tint = colors.mediaText)
           }
@@ -296,6 +305,14 @@ fun PhotoViewer(
           }
         }
       }
+    }
+  }
+  Box(Modifier.fillMaxSize().background(colors.mediaBackground.copy(alpha = 1f - pulled))) {
+    if (hinge != null) {
+      TabletopSplit(hinge, top = { pages() }, bottom = { buttons(belowFold = true) })
+    } else {
+      pages()
+      buttons(belowFold = false)
     }
     // What saving and sharing came to, over the foot's buttons.
     SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.navigationBarsIgnoringVisibility).padding(bottom = 64.dp))
