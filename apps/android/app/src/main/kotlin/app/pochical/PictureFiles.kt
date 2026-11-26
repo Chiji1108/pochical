@@ -31,15 +31,16 @@ suspend fun sharePhoto(context: Context, jpeg: ByteArray): Boolean = shareImage(
 /**
  * A chat's photo [photoId], its [jpeg] as it came, as what dragging it out of the app carries: a
  * file of its own in the app's cache, read through the FileProvider sharing uses, kept while another
- * app may still be reading it after the drop (a day, as the drop leaves no word of being done) and
- * written once however often it is shown.
+ * app may still be reading it after the drop (a day from the last time it was handed out, as the
+ * drop leaves no word of being done) and written once however often it is shown.
  */
 suspend fun dragged(context: Context, photoId: String, jpeg: suspend () -> ByteArray): ClipData =
   withContext(Dispatchers.IO) {
     val folder = File(context.cacheDir, "shared/dragged").apply { mkdirs() }
-    val stale = System.currentTimeMillis() - DRAGGED_KEPT_MS
-    folder.listFiles { file -> file.lastModified() < stale }?.forEach(File::delete)
+    val now = System.currentTimeMillis()
     val file = File(folder, "$photoId.jpg")
+    file.setLastModified(now)
+    folder.listFiles { file -> file.lastModified() < now - DRAGGED_KEPT_MS }?.forEach(File::delete)
     if (!file.exists()) {
       val writing = File(folder, "$photoId.jpg.part")
       writing.writeBytes(jpeg())
