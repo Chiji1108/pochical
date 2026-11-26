@@ -309,7 +309,7 @@ export const STORE_SHOTS = [
     raw: "06-device-calendar.png",
   },
   {
-    headline: ["勤務表のクセにも、", "合わせます。"],
+    headline: ["繰り返しも、", "15日始まりも。"],
     kind: "tiles",
     name: "details",
     tiles: [
@@ -331,7 +331,7 @@ export const STORE_SHOTS = [
     ],
   },
   {
-    headline: ["小さな気づかいも、", "忘れずに。"],
+    headline: ["明けもリマインドも、", "自動で。"],
     kind: "tiles",
     name: "cares",
     tiles: [
@@ -346,7 +346,7 @@ export const STORE_SHOTS = [
       },
       {
         raw: "tile-reminder.png",
-        words: "前の晩、明日のシフトをお知らせ",
+        words: "前の晩に、明日のシフトをリマインド",
       },
       {
         raw: "tile-group-end.png",
