@@ -1,10 +1,14 @@
 package app.pochical.chat
 
+import android.content.ClipData
+import android.view.View
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
+import androidx.compose.foundation.draganddrop.dragAndDropSource
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.window.DialogWindowProvider
@@ -12,6 +16,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import app.pochical.Tip
+import app.pochical.dragged
 import coil3.compose.AsyncImagePainter
 import coil3.size.Size as CoilSize
 import me.saket.telephoto.zoomable.ZoomableContentLocation
@@ -252,6 +257,7 @@ fun PhotoViewer(
         onDismissed = { close() },
         // Only the photo shown goes back into its place.
         if (page == pager.settledPage) Modifier.largePhoto(photo.photo.id, zoom) else Modifier,
+        outward = page == pager.settledPage,
       )
     }
   }
@@ -366,9 +372,27 @@ private fun photoSaid(photo: ChatPhotoItem, place: Pair<Int, Int>?, nameOf: (Str
  * to the screen, which [place] takes, so it goes back into its line from where it is.
  */
 @Composable
-private fun LargePhoto(item: ChatPhotoItem, groupId: String, said: String, onTap: () -> Unit, onPulled: (Float) -> Unit, onDismissed: () -> Unit, place: Modifier) {
+private fun LargePhoto(item: ChatPhotoItem, groupId: String, said: String, onTap: () -> Unit, onPulled: (Float) -> Unit, onDismissed: () -> Unit, place: Modifier, outward: Boolean) {
   val context = LocalContext.current
+  val calls = LocalGroupCalls.current
+  val files = LocalPhotoFiles.current
   val photo = item.photo
+  // The photo shown, held and moved (a mouse's at once), dragged out whole to another app or window,
+  // as Photos lets one go (spec/chat.md, Photos): written for it once it is shown and drawn, from
+  // the disk where drawing it put it, so the drag has it as it starts.
+  var drawn by remember(photo.id) { mutableStateOf(false) }
+  var clip by remember(photo.id) { mutableStateOf<ClipData?>(null) }
+  LaunchedEffect(photo.id, outward, drawn) {
+    if (!outward || !drawn || clip != null) return@LaunchedEffect
+    clip =
+      try {
+        dragged(context, photo.id) { wholePhoto(context, calls, files, groupId, photo.id) }
+      } catch (e: CancellationException) {
+        throw e
+      } catch (_: Exception) {
+        null
+      }
+  }
   val size = Size(photo.width.toFloat(), photo.height.toFloat()).takeIf { it.width > 0f && it.height > 0f }
   LargeImage(
     { attempt -> ImageRequest.Builder(context).data(ChatPhotoData(photo.id, groupId, small = false, attempt = attempt)).large().build() },
@@ -378,6 +402,8 @@ private fun LargePhoto(item: ChatPhotoItem, groupId: String, said: String, onTap
     onPulled,
     onDismissed,
     place,
+    clip = clip.takeIf { outward },
+    onDrawn = { drawn = true },
   ) { failed ->
     val blur = remember(photo.id) { blurOf(photo)?.asImageBitmap() }
     // What the chat drew of it, read from memory or the disk cache at once.
@@ -446,6 +472,10 @@ private fun LargeImage(
   onPulled: (Float) -> Unit,
   onDismissed: () -> Unit,
   place: Modifier = Modifier,
+  /** What it is dragged out as, while it may be; held, it is dragged out only while not zoomed in. */
+  clip: ClipData? = null,
+  /** It is drawn, fetched whole. */
+  onDrawn: () -> Unit = {},
   coming: @Composable BoxScope.(failed: Boolean) -> Unit,
 ) {
   val zoom = rememberZoomableState(ZoomSpec(maxZoomFactor = MOST_ZOOM))
@@ -486,7 +516,8 @@ private fun LargeImage(
         Modifier.fillMaxSize().zoomable(zoom, onClick = { onTap() }, onDoubleClick = DoubleClickToZoomListener.cycle(maxZoomFactor = DOUBLE_TAP_ZOOM)),
         contentAlignment = Alignment.Center,
       ) {
-        Box((if (box != null) Modifier.aspectRatio(box.width / box.height) else Modifier.fillMaxSize()).then(place)) {
+        // Zoomed in, a drag moves it about rather than out.
+        Box((if (box != null) Modifier.aspectRatio(box.width / box.height) else Modifier.fillMaxSize()).then(place).draggedOut(clip.takeIf { !zoomed })) {
           if (drawn == null) coming(failed)
           key(attempt) {
             AsyncImage(
@@ -496,7 +527,10 @@ private fun LargeImage(
               contentScale = ContentScale.Fit,
               onState = { state ->
                 failed = state is AsyncImagePainter.State.Error
-                if (state is AsyncImagePainter.State.Success) drawn = state.painter.intrinsicSize
+                if (state is AsyncImagePainter.State.Success) {
+                  drawn = state.painter.intrinsicSize
+                  onDrawn()
+                }
               },
             )
           }
@@ -549,3 +583,10 @@ private fun ImageRequest.Builder.large(): ImageRequest.Builder = size(CoilSize.O
 /** A pinch zooms up to this many times, as Signal's; a double tap to twice. */
 private const val MOST_ZOOM = 4f
 private const val DOUBLE_TAP_ZOOM = 2f
+
+/**
+ * Lets the photo [clip] holds be dragged out of the app, to another app's window beside it or on
+ * the desktop, which may read it while it holds it; nothing is dragged until it is written.
+ */
+private fun Modifier.draggedOut(clip: ClipData?): Modifier =
+  if (clip == null) this else dragAndDropSource { _ -> DragAndDropTransferData(clip, flags = View.DRAG_FLAG_GLOBAL or View.DRAG_FLAG_GLOBAL_URI_READ) }

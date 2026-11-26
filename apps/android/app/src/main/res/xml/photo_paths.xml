@@ -2,6 +2,6 @@
 <!-- The app's cache files other apps are given: a photo the camera app takes, a picture shared. -->
 <paths>
   <cache-path name="camera" path="camera/" />
-  <!-- A picture the app made, shared (PictureFiles.kt): a month's, an invitation's QR code. -->
+  <!-- A picture shared (PictureFiles.kt): a month's, an invitation's QR code, a chat's photo, shared or dragged out. -->
   <cache-path name="shared" path="shared/" />
 </paths>

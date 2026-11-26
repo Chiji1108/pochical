@@ -9,9 +9,9 @@ import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.content.MediaType
+import androidx.compose.foundation.content.ReceiveContentListener
 import androidx.compose.foundation.content.TransferableContent
 import androidx.compose.foundation.content.consume
-import androidx.compose.foundation.content.contentReceiver
 import androidx.compose.foundation.content.hasMediaType
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,6 +36,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
@@ -165,42 +166,63 @@ class ComposerState(writing: Writing<PickedPhoto>, tookDraft: Boolean) {
 fun rememberComposerState(): ComposerState = rememberSaveable(saver = ComposerState.Saver) { ComposerState(Writing(), tookDraft = false) }
 
 /**
- * The chat's composer (spec/chat.md, Photos; Drafts; Replies; Editing and unsending): Material's own
- * field and send at the lines' foot, rising with the keyboard, under the bar of the line it answers
- * (〇〇に返信) or changes (メッセージを編集), whose × stops it; while changing a line the send is ✓.
- * What is written is the chat's draft, kept on the device as the writing pauses, as the composer
- * empties and as the chat is left; while it holds words, the others hear the member is writing, at
- * most every `chatRules.typingSendMs`. 写真を送る opens the system's photo picker (no storage
- * permission), its photos waiting above the field until sent, before the words, as a line of their
- * own. Where the place shares days, ＋ opens a small menu from itself instead, as Messages' ＋ opens
- * its apps: 写真, then 日にちを共有, and in a group chat 日にちの投票 ([onShareDays], [onPollDays]).
- * Days brought to share wait over the field as 共有する日, × taking them off, and go before the
- * photos and the words, each a line of its own answering what the composer answers. A sticker the
- * keyboard gives goes at once, a line of its own (spec/chat.md, Stickers).
+ * What the chat takes besides what is typed (spec/chat.md, Photos; Stickers), from anywhere over
+ * it, as Compose's content receiver brings it: images pasted, by the edit menu or the keyboard's
+ * paste, go above the field as picked photos do, an image copied with words as the image; images
+ * dropped on the chat from another app or another window, one or several at once, the same; one the
+ * keyboard commits (its stickers, Emoji Kitchen's, its GIFs) is a sticker; while a line is changed,
+ * nothing, its words pasting as ever. While something is dragged over the chat, [over] says so: the
+ * content receiver is not told what it is until it is dropped.
  */
 @OptIn(ExperimentalFoundationApi::class)
+@Stable
+class ChatIntake internal constructor(
+  private val state: ComposerState,
+  private val taking: State<(List<Uri>) -> Unit>,
+  private val sending: State<(Uri) -> Unit>,
+) : ReceiveContentListener {
+  /** Something is held over the chat, to be dropped on it. */
+  var over by mutableStateOf(false)
+    private set
+
+  /** Photos picked, pasted or dropped, joining those waiting above the field. */
+  fun took(uris: List<Uri>) = taking.value(uris)
+
+  override fun onDragEnter() {
+    over = true
+  }
+
+  override fun onDragExit() {
+    over = false
+  }
+
+  override fun onDragEnd() {
+    over = false
+  }
+
+  override fun onReceive(transferableContent: TransferableContent): TransferableContent? {
+    val content = transferableContent
+    val clip = content.clipEntry.clipData
+    val images = (0 until clip.itemCount).mapNotNull { clip.getItemAt(it).uri }
+    if (!content.hasMediaType(MediaType.Image) || images.isEmpty()) return content
+    return when {
+      // Its words paste as ever while a line is changed.
+      state.writing.editing != null -> content.consume { it.uri != null }
+      content.source == TransferableContent.Source.Keyboard -> {
+        images.forEach(sending.value)
+        null
+      }
+      else -> {
+        took(images)
+        null
+      }
+    }
+  }
+}
+
+/** The chat's [ChatIntake], into [state]'s composer, saying what it came to by [onSay]. */
 @Composable
-fun Composer(
-  state: ComposerState,
-  groupId: String,
-  threadId: String,
-  quote: LineQuote?,
-  nameOf: (String) -> String,
-  /** The members' names are read, for a draft's mentions to be named. */
-  namesKnown: Boolean,
-  /** The words of the line being changed, as sent; null while answering or writing anew. */
-  editedWords: String?,
-  onTyping: (Boolean) -> Unit,
-  onSent: () -> Unit,
-  onNotKept: () -> Unit,
-  /** Says what picking photos came to (past the most, one that cannot be read). */
-  onSay: (String) -> Unit,
-  /** 日にちを共有 in ＋'s menu, where the place shares days; null where it has only the photo tool. */
-  onShareDays: (() -> Unit)?,
-  /** 日にちの投票 in ＋'s menu, in a group chat. */
-  onPollDays: (() -> Unit)?,
-  modifier: Modifier = Modifier,
-) {
+fun rememberChatIntake(state: ComposerState, groupId: String, threadId: String, onSay: (String) -> Unit, onSent: () -> Unit, onNotKept: () -> Unit): ChatIntake {
   val chats = LocalChats.current
   val asking = LocalNotificationAsking.current
   val scope = rememberCoroutineScope()
@@ -244,12 +266,61 @@ fun Composer(
     }
     Unit
   }
+  val taking = rememberUpdatedState(took)
+  val sending = rememberUpdatedState(sendSticker)
+  return remember(state) { ChatIntake(state, taking, sending) }
+}
+
+/**
+ * The chat's composer (spec/chat.md, Photos; Drafts; Replies; Editing and unsending): Material's own
+ * field and send at the lines' foot, rising with the keyboard, under the bar of the line it answers
+ * (〇〇に返信) or changes (メッセージを編集), whose × stops it; while changing a line the send is ✓.
+ * What is written is the chat's draft, kept on the device as the writing pauses, as the composer
+ * empties and as the chat is left; while it holds words, the others hear the member is writing, at
+ * most every `chatRules.typingSendMs`. 写真を送る opens the system's photo picker (no storage
+ * permission), its photos waiting above the field until sent, before the words, as a line of their
+ * own. Where the place shares days, ＋ opens a small menu from itself instead, as Messages' ＋ opens
+ * its apps: 写真, then 日にちを共有, and in a group chat 日にちの投票 ([onShareDays], [onPollDays]).
+ * Days brought to share wait over the field as 共有する日, × taking them off, and go before the
+ * photos and the words, each a line of its own answering what the composer answers. A sticker the
+ * keyboard gives goes at once, a line of its own (spec/chat.md, Stickers).
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun Composer(
+  state: ComposerState,
+  /** What the chat takes besides words, the photos picked joining it there. */
+  intake: ChatIntake,
+  groupId: String,
+  threadId: String,
+  quote: LineQuote?,
+  nameOf: (String) -> String,
+  /** The members' names are read, for a draft's mentions to be named. */
+  namesKnown: Boolean,
+  /** The words of the line being changed, as sent; null while answering or writing anew. */
+  editedWords: String?,
+  onTyping: (Boolean) -> Unit,
+  onSent: () -> Unit,
+  onNotKept: () -> Unit,
+  /** Says what picking photos came to (past the most, one that cannot be read). */
+  onSay: (String) -> Unit,
+  /** 日にちを共有 in ＋'s menu, where the place shares days; null where it has only the photo tool. */
+  onShareDays: (() -> Unit)?,
+  /** 日にちの投票 in ＋'s menu, in a group chat. */
+  onPollDays: (() -> Unit)?,
+  modifier: Modifier = Modifier,
+) {
+  val chats = LocalChats.current
+  val asking = LocalNotificationAsking.current
+  val scope = rememberCoroutineScope()
+  val context = LocalContext.current
+  val resources = context.resources
   // The picker stops at the room left; it takes two at least, one alone picked as one.
   val most = maxOf(Chat.photosPerSend - state.writing.photos.size, 2)
   // Picked photos the composer no longer holds (taken out by 編集, or left with a chat) go as it opens.
   LaunchedEffect(Unit) { sweepPicked(context, state.writing.photos) }
-  val pickMany =rememberLauncherForActivityResult(remember(most) { ActivityResultContracts.PickMultipleVisualMedia(most) }) { took(it) }
-  val pickOne = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> took(listOfNotNull(uri)) }
+  val pickMany =rememberLauncherForActivityResult(remember(most) { ActivityResultContracts.PickMultipleVisualMedia(most) }) { intake.took(it) }
+  val pickOne = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> intake.took(listOfNotNull(uri)) }
   val pickPhotos = {
     val room = Chat.photosPerSend - state.writing.photos.size
     val images = PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
@@ -448,27 +519,7 @@ fun Composer(
                 // Held down, it sends once.
                 if (event.type == KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount == 0 && sendable) send()
                 true
-              }
-              .contentReceiver { content ->
-              // Images pasted, by the edit menu or the keyboard's paste, go above it as picked photos do,
-              // an image copied with words as the image; one the keyboard commits (its stickers, Emoji
-              // Kitchen's, its GIFs) is a sticker; while a line is changed, nothing (spec/chat.md, Photos; Stickers).
-              val clip = content.clipEntry.clipData
-              val images = (0 until clip.itemCount).mapNotNull { clip.getItemAt(it).uri }
-              if (!content.hasMediaType(MediaType.Image) || images.isEmpty()) return@contentReceiver content
-              when {
-                // Its words paste as ever while a line is changed.
-                editing != null -> content.consume { it.uri != null }
-                content.source == TransferableContent.Source.Keyboard -> {
-                  images.forEach(sendSticker)
-                  null
-                }
-                else -> {
-                  took(images)
-                  null
-                }
-              }
-            },
+              },
           placeholder = { Text(stringResource(R.string.chat_message)) },
           lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = COMPOSER_LINES),
           shape = RoundedCornerShape(Radius.xxl),

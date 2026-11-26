@@ -1,6 +1,10 @@
 package app.pochical.chat
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.content.contentReceiver
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.rememberCoroutineScope
@@ -190,7 +194,7 @@ val LocalChats = staticCompositionLocalOf<Chats> { error("No chats provided") }
  * they are as earlier ones come in above, and the keyboard never hides the latest. It holds its
  * group's socket while it shows.
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalCoroutinesApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun ChatPage(
   groupId: String,
@@ -680,9 +684,14 @@ fun ChatPage(
       linkItems = linkItems,
       takenTitle = { floatingDay.taken },
     )
+  val sayOver = { said: String -> scope.launch { snackbar.showSnackbar(said) }; Unit }
+  val intake = rememberChatIntake(composer, groupId, threadId, onSay = sayOver, onSent = toFoot, onNotKept = { notKept = true })
   PhotoZoomLayout(viewing, reducedMotion, shownOf = OpenPhotos::shownPhoto, places = {
     // While a line's menu is open, a screen reader goes into it alone, as iOS makes it modal.
     ChatScaffold(groupId, threadId, support, members, groups, socket, onBack, onPhotos, onShifts, say, onTitle, if (menu.open != null) Modifier.clearAndSetSemantics {} else Modifier) {
+      // What is pasted, given by the keyboard or dropped anywhere on the chat comes to its composer.
+      // Not while a photo is open over it, which takes nothing dropped on it.
+      Box(Modifier.fillMaxSize().then(if (viewing == null) Modifier.contentReceiver(intake) else Modifier)) {
       Column(Modifier.fillMaxSize().imePadding()) {
         Box(Modifier.weight(1f).fillMaxWidth()) {
           // What floats over the lines' top keeps its room there, so the first of them scrolls out from under it.
@@ -741,6 +750,7 @@ fun ChatPage(
         }
         Composer(
           composer,
+          intake,
           groupId,
           threadId,
           quote = replying?.let { lineQuote(it, chat.line(it) ?: answered, nameOf, blockedIds) },
@@ -751,11 +761,14 @@ fun ChatPage(
           onTyping = { on -> socket?.sendTyping(threadId, on) },
           onSent = toFoot,
           onNotKept = { notKept = true },
-          onSay = { said -> scope.launch { snackbar.showSnackbar(said) } },
+          onSay = sayOver,
           onShareDays = if (placeRules(groupId).days) ({ pickingDays = DaysPick.Share }) else null,
           // One-to-one chats have no polls.
           onPollDays = if (!direct && placeRules(groupId).polls) ({ pickingDays = DaysPick.Poll }) else null,
         )
+      }
+      // Held over the chat, what would be dropped on it: the chat ringed in the accent, as a drop target is marked.
+      if (intake.over) DropMark(Modifier.matchParentSize())
       }
     }
     LineMenu(menu, reducedMotion)
@@ -1271,3 +1284,13 @@ private fun rememberTypers(socket: ChatSocket?, threadId: String, me: String?, b
   }
   return until.keys.filter { it !in blocked }.sorted()
 }
+
+/** Where a drop would land, while something is held over it: ringed and lightly tinted in the accent. */
+@Composable
+private fun DropMark(modifier: Modifier) {
+  val accent = MaterialTheme.colorScheme.primary
+  Box(modifier.background(accent.copy(alpha = DROP_TINT)).border(DROP_RING, accent))
+}
+
+private const val DROP_TINT = 0.08f
+private val DROP_RING = 3.dp

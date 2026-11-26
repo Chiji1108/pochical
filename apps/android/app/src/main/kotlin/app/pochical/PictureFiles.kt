@@ -28,6 +28,29 @@ suspend fun sharePicture(context: Context, picture: Bitmap, stem: String, title:
 /** Shares a chat's photo, its [jpeg] as it came, through Android's share sheet; whether the sheet opened. */
 suspend fun sharePhoto(context: Context, jpeg: ByteArray): Boolean = shareImage(context, "photo", "jpg", "image/jpeg", null) { it.write(jpeg) }
 
+/**
+ * A chat's photo [photoId], its [jpeg] as it came, as what dragging it out of the app carries: a
+ * file of its own in the app's cache, read through the FileProvider sharing uses, kept while another
+ * app may still be reading it after the drop (a day from the last time it was handed out, as the
+ * drop leaves no word of being done) and written once however often it is shown.
+ */
+suspend fun dragged(context: Context, photoId: String, jpeg: suspend () -> ByteArray): ClipData =
+  withContext(Dispatchers.IO) {
+    val folder = File(context.cacheDir, "shared/dragged").apply { mkdirs() }
+    val now = System.currentTimeMillis()
+    val file = File(folder, "$photoId.jpg")
+    file.setLastModified(now)
+    folder.listFiles { file -> file.lastModified() < now - DRAGGED_KEPT_MS }?.forEach(File::delete)
+    if (!file.exists()) {
+      val writing = File(folder, "$photoId.jpg.part")
+      writing.writeBytes(jpeg())
+      writing.renameTo(file)
+    }
+    ClipData.newUri(context.contentResolver, null, FileProvider.getUriForFile(context, "${context.packageName}.photos", file))
+  }
+
+private const val DRAGGED_KEPT_MS = 24 * 60 * 60 * 1000L
+
 private suspend fun shareImage(context: Context, stem: String, extension: String, mimeType: String, title: String?, write: (java.io.OutputStream) -> Unit): Boolean =
   try {
     val file =
