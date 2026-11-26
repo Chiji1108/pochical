@@ -741,7 +741,8 @@ fun CalendarScreen(
             // ポチポチ入力, at the foot as on a phone, nearest the hand.
             Row(Modifier.fillMaxSize()) {
               Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.BottomCenter) { monthFoot() }
-              if (entering == null) Box(Modifier.width(SUPPORTING_PANE_WIDTH).fillMaxHeight()) { dayPane() }
+              // シフト's list takes the pane's place, a page beside the tabs, as on a wide window.
+              if (entering == null && !listBeside) Box(Modifier.width(SUPPORTING_PANE_WIDTH).fillMaxHeight()) { dayPane() }
             }
           } else if (entering == null && opened != null) {
             // Too narrow for both: the day opened in their place, closed with its ×.
