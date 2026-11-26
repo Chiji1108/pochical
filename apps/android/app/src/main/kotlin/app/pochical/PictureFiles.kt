@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.graphics.Bitmap
 import android.os.Environment
 import android.provider.MediaStore
@@ -28,15 +29,29 @@ suspend fun sharePicture(context: Context, picture: Bitmap, stem: String, title:
 /** Shares a chat's photo, its [jpeg] as it came, through Android's share sheet; whether the sheet opened. */
 suspend fun sharePhoto(context: Context, jpeg: ByteArray): Boolean = shareImage(context, "photo", "jpg", "image/jpeg", null) { it.write(jpeg) }
 
+/**
+ * A chat's photo, its [jpeg] as it came, as a file another app may read while it is dragged out of
+ * the app, through the FileProvider sharing uses; the one dragged before gone.
+ */
+suspend fun photoToDrag(context: Context, jpeg: ByteArray): Uri = sharedFile(context, "dragged", "jpg") { it.write(jpeg) }
+
+/**
+ * A file of its own each time in the app's cache, named from [stem], [write] writes into it, the
+ * one before under the same [stem] gone; read through its FileProvider.
+ */
+private suspend fun sharedFile(context: Context, stem: String, extension: String, write: (java.io.OutputStream) -> Unit): Uri {
+  val file =
+    withContext(Dispatchers.IO) {
+      val shared = File(context.cacheDir, "shared").apply { mkdirs() }
+      shared.listFiles { file -> file.name.startsWith("$stem-") }?.forEach(File::delete)
+      File(shared, "$stem-${UUID.randomUUID()}.$extension").also { file -> file.outputStream().use(write) }
+    }
+  return FileProvider.getUriForFile(context, "${context.packageName}.photos", file)
+}
+
 private suspend fun shareImage(context: Context, stem: String, extension: String, mimeType: String, title: String?, write: (java.io.OutputStream) -> Unit): Boolean =
   try {
-    val file =
-      withContext(Dispatchers.IO) {
-        val shared = File(context.cacheDir, "shared").apply { mkdirs() }
-        shared.listFiles { file -> file.name.startsWith("$stem-") }?.forEach(File::delete)
-        File(shared, "$stem-${UUID.randomUUID()}.$extension").also { file -> file.outputStream().use(write) }
-      }
-    val uri = FileProvider.getUriForFile(context, "${context.packageName}.photos", file)
+    val uri = sharedFile(context, stem, extension, write)
     val send =
       Intent(Intent.ACTION_SEND)
         .setType(mimeType)

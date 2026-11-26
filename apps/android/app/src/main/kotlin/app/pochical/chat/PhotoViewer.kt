@@ -1,16 +1,21 @@
 package app.pochical.chat
 
+import android.content.ClipData
+import android.view.View
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
+import androidx.compose.foundation.draganddrop.dragAndDropSource
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import app.pochical.photoToDrag
 import coil3.compose.AsyncImagePainter
 import coil3.size.Size as CoilSize
 import me.saket.telephoto.zoomable.ZoomableContentLocation
@@ -235,6 +240,22 @@ fun PhotoViewer(
   // The photo and the buttons over it; on a table the photo above the fold and the buttons below it
   // (spec/chat.md, Photos), so the photo stands up and the buttons lie in reach.
   val hinge = tabletopHinge()
+  // The photo shown, held and moved (a mouse's at once), dragged out whole to another app or window,
+  // as Photos lets one go (spec/chat.md, Photos): written for it as it settles, from the disk where
+  // showing it put it, so the drag has it as it starts.
+  var draggable by remember { mutableStateOf<Pair<String, ClipData>?>(null) }
+  val settledId = settled?.photo?.id
+  LaunchedEffect(settledId) {
+    val id = settledId ?: return@LaunchedEffect
+    draggable =
+      try {
+        id to ClipData.newUri(context.contentResolver, null, photoToDrag(context, wholePhoto(context, calls, files, groupId, id)))
+      } catch (e: CancellationException) {
+        throw e
+      } catch (_: Exception) {
+        null
+      }
+  }
   @Composable
   fun pages() {
     HorizontalPager(pager, Modifier.fillMaxSize(), key = { photos.getOrNull(it)?.layoutKey ?: it }, beyondViewportPageCount = 1) { page ->
@@ -250,7 +271,7 @@ fun PhotoViewer(
         onPulled = { if (page == pager.currentPage) pulled = it },
         onDismissed = { close() },
         // Only the photo shown goes back into its place.
-        if (page == pager.settledPage) Modifier.largePhoto(photo.photo.id, zoom) else Modifier,
+        if (page == pager.settledPage) Modifier.largePhoto(photo.photo.id, zoom).draggedOut(draggable?.takeIf { it.first == photo.photo.id }?.second) else Modifier,
       )
     }
   }
@@ -542,3 +563,10 @@ private fun ImageRequest.Builder.large(): ImageRequest.Builder = size(CoilSize.O
 /** A pinch zooms up to this many times, as Signal's; a double tap to twice. */
 private const val MOST_ZOOM = 4f
 private const val DOUBLE_TAP_ZOOM = 2f
+
+/**
+ * Lets the photo [clip] holds be dragged out of the app, to another app's window beside it or on
+ * the desktop, which may read it while it holds it; nothing is dragged until it is written.
+ */
+private fun Modifier.draggedOut(clip: ClipData?): Modifier =
+  if (clip == null) this else dragAndDropSource { _ -> DragAndDropTransferData(clip, flags = View.DRAG_FLAG_GLOBAL or View.DRAG_FLAG_GLOBAL_URI_READ) }
