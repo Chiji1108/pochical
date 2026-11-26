@@ -15,7 +15,7 @@ import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import app.pochical.photoToDrag
+import app.pochical.dragged
 import coil3.compose.AsyncImagePainter
 import coil3.size.Size as CoilSize
 import me.saket.telephoto.zoomable.ZoomableContentLocation
@@ -240,22 +240,6 @@ fun PhotoViewer(
   // The photo and the buttons over it; on a table the photo above the fold and the buttons below it
   // (spec/chat.md, Photos), so the photo stands up and the buttons lie in reach.
   val hinge = tabletopHinge()
-  // The photo shown, held and moved (a mouse's at once), dragged out whole to another app or window,
-  // as Photos lets one go (spec/chat.md, Photos): written for it as it settles, from the disk where
-  // showing it put it, so the drag has it as it starts.
-  var draggable by remember { mutableStateOf<Pair<String, ClipData>?>(null) }
-  val settledId = settled?.photo?.id
-  LaunchedEffect(settledId) {
-    val id = settledId ?: return@LaunchedEffect
-    draggable =
-      try {
-        id to ClipData.newUri(context.contentResolver, null, photoToDrag(context, wholePhoto(context, calls, files, groupId, id)))
-      } catch (e: CancellationException) {
-        throw e
-      } catch (_: Exception) {
-        null
-      }
-  }
   @Composable
   fun pages() {
     HorizontalPager(pager, Modifier.fillMaxSize(), key = { photos.getOrNull(it)?.layoutKey ?: it }, beyondViewportPageCount = 1) { page ->
@@ -271,7 +255,8 @@ fun PhotoViewer(
         onPulled = { if (page == pager.currentPage) pulled = it },
         onDismissed = { close() },
         // Only the photo shown goes back into its place.
-        if (page == pager.settledPage) Modifier.largePhoto(photo.photo.id, zoom).draggedOut(draggable?.takeIf { it.first == photo.photo.id }?.second) else Modifier,
+        if (page == pager.settledPage) Modifier.largePhoto(photo.photo.id, zoom) else Modifier,
+        outward = page == pager.settledPage,
       )
     }
   }
@@ -381,9 +366,27 @@ private fun photoSaid(photo: ChatPhotoItem, place: Pair<Int, Int>?, nameOf: (Str
  * to the screen, which [place] takes, so it goes back into its line from where it is.
  */
 @Composable
-private fun LargePhoto(item: ChatPhotoItem, groupId: String, said: String, onTap: () -> Unit, onPulled: (Float) -> Unit, onDismissed: () -> Unit, place: Modifier) {
+private fun LargePhoto(item: ChatPhotoItem, groupId: String, said: String, onTap: () -> Unit, onPulled: (Float) -> Unit, onDismissed: () -> Unit, place: Modifier, outward: Boolean) {
   val context = LocalContext.current
+  val calls = LocalGroupCalls.current
+  val files = LocalPhotoFiles.current
   val photo = item.photo
+  // The photo shown, held and moved (a mouse's at once), dragged out whole to another app or window,
+  // as Photos lets one go (spec/chat.md, Photos): written for it once it is shown and drawn, from
+  // the disk where drawing it put it, so the drag has it as it starts.
+  var drawn by remember(photo.id) { mutableStateOf(false) }
+  var clip by remember(photo.id) { mutableStateOf<ClipData?>(null) }
+  LaunchedEffect(photo.id, outward, drawn) {
+    if (!outward || !drawn || clip != null) return@LaunchedEffect
+    clip =
+      try {
+        dragged(context, photo.id) { wholePhoto(context, calls, files, groupId, photo.id) }
+      } catch (e: CancellationException) {
+        throw e
+      } catch (_: Exception) {
+        null
+      }
+  }
   val size = Size(photo.width.toFloat(), photo.height.toFloat()).takeIf { it.width > 0f && it.height > 0f }
   LargeImage(
     { attempt -> ImageRequest.Builder(context).data(ChatPhotoData(photo.id, groupId, small = false, attempt = attempt)).large().build() },
@@ -393,6 +396,8 @@ private fun LargePhoto(item: ChatPhotoItem, groupId: String, said: String, onTap
     onPulled,
     onDismissed,
     place,
+    clip = clip.takeIf { outward },
+    onDrawn = { drawn = true },
   ) { failed ->
     val blur = remember(photo.id) { blurOf(photo)?.asImageBitmap() }
     // What the chat drew of it, read from memory or the disk cache at once.
@@ -460,6 +465,10 @@ private fun LargeImage(
   onPulled: (Float) -> Unit,
   onDismissed: () -> Unit,
   place: Modifier = Modifier,
+  /** What it is dragged out as, while it may be; held, it is dragged out only while not zoomed in. */
+  clip: ClipData? = null,
+  /** It is drawn, fetched whole. */
+  onDrawn: () -> Unit = {},
   coming: @Composable BoxScope.(failed: Boolean) -> Unit,
 ) {
   val zoom = rememberZoomableState(ZoomSpec(maxZoomFactor = MOST_ZOOM))
@@ -500,7 +509,8 @@ private fun LargeImage(
         Modifier.fillMaxSize().zoomable(zoom, onClick = { onTap() }, onDoubleClick = DoubleClickToZoomListener.cycle(maxZoomFactor = DOUBLE_TAP_ZOOM)),
         contentAlignment = Alignment.Center,
       ) {
-        Box((if (box != null) Modifier.aspectRatio(box.width / box.height) else Modifier.fillMaxSize()).then(place)) {
+        // Zoomed in, a drag moves it about rather than out.
+        Box((if (box != null) Modifier.aspectRatio(box.width / box.height) else Modifier.fillMaxSize()).then(place).draggedOut(clip.takeIf { !zoomed })) {
           if (drawn == null) coming(failed)
           key(attempt) {
             AsyncImage(
@@ -510,7 +520,10 @@ private fun LargeImage(
               contentScale = ContentScale.Fit,
               onState = { state ->
                 failed = state is AsyncImagePainter.State.Error
-                if (state is AsyncImagePainter.State.Success) drawn = state.painter.intrinsicSize
+                if (state is AsyncImagePainter.State.Success) {
+                  drawn = state.painter.intrinsicSize
+                  onDrawn()
+                }
               },
             )
           }

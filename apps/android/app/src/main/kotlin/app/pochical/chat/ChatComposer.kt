@@ -171,7 +171,8 @@ fun rememberComposerState(): ComposerState = rememberSaveable(saver = ComposerSt
  * paste, go above the field as picked photos do, an image copied with words as the image; images
  * dropped on the chat from another app or another window, one or several at once, the same; one the
  * keyboard commits (its stickers, Emoji Kitchen's, its GIFs) is a sticker; while a line is changed,
- * nothing, its words pasting as ever. While images are dragged over the chat, [over] says so.
+ * nothing, its words pasting as ever. While something is dragged over the chat, [over] says so: the
+ * content receiver is not told what it is until it is dropped.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Stable

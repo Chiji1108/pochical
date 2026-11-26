@@ -6,15 +6,12 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.net.Uri
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.content.MediaType
-import androidx.compose.foundation.content.ReceiveContentListener
-import androidx.compose.foundation.content.TransferableContent
 import androidx.compose.foundation.content.contentReceiver
-import androidx.compose.foundation.content.hasMediaType
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
+import app.pochical.kit.Writing
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -37,28 +34,34 @@ import org.robolectric.RuntimeEnvironment
 class ChatIntakeTest {
   @get:Rule val compose = createComposeRule()
 
-  @Test
-  fun anImagePastedInTheFieldComesToTheIntakeOverTheChat() {
-    val taken = mutableListOf<Uri>()
-    val intake =
-      object : ReceiveContentListener {
-        override fun onReceive(transferableContent: TransferableContent): TransferableContent? {
-          if (!transferableContent.hasMediaType(MediaType.Image)) return transferableContent
-          val clip = transferableContent.clipEntry.clipData
-          taken += (0 until clip.itemCount).mapNotNull { clip.getItemAt(it).uri }
-          return null
-        }
-      }
-    val image = Uri.parse("content://app.pochical.test/photo.jpg")
-    val context = RuntimeEnvironment.getApplication()
-    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+  private val image = Uri.parse("content://app.pochical.test/photo.jpg")
+  private val taken = mutableListOf<Uri>()
+  private val stickers = mutableListOf<Uri>()
+
+  /** Pastes an image in the field of a chat whose intake stands over it, its composer holding [writing]. */
+  private fun pasteAnImage(writing: Writing<PickedPhoto> = Writing()) {
+    val state = ComposerState(writing, tookDraft = true)
+    val intake = ChatIntake(state, mutableStateOf({ uris: List<Uri> -> taken += uris }), mutableStateOf({ uri: Uri -> stickers += uri }))
+    val clipboard = RuntimeEnvironment.getApplication().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     clipboard.setPrimaryClip(ClipData(ClipDescription("photo", arrayOf("image/jpeg")), ClipData.Item(image)))
     compose.setContent {
-      Box(Modifier.contentReceiver(intake)) { BasicTextField(rememberTextFieldState(), Modifier.testTag("field")) }
+      Box(Modifier.contentReceiver(intake)) { BasicTextField(state.words, Modifier.testTag("field")) }
     }
     compose.onNodeWithTag("field").performClick()
     compose.onNodeWithTag("field").performSemanticsAction(SemanticsActions.PasteText)
     compose.waitForIdle()
+  }
+
+  @Test
+  fun anImagePastedInTheFieldJoinsThePhotosWaiting() {
+    pasteAnImage()
     assertEquals(listOf(image), taken)
+    assertEquals(emptyList<Uri>(), stickers)
+  }
+
+  @Test
+  fun anImagePastesNothingWhileALineIsChanged() {
+    pasteAnImage(Writing(text = "words", editing = 5L))
+    assertEquals(emptyList<Uri>(), taken)
   }
 }

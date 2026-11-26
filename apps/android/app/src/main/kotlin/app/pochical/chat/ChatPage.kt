@@ -691,7 +691,8 @@ fun ChatPage(
     // While a line's menu is open, a screen reader goes into it alone, as iOS makes it modal.
     ChatScaffold(groupId, threadId, support, members, groups, socket, onBack, onPhotos, onShifts, say, onTitle, if (menu.open != null) Modifier.clearAndSetSemantics {} else Modifier) {
       // What is pasted, given by the keyboard or dropped anywhere on the chat comes to its composer.
-      Box(Modifier.fillMaxSize().contentReceiver(intake)) {
+      // Not while a photo is open over it, which takes nothing dropped on it.
+      Box(Modifier.fillMaxSize().then(if (viewing == null) Modifier.contentReceiver(intake) else Modifier)) {
       Column(Modifier.fillMaxSize().imePadding()) {
         Box(Modifier.weight(1f).fillMaxWidth()) {
           // What floats over the lines' top keeps its room there, so the first of them scrolls out from under it.

@@ -4,7 +4,6 @@ import android.content.ClipData
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.graphics.Bitmap
 import android.os.Environment
 import android.provider.MediaStore
@@ -30,28 +29,36 @@ suspend fun sharePicture(context: Context, picture: Bitmap, stem: String, title:
 suspend fun sharePhoto(context: Context, jpeg: ByteArray): Boolean = shareImage(context, "photo", "jpg", "image/jpeg", null) { it.write(jpeg) }
 
 /**
- * A chat's photo, its [jpeg] as it came, as a file another app may read while it is dragged out of
- * the app, through the FileProvider sharing uses; the one dragged before gone.
+ * A chat's photo [photoId], its [jpeg] as it came, as what dragging it out of the app carries: a
+ * file of its own in the app's cache, read through the FileProvider sharing uses, kept while another
+ * app may still be reading it after the drop (a day, as the drop leaves no word of being done) and
+ * written once however often it is shown.
  */
-suspend fun photoToDrag(context: Context, jpeg: ByteArray): Uri = sharedFile(context, "dragged", "jpg") { it.write(jpeg) }
-
-/**
- * A file of its own each time in the app's cache, named from [stem], [write] writes into it, the
- * one before under the same [stem] gone; read through its FileProvider.
- */
-private suspend fun sharedFile(context: Context, stem: String, extension: String, write: (java.io.OutputStream) -> Unit): Uri {
-  val file =
-    withContext(Dispatchers.IO) {
-      val shared = File(context.cacheDir, "shared").apply { mkdirs() }
-      shared.listFiles { file -> file.name.startsWith("$stem-") }?.forEach(File::delete)
-      File(shared, "$stem-${UUID.randomUUID()}.$extension").also { file -> file.outputStream().use(write) }
+suspend fun dragged(context: Context, photoId: String, jpeg: suspend () -> ByteArray): ClipData =
+  withContext(Dispatchers.IO) {
+    val folder = File(context.cacheDir, "shared/dragged").apply { mkdirs() }
+    val stale = System.currentTimeMillis() - DRAGGED_KEPT_MS
+    folder.listFiles { file -> file.lastModified() < stale }?.forEach(File::delete)
+    val file = File(folder, "$photoId.jpg")
+    if (!file.exists()) {
+      val writing = File(folder, "$photoId.jpg.part")
+      writing.writeBytes(jpeg())
+      writing.renameTo(file)
     }
-  return FileProvider.getUriForFile(context, "${context.packageName}.photos", file)
-}
+    ClipData.newUri(context.contentResolver, null, FileProvider.getUriForFile(context, "${context.packageName}.photos", file))
+  }
+
+private const val DRAGGED_KEPT_MS = 24 * 60 * 60 * 1000L
 
 private suspend fun shareImage(context: Context, stem: String, extension: String, mimeType: String, title: String?, write: (java.io.OutputStream) -> Unit): Boolean =
   try {
-    val uri = sharedFile(context, stem, extension, write)
+    val file =
+      withContext(Dispatchers.IO) {
+        val shared = File(context.cacheDir, "shared").apply { mkdirs() }
+        shared.listFiles { file -> file.name.startsWith("$stem-") }?.forEach(File::delete)
+        File(shared, "$stem-${UUID.randomUUID()}.$extension").also { file -> file.outputStream().use(write) }
+      }
+    val uri = FileProvider.getUriForFile(context, "${context.packageName}.photos", file)
     val send =
       Intent(Intent.ACTION_SEND)
         .setType(mimeType)
