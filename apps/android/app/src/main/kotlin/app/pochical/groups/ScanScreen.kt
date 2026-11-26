@@ -16,6 +16,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,7 +25,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -159,7 +160,8 @@ fun ScanScreen(onClose: () -> Unit, onInvite: (String) -> Unit) {
         Text(stringResource(R.string.scan), Modifier.padding(start = 12.dp), color = colors.mediaText, style = MaterialTheme.typography.titleMedium)
       }
       Spacer(Modifier.weight(1f))
-      ScanFrame()
+      // Smaller where the window is low (a phone on its side), so the words and the button under it keep their room.
+      ScanFrame(Modifier.weight(2f, fill = false))
       Text(
         stringResource(if (!camera && asked) R.string.scan_camera_denied else R.string.scan_hint),
         color = colors.mediaText,
@@ -230,13 +232,13 @@ private fun QrCamera(scanner: com.google.mlkit.vision.barcode.BarcodeScanner, on
   )
 }
 
-/** Four corner marks, where the code goes. */
+/** Four corner marks, where the code goes: 220 square, or as large as the room it is given. */
 @Composable
-private fun ScanFrame() {
+private fun ScanFrame(modifier: Modifier) {
   val colors = LocalThemeColors.current
-  Box(Modifier.size(220.dp).background(colors.mediaFillFaint, RoundedCornerShape(Radius.md))) {
+  Box(modifier.sizeIn(maxWidth = 220.dp, maxHeight = 220.dp).aspectRatio(1f).background(colors.mediaFillFaint, RoundedCornerShape(Radius.md))) {
     Canvas(Modifier.fillMaxSize()) {
-      val arm = 32.dp.toPx()
+      val arm = minOf(32.dp.toPx(), size.minDimension / 4)
       val width = 3.dp.toPx()
       // Each corner the top-left's turned a quarter more, about the frame's middle.
       repeat(4) { turns ->
