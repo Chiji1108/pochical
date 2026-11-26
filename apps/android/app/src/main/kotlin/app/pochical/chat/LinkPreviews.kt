@@ -30,13 +30,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.pochical.LocalThemeColors
 import app.pochical.R
+import app.pochical.Tip
 import app.pochical.design.Chat
 import app.pochical.design.Radius
 import app.pochical.groups.GroupMarkView
@@ -90,9 +90,7 @@ fun ComposerPreview(site: String, preview: LinkPreview?, onRemove: () -> Unit) {
         PhotoPicture(image, PhotoShelf.Previews, Modifier.size(40.dp))
       }
     }
-    IconButton(onClick = onRemove, Modifier.semantics { contentDescription = remove }) {
-      Icon(painterResource(R.drawable.ic_close), contentDescription = null, Modifier.size(20.dp))
-    }
+    Tip(remove) { IconButton(onClick = onRemove) { Icon(painterResource(R.drawable.ic_close), remove, Modifier.size(20.dp)) } }
   }
 }
 

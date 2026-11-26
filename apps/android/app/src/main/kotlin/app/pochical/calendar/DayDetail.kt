@@ -73,6 +73,7 @@ import app.pochical.RowEnd
 import app.pochical.SettingsRow
 import app.pochical.SettingsSection
 import app.pochical.ShiftMark
+import app.pochical.Tip
 import app.pochical.design.COWORKERS_MAX
 import app.pochical.design.TextLimits
 import app.pochical.kit.ShiftTime
@@ -121,13 +122,14 @@ fun DayDetail(
         Modifier.weight(1f).semantics { heading() },
         style = MaterialTheme.typography.titleMedium,
       )
-      IconButton(onClick = { onStep(-1) }, enabled = canStep(-1)) {
-        Icon(painterResource(R.drawable.ic_chevron_left), stringResource(R.string.day_before))
+      val before = stringResource(R.string.day_before)
+      val after = stringResource(R.string.day_after)
+      Tip(before) { IconButton(onClick = { onStep(-1) }, enabled = canStep(-1)) { Icon(painterResource(R.drawable.ic_chevron_left), before) } }
+      Tip(after) { IconButton(onClick = { onStep(1) }, enabled = canStep(1)) { Icon(painterResource(R.drawable.ic_chevron_right), after) } }
+      if (onClose != null) {
+        val close = stringResource(R.string.close)
+        Tip(close) { IconButton(onClick = onClose) { Icon(painterResource(R.drawable.ic_close), close) } }
       }
-      IconButton(onClick = { onStep(1) }, enabled = canStep(1)) {
-        Icon(painterResource(R.drawable.ic_chevron_right), stringResource(R.string.day_after))
-      }
-      if (onClose != null) IconButton(onClick = onClose) { Icon(painterResource(R.drawable.ic_close), stringResource(R.string.close)) }
     }
     // Another day's crossfades in under the bar, as iOS's, the bar and its ‹ › staying put; with
     // reduced motion it just changes.
@@ -428,13 +430,16 @@ private fun MemoField(day: LocalDate, note: String?, days: OwnDays, writing: Mem
     trailingIcon =
       if (draft.text.isNotEmpty()) {
         {
-          IconButton(
-            onClick = {
-              write(TextFieldValue())
-              days.setNote(day, "")
+          val clear = stringResource(R.string.day_memo_clear)
+          Tip(clear) {
+            IconButton(
+              onClick = {
+                write(TextFieldValue())
+                days.setNote(day, "")
+              }
+            ) {
+              Icon(painterResource(R.drawable.ic_close), clear)
             }
-          ) {
-            Icon(painterResource(R.drawable.ic_close), stringResource(R.string.day_memo_clear))
           }
         }
       } else {

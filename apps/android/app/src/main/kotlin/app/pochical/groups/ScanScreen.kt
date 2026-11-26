@@ -63,6 +63,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import app.pochical.LocalThemeColors
 import app.pochical.R
+import app.pochical.Tip
 import app.pochical.design.Radius
 import app.pochical.kit.openedInviteCode
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
@@ -151,8 +152,9 @@ fun ScanScreen(onClose: () -> Unit, onInvite: (String) -> Unit) {
       verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
       Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onClose, Modifier.background(colors.mediaFill, CircleShape)) {
-          Icon(painterResource(R.drawable.ic_close), stringResource(R.string.close), tint = colors.mediaText)
+        val close = stringResource(R.string.close)
+        Tip(close) {
+          IconButton(onClick = onClose, Modifier.background(colors.mediaFill, CircleShape)) { Icon(painterResource(R.drawable.ic_close), close, tint = colors.mediaText) }
         }
         Text(stringResource(R.string.scan), Modifier.padding(start = 12.dp), color = colors.mediaText, style = MaterialTheme.typography.titleMedium)
       }

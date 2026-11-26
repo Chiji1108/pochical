@@ -109,13 +109,8 @@ fun PageBar(
 /** ← back, or ✕ for a page that [closes]. */
 @Composable
 private fun BackButton(onBack: () -> Unit, closes: Boolean) {
-  IconButton(onClick = onBack) {
-    if (closes) {
-      Icon(painterResource(R.drawable.ic_close), contentDescription = stringResource(R.string.close))
-    } else {
-      Icon(painterResource(R.drawable.ic_back), contentDescription = stringResource(R.string.back))
-    }
-  }
+  val label = stringResource(if (closes) R.string.close else R.string.back)
+  Tip(label) { IconButton(onClick = onBack) { Icon(painterResource(if (closes) R.drawable.ic_close else R.drawable.ic_back), label) } }
 }
 
 /**

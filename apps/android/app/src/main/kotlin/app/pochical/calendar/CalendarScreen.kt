@@ -12,6 +12,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedContent
+import app.pochical.Tip
 import app.pochical.paneDirective
 import app.pochical.TabletopSplit
 import app.pochical.tabletopHinge
@@ -973,13 +974,8 @@ private fun Heading(
     if (!entering && !dayOpen) {
       Box {
         var saving by remember { mutableStateOf(false) }
-        IconButton(onClick = { saving = true }) {
-          Icon(
-            painterResource(R.drawable.ic_download),
-            stringResource(if (byPeriod) R.string.calendar_save_period else R.string.calendar_save_month),
-            tint = colors.textPrimary,
-          )
-        }
+        val save = stringResource(if (byPeriod) R.string.calendar_save_period else R.string.calendar_save_month)
+        Tip(save) { IconButton(onClick = { saving = true }) { Icon(painterResource(R.drawable.ic_download), save, tint = colors.textPrimary) } }
         GroupedMenu(
           saving,
           onDismiss = { saving = false },

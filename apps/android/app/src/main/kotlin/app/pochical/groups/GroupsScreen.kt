@@ -84,6 +84,7 @@ import app.pochical.PageScaffold
 import app.pochical.R
 import app.pochical.RootPage
 import app.pochical.SectionHeader
+import app.pochical.Tip
 import app.pochical.UnreadBadge
 import app.pochical.calendar.holidayCountry
 import app.pochical.calendar.holidayName
@@ -360,11 +361,13 @@ private fun RailTab(group: GroupRow, isOpen: Boolean, label: String, count: Int,
 @Composable
 private fun RailAction(icon: Int, label: String, onClick: () -> Unit) {
   val colors = LocalThemeColors.current
-  FilledIconButton(
-    onClick = onClick,
-    colors = IconButtonDefaults.filledIconButtonColors(containerColor = colors.backgroundCard, contentColor = colors.accentDefault),
-  ) {
-    Icon(painterResource(icon), label)
+  Tip(label) {
+    FilledIconButton(
+      onClick = onClick,
+      colors = IconButtonDefaults.filledIconButtonColors(containerColor = colors.backgroundCard, contentColor = colors.accentDefault),
+    ) {
+      Icon(painterResource(icon), label)
+    }
   }
 }
 
@@ -432,12 +435,10 @@ fun rememberMeId(): String? {
 /** The open group's buttons in the bar over its page: メンバーを招待 and グループの設定. */
 @Composable
 fun GroupButtons(groupId: String, open: (RootPage) -> Unit) {
-  IconButton(onClick = { open(RootPage.GroupInvite(groupId)) }) {
-    Icon(painterResource(R.drawable.ic_person_add), stringResource(R.string.invite))
-  }
-  IconButton(onClick = { open(RootPage.GroupSettings(groupId)) }) {
-    Icon(painterResource(R.drawable.ic_tune), stringResource(R.string.group_settings))
-  }
+  val invite = stringResource(R.string.invite)
+  val settings = stringResource(R.string.group_settings)
+  Tip(invite) { IconButton(onClick = { open(RootPage.GroupInvite(groupId)) }) { Icon(painterResource(R.drawable.ic_person_add), invite) } }
+  Tip(settings) { IconButton(onClick = { open(RootPage.GroupSettings(groupId)) }) { Icon(painterResource(R.drawable.ic_tune), settings) } }
 }
 
 /** The rail's width, which the page beside it starts after. */
