@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import app.pochical.LocalThemeColors
 import app.pochical.PageScaffold
 import app.pochical.R
+import app.pochical.Tip
 import app.pochical.calendar.rememberReducedMotion
 import app.pochical.groups.LocalValues
 import app.pochical.kit.PhotoRun
@@ -95,7 +96,10 @@ fun ChatPhotosPage(groupId: String, threadId: String, onBack: () -> Unit) {
       topBar = {
         TopAppBar(
           title = { Text(stringResource(R.string.chat_photos_title)) },
-          navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_back), stringResource(R.string.back)) } },
+          navigationIcon = {
+            val back = stringResource(R.string.back)
+            Tip(back) { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_back), back) } }
+          },
         )
       },
       fillsWidth = true,

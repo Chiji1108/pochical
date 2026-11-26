@@ -6,6 +6,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.compose.LifecycleEventEffect
 import app.pochical.PageScaffold
+import app.pochical.Tip
 import app.pochical.notifications.ShowingChat
 import app.pochical.notifications.LocalNotificationAsking
 import app.pochical.calendar.fullText
@@ -900,13 +901,15 @@ private fun ChatScaffold(
           }
         },
         navigationIcon = {
-          IconButton(onClick = onBack, shapes = IconButtonDefaults.shapes()) { Icon(painterResource(R.drawable.ic_back), stringResource(R.string.back)) }
+          val back = stringResource(R.string.back)
+          Tip(back) { IconButton(onClick = onBack, shapes = IconButtonDefaults.shapes()) { Icon(painterResource(R.drawable.ic_back), back) } }
         },
         actions = {
           // ⋯, its menu Material's own from where it was opened (spec/chat.md, Photos: 写真).
           var more by remember { mutableStateOf(false) }
           Box {
-            IconButton(onClick = { more = true }, shapes = IconButtonDefaults.shapes()) { Icon(painterResource(R.drawable.ic_more_vert), stringResource(R.string.chat_more)) }
+            val label = stringResource(R.string.chat_more)
+            Tip(label) { IconButton(onClick = { more = true }, shapes = IconButtonDefaults.shapes()) { Icon(painterResource(R.drawable.ic_more_vert), label) } }
             val shifts = stringResource(R.string.group_shifts)
             val photos = stringResource(R.string.chat_photos_title)
             val mute = stringResource(if (muted == true) R.string.chat_unmute else R.string.chat_mute)

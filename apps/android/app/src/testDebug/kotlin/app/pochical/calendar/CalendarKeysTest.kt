@@ -7,8 +7,10 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.isFocused
+import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
@@ -62,8 +64,9 @@ class CalendarKeysTest {
     }
   }
 
+  /** Pressed in the activity's window, under a button's tooltip should one show as Tab reaches it. */
   private fun press(key: Key) {
-    compose.onRoot().performKeyInput { pressKey(key) }
+    compose.onAllNodes(isRoot()).onFirst().performKeyInput { pressKey(key) }
     compose.waitForIdle()
   }
 

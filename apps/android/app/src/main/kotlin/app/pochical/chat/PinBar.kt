@@ -32,13 +32,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.pochical.LocalThemeColors
 import app.pochical.R
+import app.pochical.Tip
 import app.pochical.contextClick
 import app.pochical.design.Chat
 import app.pochical.design.Radius
@@ -86,8 +85,10 @@ fun PinBar(pins: List<ChatLine>, nameOf: (String) -> String, blocked: Set<String
         }
         if (many) {
           val label = stringResource(if (open) R.string.chat_pins_close else R.string.chat_pins_open)
-          IconButton(onClick = { open = !open }, Modifier.semantics { contentDescription = label }) {
-            Icon(painterResource(R.drawable.ic_expand_more), contentDescription = null, Modifier.rotate(if (open) 180f else 0f), tint = colors.textSecondary)
+          Tip(label) {
+            IconButton(onClick = { open = !open }) {
+              Icon(painterResource(R.drawable.ic_expand_more), label, Modifier.rotate(if (open) 180f else 0f), tint = colors.textSecondary)
+            }
           }
         }
       }

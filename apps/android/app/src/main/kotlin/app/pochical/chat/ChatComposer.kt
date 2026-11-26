@@ -64,7 +64,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -72,6 +71,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import app.pochical.LocalThemeColors
 import app.pochical.R
+import app.pochical.Tip
 import app.pochical.design.Chat
 import app.pochical.design.Radius
 import app.pochical.design.TextLimits
@@ -432,8 +432,9 @@ fun Composer(
         if (editing == null) {
           if (onShareDays != null) AttachMenu(pickPhotos, onShareDays, onPollDays, Modifier.padding(bottom = 4.dp))
           else {
-            IconButton(onClick = pickPhotos, modifier = Modifier.padding(bottom = 4.dp), shapes = IconButtonDefaults.shapes()) {
-              Icon(painterResource(R.drawable.ic_image), stringResource(R.string.chat_photo_send))
+            val photos = stringResource(R.string.chat_photo_send)
+            Tip(photos, Modifier.padding(bottom = 4.dp)) {
+              IconButton(onClick = pickPhotos, shapes = IconButtonDefaults.shapes()) { Icon(painterResource(R.drawable.ic_image), photos) }
             }
           }
         }
@@ -472,15 +473,16 @@ fun Composer(
           lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = COMPOSER_LINES),
           shape = RoundedCornerShape(Radius.xxl),
         )
-        FilledIconButton(
-          onClick = send,
-          enabled = sendable,
-          modifier = Modifier.padding(start = 8.dp, bottom = 4.dp),
-          // Material 3 Expressive's press: its round squares off under the finger.
-          shapes = IconButtonDefaults.shapes(),
-        ) {
-          if (editing != null) Icon(painterResource(R.drawable.ic_check), stringResource(R.string.chat_save))
-          else Icon(painterResource(R.drawable.ic_send), stringResource(R.string.chat_send))
+        val sends = stringResource(if (editing != null) R.string.chat_save else R.string.chat_send)
+        Tip(sends, Modifier.padding(start = 8.dp, bottom = 4.dp)) {
+          FilledIconButton(
+            onClick = send,
+            enabled = sendable,
+            // Material 3 Expressive's press: its round squares off under the finger.
+            shapes = IconButtonDefaults.shapes(),
+          ) {
+            Icon(painterResource(if (editing != null) R.drawable.ic_check else R.drawable.ic_send), sends)
+          }
         }
       }
     }
@@ -495,7 +497,8 @@ fun Composer(
 private fun AttachMenu(onPhotos: () -> Unit, onShareDays: () -> Unit, onPollDays: (() -> Unit)?, modifier: Modifier = Modifier) {
   var open by remember { mutableStateOf(false) }
   Box(modifier) {
-    IconButton(onClick = { open = true }, shapes = IconButtonDefaults.shapes()) { Icon(painterResource(R.drawable.ic_add), stringResource(R.string.chat_attach)) }
+    val attach = stringResource(R.string.chat_attach)
+    Tip(attach) { IconButton(onClick = { open = true }, shapes = IconButtonDefaults.shapes()) { Icon(painterResource(R.drawable.ic_add), attach) } }
     val photo = stringResource(R.string.chat_attach_photo)
     val share = stringResource(R.string.chat_share_days)
     val poll = stringResource(R.string.chat_poll_days)
@@ -528,9 +531,7 @@ private fun ComposerBar(title: String, words: String?, stop: String, picture: (@
     }
     // What is answered, small beside its words (a quoted photo or sticker).
     if (picture != null) Box(Modifier.padding(start = 8.dp)) { picture() }
-    IconButton(onClick = onStop, Modifier.semantics { contentDescription = stop }) {
-      Icon(painterResource(R.drawable.ic_close), contentDescription = null, Modifier.size(20.dp))
-    }
+    Tip(stop) { IconButton(onClick = onStop) { Icon(painterResource(R.drawable.ic_close), stop, Modifier.size(20.dp)) } }
   }
 }
 

@@ -63,6 +63,7 @@ import app.pochical.RowEnd
 import app.pochical.SettingsRadioRow
 import app.pochical.SettingsRow
 import app.pochical.SettingsSection
+import app.pochical.Tip
 import app.pochical.design.Chat
 import app.pochical.design.Radius
 import app.pochical.groups.GroupMarkView
@@ -292,9 +293,8 @@ fun MemberProfileSheet(
       Box(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
         var menu by remember { mutableStateOf(false) }
         Box(Modifier.align(Alignment.TopEnd)) {
-          IconButton(onClick = { menu = true }, shapes = IconButtonDefaults.shapes()) {
-            Icon(painterResource(R.drawable.ic_more_vert), stringResource(R.string.profile_menu, person.name))
-          }
+          val more = stringResource(R.string.profile_menu, person.name)
+          Tip(more) { IconButton(onClick = { menu = true }, shapes = IconButtonDefaults.shapes()) { Icon(painterResource(R.drawable.ic_more_vert), more) } }
           val block = stringResource(if (blocked) R.string.unblock else R.string.block)
           val report = stringResource(R.string.report)
           GroupedMenu(
