@@ -35,6 +35,7 @@ import app.pochical.R
 import app.pochical.SectionRow
 import app.pochical.SettingsPage
 import app.pochical.ShiftMark
+import app.pochical.Tip
 import app.pochical.design.PATTERNS_PER_PAGE
 import app.pochical.kit.hoursText
 import app.pochical.rowColors
@@ -71,7 +72,10 @@ fun ShiftChoicePage(day: LocalDate, onBack: () -> Unit) {
             leadingIcon = { Icon(painterResource(R.drawable.ic_search), contentDescription = null) },
             trailingIcon =
               if (query.isNotEmpty()) {
-                { IconButton(onClick = { query = "" }) { Icon(painterResource(R.drawable.ic_close), stringResource(R.string.clear)) } }
+                {
+                  val clear = stringResource(R.string.clear)
+                  Tip(clear) { IconButton(onClick = { query = "" }) { Icon(painterResource(R.drawable.ic_close), clear) } }
+                }
               } else {
                 null
               },

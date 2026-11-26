@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import app.pochical.ListSheet
 import app.pochical.LocalThemeColors
 import app.pochical.R
+import app.pochical.Tip
 import app.pochical.calendar.Pattern
 import app.pochical.calendar.fullText
 import app.pochical.calendar.holidayName
@@ -73,9 +74,8 @@ fun DaySheetContent(day: LocalDate, members: List<GroupMember>, days: GroupDays,
           Text(stringResource(R.string.together_day), style = PochicalTextStyles.caption2, fontWeight = FontWeight.SemiBold, color = colors.accentDefault)
         }
       }
-      IconButton(onClick = { onShare(day) }, Modifier.align(Alignment.CenterEnd).padding(end = 4.dp)) {
-        Icon(painterResource(R.drawable.ic_share), stringResource(R.string.chat_share_in_chat))
-      }
+      val share = stringResource(R.string.chat_share_in_chat)
+      Tip(share, Modifier.align(Alignment.CenterEnd).padding(end = 4.dp)) { IconButton(onClick = { onShare(day) }) { Icon(painterResource(R.drawable.ic_share), share) } }
     }
     members.forEachIndexed { index, member ->
       val shift = days.shifts[index][day]

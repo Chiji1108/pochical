@@ -59,6 +59,7 @@ import app.pochical.ListSheet
 import app.pochical.LocalDeviceSettings
 import app.pochical.LocalThemeColors
 import app.pochical.R
+import app.pochical.Tip
 import app.pochical.calendar.WeekdayRow
 import app.pochical.calendar.fullText
 import app.pochical.calendar.holidayCountry
@@ -429,9 +430,11 @@ private fun MonthGrid(month: YearMonth, today: LocalDate, together: Set<LocalDat
   val weeks = remember(month, week.start) { monthWeeks(month, week.start) }
   Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-      IconButton(onClick = { onMonth(month.minusMonths(1)) }) { Icon(painterResource(R.drawable.ic_chevron_left), stringResource(R.string.days_previous_month)) }
+      val previous = stringResource(R.string.days_previous_month)
+      Tip(previous) { IconButton(onClick = { onMonth(month.minusMonths(1)) }) { Icon(painterResource(R.drawable.ic_chevron_left), previous) } }
       Text(month.monthWithYear(english), Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
-      IconButton(onClick = { onMonth(month.plusMonths(1)) }) { Icon(painterResource(R.drawable.ic_chevron_right), stringResource(R.string.days_next_month)) }
+      val next = stringResource(R.string.days_next_month)
+      Tip(next) { IconButton(onClick = { onMonth(month.plusMonths(1)) }) { Icon(painterResource(R.drawable.ic_chevron_right), next) } }
     }
     WeekdayRow(week)
     for (row in 0 until MOST_WEEKS) {

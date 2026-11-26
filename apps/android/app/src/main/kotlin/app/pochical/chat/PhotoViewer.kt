@@ -15,6 +15,7 @@ import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import app.pochical.Tip
 import app.pochical.dragged
 import coil3.compose.AsyncImagePainter
 import coil3.size.Size as CoilSize
@@ -266,9 +267,8 @@ fun PhotoViewer(
     AnimatedVisibility((controls || reading) && pulled == 0f, enter = fadeIn(), exit = fadeOut()) {
       Box(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().then(if (belowFold) Modifier else Modifier.windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility)).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-          IconButton(onClick = { close() }) {
-            Icon(painterResource(R.drawable.ic_close), stringResource(R.string.chat_photo_close), tint = colors.mediaText)
-          }
+          val closes = stringResource(R.string.chat_photo_close)
+          Tip(closes) { IconButton(onClick = { close() }) { Icon(painterResource(R.drawable.ic_close), closes, tint = colors.mediaText) } }
           // The count stays as it was while the group is asked again where the photo is.
           var said by remember { mutableStateOf<Pair<Int, Int>?>(null) }
           remember(version) { open.run.place }?.let { said = it }
@@ -287,27 +287,33 @@ fun PhotoViewer(
         Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBarsIgnoringVisibility).padding(8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
           val photo = photos.getOrNull(pager.currentPage)
           val notShared = stringResource(R.string.chat_photo_not_shared)
-          IconButton(
-            onClick = {
-              photo?.let {
-                scope.launch {
-                  val opened =
-                    try {
-                      sharePhoto(context, wholePhoto(context, calls, files, groupId, it.photo.id))
-                    } catch (e: CancellationException) {
-                      throw e
-                    } catch (_: Exception) {
-                      false
-                    }
-                  if (!opened) snackbar.showSnackbar(notShared)
+          val share = stringResource(R.string.chat_photo_share)
+          val save = stringResource(R.string.chat_save)
+          Tip(share) {
+            IconButton(
+              onClick = {
+                photo?.let {
+                  scope.launch {
+                    val opened =
+                      try {
+                        sharePhoto(context, wholePhoto(context, calls, files, groupId, it.photo.id))
+                      } catch (e: CancellationException) {
+                        throw e
+                      } catch (_: Exception) {
+                        false
+                      }
+                    if (!opened) snackbar.showSnackbar(notShared)
+                  }
                 }
               }
+            ) {
+              Icon(painterResource(R.drawable.ic_share), share, tint = colors.mediaText)
             }
-          ) {
-            Icon(painterResource(R.drawable.ic_share), stringResource(R.string.chat_photo_share), tint = colors.mediaText)
           }
-          IconButton(onClick = { photo?.let { scope.launch { snackbar.saying(savePhotos(context, calls, files, groupId, listOf(it.photo)), haptics) } } }) {
-            Icon(painterResource(R.drawable.ic_download), stringResource(R.string.chat_save), tint = colors.mediaText)
+          Tip(save) {
+            IconButton(onClick = { photo?.let { scope.launch { snackbar.saying(savePhotos(context, calls, files, groupId, listOf(it.photo)), haptics) } } }) {
+              Icon(painterResource(R.drawable.ic_download), save, tint = colors.mediaText)
+            }
           }
         }
       }
@@ -438,8 +444,9 @@ fun FaceViewer(photoId: String, shelf: PhotoShelf, name: String, onClose: () -> 
         if (!failed) CircularProgressIndicator(Modifier.align(Alignment.Center).size(40.dp), color = colors.mediaText)
       }
       AnimatedVisibility((controls || reading) && pulled == 0f, enter = fadeIn(), exit = fadeOut()) {
-        IconButton(onClick = onClose, Modifier.windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility).padding(8.dp)) {
-          Icon(painterResource(R.drawable.ic_close), stringResource(R.string.chat_photo_close), tint = colors.mediaText)
+        val close = stringResource(R.string.chat_photo_close)
+        Tip(close, Modifier.windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility).padding(8.dp)) {
+          IconButton(onClick = onClose) { Icon(painterResource(R.drawable.ic_close), close, tint = colors.mediaText) }
         }
       }
     }

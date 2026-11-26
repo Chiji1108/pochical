@@ -10,6 +10,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.compose.LifecycleEventEffect
 import app.pochical.PageScaffold
+import app.pochical.Tip
 import app.pochical.notifications.ShowingChat
 import app.pochical.notifications.LocalNotificationAsking
 import app.pochical.calendar.fullText
@@ -99,8 +100,6 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -913,13 +912,15 @@ private fun ChatScaffold(
           }
         },
         navigationIcon = {
-          IconButton(onClick = onBack, shapes = IconButtonDefaults.shapes()) { Icon(painterResource(R.drawable.ic_back), stringResource(R.string.back)) }
+          val back = stringResource(R.string.back)
+          Tip(back) { IconButton(onClick = onBack, shapes = IconButtonDefaults.shapes()) { Icon(painterResource(R.drawable.ic_back), back) } }
         },
         actions = {
           // ⋯, its menu Material's own from where it was opened (spec/chat.md, Photos: 写真).
           var more by remember { mutableStateOf(false) }
           Box {
-            IconButton(onClick = { more = true }, shapes = IconButtonDefaults.shapes()) { Icon(painterResource(R.drawable.ic_more_vert), stringResource(R.string.chat_more)) }
+            val label = stringResource(R.string.chat_more)
+            Tip(label) { IconButton(onClick = { more = true }, shapes = IconButtonDefaults.shapes()) { Icon(painterResource(R.drawable.ic_more_vert), label) } }
             val shifts = stringResource(R.string.group_shifts)
             val photos = stringResource(R.string.chat_photos_title)
             val mute = stringResource(if (muted == true) R.string.chat_unmute else R.string.chat_mute)
@@ -1074,9 +1075,7 @@ private fun LatestButton(
     val to = stringResource(if (toUnread) R.string.chat_to_unread else R.string.chat_to_latest)
     val label = if (unseen > 0) stringResource(R.string.chat_unseen, to, unseen) else to
     BadgedBox(badge = { if (unseen > 0) Badge { Text("$unseen") } }) {
-      SmallFloatingActionButton(onClick = { onClick(toUnread) }, Modifier.semantics { contentDescription = label }) {
-        Icon(painterResource(R.drawable.ic_keyboard_arrow_down), contentDescription = null)
-      }
+      Tip(label) { SmallFloatingActionButton(onClick = { onClick(toUnread) }) { Icon(painterResource(R.drawable.ic_keyboard_arrow_down), label) } }
     }
   }
 }

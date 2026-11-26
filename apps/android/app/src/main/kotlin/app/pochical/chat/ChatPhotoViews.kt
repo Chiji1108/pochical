@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import app.pochical.LocalThemeColors
 import app.pochical.R
+import app.pochical.Tip
 import app.pochical.calendar.rememberReducedMotion
 import app.pochical.design.Chat
 import app.pochical.design.Radius
@@ -296,9 +297,8 @@ internal fun PhotoGoingUp(photoId: String, sending: Boolean, onStop: (() -> Unit
     Box(Modifier.size(48.dp).background(colors.mediaShade, CircleShape), contentAlignment = Alignment.Center) {
       Ring(gone, Modifier.fillMaxSize().padding(4.dp))
       if (onStop != null) {
-        IconButton(onClick = onStop, Modifier.size(48.dp)) {
-          Icon(painterResource(R.drawable.ic_close), stringResource(R.string.chat_photo_stop), Modifier.size(18.dp), tint = colors.mediaText)
-        }
+        val stop = stringResource(R.string.chat_photo_stop)
+        Tip(stop) { IconButton(onClick = onStop, Modifier.size(48.dp)) { Icon(painterResource(R.drawable.ic_close), stop, Modifier.size(18.dp), tint = colors.mediaText) } }
       }
     }
   }
