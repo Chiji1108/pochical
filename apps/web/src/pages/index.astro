@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
+import Lines from "../components/lines.astro";
 import {
   ChatPhone,
   EntryPhone,
@@ -493,17 +494,14 @@ const rest = [
   },
   {
     alt: "繰り返しの画面。当番・非番・休みが3日ごとに並んだ2週間のカレンダー。",
-    lines: [
-      "決まった並びは、繰り返しで先の月まで。",
-      "15日始まりや、早出・残業にも。",
-    ],
+    lines: ["先の月まで、まとめて入ります。", "15日始まりや、早出・残業にも。"],
     picture: cardDetails,
     title: ["決まった並びは、", "繰り返しで。"],
   },
   {
     alt: "次の通知の見本。前の日の21時に届く「明日は日勤（早出）8:00–18:00」。",
     lines: [
-      "前の晩に、明日のシフトをお知らせ。",
+      "届く時刻は、好きに決められます。",
       "夜勤の次の日は、明けも一緒に。",
     ],
     picture: cardCares,
@@ -857,20 +855,10 @@ const closing = {
           />
           <div class={more.words}>
             <h2 class={more.title}>
-              {title.map((line, index) => (
-                <>
-                  {index > 0 && <br />}
-                  {line}
-                </>
-              ))}
+              <Lines lines={title} />
             </h2>
             <p class={more.body}>
-              {lines.map((line, index) => (
-                <>
-                  {index > 0 && <br />}
-                  {line}
-                </>
-              ))}
+              <Lines lines={lines} />
             </p>
           </div>
         </li>

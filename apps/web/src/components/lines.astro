@@ -1,0 +1,14 @@
+---
+// Words set a line a line, as a picture or a card sets them: each line
+// after the first on a line of its own.
+type Props = { lines: readonly string[] };
+
+const { lines } = Astro.props;
+---
+
+{lines.map((line, index) => (
+  <>
+    {index > 0 && <br />}
+    {line}
+  </>
+))}
