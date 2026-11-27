@@ -13,6 +13,7 @@ import {
   STORE_SHOTS,
   STORES,
   storeShotFile,
+  storeShotsOf,
   TITLE,
   unitOf,
   WALL,
@@ -50,13 +51,25 @@ import { unsaid } from "./store-words";
 //   side from 320 to 3840 pixels, the longer no more than twice the
 //   shorter, 9:16 for those it features, their words no more than a fifth
 //   of the picture, eight at most; a tablet's 16:9 on its side, each side
-//   from 1080 to 7680 pixels:
+//   from 1080 to 7680 pixels; a foldable's (#1285) three to eight, each
+//   side from 960 to 3840 pixels, at least one of each shape: 1:1 and 4:3
+//   of the inner display unfolded, 10:16 of the outer one folded:
 //   https://support.google.com/googleplay/android-developer/answer/9866151
 const ASKED = {
   appStoreDuoOuter: { height: 2034, width: 1398 },
   appStoreIpad: { height: 2064, width: 2752 },
   appStoreScreenshot: { height: 2622, width: 1206 },
   featureGraphic: { height: 500, width: 1024 },
+  foldable: {
+    least: 3,
+    most: 8,
+    shapes: {
+      "android-foldable": 1,
+      "android-foldable-outer": 10 / 16,
+      "android-foldable-wide": 4 / 3,
+    },
+    side: { least: 960, most: 3840 },
+  },
   headlineShare: 0.2,
   productPageHeader: { height: 1646, width: 3840 },
   screenshots: 8,
@@ -67,6 +80,14 @@ const ASKED = {
 const storeIds = Object.keys(STORES).filter((id): id is StoreId =>
   Object.hasOwn(STORES, id)
 );
+
+// Google Play's foldable pictures, each store's with the shape it is of.
+const foldables = storeIds.flatMap((store) => {
+  const shape = Object.entries(ASKED.foldable.shapes).find(
+    ([id]) => id === store
+  )?.[1];
+  return shape === undefined ? [] : [{ shape, store }];
+});
 
 const root = path.join(import.meta.dirname, "../../..");
 const pictures: readonly WallPicture[] = WALL_PICTURES;
@@ -100,6 +121,15 @@ test("the pictures are of the sizes the stores ask for", () => {
   expect(tablet.height).toBeGreaterThanOrEqual(ASKED.tabletSide.least);
   expect(tablet.width).toBeLessThanOrEqual(ASKED.tabletSide.most);
   expect(tablet.width / tablet.height).toBeCloseTo(16 / 9);
+  expect(foldables).toHaveLength(Object.keys(ASKED.foldable.shapes).length);
+  for (const { shape, store } of foldables) {
+    const foldable = STORES[store];
+    expect(foldable.width / foldable.height, store).toBeCloseTo(shape);
+    for (const side of [foldable.height, foldable.width]) {
+      expect(side).toBeGreaterThanOrEqual(ASKED.foldable.side.least);
+      expect(side).toBeLessThanOrEqual(ASKED.foldable.side.most);
+    }
+  }
   expect(pictures.find(({ name }) => name === "feature-graphic")).toMatchObject(
     ASKED.featureGraphic
   );
@@ -110,8 +140,24 @@ test("the pictures are of the sizes the stores ask for", () => {
   expect(HEADLINE_SHARE).toBeLessThanOrEqual(ASKED.headlineShare);
 });
 
+// Google Play's foldable pictures share its places, each shot drawn in one
+// of their shapes.
+test("a foldable's pictures are each shot once, in every shape", () => {
+  for (const { store } of foldables) {
+    expect(storeShotsOf(store).length, store).toBeGreaterThan(0);
+  }
+  const names = foldables.flatMap(({ store }) =>
+    storeShotsOf(store).map(({ name }) => name)
+  );
+  expect(names.toSorted()).toEqual(
+    STORE_SHOTS.map(({ name }) => name).toSorted()
+  );
+  expect(names.length).toBeGreaterThanOrEqual(ASKED.foldable.least);
+  expect(names.length).toBeLessThanOrEqual(ASKED.foldable.most);
+});
+
 const drawn = storeIds.flatMap((id) =>
-  STORE_SHOTS.map((shot) => ({
+  storeShotsOf(id).map((shot) => ({
     file: path.join("store/screenshots", id, storeShotFile(shot.name)),
     size: STORES[id],
   }))
@@ -143,29 +189,36 @@ test.each([
 // headline over a screen, so it reads as one, and its lines inside the
 // room a phone keeps over and under it.
 test.each(
-  Object.entries(STORES)
-    .filter(([, picture]) =>
-      STORE_SHOTS.some((shot) => besideOf(shot, picture))
+  storeIds
+    .filter((store) =>
+      storeShotsOf(store).some((shot) => besideOf(shot, STORES[store]))
     )
-    .map(([store, picture]) => ({ picture, store }))
-)("the headlines beside tiles are large and fit in $store", ({ picture }) => {
-  const size = besideSizeOf(picture);
-  expect(size).toBeGreaterThanOrEqual(HEADLINE.size);
-  for (const shot of STORE_SHOTS.filter((one) => besideOf(one, picture))) {
-    expect(shot.headline.length * size * TITLE.line).toBeLessThanOrEqual(
-      picture.height / unitOf(picture) - 2 * STAGE_FOOT
-    );
+    .map((store) => ({ picture: STORES[store], store }))
+)(
+  "the headlines beside tiles are large and fit in $store",
+  ({ picture, store }) => {
+    const size = besideSizeOf(picture);
+    expect(size).toBeGreaterThanOrEqual(HEADLINE.size);
+    for (const shot of storeShotsOf(store).filter((one) =>
+      besideOf(one, picture)
+    )) {
+      expect(shot.headline.length * size * TITLE.line).toBeLessThanOrEqual(
+        picture.height / unitOf(picture) - 2 * STAGE_FOOT
+      );
+    }
   }
-});
+);
 
 // A headline is set in rows that are never broken, every letter as wide
 // as it is tall at most: each row keeps the picture's margin at both
 // sides, and the rows, under the room kept over them, keep to the
-// headline's share of every store's picture, in its units.
+// headline's share of every store's picture it is drawn in, in its units.
 test.each(STORE_SHOTS.map(({ headline, name }) => ({ headline, name })))(
   "$name's headline fits its room",
-  ({ headline }) => {
-    for (const picture of Object.values(STORES)) {
+  ({ headline, name }) => {
+    for (const picture of storeIds
+      .filter((store) => storeShotsOf(store).some((shot) => shot.name === name))
+      .map((store) => STORES[store])) {
       const unit = unitOf(picture);
       for (const line of headline) {
         expect(

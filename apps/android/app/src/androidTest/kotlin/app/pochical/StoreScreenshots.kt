@@ -265,7 +265,8 @@ class StoreScreenshots {
    * the next notification as its page draws it.
    */
   private fun photographCares() {
-    device.tap(By.text("設定"), By.text("リマインド"))
+    openSettings()
+    reveal(By.text("リマインド"))
     device.tap(By.text("リマインド"), By.text("リマインドを追加"))
     device.tap(By.textStartsWith("前日"), By.text("リマインドを編集"))
     // The notification under its heading.
@@ -297,7 +298,7 @@ class StoreScreenshots {
    * then on are the new job's.
    */
   private fun startFixedCycle() {
-    device.tap(By.text("設定"), By.text("シフトパターン"))
+    openSettings()
     val steps = listOf(
       "シフトパターン" to "並び替え",
       "新しい仕事にする" to "新しい仕事の初日",
@@ -351,7 +352,8 @@ class StoreScreenshots {
    * or not, and 色をつける日.
    */
   private fun pick(style: Style, english: Boolean = false) {
-    device.tap(By.text("設定"), By.text("スタイル"))
+    openSettings()
+    reveal(By.text("スタイル"))
     device.tap(By.text("スタイル"), By.text("テーマ"))
     for (choice in listOf(style.shape, style.theme, style.colors, style.off)) {
       if (choice == style.theme) showTheme(choice)
@@ -360,6 +362,7 @@ class StoreScreenshots {
     }
     device.back(By.text("テーマ"))
     // カレンダー's row, by what it says of the week: the tab is カレンダー too.
+    reveal(By.textContains("曜はじまり"))
     device.tap(By.textContains("曜はじまり"), By.text("週の始まり"))
     val names = if (english) "英語" else "日本語"
     if (!device.hasObject(By.desc(names).checked(true))) device.tap(By.desc(names), By.desc(names).checked(true))
@@ -375,7 +378,8 @@ class StoreScreenshots {
    * dragged until the row is in sight, on from where it opens and then back.
    */
   private fun pickPeriod(period: String) {
-    device.tap(By.text("設定"), By.text("スタイル"))
+    openSettings()
+    reveal(By.textContains("曜はじまり"))
     device.tap(By.textContains("曜はじまり"), By.text("週の始まり"))
     reveal(By.text("1ページの期間"))
     device.tap(By.text("1ページの期間"), By.text("キャンセル"))
@@ -443,12 +447,24 @@ class StoreScreenshots {
   /** The switch named [name], while it is [on] or off. */
   private fun switch(name: String, on: Boolean): BySelector = By.checked(on).hasDescendant(By.text(name))
 
-  /** Brings [target] onto a settings page, none of them two screens tall: where the page does not show it yet, a page down. */
+  /** Opens 設定 by its tab, its list where it was left. */
+  private fun openSettings() = device.tap(By.text("設定"), By.selected(true).hasDescendant(By.text("設定")))
+
+  /**
+   * Brings [target] onto a settings page, none of them two screens tall, where it does not show yet:
+   * each list on the screen dragged a page down, twice at most, then up, until one shows it, the page
+   * last opened first: on a wide screen, the page open beside 設定's list before the list, which may
+   * have been left anywhere. A list is drawn again as it moves, so it is dragged where it was found.
+   */
   private fun reveal(target: BySelector) {
-    if (device.hasObject(target)) return
-    // Dragged up through the middle of the screen, clear of its edges, where a drag is the system's.
-    val (width, height) = device.displayWidth to device.displayHeight
-    device.swipe(width / 2, height * 4 / 5, width / 2, height / 5, 40)
+    for (list in device.findObjects(By.scrollable(true)).map { it.visibleBounds }.sortedByDescending { it.left }) {
+      for (up in listOf(true, true, false, false, false)) {
+        if (device.hasObject(target)) return
+        // Through the list's middle, clear of its edges, where a drag may be the system's.
+        val (from, to) = list.top + list.height() * 4 / 5 to list.top + list.height() / 5
+        device.swipe(list.centerX(), if (up) from else to, list.centerX(), if (up) to else from, 40)
+      }
+    }
     device.find(target)
   }
 

@@ -191,6 +191,18 @@ run = "tools/store-screenshots/android.sh android"
 description = "Photograph the Android app for the stores' tablet screenshots on the emulator ANDROID_SERIAL names, a tablet's, on its side, taking the app off it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default) and seeds: the screens and the widgets, raw, into .build/store-screenshots/android-tablet"
 run = "tools/store-screenshots/android.sh android-tablet"
 
+[tasks."store:shots:android-foldable"]
+description = "Photograph the Android app for Google Play's foldable screenshots of a square inner display on the emulator ANDROID_SERIAL names, a foldable's whose inner display is square, opened, on its side, taking the app off it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default) and seeds: the screens and the widgets, raw, into .build/store-screenshots/android-foldable"
+run = "tools/store-screenshots/android.sh android-foldable"
+
+[tasks."store:shots:android-foldable-wide"]
+description = "Photograph the Android app for Google Play's foldable screenshots of a wide inner display on the emulator ANDROID_SERIAL names, a foldable's whose inner display is wide, opened, on its side, taking the app off it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default) and seeds: the screens and the widgets, raw, into .build/store-screenshots/android-foldable-wide"
+run = "tools/store-screenshots/android.sh android-foldable-wide"
+
+[tasks."store:shots:android-foldable-outer"]
+description = "Photograph the Android app for Google Play's foldable screenshots of an outer display on the emulator ANDROID_SERIAL names, a foldable's, folded, taking the app off it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default) and seeds: the screens and the widgets, raw, into .build/store-screenshots/android-foldable-outer"
+run = "tools/store-screenshots/android.sh android-foldable-outer"
+
 [tasks."ios:photo-touches"]
 description = "Run the chat photo line's touch UI tests in a simulator, erasing it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default): <simulator name> [derived data]"
 run = "tools/photo-line-touches/run.sh"

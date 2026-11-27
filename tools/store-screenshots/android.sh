@@ -8,38 +8,61 @@
 # and group; StoreScreenshots in :app's androidTest walks them all.
 # `<store>` is the store's device the pictures are for: `android`, a
 # phone's, or `android-tablet`, a tablet's (#1226), which the walk
-# photographs on its side; the run fails when the emulator is not of that
-# kind, by Material's window sizes (a tablet 600dp or more at its narrowest).
+# photographs on its side; or a foldable's (#1285), which the run folds or
+# opens for the walk: `android-foldable`, its square inner display, open,
+# `android-foldable-wide`, its wide one, open, or `android-foldable-outer`,
+# its outer display, folded. The run fails when the emulator is not of that
+# kind: a foldable, or not, and by Material's window sizes (a tablet 600dp
+# or more at its narrowest), or by how square an inner display is (a
+# square one's sides within a tenth of each other, a wide one's further apart).
 # `mise run store:images` draws Google Play's pictures from them.
 #
 #   ANDROID_SERIAL=emulator-<port> mise run store:shots:android
 #   ANDROID_SERIAL=emulator-<port> mise run store:shots:android-tablet
+#   ANDROID_SERIAL=emulator-<port> mise run store:shots:android-foldable
 #
-# The emulator, a phone's or a tablet's with Google Play, is running already and is the
+# The emulator, a phone's, a tablet's or a foldable's with Google Play, is running already and is the
 # run's to change: the app is taken off it, with its data, and whoever the
 # app was signed in as there is signed out. For the run it shows the time
 # the group's chat was written at, with full signal and battery (SystemUI's
 # demo mode), in light, nothing
-# animating, and has a calendar of its own, 仕事, to add shifts to; all put
-# back at the end. It starts the server itself, so nothing else may be on
+# animating, folded or open as the store's display is, awake when folded,
+# and has a calendar of its own, 仕事, to add shifts to; all put back at
+# the end. It starts the server itself, so nothing else may be on
 # POCHICAL_DEV_SERVER (:8787 by default), and seeds the group there
 # (seed.ts).
 set -euo pipefail
 
-store=${1:?the store: android or android-tablet}
+store=${1:?the store: android, android-tablet, android-foldable, android-foldable-wide or android-foldable-outer}
 root=$(cd "$(dirname "$0")/../.." && pwd)
 out=$root/.build/store-screenshots/$store
 [[ ${ANDROID_SERIAL:-} == emulator-* ]] ||
   { echo "ANDROID_SERIAL must name an emulator (emulator-<port>): the run takes the app off it and changes its settings" >&2; exit 1; }
 adb() { command "${ANDROID_HOME:+$ANDROID_HOME/platform-tools/}adb" -s "$ANDROID_SERIAL" "$@"; }
 
-# The emulator's narrowest side in dp, which says whether it is a phone or a tablet.
-narrowest=$(adb shell wm size | awk -F'[ x]' '/size:/ { w = $(NF-1); h = $NF } END { print (w < h ? w : h) }')
-density=$(adb shell wm density | awk '/density:/ { d = $NF } END { print d }')
+# Whether the emulator folds: a foldable's states have one where it is closed.
+folds() { adb shell cmd device_state print-states | grep -q "name='CLOSED'"; }
+folded() { adb shell cmd device_state state | grep -q "name='CLOSED'"; }
+# Folds or opens it, and waits until its display is the one asked for,
+# awake and unlocked, as a display it turned to may have locked.
+posture() {
+  adb emu "$1" >/dev/null
+  for _ in $(seq 10); do
+    if [ "$(folded && echo fold || echo unfold)" = "$1" ]; then
+      adb shell input keyevent KEYCODE_WAKEUP
+      adb shell wm dismiss-keyguard
+      return
+    fi
+    sleep 1
+  done
+  echo "$ANDROID_SERIAL did not $1" >&2
+  exit 1
+}
 case $store in
-  android) [ $((narrowest * 160 / density)) -lt 600 ] || { echo "$ANDROID_SERIAL is a tablet: name a phone's emulator for $store" >&2; exit 1; } ;;
-  android-tablet) [ $((narrowest * 160 / density)) -ge 600 ] || { echo "$ANDROID_SERIAL is a phone: name a tablet's emulator for $store" >&2; exit 1; } ;;
-  *) echo "no store's device is $store: android or android-tablet" >&2; exit 1 ;;
+  android | android-tablet) ! folds || { echo "$ANDROID_SERIAL is a foldable's: name a phone's or a tablet's emulator for $store" >&2; exit 1; } ;;
+  android-foldable | android-foldable-wide | android-foldable-outer)
+    folds || { echo "$ANDROID_SERIAL does not fold: name a foldable's emulator for $store" >&2; exit 1; } ;;
+  *) echo "no store's device is $store: android, android-tablet, android-foldable, android-foldable-wide or android-foldable-outer" >&2; exit 1 ;;
 esac
 gradle() { (cd "$root/apps/android" && ./gradlew "$@"); }
 
@@ -60,6 +83,10 @@ scales="window_animation_scale transition_animation_scale animator_duration_scal
 # The global settings the run changes: the animations' scales, and that
 # SystemUI takes the demo's commands.
 settings="$scales sysui_demo_allowed"
+# Whether a foldable stays awake folded, which the run asks of it, and
+# whether it is folded.
+was_fold_lock=$(adb shell settings get system fold_lock_behavior_setting)
+was_folded=$(folded && echo fold || echo unfold)
 
 night=$(adb shell cmd uimode night | sed 's/.*: //')
 for setting in $settings; do declare "was_$setting=$(adb shell settings get global "$setting")"; done
@@ -77,10 +104,33 @@ restore() {
       left="$left $setting,"
   done
   without_calendar || left="$left the calendar,"
+  if folds; then
+    if [ "$was_fold_lock" = null ]; then adb shell settings delete system fold_lock_behavior_setting >/dev/null; else adb shell settings put system fold_lock_behavior_setting "$was_fold_lock"; fi ||
+      left="$left fold_lock_behavior_setting,"
+    (posture "$was_folded") || left="$left the fold,"
+  fi
   [ -z "$left" ] || { echo "not put back:${left%,}" >&2; status=1; }
   exit "$status"
 }
 trap restore EXIT
+
+# The display it is held at, the inner one open for its square or wide
+# pictures, and the outer one folded, kept awake as it folds.
+if folds; then
+  adb shell settings put system fold_lock_behavior_setting stay_awake_on_fold_key
+  posture "$([ "$store" = android-foldable-outer ] && echo fold || echo unfold)"
+fi
+# The display's sides, and the narrowest in dp, which says whether it is a phone or a tablet.
+read -r shortest longest < <(adb shell wm size | awk -F'[ x]' '/size:/ { w = $(NF-1); h = $NF } END { print (w < h ? w " " h : h " " w) }')
+density=$(adb shell wm density | awk '/density:/ { d = $NF } END { print d }')
+narrowest=$((shortest * 160 / density))
+square=$((longest * 10 < shortest * 11))
+case $store in
+  android | android-foldable-outer) [ "$narrowest" -lt 600 ] || { echo "$ANDROID_SERIAL is a tablet: name a phone's emulator for $store" >&2; exit 1; } ;;
+  android-tablet) [ "$narrowest" -ge 600 ] || { echo "$ANDROID_SERIAL is a phone: name a tablet's emulator for $store" >&2; exit 1; } ;;
+  android-foldable) [ "$square" = 1 ] || { echo "$ANDROID_SERIAL's inner display is wide: name one whose inner display is square for $store" >&2; exit 1; } ;;
+  android-foldable-wide) [ "$square" = 0 ] || { echo "$ANDROID_SERIAL's inner display is square: name one whose inner display is wide for $store" >&2; exit 1; } ;;
+esac
 
 adb uninstall app.pochical >/dev/null || true
 adb shell cmd uimode night no >/dev/null
