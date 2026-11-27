@@ -490,7 +490,9 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
   }
 
   private func page(_ item: ChatPhotoItem) -> PhotoPage {
-    let page = PhotoPage(item, writer: names[item.authorID], shelf: shelf, calls: calls)
+    // Dragged out as it is shared and saved: a chat's photo, never someone's face.
+    let page = PhotoPage(
+      item, writer: names[item.authorID], shelf: shelf, calls: calls, drags: onSave != nil)
     page.onTap = { [weak self] in self?.toggleChrome() }
     return page
   }
@@ -689,6 +691,9 @@ private final class PhotoPage: UIViewController, UIScrollViewDelegate, UIDragInt
   }
   private let shelf: PhotoShelf
   private let calls: GroupCalls
+  /// It may be dragged out: a chat's photo, which is shared and saved too;
+  /// not someone's face, which is theirs to keep.
+  private let drags: Bool
   private let scroll = UIScrollView()
   private let picture = UIImageView()
   private let spinner = UIActivityIndicatorView(style: .large)
@@ -704,8 +709,11 @@ private final class PhotoPage: UIViewController, UIScrollViewDelegate, UIDragInt
   private static let deepest: CGFloat = 4
   private static let tapped: CGFloat = 2
 
-  init(_ item: ChatPhotoItem, writer: String?, shelf: PhotoShelf, calls: GroupCalls) {
+  init(
+    _ item: ChatPhotoItem, writer: String?, shelf: PhotoShelf, calls: GroupCalls, drags: Bool
+  ) {
     self.item = item
+    self.drags = drags
     self.writer = writer
     self.shelf = shelf
     self.calls = calls
@@ -752,10 +760,12 @@ private final class PhotoPage: UIViewController, UIScrollViewDelegate, UIDragInt
     // Held and moved, the photo itself is dragged out to another app or
     // window, as Photos lets one go; on an iPhone too, where a drag is off
     // unless asked for.
-    let drag = UIDragInteraction(delegate: self)
-    drag.isEnabled = true
-    picture.addInteraction(drag)
-    picture.isUserInteractionEnabled = true
+    if drags {
+      let drag = UIDragInteraction(delegate: self)
+      drag.isEnabled = true
+      picture.addInteraction(drag)
+      picture.isUserInteractionEnabled = true
+    }
 
     spinner.color = .white
     spinner.hidesWhenStopped = true
