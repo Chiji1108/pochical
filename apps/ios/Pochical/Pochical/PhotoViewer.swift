@@ -5,6 +5,7 @@ import PochicalKit
 import SQLiteData
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 
 // A photo opened large (spec/chat.md, Photos; /design's PhotoViewer), as
 // Photos, Signal and Telegram open one: whole on black, pinched or tapped
@@ -676,7 +677,7 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
 }
 
 /// One photo large, zoomed by the system's scroll view.
-private final class PhotoPage: UIViewController, UIScrollViewDelegate {
+private final class PhotoPage: UIViewController, UIScrollViewDelegate, UIDragInteractionDelegate {
   let item: ChatPhotoItem
   var photo: LinePhoto { item.photo }
   var onTap: (() -> Void)?
@@ -748,6 +749,13 @@ private final class PhotoPage: UIViewController, UIScrollViewDelegate {
       },
     ]
     scroll.addSubview(picture)
+    // Held and moved, the photo itself is dragged out to another app or
+    // window, as Photos lets one go; on an iPhone too, where a drag is off
+    // unless asked for.
+    let drag = UIDragInteraction(delegate: self)
+    drag.isEnabled = true
+    picture.addInteraction(drag)
+    picture.isUserInteractionEnabled = true
 
     spinner.color = .white
     spinner.hidesWhenStopped = true
@@ -906,10 +914,46 @@ private final class PhotoPage: UIViewController, UIScrollViewDelegate {
     }
   }
 
+  // MARK: Dragged out
+
+  /// The photo itself, as it came, once it is drawn and while it is not
+  /// zoomed in (zoomed in, a drag moves it about); one still coming drags
+  /// nothing (spec/chat.md, Photos).
+  func dragInteraction(
+    _ interaction: UIDragInteraction, itemsForBeginning session: any UIDragSession
+  ) -> [UIDragItem] {
+    guard let image, !zoomedIn else { return [] }
+    let dragged = DraggedPhoto(photo: photo, shelf: shelf, calls: calls)
+    let provider = NSItemProvider()
+    provider.register(dragged)
+    let item = UIDragItem(itemProvider: provider)
+    item.localObject = image
+    return [item]
+  }
+
   /// The photo itself, for sharing: once it has come, else fetched now.
   func wholeImage() async -> UIImage? {
     if let image { return image }
     return await ChatPhotoLoading.whole(photo, in: shelf, calls: calls).flatMap { UIImage(data: $0) }
+  }
+}
+
+/// A photo dragged out of the viewer: the photo itself, as it came (a
+/// JPEG, as the app sends every photo), read as the app it is dropped on
+/// asks for it.
+private nonisolated struct DraggedPhoto: Transferable {
+  let photo: LinePhoto
+  let shelf: PhotoShelf
+  let calls: GroupCalls
+
+  static var transferRepresentation: some TransferRepresentation {
+    DataRepresentation(exportedContentType: .jpeg) { dragged in
+      guard
+        let data = await ChatPhotoLoading.whole(
+          dragged.photo, in: dragged.shelf, calls: dragged.calls)
+      else { throw CocoaError(.fileReadUnknown) }
+      return data
+    }
   }
 }
 

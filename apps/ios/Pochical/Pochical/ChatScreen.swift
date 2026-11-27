@@ -156,6 +156,8 @@ struct ChatScreen: View {
   @State private var deciding: ChatLineRow?
   /// The photos opened large.
   @State private var viewing: PhotoViewing?
+  /// Something that may be dropped on the chat is held over it.
+  @State private var dropping = false
   /// Long lines opened at 続きを読む, which stay open while the chat is.
   @State private var unfolded: Set<String> = []
   /// Lines not sent being sent again, by the time each was written then:
@@ -236,6 +238,24 @@ struct ChatScreen: View {
     // setting it off), and the stage itself stands the composer on the
     // keyboard.
     .ignoresSafeArea()
+    // Images dropped anywhere on the chat, from another app beside it or
+    // Files, go in the tray as pasted ones do (spec/chat.md, Photos); held
+    // over it, the chat is ringed in the accent, as a drop target is
+    // marked. A photo opened large stands over it, taking the drop itself.
+    .onDrop(of: [.image], isTargeted: $dropping) { images in
+      guard draft.editing == nil else { return false }
+      draft.take(images, say: say)
+      return true
+    }
+    .overlay {
+      if dropping {
+        Rectangle()
+          .fill(colors.accentDefault.opacity(0.08))
+          .strokeBorder(colors.accentDefault, lineWidth: 3)
+          .ignoresSafeArea()
+          .allowsHitTesting(false)
+      }
+    }
     .sensoryFeedback(.success, trigger: done)
     .task(
       id: JumpKey(
