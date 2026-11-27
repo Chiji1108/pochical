@@ -275,9 +275,12 @@ final class StoreScreenshotTests: XCTestCase {
       press(name)
       XCTAssertTrue(app.navigationBars["パターンを編集"].waitForExistence(timeout: 5), "\(name) opens")
       let field = app.textFields.firstMatch
-      // The name, one word at the field's trailing edge, picked by two taps and typed over.
-      field.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).doubleTap()
-      field.typeText(called)
+      // The name, at the field's trailing edge, erased from its end and typed again: the caret
+      // goes where the field is touched, after the name only at the very edge.
+      field.coordinate(withNormalizedOffset: CGVector(dx: 1, dy: 0.5))
+        .withOffset(CGVector(dx: -2, dy: 0)).tap()
+      let typed = (field.value as? String)?.count ?? 0
+      field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: typed) + called)
       XCTAssertEqual(field.value as? String, called, "\(name) is named \(called)")
       button("保存", of: app.navigationBars["パターンを編集"]).tap()
     }
@@ -291,13 +294,20 @@ final class StoreScreenshotTests: XCTestCase {
     coming.tap()
     press("カレンダーで直す")
     XCTAssertTrue(app.navigationBars["繰り返しを直す"].waitForExistence(timeout: 5), "the order opens")
+    // The page's column: on an iPad, right of 設定's list, which stands beside it.
+    let list = app.navigationBars["設定"]
+    let column = app.frame.divided(
+      atDistance: list.exists && list.frame.width < app.frame.width ? list.frame.maxX : 0,
+      from: .minXEdge
+    ).remainder
     // The month's name and its first two weeks, the cycle come round in them.
     let today = Calendar.current.dateComponents([.year, .month], from: .now)
     let title = app.buttons.matching(NSPredicate(format: "label MATCHES '[0-9]+年[0-9]+月.*'"))
       .firstMatch
     let first = DateComponents(year: today.year, month: today.month! + 1, day: 1)
     try snap(
-      "tile-repeat", from: title.frame.minY, until: rowTop(first, after: 14), across: week(first))
+      "tile-repeat", from: title.frame.minY, until: rowTop(first, after: 14, in: column),
+      across: week(first, in: column))
   }
 
   /// A group with an end, 忘年会, made in グループを作る with 終了日をつける on,
@@ -505,34 +515,44 @@ final class StoreScreenshotTests: XCTestCase {
   /// The calendar's `day`, holding `shift` when one is named, whatever
   /// else it says (a holiday's name before the shift, a change of hours
   /// after): the shown month's, as the months beside it hold its first
-  /// and last days too. The shown page starts at the screen's leading
-  /// edge, so of the copies on the screen it holds the one furthest left:
-  /// the page after's lies to its right, where the pages run on under the
-  /// bars down the side of iPhone Duo's outer display (#1224), clipped
-  /// out of sight and still in the app's frame.
-  @MainActor private func day(_ month: Int, _ day: Int, holding shift: String? = nil) -> XCUIElement {
+  /// and last days too. The shown page starts at the leading edge of
+  /// its `column` (the screen's, or on an iPad the one beside 設定's
+  /// list, where the page before's lies under the list), so of the copies
+  /// in the column it holds the one furthest left: the page after's lies
+  /// to its right, where the pages run on under the bars down the side of
+  /// iPhone Duo's outer display (#1224), clipped out of sight and still in
+  /// the app's frame.
+  @MainActor private func day(
+    _ month: Int, _ day: Int, holding shift: String? = nil, in column: CGRect? = nil
+  ) -> XCUIElement {
     let said = Self.spoken("\(month)", "\(day)")
     let days = app.descendants(matching: .any).matching(
       NSPredicate(format: "label MATCHES %@", said + (shift.map { "(.+、)?\($0)(、.*)?" } ?? ".*")))
-    return days.allElementsBoundByIndex.map { ($0, $0.frame) }.filter { app.frame.contains($1) }
+    return days.allElementsBoundByIndex.map { ($0, $0.frame) }
+      .filter { (column ?? app.frame).contains($1) }
       .min { $0.1.minX < $1.1.minX }?.0 ?? days.firstMatch
   }
 
   /// The calendar's day `days` after `date`, whatever it holds: a day of
   /// the month before or after shows in the month's weeks too.
-  @MainActor private func day(_ date: DateComponents, after days: Int) -> XCUIElement {
+  @MainActor private func day(
+    _ date: DateComponents, after days: Int, in column: CGRect? = nil
+  ) -> XCUIElement {
     let on = Calendar.current.date(
       byAdding: .day, value: days, to: Calendar.current.date(from: date)!)!
     return day(
-      Calendar.current.component(.month, from: on), Calendar.current.component(.day, from: on))
+      Calendar.current.component(.month, from: on), Calendar.current.component(.day, from: on),
+      in: column)
   }
 
   /// Where the row of the calendar's day `days` after `date` begins on the
   /// screen: midway between the foot of the days in the row over it and
   /// its own top, whatever room the rows leave between their days.
-  @MainActor private func rowTop(_ date: DateComponents, after days: Int) -> CGFloat {
-    let top = day(date, after: days).frame.minY
-    let over = (1...7).map { day(date, after: days - $0).frame }
+  @MainActor private func rowTop(
+    _ date: DateComponents, after days: Int, in column: CGRect? = nil
+  ) -> CGFloat {
+    let top = day(date, after: days, in: column).frame.minY
+    let over = (1...7).map { day(date, after: days - $0, in: column).frame }
       .filter { app.frame.contains($0) && $0.maxY <= top }.map(\.maxY).max()
     return ((over ?? top) + top) / 2
   }
@@ -546,9 +566,11 @@ final class StoreScreenshotTests: XCTestCase {
   /// How far across the screen the calendar's week of `date` is: from its
   /// first day to its last, with the room its days keep between them at
   /// both sides, the calendar standing beside the day's pane on an iPad.
-  @MainActor private func week(_ date: DateComponents) -> ClosedRange<CGFloat> {
+  @MainActor private func week(
+    _ date: DateComponents, in column: CGRect? = nil
+  ) -> ClosedRange<CGFloat> {
     let row = Calendar.current.component(.weekday, from: Calendar.current.date(from: date)!) - 1
-    let days = (0..<7).map { day(date, after: $0 - row).frame }
+    let days = (0..<7).map { day(date, after: $0 - row, in: column).frame }
     let gap = days[1].minX - days[0].maxX
     return (days[0].minX - gap)...(days[6].maxX + gap)
   }
@@ -618,11 +640,15 @@ final class StoreScreenshotTests: XCTestCase {
         XCUIElement.ElementType.button.rawValue)
     ).firstMatch
     // Half the menu at a time, held at the end so it stops where the finger does: a swipe
-    // flings it on past rows it never shows.
+    // flings it on past rows it never shows. From the middle of what shows of it: its frame is
+    // its rows', which go on past the screen when it opens up from a row at the screen's foot
+    // (an iPad's), the middle of that at the menu's very edge.
     let scroll = { (by: CGFloat) in
-      let middle = menu.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+      let shown = menu.frame.intersection(self.app.frame)
+      let middle = self.app.coordinate(withNormalizedOffset: .zero)
+        .withOffset(CGVector(dx: shown.midX, dy: shown.midY))
       middle.press(
-        forDuration: 0.05, thenDragTo: middle.withOffset(CGVector(dx: 0, dy: by * menu.frame.height / 2)),
+        forDuration: 0.05, thenDragTo: middle.withOffset(CGVector(dx: 0, dy: by * shown.height / 2)),
         withVelocity: .slow, thenHoldForDuration: 0.3)
     }
     for _ in 0..<16 where !(choice.exists && choice.isHittable) { scroll(1) }
