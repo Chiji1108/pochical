@@ -156,6 +156,8 @@ struct ChatScreen: View {
   @State private var deciding: ChatLineRow?
   /// The photos opened large.
   @State private var viewing: PhotoViewing?
+  /// Something that may be dropped on the chat is held over it.
+  @State private var dropping = false
   /// Long lines opened at 続きを読む, which stay open while the chat is.
   @State private var unfolded: Set<String> = []
   /// Lines not sent being sent again, by the time each was written then:
@@ -236,6 +238,23 @@ struct ChatScreen: View {
     // setting it off), and the stage itself stands the composer on the
     // keyboard.
     .ignoresSafeArea()
+    // Images dropped anywhere on the chat, from another app beside it or
+    // Files, go in the tray as pasted ones do (spec/chat.md, Photos); held
+    // over it, the chat is ringed in the accent, as a drop target is
+    // marked. A photo opened large stands over it, taking the drop itself;
+    // a chat that takes no more lines takes none.
+    .onDrop(of: otherLeft == nil ? [.image] : [], isTargeted: $dropping) { items in
+      PastedImages(items).map { draft.take($0, say: say, send: sendSticker) } ?? false
+    }
+    .overlay {
+      if dropping {
+        Rectangle()
+          .fill(colors.accentDefault.opacity(0.08))
+          .strokeBorder(colors.accentDefault, lineWidth: 3)
+          .ignoresSafeArea()
+          .allowsHitTesting(false)
+      }
+    }
     .sensoryFeedback(.success, trigger: done)
     .task(
       id: JumpKey(
@@ -524,12 +543,16 @@ struct ChatScreen: View {
     }
   }
 
+  /// The other member of a one-to-one chat, once they left: the chat
+  /// stays to be read, but takes no more lines.
+  private var otherLeft: GroupMemberRow? {
+    otherID.flatMap { other in chat.writers.first { $0.userID == other && $0.left } }
+  }
+
   /// Under the lines: the composer, or what a one-to-one chat with
   /// someone who left says in its place.
   @ViewBuilder private var composer: some View {
-    // A one-to-one chat with someone who left stays to be read, but
-    // takes no more lines.
-    if let otherID, let gone = chat.writers.first(where: { $0.userID == otherID && $0.left }) {
+    if let gone = otherLeft {
       Text(gone.deleted ? "相手のアカウントは削除されました" : "\(gone.displayName)はグループを抜けました")
         .font(.footnote)
         .foregroundStyle(colors.textTertiary)

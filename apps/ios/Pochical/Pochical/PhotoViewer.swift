@@ -5,6 +5,7 @@ import PochicalKit
 import SQLiteData
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 
 // A photo opened large (spec/chat.md, Photos; /design's PhotoViewer), as
 // Photos, Signal and Telegram open one: whole on black, pinched or tapped
@@ -489,7 +490,9 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
   }
 
   private func page(_ item: ChatPhotoItem) -> PhotoPage {
-    let page = PhotoPage(item, writer: names[item.authorID], shelf: shelf, calls: calls)
+    // Dragged out as it is shared and saved: a chat's photo, never someone's face.
+    let page = PhotoPage(
+      item, writer: names[item.authorID], shelf: shelf, calls: calls, drags: onSave != nil)
     page.onTap = { [weak self] in self?.toggleChrome() }
     return page
   }
@@ -676,7 +679,7 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
 }
 
 /// One photo large, zoomed by the system's scroll view.
-private final class PhotoPage: UIViewController, UIScrollViewDelegate {
+private final class PhotoPage: UIViewController, UIScrollViewDelegate, UIDragInteractionDelegate {
   let item: ChatPhotoItem
   var photo: LinePhoto { item.photo }
   var onTap: (() -> Void)?
@@ -688,6 +691,9 @@ private final class PhotoPage: UIViewController, UIScrollViewDelegate {
   }
   private let shelf: PhotoShelf
   private let calls: GroupCalls
+  /// It may be dragged out: a chat's photo, which is shared and saved too;
+  /// not someone's face, which is theirs to keep.
+  private let drags: Bool
   private let scroll = UIScrollView()
   private let picture = UIImageView()
   private let spinner = UIActivityIndicatorView(style: .large)
@@ -703,8 +709,11 @@ private final class PhotoPage: UIViewController, UIScrollViewDelegate {
   private static let deepest: CGFloat = 4
   private static let tapped: CGFloat = 2
 
-  init(_ item: ChatPhotoItem, writer: String?, shelf: PhotoShelf, calls: GroupCalls) {
+  init(
+    _ item: ChatPhotoItem, writer: String?, shelf: PhotoShelf, calls: GroupCalls, drags: Bool
+  ) {
     self.item = item
+    self.drags = drags
     self.writer = writer
     self.shelf = shelf
     self.calls = calls
@@ -748,6 +757,15 @@ private final class PhotoPage: UIViewController, UIScrollViewDelegate {
       },
     ]
     scroll.addSubview(picture)
+    // Held and moved, the photo itself is dragged out to another app or
+    // window, as Photos lets one go; on an iPhone too, where a drag is off
+    // unless asked for.
+    if drags {
+      let drag = UIDragInteraction(delegate: self)
+      drag.isEnabled = true
+      picture.addInteraction(drag)
+      picture.isUserInteractionEnabled = true
+    }
 
     spinner.color = .white
     spinner.hidesWhenStopped = true
@@ -906,10 +924,47 @@ private final class PhotoPage: UIViewController, UIScrollViewDelegate {
     }
   }
 
+  // MARK: Dragged out
+
+  /// The photo itself, as it came, once it is drawn and while it is not
+  /// zoomed in (zoomed in, a drag moves it about); one still coming drags
+  /// nothing (spec/chat.md, Photos).
+  func dragInteraction(
+    _ interaction: UIDragInteraction, itemsForBeginning session: any UIDragSession
+  ) -> [UIDragItem] {
+    guard let image, !zoomedIn else { return [] }
+    let dragged = DraggedPhoto(photo: photo, shelf: shelf, calls: calls)
+    let provider = NSItemProvider()
+    provider.register(dragged)
+    let item = UIDragItem(itemProvider: provider)
+    item.localObject = image
+    return [item]
+  }
+
   /// The photo itself, for sharing: once it has come, else fetched now.
   func wholeImage() async -> UIImage? {
     if let image { return image }
     return await ChatPhotoLoading.whole(photo, in: shelf, calls: calls).flatMap { UIImage(data: $0) }
+  }
+}
+
+/// A photo dragged out of the viewer: the photo itself, as it came (a
+/// JPEG, as the app sends every photo), read as the app it is dropped on
+/// asks for it.
+private nonisolated struct DraggedPhoto: Transferable {
+  let photo: LinePhoto
+  let shelf: PhotoShelf
+  let calls: GroupCalls
+
+  static var transferRepresentation: some TransferRepresentation {
+    DataRepresentation(exportedContentType: .jpeg) { dragged in
+      guard
+        let data = await ChatPhotoLoading.whole(
+          dragged.photo, in: dragged.shelf, calls: dragged.calls)
+      else { throw CocoaError(.fileReadUnknown) }
+      return data
+    }
+    .suggestedFileName { "\($0.photo.id).jpg" }
   }
 }
 

@@ -50,6 +50,78 @@ final class ChatDraft {
     return state.preview
   }
 
+  /// What the photo button, a paste and a drop say past the tray's room.
+  static let photosFull = "写真は一度に\(Chat.photosPerSend)枚まで送れます"
+
+  /// What is pasted into the field or dropped on the chat: a sticker goes
+  /// at once as a line of its own (`send`), and photos into the tray. While
+  /// a line is being changed nothing goes, as its photo tool is hidden
+  /// then; false then.
+  @discardableResult
+  func take(
+    _ pasted: PastedImages, say: @escaping (String) -> Void,
+    send: @escaping (PastedSticker) -> Void
+  ) -> Bool {
+    guard editing == nil else { return false }
+    switch pasted {
+    case .photos(let images): takePhotos(images, say: say)
+    case .sticker(let sticker):
+      Task {
+        guard let read = await ChatStickers.read(sticker) else {
+          say("開けないスタンプでした")
+          return
+        }
+        send(read)
+      }
+    }
+    return true
+  }
+
+  /// Images pasted or dropped go in the tray as picked photos do, as many
+  /// as it has room for, saying so past it as the picker's button does.
+  private func takePhotos(_ images: [NSItemProvider], say: @escaping (String) -> Void) {
+    let room = photoRoom
+    if images.count > room {
+      say(Self.photosFull)
+    }
+    guard room > 0 else { return }
+    read(images.prefix(room).map(PhotoSource.pasted), say: say)
+  }
+
+  /// Reads photos, picked, pasted or dropped, into the tray. Counted at
+  /// once: until the last is in, nothing is sent and the tray has no room
+  /// for them.
+  fileprivate func read(_ sources: [PhotoSource], say: @escaping (String) -> Void) {
+    comingPhotos += sources.count
+    let message = writing.message
+    Task { await readPhotos(sources, for: message, say: say) }
+  }
+
+  /// Reads photos counted coming, and shrinks them to send, into the tray
+  /// of the message they were picked for.
+  private func readPhotos(
+    _ sources: [PhotoSource], for message: UUID, say: (String) -> Void
+  ) async {
+    var unreadable = false
+    for source in sources {
+      defer { comingPhotos -= 1 }
+      guard let data = await source.data(),
+        let shrunk = await ChatPhotos.shrink(data)
+      else {
+        unreadable = true
+        continue
+      }
+      // Decoded and shrunk off the main thread, as the photo is: at 2048
+      // pixels, on it, each would hold the screen still a moment.
+      let thumbnail = await UIImage(data: shrunk.jpeg)?.byPreparingThumbnail(
+        ofSize: CGSize(width: 128, height: 128))
+      writing.pick(PickedPhoto(shrunk: shrunk, thumbnail: thumbnail), for: message)
+    }
+    if unreadable {
+      say("開けない写真がありました")
+    }
+  }
+
   /// Says the member is writing: at most every typingSendMs while the field
   /// holds words.
   func typed(in threadID: String, socket: SyncClient) {
@@ -153,7 +225,7 @@ struct ChatComposer: View {
     .onChange(of: photoItems) { _, items in
       guard !items.isEmpty else { return }
       photoItems = []
-      read(items.map(PhotoSource.picked))
+      draft.read(items.map(PhotoSource.picked), say: say)
     }
     // The member's own typing: at most every typingSendMs while the field
     // holds words, and a stop once it empties.
@@ -222,7 +294,7 @@ struct ChatComposer: View {
           placeholder: "メッセージ", text: $draft.writing.text, limit: TextLimits.chatMessage,
           composing: $draft.composing, box: draft.field,
           // A message being changed keeps what it carries, as the tools go.
-          onPaste: editing == nil ? { paste($0) } : nil,
+          onPaste: editing == nil ? { draft.take($0, say: say, send: onSticker) } : nil,
           onSend: blocked ? nil : onSubmit)
         .overlay(alignment: .leading) {
           if draft.writing.text.isEmpty {
@@ -311,7 +383,7 @@ struct ChatComposer: View {
     if draft.photoRoom > 0 {
       choosingPhotos = true
     } else {
-      say(Self.photosFull)
+      say(ChatDraft.photosFull)
     }
   }
 
@@ -389,69 +461,6 @@ struct ChatComposer: View {
     }
   }
 
-  /// What the photo button and a paste say past the tray's room.
-  private static let photosFull = "写真は一度に\(Chat.photosPerSend)枚まで送れます"
-
-  /// What is pasted: a sticker goes at once as a line of its own, and
-  /// photos into the tray.
-  private func paste(_ pasted: PastedImages) {
-    switch pasted {
-    case .photos(let images): pastePhotos(images)
-    case .sticker(let sticker): Task { await sendSticker(sticker) }
-    }
-  }
-
-  /// A sticker pasted, sent as given, the words written left in the field.
-  private func sendSticker(_ pasted: NSItemProvider) async {
-    guard let sticker = await ChatStickers.read(pasted) else {
-      say("開けないスタンプでした")
-      return
-    }
-    onSticker(sticker)
-  }
-
-  /// Images pasted into the field go in the tray as picked photos do, as
-  /// many as it has room for, saying so past it as the picker's button does.
-  private func pastePhotos(_ images: [NSItemProvider]) {
-    let room = draft.photoRoom
-    if images.count > room {
-      say(Self.photosFull)
-    }
-    guard room > 0 else { return }
-    read(images.prefix(room).map(PhotoSource.pasted))
-  }
-
-  /// Reads photos, picked or pasted, into the tray. Counted at once: until
-  /// the last is in, nothing is sent and the tray has no room for them.
-  private func read(_ sources: [PhotoSource]) {
-    draft.comingPhotos += sources.count
-    let message = draft.writing.message
-    Task { await readPhotos(sources, for: message) }
-  }
-
-  /// Reads photos counted coming, and shrinks them to send, into the tray
-  /// of the message they were picked for.
-  private func readPhotos(_ sources: [PhotoSource], for message: UUID) async {
-    var unreadable = false
-    for source in sources {
-      defer { draft.comingPhotos -= 1 }
-      guard let data = await source.data(),
-        let shrunk = await ChatPhotos.shrink(data)
-      else {
-        unreadable = true
-        continue
-      }
-      // Decoded and shrunk off the main thread, as the photo is: at 2048
-      // pixels, on it, each would hold the screen still a moment.
-      let thumbnail = await UIImage(data: shrunk.jpeg)?.byPreparingThumbnail(
-        ofSize: CGSize(width: 128, height: 128))
-      draft.writing.pick(PickedPhoto(shrunk: shrunk, thumbnail: thumbnail), for: message)
-    }
-    if unreadable {
-      say("開けない写真がありました")
-    }
-  }
-
   /// Asks for the page of the words' first link once it has stayed the
   /// same a moment, as chatRules.linkPreviewSettleMs.
   private func readPreview(of link: String?) async {
@@ -497,7 +506,8 @@ extension Chat {
     duration: composerSpring.duration, bounce: composerSpring.bounce)
 }
 
-/// Where a photo for the tray comes from: the photo picker, or pasted.
+/// Where a photo for the tray comes from: the photo picker, or pasted or
+/// dropped.
 private enum PhotoSource {
   case picked(PhotosPickerItem)
   case pasted(NSItemProvider)
