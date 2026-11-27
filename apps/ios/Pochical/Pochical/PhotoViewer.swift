@@ -954,6 +954,7 @@ private nonisolated struct DraggedPhoto: Transferable {
       else { throw CocoaError(.fileReadUnknown) }
       return data
     }
+    .suggestedFileName { "\($0.photo.id).jpg" }
   }
 }
 

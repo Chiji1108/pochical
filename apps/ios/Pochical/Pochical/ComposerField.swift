@@ -166,6 +166,18 @@ struct ComposerField: UIViewRepresentable {
 enum PastedImages {
   case photos([NSItemProvider])
   case sticker(NSItemProvider)
+
+  /// What `items`, pasted or dropped, are: a sticker, else the images among
+  /// them (any words with them left); none when nothing is an image.
+  init?(_ items: [NSItemProvider]) {
+    if let sticker = items.first(where: ChatStickers.isSticker) {
+      self = .sticker(sticker)
+      return
+    }
+    let images = items.filter { $0.hasItemConformingToTypeIdentifier(UTType.image.identifier) }
+    guard !images.isEmpty else { return nil }
+    self = .photos(images)
+  }
 }
 
 /// A text view that takes images pasted, as Messages' and Signal's fields
@@ -253,17 +265,10 @@ final class ComposerTextView: UITextView {
       super.paste(sender)
       return
     }
-    let items = board.itemProviders
-    if let sticker = items.first(where: ChatStickers.isSticker) {
-      onPaste(.sticker(sticker))
-      return
-    }
-    // The items that are images; any words copied with them are left.
-    let images = items.filter { $0.hasItemConformingToTypeIdentifier(UTType.image.identifier) }
-    guard !images.isEmpty else {
+    guard let pasted = PastedImages(board.itemProviders) else {
       super.paste(sender)
       return
     }
-    onPaste(.photos(images))
+    onPaste(pasted)
   }
 }
