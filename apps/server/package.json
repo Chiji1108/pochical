@@ -17,7 +17,7 @@
     "fix": "pnpm --dir ../.. fix"
   },
   "dependencies": {
-    "@better-auth/core": "1.7.25",
+    "@better-auth/core": "1.7.28",
     "@bufbuild/protobuf": "2.17.0",
     "@connectrpc/connect": "2.3.0",
     "@pochical/design": "workspace:*",
