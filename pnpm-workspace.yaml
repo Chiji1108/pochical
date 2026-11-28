@@ -10,7 +10,7 @@ packages:
 # The scripts' runner, the test runner and Node's types, at one version for every
 # workspace that uses them.
 catalog:
-  "@types/node": 24.19.2
+  "@types/node": 24.19.4
   # The site's phrases (packages/jsx) and the iOS app's (design/) from one model.
   budoux: ^0.10.4
   playwright-core: ^1.64.1
